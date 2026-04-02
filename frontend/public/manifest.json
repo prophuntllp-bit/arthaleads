@@ -1,0 +1,9 @@
+{
+  "name": "PropCRM",
+  "short_name": "PropCRM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#3f63f6",
+  "icons": []
+}

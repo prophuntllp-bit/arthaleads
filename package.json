@@ -1,0 +1,9 @@
+{
+  "name": "propcrm-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start:local": "powershell -ExecutionPolicy Bypass -File .\\start-crm.ps1",
+    "stop:local": "powershell -ExecutionPolicy Bypass -File .\\stop-crm.ps1"
+  }
+}

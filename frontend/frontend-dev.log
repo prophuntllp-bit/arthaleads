@@ -1,0 +1,79 @@
+
+> propcrm-frontend@1.0.0 dev
+> vite
+
+
+  [32m[1mVITE[22m v6.4.1[39m  [2mready in [0m[1m388[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m11:12:26 am[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/styles.css[22m
+[2m11:12:26 am[22m [31m[1m[vite][22m[39m [31mInternal server error: E:\PROPHUNT CRM\frontend\src\pages\Login.jsx: Unexpected token, expected "," (27:52)
+
+[0m [90m 25 |[31m       navigate([32m"/"[31m)[33m;[31m
+ [90m 26 |[31m     } [36mcatch[31m (e) {
+[31m[1m>[22m[31m[90m 27 |[31m       setErr([32m`n        e.response?.data?.message ||`[31mn        (e[33m.[31mrequest [33m?[31m [32m"Backend is not reachable. Run the CRM launcher and try again."[31m [33m:[31m [32m"Login failed"[31m)[32m`n      );[31m
+ [90m    |[31m                                                     [31m[1m^[22m[31m
+ [90m 28 |[31m [32m    } finally {[31m
+ [90m 29 |[31m [32m      setLoading(false);[31m
+ [90m 30 |[31m [32m    }[31m[0m[39m
+  Plugin: [35mvite:react-babel[39m
+  File: [36mE:/PROPHUNT CRM/frontend/src/pages/Login.jsx[39m:27:52
+[33m  25 |        navigate("/");
+  26 |      } catch (e) {
+  27 |        setErr(`n        e.response?.data?.message ||`n        (e.request ? "Backend is not reachable. Run the CRM launcher and try again." : "Login failed")`n      );
+     |                                                      ^
+  28 |      } finally {
+  29 |        setLoading(false);[39m
+      at constructor (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:365:19)
+      at JSXParserMixin.raise (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:6599:19)
+      at JSXParserMixin.unexpected (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:6619:16)
+      at JSXParserMixin.expect (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:6899:12)
+      at JSXParserMixin.parseCallExpressionArguments (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11243:14)
+      at JSXParserMixin.parseCoverCallAndAsyncArrowHead (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11186:29)
+      at JSXParserMixin.parseSubscript (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11120:19)
+      at JSXParserMixin.parseSubscripts (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11094:19)
+      at JSXParserMixin.parseExprSubscripts (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11085:17)
+      at JSXParserMixin.parseUpdate (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11066:21)
+      at JSXParserMixin.parseMaybeUnary (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11046:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10899:61)
+      at JSXParserMixin.parseExprOps (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10904:23)
+      at JSXParserMixin.parseMaybeConditional (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10881:23)
+      at JSXParserMixin.parseMaybeAssign (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10831:21)
+      at JSXParserMixin.parseExpressionBase (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10784:23)
+      at E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10780:39
+      at JSXParserMixin.allowInAnd (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12421:16)
+      at JSXParserMixin.parseExpression (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10780:17)
+      at JSXParserMixin.parseStatementContent (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12895:23)
+      at JSXParserMixin.parseStatementLike (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12767:17)
+      at JSXParserMixin.parseStatementListItem (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12747:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13316:61)
+      at JSXParserMixin.parseBlockBody (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13309:10)
+      at JSXParserMixin.parseBlock (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13297:10)
+      at E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13218:72
+      at JSXParserMixin.withSmartMixTopicForbiddingContext (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12403:14)
+      at JSXParserMixin.parseTryStatement (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13218:26)
+      at JSXParserMixin.parseStatementContent (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12804:21)
+      at JSXParserMixin.parseStatementLike (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12767:17)
+      at JSXParserMixin.parseStatementListItem (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12747:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13316:61)
+      at JSXParserMixin.parseBlockBody (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13309:10)
+      at JSXParserMixin.parseBlock (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:13297:10)
+      at JSXParserMixin.parseFunctionBody (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12100:24)
+      at JSXParserMixin.parseArrowExpression (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12075:10)
+      at JSXParserMixin.parseAsyncArrowFromCallExpression (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11264:10)
+      at JSXParserMixin.parseCoverCallAndAsyncArrowHead (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11194:27)
+      at JSXParserMixin.parseSubscript (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11120:19)
+      at JSXParserMixin.parseSubscripts (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11094:19)
+      at JSXParserMixin.parseExprSubscripts (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11085:17)
+      at JSXParserMixin.parseUpdate (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11066:21)
+      at JSXParserMixin.parseMaybeUnary (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:11046:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10899:61)
+      at JSXParserMixin.parseExprOps (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10904:23)
+      at JSXParserMixin.parseMaybeConditional (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10881:23)
+      at JSXParserMixin.parseMaybeAssign (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10831:21)
+      at E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10800:39
+      at JSXParserMixin.allowInAnd (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:12421:16)
+      at JSXParserMixin.parseMaybeAssignAllowIn (E:\PROPHUNT CRM\frontend\node_modules\@babel\parser\lib\index.js:10800:17)
+[2m11:13:10 am[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/styles.css[22m

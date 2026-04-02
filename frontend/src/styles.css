@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --app-bg: #f7f7f6;
+    --app-surface: #ffffff;
+    --app-surface-low: #f1f1ef;
+    --app-surface-high: #e8e8e5;
+    --app-text: #18181b;
+    --app-text-soft: #71717a;
+    --app-border: rgba(143, 113, 100, 0.14);
+    --app-primary: #ff6b00;
+    --app-primary-deep: #a04100;
+    --app-shadow: 0px 12px 32px rgba(160, 65, 0, 0.04);
+  }
+
+  :root.dark {
+    --app-bg: #09090b;
+    --app-surface: #111113;
+    --app-surface-low: #17171a;
+    --app-surface-high: #202025;
+    --app-text: #f5f5f5;
+    --app-text-soft: #a1a1aa;
+    --app-border: rgba(255, 255, 255, 0.08);
+    --app-primary: #ff6b00;
+    --app-primary-deep: #a04100;
+    --app-shadow: 0px 18px 48px rgba(0, 0, 0, 0.35);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background: var(--app-bg);
+    color: var(--app-text);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .bg-app {
+    background: var(--app-bg);
+  }
+
+  .bg-app-surface {
+    background: var(--app-surface);
+  }
+
+  .text-app {
+    color: var(--app-text);
+  }
+
+  .text-app-soft {
+    color: var(--app-text-soft);
+  }
+
+  .card {
+    @apply rounded-[1.5rem];
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .input {
+    @apply w-full rounded-2xl px-4 py-3 text-sm transition;
+    border: 1px solid var(--app-border);
+    background: var(--app-surface-low);
+    color: var(--app-text);
+  }
+
+  .input::placeholder {
+    color: var(--app-text-soft);
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: rgba(255, 107, 0, 0.35);
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.12);
+  }
+
+  .select {
+    @apply input appearance-none;
+  }
+
+  .textarea {
+    @apply input min-h-28 resize-y;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium;
+    color: var(--app-text);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+    background-image: linear-gradient(135deg, var(--app-primary-deep), var(--app-primary));
+    box-shadow: 0px 16px 36px rgba(255, 107, 0, 0.22);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    color: var(--app-text);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-medium transition;
+    color: var(--app-text-soft);
+    background: transparent;
+  }
+
+  .btn-ghost:hover {
+    background: var(--app-surface-low);
+    color: var(--app-text);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .shell-panel {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+  }
+
+  .stitch-kicker {
+    @apply text-[10px] font-bold uppercase tracking-[0.22em];
+    color: var(--app-text-soft);
+  }
+
+  .stitch-page {
+    @apply px-4 py-6 sm:px-6 lg:px-8 lg:py-8;
+  }
+
+  .stitch-topbar {
+    @apply flex flex-col gap-4 rounded-[1.75rem] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between;
+    background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+    backdrop-filter: blur(18px);
+  }
+
+  .stitch-surface-muted {
+    background: var(--app-surface-low);
+    border: 1px solid var(--app-border);
+  }
+
+  .stitch-surface-strong {
+    background: var(--app-surface-high);
+    border: 1px solid var(--app-border);
+  }
+
+  .stitch-pill {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold;
+    background: var(--app-surface-low);
+    border: 1px solid var(--app-border);
+    color: var(--app-text-soft);
+  }
+
+  .stitch-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .stitch-table thead th {
+    @apply px-5 py-4 text-left text-[11px] font-bold uppercase tracking-[0.18em];
+    color: var(--app-text-soft);
+    background: color-mix(in srgb, var(--app-surface-low) 92%, transparent);
+  }
+
+  .stitch-table tbody td {
+    @apply px-5 py-4 align-middle;
+    border-top: 1px solid color-mix(in srgb, var(--app-border) 90%, transparent);
+  }
+
+  .stitch-table tbody tr {
+    transition: background-color 160ms ease;
+  }
+
+  .stitch-table tbody tr:hover {
+    background: color-mix(in srgb, var(--app-surface-high) 55%, transparent);
+  }
+
+  .auth-shell {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(255, 107, 0, 0.18), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(160, 65, 0, 0.16), transparent 32%),
+      var(--app-bg);
+  }
+
+  .auth-card {
+    @apply rounded-[2rem] p-8 sm:p-10;
+    background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
+    backdrop-filter: blur(24px);
+  }
+}

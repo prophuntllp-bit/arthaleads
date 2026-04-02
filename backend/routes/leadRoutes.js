@@ -1,0 +1,27 @@
+// routes/leadRoutes.js
+const express = require("express");
+const router = express.Router();
+const leadController = require("../controllers/leadController");
+const { protect, authorize } = require("../middlewares/auth");
+const validate = require("../middlewares/validate");
+const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, importLeadsSchema } = require("../validations/schemas");
+
+// All lead routes require authentication
+router.use(protect);
+
+router.get("/analytics", leadController.getAnalytics);
+router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
+
+router.route("/")
+  .get(leadController.getAll)
+  .post(validate(createLeadSchema), leadController.create);
+
+router.route("/:id")
+  .get(leadController.getById)
+  .put(validate(updateLeadSchema), leadController.update)
+  .delete(authorize("admin", "manager"), leadController.delete);
+
+router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
+router.post("/:id/assign", authorize("admin", "manager"), validate(assignLeadSchema), leadController.assign);
+
+module.exports = router;
