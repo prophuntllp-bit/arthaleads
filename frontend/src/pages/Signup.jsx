@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Building2, BadgePlus } from "lucide-react";
+import { Building2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 
@@ -10,28 +10,39 @@ export default function Signup() {
   const { signup } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     phone: "",
-    role: "agent"
+    role: "agent", // always agent — admin promotes via Team page
   });
 
-  const setValue = (key) => (event) => {
-    setForm((current) => ({ ...current, [key]: event.target.value }));
-  };
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError("");
+
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
     try {
       await signup(form);
-      toast.success("Account created");
+      toast.success("Account created! Welcome to PropCRM.");
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Signup failed");
+      // Show the real backend error message if available
+      const msg =
+        err.response?.data?.message ||
+        (err.request
+          ? "Could not reach the server. Please check your internet connection and try again."
+          : "Something went wrong. Please try again.");
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -40,38 +51,47 @@ export default function Signup() {
   return (
     <div className="auth-shell flex items-center justify-center p-4">
       <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[0.98fr_1.02fr]">
-        <div className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
-          style={{ borderColor: "var(--app-border)", background: "linear-gradient(145deg, color-mix(in srgb, var(--app-surface) 88%, transparent), color-mix(in srgb, var(--app-surface-low) 92%, transparent))", boxShadow: "var(--app-shadow)" }}>
+
+        {/* Left panel — desktop only */}
+        <div
+          className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
+          style={{
+            borderColor: "var(--app-border)",
+            background: "linear-gradient(145deg, color-mix(in srgb, var(--app-surface) 88%, transparent), color-mix(in srgb, var(--app-surface-low) 92%, transparent))",
+            boxShadow: "var(--app-shadow)",
+          }}
+        >
           <div>
             <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
               <Building2 className="h-7 w-7 text-white" />
             </div>
             <p className="stitch-kicker mb-3">Team Onboarding</p>
             <h1 className="max-w-md text-5xl font-black leading-[1.02] tracking-tight text-app">
-              Bring your sales team into one elegant workflow.
+              Join your real estate team on PropCRM.
             </h1>
             <p className="mt-5 max-w-lg text-sm leading-6 text-app-soft">
-              Create accounts for admins, managers, and agents with the same premium dark interface your sales team will use every day.
+              Create your account to start managing leads, tracking follow-ups, and closing deals with your team.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[
-              "Role-based CRM access",
-              "Lead assignment and pipeline visibility",
-              "Shared notes, follow-ups, and analytics",
+              "Access your leads and pipeline instantly",
+              "Get notified on follow-ups and site visits",
+              "Collaborate with your team in real time",
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <BadgePlus className="h-4 w-4 text-orange-500" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />
                 <span className="text-sm text-app">{item}</span>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Right panel — form */}
         <div className="w-full max-w-2xl lg:ml-auto lg:max-w-none">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg lg:hidden">
               <Building2 className="h-7 w-7 text-white" />
             </div>
             <h1 className="text-3xl font-black tracking-tight text-app">Create your account</h1>
@@ -79,47 +99,86 @@ export default function Signup() {
           </div>
 
           <div className="auth-card">
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="label">Name</label>
-                <input className="input" value={form.name} onChange={setValue("name")} required />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+
               <div>
-                <label className="label">Email</label>
-                <input className="input" type="email" value={form.email} onChange={setValue("email")} required />
+                <label className="label">Full Name</label>
+                <input
+                  className="input"
+                  value={form.name}
+                  onChange={set("name")}
+                  placeholder="e.g. Abhishek Ghadge"
+                  required
+                  minLength={2}
+                />
               </div>
+
               <div>
-                <label className="label">Phone</label>
-                <input className="input" value={form.phone} onChange={setValue("phone")} />
+                <label className="label">Work Email</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={form.email}
+                  onChange={set("email")}
+                  placeholder="you@company.com"
+                  required
+                />
               </div>
+
+              <div>
+                <label className="label">Phone <span className="text-app-soft font-normal">(optional)</span></label>
+                <input
+                  className="input"
+                  type="tel"
+                  value={form.phone}
+                  onChange={set("phone")}
+                  placeholder="e.g. 8080197945"
+                />
+              </div>
+
               <div>
                 <label className="label">Password</label>
-                <input className="input" type="password" value={form.password} onChange={setValue("password")} required />
-              </div>
-              <div>
-                <label className="label">Role</label>
-                <select className="select" value={form.role} onChange={setValue("role")}>
-                  <option value="agent">Sales Agent</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
+                <div className="relative">
+                  <input
+                    className="input pr-11"
+                    type={showPwd ? "text" : "password"}
+                    value={form.password}
+                    onChange={set("password")}
+                    placeholder="Minimum 6 characters"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app"
+                    onClick={() => setShowPwd((v) => !v)}
+                  >
+                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-app-soft">Your admin will assign your role after you join.</p>
               </div>
 
               {error && (
-                <div className="md:col-span-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                   {error}
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <button type="submit" className="btn-primary w-full justify-center py-3" disabled={loading}>
-                  {loading ? <Spinner size="sm" /> : "Create Account"}
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="btn-primary w-full justify-center py-3 mt-2"
+                disabled={loading}
+              >
+                {loading ? <><Spinner size="sm" /><span>Creating account…</span></> : "Create Account"}
+              </button>
             </form>
 
             <p className="mt-6 text-center text-sm text-app-soft">
-              Already have an account? <Link to="/login" className="font-semibold text-orange-500 hover:underline">Sign in</Link>
+              Already have an account?{" "}
+              <Link to="/login" className="font-semibold text-orange-500 hover:underline">
+                Sign in
+              </Link>
             </p>
           </div>
         </div>
