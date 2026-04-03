@@ -63,9 +63,9 @@ const automationService = {
     });
 
     // Subscribe the Page to send leadgen events to our webhook
-    if (normalized.platform === "Facebook" && normalized.pageId && normalized.pageAccessToken) {
+    if (normalized.platform === "Facebook" && normalized.pageId && normalized.accessToken) {
       try {
-        await automationService.subscribePageWebhook(normalized.pageId, normalized.pageAccessToken);
+        await automationService.subscribePageWebhook(normalized.pageId, normalized.accessToken);
       } catch (err) {
         console.warn("Page webhook subscription failed (non-fatal):", err.message);
       }
@@ -118,9 +118,9 @@ const automationService = {
     await automation.save();
 
     // Re-subscribe page webhook on update (in case token changed or first save)
-    if (normalized.platform === "Facebook" && normalized.pageId && normalized.pageAccessToken) {
+    if (normalized.platform === "Facebook" && normalized.pageId && normalized.accessToken) {
       try {
-        await automationService.subscribePageWebhook(normalized.pageId, normalized.pageAccessToken);
+        await automationService.subscribePageWebhook(normalized.pageId, normalized.accessToken);
       } catch (err) {
         console.warn("Page webhook subscription failed (non-fatal):", err.message);
       }
