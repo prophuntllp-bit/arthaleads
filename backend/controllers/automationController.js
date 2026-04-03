@@ -59,6 +59,9 @@ const automationController = {
   },
 
   async facebookConnect(req, res, next) {
+    // Must set COOP before redirect — helmet's default COOP: same-origin
+    // nullifies window.opener on the very first popup page load
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     try {
       const rawToken = req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
