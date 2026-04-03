@@ -73,6 +73,9 @@ const automationController = {
   async facebookCallback(req, res) {
     const frontendOrigin = automationService.getFrontendOrigin();
 
+    // Allow window.opener.postMessage — helmet's default COOP: same-origin breaks it
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+
     try {
       const { code, state } = req.query;
       if (!code || !state) {
