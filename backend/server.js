@@ -17,6 +17,9 @@ require("./utils/scheduler");
 
 const app = express();
 
+// Trust Railway/Vercel proxy — required for express-rate-limit behind a reverse proxy
+app.set("trust proxy", 1);
+
 // ── Connect Database ──────────────────────────────────────────────────────────
 connectDB();
 

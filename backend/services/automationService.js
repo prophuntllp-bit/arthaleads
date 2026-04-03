@@ -116,6 +116,16 @@ const automationService = {
 
     automation.updatedBy = actor._id;
     await automation.save();
+
+    // Re-subscribe page webhook on update (in case token changed or first save)
+    if (normalized.platform === "Facebook" && normalized.pageId && normalized.pageAccessToken) {
+      try {
+        await automationService.subscribePageWebhook(normalized.pageId, normalized.pageAccessToken);
+      } catch (err) {
+        console.warn("Page webhook subscription failed (non-fatal):", err.message);
+      }
+    }
+
     return automation;
   },
 
