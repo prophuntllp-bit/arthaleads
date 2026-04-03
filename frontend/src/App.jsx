@@ -15,6 +15,7 @@ import Automation   from "./pages/Automation";
 import Settings     from "./pages/Settings";
 import HelpSupport  from "./pages/HelpSupport";
 import NotFound     from "./pages/NotFound";
+import Privacy      from "./pages/Privacy";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -57,6 +58,9 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
+        {/* Fully public — no auth needed */}
+        <Route path="/privacy" element={<Privacy />} />
+
         {/* Public routes */}
         <Route element={<RedirectIfAuth />}>
           <Route path="/login"  element={<Login />} />
