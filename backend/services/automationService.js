@@ -56,11 +56,36 @@ const automationService = {
 
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
-    return Automation.create({
+    const automation = await Automation.create({
       ...normalized,
       createdBy: actor._id,
       updatedBy: actor._id,
     });
+
+    // Subscribe the Page to send leadgen events to our webhook
+    if (normalized.platform === "Facebook" && normalized.pageId && normalized.pageAccessToken) {
+      try {
+        await automationService.subscribePageWebhook(normalized.pageId, normalized.pageAccessToken);
+      } catch (err) {
+        console.warn("Page webhook subscription failed (non-fatal):", err.message);
+      }
+    }
+
+    return automation;
+  },
+
+  async subscribePageWebhook(pageId, pageAccessToken) {
+    const url = `https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}/subscribed_apps`;
+    const params = new URLSearchParams({
+      subscribed_fields: "leadgen",
+      access_token: pageAccessToken,
+    });
+    const res = await fetch(`${url}?${params.toString()}`, { method: "POST" });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.error?.message || "Failed to subscribe page webhook");
+    }
+    return json;
   },
 
   async update(id, payload, actor) {
