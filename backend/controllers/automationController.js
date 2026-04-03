@@ -73,8 +73,11 @@ const automationController = {
   async facebookCallback(req, res) {
     const frontendOrigin = automationService.getFrontendOrigin();
 
-    // Allow window.opener.postMessage — helmet's default COOP: same-origin breaks it
+    // Allow window.opener.postMessage — helmet defaults break both of these:
+    // - COOP: same-origin nullifies window.opener
+    // - CSP: script-src 'self' blocks inline <script> tags
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    res.setHeader("Content-Security-Policy", "script-src 'unsafe-inline'");
 
     try {
       const { code, state } = req.query;
