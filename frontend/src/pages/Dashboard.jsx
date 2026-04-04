@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -75,7 +75,7 @@ export default function Dashboard() {
             <p className="stitch-kicker mb-2">Overview</p>
             <h1 className="text-3xl font-black tracking-tight text-app">Good morning, {user?.name?.split(" ")[0]}</h1>
             <p className="mt-1 max-w-2xl text-sm text-app-soft">
-              Track source performance, team momentum, and recent lead movement through the same premium dashboard language from your Stitch design.
+              Track source performance, team momentum, and recent lead movement across all your active channels in real time.
             </p>
           </div>
         </div>
@@ -185,17 +185,28 @@ export default function Dashboard() {
             <div className="stitch-pill">Live pipeline</div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={statusChartData} barCategoryGap="34%">
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+            <BarChart data={statusChartData} barCategoryGap="34%" margin={{ top: 4, right: 4, left: -20, bottom: 24 }}>
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
+                axisLine={false}
+                tickLine={false}
+                angle={-35}
+                textAnchor="end"
+                interval={0}
+              />
+              <YAxis tick={{ fontSize: 11, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} allowDecimals={false} />
               <Tooltip
                 contentStyle={{
-                  borderRadius: 18,
+                  borderRadius: 14,
                   border: "1px solid var(--app-border)",
-                  background: "var(--app-surface)",
+                  background: "var(--app-bg)",
                   color: "var(--app-text)",
-                  boxShadow: "var(--app-shadow)",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                  fontSize: 13,
                 }}
+                itemStyle={{ color: "var(--app-text)" }}
+                labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
               />
               <Bar dataKey="value" radius={[10, 10, 0, 0]}>
@@ -215,15 +226,14 @@ export default function Dashboard() {
           {sourceChartData.length === 0 ? (
             <p className="py-20 text-center text-sm text-app-soft">No data yet</p>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={sourceChartData}
-                  cx="40%"
-                  cy="50%"
-                  outerRadius={92}
+                  cx="50%"
+                  cy="45%"
+                  outerRadius={88}
                   dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
                   labelLine={false}
                 >
                   {sourceChartData.map((_, index) => (
@@ -232,11 +242,25 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    borderRadius: 18,
+                    borderRadius: 14,
                     border: "1px solid var(--app-border)",
-                    background: "var(--app-surface)",
+                    background: "var(--app-bg)",
                     color: "var(--app-text)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    fontSize: 13,
                   }}
+                  itemStyle={{ color: "var(--app-text)" }}
+                  labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
+                  formatter={(value, name) => [value, name]}
+                />
+                <Legend
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="center"
+                  iconType="circle"
+                  iconSize={8}
+                  wrapperStyle={{ fontSize: 11, color: "var(--app-text-soft)", paddingTop: 12 }}
+                  formatter={(value) => <span style={{ color: "var(--app-text-soft)" }}>{value}</span>}
                 />
               </PieChart>
             </ResponsiveContainer>
