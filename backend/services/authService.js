@@ -1,11 +1,8 @@
 // services/authService.js
 const jwt = require("jsonwebtoken");
-const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
 const { AppError } = require("../middlewares/errorHandler");
-
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -38,12 +35,19 @@ const authService = {
   },
 
   async googleAuth(credential) {
-    // Verify the Google ID token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
+    // Verify the Google ID token using Google's tokeninfo endpoint (no external library needed)
+    const response = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
+    );
+    const payload = await response.json();
+
+    if (!response.ok || payload.error) {
+      throw new AppError("Invalid Google token", 401);
+    }
+    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+      throw new AppError("Google token audience mismatch", 401);
+    }
+
     const { sub: googleId, email, name, picture } = payload;
 
     if (!email) throw new AppError("Google account has no email", 400);
