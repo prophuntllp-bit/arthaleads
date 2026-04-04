@@ -19,6 +19,17 @@ const authController = {
     }
   },
 
+  async googleAuth(req, res, next) {
+    try {
+      const { credential } = req.body;
+      if (!credential) return next(new (require("../middlewares/errorHandler").AppError)("Google credential is required", 400));
+      const data = await authService.googleAuth(credential);
+      res.json({ success: true, ...data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getMe(req, res, next) {
     try {
       const user = await authService.getMe(req.user._id);

@@ -4,16 +4,32 @@ import { useAuth } from "../context/AuthContext";
 import { Building2, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [gLoading, setGLoading] = useState(false);
   const [err, setErr] = useState("");
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setErr("");
+    setGLoading(true);
+    try {
+      await googleLogin(credentialResponse.credential);
+      toast.success("Welcome back!");
+      navigate("/");
+    } catch (e) {
+      setErr(e.response?.data?.message || "Google sign-in failed. Please try again.");
+    } finally {
+      setGLoading(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -110,7 +126,7 @@ export default function Login() {
                     type={showPwd ? "text" : "password"}
                     value={form.password}
                     onChange={set("password")}
-                    placeholder="••••••••"
+                    placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
                     required
                     autoComplete="current-password"
                   />
@@ -134,6 +150,30 @@ export default function Login() {
                 {loading ? <Spinner size="sm" /> : "Sign In"}
               </button>
             </form>
+
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+              <span className="text-xs text-app-soft">or continue with</span>
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+            </div>
+
+            <div className="flex justify-center">
+              {gLoading ? (
+                <div className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
+                  <Spinner size="sm" /> Signing in with Googleâ€¦
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setErr("Google sign-in failed. Please try again.")}
+                  theme="filled_black"
+                  shape="rectangular"
+                  size="large"
+                  width="400"
+                  text="signin_with"
+                />
+              )}
+            </div>
 
             <p className="mt-6 text-center text-sm text-app-soft">
               Don't have an account? <Link to="/signup" className="font-semibold text-orange-500 hover:underline">Sign up</Link>

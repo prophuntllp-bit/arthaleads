@@ -23,9 +23,14 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false, // optional for Google OAuth users
       minlength: [6, "Password must be at least 6 characters"],
       select: false, // never returned in queries by default
+    },
+    googleId: {
+      type: String,
+      default: null,
+      select: false,
     },
     role: {
       type: String,
@@ -44,9 +49,9 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Hash password before saving
+// Hash password before saving (skip for Google-only accounts)
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();

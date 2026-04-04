@@ -38,6 +38,13 @@ export function AuthProvider({ children }) {
     return data;
   }, [persistUser]);
 
+  const googleLogin = useCallback(async (credential) => {
+    const { data } = await api.post("/auth/google", { credential });
+    localStorage.setItem("crm_token", data.token);
+    persistUser(data.user);
+    return data;
+  }, [persistUser]);
+
   const refreshUser = useCallback(async () => {
     const { data } = await api.get("/auth/me");
     persistUser(data.user);
@@ -55,7 +62,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refreshUser, updateUserState }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, refreshUser, updateUserState }}>
       {children}
     </AuthContext.Provider>
   );

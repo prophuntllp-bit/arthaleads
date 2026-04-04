@@ -1,8 +1,11 @@
 // services/authService.js
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
 const { AppError } = require("../middlewares/errorHandler");
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -26,6 +29,46 @@ const authService = {
       throw new AppError("Invalid email or password", 401);
     }
     if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    return { token, user };
+  },
+
+  async googleAuth(credential) {
+    // Verify the Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) throw new AppError("Google account has no email", 400);
+
+    // Find existing user by googleId or email
+    let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");
+
+    if (user) {
+      // If found by email but no googleId yet, link the Google account
+      if (!user.googleId) {
+        user.googleId = googleId;
+        if (picture && !user.avatar) user.avatar = picture;
+        await user.save({ validateBeforeSave: false });
+      }
+      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+    } else {
+      // New user — create account (role defaults to agent, admin can change via Team page)
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        avatar: picture || "",
+        role: "agent",
+      });
+    }
 
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
