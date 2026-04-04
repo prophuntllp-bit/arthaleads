@@ -1,4 +1,5 @@
 const authService = require("../services/authService");
+const { AppError } = require("../middlewares/errorHandler");
 
 const authController = {
   async signup(req, res, next) {
@@ -22,7 +23,7 @@ const authController = {
   async googleAuth(req, res, next) {
     try {
       const { credential } = req.body;
-      if (!credential) return next(new (require("../middlewares/errorHandler").AppError)("Google credential is required", 400));
+      if (!credential) return next(new AppError("Google credential is required", 400));
       const data = await authService.googleAuth(credential);
       res.json({ success: true, ...data });
     } catch (err) {
