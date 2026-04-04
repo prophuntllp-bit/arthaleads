@@ -1,5 +1,7 @@
 // server.js — Production-ready CRM entry point
+console.log("[BOOT] server.js starting, node:", process.version);
 require("dotenv").config();
+console.log("[BOOT] dotenv loaded, PORT:", process.env.PORT);
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
