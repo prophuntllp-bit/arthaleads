@@ -2,17 +2,15 @@
 console.log("[BOOT] server.js starting, node:", process.version);
 
 process.on("uncaughtException", (err) => {
-  console.error("[FATAL] Uncaught Exception:", err.message);
-  console.error(err.stack);
-  process.exit(1);
+  console.error("[FATAL] Uncaught Exception:", err.message, err.stack);
 });
 process.on("unhandledRejection", (reason) => {
-  console.error("[FATAL] Unhandled Rejection:", reason);
-  process.exit(1);
+  console.error("[FATAL] Unhandled Rejection:", reason?.message || String(reason));
 });
 
 require("dotenv").config();
 console.log("[BOOT] dotenv OK, PORT:", process.env.PORT, "MONGO:", !!process.env.MONGO_URI);
+console.log("[BOOT] Loading modules...");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -28,13 +26,15 @@ const automationRoutes = require("./routes/automationRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 require("./utils/scheduler");
 
+console.log("[BOOT] Modules loaded, creating app...");
 const app = express();
 
 // Trust Railway/Vercel proxy — required for express-rate-limit behind a reverse proxy
 app.set("trust proxy", 1);
 
 // ── Connect Database ──────────────────────────────────────────────────────────
-connectDB();
+console.log("[BOOT] Connecting to DB...");
+connectDB().then(() => console.log("[BOOT] DB connected")).catch((e) => console.error("[BOOT] DB error:", e.message));
 
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
@@ -106,6 +106,7 @@ app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
+console.log("[BOOT] Calling app.listen on port", PORT);
 app.listen(PORT, () => {
   logger.info(`🚀 CRM Server running on port ${PORT} [${process.env.NODE_ENV || "development"}]`);
 });
