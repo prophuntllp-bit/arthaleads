@@ -1,7 +1,18 @@
 // server.js — Production-ready CRM entry point
 console.log("[BOOT] server.js starting, node:", process.version);
+
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught Exception:", err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled Rejection:", reason);
+  process.exit(1);
+});
+
 require("dotenv").config();
-console.log("[BOOT] dotenv loaded, PORT:", process.env.PORT);
+console.log("[BOOT] dotenv OK, PORT:", process.env.PORT, "MONGO:", !!process.env.MONGO_URI);
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
