@@ -87,6 +87,17 @@ const projectController = {
       res.json({ success: true, message: "Lead deleted" });
     } catch (err) { next(err); }
   },
+
+  async bulkDeleteLeads(req, res, next) {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const count = await projectService.bulkDeleteLeads(req.params.id, ids);
+      res.json({ success: true, message: `${count} lead(s) deleted` });
+    } catch (err) { next(err); }
+  },
 };
 
 module.exports = projectController;

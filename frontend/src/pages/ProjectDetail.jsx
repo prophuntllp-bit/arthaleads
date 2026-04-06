@@ -233,6 +233,12 @@ export default function ProjectDetail() {
   const [importing, setImporting]       = useState(false);
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);
+
+  // Bulk select
+  const [selectedIds, setSelectedIds]       = useState(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting]       = useState(false);
+
   const fileRef = useRef(null);
 
   const LIMIT = 50;
@@ -277,8 +283,44 @@ export default function ProjectDetail() {
     } finally { setImporting(false); }
   };
 
+  // Clear selection when page/search changes
+  useEffect(() => { setSelectedIds(new Set()); }, [leadsPage, search]);
+
+  const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l._id));
+  const someSelected = leads.some((l) => selectedIds.has(l._id));
+
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(leads.map((l) => l._id)));
+  };
+
+  const toggleOne = (lid) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(lid)) next.delete(lid); else next.add(lid);
+      return next;
+    });
+  };
+
   const handleLeadUpdated = (updated) => {
     setLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const ids = [...selectedIds];
+      await api.delete(`/projects/${id}/leads/bulk`, { data: { ids } });
+      setLeads((prev) => prev.filter((l) => !selectedIds.has(l._id)));
+      setLeadsTotal((t) => t - ids.length);
+      setSelectedIds(new Set());
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+      setShowBulkConfirm(false);
+    }
   };
 
   const handleDeleteLead = async () => {
@@ -455,6 +497,11 @@ export default function ProjectDetail() {
                 onChange={handleSearch}
               />
             </div>
+            {canManage && selectedIds.size > 0 && (
+              <button className="btn-danger" onClick={() => setShowBulkConfirm(true)}>
+                <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
+              </button>
+            )}
             {canManage && (
               <>
                 <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
@@ -481,6 +528,18 @@ export default function ProjectDetail() {
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
+                        {canManage && (
+                          <th className="w-10 px-3">
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                              onChange={toggleAll}
+                              className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                              title="Select all"
+                            />
+                          </th>
+                        )}
                         <th>#</th>
                         <th>Name</th>
                         <th>Phone</th>
@@ -499,7 +558,17 @@ export default function ProjectDetail() {
                     </thead>
                     <tbody>
                       {leads.map((lead, i) => (
-                        <tr key={lead._id} className="group">
+                        <tr key={lead._id} className={`group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                          {canManage && (
+                            <td className="w-10 px-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(lead._id)}
+                                onChange={() => toggleOne(lead._id)}
+                                className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                              />
+                            </td>
+                          )}
                           <td className="text-app-soft text-xs">{(leadsPage - 1) * LIMIT + i + 1}</td>
                           <td className="font-medium text-app whitespace-nowrap">{lead.name}</td>
                           <td>
@@ -588,6 +657,15 @@ export default function ProjectDetail() {
         loading={deletingLead}
         title="Delete Lead"
         message="Are you sure you want to permanently delete this lead? This cannot be undone."
+      />
+
+      <ConfirmDialog
+        open={showBulkConfirm}
+        onClose={() => setShowBulkConfirm(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title={`Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}`}
+        message={`Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
       />
 
       <ConfirmDialog

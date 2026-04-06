@@ -129,6 +129,11 @@ const projectService = {
     const lead = await ProjectLead.findByIdAndDelete(leadId);
     if (!lead) throw new AppError("Lead not found", 404);
   },
+
+  async bulkDeleteLeads(projectId, ids) {
+    const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
+    return result.deletedCount;
+  },
 };
 
 module.exports = projectService;

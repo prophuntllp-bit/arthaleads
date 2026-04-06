@@ -298,8 +298,11 @@ export default function Leads() {
   const [projPages, setProjPages]             = useState(1);
   const [projLoading, setProjLoading]         = useState(false);
   const [projSearch, setProjSearch]           = useState("");
-  const [projDeletingId, setProjDeletingId]   = useState(null);
-  const [projDeleting, setProjDeleting]       = useState(false);
+  const [projDeletingId, setProjDeletingId]         = useState(null);
+  const [projDeleting, setProjDeleting]             = useState(false);
+  const [projSelectedIds, setProjSelectedIds]       = useState(new Set());
+  const [showProjBulkConfirm, setShowProjBulkConfirm] = useState(false);
+  const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
   const PROJ_LIMIT = 50;
 
   useEffect(() => {
@@ -421,8 +424,41 @@ export default function Leads() {
     upsertLead(updated, false);
   };
 
+  const projAllSelected = projLeads.length > 0 && projLeads.every((l) => projSelectedIds.has(l._id));
+  const projSomeSelected = projLeads.some((l) => projSelectedIds.has(l._id));
+
+  const projToggleAll = () => {
+    if (projAllSelected) setProjSelectedIds(new Set());
+    else setProjSelectedIds(new Set(projLeads.map((l) => l._id)));
+  };
+
+  const projToggleOne = (lid) => {
+    setProjSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(lid)) next.delete(lid); else next.add(lid);
+      return next;
+    });
+  };
+
   const handleProjLeadUpdated = (updated) => {
     setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+  };
+
+  const handleProjBulkDelete = async () => {
+    setProjBulkDeleting(true);
+    try {
+      const ids = [...projSelectedIds];
+      await api.delete(`/projects/${selectedProject._id}/leads/bulk`, { data: { ids } });
+      setProjLeads((prev) => prev.filter((l) => !projSelectedIds.has(l._id)));
+      setProjTotal((t) => t - ids.length);
+      setProjSelectedIds(new Set());
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk delete failed");
+    } finally {
+      setProjBulkDeleting(false);
+      setShowProjBulkConfirm(false);
+    }
   };
 
   const handleProjDeleteLead = async () => {
@@ -634,13 +670,18 @@ export default function Leads() {
 
           {selectedProject && (
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="relative flex-1 max-w-sm">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <div className="relative flex-1 max-w-sm min-w-[180px]">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
                   <input className="input rounded-full pl-11 text-sm" placeholder="Search by name or phone..."
                     value={projSearch}
-                    onChange={(e) => { setProjSearch(e.target.value); setProjPage(1); }} />
+                    onChange={(e) => { setProjSearch(e.target.value); setProjPage(1); setProjSelectedIds(new Set()); }} />
                 </div>
+                {projSelectedIds.size > 0 && canDelete && (
+                  <button className="btn-danger rounded-xl text-xs" onClick={() => setShowProjBulkConfirm(true)}>
+                    <Trash2 className="h-4 w-4" /> Delete {projSelectedIds.size} selected
+                  </button>
+                )}
                 <span className="text-xs text-app-soft">{projTotal} leads</span>
               </div>
 
@@ -649,6 +690,18 @@ export default function Leads() {
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
+                        {canDelete && (
+                          <th className="w-10 px-3">
+                            <input
+                              type="checkbox"
+                              checked={projAllSelected}
+                              ref={(el) => { if (el) el.indeterminate = projSomeSelected && !projAllSelected; }}
+                              onChange={projToggleAll}
+                              className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                              title="Select all"
+                            />
+                          </th>
+                        )}
                         <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th>
                         <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
                         <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Booking</th>
@@ -657,9 +710,19 @@ export default function Leads() {
                     </thead>
                     <tbody>
                       {projLeads.length === 0 ? (
-                        <tr><td colSpan={canDelete ? 13 : 12} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
+                        <tr><td colSpan={canDelete ? 14 : 12} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
                       ) : projLeads.map((lead, i) => (
-                        <tr key={lead._id} className="group">
+                        <tr key={lead._id} className={`group ${projSelectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                          {canDelete && (
+                            <td className="w-10 px-3">
+                              <input
+                                type="checkbox"
+                                checked={projSelectedIds.has(lead._id)}
+                                onChange={() => projToggleOne(lead._id)}
+                                className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                              />
+                            </td>
+                          )}
                           <td className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
                           <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a></td>
@@ -896,6 +959,14 @@ export default function Leads() {
         loading={projDeleting}
         title="Delete Project Lead"
         message="Are you sure you want to permanently delete this lead? This cannot be undone."
+      />
+      <ConfirmDialog
+        open={showProjBulkConfirm}
+        onClose={() => setShowProjBulkConfirm(false)}
+        onConfirm={handleProjBulkDelete}
+        loading={projBulkDeleting}
+        title={`Delete ${projSelectedIds.size} Lead${projSelectedIds.size !== 1 ? "s" : ""}`}
+        message={`Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
       />
     </div>
   );
