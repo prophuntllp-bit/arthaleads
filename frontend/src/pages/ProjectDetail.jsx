@@ -24,14 +24,23 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
+// Strip common phone prefixes Facebook adds: "p:", "P:", "ph:", "tel:", "mob:" etc.
+function cleanPhone(raw) {
+  return String(raw || "")
+    .replace(/^(?:p|ph|tel|mob|mobile|phone)\s*:\s*/i, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
 // Parse a row from the imported Excel — tries multiple Facebook column name variants
 function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
 
-  const name  = r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
-  const phone = r["phone number"] || r["phone"] || r["mobile"] || r["contact"] || r["mobile number"] || "";
-  const email = r["email"] || r["email address"] || r["mail"] || "";
+  const name   = r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
+  const rawPhone = r["phone number"] || r["phone"] || r["mobile"] || r["contact"] || r["mobile number"] || r["ph"] || "";
+  const phone  = cleanPhone(rawPhone);
+  const email  = r["email"] || r["email address"] || r["mail"] || "";
   const source = r["source"] || r["lead source"] || "Facebook";
 
   return { name, phone, email, source };

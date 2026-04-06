@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   StatusBadge, PriorityBadge, SourceBadge,
-  PageLoader, EmptyState, ConfirmDialog
+  PageLoader, EmptyState, ConfirmDialog, Spinner
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -11,7 +11,59 @@ import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
-import { ChevronDown, Download, Eye, Filter, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+
+// ── Project-wise leads remark cell ───────────────────────────────────────────
+function ProjRemarkCell({ lead, projectId, onUpdated }) {
+  const [remark, setRemark] = useState(lead.remark || "Not Contacted");
+  const [note, setNote]     = useState(lead.remarkNote || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async (r, n) => {
+    setSaving(true);
+    try {
+      const res = await api.patch(`/projects/${projectId}/leads/${lead._id}/remark`, { remark: r, remarkNote: n });
+      onUpdated(res.data.data);
+    } catch { toast.error("Failed to save remark"); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 min-w-[160px]">
+      <div className="relative">
+        <select
+          value={remark}
+          onChange={(e) => {
+            const v = e.target.value;
+            setRemark(v);
+            if (v === "Not Contacted") { setNote(""); save(v, ""); }
+            else save(v, note);
+          }}
+          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${
+            remark === "Contacted"
+              ? "bg-green-500/10 border-green-500/30 text-green-600"
+              : "bg-orange-500/10 border-orange-500/30 text-orange-500"
+          }`}
+        >
+          <option value="Not Contacted">Not Contacted</option>
+          <option value="Contacted">Contacted</option>
+        </select>
+        {saving && <span className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></span>}
+      </div>
+      {remark === "Contacted" && (
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onBlur={() => save(remark, note)}
+          placeholder="Write a note..."
+          rows={2}
+          className="w-full rounded-xl border px-2.5 py-1.5 text-xs resize-none"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function Leads() {
   const { user } = useAuth();
@@ -32,6 +84,30 @@ export default function Leads() {
   const [importing, setImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
+
+  // Project-wise leads
+  const [projects, setProjects]               = useState([]);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [projLeads, setProjLeads]             = useState([]);
+  const [projTotal, setProjTotal]             = useState(0);
+  const [projPage, setProjPage]               = useState(1);
+  const [projPages, setProjPages]             = useState(1);
+  const [projLoading, setProjLoading]         = useState(false);
+  const [projSearch, setProjSearch]           = useState("");
+  const PROJ_LIMIT = 50;
+
+  useEffect(() => {
+    api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProject) return;
+    setProjLoading(true);
+    api.get(`/projects/${selectedProject._id}/leads`, { params: { page: projPage, limit: PROJ_LIMIT, search: projSearch } })
+      .then((r) => { setProjLeads(r.data.leads); setProjTotal(r.data.total); setProjPages(r.data.pages); })
+      .catch(() => toast.error("Failed to load project leads"))
+      .finally(() => setProjLoading(false));
+  }, [selectedProject, projPage, projSearch]);
 
   useEffect(() => {
     if (user?.role !== "agent") {
@@ -265,6 +341,89 @@ export default function Leads() {
           </div>
         </div>
       </section>
+
+      {/* ── Project-wise leads section ── */}
+      {projects.length > 0 && (
+        <section className="card p-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <FolderKanban className="h-4 w-4 text-orange-500" />
+            <p className="stitch-kicker">View by Project</p>
+            <select
+              className="select rounded-2xl max-w-xs"
+              value={selectedProject?._id || ""}
+              onChange={(e) => {
+                const p = projects.find((x) => x._id === e.target.value) || null;
+                setSelectedProject(p);
+                setProjPage(1);
+                setProjSearch("");
+              }}
+            >
+              <option value="">— Select a project —</option>
+              {projects.map((p) => (
+                <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0} leads)</option>
+              ))}
+            </select>
+            {selectedProject && (
+              <button className="btn-ghost text-xs" onClick={() => setSelectedProject(null)}>Clear</button>
+            )}
+          </div>
+
+          {selectedProject && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+                  <input className="input rounded-full pl-11 text-sm" placeholder="Search by name or phone..."
+                    value={projSearch}
+                    onChange={(e) => { setProjSearch(e.target.value); setProjPage(1); }} />
+                </div>
+                <span className="text-xs text-app-soft">{projTotal} leads</span>
+              </div>
+
+              {projLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
+                <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--app-border)" }}>
+                  <table className="stitch-table">
+                    <thead>
+                      <tr>
+                        <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th><th>Remark</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {projLeads.length === 0 ? (
+                        <tr><td colSpan={6} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
+                      ) : projLeads.map((lead, i) => (
+                        <tr key={lead._id}>
+                          <td className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + i + 1}</td>
+                          <td className="font-medium text-app text-sm">{lead.name}</td>
+                          <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline">{lead.phone}</a></td>
+                          <td className="text-sm text-app-soft">{lead.email || "—"}</td>
+                          <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
+                          <td>
+                            <ProjRemarkCell
+                              lead={lead}
+                              projectId={selectedProject._id}
+                              onUpdated={(updated) => setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {projPages > 1 && (
+                    <div className="flex items-center justify-between border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+                      <span className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + 1}–{Math.min(projPage * PROJ_LIMIT, projTotal)} of {projTotal}</span>
+                      <div className="flex gap-2">
+                        <button className="btn-secondary px-2 py-1" disabled={projPage === 1} onClick={() => setProjPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
+                        <button className="btn-secondary px-2 py-1" disabled={projPage === projPages} onClick={() => setProjPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="card p-4 xl:col-span-2">

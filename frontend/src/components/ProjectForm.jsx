@@ -1,16 +1,24 @@
 // components/ProjectForm.jsx
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Modal, Spinner } from "./UI";
-import { ImageOff, Plus, X } from "lucide-react";
+import { ImageOff, Plus, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
 const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "4BHK+", "Studio", "Duplex", "Penthouse"];
 
+const AMENITY_OPTIONS = [
+  "Swimming Pool", "Gymnasium", "Clubhouse", "24/7 Security", "CCTV Surveillance",
+  "Covered Parking", "Visitor Parking", "Lift / Elevator", "Power Backup",
+  "24/7 Water Supply", "Garden / Landscape", "Children's Play Area", "Sports Facility",
+  "Jogging Track", "Intercom", "Fire Safety", "Rainwater Harvesting",
+  "Solar Panels", "EV Charging", "Shopping Complex", "School Nearby",
+  "Hospital Nearby", "Metro Connectivity", "Vastu Compliant",
+];
+
 const empty = {
   name: "", description: "", location: "",
-  images: [],
-  priceMin: "", priceMax: "",
+  images: [], priceMin: "", priceMax: "",
   bhkTypes: [], area: "", amenities: [],
   possessionDate: "", reraNumber: "",
 };
@@ -18,38 +26,72 @@ const empty = {
 function toForm(p) {
   if (!p) return { ...empty };
   return {
-    name: p.name || "",
-    description: p.description || "",
-    location: p.location || "",
-    images: p.images || [],
-    priceMin: p.priceMin || "",
-    priceMax: p.priceMax || "",
-    bhkTypes: p.bhkTypes || [],
-    area: p.area || "",
-    amenities: p.amenities || [],
+    name: p.name || "", description: p.description || "", location: p.location || "",
+    images: p.images || [], priceMin: p.priceMin || "", priceMax: p.priceMax || "",
+    bhkTypes: p.bhkTypes || [], area: p.area || "", amenities: p.amenities || [],
     possessionDate: p.possessionDate ? p.possessionDate.slice(0, 10) : "",
     reraNumber: p.reraNumber || "",
   };
 }
 
+// Resize + convert uploaded image file to base64
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const MAX = 900;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else        { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 export default function ProjectForm({ open, onClose, project, onSaved }) {
-  const [form, setForm] = useState(() => toForm(project));
-  const [imageInput, setImageInput] = useState("");
-  const [amenityInput, setAmenityInput] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [form, setForm]           = useState(() => toForm(project));
+  const [urlInput, setUrlInput]   = useState("");
+  const [amenitySelect, setAmenitySelect] = useState("");
+  const [customAmenity, setCustomAmenity] = useState("");
+  const [uploadingImg, setUploadingImg]   = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const imgFileRef = useRef(null);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const addImage = () => {
-    const url = imageInput.trim();
+  // ── Images ────────────────────────────────────────────────────────────────
+  const addImageUrl = () => {
+    const url = urlInput.trim();
     if (!url) return;
     setForm((f) => ({ ...f, images: [...f.images, url] }));
-    setImageInput("");
+    setUrlInput("");
+  };
+
+  const handleImageFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = "";
+    setUploadingImg(true);
+    try {
+      const b64s = await Promise.all(files.map(fileToBase64));
+      setForm((f) => ({ ...f, images: [...f.images, ...b64s] }));
+    } catch { toast.error("Failed to process image"); }
+    finally { setUploadingImg(false); }
   };
 
   const removeImage = (i) =>
     setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
 
+  // ── BHK ───────────────────────────────────────────────────────────────────
   const toggleBhk = (val) =>
     setForm((f) => ({
       ...f,
@@ -58,16 +100,24 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
         : [...f.bhkTypes, val],
     }));
 
-  const addAmenity = () => {
-    const val = amenityInput.trim();
+  // ── Amenities ─────────────────────────────────────────────────────────────
+  const addAmenityFromSelect = () => {
+    if (!amenitySelect || form.amenities.includes(amenitySelect)) return;
+    setForm((f) => ({ ...f, amenities: [...f.amenities, amenitySelect] }));
+    setAmenitySelect("");
+  };
+
+  const addCustomAmenity = () => {
+    const val = customAmenity.trim();
     if (!val || form.amenities.includes(val)) return;
     setForm((f) => ({ ...f, amenities: [...f.amenities, val] }));
-    setAmenityInput("");
+    setCustomAmenity("");
   };
 
   const removeAmenity = (i) =>
     setForm((f) => ({ ...f, amenities: f.amenities.filter((_, idx) => idx !== i) }));
 
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return toast.error("Project name is required");
@@ -98,48 +148,66 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
     <Modal open={open} onClose={onClose} title={project ? "Edit Project" : "New Project"} size="xl">
       <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* Basic Info */}
+        {/* ── Basic Info ── */}
         <div className="space-y-4">
           <p className="stitch-kicker">Basic Info</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label">Project Name *</label>
-              <input className="input" value={form.name} onChange={set("name")} placeholder="e.g. Skyline Heights Phase 2" required />
+              <input className="input" value={form.name} onChange={set("name")}
+                placeholder="e.g. Skyline Heights Phase 2" required />
             </div>
             <div>
               <label className="label">Location</label>
-              <input className="input" value={form.location} onChange={set("location")} placeholder="e.g. Andheri West, Mumbai" />
+              <input className="input" value={form.location} onChange={set("location")}
+                placeholder="e.g. Andheri West, Mumbai" />
             </div>
             <div>
               <label className="label">RERA Number</label>
-              <input className="input" value={form.reraNumber} onChange={set("reraNumber")} placeholder="e.g. P51800047795" />
+              <input className="input" value={form.reraNumber} onChange={set("reraNumber")}
+                placeholder="e.g. P51800047795" />
             </div>
             <div className="sm:col-span-2">
               <label className="label">Description</label>
-              <textarea className="textarea" rows={3} value={form.description} onChange={set("description")} placeholder="Brief overview of the project for telecallers..." />
+              <textarea className="textarea" rows={3} value={form.description} onChange={set("description")}
+                placeholder="Brief overview for telecallers..." />
             </div>
           </div>
         </div>
 
-        {/* Images */}
+        {/* ── Images ── */}
         <div className="space-y-3">
           <p className="stitch-kicker">Project Images</p>
+
+          {/* Upload from device */}
           <div className="flex gap-2">
+            <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
+            <button type="button" onClick={() => imgFileRef.current?.click()}
+              className="btn-secondary flex items-center gap-2" disabled={uploadingImg}>
+              {uploadingImg ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+              Upload Photos
+            </button>
+          </div>
+
+          {/* OR paste URL */}
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-app-soft flex-shrink-0">Or paste URL:</span>
             <input
-              className="input"
-              value={imageInput}
-              onChange={(e) => setImageInput(e.target.value)}
-              placeholder="Paste image URL and click Add"
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImage())}
+              className="input flex-1"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              placeholder="https://..."
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
             />
-            <button type="button" onClick={addImage} className="btn-secondary flex-shrink-0">
+            <button type="button" onClick={addImageUrl} className="btn-secondary flex-shrink-0">
               <Plus className="h-4 w-4" /> Add
             </button>
           </div>
+
           {form.images.length > 0 && (
             <div className="flex flex-wrap gap-3">
               {form.images.map((url, i) => (
-                <div key={i} className="relative group">
+                <div key={i} className="relative group flex-shrink-0">
                   <img
                     src={url} alt=""
                     className="h-20 w-20 rounded-2xl object-cover border"
@@ -153,9 +221,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
                     <ImageOff className="h-6 w-6 text-app-soft" />
                   </div>
                   <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white items-center justify-center hidden group-hover:flex"
+                    type="button" onClick={() => removeImage(i)}
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -165,17 +232,19 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           )}
         </div>
 
-        {/* Pricing & Config */}
+        {/* ── Pricing & Config ── */}
         <div className="space-y-4">
           <p className="stitch-kicker">Pricing & Configuration</p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <label className="label">Min Price (₹)</label>
-              <input className="input" type="number" min="0" value={form.priceMin} onChange={set("priceMin")} placeholder="5000000" />
+              <input className="input" type="number" min="0" value={form.priceMin} onChange={set("priceMin")}
+                placeholder="5000000" />
             </div>
             <div>
               <label className="label">Max Price (₹)</label>
-              <input className="input" type="number" min="0" value={form.priceMax} onChange={set("priceMax")} placeholder="12000000" />
+              <input className="input" type="number" min="0" value={form.priceMax} onChange={set("priceMax")}
+                placeholder="12000000" />
             </div>
             <div>
               <label className="label">Area Range</label>
@@ -187,18 +256,16 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          {/* BHK Types */}
+          {/* BHK chips */}
           <div>
             <label className="label">BHK Types Available</label>
             <div className="flex flex-wrap gap-2 mt-1">
               {BHK_OPTIONS.map((bhk) => (
-                <button
-                  key={bhk} type="button"
-                  onClick={() => toggleBhk(bhk)}
+                <button key={bhk} type="button" onClick={() => toggleBhk(bhk)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                     form.bhkTypes.includes(bhk)
                       ? "bg-orange-500 border-orange-500 text-white"
-                      : "border-app text-app-soft hover:border-orange-500/50"
+                      : "text-app-soft hover:border-orange-500/50"
                   }`}
                   style={!form.bhkTypes.includes(bhk) ? { borderColor: "var(--app-border)" } : {}}
                 >
@@ -208,18 +275,33 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          {/* Amenities */}
+          {/* Amenities — dropdown + custom */}
           <div>
             <label className="label">Amenities</label>
             <div className="flex gap-2">
+              <select
+                className="select flex-1"
+                value={amenitySelect}
+                onChange={(e) => setAmenitySelect(e.target.value)}
+              >
+                <option value="">Select amenity...</option>
+                {AMENITY_OPTIONS.filter((a) => !form.amenities.includes(a)).map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
+              <button type="button" onClick={addAmenityFromSelect} className="btn-secondary flex-shrink-0">
+                <Plus className="h-4 w-4" /> Add
+              </button>
+            </div>
+            <div className="flex gap-2 mt-2">
               <input
-                className="input"
-                value={amenityInput}
-                onChange={(e) => setAmenityInput(e.target.value)}
-                placeholder="e.g. Swimming Pool, Gym, Parking..."
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addAmenity())}
+                className="input flex-1"
+                value={customAmenity}
+                onChange={(e) => setCustomAmenity(e.target.value)}
+                placeholder="Or type a custom amenity..."
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomAmenity(); } }}
               />
-              <button type="button" onClick={addAmenity} className="btn-secondary flex-shrink-0">
+              <button type="button" onClick={addCustomAmenity} className="btn-secondary flex-shrink-0">
                 <Plus className="h-4 w-4" /> Add
               </button>
             </div>
@@ -228,7 +310,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
                 {form.amenities.map((a, i) => (
                   <span key={i} className="stitch-pill gap-1">
                     {a}
-                    <button type="button" onClick={() => removeAmenity(i)}>
+                    <button type="button" onClick={() => removeAmenity(i)}
+                      className="hover:text-red-500 transition-colors">
                       <X className="h-3 w-3" />
                     </button>
                   </span>

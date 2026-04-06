@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Bell,
   CheckCircle,
-  ChevronDown,
   Clock3,
   MessageCircle,
   MoonStar,
@@ -18,7 +17,8 @@ import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
-import { DATE_RANGE_OPTIONS, fmtDate } from "../utils/constants";
+import { fmtDate } from "../utils/constants";
+import DateRangePicker from "../components/DateRangePicker";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
@@ -89,18 +89,7 @@ export default function Dashboard() {
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             {theme === "dark" ? "Dark" : "Light"}
           </button>
-          <div className="relative">
-            <select
-              className="select min-w-[190px] rounded-full pr-10"
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-            >
-              {DATE_RANGE_OPTIONS.filter((option) => option.value).map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-          </div>
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
         </div>
       </header>
 

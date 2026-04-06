@@ -31,18 +31,44 @@ const getDateRangeFilter = (dateRange, from, to) => {
     case "today":
       start.setHours(0, 0, 0, 0);
       return { $gte: start, $lte: end };
-    case "tomorrow":
-      start.setDate(start.getDate() + 1);
-      end.setDate(end.getDate() + 1);
-      start.setHours(0, 0, 0, 0);
+    case "yesterday":
+      start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0);
+      end.setDate(end.getDate() - 1);
+      return { $gte: start, $lte: end };
+    case "todayYesterday":
+      start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0);
       return { $gte: start, $lte: end };
     case "last7days":
-      start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+      return { $gte: start, $lte: end };
+    case "last14days":
+      start.setDate(start.getDate() - 13); start.setHours(0, 0, 0, 0);
+      return { $gte: start, $lte: end };
+    case "last28days":
+      start.setDate(start.getDate() - 27); start.setHours(0, 0, 0, 0);
       return { $gte: start, $lte: end };
     case "last30days":
-      start.setDate(start.getDate() - 29);
-      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 29); start.setHours(0, 0, 0, 0);
+      return { $gte: start, $lte: end };
+    case "thisweek":
+      start.setDate(start.getDate() - start.getDay()); start.setHours(0, 0, 0, 0);
+      return { $gte: start, $lte: end };
+    case "lastweek": {
+      const ls = new Date(now);
+      ls.setDate(ls.getDate() - ls.getDay() - 7); ls.setHours(0, 0, 0, 0);
+      const le = new Date(ls); le.setDate(le.getDate() + 6); le.setHours(23, 59, 59, 999);
+      return { $gte: ls, $lte: le };
+    }
+    case "thismonth":
+      start.setDate(1); start.setHours(0, 0, 0, 0);
+      return { $gte: start, $lte: end };
+    case "lastmonth": {
+      const lms = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lme = new Date(now.getFullYear(), now.getMonth(), 0); lme.setHours(23, 59, 59, 999);
+      return { $gte: lms, $lte: lme };
+    }
+    case "thisyear":
+      start.setMonth(0, 1); start.setHours(0, 0, 0, 0);
       return { $gte: start, $lte: end };
     default:
       return null;

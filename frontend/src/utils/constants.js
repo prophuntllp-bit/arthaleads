@@ -5,11 +5,18 @@ export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Offi
 export const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
 export const PURPOSE_OPTIONS = ["Buy", "Rent", "Invest", "N/A"];
 export const DATE_RANGE_OPTIONS = [
-  { value: "", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "last7days", label: "Last 7 Days" },
-  { value: "last30days", label: "Last 30 Days" }
+  { value: "",             label: "Maximum" },
+  { value: "today",        label: "Today" },
+  { value: "yesterday",    label: "Yesterday" },
+  { value: "last7days",    label: "Last 7 Days" },
+  { value: "last14days",   label: "Last 14 Days" },
+  { value: "last28days",   label: "Last 28 Days" },
+  { value: "last30days",   label: "Last 30 Days" },
+  { value: "thisweek",     label: "This Week" },
+  { value: "lastweek",     label: "Last Week" },
+  { value: "thismonth",    label: "This Month" },
+  { value: "lastmonth",    label: "Last Month" },
+  { value: "thisyear",     label: "This Year" },
 ];
 
 export const STATUS_COLORS = {
