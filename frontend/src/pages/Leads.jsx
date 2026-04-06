@@ -71,13 +71,13 @@ function InlineDate({ value, leadId, field, onSaved }) {
     finally { setSaving(false); }
   };
 
-  const dateVal = value ? new Date(value).toISOString().slice(0, 10) : "";
+  const dateVal = value ? new Date(value).toISOString().slice(0, 16) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <input
-      type="date"
+      type="datetime-local"
       className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 110 }}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
       value={dateVal}
       onChange={(e) => save(e.target.value)}
     />
@@ -171,12 +171,12 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-  const dateVal = value ? new Date(value).toISOString().slice(0, 10) : "";
+  const dateVal = value ? new Date(value).toISOString().slice(0, 16) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <input type="date"
+    <input type="datetime-local"
       className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 110 }}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
       value={dateVal} onChange={(e) => save(e.target.value)} />
   );
 }
@@ -704,7 +704,7 @@ export default function Leads() {
                         )}
                         <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th>
                         <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
-                        <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Booking</th>
+                        <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Status</th>
                         {canDelete && <th></th>}
                       </tr>
                     </thead>
@@ -836,7 +836,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "Source", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "Source", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Status", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>

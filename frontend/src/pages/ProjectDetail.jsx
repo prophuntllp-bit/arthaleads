@@ -100,13 +100,13 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
     finally { setSaving(false); }
   };
 
-  const dateVal = value ? new Date(value).toISOString().slice(0, 10) : "";
+  const dateVal = value ? new Date(value).toISOString().slice(0, 16) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <input
-      type="date"
+      type="datetime-local"
       className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 110 }}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
       value={dateVal}
       onChange={(e) => save(e.target.value)}
     />
@@ -551,7 +551,7 @@ export default function ProjectDetail() {
                         <th>Remark 1</th>
                         <th>Remark 2</th>
                         <th>Remark</th>
-                        <th>Booking</th>
+                        <th>Status</th>
                         <th>Updated By</th>
                         {canManage && <th></th>}
                       </tr>
