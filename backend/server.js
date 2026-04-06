@@ -80,10 +80,8 @@ if (process.env.NODE_ENV !== "test") {
 app.use("/webhook", webhookRoutes);
 
 // ── Body Parsing ──────────────────────────────────────────────────────────────
-// Higher limits for project routes (images as base64 + lead imports)
-app.use("/api/projects", express.json({ limit: "8mb" }));
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "8mb" }));
+app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth",  authLimiter, authRoutes);
