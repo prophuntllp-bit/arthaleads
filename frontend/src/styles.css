@@ -4,115 +4,196 @@
 
 @layer base {
   :root {
-    --app-bg: #f7f7f6;
-    --app-surface: #ffffff;
-    --app-surface-low: #f1f1ef;
-    --app-surface-high: #e8e8e5;
+    --app-bg: #f0ede8;
+    --app-surface: rgba(255, 255, 255, 0.72);
+    --app-surface-low: rgba(255, 255, 255, 0.48);
+    --app-surface-high: rgba(255, 255, 255, 0.88);
     --app-text: #18181b;
     --app-text-soft: #71717a;
-    --app-border: rgba(143, 113, 100, 0.14);
+    --app-border: rgba(160, 65, 0, 0.12);
+    --app-border-strong: rgba(160, 65, 0, 0.22);
     --app-primary: #ff6b00;
     --app-primary-deep: #a04100;
-    --app-shadow: 0px 12px 32px rgba(160, 65, 0, 0.04);
+    --app-shadow: 0 8px 32px rgba(160, 65, 0, 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --app-shadow-lg: 0 24px 64px rgba(160, 65, 0, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --glass-blur: blur(20px) saturate(160%);
+    --glass-blur-heavy: blur(40px) saturate(180%);
   }
 
   :root.dark {
-    --app-bg: #09090b;
-    --app-surface: #111113;
-    --app-surface-low: #17171a;
-    --app-surface-high: #202025;
-    --app-text: #f5f5f5;
-    --app-text-soft: #a1a1aa;
-    --app-border: rgba(255, 255, 255, 0.08);
+    --app-bg: #0a0a0f;
+    --app-surface: rgba(18, 18, 24, 0.75);
+    --app-surface-low: rgba(12, 12, 18, 0.70);
+    --app-surface-high: rgba(28, 28, 38, 0.85);
+    --app-text: #f0f0f5;
+    --app-text-soft: #8888a0;
+    --app-border: rgba(255, 255, 255, 0.07);
+    --app-border-strong: rgba(255, 107, 0, 0.18);
     --app-primary: #ff6b00;
     --app-primary-deep: #a04100;
-    --app-shadow: 0px 18px 48px rgba(0, 0, 0, 0.35);
+    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.50), 0 1px 0 rgba(255,255,255,0.04) inset;
+    --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255,255,255,0.06) inset;
+    --glass-blur: blur(20px) saturate(160%);
+    --glass-blur-heavy: blur(40px) saturate(180%);
   }
 
-  html {
-    color-scheme: light;
-  }
-
-  html.dark {
-    color-scheme: dark;
-  }
+  html { color-scheme: light; }
+  html.dark { color-scheme: dark; }
 
   body {
     @apply font-sans antialiased;
     background: var(--app-bg);
     color: var(--app-text);
+    position: relative;
   }
 
-  #root {
-    min-height: 100vh;
+  /* Ambient background glow orbs — light mode */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
   }
+
+  body::before {
+    width: 900px;
+    height: 900px;
+    top: -300px;
+    left: -200px;
+    background: radial-gradient(circle, rgba(255, 107, 0, 0.13) 0%, transparent 70%);
+    animation: orb-drift-a 18s ease-in-out infinite alternate;
+  }
+
+  body::after {
+    width: 700px;
+    height: 700px;
+    bottom: -200px;
+    right: -100px;
+    background: radial-gradient(circle, rgba(160, 65, 0, 0.10) 0%, transparent 70%);
+    animation: orb-drift-b 22s ease-in-out infinite alternate;
+  }
+
+  /* Dark mode orbs — deeper and more dramatic */
+  html.dark body::before {
+    background: radial-gradient(circle, rgba(255, 107, 0, 0.12) 0%, transparent 65%);
+    width: 1000px;
+    height: 1000px;
+    top: -350px;
+    left: -250px;
+  }
+
+  html.dark body::after {
+    background: radial-gradient(circle, rgba(120, 40, 0, 0.18) 0%, transparent 65%);
+    width: 800px;
+    height: 800px;
+  }
+
+  @keyframes orb-drift-a {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    100% { transform: translate(60px, 40px) scale(1.08); }
+  }
+
+  @keyframes orb-drift-b {
+    0%   { transform: translate(0px, 0px) scale(1); }
+    100% { transform: translate(-50px, -30px) scale(1.06); }
+  }
+
+  #root { min-height: 100vh; }
 }
 
 @layer components {
-  .bg-app {
-    background: var(--app-bg);
-  }
+  .bg-app         { background: var(--app-bg); }
+  .bg-app-surface { background: var(--app-surface); backdrop-filter: var(--glass-blur); }
+  .text-app       { color: var(--app-text); }
+  .text-app-soft  { color: var(--app-text-soft); }
 
-  .bg-app-surface {
-    background: var(--app-surface);
-  }
-
-  .text-app {
-    color: var(--app-text);
-  }
-
-  .text-app-soft {
-    color: var(--app-text-soft);
-  }
-
+  /* ── Core glass card ── */
   .card {
     @apply rounded-[1.5rem];
     background: var(--app-surface);
     border: 1px solid var(--app-border);
     box-shadow: var(--app-shadow);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    transition: box-shadow 200ms ease, border-color 200ms ease;
   }
 
+  .card:hover {
+    border-color: var(--app-border-strong);
+    box-shadow: var(--app-shadow-lg);
+  }
+
+  /* ── Inputs ── */
   .input {
     @apply w-full rounded-2xl px-4 py-3 text-sm transition;
     border: 1px solid var(--app-border);
     background: var(--app-surface-low);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     color: var(--app-text);
   }
 
-  .input::placeholder {
-    color: var(--app-text-soft);
-  }
+  .input::placeholder { color: var(--app-text-soft); }
 
   .input:focus {
     outline: none;
-    border-color: rgba(255, 107, 0, 0.35);
-    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.12);
+    border-color: rgba(255, 107, 0, 0.45);
+    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.12), 0 2px 12px rgba(255, 107, 0, 0.08);
+    background: var(--app-surface);
   }
 
-  .select {
-    @apply input appearance-none;
-  }
-
-  .textarea {
-    @apply input min-h-28 resize-y;
-  }
+  .select   { @apply input appearance-none; }
+  .textarea { @apply input min-h-28 resize-y; }
 
   .label {
     @apply mb-1.5 block text-sm font-medium;
     color: var(--app-text);
   }
 
+  /* ── Buttons ── */
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
     background-image: linear-gradient(135deg, var(--app-primary-deep), var(--app-primary));
-    box-shadow: 0px 16px 36px rgba(255, 107, 0, 0.22);
+    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 12px 32px rgba(255, 107, 0, 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.30);
   }
 
   .btn-secondary {
     @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
     background: var(--app-surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--app-border);
     color: var(--app-text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 0 rgba(255,255,255,0.5) inset;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--app-border-strong);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.5) inset;
+    transform: translateY(-1px);
   }
 
   .btn-ghost {
@@ -123,66 +204,90 @@
 
   .btn-ghost:hover {
     background: var(--app-surface-low);
+    backdrop-filter: var(--glass-blur);
     color: var(--app-text);
   }
 
   .btn-danger {
-    @apply inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+    background: linear-gradient(135deg, #b91c1c, #ef4444);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.30);
   }
 
+  .btn-danger:hover:not(:disabled) {
+    box-shadow: 0 12px 32px rgba(239, 68, 68, 0.42);
+    transform: translateY(-1px);
+  }
+
+  /* ── Badges ── */
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 
+  /* ── Shell panel (sidebar cards, modals) ── */
   .shell-panel {
     background: var(--app-surface);
     border: 1px solid var(--app-border);
     box-shadow: var(--app-shadow);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
   }
 
+  /* ── Typography helpers ── */
   .stitch-kicker {
     @apply text-[10px] font-bold uppercase tracking-[0.22em];
     color: var(--app-text-soft);
   }
 
-  .stitch-page {
-    @apply px-4 py-6 sm:px-6 lg:px-8 lg:py-8;
-  }
+  /* ── Page layout ── */
+  .stitch-page { @apply px-4 py-6 sm:px-6 lg:px-8 lg:py-8; }
 
+  /* ── Top bar ── */
   .stitch-topbar {
     @apply flex flex-col gap-4 rounded-[1.75rem] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between;
-    background: color-mix(in srgb, var(--app-surface) 88%, transparent);
+    background: var(--app-surface);
     border: 1px solid var(--app-border);
     box-shadow: var(--app-shadow);
-    backdrop-filter: blur(18px);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
   }
 
+  /* ── Muted / strong surfaces ── */
   .stitch-surface-muted {
     background: var(--app-surface-low);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--app-border);
   }
 
   .stitch-surface-strong {
     background: var(--app-surface-high);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--app-border);
   }
 
+  /* ── Pills ── */
   .stitch-pill {
     @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold;
     background: var(--app-surface-low);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--app-border);
     color: var(--app-text-soft);
   }
 
-  .stitch-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+  /* ── Table ── */
+  .stitch-table { width: 100%; border-collapse: collapse; }
 
   .stitch-table thead th {
     @apply px-5 py-4 text-left text-[11px] font-bold uppercase tracking-[0.18em];
     color: var(--app-text-soft);
-    background: color-mix(in srgb, var(--app-surface-low) 92%, transparent);
+    background: var(--app-surface-low);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
   .stitch-table tbody td {
@@ -190,27 +295,80 @@
     border-top: 1px solid color-mix(in srgb, var(--app-border) 90%, transparent);
   }
 
-  .stitch-table tbody tr {
-    transition: background-color 160ms ease;
-  }
+  .stitch-table tbody tr { transition: background-color 160ms ease; }
 
   .stitch-table tbody tr:hover {
     background: color-mix(in srgb, var(--app-surface-high) 55%, transparent);
   }
 
+  /* ── Auth pages ── */
   .auth-shell {
     min-height: 100vh;
     background:
-      radial-gradient(circle at top left, rgba(255, 107, 0, 0.18), transparent 30%),
-      radial-gradient(circle at bottom right, rgba(160, 65, 0, 0.16), transparent 32%),
+      radial-gradient(ellipse at 15% 15%, rgba(255, 107, 0, 0.20) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(160, 65, 0, 0.16) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(255, 150, 50, 0.06) 0%, transparent 60%),
       var(--app-bg);
   }
 
   .auth-card {
     @apply rounded-[2rem] p-8 sm:p-10;
-    background: color-mix(in srgb, var(--app-surface) 88%, transparent);
-    border: 1px solid var(--app-border);
-    box-shadow: var(--app-shadow);
-    backdrop-filter: blur(24px);
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-strong);
+    box-shadow: var(--app-shadow-lg);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle shimmer line at top of auth card */
+  .auth-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.4), transparent);
+    border-radius: 999px;
+  }
+
+  /* ── Modal ── */
+  .modal-glass {
+    background: var(--app-surface);
+    border: 1px solid var(--app-border-strong);
+    box-shadow: var(--app-shadow-lg);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
+  }
+
+  /* ── Glow accent for active/highlight states ── */
+  .glow-orange {
+    box-shadow: 0 0 24px rgba(255, 107, 0, 0.25), 0 4px 12px rgba(255, 107, 0, 0.15);
+  }
+
+  /* ── Sidebar glass ── */
+  .sidebar-glass {
+    background: var(--app-surface);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    border-right: 1px solid var(--app-border);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.06);
+  }
+
+  html.dark .sidebar-glass {
+    box-shadow: 4px 0 48px rgba(0, 0, 0, 0.40);
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--app-border-strong);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 107, 0, 0.30);
   }
 }

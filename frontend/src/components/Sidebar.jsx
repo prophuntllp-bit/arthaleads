@@ -106,8 +106,8 @@ export default function Sidebar() {
 
   return (
     <>
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 backdrop-blur-xl px-4 py-3 flex items-center justify-between border-b"
-        style={{ background: "color-mix(in srgb, var(--app-bg) 86%, transparent)", borderColor: "var(--app-border)" }}>
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
+        style={{ borderColor: "var(--app-border)" }}>
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
             <Building2 className="w-4 h-4 text-white" />
@@ -129,15 +129,13 @@ export default function Sidebar() {
       )}
 
       <div
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"}`}
-        style={{ background: "var(--app-surface)", borderRight: "1px solid var(--app-border)" }}
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <NavContent />
       </div>
 
       <aside
-        className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0"
-        style={{ background: "var(--app-surface)", borderRight: "1px solid var(--app-border)" }}
+        className="hidden lg:flex flex-col w-64 h-screen sticky top-0 flex-shrink-0 sidebar-glass"
       >
         <NavContent />
       </aside>
