@@ -154,12 +154,14 @@ export default function DateRangePicker({ value, onChange, label }) {
   const [rangeStart, setRangeStart] = useState(null);
   const [rangeEnd, setRangeEnd]     = useState(null);
   const [hoverDate, setHoverDate]   = useState(null);
-  const [picking, setPicking]       = useState(false); // true = waiting for 2nd click
+  const [picking, setPicking]       = useState(false);
+  const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
   const today = new Date(); today.setHours(0,0,0,0);
   const [leftMonth, setLeftMonth] = useState({ year: today.getFullYear(), month: today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1, adjYear: today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear() });
   const [rightMonth, setRightMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
 
   const ref = useRef(null);
+  const btnRef = useRef(null);
 
   const selectedLabel = PRESETS.find((p) => p.value === value)?.label || "Date Range";
 
@@ -212,11 +214,24 @@ export default function DateRangePicker({ value, onChange, label }) {
 
   const displayDates = presetDates(value);
 
+  const openPicker = () => {
+    if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPopoverPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setPending(value);
+    setOpen((o) => !o);
+  };
+
   return (
-    <div className="relative" ref={ref}>
+    <div ref={ref}>
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => { setPending(value); setOpen((o) => !o); }}
+        onClick={openPicker}
         className="stitch-pill flex items-center gap-2"
       >
         <CalendarDays className="h-4 w-4 text-orange-500" />
@@ -230,8 +245,10 @@ export default function DateRangePicker({ value, onChange, label }) {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 rounded-2xl shadow-2xl overflow-hidden"
+          className="fixed z-[9999] rounded-2xl shadow-2xl overflow-hidden"
           style={{
+            top: popoverPos.top,
+            right: popoverPos.right,
             background: "var(--app-surface)",
             border: "1px solid var(--app-border)",
             backdropFilter: "var(--glass-blur-heavy)",
