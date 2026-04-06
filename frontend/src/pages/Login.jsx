@@ -42,7 +42,7 @@ export default function Login() {
     } catch (e) {
       setErr(
         e.response?.data?.message ||
-        (e.request ? "Backend is not reachable. Run the CRM launcher and try again." : "Login failed")
+        (e.request ? "Connection failed. Please check your internet and try again." : "Login failed")
       );
     } finally {
       setLoading(false);
