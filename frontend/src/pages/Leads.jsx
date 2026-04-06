@@ -123,6 +123,95 @@ function InlineBooking({ value, leadId, onSaved }) {
   );
 }
 
+// ── Project lead inline helpers ───────────────────────────────────────────────
+function ProjInlineText({ value, leadId, projectId, field, placeholder = "Add note…", multiline = false, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal]         = useState(value || "");
+  const [saving, setSaving]   = useState(false);
+
+  const save = async () => {
+    setEditing(false);
+    if (val === (value || "")) return;
+    setSaving(true);
+    try {
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: val });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); setVal(value || ""); }
+    finally { setSaving(false); }
+  };
+
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  if (editing) {
+    const shared = {
+      autoFocus: true,
+      className: "w-full min-w-[120px] rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400",
+      style: { borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" },
+      value: val, onChange: (e) => setVal(e.target.value), onBlur: save,
+      onKeyDown: (e) => e.key === "Escape" && setEditing(false),
+    };
+    return multiline
+      ? <textarea {...shared} rows={2} className={shared.className + " resize-none"} />
+      : <input {...shared} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} />;
+  }
+  return (
+    <span onClick={() => setEditing(true)}
+      className="block cursor-pointer rounded px-1 py-0.5 text-xs transition hover:bg-orange-500/10 min-w-[70px]" title="Click to edit">
+      {val || <span className="text-app-soft italic">{placeholder}</span>}
+    </span>
+  );
+}
+
+function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const save = async (dateStr) => {
+    setSaving(true);
+    try {
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: dateStr || null });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+  const dateVal = value ? new Date(value).toISOString().slice(0, 10) : "";
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  return (
+    <input type="date"
+      className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 110 }}
+      value={dateVal} onChange={(e) => save(e.target.value)} />
+  );
+}
+
+const PROJ_BOOKING_OPTIONS = [
+  { value: "", label: "— None —", color: "" },
+  { value: "Interested", label: "Interested", color: "text-blue-600" },
+  { value: "Call Back", label: "Call Back", color: "text-amber-600" },
+  { value: "Site Visit Booked", label: "Site Visit Booked", color: "text-violet-600" },
+  { value: "Booked", label: "Booked", color: "text-green-600" },
+  { value: "Not Interested", label: "Not Interested", color: "text-red-500" },
+];
+
+function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const save = async (v) => {
+    setSaving(true);
+    try {
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { booking: v });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+  const opt = PROJ_BOOKING_OPTIONS.find((o) => o.value === (value || "")) || PROJ_BOOKING_OPTIONS[0];
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  return (
+    <select
+      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 125 }}
+      value={value || ""} onChange={(e) => save(e.target.value)}>
+      {PROJ_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
 // ── Project-wise leads remark cell ────────────────────────────────────────────
 function ProjRemarkCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "Not Contacted");
@@ -209,6 +298,8 @@ export default function Leads() {
   const [projPages, setProjPages]             = useState(1);
   const [projLoading, setProjLoading]         = useState(false);
   const [projSearch, setProjSearch]           = useState("");
+  const [projDeletingId, setProjDeletingId]   = useState(null);
+  const [projDeleting, setProjDeleting]       = useState(false);
   const PROJ_LIMIT = 50;
 
   useEffect(() => {
@@ -328,6 +419,25 @@ export default function Leads() {
 
   const handleInlineUpdate = (updated) => {
     upsertLead(updated, false);
+  };
+
+  const handleProjLeadUpdated = (updated) => {
+    setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+  };
+
+  const handleProjDeleteLead = async () => {
+    setProjDeleting(true);
+    try {
+      await api.delete(`/projects/${selectedProject._id}/leads/${projDeletingId}`);
+      setProjLeads((prev) => prev.filter((l) => l._id !== projDeletingId));
+      setProjTotal((t) => t - 1);
+      toast.success("Lead deleted");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Delete failed");
+    } finally {
+      setProjDeleting(false);
+      setProjDeletingId(null);
+    }
   };
 
   const getXlsx = async () => import("xlsx");
@@ -536,29 +646,43 @@ export default function Leads() {
 
               {projLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
                 <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--app-border)" }}>
-                  <table className="stitch-table">
+                  <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
-                        <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th><th>Remark</th>
+                        <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th>
+                        <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
+                        <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Booking</th>
+                        {canDelete && <th></th>}
                       </tr>
                     </thead>
                     <tbody>
                       {projLeads.length === 0 ? (
-                        <tr><td colSpan={6} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
+                        <tr><td colSpan={canDelete ? 13 : 12} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
                       ) : projLeads.map((lead, i) => (
-                        <tr key={lead._id}>
+                        <tr key={lead._id} className="group">
                           <td className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + i + 1}</td>
-                          <td className="font-medium text-app text-sm">{lead.name}</td>
-                          <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline">{lead.phone}</a></td>
+                          <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
+                          <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
-                          <td>
-                            <ProjRemarkCell
-                              lead={lead}
-                              projectId={selectedProject._id}
-                              onUpdated={(updated) => setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))}
-                            />
-                          </td>
+                          <td><ProjRemarkCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineDate value={lead.followUp2} leadId={lead._id} projectId={selectedProject._id} field="followUp2" onSaved={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineText value={lead.remark1} leadId={lead._id} projectId={selectedProject._id} field="remark1" placeholder="Remark 1…" onSaved={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineText value={lead.remark2} leadId={lead._id} projectId={selectedProject._id} field="remark2" placeholder="Remark 2…" onSaved={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
+                          <td><ProjInlineBooking value={lead.booking} leadId={lead._id} projectId={selectedProject._id} onSaved={handleProjLeadUpdated} /></td>
+                          {canDelete && (
+                            <td>
+                              <button
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-red-500/10 hover:text-red-400"
+                                onClick={() => setProjDeletingId(lead._id)}
+                                title="Delete lead"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -764,6 +888,14 @@ export default function Leads() {
         loading={bulkDeleting}
         title={`Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}`}
         message={`Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+      />
+      <ConfirmDialog
+        open={!!projDeletingId}
+        onClose={() => setProjDeletingId(null)}
+        onConfirm={handleProjDeleteLead}
+        loading={projDeleting}
+        title="Delete Project Lead"
+        message="Are you sure you want to permanently delete this lead? This cannot be undone."
       />
     </div>
   );

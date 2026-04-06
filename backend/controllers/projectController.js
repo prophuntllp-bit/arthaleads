@@ -73,6 +73,20 @@ const projectController = {
       res.json({ success: true, data: lead });
     } catch (err) { next(err); }
   },
+
+  async updateLeadFields(req, res, next) {
+    try {
+      const lead = await projectService.updateLeadFields(req.params.leadId, req.body);
+      res.json({ success: true, data: lead });
+    } catch (err) { next(err); }
+  },
+
+  async deleteLead(req, res, next) {
+    try {
+      await projectService.deleteLead(req.params.leadId);
+      res.json({ success: true, message: "Lead deleted" });
+    } catch (err) { next(err); }
+  },
 };
 
 module.exports = projectController;

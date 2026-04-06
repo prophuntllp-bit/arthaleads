@@ -17,5 +17,7 @@ router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);
 router.patch("/:id/leads/:leadId/remark", projectController.updateRemark);
+router.patch("/:id/leads/:leadId",        projectController.updateLeadFields);
+router.delete("/:id/leads/:leadId", authorize("admin", "manager"), projectController.deleteLead);
 
 module.exports = router;

@@ -114,6 +114,21 @@ const projectService = {
     if (!lead) throw new AppError("Lead not found", 404);
     return lead;
   },
+
+  async updateLeadFields(leadId, data) {
+    const allowed = ["remark1", "remark2", "followUp", "followUp2", "booking"];
+    const update = {};
+    allowed.forEach((f) => { if (f in data) update[f] = data[f]; });
+    const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
+      .populate("remarkUpdatedBy", "name");
+    if (!lead) throw new AppError("Lead not found", 404);
+    return lead;
+  },
+
+  async deleteLead(leadId) {
+    const lead = await ProjectLead.findByIdAndDelete(leadId);
+    if (!lead) throw new AppError("Lead not found", 404);
+  },
 };
 
 module.exports = projectService;
