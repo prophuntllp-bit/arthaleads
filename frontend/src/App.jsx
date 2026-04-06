@@ -30,7 +30,7 @@ function RequireAuth() {
   }
   if (!user) return <Navigate to="/login" replace />;
   return (
-    <div className="flex min-h-screen bg-app text-app">
+    <div className="flex min-h-screen text-app" style={{ background: "transparent" }}>
       <Sidebar />
       <main className="flex-1 min-w-0 pt-16 lg:pt-0 overflow-y-auto">
         <Outlet />
