@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow
+  LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban
 } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -12,6 +12,7 @@ const navItems = [
   { to: "/",          label: "Dashboard",  icon: LayoutDashboard },
   { to: "/leads",     label: "Leads",      icon: Users },
   { to: "/pipeline",  label: "Pipeline",   icon: Kanban },
+  { to: "/projects",  label: "Projects",   icon: FolderKanban },
   { to: "/team",      label: "Team",       icon: UserCheck, roles: ["admin"] },
   { to: "/automation", label: "Automation", icon: Workflow, roles: ["admin", "manager"] },
   { to: "/performance", label: "Performance", icon: BarChart3, roles: ["admin", "manager"] },

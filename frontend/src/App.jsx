@@ -71,10 +71,12 @@ import LeadPipeline from "./pages/LeadPipeline";
 import Team         from "./pages/Team";
 import Performance  from "./pages/Performance";
 import Automation   from "./pages/Automation";
-import Settings     from "./pages/Settings";
-import HelpSupport  from "./pages/HelpSupport";
-import NotFound     from "./pages/NotFound";
-import Privacy      from "./pages/Privacy";
+import Settings      from "./pages/Settings";
+import HelpSupport   from "./pages/HelpSupport";
+import NotFound      from "./pages/NotFound";
+import Privacy       from "./pages/Privacy";
+import Projects      from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -132,8 +134,10 @@ export default function App() {
           <Route path="/"          element={<Dashboard />} />
           <Route path="/leads"     element={<Leads />} />
           <Route path="/pipeline"  element={<LeadPipeline />} />
-          <Route path="/settings"  element={<Settings />} />
-          <Route path="/help-support" element={<HelpSupport />} />
+          <Route path="/settings"      element={<Settings />} />
+          <Route path="/help-support"  element={<HelpSupport />} />
+          <Route path="/projects"      element={<Projects />} />
+          <Route path="/projects/:id"  element={<ProjectDetail />} />
 
           {/* Admin only */}
           <Route element={<RequireRole roles={["admin"]} />}>

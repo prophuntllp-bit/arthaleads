@@ -24,6 +24,7 @@ const authRoutes = require("./routes/authRoutes");
 const leadRoutes = require("./routes/leadRoutes");
 const automationRoutes = require("./routes/automationRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 require("./utils/scheduler");
 
 console.log("[BOOT] Modules loaded, creating app...");
@@ -79,6 +80,8 @@ if (process.env.NODE_ENV !== "test") {
 app.use("/webhook", webhookRoutes);
 
 // ── Body Parsing ──────────────────────────────────────────────────────────────
+// Higher limit for project lead imports (can be 200+ rows as JSON)
+app.use("/api/projects/:id/leads/import", express.json({ limit: "2mb" }));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
@@ -86,6 +89,7 @@ app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use("/api/auth",  authLimiter, authRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
+app.use("/api/projects", projectRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
