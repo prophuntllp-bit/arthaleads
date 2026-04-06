@@ -34,13 +34,14 @@ function toForm(p) {
   };
 }
 
-// Resize + convert uploaded image file to base64
+// Resize + compress uploaded image to a small base64 thumbnail
+// Max 640px on longest side, JPEG quality 0.60 → each image ~25-50KB base64
 async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
-      const MAX = 900;
+      const MAX = 640;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -50,7 +51,7 @@ async function fileToBase64(file) {
       canvas.width = w; canvas.height = h;
       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
+      resolve(canvas.toDataURL("image/jpeg", 0.60));
     };
     img.onerror = reject;
     img.src = url;
@@ -80,9 +81,12 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     e.target.value = "";
+    const remaining = 5 - form.images.length;
+    if (remaining <= 0) return toast.error("Max 5 images per project");
+    const toProcess = files.slice(0, remaining);
     setUploadingImg(true);
     try {
-      const b64s = await Promise.all(files.map(fileToBase64));
+      const b64s = await Promise.all(toProcess.map(fileToBase64));
       setForm((f) => ({ ...f, images: [...f.images, ...b64s] }));
     } catch { toast.error("Failed to process image"); }
     finally { setUploadingImg(false); }
