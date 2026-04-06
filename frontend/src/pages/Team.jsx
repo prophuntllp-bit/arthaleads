@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
@@ -24,6 +24,7 @@ export default function Team() {
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -52,6 +53,7 @@ export default function Team() {
   const openCreate = () => {
     setEditingUser(null);
     setForm(emptyMember);
+    setShowPwd(false);
     setShowModal(true);
   };
 
@@ -66,6 +68,7 @@ export default function Team() {
       avatar: member.avatar || "",
       isActive: member.isActive ?? true,
     });
+    setShowPwd(false);
     setShowModal(true);
   };
 
@@ -279,7 +282,12 @@ export default function Team() {
           )}
           <div className="md:col-span-2">
             <label className="label">{editingUser ? "Set New Password (optional)" : "Temporary Password"}</label>
-            <input className="input" type="password" value={form.password} onChange={handleChange("password")} required={!editingUser} />
+            <div className="relative">
+              <input className="input pr-10" type={showPwd ? "text" : "password"} value={form.password} onChange={handleChange("password")} required={!editingUser} />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowPwd((v) => !v)}>
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm text-app" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
             <input type="checkbox" checked={form.isActive} onChange={handleChange("isActive")} />

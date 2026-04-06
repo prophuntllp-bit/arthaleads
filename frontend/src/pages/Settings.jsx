@@ -1,11 +1,14 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Camera, ImagePlus, KeyRound, ShieldCheck, UserRound } from "lucide-react";
+import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Settings() {
   const { user, updateUserState, refreshUser } = useAuth();
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd]         = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -156,11 +159,21 @@ export default function Settings() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="label">Current Password</label>
-                  <input className="input" type="password" value={form.currentPassword} onChange={setValue("currentPassword")} placeholder="Required to set a new password" />
+                  <div className="relative">
+                    <input className="input pr-10" type={showCurrentPwd ? "text" : "password"} value={form.currentPassword} onChange={setValue("currentPassword")} placeholder="Required to set a new password" />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowCurrentPwd((v) => !v)}>
+                      {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="label">New Password</label>
-                  <input className="input" type="password" value={form.newPassword} onChange={setValue("newPassword")} placeholder="Minimum 6 characters" />
+                  <div className="relative">
+                    <input className="input pr-10" type={showNewPwd ? "text" : "password"} value={form.newPassword} onChange={setValue("newPassword")} placeholder="Minimum 6 characters" />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowNewPwd((v) => !v)}>
+                      {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
