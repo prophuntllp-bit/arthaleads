@@ -78,6 +78,19 @@ const leadController = {
     }
   },
 
+  async bulkDelete(req, res, next) {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const count = await leadService.bulkDelete(ids);
+      res.json({ success: true, message: `${count} lead(s) deleted` });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getAnalytics(req, res, next) {
     try {
       const data = await leadService.getAnalytics(req.user, req.query);

@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -13,7 +13,117 @@ import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 
-// ── Project-wise leads remark cell ───────────────────────────────────────────
+// ── Inline editable text cell ─────────────────────────────────────────────────
+function InlineText({ value, leadId, field, onSaved, placeholder = "Add note…", multiline = false }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal]         = useState(value || "");
+  const [saving, setSaving]   = useState(false);
+
+  const save = async () => {
+    setEditing(false);
+    if (val === (value || "")) return;
+    setSaving(true);
+    try {
+      const res = await api.put(`/leads/${leadId}`, { [field]: val });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); setVal(value || ""); }
+    finally { setSaving(false); }
+  };
+
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+
+  if (editing) {
+    const shared = {
+      autoFocus: true,
+      className: "w-full min-w-[140px] rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400",
+      style: { borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" },
+      value: val,
+      onChange: (e) => setVal(e.target.value),
+      onBlur: save,
+      onKeyDown: (e) => e.key === "Escape" && setEditing(false),
+    };
+    return multiline
+      ? <textarea {...shared} rows={2} className={shared.className + " resize-none"} />
+      : <input {...shared} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} />;
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      className="block cursor-pointer rounded px-1 py-0.5 text-xs transition hover:bg-orange-500/10 min-w-[80px]"
+      title="Click to edit"
+    >
+      {val || <span className="text-app-soft italic">{placeholder}</span>}
+    </span>
+  );
+}
+
+// ── Inline date cell ──────────────────────────────────────────────────────────
+function InlineDate({ value, leadId, field, onSaved }) {
+  const [saving, setSaving] = useState(false);
+
+  const save = async (dateStr) => {
+    setSaving(true);
+    try {
+      const res = await api.put(`/leads/${leadId}`, { [field]: dateStr || null });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+
+  const dateVal = value ? new Date(value).toISOString().slice(0, 10) : "";
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  return (
+    <input
+      type="date"
+      className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 110 }}
+      value={dateVal}
+      onChange={(e) => save(e.target.value)}
+    />
+  );
+}
+
+// ── Inline booking select ─────────────────────────────────────────────────────
+const BOOKING_OPTIONS = [
+  { value: "",                   label: "— None —",           color: "" },
+  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
+  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
+  { value: "Booked",             label: "Booked",              color: "text-green-600" },
+  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
+];
+
+function InlineBooking({ value, leadId, onSaved }) {
+  const [saving, setSaving] = useState(false);
+
+  const save = async (v) => {
+    setSaving(true);
+    try {
+      const res = await api.put(`/leads/${leadId}`, { booking: v });
+      onSaved(res.data.data);
+    } catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+
+  const opt = BOOKING_OPTIONS.find((o) => o.value === (value || "")) || BOOKING_OPTIONS[0];
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+
+  return (
+    <select
+      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 130 }}
+      value={value || ""}
+      onChange={(e) => save(e.target.value)}
+    >
+      {BOOKING_OPTIONS.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+// ── Project-wise leads remark cell ────────────────────────────────────────────
 function ProjRemarkCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "Not Contacted");
   const [note, setNote]     = useState(lead.remarkNote || "");
@@ -85,7 +195,12 @@ export default function Leads() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
 
-  // Project-wise leads
+  // ── Bulk select state ─────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // ── Project-wise leads ────────────────────────────────────────────────────
   const [projects, setProjects]               = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [projLeads, setProjLeads]             = useState([]);
@@ -146,10 +261,29 @@ export default function Leads() {
         setShowExportMenu(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Clear selection when page changes
+  useEffect(() => { setSelectedIds(new Set()); }, [page, filters]);
+
+  // ── Selection helpers ─────────────────────────────────────────────────────
+  const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l._id));
+  const someSelected = leads.some((l) => selectedIds.has(l._id));
+
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(leads.map((l) => l._id)));
+  };
+
+  const toggleOne = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const handleSaved = (saved) => {
     upsertLead(saved, !editLead);
@@ -171,9 +305,29 @@ export default function Leads() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const ids = [...selectedIds];
+      await api.delete("/leads/bulk", { data: { ids } });
+      ids.forEach((id) => removeLead(id));
+      setSelectedIds(new Set());
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+      setShowBulkConfirm(false);
+    }
+  };
+
   const handleDetailUpdated = (updated) => {
     upsertLead(updated, false);
     setDetailLead(updated);
+  };
+
+  const handleInlineUpdate = (updated) => {
+    upsertLead(updated, false);
   };
 
   const getXlsx = async () => import("xlsx");
@@ -181,13 +335,7 @@ export default function Leads() {
   const exportRows = async (type) => {
     try {
       const { data } = await api.get("/leads", {
-        params: {
-          ...filters,
-          page: 1,
-          limit: 1000,
-          sortBy: "createdAt",
-          order: "desc",
-        },
+        params: { ...filters, page: 1, limit: 1000, sortBy: "createdAt", order: "desc" },
       });
 
       const rows = (data.leads || []).map((lead) => ({
@@ -205,6 +353,11 @@ export default function Leads() {
         BudgetMax: lead.budget?.max || 0,
         FollowUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
         FollowUpNote: lead.followUpNote || "",
+        FollowUp2: lead.followUp2 ? new Date(lead.followUp2).toISOString().slice(0, 10) : "",
+        Remark1: lead.remark1 || "",
+        Remark2: lead.remark2 || "",
+        Remark: lead.remark || "",
+        Booking: lead.booking || "",
         AssignedTo: lead.assignedToName || lead.assignedTo?.name || "",
         CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : "",
       }));
@@ -235,7 +388,6 @@ export default function Leads() {
 
   const parseImportRow = (row) => {
     const assignedAgent = agents.find((agent) => agent.name?.toLowerCase() === String(row.AssignedTo || "").trim().toLowerCase());
-
     return {
       name: String(row.Name || row.name || "").trim(),
       phone: String(row.Phone || row.phone || "").trim(),
@@ -261,7 +413,6 @@ export default function Leads() {
   const handleImport = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     setImporting(true);
     try {
       const XLSX = await getXlsx();
@@ -270,12 +421,7 @@ export default function Leads() {
       const firstSheet = workbook.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
       const leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
-
-      if (!leadsToImport.length) {
-        toast.error("No valid leads found in the uploaded file");
-        return;
-      }
-
+      if (!leadsToImport.length) { toast.error("No valid leads found in the uploaded file"); return; }
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
       toast.success(data.message || "Leads imported");
       window.location.reload();
@@ -286,6 +432,8 @@ export default function Leads() {
       event.target.value = "";
     }
   };
+
+  const canDelete = user?.role !== "agent";
 
   return (
     <div className="stitch-page space-y-6">
@@ -298,13 +446,22 @@ export default function Leads() {
           </div>
 
           <div className="flex flex-wrap gap-3">
+            {selectedIds.size > 0 && canDelete && (
+              <button
+                className="btn-danger rounded-xl"
+                onClick={() => setShowBulkConfirm(true)}
+              >
+                <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
+              </button>
+            )}
+
             <label className="btn-secondary cursor-pointer rounded-xl">
               <Upload className="h-4 w-4" /> {importing ? "Importing..." : "Import"}
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
 
             <div className="relative" ref={exportMenuRef}>
-              <button className="btn-secondary rounded-xl" onClick={() => setShowExportMenu((current) => !current)}>
+              <button className="btn-secondary rounded-xl" onClick={() => setShowExportMenu((c) => !c)}>
                 <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
               </button>
               {showExportMenu && (
@@ -313,17 +470,14 @@ export default function Leads() {
                   style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}
                 >
                   {[
-                    { key: "csv", label: "Export CSV" },
+                    { key: "csv",   label: "Export CSV" },
                     { key: "excel", label: "Export Excel" },
-                    { key: "json", label: "Export JSON" },
+                    { key: "json",  label: "Export JSON" },
                   ].map((item) => (
                     <button
                       key={item.key}
                       className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition"
-                      onClick={() => {
-                        setShowExportMenu(false);
-                        exportRows(item.key);
-                      }}
+                      onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
                       style={{ background: "transparent" }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
@@ -468,10 +622,6 @@ export default function Leads() {
         </div>
       </section>
 
-      <section className="card p-4 text-xs text-app-soft">
-        Import columns supported: <span className="text-app">Name, Phone, Email, Source, Status, Priority, PropertyType, BHK, Purpose, PreferredLocation, BudgetMin, BudgetMax, FollowUpDate, FollowUpNote, AssignedTo</span>
-      </section>
-
       <section className="card overflow-hidden">
         {loading ? (
           <PageLoader />
@@ -484,25 +634,47 @@ export default function Leads() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="stitch-table min-w-[980px] text-sm">
+            <table className="stitch-table min-w-[1800px] text-sm">
               <thead>
                 <tr>
-                  {["Lead", "Phone", "Source", "Status", "Priority", "Property Interest", "Follow-up", "Assigned To", "Actions"].map((heading) => (
-                    <th key={heading}>{heading}</th>
+                  {canDelete && (
+                    <th className="w-10 px-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={toggleAll}
+                        className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                        title="Select all"
+                      />
+                    </th>
+                  )}
+                  {["Lead", "Phone", "Source", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                    <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {leads.map((lead, index) => (
-                  <tr key={lead._id} className={index % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02] group" : "group"}>
+                  <tr key={lead._id} className={`${index % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                    {canDelete && (
+                      <td className="w-10 px-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(lead._id)}
+                          onChange={() => toggleOne(lead._id)}
+                          className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                        />
+                      </td>
+                    )}
                     <td>
-                      <div className="flex items-center gap-4">
-                        <div className="stitch-surface-muted flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold text-orange-500">
+                      <div className="flex items-center gap-3">
+                        <div className="stitch-surface-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold text-orange-500">
                           {lead.name?.slice(0, 1)?.toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
-                          <p className="truncate text-xs text-app-soft">{lead.email || "No email added"}</p>
+                          <p className="truncate text-sm font-semibold text-app max-w-[140px]">{lead.name}</p>
+                          <p className="truncate text-xs text-app-soft max-w-[140px]">{lead.email || "No email"}</p>
                         </div>
                       </div>
                     </td>
@@ -510,26 +682,41 @@ export default function Leads() {
                     <td><SourceBadge source={lead.source} /></td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
-                    <td className="min-w-[220px]">
-                      <div>
-                        <p className="text-sm font-medium text-app">{lead.propertyType}{lead.bhk !== "N/A" ? ` • ${lead.bhk}` : ""}</p>
-                        {(lead.budget?.min || lead.budget?.max) && (
-                          <p className="mt-1 text-xs text-orange-500">{fmtCurrency(lead.budget?.min)} - {fmtCurrency(lead.budget?.max)}</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap text-xs text-app-soft">{fmtDate(lead.followUpDate)}</td>
-                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
                     <td>
-                      <div className="flex justify-end gap-2 opacity-50 transition-opacity group-hover:opacity-100">
-                        <button className="flex h-9 w-9 items-center justify-center rounded-xl text-app-soft transition hover:bg-white/5 hover:text-app" onClick={() => setDetailLead(lead)} title="View">
+                      <InlineDate value={lead.followUpDate} leadId={lead._id} field="followUpDate" onSaved={handleInlineUpdate} />
+                    </td>
+                    <td>
+                      <InlineDate value={lead.followUp2} leadId={lead._id} field="followUp2" onSaved={handleInlineUpdate} />
+                    </td>
+                    <td>
+                      <InlineText value={lead.remark1} leadId={lead._id} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
+                    </td>
+                    <td>
+                      <InlineText value={lead.remark2} leadId={lead._id} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
+                    </td>
+                    <td>
+                      <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
+                    </td>
+                    <td>
+                      <InlineBooking value={lead.booking} leadId={lead._id} onSaved={handleInlineUpdate} />
+                    </td>
+                    <td className="min-w-[160px]">
+                      <p className="text-sm font-medium text-app">{lead.propertyType}{lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}</p>
+                      {(lead.budget?.min || lead.budget?.max) && (
+                        <p className="mt-0.5 text-xs text-orange-500">{fmtCurrency(lead.budget?.min)} – {fmtCurrency(lead.budget?.max)}</p>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "—"}</td>
+                    <td>
+                      <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
+                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-white/5 hover:text-app" onClick={() => setDetailLead(lead)} title="View">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button className="flex h-9 w-9 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
+                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        {user?.role !== "agent" && (
-                          <button className="flex h-9 w-9 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingId(lead._id)} title="Delete">
+                        {canDelete && (
+                          <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingId(lead._id)} title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -544,7 +731,7 @@ export default function Leads() {
 
         {pages > 1 && (
           <div className="flex items-center justify-between border-t px-5 py-4" style={{ borderColor: "var(--app-border)" }}>
-            <p className="text-xs text-app-soft">Showing {(page - 1) * LIMIT + 1} - {Math.min(page * LIMIT, total)} of {total}</p>
+            <p className="text-xs text-app-soft">Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}</p>
             <div className="flex gap-2">
               <button className="btn-secondary rounded-xl px-3 py-1.5 text-xs" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
               {Array.from({ length: Math.min(pages, 5) }, (_, i) => {
@@ -570,6 +757,14 @@ export default function Leads() {
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />
       <LeadDetail open={!!detailLead} onClose={() => setDetailLead(null)} lead={detailLead} onUpdated={handleDetailUpdated} />
       <ConfirmDialog open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} loading={deleteLoading} title="Delete Lead" message="Are you sure you want to permanently delete this lead? This cannot be undone." />
+      <ConfirmDialog
+        open={showBulkConfirm}
+        onClose={() => setShowBulkConfirm(false)}
+        onConfirm={handleBulkDelete}
+        loading={bulkDeleting}
+        title={`Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}`}
+        message={`Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+      />
     </div>
   );
 }

@@ -243,6 +243,12 @@ const leadService = {
     await lead.deleteOne();
   },
 
+  // ── Bulk Delete ────────────────────────────────────────────────────────────
+  async bulkDelete(ids) {
+    const result = await Lead.deleteMany({ _id: { $in: ids } });
+    return result.deletedCount;
+  },
+
   // ── Add Note ───────────────────────────────────────────────────────────────
   async addNote(id, text, user) {
     const lead = await Lead.findById(id);

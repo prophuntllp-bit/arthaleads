@@ -106,6 +106,17 @@ const leadSchema = new mongoose.Schema(
     siteVisitDate: { type: Date, default: null },
     siteVisitDone: { type: Boolean, default: false },
 
+    // ── Telecaller Remarks ────────────────────────────────────────────────────
+    remark1:   { type: String, trim: true, default: "" },
+    remark2:   { type: String, trim: true, default: "" },
+    remark:    { type: String, trim: true, default: "" },
+    followUp2: { type: Date, default: null },
+    booking: {
+      type: String,
+      enum: ["", "Interested", "Site Visit Booked", "Booked", "Not Interested", "Call Back"],
+      default: "",
+    },
+
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },

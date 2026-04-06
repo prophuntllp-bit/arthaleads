@@ -11,6 +11,7 @@ router.use(protect);
 
 router.get("/analytics", leadController.getAnalytics);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
+router.delete("/bulk", authorize("admin", "manager"), leadController.bulkDelete);
 
 router.route("/")
   .get(leadController.getAll)

@@ -133,8 +133,13 @@ const updateLeadSchema = Joi.object({
   assignedTo: Joi.string().hex().length(24).allow(null, ""),
   followUpDate: Joi.date().allow(null),
   followUpNote: Joi.string().allow(""),
+  followUp2: Joi.date().allow(null, ""),
   siteVisitDate: Joi.date().allow(null),
   siteVisitDone: Joi.boolean(),
+  remark1: Joi.string().allow("").max(500),
+  remark2: Joi.string().allow("").max(500),
+  remark: Joi.string().allow("").max(1000),
+  booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Booked", "Not Interested", "Call Back").allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
 }).min(1); // At least one field required for update
