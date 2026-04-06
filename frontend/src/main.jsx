@@ -1,5 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+
+// Register service worker for PWA install prompt
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";
