@@ -1,5 +1,6 @@
 // components/DateRangePicker.jsx
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 const PRESETS = [
@@ -243,7 +244,7 @@ export default function DateRangePicker({ value, onChange, label }) {
         )}
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
           className="fixed z-[9999] rounded-2xl shadow-2xl overflow-hidden"
           style={{
@@ -323,7 +324,8 @@ export default function DateRangePicker({ value, onChange, label }) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
