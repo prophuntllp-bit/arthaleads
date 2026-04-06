@@ -339,7 +339,11 @@ const leadService = {
       Lead.aggregate([
         { $match: { ...baseMatch, assignedTo: { $ne: null } } },
         { $group: { _id: "$assignedTo", name: { $first: "$assignedToName" }, count: { $sum: 1 } } },
+        // Only include agents whose User document still exists and is active
+        { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
+        { $match: { "user.0": { $exists: true }, "user.0.isActive": { $ne: false } } },
         { $sort: { count: -1 } }, { $limit: 10 },
+        { $project: { _id: 1, name: 1, count: 1 } },
       ]),
       Lead.find(baseMatch)
         .sort({ createdAt: -1 }).limit(5)
