@@ -163,6 +163,7 @@ export default function DateRangePicker({ value, onChange, label }) {
 
   const ref = useRef(null);
   const btnRef = useRef(null);
+  const popoverRef = useRef(null);
 
   const selectedLabel = PRESETS.find((p) => p.value === value)?.label || "Date Range";
 
@@ -177,7 +178,11 @@ export default function DateRangePicker({ value, onChange, label }) {
   }, [open, pending]);
 
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      const inBtn     = ref.current?.contains(e.target);
+      const inPopover = popoverRef.current?.contains(e.target);
+      if (!inBtn && !inPopover) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
@@ -246,6 +251,7 @@ export default function DateRangePicker({ value, onChange, label }) {
 
       {open && createPortal(
         <div
+          ref={popoverRef}
           className="fixed z-[9999] rounded-2xl shadow-2xl overflow-hidden"
           style={{
             top: popoverPos.top,
