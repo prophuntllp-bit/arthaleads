@@ -974,7 +974,11 @@ export default function Leads() {
                       <InlineBooking value={lead.booking} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} onSaved={handleInlineUpdate} />
                     </td>
                     <td className="min-w-[160px]">
-                      <p className="text-sm font-medium text-app">{lead.propertyType}{lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}</p>
+                      {(lead.propertyType || lead.bhk) ? (
+                        <p className="text-sm font-medium text-app">
+                          {lead.propertyType || ""}{lead.bhk && lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}
+                        </p>
+                      ) : <span className="text-xs text-app-soft">—</span>}
                       {(lead.budget?.min || lead.budget?.max) && (
                         <p className="mt-0.5 text-xs text-orange-500">{fmtCurrency(lead.budget?.min)} – {fmtCurrency(lead.budget?.max)}</p>
                       )}

@@ -63,8 +63,7 @@ const projectController = {
 
   async updateRemark(req, res, next) {
     try {
-      const { remark, remarkNote } = req.body;
-      if (!remark) return next(new AppError("remark is required", 400));
+      const { remark = "", remarkNote } = req.body;
       const lead = await projectService.updateRemark(
         req.params.leadId,
         { remark, remarkNote },
