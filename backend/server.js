@@ -36,7 +36,18 @@ app.set("trust proxy", 1);
 
 // ── Connect Database ──────────────────────────────────────────────────────────
 console.log("[BOOT] Connecting to DB...");
-connectDB().then(() => console.log("[BOOT] DB connected")).catch((e) => console.error("[BOOT] DB error:", e.message));
+connectDB().then(async () => {
+  console.log("[BOOT] DB connected");
+  // One-time migration: clear auto-defaulted "Not Contacted" remarks (never manually set)
+  try {
+    const mongoose = require("mongoose");
+    const r = await mongoose.connection.collection("projectleads").updateMany(
+      { remark: "Not Contacted", remarkUpdatedBy: null },
+      { $set: { remark: "" } }
+    );
+    if (r.modifiedCount > 0) console.log(`[MIGRATION] Cleared ${r.modifiedCount} default 'Not Contacted' remarks`);
+  } catch (e) { console.error("[MIGRATION] remark clear failed:", e.message); }
+}).catch((e) => console.error("[BOOT] DB error:", e.message));
 
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
