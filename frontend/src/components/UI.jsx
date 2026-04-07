@@ -1,6 +1,6 @@
 // components/UI.jsx — Shared reusable components
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle } from "lucide-react";
 
 export function StatusBadge({ status }) {
   return (
@@ -114,5 +114,40 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, loadin
         </button>
       </div>
     </Modal>
+  );
+}
+
+// ── Phone + WhatsApp action pair ──────────────────────────────────────────────
+// Normalises phone → international format for wa.me (defaults to +91 India)
+function toWaNumber(phone = "") {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `91${digits}`;           // bare 10-digit IN
+  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`; // 0XXXXXXXXXX
+  return digits;                                             // already has country code
+}
+
+export function PhoneActions({ phone, showNumber = true }) {
+  if (!phone) return <span className="text-xs text-app-soft">—</span>;
+  const waNumber = toWaNumber(phone);
+  return (
+    <div className="flex items-center gap-2 whitespace-nowrap">
+      <a
+        href={`tel:${phone}`}
+        className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition"
+        title={`Call ${phone}`}
+      >
+        <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+        {showNumber && phone}
+      </a>
+      <a
+        href={`https://wa.me/${waNumber}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500/10 hover:bg-green-500/20 transition"
+        title={`WhatsApp ${phone}`}
+      >
+        <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+      </a>
+    </div>
   );
 }

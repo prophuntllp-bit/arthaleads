@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Archive, ChevronDown, Download, Phone, RotateCcw, Trash2, Upload } from "lucide-react";
+import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { EmptyState, PageLoader, SourceBadge, StatusBadge } from "../components/UI";
+import { EmptyState, PageLoader, PhoneActions, SourceBadge, StatusBadge } from "../components/UI";
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -280,11 +280,7 @@ export default function DumpLeads() {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap">
-                        <Phone className="h-3 w-3" />{lead.phone}
-                      </a>
-                    </td>
+                    <td><PhoneActions phone={lead.phone} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName

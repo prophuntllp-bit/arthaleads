@@ -2,14 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import {
   ArrowLeft, Building2, Calendar, ChevronLeft, ChevronRight,
-  ImageOff, MapPin, Pencil, Phone, Search, Trash2, Upload, Users,
+  ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
 function fmtPrice(n) {
@@ -604,9 +604,7 @@ export default function ProjectDetail() {
                           <td className="text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="font-medium text-app whitespace-nowrap">{lead.name}</td>
                           <td>
-                            <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap">
-                              <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />{lead.phone}
-                            </a>
+                            <PhoneActions phone={lead.phone} />
                           </td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
