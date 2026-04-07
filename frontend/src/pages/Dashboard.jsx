@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
-  Bell,
   CheckCircle,
   Clock3,
   MessageCircle,
@@ -80,10 +79,6 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button className="stitch-pill">
-            <Bell className="h-4 w-4" />
-            Alerts
-          </button>
           <button className="stitch-pill" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             {theme === "dark" ? "Dark" : "Light"}

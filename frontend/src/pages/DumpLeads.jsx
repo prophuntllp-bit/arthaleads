@@ -19,6 +19,8 @@ export default function DumpLeads() {
   const [leads, setLeads]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch]   = useState("");
+  const [limit, setLimit]     = useState(10);
+  const [page, setPage]       = useState(1);
 
   const canDelete = ["admin", "manager"].includes(user?.role);
 
@@ -72,6 +74,10 @@ export default function DumpLeads() {
     l.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * limit, safePage * limit);
+
   return (
     <div className="stitch-page space-y-6">
       <header className="stitch-topbar">
@@ -82,13 +88,23 @@ export default function DumpLeads() {
         </div>
       </header>
 
-      <div className="card p-4 flex gap-3">
+      <div className="card p-4 flex flex-wrap gap-3 items-center">
         <input
-          className="input flex-1"
+          className="input flex-1 min-w-[180px]"
           placeholder="Search by name, phone, or email…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-app-soft whitespace-nowrap">Show rows</span>
+          <select
+            className="input w-20 py-2 text-sm"
+            value={limit}
+            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+          >
+            {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
       </div>
 
       <section className="card overflow-hidden">
@@ -107,7 +123,7 @@ export default function DumpLeads() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead, i) => (
+                {paginated.map((lead, i) => (
                   <tr key={lead._id + (lead._type || "")} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
                     <td>
                       <div className="flex items-center gap-2">
@@ -183,6 +199,47 @@ export default function DumpLeads() {
                 ))}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+                <p className="text-xs text-app-soft">
+                  {filtered.length} total · showing {(safePage - 1) * limit + 1}–{Math.min(safePage * limit, filtered.length)}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30 transition"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                  >← Prev</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, idx) =>
+                      p === "…" ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-xs text-app-soft">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            p === safePage
+                              ? "bg-orange-500 text-white"
+                              : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                          }`}
+                        >{p}</button>
+                      )
+                    )}
+                  <button
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30 transition"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                  >Next →</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
