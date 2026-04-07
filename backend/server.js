@@ -25,6 +25,7 @@ const leadRoutes = require("./routes/leadRoutes");
 const automationRoutes = require("./routes/automationRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 const projectRoutes = require("./routes/projectRoutes");
+const pushRoutes = require("./routes/pushRoutes");
 require("./utils/scheduler");
 
 console.log("[BOOT] Modules loaded, creating app...");
@@ -88,6 +89,7 @@ app.use("/api/auth",  authLimiter, authRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/push", pushRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

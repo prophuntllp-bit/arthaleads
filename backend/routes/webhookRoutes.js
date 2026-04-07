@@ -3,6 +3,7 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const Automation = require("../models/Automation");
 const logger = require("../config/logger");
+const { sendPushToAll } = require("../utils/push");
 
 const router = express.Router();
 
@@ -113,6 +114,14 @@ router.post("/", express.json(), async (req, res) => {
           automation.lastSyncAt = new Date();
           await automation.save();
         }
+
+        // Send push notification to all subscribed users
+        sendPushToAll({
+          type: "new_lead",
+          title: "New Facebook Lead 🏠",
+          body: `${name} just submitted a lead from Facebook`,
+          data: { leadName: name, source: "Facebook" },
+        }).catch((e) => logger.warn("Push notification failed:", e.message));
       }
     }
 

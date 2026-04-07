@@ -5,9 +5,11 @@ import {
   LayoutDashboard, Users, UserCheck, Settings,
   LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
+import { fmtDate } from "../utils/constants";
+import { subscribeToPush } from "../utils/pushNotifications";
 
 const navItems = [
   { to: "/",           label: "Dashboard",    icon: LayoutDashboard },
@@ -27,14 +29,55 @@ export default function Sidebar() {
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [followUpCount, setFollowUpCount] = useState(0);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alerts, setAlerts] = useState([]);
+  const [alertCount, setAlertCount] = useState(0);
+  const alertRef = useRef(null);
+  const lastSeenRef = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
 
   useEffect(() => {
     if (!user) return;
-    api.get("/leads/analytics", { params: { dateRange: "today" } })
-      .then((r) => setFollowUpCount(r.data.data?.todayFollowUps || 0))
-      .catch(() => {});
+    const fetchAlerts = () => {
+      api.get("/leads/alerts")
+        .then((r) => {
+          const data = r.data.data || [];
+          setAlerts(data);
+          const newCount = data.filter(
+            (l) => new Date(l.createdAt).getTime() > lastSeenRef.current
+          ).length;
+          setAlertCount(newCount);
+        })
+        .catch(() => {});
+    };
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 30000); // poll every 30s
+    return () => clearInterval(interval);
   }, [user]);
+
+  // Register push subscription once logged in
+  useEffect(() => {
+    if (!user) return;
+    subscribeToPush();
+  }, [user]);
+
+  // Close alerts panel on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (alertRef.current && !alertRef.current.contains(e.target)) setAlertOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const openAlerts = () => {
+    setAlertOpen((v) => !v);
+    if (!alertOpen) {
+      const now = Date.now();
+      localStorage.setItem("crm_alerts_seen", String(now));
+      lastSeenRef.current = now;
+      setAlertCount(0);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -129,18 +172,51 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/leads")}
-            className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5"
-            title="Today's follow-ups"
-          >
-            <Bell className="w-5 h-5" />
-            {followUpCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
-                {followUpCount > 9 ? "9+" : followUpCount}
-              </span>
+          <div ref={alertRef} className="relative">
+            <button
+              onClick={openAlerts}
+              className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5"
+              title="New lead alerts"
+            >
+              <Bell className="w-5 h-5" />
+              {alertCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white animate-pulse">
+                  {alertCount > 9 ? "9+" : alertCount}
+                </span>
+              )}
+            </button>
+            {alertOpen && (
+              <div className="fixed top-14 right-3 z-[200] w-80 max-h-[70vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+                style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
+                  <p className="text-sm font-bold text-app">New Lead Alerts</p>
+                  <span className="stitch-kicker">{alerts.length} in last 7 days</span>
+                </div>
+                <div className="overflow-y-auto flex-1">
+                  {alerts.length === 0 ? (
+                    <p className="p-4 text-xs text-app-soft text-center">No automation leads yet</p>
+                  ) : alerts.map((lead) => (
+                    <div key={lead._id} className="flex items-start gap-3 px-4 py-3 border-b hover:bg-black/5 dark:hover:bg-white/5 transition"
+                      style={{ borderColor: "var(--app-border)" }}>
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
+                        {lead.name?.[0]?.toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
+                        <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
+                        <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="px-4 py-2.5 text-xs font-semibold text-orange-500 border-t hover:bg-orange-500/5 transition text-center"
+                  style={{ borderColor: "var(--app-border)" }}
+                  onClick={() => { setAlertOpen(false); navigate("/leads"); }}
+                >View All Leads →</button>
+              </div>
             )}
-          </button>
+          </div>
           <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>

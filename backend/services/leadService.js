@@ -125,7 +125,7 @@ const leadService = {
       dateRange, from, to,
     } = query;
 
-    const filter = { isArchived: false };
+    const filter = { isArchived: false, isDeleted: { $ne: true } };
     const andConditions = [];
 
     // Agents can only see their own leads
@@ -235,18 +235,23 @@ const leadService = {
     return lead;
   },
 
-  // ── Delete ─────────────────────────────────────────────────────────────────
+  // ── Delete (soft) ─────────────────────────────────────────────────────────
   async delete(id, user) {
     const lead = await Lead.findById(id);
     if (!lead) throw new AppError("Lead not found", 404);
     if (user.role === "agent") throw new AppError("Agents cannot delete leads", 403);
-    await lead.deleteOne();
+    lead.isDeleted = true;
+    lead.deletedAt = new Date();
+    await lead.save({ validateBeforeSave: false });
   },
 
-  // ── Bulk Delete ────────────────────────────────────────────────────────────
+  // ── Bulk Delete (soft) ────────────────────────────────────────────────────
   async bulkDelete(ids) {
-    const result = await Lead.deleteMany({ _id: { $in: ids } });
-    return result.deletedCount;
+    const result = await Lead.updateMany(
+      { _id: { $in: ids } },
+      { $set: { isDeleted: true, deletedAt: new Date() } }
+    );
+    return result.modifiedCount;
   },
 
   // ── Add Note ───────────────────────────────────────────────────────────────
@@ -322,7 +327,7 @@ const leadService = {
   },
 
   async getAnalytics(user, query = {}) {
-    const baseMatch = { isArchived: false };
+    const baseMatch = { isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") {
       baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
@@ -377,19 +382,56 @@ const leadService = {
     };
   },
 
+  // ── Restore (undo soft delete) ────────────────────────────────────────────
+  async restore(id) {
+    const lead = await Lead.findById(id);
+    if (!lead) throw new AppError("Lead not found", 404);
+    lead.isDeleted = false;
+    lead.deletedAt = null;
+    await lead.save({ validateBeforeSave: false });
+    return lead;
+  },
+
+  // ── Permanent delete ──────────────────────────────────────────────────────
+  async permanentDelete(id) {
+    const lead = await Lead.findByIdAndDelete(id);
+    if (!lead) throw new AppError("Lead not found", 404);
+  },
+
+  // ── Automation Alerts — recent leads from automated sources ───────────────
+  async getAlerts(user) {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days
+    const filter = {
+      isDeleted: { $ne: true },
+      isArchived: false,
+      source: { $in: ["Facebook", "Google", "WhatsApp"] },
+      createdAt: { $gte: since },
+    };
+    if (user.role === "agent") {
+      filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+    }
+    return Lead.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select("name phone source status createdAt assignedToName");
+  },
+
   async getDump(user) {
     const filter = {
-      isArchived: false,
-      $or: [{ booking: "Not Interested" }, { status: "Closed Lost" }],
+      $or: [
+        { isDeleted: true },
+        { booking: "Not Interested" },
+        { status: "Closed Lost" },
+      ],
     };
     if (user.role === "agent") {
       filter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
     }
     return Lead.find(filter)
       .sort({ updatedAt: -1 })
-      .limit(500)
+      .limit(1000)
       .populate("assignedTo", "name email")
-      .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt");
+      .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt");
   },
 };
 

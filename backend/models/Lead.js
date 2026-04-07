@@ -120,6 +120,8 @@ const leadSchema = new mongoose.Schema(
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt:  { type: Date, default: null },
   },
   { timestamps: true }
 );

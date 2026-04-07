@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 
 export function useLeads() {
-  const LIMIT = 10;
+  const [limit, setLimit] = useState(50);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
@@ -22,7 +22,7 @@ export function useLeads() {
       setLoading(true);
       try {
         const { data } = await api.get("/leads", {
-          params: { ...filters, page, limit: LIMIT },
+          params: { ...filters, page, limit },
           signal: controller.signal
         });
         setLeads(data.leads || []);
@@ -43,11 +43,16 @@ export function useLeads() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, page]);
+  }, [filters, page, limit]);
 
   const setFilter = (key, value) => {
     setPage(1);
     setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  const changeLimit = (newLimit) => {
+    setPage(1);
+    setLimit(newLimit);
   };
 
   const upsertLead = (lead, prepend = false) => {
@@ -56,7 +61,7 @@ export function useLeads() {
       if (exists) {
         return current.map((item) => (item._id === lead._id ? lead : item));
       }
-      return prepend ? [lead, ...current].slice(0, LIMIT) : current;
+      return prepend ? [lead, ...current].slice(0, limit) : current;
     });
 
     if (prepend) {
@@ -80,6 +85,8 @@ export function useLeads() {
     loading,
     upsertLead,
     removeLead,
-    LIMIT
+    limit,
+    changeLimit,
+    LIMIT: limit,
   };
 }

@@ -91,6 +91,20 @@ const leadController = {
     }
   },
 
+  async restore(req, res, next) {
+    try {
+      const lead = await leadService.restore(req.params.id);
+      res.json({ success: true, data: lead });
+    } catch (err) { next(err); }
+  },
+
+  async permanentDelete(req, res, next) {
+    try {
+      await leadService.permanentDelete(req.params.id);
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  },
+
   async getAnalytics(req, res, next) {
     try {
       const data = await leadService.getAnalytics(req.user, req.query);
@@ -103,6 +117,15 @@ const leadController = {
   async getDump(req, res, next) {
     try {
       const leads = await leadService.getDump(req.user);
+      res.json({ success: true, data: leads });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getAlerts(req, res, next) {
+    try {
+      const leads = await leadService.getAlerts(req.user);
       res.json({ success: true, data: leads });
     } catch (err) {
       next(err);

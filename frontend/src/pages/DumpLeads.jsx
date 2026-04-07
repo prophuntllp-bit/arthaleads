@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Archive, Phone, Trash2 } from "lucide-react";
+import { Archive, Phone, RotateCcw, Trash2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { EmptyState, PageLoader, SourceBadge, StatusBadge } from "../components/UI";
 import { fmtDate } from "../utils/constants";
@@ -29,13 +29,21 @@ export default function DumpLeads() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Permanently delete this lead?")) return;
+  const handleHardDelete = async (id) => {
+    if (!window.confirm("Permanently delete this lead? This cannot be undone.")) return;
     try {
-      await api.delete(`/leads/${id}`);
+      await api.delete(`/leads/${id}/permanent`);
       setLeads((prev) => prev.filter((l) => l._id !== id));
-      toast.success("Lead deleted");
+      toast.success("Lead permanently deleted");
     } catch { toast.error("Delete failed"); }
+  };
+
+  const handleRestore = async (id) => {
+    try {
+      await api.patch(`/leads/${id}/restore`);
+      setLeads((prev) => prev.filter((l) => l._id !== id));
+      toast.success("Lead restored to main leads");
+    } catch { toast.error("Restore failed"); }
   };
 
   const filtered = leads.filter((l) =>
@@ -74,14 +82,14 @@ export default function DumpLeads() {
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
-                  {["Lead", "Phone", "Source", "Pipeline Status", "Booking Status", "Assigned To", "Remark", "Added", canDelete && "Del"].filter(Boolean).map((h) => (
+                  {["Lead", "Phone", "Source", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((lead, i) => (
-                  <tr key={lead._id} className={i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""}>
+                  <tr key={lead._id} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="stitch-surface-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-orange-500">
@@ -107,6 +115,11 @@ export default function DumpLeads() {
                         </span>
                       ) : <span className="text-xs text-app-soft">—</span>}
                     </td>
+                    <td>
+                      {lead.isDeleted
+                        ? <span className="badge bg-red-500/10 text-red-500 border border-red-500/20">Deleted</span>
+                        : <span className="badge bg-gray-100/50 text-gray-500">Not Interested</span>}
+                    </td>
                     <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "—"}</td>
                     <td className="text-xs text-app-soft max-w-[180px]">
                       <p className="truncate">{lead.remark || lead.remark1 || "—"}</p>
@@ -114,13 +127,18 @@ export default function DumpLeads() {
                     <td className="text-xs text-app-soft whitespace-nowrap">{fmtDate(lead.createdAt)}</td>
                     {canDelete && (
                       <td>
-                        <button
-                          onClick={() => handleDelete(lead._id)}
-                          className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition"
-                          title="Delete permanently"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {lead.isDeleted && (
+                            <button onClick={() => handleRestore(lead._id)}
+                              className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => handleHardDelete(lead._id)}
+                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

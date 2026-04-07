@@ -317,7 +317,7 @@ export default function Leads() {
   const {
     leads, total, loading, page, setPage,
     filters, setFilter,
-    upsertLead, removeLead, pages, LIMIT,
+    upsertLead, removeLead, pages, limit, changeLimit,
   } = useLeads();
 
   const [agents, setAgents] = useState([]);
@@ -963,29 +963,40 @@ export default function Leads() {
           </div>
         )}
 
-        {pages > 1 && (
-          <div className="flex items-center justify-between border-t px-5 py-4" style={{ borderColor: "var(--app-border)" }}>
-            <p className="text-xs text-app-soft">Showing {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}</p>
-            <div className="flex gap-2">
-              <button className="btn-secondary rounded-xl px-3 py-1.5 text-xs" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
-              {Array.from({ length: Math.min(pages, 5) }, (_, i) => {
-                const p = page <= 3 ? i + 1 : page - 2 + i;
-                if (p > pages) return null;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`h-9 w-9 rounded-xl text-xs font-semibold transition ${p === page ? "text-white" : "text-app-soft"}`}
-                    style={p === page ? { background: "linear-gradient(135deg, var(--app-primary-deep), var(--app-primary))" } : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <button className="btn-secondary rounded-xl px-3 py-1.5 text-xs" disabled={page === pages} onClick={() => setPage((p) => p + 1)}>Next</button>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+          {/* Show rows selector */}
+          <div className="flex items-center gap-2 text-xs text-app-soft">
+            <span>Show rows:</span>
+            {[10, 30, 50, 100, 200, 500].map((n) => (
+              <button
+                key={n}
+                onClick={() => changeLimit(n)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${limit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+              >{n}</button>
+            ))}
           </div>
-        )}
+          {/* Page info + navigation */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-app-soft">
+              {total === 0 ? "0 results" : `${(page - 1) * limit + 1} – ${Math.min(page * limit, total)} of ${total}`}
+            </span>
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+              disabled={page === 1} onClick={() => setPage(1)} title="First page"
+            ><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+              disabled={page === 1} onClick={() => setPage((p) => p - 1)} title="Previous page"
+            ><ChevronLeft className="h-4 w-4" /></button>
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+              disabled={page === pages || pages === 0} onClick={() => setPage((p) => p + 1)} title="Next page"
+            ><ChevronRight className="h-4 w-4" /></button>
+          </div>
+        </div>
       </section>
 
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />

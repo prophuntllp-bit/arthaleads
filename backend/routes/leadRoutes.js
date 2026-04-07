@@ -11,6 +11,7 @@ router.use(protect);
 
 router.get("/analytics", leadController.getAnalytics);
 router.get("/dump", authorize("admin", "manager"), leadController.getDump);
+router.get("/alerts", leadController.getAlerts);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.delete("/bulk", authorize("admin", "manager"), leadController.bulkDelete);
 
@@ -23,6 +24,8 @@ router.route("/:id")
   .put(validate(updateLeadSchema), leadController.update)
   .delete(authorize("admin", "manager"), leadController.delete);
 
+router.patch("/:id/restore", authorize("admin", "manager"), leadController.restore);
+router.delete("/:id/permanent", authorize("admin", "manager"), leadController.permanentDelete);
 router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
 router.post("/:id/assign", authorize("admin", "manager"), validate(assignLeadSchema), leadController.assign);
 
