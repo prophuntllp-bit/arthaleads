@@ -1,5 +1,6 @@
 // services/leadService.js
 const Lead = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -469,7 +470,7 @@ const leadService = {
   },
 
   async getDump(user) {
-    const filter = {
+    const leadFilter = {
       $or: [
         { isDeleted: true },
         { booking: "Not Interested" },
@@ -477,13 +478,41 @@ const leadService = {
       ],
     };
     if (user.role === "agent") {
-      filter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
+      leadFilter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
     }
-    return Lead.find(filter)
-      .sort({ updatedAt: -1 })
-      .limit(1000)
-      .populate("assignedTo", "name email")
-      .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt");
+
+    const projFilter = { booking: "Not Interested" };
+    if (user.role === "agent") projFilter.importedBy = user._id;
+
+    const [regularLeads, projectLeads] = await Promise.all([
+      Lead.find(leadFilter)
+        .sort({ updatedAt: -1 })
+        .limit(1000)
+        .populate("assignedTo", "name email")
+        .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt"),
+      ProjectLead.find(projFilter)
+        .sort({ updatedAt: -1 })
+        .limit(500)
+        .populate("project", "name _id")
+        .select("name phone email source booking remark remark1 remark2 createdAt updatedAt project importedBy"),
+    ]);
+
+    const projFormatted = projectLeads.map((l) => {
+      const obj = l.toObject();
+      return {
+        ...obj,
+        _type: "project",
+        projectName: obj.project?.name,
+        projectId: obj.project?._id,
+        isDeleted: false,
+      };
+    });
+
+    const regularFormatted = regularLeads.map((l) => ({ ...l.toObject(), _type: "lead" }));
+
+    return [...regularFormatted, ...projFormatted].sort(
+      (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+    );
   },
 };
 

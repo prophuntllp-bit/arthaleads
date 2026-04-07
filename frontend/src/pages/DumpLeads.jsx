@@ -7,10 +7,10 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 
 const BOOKING_COLOR = {
-  "Not Interested": "bg-red-500/10 text-red-500 border-red-500/20",
-  "Interested":     "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  "Booked":         "bg-green-500/10 text-green-600 border-green-500/20",
-  "Call Back":      "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
+  "Interested":        "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  "Booked":            "bg-green-500/10 text-green-600 border-green-500/20",
+  "Call Back":         "bg-amber-500/10 text-amber-600 border-amber-500/20",
   "Site Visit Booked": "bg-violet-500/10 text-violet-600 border-violet-500/20",
 };
 
@@ -29,6 +29,7 @@ export default function DumpLeads() {
       .finally(() => setLoading(false));
   }, []);
 
+  // ── Regular lead actions ────────────────────────────────────────────────────
   const handleHardDelete = async (id) => {
     if (!window.confirm("Permanently delete this lead? This cannot be undone.")) return;
     try {
@@ -46,6 +47,24 @@ export default function DumpLeads() {
     } catch { toast.error("Restore failed"); }
   };
 
+  // ── Project lead actions ────────────────────────────────────────────────────
+  const handleProjRestore = async (lead) => {
+    try {
+      await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, { booking: "" });
+      setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+      toast.success("Lead restored to project leads");
+    } catch { toast.error("Restore failed"); }
+  };
+
+  const handleProjHardDelete = async (lead) => {
+    if (!window.confirm("Permanently delete this project lead? This cannot be undone.")) return;
+    try {
+      await api.delete(`/projects/${lead.projectId}/leads/${lead._id}`);
+      setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+      toast.success("Lead permanently deleted");
+    } catch { toast.error("Delete failed"); }
+  };
+
   const filtered = leads.filter((l) =>
     !search ||
     l.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -59,7 +78,7 @@ export default function DumpLeads() {
         <div className="flex flex-1 flex-col gap-2">
           <p className="stitch-kicker mb-1">Archive</p>
           <h1 className="text-3xl font-black tracking-tight text-app">Dump Leads</h1>
-          <p className="text-sm text-app-soft">Leads marked as Not Interested or Closed Lost — {leads.length} total</p>
+          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted — {leads.length} total</p>
         </div>
       </header>
 
@@ -76,20 +95,20 @@ export default function DumpLeads() {
         {loading ? (
           <PageLoader />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or Closed Lost will appear here." />
+          <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
         ) : (
           <div className="overflow-x-auto">
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
-                  {["Lead", "Phone", "Source", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
+                  {["Lead", "Phone", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((lead, i) => (
-                  <tr key={lead._id} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
+                  <tr key={lead._id + (lead._type || "")} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="stitch-surface-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-orange-500">
@@ -107,6 +126,11 @@ export default function DumpLeads() {
                       </a>
                     </td>
                     <td><SourceBadge source={lead.source} /></td>
+                    <td>
+                      {lead.projectName
+                        ? <span className="text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
+                        : <span className="text-xs text-app-soft">—</span>}
+                    </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td>
                       {lead.booking ? (
@@ -128,16 +152,30 @@ export default function DumpLeads() {
                     {canDelete && (
                       <td>
                         <div className="flex items-center gap-1">
-                          {lead.isDeleted && (
+                          {/* Restore button */}
+                          {lead._type === "project" ? (
+                            <button onClick={() => handleProjRestore(lead)}
+                              className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          ) : lead.isDeleted ? (
                             <button onClick={() => handleRestore(lead._id)}
                               className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
+                          ) : null}
+                          {/* Permanent delete button */}
+                          {lead._type === "project" ? (
+                            <button onClick={() => handleProjHardDelete(lead)}
+                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          ) : (
+                            <button onClick={() => handleHardDelete(lead._id)}
+                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           )}
-                          <button onClick={() => handleHardDelete(lead._id)}
-                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
                         </div>
                       </td>
                     )}
