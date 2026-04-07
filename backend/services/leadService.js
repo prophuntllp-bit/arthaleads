@@ -326,6 +326,63 @@ const leadService = {
     return imported;
   },
 
+  async getAllUnified(query, user) {
+    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to } = query;
+
+    const leadFilter = { isArchived: false, isDeleted: { $ne: true } };
+    if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+    if (status) leadFilter.status = status;
+    if (source) leadFilter.source = source;
+    if (priority) leadFilter.priority = priority;
+    const createdAtFilter = getDateRangeFilter(dateRange, from, to);
+    if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
+    if (search) {
+      const rx = { $regex: search, $options: "i" };
+      leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
+    }
+
+    const projFilter = {};
+    if (source) projFilter.source = source;
+    if (search) {
+      const rx = { $regex: search, $options: "i" };
+      projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
+    }
+    if (user.role === "agent") projFilter.importedBy = user._id;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [result] = await Lead.aggregate([
+      { $match: leadFilter },
+      { $addFields: { _type: "lead" } },
+      { $unionWith: {
+        coll: "projectleads",
+        pipeline: [
+          { $match: projFilter },
+          { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "_proj" } },
+          { $addFields: {
+            _type: "project",
+            projectName: { $arrayElemAt: ["$_proj.name", 0] },
+            projectId: { $arrayElemAt: ["$_proj._id", 0] },
+            status: { $ifNull: ["$status", "New"] },
+            priority: { $ifNull: ["$priority", "Medium"] },
+            assignedToName: { $ifNull: ["$assignedToName", ""] },
+            followUpDate: { $ifNull: ["$followUp", null] },
+          }},
+          { $project: { _proj: 0 } },
+        ],
+      }},
+      { $sort: { createdAt: -1 } },
+      { $facet: {
+        data: [{ $skip: skip }, { $limit: parseInt(limit) }],
+        count: [{ $count: "total" }],
+      }},
+    ]);
+
+    const leads = result?.data || [];
+    const total = result?.count?.[0]?.total || 0;
+    return { leads, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) };
+  },
+
   async getAnalytics(user, query = {}) {
     const baseMatch = { isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") {
@@ -398,15 +455,10 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
   },
 
-  // ── Automation Alerts — recent leads from automated sources ───────────────
+  // ── Automation Alerts — recent leads from all sources ────────────────────
   async getAlerts(user) {
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days
-    const filter = {
-      isDeleted: { $ne: true },
-      isArchived: false,
-      source: { $in: ["Facebook", "Google", "WhatsApp"] },
-      createdAt: { $gte: since },
-    };
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const filter = { isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };
     if (user.role === "agent") {
       filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }

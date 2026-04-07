@@ -318,7 +318,7 @@ export default function Leads() {
     leads, total, loading, page, setPage,
     filters, setFilter,
     upsertLead, removeLead, pages, limit, changeLimit,
-  } = useLeads();
+  } = useLeads("unified");
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -349,7 +349,7 @@ export default function Leads() {
   const [projSelectedIds, setProjSelectedIds]       = useState(new Set());
   const [showProjBulkConfirm, setShowProjBulkConfirm] = useState(false);
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
-  const PROJ_LIMIT = 50;
+  const [projLimit, setProjLimit] = useState(50);
 
   useEffect(() => {
     api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});
@@ -358,11 +358,11 @@ export default function Leads() {
   useEffect(() => {
     if (!selectedProject) return;
     setProjLoading(true);
-    api.get(`/projects/${selectedProject._id}/leads`, { params: { page: projPage, limit: PROJ_LIMIT, search: projSearch } })
+    api.get(`/projects/${selectedProject._id}/leads`, { params: { page: projPage, limit: projLimit, search: projSearch } })
       .then((r) => { setProjLeads(r.data.leads); setProjTotal(r.data.total); setProjPages(r.data.pages); })
       .catch(() => toast.error("Failed to load project leads"))
       .finally(() => setProjLoading(false));
-  }, [selectedProject, projPage, projSearch]);
+  }, [selectedProject, projPage, projSearch, projLimit]);
 
   useEffect(() => {
     if (user?.role !== "agent") {
@@ -770,7 +770,7 @@ export default function Leads() {
                               />
                             </td>
                           )}
-                          <td className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + i + 1}</td>
+                          <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
                           <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
@@ -797,15 +797,28 @@ export default function Leads() {
                       ))}
                     </tbody>
                   </table>
-                  {projPages > 1 && (
-                    <div className="flex items-center justify-between border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
-                      <span className="text-xs text-app-soft">{(projPage - 1) * PROJ_LIMIT + 1}–{Math.min(projPage * PROJ_LIMIT, projTotal)} of {projTotal}</span>
-                      <div className="flex gap-2">
-                        <button className="btn-secondary px-2 py-1" disabled={projPage === 1} onClick={() => setProjPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
-                        <button className="btn-secondary px-2 py-1" disabled={projPage === projPages} onClick={() => setProjPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
-                      </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+                    <div className="flex items-center gap-2 text-xs text-app-soft">
+                      <span>Show rows:</span>
+                      {[10, 30, 50, 100, 200, 500].map((n) => (
+                        <button key={n} onClick={() => { setProjLimit(n); setProjPage(1); }}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${projLimit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                        >{n}</button>
+                      ))}
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-app-soft">{projTotal === 0 ? "0 results" : `${(projPage - 1) * projLimit + 1} – ${Math.min(projPage * projLimit, projTotal)} of ${projTotal}`}</span>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={projPage === 1} onClick={() => setProjPage(1)}><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={projPage === 1} onClick={() => setProjPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={projPage === projPages || projPages === 0} onClick={() => setProjPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -883,7 +896,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "Source", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Status", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "Source", "Project", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Status", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -914,6 +927,11 @@ export default function Leads() {
                     </td>
                     <td className="whitespace-nowrap text-sm text-app-soft">{lead.phone}</td>
                     <td><SourceBadge source={lead.source} /></td>
+                    <td>
+                      {lead.projectName
+                        ? <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
+                        : <span className="text-xs text-app-soft">—</span>}
+                    </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
                     <td>

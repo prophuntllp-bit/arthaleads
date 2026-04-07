@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
-export function useLeads() {
+export function useLeads(mode = "normal") {
   const [limit, setLimit] = useState(50);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
@@ -16,12 +16,14 @@ export function useLeads() {
     dateRange: ""
   });
 
+  const endpoint = mode === "unified" ? "/leads/unified" : "/leads";
+
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const { data } = await api.get("/leads", {
+        const { data } = await api.get(endpoint, {
           params: { ...filters, page, limit },
           signal: controller.signal
         });
@@ -43,7 +45,7 @@ export function useLeads() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, page, limit]);
+  }, [filters, page, limit, endpoint]);
 
   const setFilter = (key, value) => {
     setPage(1);

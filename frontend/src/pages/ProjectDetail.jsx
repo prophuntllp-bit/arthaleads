@@ -273,7 +273,7 @@ export default function ProjectDetail() {
 
   const fileRef = useRef(null);
 
-  const LIMIT = 50;
+  const [leadsLimit, setLeadsLimit] = useState(50);
 
   useEffect(() => {
     api.get(`/projects/${id}`)
@@ -285,11 +285,11 @@ export default function ProjectDetail() {
   useEffect(() => {
     if (tab !== "leads") return;
     setLeadsLoading(true);
-    api.get(`/projects/${id}/leads`, { params: { page: leadsPage, limit: LIMIT, search } })
+    api.get(`/projects/${id}/leads`, { params: { page: leadsPage, limit: leadsLimit, search } })
       .then((r) => { setLeads(r.data.leads); setLeadsTotal(r.data.total); setLeadsPages(r.data.pages); })
       .catch(() => toast.error("Failed to load leads"))
       .finally(() => setLeadsLoading(false));
-  }, [id, tab, leadsPage, search]);
+  }, [id, tab, leadsPage, search, leadsLimit]);
 
   const handleSearch = (e) => { setSearch(e.target.value); setLeadsPage(1); };
 
@@ -308,7 +308,7 @@ export default function ProjectDetail() {
       const res = await api.post(`/projects/${id}/leads/import`, { rows });
       toast.success(`Imported ${res.data.inserted} leads${res.data.skipped ? `, skipped ${res.data.skipped}` : ""}`);
       setLeadsPage(1); setSearch("");
-      const fresh = await api.get(`/projects/${id}/leads`, { params: { page: 1, limit: LIMIT } });
+      const fresh = await api.get(`/projects/${id}/leads`, { params: { page: 1, limit: leadsLimit } });
       setLeads(fresh.data.leads); setLeadsTotal(fresh.data.total); setLeadsPages(fresh.data.pages);
     } catch (err) {
       toast.error(err.response?.data?.message || "Import failed");
@@ -601,7 +601,7 @@ export default function ProjectDetail() {
                               />
                             </td>
                           )}
-                          <td className="text-app-soft text-xs">{(leadsPage - 1) * LIMIT + i + 1}</td>
+                          <td className="text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="font-medium text-app whitespace-nowrap">{lead.name}</td>
                           <td>
                             <a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a>
@@ -652,21 +652,28 @@ export default function ProjectDetail() {
                   </table>
                 </div>
 
-                {leadsPages > 1 && (
-                  <div className="flex items-center justify-between border-t px-5 py-4" style={{ borderColor: "var(--app-border)" }}>
-                    <p className="text-xs text-app-soft">
-                      {(leadsPage - 1) * LIMIT + 1}–{Math.min(leadsPage * LIMIT, leadsTotal)} of {leadsTotal}
-                    </p>
-                    <div className="flex gap-2">
-                      <button className="btn-secondary px-3 py-2" disabled={leadsPage === 1} onClick={() => setLeadsPage((p) => p - 1)}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <button className="btn-secondary px-3 py-2" disabled={leadsPage === leadsPages} onClick={() => setLeadsPage((p) => p + 1)}>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+                  <div className="flex items-center gap-2 text-xs text-app-soft">
+                    <span>Show rows:</span>
+                    {[10, 30, 50, 100, 200, 500].map((n) => (
+                      <button key={n} onClick={() => { setLeadsLimit(n); setLeadsPage(1); }}
+                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${leadsLimit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                      >{n}</button>
+                    ))}
                   </div>
-                )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-app-soft">{leadsTotal === 0 ? "0" : `${(leadsPage - 1) * leadsLimit + 1} – ${Math.min(leadsPage * leadsLimit, leadsTotal)} of ${leadsTotal}`}</span>
+                    <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                      disabled={leadsPage === 1} onClick={() => setLeadsPage(1)}><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
+                    <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                      disabled={leadsPage === 1} onClick={() => setLeadsPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
+                    <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                      disabled={leadsPage === leadsPages || leadsPages === 0} onClick={() => setLeadsPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
+                  </div>
+                </div>
               </>
             )}
           </div>
