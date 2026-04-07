@@ -197,18 +197,25 @@ export default function Sidebar() {
 
   // Single portal-rendered alerts dropdown — escapes backdrop-filter stacking context
   const AlertsPortal = alertOpen ? createPortal(
-    <div
-      id="alerts-portal-dropdown"
-      className="w-80 max-h-[70vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
-      style={{
-        position: "fixed",
-        top: dropdownPos.top,
-        left: dropdownPos.left,
-        zIndex: 9999,
-        background: "var(--app-surface)",
-        border: "1px solid var(--app-border)",
-      }}
-    >
+    <>
+      {/* Scrim — closes on outside click, keeps popup visually separated */}
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.18)" }}
+        onClick={() => setAlertOpen(false)}
+      />
+      <div
+        id="alerts-portal-dropdown"
+        className="w-80 max-h-[70vh] flex flex-col rounded-2xl overflow-hidden"
+        style={{
+          position: "fixed",
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          zIndex: 9999,
+          background: isDark ? "rgb(18, 18, 28)" : "rgb(255, 255, 255)",
+          border: "1px solid var(--app-border)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.15)",
+        }}
+      >
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
         <p className="text-sm font-bold text-app">New Lead Alerts</p>
         <span className="stitch-kicker">{alerts.length} in last 7 days</span>
@@ -235,7 +242,8 @@ export default function Sidebar() {
         style={{ borderColor: "var(--app-border)" }}
         onClick={() => { setAlertOpen(false); navigate("/leads"); }}
       >View All Leads →</button>
-    </div>,
+    </div>
+    </>,
     document.body
   ) : null;
 
