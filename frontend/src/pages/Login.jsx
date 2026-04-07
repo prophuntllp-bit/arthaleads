@@ -35,37 +35,38 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     setLoading(true);
-    try {
-      await login(form.email, form.password);
-      toast.success("Welcome back!");
-      navigate("/");
-    } catch (firstErr) {
-      // If network/connection error, auto-retry once — handles Railway cold-start
-      const isNetworkErr = !firstErr.response && firstErr.request;
-      if (isNetworkErr) {
-        setErr("Server is warming up… retrying in 3 seconds");
-        await new Promise((r) => setTimeout(r, 3000));
-        try {
-          await login(form.email, form.password);
-          toast.success("Welcome back!");
-          navigate("/");
-          return;
-        } catch (retryErr) {
-          setErr(
-            retryErr.response?.data?.message ||
-            "Connection failed. The server may be starting up — please try again in a moment."
-          );
+
+    // Retry up to 3 times on network errors (Railway cold-start takes ~20-30s)
+    const RETRY_DELAYS = [6000, 10000, 15000];
+    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+      try {
+        await login(form.email, form.password);
+        toast.success("Welcome back!");
+        navigate("/");
+        return;
+      } catch (e) {
+        const isNetworkErr = !e.response && e.request;
+        if (isNetworkErr && attempt < RETRY_DELAYS.length) {
+          const secs = RETRY_DELAYS[attempt] / 1000;
+          setErr(`Server is warming up… retrying in ${secs}s`);
+          await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+          setErr("");
+          continue;
         }
-      } else {
-        setErr(firstErr.response?.data?.message || "Login failed. Please check your credentials.");
+        setErr(
+          e.response?.data?.message ||
+          (isNetworkErr
+            ? "Could not reach the server. Check your internet connection and tap Sign In again."
+            : "Login failed. Please check your credentials.")
+        );
+        break;
       }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (
-    <div className="auth-shell flex items-center justify-center p-4">
+    <div className="auth-shell flex items-center justify-center p-4 overflow-x-hidden">
       <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <div
           className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
@@ -102,7 +103,7 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="w-full max-w-md lg:ml-auto lg:max-w-none">
+        <div className="w-full max-w-md lg:ml-auto lg:max-w-none min-w-0">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
               <Building2 className="h-7 w-7 text-white" />
@@ -172,21 +173,22 @@ export default function Login() {
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center overflow-hidden w-full">
               {gLoading ? (
                 <div className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
                   <Spinner size="sm" /> Signing in with Google…
                 </div>
               ) : (
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => setErr("Google sign-in failed. Please try again.")}
-                  theme="filled_black"
-                  shape="rectangular"
-                  size="large"
-                  width="400"
-                  text="signin_with"
-                />
+                <div className="w-full overflow-hidden">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setErr("Google sign-in failed. Please try again.")}
+                    theme="filled_black"
+                    shape="rectangular"
+                    size="large"
+                    text="signin_with"
+                  />
+                </div>
               )}
             </div>
 

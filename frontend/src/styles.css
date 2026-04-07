@@ -274,7 +274,7 @@
   }
 
   .auth-card {
-    @apply rounded-[2rem] p-8 sm:p-10;
+    @apply rounded-[2rem] p-5 sm:p-8 lg:p-10;
     background: var(--app-surface);
     border: 1px solid var(--app-border-strong);
     box-shadow: var(--app-shadow-lg);
