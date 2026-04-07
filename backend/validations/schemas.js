@@ -174,6 +174,11 @@ const importLeadsSchema = Joi.object({
       followUpDate: Joi.date().allow(null).optional(),
       followUpNote: Joi.string().allow("").optional(),
       tags: Joi.array().items(Joi.string()).optional(),
+      booking: Joi.string().valid("Not Interested","Interested","Booked","Call Back","Site Visit Booked","").allow("").optional(),
+      isDeleted: Joi.boolean().optional(),
+      remark: Joi.string().allow("").optional(),
+      remark1: Joi.string().allow("").optional(),
+      remark2: Joi.string().allow("").optional(),
     })
   ).min(1).required(),
 });
