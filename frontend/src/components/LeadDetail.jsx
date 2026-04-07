@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
-import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions } from "./UI";
+import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
 import { fmtCurrency, fmtDate, STATUS_OPTIONS } from "../utils/constants";
 
 function Info({ label, value }) {
@@ -69,6 +69,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
               <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
+                <WhatsAppLink phone={lead.phone} />
                 {lead.email && <span className="text-sm text-app-soft">{lead.email}</span>}
               </div>
             </div>

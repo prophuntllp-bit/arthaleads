@@ -117,37 +117,43 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, loadin
   );
 }
 
-// ── Phone + WhatsApp action pair ──────────────────────────────────────────────
+// ── Phone helpers ─────────────────────────────────────────────────────────────
 // Normalises phone → international format for wa.me (defaults to +91 India)
-function toWaNumber(phone = "") {
+export function toWaNumber(phone = "") {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;           // bare 10-digit IN
-  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`; // 0XXXXXXXXXX
-  return digits;                                             // already has country code
+  if (digits.length === 10) return `91${digits}`;
+  if (digits.length === 11 && digits.startsWith("0")) return `91${digits.slice(1)}`;
+  return digits;
 }
 
-export function PhoneActions({ phone, showNumber = true }) {
+// Orange call icon + phone number — tap to dial
+export function PhoneActions({ phone }) {
+  if (!phone) return <span className="text-xs text-app-soft">—</span>;
+  return (
+    <a
+      href={`tel:${phone}`}
+      className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap"
+      title={`Call ${phone}`}
+    >
+      <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+      {phone}
+    </a>
+  );
+}
+
+// Green "Chat on WhatsApp" link — for its own table column
+export function WhatsAppLink({ phone }) {
   if (!phone) return <span className="text-xs text-app-soft">—</span>;
   const waNumber = toWaNumber(phone);
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <a
-        href={`tel:${phone}`}
-        className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition"
-        title={`Call ${phone}`}
-      >
-        <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
-        {showNumber && phone}
-      </a>
-      <a
-        href={`https://wa.me/${waNumber}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500/10 hover:bg-green-500/20 transition"
-        title={`WhatsApp ${phone}`}
-      >
-        <MessageCircle className="h-3.5 w-3.5 text-green-500" />
-      </a>
-    </div>
+    <a
+      href={`https://wa.me/${waNumber}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400"
+    >
+      <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
+      Chat on WhatsApp
+    </a>
   );
 }

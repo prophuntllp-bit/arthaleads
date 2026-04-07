@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { EmptyState, PageLoader, PhoneActions, SourceBadge, StatusBadge } from "../components/UI";
+import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -261,7 +261,7 @@ export default function DumpLeads() {
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
-                  {["Lead", "Phone", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -281,6 +281,7 @@ export default function DumpLeads() {
                       </div>
                     </td>
                     <td><PhoneActions phone={lead.phone} /></td>
+                    <td><WhatsAppLink phone={lead.phone} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName

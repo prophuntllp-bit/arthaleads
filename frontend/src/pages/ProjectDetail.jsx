@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -575,6 +575,7 @@ export default function ProjectDetail() {
                         <th>#</th>
                         <th>Name</th>
                         <th>Phone</th>
+                        <th>WhatsApp</th>
                         <th>Email</th>
                         <th>Source</th>
                         <th>Contact Status</th>
@@ -603,9 +604,8 @@ export default function ProjectDetail() {
                           )}
                           <td className="text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="font-medium text-app whitespace-nowrap">{lead.name}</td>
-                          <td>
-                            <PhoneActions phone={lead.phone} />
-                          </td>
+                          <td><PhoneActions phone={lead.phone} /></td>
+                          <td><WhatsAppLink phone={lead.phone} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>

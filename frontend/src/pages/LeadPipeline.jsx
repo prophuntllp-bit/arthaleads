@@ -4,7 +4,7 @@ import { ArrowLeftRight, CheckCircle2, Clock3, MapPinned, PhoneCall, Trophy, XCi
 import api from "../services/api";
 import { useLeads } from "../hooks/useLeads";
 import { STATUS_OPTIONS } from "../utils/constants";
-import { PhoneActions } from "../components/UI";
+import { PhoneActions, WhatsAppLink } from "../components/UI";
 
 const STAGE_META = {
   "New": {
@@ -122,9 +122,12 @@ export default function LeadPipeline() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
-                        <div className="mt-1 flex items-center gap-2">
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
                           <PhoneActions phone={lead.phone} />
                           <span className="text-xs text-app-soft">• {lead.source}</span>
+                        </div>
+                        <div className="mt-1.5">
+                          <WhatsAppLink phone={lead.phone} />
                         </div>
                       </div>
                       <CheckCircle2 className="h-4 w-4 text-orange-500" />

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   StatusBadge, PriorityBadge, SourceBadge,
-  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions
+  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -751,7 +751,7 @@ export default function Leads() {
                             />
                           </th>
                         )}
-                        <th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>Source</th>
+                        <th>#</th><th>Name</th><th>Phone</th><th>WhatsApp</th><th>Email</th><th>Source</th>
                         <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
                         <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Status</th>
                         {canDelete && <th></th>}
@@ -775,6 +775,7 @@ export default function Leads() {
                           <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
                           <td><PhoneActions phone={lead.phone} /></td>
+                          <td><WhatsAppLink phone={lead.phone} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
@@ -898,7 +899,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "Source", "Project", "Status", "Priority", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -928,6 +929,7 @@ export default function Leads() {
                       </div>
                     </td>
                     <td><PhoneActions phone={lead.phone} /></td>
+                    <td><WhatsAppLink phone={lead.phone} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName
