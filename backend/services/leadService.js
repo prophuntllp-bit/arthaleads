@@ -125,7 +125,7 @@ const leadService = {
       dateRange, from, to,
     } = query;
 
-    const filter = { isArchived: false, isDeleted: { $ne: true } };
+    const filter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     const andConditions = [];
 
     // Agents can only see their own leads
@@ -329,7 +329,7 @@ const leadService = {
   async getAllUnified(query, user) {
     const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to } = query;
 
-    const leadFilter = { isArchived: false, isDeleted: { $ne: true } };
+    const leadFilter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     if (status) leadFilter.status = status;
     if (source) leadFilter.source = source;
@@ -341,7 +341,7 @@ const leadService = {
       leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
     }
 
-    const projFilter = {};
+    const projFilter = { booking: { $ne: "Not Interested" } };
     if (source) projFilter.source = source;
     if (search) {
       const rx = { $regex: search, $options: "i" };

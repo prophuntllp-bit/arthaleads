@@ -429,9 +429,9 @@ export default function Leads() {
     try {
       await api.delete(`/leads/${deletingId}`);
       removeLead(deletingId);
-      toast.success("Lead deleted");
+      toast.success("Lead moved to Dump");
     } catch (e) {
-      toast.error(e.response?.data?.message || "Delete failed");
+      toast.error(e.response?.data?.message || "Move to Dump failed");
     } finally {
       setDeleteLoading(false);
       setDeletingId(null);
@@ -445,9 +445,9 @@ export default function Leads() {
       await api.delete("/leads/bulk", { data: { ids } });
       ids.forEach((id) => removeLead(id));
       setSelectedIds(new Set());
-      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} moved to Dump`);
     } catch (e) {
-      toast.error(e.response?.data?.message || "Bulk delete failed");
+      toast.error(e.response?.data?.message || "Move to Dump failed");
     } finally {
       setBulkDeleting(false);
       setShowBulkConfirm(false);
@@ -460,7 +460,12 @@ export default function Leads() {
   };
 
   const handleInlineUpdate = (updated) => {
-    upsertLead(updated, false);
+    if (updated?.booking === "Not Interested") {
+      removeLead(updated._id);
+      toast.success("Lead moved to Dump");
+    } else {
+      upsertLead(updated, false);
+    }
   };
 
   const projAllSelected = projLeads.length > 0 && projLeads.every((l) => projSelectedIds.has(l._id));
@@ -480,7 +485,12 @@ export default function Leads() {
   };
 
   const handleProjLeadUpdated = (updated) => {
-    setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+    if (updated?.booking === "Not Interested") {
+      setProjLeads((prev) => prev.filter((l) => l._id !== updated._id));
+      toast.success("Lead moved to Dump");
+    } else {
+      setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+    }
   };
 
   const handleProjBulkDelete = async () => {
@@ -1032,14 +1042,14 @@ export default function Leads() {
 
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />
       <LeadDetail open={!!detailLead} onClose={() => setDetailLead(null)} lead={detailLead} onUpdated={handleDetailUpdated} />
-      <ConfirmDialog open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} loading={deleteLoading} title="Delete Lead" message="Are you sure you want to permanently delete this lead? This cannot be undone." />
+      <ConfirmDialog open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} loading={deleteLoading} title="Move to Dump" message="This lead will be moved to the Dump section. You can restore or permanently delete it from there." />
       <ConfirmDialog
         open={showBulkConfirm}
         onClose={() => setShowBulkConfirm(false)}
         onConfirm={handleBulkDelete}
         loading={bulkDeleting}
-        title={`Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}`}
-        message={`Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+        title={`Move ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""} to Dump`}
+        message={`${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""} will be moved to the Dump section. You can restore or permanently delete them from there.`}
       />
       <ConfirmDialog
         open={!!projDeletingId}
