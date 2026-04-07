@@ -355,7 +355,7 @@ export default function Leads() {
   const [projSelectedIds, setProjSelectedIds]       = useState(new Set());
   const [showProjBulkConfirm, setShowProjBulkConfirm] = useState(false);
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
-  const [projLimit, setProjLimit] = useState(50);
+  const [projLimit, setProjLimit] = useState(10);
 
   useEffect(() => {
     api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../services/api";
 
 export function useLeads(mode = "normal") {
-  const [limit, setLimit] = useState(50);
+  const [limit, setLimit] = useState(10);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);

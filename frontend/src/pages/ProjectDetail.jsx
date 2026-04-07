@@ -273,7 +273,7 @@ export default function ProjectDetail() {
 
   const fileRef = useRef(null);
 
-  const [leadsLimit, setLeadsLimit] = useState(50);
+  const [leadsLimit, setLeadsLimit] = useState(10);
 
   useEffect(() => {
     api.get(`/projects/${id}`)
