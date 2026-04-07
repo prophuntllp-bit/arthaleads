@@ -39,11 +39,26 @@ export default function Login() {
       await login(form.email, form.password);
       toast.success("Welcome back!");
       navigate("/");
-    } catch (e) {
-      setErr(
-        e.response?.data?.message ||
-        (e.request ? "Connection failed. Please check your internet and try again." : "Login failed")
-      );
+    } catch (firstErr) {
+      // If network/connection error, auto-retry once — handles Railway cold-start
+      const isNetworkErr = !firstErr.response && firstErr.request;
+      if (isNetworkErr) {
+        setErr("Server is warming up… retrying in 3 seconds");
+        await new Promise((r) => setTimeout(r, 3000));
+        try {
+          await login(form.email, form.password);
+          toast.success("Welcome back!");
+          navigate("/");
+          return;
+        } catch (retryErr) {
+          setErr(
+            retryErr.response?.data?.message ||
+            "Connection failed. The server may be starting up — please try again in a moment."
+          );
+        }
+      } else {
+        setErr(firstErr.response?.data?.message || "Login failed. Please check your credentials.");
+      }
     } finally {
       setLoading(false);
     }

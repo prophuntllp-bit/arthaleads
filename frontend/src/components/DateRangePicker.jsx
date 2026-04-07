@@ -1,7 +1,7 @@
 // components/DateRangePicker.jsx
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PRESETS = [
   { label: "Today",             value: "today" },
@@ -112,7 +112,7 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
   };
 
   return (
-    <div className="min-w-[220px]">
+    <div className="flex-1 min-w-0">
       <div className="mb-3 text-center text-sm font-semibold text-app">
         {MONTHS[month]} {year}
       </div>
@@ -157,6 +157,7 @@ export default function DateRangePicker({ value, onChange, label }) {
   const [hoverDate, setHoverDate]   = useState(null);
   const [picking, setPicking]       = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
+  const [isMobile, setIsMobile]     = useState(false);
   const today = new Date(); today.setHours(0,0,0,0);
   const [leftMonth, setLeftMonth] = useState({ year: today.getFullYear(), month: today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1, adjYear: today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear() });
   const [rightMonth, setRightMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -200,6 +201,15 @@ export default function DateRangePicker({ value, onChange, label }) {
     });
   };
 
+  // Single-month nav for mobile
+  const shiftSingle = (dir) => {
+    setRightMonth((prev) => {
+      let m = prev.month + dir, y = prev.year;
+      if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
+      return { year: y, month: m };
+    });
+  };
+
   const handleDayClick = (d) => {
     if (!picking) {
       setRangeStart(d); setRangeEnd(null); setPicking(true);
@@ -223,10 +233,18 @@ export default function DateRangePicker({ value, onChange, label }) {
   const openPicker = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setPopoverPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const mobile = window.innerWidth < 640;
+      setIsMobile(mobile);
+      if (mobile) {
+        // Full-width anchored just below the button
+        const top = Math.min(rect.bottom + 8, window.innerHeight - 460);
+        setPopoverPos({ top: Math.max(top, 8), left: 8, right: 8 });
+      } else {
+        setPopoverPos({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
     }
     setPending(value);
     setOpen((o) => !o);
@@ -255,60 +273,62 @@ export default function DateRangePicker({ value, onChange, label }) {
           className="fixed z-[9999] rounded-2xl shadow-2xl overflow-hidden"
           style={{
             top: popoverPos.top,
-            right: popoverPos.right,
+            ...(isMobile
+              ? { left: popoverPos.left, right: popoverPos.right }
+              : { right: popoverPos.right, minWidth: 580 }),
             background: "var(--app-surface)",
             border: "1px solid var(--app-border)",
             backdropFilter: "var(--glass-blur-heavy)",
             WebkitBackdropFilter: "var(--glass-blur-heavy)",
             boxShadow: "var(--app-shadow-lg)",
-            minWidth: 580,
+            maxHeight: "80vh",
+            overflowY: "auto",
           }}
         >
-          <div className="flex">
-            {/* Presets sidebar */}
-            <div className="w-44 border-r flex-shrink-0 py-3" style={{ borderColor: "var(--app-border)" }}>
-              <p className="stitch-kicker px-4 mb-2">Recently used</p>
-              {PRESETS.map((p) => (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => { setPending(p.value); const d = presetDates(p.value); setRangeStart(d.start); setRangeEnd(d.end); setPicking(false); }}
-                  className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
-                    pending === p.value ? "text-orange-500 font-semibold" : "text-app-soft hover:text-app"
-                  }`}
-                >
-                  <span className={`h-3.5 w-3.5 rounded-full border flex-shrink-0 flex items-center justify-center ${
-                    pending === p.value ? "border-orange-500" : "border-app-soft/40"
-                  }`}>
-                    {pending === p.value && <span className="h-2 w-2 rounded-full bg-orange-500" />}
-                  </span>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Calendar panel */}
-            <div className="flex-1 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <button type="button" onClick={() => shiftLeft(-1)} className="btn-ghost p-1.5">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <div className="flex gap-8">
-                  <span className="text-sm font-semibold text-app">{MONTHS[leftMonth.month]} {leftMonth.adjYear}</span>
-                  <span className="text-sm font-semibold text-app">{MONTHS[rightMonth.month]} {rightMonth.year}</span>
+          {isMobile ? (
+            /* ── Mobile layout: vertical stack ── */
+            <div className="flex flex-col">
+              {/* Preset chips horizontal scroll */}
+              <div className="border-b px-3 py-2.5 overflow-x-auto" style={{ borderColor: "var(--app-border)" }}>
+                <div className="flex gap-2 w-max">
+                  {PRESETS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => {
+                        setPending(p.value);
+                        const d = presetDates(p.value);
+                        setRangeStart(d.start);
+                        setRangeEnd(d.end);
+                        setPicking(false);
+                      }}
+                      className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex-shrink-0 ${
+                        pending === p.value
+                          ? "bg-orange-500 text-white border-orange-500"
+                          : "text-app-soft border-app-soft/30 hover:text-app hover:border-app-soft/60"
+                      }`}
+                      style={pending !== p.value ? { borderColor: "var(--app-border)" } : {}}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
                 </div>
-                <button type="button" onClick={() => shiftLeft(1)} className="btn-ghost p-1.5">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
               </div>
 
-              <div className="flex gap-6">
-                <CalendarMonth
-                  year={leftMonth.adjYear} month={leftMonth.month}
-                  rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
-                  onDayClick={handleDayClick} onDayHover={setHoverDate}
-                />
-                <div className="w-px self-stretch" style={{ background: "var(--app-border)" }} />
+              {/* Single month calendar */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1.5">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-app">
+                    {MONTHS[rightMonth.month]} {rightMonth.year}
+                  </span>
+                  <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1.5">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
                 <CalendarMonth
                   year={rightMonth.year} month={rightMonth.month}
                   rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
@@ -316,20 +336,92 @@ export default function DateRangePicker({ value, onChange, label }) {
                 />
               </div>
 
-              <div className="mt-4 border-t pt-3 flex items-center justify-between gap-4" style={{ borderColor: "var(--app-border)" }}>
-                <p className="text-[11px] text-app-soft">Dates shown in Kolkata Time (IST)</p>
-                <div className="flex items-center gap-2">
-                  {rangeStart && (
-                    <span className="text-xs text-app-soft">
+              {/* Footer */}
+              <div className="border-t px-4 py-3 flex items-center justify-between gap-3" style={{ borderColor: "var(--app-border)" }}>
+                <div className="min-w-0 flex-1">
+                  {rangeStart ? (
+                    <p className="text-[11px] text-app-soft truncate">
                       {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
-                    </span>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-app-soft">Select start date</p>
                   )}
-                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
-                  <button type="button" onClick={handleUpdate} className="btn-primary px-4 py-2 text-xs">Update</button>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-2 text-xs">Cancel</button>
+                  <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-2 text-xs">Apply</button>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* ── Desktop layout: sidebar + dual calendar ── */
+            <div className="flex">
+              {/* Presets sidebar */}
+              <div className="w-44 border-r flex-shrink-0 py-3" style={{ borderColor: "var(--app-border)" }}>
+                <p className="stitch-kicker px-4 mb-2">Recently used</p>
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => { setPending(p.value); const d = presetDates(p.value); setRangeStart(d.start); setRangeEnd(d.end); setPicking(false); }}
+                    className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+                      pending === p.value ? "text-orange-500 font-semibold" : "text-app-soft hover:text-app"
+                    }`}
+                  >
+                    <span className={`h-3.5 w-3.5 rounded-full border flex-shrink-0 flex items-center justify-center ${
+                      pending === p.value ? "border-orange-500" : "border-app-soft/40"
+                    }`}>
+                      {pending === p.value && <span className="h-2 w-2 rounded-full bg-orange-500" />}
+                    </span>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Calendar panel */}
+              <div className="flex-1 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button type="button" onClick={() => shiftLeft(-1)} className="btn-ghost p-1.5">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex gap-8">
+                    <span className="text-sm font-semibold text-app">{MONTHS[leftMonth.month]} {leftMonth.adjYear}</span>
+                    <span className="text-sm font-semibold text-app">{MONTHS[rightMonth.month]} {rightMonth.year}</span>
+                  </div>
+                  <button type="button" onClick={() => shiftLeft(1)} className="btn-ghost p-1.5">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex gap-6">
+                  <CalendarMonth
+                    year={leftMonth.adjYear} month={leftMonth.month}
+                    rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                    onDayClick={handleDayClick} onDayHover={setHoverDate}
+                  />
+                  <div className="w-px self-stretch" style={{ background: "var(--app-border)" }} />
+                  <CalendarMonth
+                    year={rightMonth.year} month={rightMonth.month}
+                    rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                    onDayClick={handleDayClick} onDayHover={setHoverDate}
+                  />
+                </div>
+
+                <div className="mt-4 border-t pt-3 flex items-center justify-between gap-4" style={{ borderColor: "var(--app-border)" }}>
+                  <p className="text-[11px] text-app-soft">Dates shown in Kolkata Time (IST)</p>
+                  <div className="flex items-center gap-2">
+                    {rangeStart && (
+                      <span className="text-xs text-app-soft">
+                        {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
+                      </span>
+                    )}
+                    <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
+                    <button type="button" onClick={handleUpdate} className="btn-primary px-4 py-2 text-xs">Update</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>,
         document.body
       )}
