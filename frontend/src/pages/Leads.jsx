@@ -58,6 +58,19 @@ function InlineText({ value, leadId, field, onSaved, placeholder = "Add note…"
   );
 }
 
+// ── IST helpers (UTC+5:30) ────────────────────────────────────────────────────
+function toISTLocal(utcStr) {
+  if (!utcStr) return "";
+  const d = new Date(utcStr);
+  const ist = new Date(d.getTime() + 330 * 60 * 1000);
+  return ist.toISOString().slice(0, 16);
+}
+function fromISTLocal(localStr) {
+  if (!localStr) return null;
+  const d = new Date(localStr);
+  return new Date(d.getTime() - 330 * 60 * 1000).toISOString();
+}
+
 // ── Inline date cell ──────────────────────────────────────────────────────────
 function InlineDate({ value, leadId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
@@ -65,13 +78,13 @@ function InlineDate({ value, leadId, field, onSaved }) {
   const save = async (dateStr) => {
     setSaving(true);
     try {
-      const res = await api.put(`/leads/${leadId}`, { [field]: dateStr || null });
+      const res = await api.put(`/leads/${leadId}`, { [field]: fromISTLocal(dateStr) });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
 
-  const dateVal = value ? new Date(value).toISOString().slice(0, 16) : "";
+  const dateVal = toISTLocal(value);
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <input
@@ -166,12 +179,12 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
   const save = async (dateStr) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: dateStr || null });
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromISTLocal(dateStr) });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-  const dateVal = value ? new Date(value).toISOString().slice(0, 16) : "";
+  const dateVal = toISTLocal(value);
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <input type="datetime-local"
