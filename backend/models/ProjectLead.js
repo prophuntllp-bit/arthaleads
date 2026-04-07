@@ -17,8 +17,8 @@ const projectLeadSchema = new mongoose.Schema(
     // Remark system for telecallers
     remark: {
       type: String,
-      enum: ["Not Contacted", "Contacted"],
-      default: "Not Contacted",
+      enum: ["", "Not Contacted", "Contacted"],
+      default: "",
     },
     remarkNote: {
       type: String,

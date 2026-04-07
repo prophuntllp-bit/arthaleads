@@ -902,7 +902,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "Source", "Project", "Status", "Priority", "Follow Up", "Follow Up 2", "Remark 1", "Remark 2", "Remark", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "Source", "Project", "Status", "Priority", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -940,6 +940,19 @@ export default function Leads() {
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
+                    {/* Remark (contact status) — first */}
+                    <td>
+                      {lead._type === "project"
+                        ? <ProjRemarkCell lead={lead} projectId={lead.projectId} onUpdated={handleInlineUpdate} />
+                        : <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
+                      }
+                    </td>
+                    <td>
+                      <InlineText value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
+                    </td>
+                    <td>
+                      <InlineText value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
+                    </td>
                     <td>
                       <InlineDate
                         value={lead.followUpDate}
@@ -957,18 +970,6 @@ export default function Leads() {
                         field="followUp2"
                         onSaved={handleInlineUpdate}
                       />
-                    </td>
-                    <td>
-                      <InlineText value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
-                    </td>
-                    <td>
-                      <InlineText value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
-                    </td>
-                    <td>
-                      {lead._type === "project"
-                        ? <ProjRemarkCell lead={lead} projectId={lead.projectId} onUpdated={handleInlineUpdate} />
-                        : <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
-                      }
                     </td>
                     <td>
                       <InlineBooking value={lead.booking} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} onSaved={handleInlineUpdate} />

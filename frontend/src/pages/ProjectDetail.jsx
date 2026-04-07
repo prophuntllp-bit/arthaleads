@@ -578,10 +578,10 @@ export default function ProjectDetail() {
                         <th>Email</th>
                         <th>Source</th>
                         <th>Contact Status</th>
-                        <th>Follow Up</th>
-                        <th>Follow Up 2</th>
                         <th>Remark 1</th>
                         <th>Remark 2</th>
+                        <th>Follow Up</th>
+                        <th>Follow Up 2</th>
                         <th>Remark</th>
                         <th>Status</th>
                         <th>Updated By</th>
@@ -612,16 +612,16 @@ export default function ProjectDetail() {
                             <RemarkCell lead={lead} projectId={id} onUpdated={handleLeadUpdated} />
                           </td>
                           <td>
-                            <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp" onSaved={handleLeadUpdated} />
-                          </td>
-                          <td>
-                            <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleLeadUpdated} />
-                          </td>
-                          <td>
                             <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleLeadUpdated} />
                           </td>
                           <td>
                             <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…" onSaved={handleLeadUpdated} />
+                          </td>
+                          <td>
+                            <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp" onSaved={handleLeadUpdated} />
+                          </td>
+                          <td>
+                            <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleLeadUpdated} />
                           </td>
                           <td>
                             <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="General remark…" multiline onSaved={handleLeadUpdated} />
