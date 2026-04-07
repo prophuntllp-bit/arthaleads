@@ -121,7 +121,9 @@ export default function LeadPipeline() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
-                        <p className="mt-1 text-xs text-app-soft">{lead.phone} • {lead.source}</p>
+                        <a href={`tel:${lead.phone}`} className="mt-1 flex items-center gap-1 text-xs text-app-soft hover:text-orange-500 transition">
+                          <PhoneCall className="h-3 w-3 flex-shrink-0 text-orange-400" />{lead.phone} • {lead.source}
+                        </a>
                       </div>
                       <CheckCircle2 className="h-4 w-4 text-orange-500" />
                     </div>

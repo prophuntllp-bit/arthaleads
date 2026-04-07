@@ -11,7 +11,7 @@ import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
-import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Phone, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -774,7 +774,11 @@ export default function Leads() {
                           )}
                           <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
-                          <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a></td>
+                          <td>
+                            <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap">
+                              <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />{lead.phone}
+                            </a>
+                          </td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
@@ -927,7 +931,11 @@ export default function Leads() {
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.phone}</td>
+                    <td>
+                      <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap">
+                        <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />{lead.phone}
+                      </a>
+                    </td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName
