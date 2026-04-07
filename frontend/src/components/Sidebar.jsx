@@ -33,7 +33,7 @@ export default function Sidebar() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
-  const [dropdownPos, setDropdownPos] = useState({ top: 80, left: 268 });
+  const [dropdownPos, setDropdownPos] = useState({ top: 80, left: 268, right: undefined });
   const alertRef = useRef(null);
   const mobileBellRef = useRef(null);
   const lastSeenRef = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
@@ -84,9 +84,10 @@ export default function Sidebar() {
       // Position dropdown: on mobile (< 1024) anchor to button bottom-right; desktop anchor to button right+8
       const isMobile = window.innerWidth < 1024;
       if (isMobile) {
-        setDropdownPos({ top: rect.bottom + 6, left: Math.min(rect.right - 320, window.innerWidth - 328) });
+        // Anchor to right edge of screen, just below topbar
+        setDropdownPos({ top: rect.bottom + 6, left: undefined, right: 8 });
       } else {
-        setDropdownPos({ top: rect.top, left: rect.right + 8 });
+        setDropdownPos({ top: rect.top, left: rect.right + 8, right: undefined });
       }
     }
     setAlertOpen(newOpen);
@@ -209,7 +210,9 @@ export default function Sidebar() {
         style={{
           position: "fixed",
           top: dropdownPos.top,
-          left: dropdownPos.left,
+          ...(dropdownPos.right !== undefined
+            ? { right: dropdownPos.right }
+            : { left: dropdownPos.left }),
           zIndex: 9999,
           background: isDark ? "rgb(18, 18, 28)" : "rgb(255, 255, 255)",
           border: "1px solid var(--app-border)",

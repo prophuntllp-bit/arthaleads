@@ -390,53 +390,71 @@ const leadService = {
       baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
     const createdAtFilter = getDateRangeFilter(query.dateRange, query.from, query.to);
-    if (createdAtFilter) {
-      baseMatch.createdAt = createdAtFilter;
-    }
+    if (createdAtFilter) baseMatch.createdAt = createdAtFilter;
+
+    // ProjectLead base filter (no isDeleted/isArchived, exclude Not Interested)
+    const projMatch = { booking: { $ne: "Not Interested" } };
+    if (user.role === "agent") projMatch.importedBy = user._id;
+    if (createdAtFilter) projMatch.createdAt = createdAtFilter;
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const followUpMatch = { ...baseMatch, followUpDate: { $ne: null } };
-    delete followUpMatch.createdAt; // follow-ups are date-independent of range
+    const followUpMatch    = { ...baseMatch,  followUpDate: { $ne: null } };
+    const projFollowUpMatch = { ...projMatch, followUp:     { $ne: null } };
+    delete followUpMatch.createdAt;
+    delete projFollowUpMatch.createdAt;
 
-    const [totalLeads, byStatus, bySource, byPriority, byAgent, recentLeads, todayFollowUps, totalFollowUps] = await Promise.all([
+    const [
+      leadTotal, projTotal,
+      byStatus, bySource, projBySource,
+      byPriority, byAgent, recentLeads,
+      todayFollowUps, projTodayFollowUps,
+      totalFollowUps, projTotalFollowUps,
+    ] = await Promise.all([
       Lead.countDocuments(baseMatch),
+      ProjectLead.countDocuments(projMatch),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
+      ProjectLead.aggregate([{ $match: projMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$priority", count: { $sum: 1 } } }]),
       Lead.aggregate([
         { $match: { ...baseMatch, assignedTo: { $ne: null } } },
         { $group: { _id: "$assignedTo", name: { $first: "$assignedToName" }, count: { $sum: 1 } } },
-        // Only include agents whose User document still exists and is active
         { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
         { $match: { "user.0": { $exists: true }, "user.0.isActive": { $ne: false } } },
         { $sort: { count: -1 } }, { $limit: 10 },
         { $project: { _id: 1, name: 1, count: 1 } },
       ]),
-      Lead.find(baseMatch)
-        .sort({ createdAt: -1 }).limit(5)
+      Lead.find(baseMatch).sort({ createdAt: -1 }).limit(5)
         .select("name source status priority createdAt assignedToName"),
-      Lead.countDocuments({ ...followUpMatch, followUpDate: { $gte: todayStart, $lte: todayEnd } }),
+      Lead.countDocuments({ ...followUpMatch,     followUpDate: { $gte: todayStart, $lte: todayEnd } }),
+      ProjectLead.countDocuments({ ...projFollowUpMatch, followUp: { $gte: todayStart, $lte: todayEnd } }),
       Lead.countDocuments(followUpMatch),
+      ProjectLead.countDocuments(projFollowUpMatch),
     ]);
 
-    const sourceMap = bySource.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
 
+    // Merge source counts from both collections
+    const mergedSourceMap = {};
+    [...bySource, ...projBySource].forEach(({ _id, count }) => {
+      mergedSourceMap[_id] = (mergedSourceMap[_id] || 0) + count;
+    });
+
     return {
-      totalLeads,
+      totalLeads: leadTotal + projTotal,
       byStatus: toMap(byStatus),
-      bySource: sourceMap,
+      bySource: mergedSourceMap,
       byPriority: toMap(byPriority),
       sourceHighlights: {
-        facebook: sourceMap.Facebook || 0,
-        google: sourceMap.Google || 0,
-        whatsapp: sourceMap.WhatsApp || 0,
+        facebook: mergedSourceMap.Facebook || 0,
+        google:   mergedSourceMap.Google   || 0,
+        whatsapp: mergedSourceMap.WhatsApp || 0,
       },
       byAgent,
       recentLeads,
-      todayFollowUps,
-      totalFollowUps,
+      todayFollowUps:  todayFollowUps  + projTodayFollowUps,
+      totalFollowUps:  totalFollowUps  + projTotalFollowUps,
     };
   },
 
