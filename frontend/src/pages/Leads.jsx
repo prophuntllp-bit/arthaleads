@@ -260,58 +260,44 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Project-wise leads remark cell ────────────────────────────────────────────
-function ProjRemarkCell({ lead, projectId, onUpdated }) {
+// ── Unified contact status cell (works for both regular & project leads) ─────
+function ContactStatusCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "");
-  const [note, setNote]     = useState(lead.remarkNote || "");
   const [saving, setSaving] = useState(false);
 
-  const save = async (r, n) => {
+  const save = async (v) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${lead._id}/remark`, { remark: r, remarkNote: n });
+      let res;
+      if (projectId) {
+        res = await api.patch(`/projects/${projectId}/leads/${lead._id}/remark`, { remark: v, remarkNote: "" });
+      } else {
+        res = await api.put(`/leads/${lead._id}`, { remark: v });
+      }
       onUpdated(res.data.data);
     } catch { toast.error("Failed to save remark"); }
     finally { setSaving(false); }
   };
 
-  const remarkClass = remark === "Contacted"
+  const cls = remark === "Contacted"
     ? "bg-green-500/10 border-green-500/30 text-green-600"
     : remark === "Not Contacted"
     ? "bg-red-500/10 border-red-500/30 text-red-500"
     : "border-[var(--app-border)] text-app-soft";
 
   return (
-    <div className="flex flex-col gap-1.5 min-w-[160px]">
-      <div className="relative">
-        <select
-          value={remark}
-          onChange={(e) => {
-            const v = e.target.value;
-            setRemark(v);
-            if (v !== "Contacted") { setNote(""); save(v, ""); }
-            else save(v, note);
-          }}
-          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${remarkClass}`}
-          style={{ background: "var(--app-surface-low)" }}
-        >
-          <option value="">— None —</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Not Contacted">Not Contacted</option>
-        </select>
-        {saving && <span className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></span>}
-      </div>
-      {remark === "Contacted" && (
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onBlur={() => save(remark, note)}
-          placeholder="Write a note..."
-          rows={2}
-          className="w-full rounded-xl border px-2.5 py-1.5 text-xs resize-none"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-        />
-      )}
+    <div className="relative min-w-[150px]">
+      <select
+        value={remark}
+        onChange={(e) => { const v = e.target.value; setRemark(v); save(v); }}
+        className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${cls}`}
+        style={{ background: "var(--app-surface-low)" }}
+      >
+        <option value="">— None —</option>
+        <option value="Contacted">Contacted</option>
+        <option value="Not Contacted">Not Contacted</option>
+      </select>
+      {saving && <span className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></span>}
     </div>
   );
 }
@@ -781,7 +767,7 @@ export default function Leads() {
                           <td><a href={`tel:${lead.phone}`} className="text-sm text-orange-500 hover:underline whitespace-nowrap">{lead.phone}</a></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
-                          <td><ProjRemarkCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
+                          <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
                           <td><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineDate value={lead.followUp2} leadId={lead._id} projectId={selectedProject._id} field="followUp2" onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineText value={lead.remark1} leadId={lead._id} projectId={selectedProject._id} field="remark1" placeholder="Remark 1…" onSaved={handleProjLeadUpdated} /></td>
@@ -940,12 +926,13 @@ export default function Leads() {
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
-                    {/* Remark (contact status) — first */}
+                    {/* Remark (contact status) — same dropdown for all lead types */}
                     <td>
-                      {lead._type === "project"
-                        ? <ProjRemarkCell lead={lead} projectId={lead.projectId} onUpdated={handleInlineUpdate} />
-                        : <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
-                      }
+                      <ContactStatusCell
+                        lead={lead}
+                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        onUpdated={handleInlineUpdate}
+                      />
                     </td>
                     <td>
                       <InlineText value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
