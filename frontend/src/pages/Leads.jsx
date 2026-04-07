@@ -14,7 +14,7 @@ import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTI
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
-function InlineText({ value, leadId, field, onSaved, placeholder = "Add note…", multiline = false }) {
+function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
   const [editing, setEditing] = useState(false);
   const [val, setVal]         = useState(value || "");
   const [saving, setSaving]   = useState(false);
@@ -24,7 +24,9 @@ function InlineText({ value, leadId, field, onSaved, placeholder = "Add note…"
     if (val === (value || "")) return;
     setSaving(true);
     try {
-      const res = await api.put(`/leads/${leadId}`, { [field]: val });
+      const res = projectId
+        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: val })
+        : await api.put(`/leads/${leadId}`, { [field]: val });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); setVal(value || ""); }
     finally { setSaving(false); }
@@ -81,13 +83,15 @@ function fmt12hIST(utcStr) {
 }
 
 // ── Inline date cell ──────────────────────────────────────────────────────────
-function InlineDate({ value, leadId, field, onSaved }) {
+function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const save = async (dateStr) => {
     setSaving(true);
     try {
-      const res = await api.put(`/leads/${leadId}`, { [field]: fromISTLocal(dateStr) });
+      const res = projectId
+        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromISTLocal(dateStr) })
+        : await api.put(`/leads/${leadId}`, { [field]: fromISTLocal(dateStr) });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
@@ -128,13 +132,15 @@ const BOOKING_OPTIONS = [
   { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
 ];
 
-function InlineBooking({ value, leadId, onSaved }) {
+function InlineBooking({ value, leadId, projectId, onSaved }) {
   const [saving, setSaving] = useState(false);
 
   const save = async (v) => {
     setSaving(true);
     try {
-      const res = await api.put(`/leads/${leadId}`, { booking: v });
+      const res = projectId
+        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { booking: v })
+        : await api.put(`/leads/${leadId}`, { booking: v });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
@@ -929,28 +935,43 @@ export default function Leads() {
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName
-                        ? <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-0.5 text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
+                        ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>
                         : <span className="text-xs text-app-soft">—</span>}
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
                     <td>
-                      <InlineDate value={lead.followUpDate} leadId={lead._id} field="followUpDate" onSaved={handleInlineUpdate} />
+                      <InlineDate
+                        value={lead.followUpDate}
+                        leadId={lead._id}
+                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        field={lead._type === "project" ? "followUp" : "followUpDate"}
+                        onSaved={handleInlineUpdate}
+                      />
                     </td>
                     <td>
-                      <InlineDate value={lead.followUp2} leadId={lead._id} field="followUp2" onSaved={handleInlineUpdate} />
+                      <InlineDate
+                        value={lead.followUp2}
+                        leadId={lead._id}
+                        projectId={lead._type === "project" ? lead.projectId : undefined}
+                        field="followUp2"
+                        onSaved={handleInlineUpdate}
+                      />
                     </td>
                     <td>
-                      <InlineText value={lead.remark1} leadId={lead._id} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
+                      <InlineText value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
                     </td>
                     <td>
-                      <InlineText value={lead.remark2} leadId={lead._id} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
+                      <InlineText value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
                     </td>
                     <td>
-                      <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
+                      {lead._type === "project"
+                        ? <ProjRemarkCell lead={lead} projectId={lead.projectId} onUpdated={handleInlineUpdate} />
+                        : <InlineText value={lead.remark} leadId={lead._id} field="remark" onSaved={handleInlineUpdate} placeholder="General remark…" multiline />
+                      }
                     </td>
                     <td>
-                      <InlineBooking value={lead.booking} leadId={lead._id} onSaved={handleInlineUpdate} />
+                      <InlineBooking value={lead.booking} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} onSaved={handleInlineUpdate} />
                     </td>
                     <td className="min-w-[160px]">
                       <p className="text-sm font-medium text-app">{lead.propertyType}{lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}</p>

@@ -1,5 +1,6 @@
 // components/Sidebar.jsx
 import { NavLink, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
@@ -32,6 +33,7 @@ export default function Sidebar() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
+  const [dropdownPos, setDropdownPos] = useState({ top: 80, left: 268 });
   const alertRef = useRef(null);
   const mobileBellRef = useRef(null);
   const lastSeenRef = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
@@ -66,15 +68,29 @@ export default function Sidebar() {
     const handler = (e) => {
       const inDesktop = alertRef.current?.contains(e.target);
       const inMobile = mobileBellRef.current?.contains(e.target);
-      if (!inDesktop && !inMobile) setAlertOpen(false);
+      // Also check if click is inside the portal dropdown
+      const dropdown = document.getElementById("alerts-portal-dropdown");
+      const inDropdown = dropdown?.contains(e.target);
+      if (!inDesktop && !inMobile && !inDropdown) setAlertOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const openAlerts = () => {
-    setAlertOpen((v) => !v);
-    if (!alertOpen) {
+  const openAlerts = (e) => {
+    const newOpen = !alertOpen;
+    if (newOpen && e?.currentTarget) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      // Position dropdown: on mobile (< 1024) anchor to button bottom-right; desktop anchor to button right+8
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile) {
+        setDropdownPos({ top: rect.bottom + 6, left: Math.min(rect.right - 320, window.innerWidth - 328) });
+      } else {
+        setDropdownPos({ top: rect.top, left: rect.right + 8 });
+      }
+    }
+    setAlertOpen(newOpen);
+    if (newOpen) {
       const now = Date.now();
       localStorage.setItem("crm_alerts_seen", String(now));
       lastSeenRef.current = now;
@@ -107,7 +123,7 @@ export default function Sidebar() {
 
       {/* Alerts bell - desktop sidebar */}
       <div className="px-3 pb-2">
-        <div ref={alertRef} className="relative">
+        <div ref={alertRef}>
           <button
             onClick={openAlerts}
             className="relative w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
@@ -120,36 +136,6 @@ export default function Sidebar() {
               </span>
             )}
           </button>
-          {alertOpen && (
-            <div className="fixed left-64 top-20 z-[200] w-80 max-h-[70vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
-              style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-                <p className="text-sm font-bold text-app">New Lead Alerts</p>
-                <span className="stitch-kicker">{alerts.length} in last 7 days</span>
-              </div>
-              <div className="overflow-y-auto flex-1">
-                {alerts.length === 0 ? (
-                  <p className="p-4 text-xs text-app-soft text-center">No new leads yet</p>
-                ) : alerts.map((lead) => (
-                  <div key={lead._id} className="flex items-start gap-3 px-4 py-3 border-b hover:bg-black/5 dark:hover:bg-white/5 transition"
-                    style={{ borderColor: "var(--app-border)" }}>
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
-                      {lead.name?.[0]?.toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
-                      <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
-                      <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="px-4 py-2.5 text-xs font-semibold text-orange-500 border-t hover:bg-orange-500/5 transition text-center"
-                style={{ borderColor: "var(--app-border)" }}
-                onClick={() => { setAlertOpen(false); navigate("/leads"); }}
-              >View All Leads →</button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -209,8 +195,53 @@ export default function Sidebar() {
     </div>
   );
 
+  // Single portal-rendered alerts dropdown — escapes backdrop-filter stacking context
+  const AlertsPortal = alertOpen ? createPortal(
+    <div
+      id="alerts-portal-dropdown"
+      className="w-80 max-h-[70vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
+      style={{
+        position: "fixed",
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        zIndex: 9999,
+        background: "var(--app-surface)",
+        border: "1px solid var(--app-border)",
+      }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
+        <p className="text-sm font-bold text-app">New Lead Alerts</p>
+        <span className="stitch-kicker">{alerts.length} in last 7 days</span>
+      </div>
+      <div className="overflow-y-auto flex-1">
+        {alerts.length === 0 ? (
+          <p className="p-4 text-xs text-app-soft text-center">No new leads yet</p>
+        ) : alerts.map((lead) => (
+          <div key={lead._id} className="flex items-start gap-3 px-4 py-3 border-b hover:bg-black/5 dark:hover:bg-white/5 transition"
+            style={{ borderColor: "var(--app-border)" }}>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
+              {lead.name?.[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
+              <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
+              <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button
+        className="px-4 py-2.5 text-xs font-semibold text-orange-500 border-t hover:bg-orange-500/5 transition text-center"
+        style={{ borderColor: "var(--app-border)" }}
+        onClick={() => { setAlertOpen(false); navigate("/leads"); }}
+      >View All Leads →</button>
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <>
+      {AlertsPortal}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
         style={{ borderColor: "var(--app-border)" }}>
         <div className="flex items-center gap-3">
@@ -223,7 +254,7 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div ref={mobileBellRef} className="relative">
+          <div ref={mobileBellRef}>
             <button
               onClick={openAlerts}
               className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5"
@@ -236,37 +267,6 @@ export default function Sidebar() {
                 </span>
               )}
             </button>
-            {alertOpen && (
-              <div className="fixed top-14 right-3 z-[200] w-80 max-h-[70vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden"
-                style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-                <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-                  <p className="text-sm font-bold text-app">New Lead Alerts</p>
-                  <span className="stitch-kicker">{alerts.length} in last 7 days</span>
-                </div>
-                <div className="overflow-y-auto flex-1">
-                  {alerts.length === 0 ? (
-                    <p className="p-4 text-xs text-app-soft text-center">No automation leads yet</p>
-                  ) : alerts.map((lead) => (
-                    <div key={lead._id} className="flex items-start gap-3 px-4 py-3 border-b hover:bg-black/5 dark:hover:bg-white/5 transition"
-                      style={{ borderColor: "var(--app-border)" }}>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
-                        {lead.name?.[0]?.toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
-                        <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
-                        <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  className="px-4 py-2.5 text-xs font-semibold text-orange-500 border-t hover:bg-orange-500/5 transition text-center"
-                  style={{ borderColor: "var(--app-border)" }}
-                  onClick={() => { setAlertOpen(false); navigate("/leads"); }}
-                >View All Leads →</button>
-              </div>
-            )}
           </div>
           <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
             {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
