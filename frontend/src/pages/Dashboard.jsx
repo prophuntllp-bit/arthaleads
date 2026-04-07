@@ -11,7 +11,6 @@ import {
   SunMedium,
   TrendingUp,
   Users,
-  Workflow,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
@@ -123,45 +122,15 @@ export default function Dashboard() {
         />
       </div>
 
-      <section className="card p-6">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="stitch-kicker mb-2">Self-Serve Setup</p>
-            <h3 className="text-lg font-bold text-app">Connect Lead Sources</h3>
-            <p className="mt-1 text-sm text-app-soft">Let your end users connect Facebook, Google, WhatsApp, or website lead sources from the dashboard itself.</p>
-          </div>
-          <button className="stitch-pill" onClick={() => navigate("/automation")}>
-            <Workflow className="h-4 w-4" />
-            Open Automation
-          </button>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <QuickConnectCard
-            title="Connect Facebook"
-            note="Paste Page ID, verify token, and access token"
-            tone="bg-blue-500/10 text-blue-400"
-            onClick={() => navigate("/automation", { state: { presetPlatform: "Facebook" } })}
-          />
-          <QuickConnectCard
-            title="Connect Google"
-            note="Use the CRM lead API for forms and landing pages"
-            tone="bg-red-500/10 text-red-400"
-            onClick={() => navigate("/automation", { state: { presetPlatform: "Google" } })}
-          />
-          <QuickConnectCard
-            title="Connect WhatsApp"
-            note="Track chat-origin enquiries in one place"
-            tone="bg-green-500/10 text-green-400"
-            onClick={() => navigate("/automation", { state: { presetPlatform: "WhatsApp" } })}
-          />
-        </div>
-      </section>
-
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Leads" value={data?.totalLeads || 0} icon={Users} color="text-orange-500" />
-        <StatCard label="New" value={data?.byStatus?.New || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted" />
-        <StatCard label="Closed Won" value={data?.byStatus?.["Closed Won"] || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted" />
-        <StatCard label="Follow-ups" value={data?.byStatus?.["Site Visit"] || 0} icon={Clock3} color="text-amber-400" sub="Active pipeline" />
+        <StatCard label="Total Leads" value={data?.totalLeads || 0} icon={Users} color="text-orange-500"
+          onClick={() => navigate("/leads")} />
+        <StatCard label="New" value={data?.byStatus?.New || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
+          onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
+        <StatCard label="Closed Won" value={data?.byStatus?.["Closed Won"] || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
+          onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
+        <StatCard label="Follow-ups Today" value={data?.todayFollowUps || 0} icon={Clock3} color="text-amber-400" sub={`${data?.totalFollowUps || 0} total scheduled`}
+          onClick={() => navigate("/leads")} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
@@ -368,17 +337,3 @@ function TopLeadSourceCard({ label, value, icon: Icon, note, tone, iconTone, onC
   );
 }
 
-function QuickConnectCard({ title, note, tone, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-[1.5rem] border p-5 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-    >
-      <div className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}`}>Automation</div>
-      <p className="mt-4 text-lg font-semibold text-app">{title}</p>
-      <p className="mt-2 text-sm text-app-soft">{note}</p>
-    </button>
-  );
-}

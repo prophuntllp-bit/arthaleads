@@ -331,7 +331,12 @@ const leadService = {
       baseMatch.createdAt = createdAtFilter;
     }
 
-    const [totalLeads, byStatus, bySource, byPriority, byAgent, recentLeads] = await Promise.all([
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const followUpMatch = { ...baseMatch, followUpDate: { $ne: null } };
+    delete followUpMatch.createdAt; // follow-ups are date-independent of range
+
+    const [totalLeads, byStatus, bySource, byPriority, byAgent, recentLeads, todayFollowUps, totalFollowUps] = await Promise.all([
       Lead.countDocuments(baseMatch),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
@@ -348,6 +353,8 @@ const leadService = {
       Lead.find(baseMatch)
         .sort({ createdAt: -1 }).limit(5)
         .select("name source status priority createdAt assignedToName"),
+      Lead.countDocuments({ ...followUpMatch, followUpDate: { $gte: todayStart, $lte: todayEnd } }),
+      Lead.countDocuments(followUpMatch),
     ]);
 
     const sourceMap = bySource.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
@@ -365,7 +372,24 @@ const leadService = {
       },
       byAgent,
       recentLeads,
+      todayFollowUps,
+      totalFollowUps,
     };
+  },
+
+  async getDump(user) {
+    const filter = {
+      isArchived: false,
+      $or: [{ booking: "Not Interested" }, { status: "Closed Lost" }],
+    };
+    if (user.role === "agent") {
+      filter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
+    }
+    return Lead.find(filter)
+      .sort({ updatedAt: -1 })
+      .limit(500)
+      .populate("assignedTo", "name email")
+      .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt");
   },
 };
 

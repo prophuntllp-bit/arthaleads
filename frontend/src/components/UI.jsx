@@ -70,9 +70,13 @@ export function EmptyState({ icon: Icon, title, desc, action }) {
   );
 }
 
-export function StatCard({ label, value, sub, color = "text-brand-600", icon: Icon }) {
+export function StatCard({ label, value, sub, color = "text-brand-600", icon: Icon, onClick }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className="card p-6">
+    <Tag
+      className={`card p-6 text-left w-full ${onClick ? "hover:-translate-y-1 hover:border-orange-500/30 transition-all cursor-pointer" : ""}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="stitch-kicker mb-2">{label}</p>
@@ -85,7 +89,7 @@ export function StatCard({ label, value, sub, color = "text-brand-600", icon: Ic
           </div>
         )}
       </div>
-    </div>
+    </Tag>
   );
 }
 

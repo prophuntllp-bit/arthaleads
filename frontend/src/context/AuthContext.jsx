@@ -20,7 +20,14 @@ export function AuthProvider({ children }) {
 
     api.get("/auth/me")
       .then((r) => persistUser(r.data.user))
-      .catch(() => { localStorage.clear(); setUser(null); })
+      .catch((err) => {
+        // Only force-logout on explicit 401 (invalid/expired token).
+        // Network errors or 5xx (Railway restarting) keep the user logged in.
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          setUser(null);
+        }
+      })
       .finally(() => setLoading(false));
   }, [persistUser]);
 

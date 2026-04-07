@@ -77,6 +77,7 @@ import NotFound      from "./pages/NotFound";
 import Privacy       from "./pages/Privacy";
 import Projects      from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
+import DumpLeads     from "./pages/DumpLeads";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -146,8 +147,9 @@ export default function App() {
 
           {/* Admin + Manager only */}
           <Route element={<RequireRole roles={["admin", "manager"]} />}>
-            <Route path="/automation" element={<Automation />} />
+            <Route path="/automation"  element={<Automation />} />
             <Route path="/performance" element={<Performance />} />
+            <Route path="/dump-leads"  element={<DumpLeads />} />
           </Route>
         </Route>
 

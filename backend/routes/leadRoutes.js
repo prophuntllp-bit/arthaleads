@@ -10,6 +10,7 @@ const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, imp
 router.use(protect);
 
 router.get("/analytics", leadController.getAnalytics);
+router.get("/dump", authorize("admin", "manager"), leadController.getDump);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.delete("/bulk", authorize("admin", "manager"), leadController.bulkDelete);
 

@@ -58,6 +58,20 @@ export function fmtDate(value) {
   });
 }
 
+/** Format a UTC date string as IST date + 12h time (e.g. "07 Apr 2026, 2:30 PM") */
+export function fmtDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  // Shift to IST (+5:30)
+  const ist = new Date(d.getTime() + 330 * 60 * 1000);
+  const date = ist.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  const hours = ist.getUTCHours();
+  const minutes = ist.getUTCMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+  return `${date}, ${h12}:${minutes} ${ampm}`;
+}
+
 export function fmtCurrency(value) {
   if (!value) return "0";
   return new Intl.NumberFormat("en-IN", {

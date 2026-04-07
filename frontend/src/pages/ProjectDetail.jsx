@@ -99,6 +99,13 @@ function fromISTLocal(localStr) {
   const d = new Date(localStr);
   return new Date(d.getTime() - 330 * 60 * 1000).toISOString();
 }
+function nowIST() { return toISTLocal(new Date().toISOString()); }
+function fmt12hIST(utcStr) {
+  if (!utcStr) return "";
+  const ist = new Date(new Date(utcStr).getTime() + 330 * 60 * 1000);
+  const h = ist.getUTCHours(), m = ist.getUTCMinutes().toString().padStart(2, "0");
+  return `${h % 12 || 12}:${m} ${h >= 12 ? "PM" : "AM"} IST`;
+}
 
 // ── Inline date cell ──────────────────────────────────────────────────────────
 function InlineDate({ value, leadId, projectId, field, onSaved }) {
@@ -116,13 +123,21 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const dateVal = toISTLocal(value);
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <input
-      type="datetime-local"
-      className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
-      value={dateVal}
-      onChange={(e) => save(e.target.value)}
-    />
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1">
+        <input
+          type="datetime-local"
+          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
+          value={dateVal}
+          onChange={(e) => save(e.target.value)}
+        />
+        <button type="button" title="Set to current IST time" onClick={() => save(nowIST())}
+          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
+      </div>
+      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmt12hIST(value)}</span>}
+    </div>
   );
 }
 
@@ -165,9 +180,9 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Contact remark cell (Not Contacted / Contacted + note) ────────────────────
+// ── Contact remark cell (None / Contacted / Not Contacted + note) ─────────────
 function RemarkCell({ lead, projectId, onUpdated }) {
-  const [remark, setRemark] = useState(lead.remark || "Not Contacted");
+  const [remark, setRemark] = useState(lead.remark || "");
   const [note, setNote]     = useState(lead.remarkNote || "");
   const [saving, setSaving] = useState(false);
   const noteRef = useRef(null);
@@ -184,9 +199,15 @@ function RemarkCell({ lead, projectId, onUpdated }) {
   const handleChange = (e) => {
     const val = e.target.value;
     setRemark(val);
-    if (val === "Not Contacted") { setNote(""); saveRemark(val, ""); }
+    if (val !== "Contacted") { setNote(""); saveRemark(val, ""); }
     else saveRemark(val, note);
   };
+
+  const remarkClass = remark === "Contacted"
+    ? "bg-green-500/10 border-green-500/30 text-green-600"
+    : remark === "Not Contacted"
+    ? "bg-red-500/10 border-red-500/30 text-red-500"
+    : "border-[var(--app-border)] text-app-soft";
 
   return (
     <div className="flex flex-col gap-2 min-w-[160px]">
@@ -194,14 +215,12 @@ function RemarkCell({ lead, projectId, onUpdated }) {
         <select
           value={remark}
           onChange={handleChange}
-          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${
-            remark === "Contacted"
-              ? "bg-green-500/10 border-green-500/30 text-green-600"
-              : "bg-orange-500/10 border-orange-500/30 text-orange-500"
-          }`}
+          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${remarkClass}`}
+          style={{ background: "var(--app-surface-low)" }}
         >
-          <option value="Not Contacted">Not Contacted</option>
+          <option value="">— None —</option>
           <option value="Contacted">Contacted</option>
+          <option value="Not Contacted">Not Contacted</option>
         </select>
         {saving && <div className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></div>}
       </div>

@@ -99,6 +99,15 @@ const leadController = {
       next(err);
     }
   },
+
+  async getDump(req, res, next) {
+    try {
+      const leads = await leadService.getDump(req.user);
+      res.json({ success: true, data: leads });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = leadController;

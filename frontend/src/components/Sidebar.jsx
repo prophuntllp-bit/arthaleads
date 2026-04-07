@@ -3,20 +3,22 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban
+  LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
+import api from "../services/api";
 
 const navItems = [
-  { to: "/",          label: "Dashboard",  icon: LayoutDashboard },
-  { to: "/leads",     label: "Leads",      icon: Users },
-  { to: "/pipeline",  label: "Pipeline",   icon: Kanban },
-  { to: "/projects",  label: "Projects",   icon: FolderKanban },
-  { to: "/team",      label: "Team",       icon: UserCheck, roles: ["admin"] },
-  { to: "/automation", label: "Automation", icon: Workflow, roles: ["admin", "manager"] },
-  { to: "/performance", label: "Performance", icon: BarChart3, roles: ["admin", "manager"] },
-  { to: "/settings",  label: "Settings",   icon: Settings },
+  { to: "/",           label: "Dashboard",    icon: LayoutDashboard },
+  { to: "/leads",      label: "Leads",        icon: Users },
+  { to: "/pipeline",   label: "Pipeline",     icon: Kanban },
+  { to: "/projects",   label: "Projects",     icon: FolderKanban },
+  { to: "/dump-leads", label: "Dump Leads",   icon: Archive, roles: ["admin", "manager"] },
+  { to: "/team",       label: "Team",         icon: UserCheck, roles: ["admin"] },
+  { to: "/automation", label: "Automation",   icon: Workflow, roles: ["admin", "manager"] },
+  { to: "/performance",label: "Performance",  icon: BarChart3, roles: ["admin", "manager"] },
+  { to: "/settings",   label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
 
@@ -25,6 +27,14 @@ export default function Sidebar() {
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [followUpCount, setFollowUpCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get("/leads/analytics", { params: { dateRange: "today" } })
+      .then((r) => setFollowUpCount(r.data.data?.todayFollowUps || 0))
+      .catch(() => {});
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -118,9 +128,23 @@ export default function Sidebar() {
             <span className="stitch-kicker mt-1 block">Real Estate</span>
           </div>
         </div>
-        <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate("/leads")}
+            className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5"
+            title="Today's follow-ups"
+          >
+            <Bell className="w-5 h-5" />
+            {followUpCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
+                {followUpCount > 9 ? "9+" : followUpCount}
+              </span>
+            )}
+          </button>
+          <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {open && (
