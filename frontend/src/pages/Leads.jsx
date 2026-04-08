@@ -625,10 +625,12 @@ export default function Leads() {
     const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
     const parts = s.split(/[–\-]+/);
     const toINR = (p = "") => {
-      const n = parseFloat(p);
+      // strip leading/trailing underscores left from splitting (e.g. "_1_cr" → "1_cr")
+      const cleaned = p.replace(/^_+|_+$/g, "");
+      const n = parseFloat(cleaned);
       if (isNaN(n) || n === 0) return 0;
-      if (p.includes("cr")) return Math.round(n * 10_000_000);
-      if (p.includes("lakh") || p.includes("lac")) return Math.round(n * 100_000);
+      if (cleaned.includes("cr")) return Math.round(n * 10_000_000);
+      if (cleaned.includes("lakh") || cleaned.includes("lac")) return Math.round(n * 100_000);
       return Math.round(n);
     };
     return { min: toINR(parts[0]), max: toINR(parts[1] || parts[0]), currency: "INR" };
