@@ -525,7 +525,7 @@ export default function Leads() {
     }
   };
 
-  const getXlsx = async () => import("xlsx");
+  const getXlsx = async () => { const mod = await import("xlsx"); return mod.default ?? mod; };
 
   const exportRows = async (type) => {
     try {
@@ -731,7 +731,7 @@ export default function Leads() {
       toast.success(data.message || `${leadsToImport.length} lead(s) imported`);
       window.location.reload();
     } catch (e) {
-      toast.error(e.response?.data?.message || "Import failed");
+      toast.error(e.response?.data?.message || e.message || "Import failed");
     } finally {
       setImporting(false);
       event.target.value = "";

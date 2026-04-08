@@ -14,7 +14,7 @@ const BOOKING_COLOR = {
   "Site Visit Booked": "bg-violet-500/10 text-violet-600 border-violet-500/20",
 };
 
-const getXlsx = async () => import("xlsx");
+const getXlsx = async () => { const mod = await import("xlsx"); return mod.default ?? mod; };
 
 export default function DumpLeads() {
   const { user } = useAuth();
@@ -162,7 +162,7 @@ export default function DumpLeads() {
       const r = await api.get("/leads/dump");
       setLeads(r.data.data);
     } catch (e) {
-      toast.error(e.response?.data?.message || "Import failed");
+      toast.error(e.response?.data?.message || e.message || "Import failed");
     } finally {
       setImporting(false);
       event.target.value = "";
