@@ -12,7 +12,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import * as XLSX from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -569,11 +569,11 @@ export default function Leads() {
         return;
       }
 
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+      const worksheet = xlsxUtils.json_to_sheet(rows);
+      const workbook = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(workbook, worksheet, "Leads");
       const fileName = `propcrm-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
-      XLSX.writeFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
+      xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
       toast.success(`Leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
@@ -587,8 +587,6 @@ export default function Leads() {
       name: String(row.Name || row.name || "").trim(),
       phone: String(row.Phone || row.phone || "").trim(),
       email: String(row.Email || row.email || "").trim(),
-      streetAddress: String(row.StreetAddress || row.streetAddress || row.street_address || "").trim(),
-      city: String(row.City || row.city || "").trim(),
       source: String(row.Source || row.source || "Manual").trim() || "Manual",
       status: String(row.Status || row.status || "New").trim() || "New",
       priority: String(row.Priority || row.priority || "Medium").trim() || "Medium",
@@ -617,27 +615,23 @@ export default function Leads() {
   const FB_CONTACT = new Set(["full_name", "phone_number", "email", "street_address", "city"]);
 
   const isFbCsv = (headers) =>
-    headers.some((header) => String(header).trim().toLowerCase() === "full_name") &&
-    headers.some((header) => String(header).trim().toLowerCase() === "phone_number");
+    headers.includes("full_name") && headers.includes("phone_number");
 
   // Underscores → spaces, collapse whitespace
   const fbClean = (v = "") => String(v).replace(/_/g, " ").replace(/\s+/g, " ").trim();
-  const fbNormalizeKey = (v = "") => String(v).trim().toLowerCase();
-  const fbLabel = (v = "") => fbClean(String(v).replace(/\?+$/g, ""));
 
+  // "₹80_lakh_–_₹1_cr" → { min: 8000000, max: 10000000 }
   const parseFbBudget = (v = "") => {
-    const normalized = String(v).toLowerCase().replace(/[_\s]+/g, " ");
-    const matches = [...normalized.matchAll(/(\d+(?:\.\d+)?)\s*(cr|crore|lakh|lac)?/g)];
-    const toINR = ([, amount, unit = ""] = []) => {
-      const n = parseFloat(amount);
+    const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
+    const parts = s.split(/[–\-]+/);
+    const toINR = (p = "") => {
+      const n = parseFloat(p);
       if (isNaN(n) || n === 0) return 0;
-      if (unit.includes("cr")) return Math.round(n * 10_000_000);
-      if (unit.includes("lakh") || unit.includes("lac")) return Math.round(n * 100_000);
+      if (p.includes("cr")) return Math.round(n * 10_000_000);
+      if (p.includes("lakh") || p.includes("lac")) return Math.round(n * 100_000);
       return Math.round(n);
     };
-    const first = toINR(matches[0]);
-    const second = toINR(matches[1]);
-    return { min: first, max: second || first, currency: "INR" };
+    return { min: toINR(parts[0]), max: toINR(parts[1] || parts[0]), currency: "INR" };
   };
 
   // "end_use_(self-use)" → "Buy", "investment" → "Invest", "rent" → "Rent"
@@ -648,47 +642,42 @@ export default function Leads() {
     return "Buy";
   };
 
-  const parseFbRow = (row, questionCols, headerMap) => {
-    const getVal = (key) => row[headerMap.get(key) || key];
-    const streetAddress = fbClean(getVal("street_address") || "");
-    const city = fbClean(getVal("city") || "");
-    const location = [streetAddress, city].filter(Boolean).join(", ");
+  const parseFbRow = (row, questionCols) => {
+    const location = [row.street_address, row.city]
+      .map((s) => fbClean(String(s || "")))
+      .filter(Boolean)
+      .join(", ");
 
     let purpose = "Buy";
     let budget = { min: 0, max: 0, currency: "INR" };
-    const formResponses = [];
+    const extras = [];
 
     for (const col of questionCols) {
       const raw = String(row[col] || "").trim();
       if (!raw) continue;
-      const colLower = fbNormalizeKey(col);
-      const label = fbLabel(col);
-      const cleanedValue = fbClean(raw);
+      const colLower = col.toLowerCase();
+      const label = col.replace(/_/g, " ").replace(/\?$/, "").trim();
 
       if (colLower.includes("budget")) {
         budget = parseFbBudget(raw);
       } else if (colLower.includes("purpose")) {
         purpose = parseFbPurpose(raw);
+      } else {
+        // Any other question → readable remark, e.g. "when are you planning to purchase a home: immediately (0 3 months)"
+        extras.push(`${label}: ${fbClean(raw)}`);
       }
-
-      formResponses.push({
-        fieldKey: colLower.replace(/[^\w]+/g, "_"),
-        label,
-        value: cleanedValue,
-      });
     }
 
     return {
-      name: String(getVal("full_name") || "").replace(/^"|"$/g, "").trim(),
-      phone: String(getVal("phone_number") || "").replace(/^p:/i, "").trim(),
-      email: String(getVal("email") || "").trim(),
-      streetAddress,
-      city,
+      name: String(row.full_name || "").replace(/^"|"$/g, "").trim(),
+      phone: String(row.phone_number || "").replace(/^p:/i, "").trim(),
+      email: String(row.email || "").trim(),
       source: "Facebook",
       preferredLocation: location,
       purpose,
       budget,
-      formResponses,
+      remark1: extras[0] || "",
+      remark2: extras.slice(1).join(" | ") || "",
       status: "New",
       priority: "Medium",
     };
@@ -700,23 +689,18 @@ export default function Leads() {
     setImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
+      const workbook = xlsxRead(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+      const rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
       if (!rows.length) { toast.error("File is empty"); return; }
 
       const headers = Object.keys(rows[0]);
       let leadsToImport;
 
       if (isFbCsv(headers)) {
-        const headerMap = new Map(headers.map((header) => [fbNormalizeKey(header), header]));
-        const questionCols = headers.filter((header) => {
-          const normalized = fbNormalizeKey(header);
-          return !FB_META.has(normalized) && !FB_CONTACT.has(normalized);
-        });
-        leadsToImport = rows
-          .map((row) => parseFbRow(row, questionCols, headerMap))
-          .filter((entry) => entry.name && entry.phone);
+        // Auto-detected Facebook Lead Form export
+        const questionCols = headers.filter((h) => !FB_META.has(h) && !FB_CONTACT.has(h));
+        leadsToImport = rows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
         if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
         toast(`Facebook format detected — ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {

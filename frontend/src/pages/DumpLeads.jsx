@@ -5,7 +5,7 @@ import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, Status
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -111,11 +111,11 @@ export default function DumpLeads() {
         return;
       }
 
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Dump Leads");
+      const worksheet = xlsxUtils.json_to_sheet(rows);
+      const workbook = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(workbook, worksheet, "Dump Leads");
       const fileName = `propcrm-dump-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
-      XLSX.writeFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
+      xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
       toast.success(`Dump leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
@@ -129,9 +129,9 @@ export default function DumpLeads() {
     setImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
+      const workbook = xlsxRead(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+      const rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
 
       const leadsToImport = rows
         .map((row) => ({
