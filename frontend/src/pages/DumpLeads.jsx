@@ -129,7 +129,22 @@ export default function DumpLeads() {
     setImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = xlsxRead(buffer, { type: "array" });
+      const bytes = new Uint8Array(buffer);
+      const isCsv = file.name.toLowerCase().endsWith(".csv");
+      let workbook;
+      if (isCsv) {
+        let text;
+        if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          text = new TextDecoder("utf-16le").decode(buffer.slice(2));
+        } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          text = new TextDecoder("utf-16be").decode(buffer.slice(2));
+        } else {
+          text = new TextDecoder("utf-8").decode(buffer);
+        }
+        workbook = xlsxRead(text, { type: "string" });
+      } else {
+        workbook = xlsxRead(buffer, { type: "array" });
+      }
       const firstSheet = workbook.SheetNames[0];
       const rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
 
