@@ -59,9 +59,13 @@ export function useLeads(mode = "normal") {
 
   const upsertLead = (lead, prepend = false) => {
     setLeads((current) => {
-      const exists = current.some((item) => item._id === lead._id);
-      if (exists) {
-        return current.map((item) => (item._id === lead._id ? lead : item));
+      const idx = current.findIndex((item) => item._id === lead._id);
+      if (idx !== -1) {
+        const existing = current[idx];
+        // Merge: preserve client-side fields (_type, projectId, projectName) from
+        // the existing entry, then overlay fresh API data on top
+        const merged = { ...existing, ...lead };
+        return current.map((item, i) => (i === idx ? merged : item));
       }
       return prepend ? [lead, ...current].slice(0, limit) : current;
     });

@@ -215,23 +215,26 @@ const leadService = {
     }
 
     // Handle assignment change
-    if (updates.assignedTo && updates.assignedTo !== lead.assignedTo?.toString()) {
-      const agent = await User.findById(updates.assignedTo);
-      if (!agent) throw new AppError("Agent not found", 404);
-      updates.assignedToName = agent.name;
-      logActivity(
-        lead,
-        "assigned",
-        `Reassigned to ${agent.name}`,
-        user,
-        { agentId: agent._id, agentName: agent.name }
-      );
-      sendPushToUser(agent._id, {
-        type: "lead_assigned",
-        title: "New Lead Assigned",
-        body: `${user.name} has assigned a lead to you — ${lead.name}`,
-        data: { leadId: lead._id },
-      }).catch(() => {});
+    if ("assignedTo" in updates) {
+      if (updates.assignedTo) {
+        if (updates.assignedTo !== lead.assignedTo?.toString()) {
+          const agent = await User.findById(updates.assignedTo);
+          if (!agent) throw new AppError("Agent not found", 404);
+          updates.assignedToName = agent.name;
+          logActivity(lead, "assigned", `Assigned to ${agent.name}`, user, { agentId: agent._id, agentName: agent.name });
+          sendPushToUser(agent._id, {
+            type: "lead_assigned",
+            title: "New Lead Assigned",
+            body: `${user.name} has assigned a lead to you — ${lead.name}`,
+            data: { leadId: lead._id },
+          }).catch(() => {});
+        }
+      } else {
+        // Unassign — clear the name too
+        updates.assignedTo = null;
+        updates.assignedToName = "";
+        logActivity(lead, "assigned", "Unassigned", user, {});
+      }
     }
 
     if (updates.followUpDate) {
