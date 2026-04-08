@@ -1,10 +1,23 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import toast from "react-hot-toast";
 
-// Register service worker for PWA install prompt
+// Register service worker and listen for foreground push messages
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+
+  // When app is open and a push arrives, SW sends a message → show toast
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type === "PUSH_NOTIFICATION") {
+      const { title, body } = event.data;
+      toast(body || title, {
+        duration: 6000,
+        icon: "🔔",
+        style: { fontWeight: "500" },
+      });
+    }
   });
 }
 import { BrowserRouter } from "react-router-dom";
