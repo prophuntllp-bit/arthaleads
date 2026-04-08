@@ -243,7 +243,8 @@ const leadService = {
 
     Object.assign(lead, updates);
     await lead.save();
-    return lead;
+    // Return a fresh read so the response always reflects what's in the DB
+    return Lead.findById(lead._id).populate("assignedTo", "name").lean();
   },
 
   // ── Delete (soft) ─────────────────────────────────────────────────────────
@@ -302,7 +303,7 @@ const leadService = {
       data: { leadId: lead._id },
     }).catch(() => {});
 
-    return lead;
+    return Lead.findById(lead._id).populate("assignedTo", "name").lean();
   },
 
   // ── Analytics ──────────────────────────────────────────────────────────────
