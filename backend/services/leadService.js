@@ -367,10 +367,9 @@ const leadService = {
       leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
     }
 
+    // Project leads: pre-$addFields filter (fields that exist in the raw doc)
     const projFilter = { booking: { $ne: "Not Interested" } };
     if (source) projFilter.source = source;
-    if (status) projFilter.status = status;
-    if (priority) projFilter.priority = priority;
     if (followUpToday === "true" || followUpToday === true) {
       projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
     }
@@ -379,6 +378,11 @@ const leadService = {
       projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
     }
     if (user.role === "agent") projFilter.importedBy = user._id;
+
+    // Post-$addFields filter: status/priority need defaults applied first
+    const projPostFilter = {};
+    if (status) projPostFilter.status = status;
+    if (priority) projPostFilter.priority = priority;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -400,6 +404,7 @@ const leadService = {
             followUpDate: { $ifNull: ["$followUp", null] },
           }},
           { $project: { _proj: 0 } },
+          ...(Object.keys(projPostFilter).length ? [{ $match: projPostFilter }] : []),
         ],
       }},
       { $sort: { createdAt: -1 } },
