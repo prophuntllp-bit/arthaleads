@@ -5,7 +5,7 @@ import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, Status
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
