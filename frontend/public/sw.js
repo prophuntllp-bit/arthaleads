@@ -1,5 +1,5 @@
 // PropCRM Service Worker — PWA + Web Push notifications
-const CACHE_NAME = "propcrm-v5";
+const CACHE_NAME = "propcrm-v6";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
@@ -37,36 +37,31 @@ self.addEventListener("fetch", (e) => {
 // ── Web Push ──────────────────────────────────────────────────────────────────
 self.addEventListener("push", (e) => {
   let data = {};
-  try { data = e.data?.json() || {}; } catch { data = { title: "PropCRM", body: e.data?.text() || "" }; }
+  try { data = e.data?.json() || {}; } catch { data = {}; }
 
   const title = data.title || "PropCRM";
-  const body  = data.body  || "You have a new update";
-  const notifData = { url: "/leads", ...data.data };
+  const body  = data.body  || "You have a new notification";
+  const notifData = { url: "/leads", ...(data.data || {}) };
 
-  e.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If app is open in a focused tab → send message so it shows an in-app toast
-      const focusedClient = clientList.find((c) => c.focused);
-      if (focusedClient) {
-        focusedClient.postMessage({ type: "PUSH_NOTIFICATION", title, body, data: notifData });
-        // Also show system notification for non-focused open tabs
-        const unfocused = clientList.filter((c) => !c.focused);
-        if (!unfocused.length) return; // only focused tab open — toast is enough
-      }
+  // Always show the system notification (works in background AND foreground)
+  const showNotif = self.registration.showNotification(title, {
+    body,
+    icon: "/icons/icon-192x192.png",
+    badge: "/icons/icon-72x72.png",
+    vibrate: [200, 100, 200],
+    tag: `propcrm-${Date.now()}`,
+    silent: false,
+    data: notifData,
+  });
 
-      // Show system notification (background or unfocused tab)
-      return self.registration.showNotification(title, {
-        body,
-        icon: "/icons/icon-192x192.png",
-        badge: "/icons/icon-72x72.png",
-        vibrate: [200, 100, 200],
-        tag: `${data.type || "propcrm"}-${Date.now()}`, // unique tag so notifications stack
-        requireInteraction: true, // stays until user taps — won't disappear silently
-        silent: false,
-        data: notifData,
-      });
-    })
-  );
+  // Also forward to any open tabs so they can show an in-app toast
+  const notifyClients = clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((list) =>
+      list.forEach((c) => c.postMessage({ type: "PUSH_NOTIFICATION", title, body, data: notifData }))
+    );
+
+  e.waitUntil(Promise.all([showNotif, notifyClients]));
 });
 
 self.addEventListener("notificationclick", (e) => {
