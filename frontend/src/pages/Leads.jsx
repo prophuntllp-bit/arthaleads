@@ -627,16 +627,18 @@ export default function Leads() {
   const fbLabel = (v = "") => fbClean(String(v).replace(/\?+$/g, ""));
 
   const parseFbBudget = (v = "") => {
-    const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
-    const parts = s.split(/[–\-]+/);
-    const toINR = (p = "") => {
-      const n = parseFloat(p);
+    const normalized = String(v).toLowerCase().replace(/[_\s]+/g, " ");
+    const matches = [...normalized.matchAll(/(\d+(?:\.\d+)?)\s*(cr|crore|lakh|lac)?/g)];
+    const toINR = ([, amount, unit = ""] = []) => {
+      const n = parseFloat(amount);
       if (isNaN(n) || n === 0) return 0;
-      if (p.includes("cr")) return Math.round(n * 10_000_000);
-      if (p.includes("lakh") || p.includes("lac")) return Math.round(n * 100_000);
+      if (unit.includes("cr")) return Math.round(n * 10_000_000);
+      if (unit.includes("lakh") || unit.includes("lac")) return Math.round(n * 100_000);
       return Math.round(n);
     };
-    return { min: toINR(parts[0]), max: toINR(parts[1] || parts[0]), currency: "INR" };
+    const first = toINR(matches[0]);
+    const second = toINR(matches[1]);
+    return { min: first, max: second || first, currency: "INR" };
   };
 
   // "end_use_(self-use)" → "Buy", "investment" → "Invest", "rent" → "Rent"
