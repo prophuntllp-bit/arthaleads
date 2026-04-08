@@ -581,6 +581,7 @@ export default function Leads() {
     }
   };
 
+  // ── Standard CRM import (Name/Phone/Email columns) ───────────────────────────
   const parseImportRow = (row) => {
     const assignedAgent = agents.find((agent) => agent.name?.toLowerCase() === String(row.AssignedTo || "").trim().toLowerCase());
     return {
@@ -605,6 +606,84 @@ export default function Leads() {
     };
   };
 
+  // ── Facebook Lead Form CSV parser ─────────────────────────────────────────────
+  // Columns to strip (Facebook metadata)
+  const FB_META = new Set([
+    "id", "created_time", "ad_id", "ad_name", "adset_id", "adset_name",
+    "campaign_id", "campaign_name", "form_id", "form_name", "is_organic", "platform",
+  ]);
+  // Mandatory contact columns (always present)
+  const FB_CONTACT = new Set(["full_name", "phone_number", "email", "street_address", "city"]);
+
+  const isFbCsv = (headers) =>
+    headers.includes("full_name") && headers.includes("phone_number");
+
+  // Underscores → spaces, collapse whitespace
+  const fbClean = (v = "") => String(v).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+
+  // "₹80_lakh_–_₹1_cr" → { min: 8000000, max: 10000000 }
+  const parseFbBudget = (v = "") => {
+    const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
+    const parts = s.split(/[–\-]+/);
+    const toINR = (p = "") => {
+      const n = parseFloat(p);
+      if (isNaN(n) || n === 0) return 0;
+      if (p.includes("cr")) return Math.round(n * 10_000_000);
+      if (p.includes("lakh") || p.includes("lac")) return Math.round(n * 100_000);
+      return Math.round(n);
+    };
+    return { min: toINR(parts[0]), max: toINR(parts[1] || parts[0]), currency: "INR" };
+  };
+
+  // "end_use_(self-use)" → "Buy", "investment" → "Invest", "rent" → "Rent"
+  const parseFbPurpose = (v = "") => {
+    const s = String(v).toLowerCase();
+    if (s.includes("invest")) return "Invest";
+    if (s.includes("rent")) return "Rent";
+    return "Buy";
+  };
+
+  const parseFbRow = (row, questionCols) => {
+    const location = [row.street_address, row.city]
+      .map((s) => fbClean(String(s || "")))
+      .filter(Boolean)
+      .join(", ");
+
+    let purpose = "Buy";
+    let budget = { min: 0, max: 0, currency: "INR" };
+    const extras = [];
+
+    for (const col of questionCols) {
+      const raw = String(row[col] || "").trim();
+      if (!raw) continue;
+      const colLower = col.toLowerCase();
+      const label = col.replace(/_/g, " ").replace(/\?$/, "").trim();
+
+      if (colLower.includes("budget")) {
+        budget = parseFbBudget(raw);
+      } else if (colLower.includes("purpose")) {
+        purpose = parseFbPurpose(raw);
+      } else {
+        // Any other question → readable remark, e.g. "when are you planning to purchase a home: immediately (0 3 months)"
+        extras.push(`${label}: ${fbClean(raw)}`);
+      }
+    }
+
+    return {
+      name: String(row.full_name || "").replace(/^"|"$/g, "").trim(),
+      phone: String(row.phone_number || "").replace(/^p:/i, "").trim(),
+      email: String(row.email || "").trim(),
+      source: "Facebook",
+      preferredLocation: location,
+      purpose,
+      budget,
+      remark1: extras[0] || "",
+      remark2: extras.slice(1).join(" | ") || "",
+      status: "New",
+      priority: "Medium",
+    };
+  };
+
   const handleImport = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -615,10 +694,25 @@ export default function Leads() {
       const workbook = XLSX.read(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
-      const leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
-      if (!leadsToImport.length) { toast.error("No valid leads found in the uploaded file"); return; }
+      if (!rows.length) { toast.error("File is empty"); return; }
+
+      const headers = Object.keys(rows[0]);
+      let leadsToImport;
+
+      if (isFbCsv(headers)) {
+        // Auto-detected Facebook Lead Form export
+        const questionCols = headers.filter((h) => !FB_META.has(h) && !FB_CONTACT.has(h));
+        leadsToImport = rows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
+        if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
+        toast(`Facebook format detected — ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
+      } else {
+        // Standard CRM import format
+        leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
+        if (!leadsToImport.length) { toast.error("No valid leads found in the uploaded file"); return; }
+      }
+
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
-      toast.success(data.message || "Leads imported");
+      toast.success(data.message || `${leadsToImport.length} lead(s) imported`);
       window.location.reload();
     } catch (e) {
       toast.error(e.response?.data?.message || "Import failed");
