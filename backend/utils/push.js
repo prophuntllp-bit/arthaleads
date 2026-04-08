@@ -35,4 +35,28 @@ async function sendPushToAll(payload) {
   logger.info(`Push sent to ${sent}/${subs.length} subscribers`);
 }
 
-module.exports = { sendPushToAll };
+/**
+ * Send push notification to a specific user only.
+ */
+async function sendPushToUser(userId, payload) {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+
+  const subs = await PushSubscription.find({ userId });
+  if (!subs.length) return;
+
+  await Promise.allSettled(
+    subs.map((sub) =>
+      webPush.sendNotification(
+        { endpoint: sub.endpoint, keys: sub.keys },
+        JSON.stringify(payload)
+      ).catch(async (err) => {
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await PushSubscription.deleteOne({ _id: sub._id });
+        }
+        throw err;
+      })
+    )
+  );
+}
+
+module.exports = { sendPushToAll, sendPushToUser };
