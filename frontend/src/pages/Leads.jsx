@@ -352,6 +352,15 @@ export default function Leads() {
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
   const [projLimit, setProjLimit] = useState(10);
 
+  // Apply preset filters when navigated from Dashboard cards
+  useEffect(() => {
+    if (!location.state?.presetSource && !location.state?.presetStatus) return;
+    if (location.state?.presetSource) setFilter("source", location.state.presetSource);
+    if (location.state?.presetStatus) setFilter("status", location.state.presetStatus);
+    // Clear state so re-visiting the page doesn't re-apply
+    navigate(location.pathname, { replace: true, state: {} });
+  }, []);
+
   useEffect(() => {
     api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});
   }, []);
