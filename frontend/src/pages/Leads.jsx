@@ -12,6 +12,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -525,7 +526,6 @@ export default function Leads() {
     }
   };
 
-  const getXlsx = async () => { const mod = await import("xlsx"); return mod.default ?? mod; };
 
   const exportRows = async (type) => {
     try {
@@ -569,7 +569,6 @@ export default function Leads() {
         return;
       }
 
-      const XLSX = await getXlsx();
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
@@ -689,7 +688,6 @@ export default function Leads() {
     if (!file) return;
     setImporting(true);
     try {
-      const XLSX = await getXlsx();
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];

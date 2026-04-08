@@ -5,6 +5,7 @@ import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, Status
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -13,8 +14,6 @@ const BOOKING_COLOR = {
   "Call Back":         "bg-amber-500/10 text-amber-600 border-amber-500/20",
   "Site Visit Booked": "bg-violet-500/10 text-violet-600 border-violet-500/20",
 };
-
-const getXlsx = async () => { const mod = await import("xlsx"); return mod.default ?? mod; };
 
 export default function DumpLeads() {
   const { user } = useAuth();
@@ -112,7 +111,6 @@ export default function DumpLeads() {
         return;
       }
 
-      const XLSX = await getXlsx();
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Dump Leads");
@@ -130,7 +128,6 @@ export default function DumpLeads() {
     if (!file) return;
     setImporting(true);
     try {
-      const XLSX = await getXlsx();
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];
