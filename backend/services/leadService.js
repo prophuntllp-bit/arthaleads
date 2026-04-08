@@ -347,13 +347,19 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to } = query;
+    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to, followUpToday } = query;
+
+    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const leadFilter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     if (status) leadFilter.status = status;
     if (source) leadFilter.source = source;
     if (priority) leadFilter.priority = priority;
+    if (followUpToday === "true" || followUpToday === true) {
+      leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
+    }
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (search) {
@@ -363,6 +369,11 @@ const leadService = {
 
     const projFilter = { booking: { $ne: "Not Interested" } };
     if (source) projFilter.source = source;
+    if (status) projFilter.status = status;
+    if (priority) projFilter.priority = priority;
+    if (followUpToday === "true" || followUpToday === true) {
+      projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
+    }
     if (search) {
       const rx = { $regex: search, $options: "i" };
       projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];

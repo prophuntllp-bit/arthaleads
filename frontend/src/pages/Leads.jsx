@@ -322,6 +322,7 @@ export default function Leads() {
   } = useLeads("unified", {
     status: location.state?.presetStatus || "",
     source: location.state?.presetSource || "",
+    followUpToday: location.state?.presetFollowUpToday ? "true" : "",
   });
 
   const [agents, setAgents] = useState([]);
@@ -357,7 +358,7 @@ export default function Leads() {
 
   // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
-    if (location.state?.presetStatus || location.state?.presetSource) {
+    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday) {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, []);

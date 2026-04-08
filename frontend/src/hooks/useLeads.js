@@ -14,6 +14,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
     source: initialFilters.source || "",
     priority: initialFilters.priority || "",
     dateRange: initialFilters.dateRange || "",
+    followUpToday: initialFilters.followUpToday || "",
   });
 
   const endpoint = mode === "unified" ? "/leads/unified" : "/leads";
