@@ -319,7 +319,10 @@ export default function Leads() {
     leads, total, loading, page, setPage,
     filters, setFilter,
     upsertLead, removeLead, pages, limit, changeLimit,
-  } = useLeads("unified");
+  } = useLeads("unified", {
+    status: location.state?.presetStatus || "",
+    source: location.state?.presetSource || "",
+  });
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -352,13 +355,11 @@ export default function Leads() {
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
   const [projLimit, setProjLimit] = useState(10);
 
-  // Apply preset filters when navigated from Dashboard cards
+  // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
-    if (!location.state?.presetSource && !location.state?.presetStatus) return;
-    if (location.state?.presetSource) setFilter("source", location.state.presetSource);
-    if (location.state?.presetStatus) setFilter("status", location.state.presetStatus);
-    // Clear state so re-visiting the page doesn't re-apply
-    navigate(location.pathname, { replace: true, state: {} });
+    if (location.state?.presetStatus || location.state?.presetSource) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
   }, []);
 
   useEffect(() => {
@@ -379,13 +380,6 @@ export default function Leads() {
       api.get("/auth/agents").then((r) => setAgents(r.data.agents)).catch(() => {});
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!location.state?.presetSource && !location.state?.presetStatus) return;
-    if (location.state?.presetSource) setFilter("source", location.state.presetSource);
-    if (location.state?.presetStatus) setFilter("status", location.state.presetStatus);
-    navigate(location.pathname, { replace: true, state: {} });
-  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     const openLeadId = location.state?.openLeadId;

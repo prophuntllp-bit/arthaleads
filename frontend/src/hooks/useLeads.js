@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
-export function useLeads(mode = "normal") {
+export function useLeads(mode = "normal", initialFilters = {}) {
   const [limit, setLimit] = useState(10);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
@@ -10,10 +10,10 @@ export function useLeads(mode = "normal") {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: "",
-    status: "",
-    source: "",
-    priority: "",
-    dateRange: ""
+    status: initialFilters.status || "",
+    source: initialFilters.source || "",
+    priority: initialFilters.priority || "",
+    dateRange: initialFilters.dateRange || "",
   });
 
   const endpoint = mode === "unified" ? "/leads/unified" : "/leads";
