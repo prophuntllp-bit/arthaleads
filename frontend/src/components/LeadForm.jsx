@@ -89,7 +89,9 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
 
     try {
       const { data } = lead
-        ? await api.put(`/leads/${lead._id}`, payload)
+        ? lead._type === "project" && lead.projectId
+          ? await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, payload)
+          : await api.put(`/leads/${lead._id}`, payload)
         : await api.post("/leads", payload);
 
       toast.success(lead ? "Lead updated" : "Lead created");
