@@ -605,6 +605,32 @@ export default function Leads() {
     };
   };
 
+  // ── Native CSV/TSV parser (no xlsx dependency) ───────────────────────────────
+  const parseCsvText = (text) => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) return [];
+    const delim = lines[0].includes("\t") ? "\t" : ",";
+    const parseRow = (line) => {
+      const vals = [];
+      let cur = "", inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (ch === delim && !inQuote) { vals.push(cur); cur = ""; continue; }
+        cur += ch;
+      }
+      vals.push(cur);
+      return vals;
+    };
+    const headers = parseRow(lines[0]).map((h) => h.trim());
+    return lines.slice(1).map((line) => {
+      const vals = parseRow(line);
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim(); });
+      return obj;
+    });
+  };
+
   // ── Facebook Lead Form CSV parser ─────────────────────────────────────────────
   // Columns to strip (Facebook metadata)
   const FB_META = new Set([
@@ -698,9 +724,9 @@ export default function Leads() {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       const isCsv = file.name.toLowerCase().endsWith(".csv");
-      let workbook;
+      let rows;
       if (isCsv) {
-        // Facebook exports UTF-16 LE CSV — detect BOM and decode accordingly
+        // Parse CSV/TSV without xlsx — handles UTF-16 LE (Facebook export) and UTF-8
         let text;
         if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
           text = new TextDecoder("utf-16le").decode(buffer.slice(2));
@@ -709,12 +735,12 @@ export default function Leads() {
         } else {
           text = new TextDecoder("utf-8").decode(buffer);
         }
-        workbook = xlsxRead(text, { type: "string" });
+        rows = parseCsvText(text);
       } else {
-        workbook = xlsxRead(buffer, { type: "array" });
+        const workbook = xlsxRead(buffer, { type: "array" });
+        const firstSheet = workbook.SheetNames[0];
+        rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
       }
-      const firstSheet = workbook.SheetNames[0];
-      const rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
       if (!rows.length) { toast.error("File is empty"); return; }
 
       const headers = Object.keys(rows[0]);
