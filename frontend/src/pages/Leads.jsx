@@ -652,20 +652,24 @@ export default function Leads() {
 
     let purpose = "Buy";
     let budget = { min: 0, max: 0, currency: "INR" };
+    let followUpNote = "";
     const extras = [];
 
     for (const col of questionCols) {
       const raw = String(row[col] || "").trim();
       if (!raw) continue;
       const colLower = col.toLowerCase();
-      const label = col.replace(/_/g, " ").replace(/\?$/, "").trim();
 
       if (colLower.includes("budget")) {
         budget = parseFbBudget(raw);
       } else if (colLower.includes("purpose")) {
         purpose = parseFbPurpose(raw);
+      } else if (colLower.includes("when") || colLower.includes("plan") || colLower.includes("timeline") || colLower.includes("time")) {
+        // Purchase timeline → followUpNote (visible in Lead Detail Info tab)
+        followUpNote = fbClean(raw);
       } else {
-        // Any other question → readable remark, e.g. "when are you planning to purchase a home: immediately (0 3 months)"
+        // Any other question → general remark (NOT remark1/remark2 which are for agent notes)
+        const label = col.replace(/_/g, " ").replace(/\?$/, "").trim();
         extras.push(`${label}: ${fbClean(raw)}`);
       }
     }
@@ -678,8 +682,9 @@ export default function Leads() {
       preferredLocation: location,
       purpose,
       budget,
-      remark1: extras[0] || "",
-      remark2: extras.slice(1).join(" | ") || "",
+      followUpNote,
+      remark: extras.join(" | "),
+      // remark1 and remark2 intentionally left empty — reserved for agent notes after calling
       status: "New",
       priority: "Medium",
     };
