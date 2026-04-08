@@ -3,6 +3,7 @@ const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+const { sendPushToUser } = require("../utils/push");
 
 const getDateRangeFilter = (dateRange, from, to) => {
   const now = new Date();
@@ -225,6 +226,12 @@ const leadService = {
         user,
         { agentId: agent._id, agentName: agent.name }
       );
+      sendPushToUser(agent._id, {
+        type: "lead_assigned",
+        title: "New Lead Assigned",
+        body: `${user.name} has assigned a lead to you — ${lead.name}`,
+        data: { leadId: lead._id },
+      }).catch(() => {});
     }
 
     if (updates.followUpDate) {
@@ -284,6 +291,14 @@ const leadService = {
       agentName: agent.name,
     });
     await lead.save();
+
+    sendPushToUser(agent._id, {
+      type: "lead_assigned",
+      title: "New Lead Assigned",
+      body: `${user.name} has assigned a lead to you — ${lead.name}`,
+      data: { leadId: lead._id },
+    }).catch(() => {});
+
     return lead;
   },
 
