@@ -12,7 +12,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import XLSX from "xlsx";
+import * as XLSX from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
