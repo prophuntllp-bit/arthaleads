@@ -11,6 +11,14 @@ import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
+
+// Compact budget formatter: 8000000 → "80L", 10000000 → "1Cr"
+const fmtBudget = (val) => {
+  if (!val || val === 0) return "";
+  if (val >= 10_000_000) return `${parseFloat((val / 10_000_000).toFixed(2)).toString()}Cr`;
+  if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
+  return `₹${val}`;
+};
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
@@ -1040,7 +1048,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Budget", "Purpose", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -1079,6 +1087,16 @@ export default function Leads() {
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
+                    <td>
+                      <span className="text-xs text-app whitespace-nowrap">
+                        {lead.budget?.min || lead.budget?.max
+                          ? `${fmtBudget(lead.budget.min)}${lead.budget.max && lead.budget.max !== lead.budget.min ? ` - ${fmtBudget(lead.budget.max)}` : ""}`
+                          : <span className="text-app-soft">—</span>}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">—</span>}</span>
+                    </td>
                     {/* Remark (contact status) — same dropdown for all lead types */}
                     <td>
                       <ContactStatusCell
