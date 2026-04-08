@@ -1,6 +1,7 @@
 // services/projectService.js
 const Project = require("../models/Project");
 const ProjectLead = require("../models/ProjectLead");
+const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
 const projectService = {
@@ -116,12 +117,14 @@ const projectService = {
   },
 
   async updateLeadFields(leadId, data) {
-    const allowed = ["remark1", "remark2", "followUp", "followUp2", "booking"];
-    const update = {};
-    allowed.forEach((f) => { if (f in data) update[f] = data[f]; });
-    const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
-      .populate("remarkUpdatedBy", "name");
+    const lead = await ProjectLead.findById(leadId);
     if (!lead) throw new AppError("Lead not found", 404);
+
+    // Only update fields that exist in the ProjectLead schema
+    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "followUp", "followUp2", "booking"];
+    allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
+
+    await lead.save();
     return lead;
   },
 
