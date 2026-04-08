@@ -15,6 +15,8 @@ const initialForm = {
   name: "",
   phone: "",
   email: "",
+  streetAddress: "",
+  city: "",
   source: "Manual",
   status: "New",
   priority: "Medium",
@@ -43,6 +45,8 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       name: lead.name || "",
       phone: lead.phone || "",
       email: lead.email || "",
+      streetAddress: lead.streetAddress || "",
+      city: lead.city || "",
       source: lead.source || "Manual",
       status: lead.status || "New",
       priority: lead.priority || "Medium",
@@ -70,6 +74,8 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       name: form.name,
       phone: form.phone,
       email: form.email,
+      streetAddress: form.streetAddress,
+      city: form.city,
       source: form.source,
       status: form.status,
       priority: form.priority,
@@ -119,6 +125,12 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         </FormField>
         <FormField label="Email">
           <input className="input" type="email" value={form.email} onChange={setValue("email")} />
+        </FormField>
+        <FormField label="Street Address">
+          <input className="input" value={form.streetAddress} onChange={setValue("streetAddress")} />
+        </FormField>
+        <FormField label="City">
+          <input className="input" value={form.city} onChange={setValue("city")} />
         </FormField>
         <FormField label="Source">
           <select className="select" value={form.source} onChange={setValue("source")}>

@@ -90,6 +90,8 @@ const createLeadSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   phone: Joi.string().min(7).max(20).required(),
   email: Joi.string().email().allow("").optional(),
+  streetAddress: Joi.string().allow("").optional(),
+  city: Joi.string().allow("").optional(),
   propertyType: Joi.string()
     .valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other")
     .default("Apartment"),
@@ -111,6 +113,13 @@ const createLeadSchema = Joi.object({
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),
   followUpNote: Joi.string().allow("").optional(),
+  formResponses: Joi.array().items(
+    Joi.object({
+      fieldKey: Joi.string().required(),
+      label: Joi.string().required(),
+      value: Joi.string().allow(""),
+    })
+  ).optional(),
   tags: Joi.array().items(Joi.string()).optional(),
 });
 
@@ -118,6 +127,8 @@ const updateLeadSchema = Joi.object({
   name: Joi.string().min(2).max(100),
   phone: Joi.string().min(7).max(20),
   email: Joi.string().email().allow(""),
+  streetAddress: Joi.string().allow(""),
+  city: Joi.string().allow(""),
   propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other"),
   budget: Joi.object({
     min: Joi.number().min(0),
@@ -133,6 +144,13 @@ const updateLeadSchema = Joi.object({
   assignedTo: Joi.string().hex().length(24).allow(null, ""),
   followUpDate: Joi.date().allow(null),
   followUpNote: Joi.string().allow(""),
+  formResponses: Joi.array().items(
+    Joi.object({
+      fieldKey: Joi.string().required(),
+      label: Joi.string().required(),
+      value: Joi.string().allow(""),
+    })
+  ),
   followUp2: Joi.date().allow(null, ""),
   siteVisitDate: Joi.date().allow(null),
   siteVisitDone: Joi.boolean(),
@@ -158,6 +176,8 @@ const importLeadsSchema = Joi.object({
       name: Joi.string().min(2).max(100).required(),
       phone: Joi.string().min(7).max(20).required(),
       email: Joi.string().email().allow("").optional(),
+      streetAddress: Joi.string().allow("").optional(),
+      city: Joi.string().allow("").optional(),
       propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other").default("Apartment"),
       budget: Joi.object({
         min: Joi.number().min(0).default(0),
@@ -173,6 +193,13 @@ const importLeadsSchema = Joi.object({
       assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
       followUpDate: Joi.date().allow(null).optional(),
       followUpNote: Joi.string().allow("").optional(),
+      formResponses: Joi.array().items(
+        Joi.object({
+          fieldKey: Joi.string().required(),
+          label: Joi.string().required(),
+          value: Joi.string().allow(""),
+        })
+      ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
       booking: Joi.string().valid("Not Interested","Interested","Booked","Call Back","Site Visit Booked","").allow("").optional(),
       isDeleted: Joi.boolean().optional(),

@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
 import {
   ArrowLeft, Building2, Calendar, ChevronLeft, ChevronRight,
-  ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
+  Download, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
 function fmtPrice(n) {
@@ -31,6 +31,20 @@ function cleanPhone(raw) {
     .trim();
 }
 
+const FB_META = new Set([
+  "id", "created_time", "ad_id", "ad_name", "adset_id", "adset_name",
+  "campaign_id", "campaign_name", "form_id", "form_name", "is_organic", "platform",
+]);
+
+const FB_CONTACT = new Set(["full_name", "phone_number", "email", "street_address", "city"]);
+
+const fbNormalizeKey = (v = "") => String(v).trim().toLowerCase();
+const fbClean = (v = "") => String(v).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+
+const isFacebookExport = (headers = []) =>
+  headers.some((header) => fbNormalizeKey(header) === "full_name") &&
+  headers.some((header) => fbNormalizeKey(header) === "phone_number");
+
 function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
@@ -40,6 +54,43 @@ function parseRow(raw) {
   const email    = r["email"] || r["email address"] || r["mail"] || "";
   const source   = r["source"] || r["lead source"] || "Facebook";
   return { name, phone, email, source };
+}
+
+function parseFacebookProjectRow(raw, questionCols, headerMap) {
+  const getVal = (key) => raw[headerMap.get(key) || key];
+  const questions = questionCols
+    .map((column) => {
+      const value = fbClean(getVal(fbNormalizeKey(column)) || raw[column] || "");
+      if (!value) return null;
+      return `${fbClean(String(column).replace(/\?+$/g, ""))}: ${value}`;
+    })
+    .filter(Boolean);
+
+  return {
+    name: String(getVal("full_name") || "").replace(/^"|"$/g, "").trim(),
+    phone: cleanPhone(String(getVal("phone_number") || "").replace(/^p:/i, "")),
+    email: String(getVal("email") || "").trim(),
+    source: "Facebook",
+    remark1: questions[0] || "",
+    remark2: questions.slice(1).join(" | ") || "",
+  };
+}
+
+function downloadProjectTemplate() {
+  const rows = [
+    {
+      Name: "Sample Lead",
+      Phone: "+919876543210",
+      Email: "lead@example.com",
+      Source: "Facebook",
+      Remark1: "Budget range: Rs 80 lakh - Rs 1 cr",
+      Remark2: "Purchase timeline: Immediately | Purpose: End use",
+    },
+  ];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Project Leads");
+  XLSX.writeFile(wb, "propcrm-project-import-template.xlsx");
 }
 
 // ── Inline editable text cell ─────────────────────────────────────────────────

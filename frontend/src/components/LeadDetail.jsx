@@ -103,6 +103,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
             <Info label="BHK" value={lead.bhk} />
             <Info label="Purpose" value={lead.purpose} />
             <Info label="Preferred Location" value={lead.preferredLocation || "-"} />
+            <Info label="Street Address" value={lead.streetAddress || "-"} />
+            <Info label="City" value={lead.city || "-"} />
             <Info label="Budget" value={`${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`} />
             <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
             <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
@@ -110,6 +112,16 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
             <div className="md:col-span-2">
               <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
             </div>
+            {!!lead.formResponses?.length && (
+              <div className="md:col-span-2 rounded-[1.35rem] p-4 stitch-surface-muted">
+                <p className="stitch-kicker mb-3">Form Questions</p>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {lead.formResponses.map((item, index) => (
+                    <Info key={`${item.fieldKey}-${index}`} label={item.label} value={item.value || "-"} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -588,6 +588,8 @@ export default function Leads() {
       name: String(row.Name || row.name || "").trim(),
       phone: String(row.Phone || row.phone || "").trim(),
       email: String(row.Email || row.email || "").trim(),
+      streetAddress: String(row.StreetAddress || row.streetAddress || row.street_address || "").trim(),
+      city: String(row.City || row.city || "").trim(),
       source: String(row.Source || row.source || "Manual").trim() || "Manual",
       status: String(row.Status || row.status || "New").trim() || "New",
       priority: String(row.Priority || row.priority || "Medium").trim() || "Medium",
@@ -616,12 +618,14 @@ export default function Leads() {
   const FB_CONTACT = new Set(["full_name", "phone_number", "email", "street_address", "city"]);
 
   const isFbCsv = (headers) =>
-    headers.includes("full_name") && headers.includes("phone_number");
+    headers.some((header) => String(header).trim().toLowerCase() === "full_name") &&
+    headers.some((header) => String(header).trim().toLowerCase() === "phone_number");
 
   // Underscores → spaces, collapse whitespace
   const fbClean = (v = "") => String(v).replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  const fbNormalizeKey = (v = "") => String(v).trim().toLowerCase();
+  const fbLabel = (v = "") => fbClean(String(v).replace(/\?+$/g, ""));
 
-  // "₹80_lakh_–_₹1_cr" → { min: 8000000, max: 10000000 }
   const parseFbBudget = (v = "") => {
     const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
     const parts = s.split(/[–\-]+/);
@@ -643,42 +647,47 @@ export default function Leads() {
     return "Buy";
   };
 
-  const parseFbRow = (row, questionCols) => {
-    const location = [row.street_address, row.city]
-      .map((s) => fbClean(String(s || "")))
-      .filter(Boolean)
-      .join(", ");
+  const parseFbRow = (row, questionCols, headerMap) => {
+    const getVal = (key) => row[headerMap.get(key) || key];
+    const streetAddress = fbClean(getVal("street_address") || "");
+    const city = fbClean(getVal("city") || "");
+    const location = [streetAddress, city].filter(Boolean).join(", ");
 
     let purpose = "Buy";
     let budget = { min: 0, max: 0, currency: "INR" };
-    const extras = [];
+    const formResponses = [];
 
     for (const col of questionCols) {
       const raw = String(row[col] || "").trim();
       if (!raw) continue;
-      const colLower = col.toLowerCase();
-      const label = col.replace(/_/g, " ").replace(/\?$/, "").trim();
+      const colLower = fbNormalizeKey(col);
+      const label = fbLabel(col);
+      const cleanedValue = fbClean(raw);
 
       if (colLower.includes("budget")) {
         budget = parseFbBudget(raw);
       } else if (colLower.includes("purpose")) {
         purpose = parseFbPurpose(raw);
-      } else {
-        // Any other question → readable remark, e.g. "when are you planning to purchase a home: immediately (0 3 months)"
-        extras.push(`${label}: ${fbClean(raw)}`);
       }
+
+      formResponses.push({
+        fieldKey: colLower.replace(/[^\w]+/g, "_"),
+        label,
+        value: cleanedValue,
+      });
     }
 
     return {
-      name: String(row.full_name || "").replace(/^"|"$/g, "").trim(),
-      phone: String(row.phone_number || "").replace(/^p:/i, "").trim(),
-      email: String(row.email || "").trim(),
+      name: String(getVal("full_name") || "").replace(/^"|"$/g, "").trim(),
+      phone: String(getVal("phone_number") || "").replace(/^p:/i, "").trim(),
+      email: String(getVal("email") || "").trim(),
+      streetAddress,
+      city,
       source: "Facebook",
       preferredLocation: location,
       purpose,
       budget,
-      remark1: extras[0] || "",
-      remark2: extras.slice(1).join(" | ") || "",
+      formResponses,
       status: "New",
       priority: "Medium",
     };
@@ -700,9 +709,14 @@ export default function Leads() {
       let leadsToImport;
 
       if (isFbCsv(headers)) {
-        // Auto-detected Facebook Lead Form export
-        const questionCols = headers.filter((h) => !FB_META.has(h) && !FB_CONTACT.has(h));
-        leadsToImport = rows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
+        const headerMap = new Map(headers.map((header) => [fbNormalizeKey(header), header]));
+        const questionCols = headers.filter((header) => {
+          const normalized = fbNormalizeKey(header);
+          return !FB_META.has(normalized) && !FB_CONTACT.has(normalized);
+        });
+        leadsToImport = rows
+          .map((row) => parseFbRow(row, questionCols, headerMap))
+          .filter((entry) => entry.name && entry.phone);
         if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
         toast(`Facebook format detected — ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {

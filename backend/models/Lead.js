@@ -27,6 +27,15 @@ const activitySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const formResponseSchema = new mongoose.Schema(
+  {
+    fieldKey: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true },
+    value: { type: String, default: "", trim: true },
+  },
+  { _id: false }
+);
+
 // ── Main Lead Schema ───────────────────────────────────────────────────────────
 
 const leadSchema = new mongoose.Schema(
@@ -49,6 +58,16 @@ const leadSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email"],
+      default: "",
+    },
+    streetAddress: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    city: {
+      type: String,
+      trim: true,
       default: "",
     },
 
@@ -101,6 +120,7 @@ const leadSchema = new mongoose.Schema(
     // ── Activity & Notes ──────────────────────────────────────────────────────
     notes: [noteSchema],
     activities: [activitySchema],
+    formResponses: [formResponseSchema],
 
     // ── Site Visit ────────────────────────────────────────────────────────────
     siteVisitDate: { type: Date, default: null },
