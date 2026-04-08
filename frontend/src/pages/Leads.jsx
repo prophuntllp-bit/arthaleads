@@ -12,7 +12,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import * as XLSX from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -569,11 +569,11 @@ export default function Leads() {
         return;
       }
 
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+      const worksheet = xlsxUtils.json_to_sheet(rows);
+      const workbook = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(workbook, worksheet, "Leads");
       const fileName = `propcrm-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
-      XLSX.writeFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
+      xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
       toast.success(`Leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
@@ -689,9 +689,9 @@ export default function Leads() {
     setImporting(true);
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: "array" });
+      const workbook = xlsxRead(buffer, { type: "array" });
       const firstSheet = workbook.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+      const rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
       if (!rows.length) { toast.error("File is empty"); return; }
 
       const headers = Object.keys(rows[0]);

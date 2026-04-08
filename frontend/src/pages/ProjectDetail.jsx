@@ -6,7 +6,7 @@ import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppL
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import * as XLSX from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import {
   ArrowLeft, Building2, Calendar, ChevronLeft, ChevronRight,
   ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
@@ -300,9 +300,9 @@ export default function ProjectDetail() {
     setImporting(true);
     try {
       const buf = await file.arrayBuffer();
-      const wb  = XLSX.read(buf, { type: "array" });
+      const wb  = xlsxRead(buf, { type: "array" });
       const ws  = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
+      const raw = xlsxUtils.sheet_to_json(ws, { defval: "" });
       const rows = raw.map(parseRow).filter((r) => r.name && r.phone);
       if (!rows.length) return toast.error("No valid rows found. Columns needed: Name, Phone Number");
       const res = await api.post(`/projects/${id}/leads/import`, { rows });
