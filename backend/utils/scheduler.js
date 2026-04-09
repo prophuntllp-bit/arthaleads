@@ -13,59 +13,84 @@ function getTodayRange() {
   return { start, end };
 }
 
-async function runFollowUpReminder() {
-  const { start, end } = getTodayRange();
+async function notifyLeads(leads, labelFn) {
+  if (!leads.length) return;
 
-  // Fetch all admin and manager user IDs
   const managers = await User.find({ role: { $in: ["admin", "manager"] } }).select("_id").lean();
   const managerIds = managers.map((u) => u._id);
 
-  // Regular leads with follow-up today
-  const leads = await Lead.find({
-    followUpDate: { $gte: start, $lte: end },
-    isArchived: false,
-    isDeleted: { $ne: true },
-  }).select("name phone status assignedTo assignedToName followUpDate").lean();
-
-  // Project leads with follow-up today
-  const projLeads = await ProjectLead.find({
-    followUp: { $gte: start, $lte: end },
-  }).select("name phone status assignedTo assignedToName followUp").lean();
-
-  const allLeads = [...leads, ...projLeads];
-
-  if (!allLeads.length) {
-    logger.info("Follow-up reminder: no leads due today");
-    return;
-  }
-
-  logger.info(`Follow-up reminder: ${allLeads.length} lead(s) due today`);
-
-  for (const lead of allLeads) {
+  for (const lead of leads) {
     const payload = {
       title: "Follow-up Reminder",
-      body: `Follow-up due today: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`,
+      body: labelFn(lead),
       data: { url: "/leads" },
     };
 
-    // Notify the assigned agent
     if (lead.assignedTo) {
       await sendPushToUser(lead.assignedTo, payload);
     }
 
-    // Notify all admins and managers
     for (const managerId of managerIds) {
-      // Skip if already notified as assigned agent
       if (lead.assignedTo && managerId.toString() === lead.assignedTo.toString()) continue;
       await sendPushToUser(managerId, payload);
     }
   }
+}
 
-  logger.info(`Follow-up reminder: notifications sent for ${allLeads.length} lead(s)`);
+// ── Daily 9 AM: morning summary of all follow-ups today ─────────────────────
+async function runDailyReminder() {
+  const { start, end } = getTodayRange();
+
+  const leads = await Lead.find({
+    followUpDate: { $gte: start, $lte: end },
+    isArchived: false,
+    isDeleted: { $ne: true },
+  }).select("name phone assignedTo followUpDate").lean();
+
+  const projLeads = await ProjectLead.find({
+    followUp: { $gte: start, $lte: end },
+  }).select("name phone assignedTo followUp").lean();
+
+  const allLeads = [...leads, ...projLeads];
+
+  if (!allLeads.length) {
+    logger.info("Daily reminder: no follow-ups today");
+    return;
+  }
+
+  logger.info(`Daily reminder: ${allLeads.length} follow-up(s) today`);
+  await notifyLeads(allLeads, (lead) => `Follow-up due today: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
+}
+
+// ── Every minute: 10-minute-before alert ────────────────────────────────────
+async function runUpcomingReminder() {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() + 9 * 60 * 1000);  // now + 9 min
+  const windowEnd   = new Date(now.getTime() + 10 * 60 * 1000); // now + 10 min (exclusive)
+
+  const leads = await Lead.find({
+    followUpDate: { $gte: windowStart, $lt: windowEnd },
+    isArchived: false,
+    isDeleted: { $ne: true },
+  }).select("name phone assignedTo followUpDate").lean();
+
+  const projLeads = await ProjectLead.find({
+    followUp: { $gte: windowStart, $lt: windowEnd },
+  }).select("name phone assignedTo followUp").lean();
+
+  const allLeads = [...leads, ...projLeads];
+  if (!allLeads.length) return;
+
+  logger.info(`Upcoming reminder: ${allLeads.length} follow-up(s) in ~10 minutes`);
+  await notifyLeads(allLeads, (lead) => `Follow-up in 10 minutes: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
 cron.schedule("0 9 * * *", () => {
-  runFollowUpReminder().catch((err) => logger.error(`Scheduler error: ${err.message}`));
+  runDailyReminder().catch((err) => logger.error(`Daily reminder error: ${err.message}`));
 });
 
-module.exports = { runFollowUpReminder };
+cron.schedule("* * * * *", () => {
+  runUpcomingReminder().catch((err) => logger.error(`Upcoming reminder error: ${err.message}`));
+});
+
+module.exports = { runDailyReminder, runUpcomingReminder };
