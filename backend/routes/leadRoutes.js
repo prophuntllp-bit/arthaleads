@@ -13,6 +13,7 @@ router.get("/analytics", leadController.getAnalytics);
 router.get("/dump", authorize("admin", "manager"), leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/unified", leadController.getAllUnified);
+router.get("/export", leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.delete("/bulk", authorize("admin", "manager"), leadController.bulkDelete);
 
