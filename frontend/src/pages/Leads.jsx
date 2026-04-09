@@ -1268,24 +1268,9 @@ export default function Leads() {
             }}
           >
             {selectedIds.size > 0 && (
-              <>
-                <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">Selected ({selectedIds.size})</p>
-                {[
-                  { key: "csv",   label: "Export CSV" },
-                  { key: "excel", label: "Export Excel" },
-                  { key: "json",  label: "Export JSON" },
-                ].map((item) => (
-                  <button
-                    key={"sel-" + item.key}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
-                    onClick={() => { const sel = leads.filter((l) => selectedIds.has(l._id)); setShowExportMenu(false); exportRows(item.key, sel); }}
-                  >
-                    <Download className="h-4 w-4" /> {item.label}
-                  </button>
-                ))}
-                <div className="mx-4 my-1 border-t" style={{ borderColor: "var(--app-border)" }} />
-                <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">All filtered</p>
-              </>
+              <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-orange-400">
+                Exporting {selectedIds.size} selected
+              </p>
             )}
             {[
               { key: "csv",   label: "Export CSV" },
@@ -1295,7 +1280,11 @@ export default function Leads() {
               <button
                 key={item.key}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
-                onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
+                onClick={() => {
+                  const src = selectedIds.size > 0 ? leads.filter((l) => selectedIds.has(l._id)) : null;
+                  setShowExportMenu(false);
+                  exportRows(item.key, src);
+                }}
               >
                 <Download className="h-4 w-4" /> {item.label}
               </button>
