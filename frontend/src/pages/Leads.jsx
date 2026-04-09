@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -359,6 +360,8 @@ export default function Leads() {
   const [importing, setImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
+  const exportBtnRef = useRef(null);
+  const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
 
   // ── Bulk select state ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -839,61 +842,18 @@ export default function Leads() {
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
 
-            <div className="relative" ref={exportMenuRef}>
-              <button className="btn-secondary rounded-xl" onClick={() => setShowExportMenu((c) => !c)}>
+            <div ref={exportMenuRef}>
+              <button
+                ref={exportBtnRef}
+                className="btn-secondary rounded-xl"
+                onClick={() => {
+                  const rect = exportBtnRef.current?.getBoundingClientRect();
+                  if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                  setShowExportMenu((c) => !c);
+                }}
+              >
                 <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
               </button>
-              {showExportMenu && (
-                <div
-                  className="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl"
-                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)", zIndex: 9999 }}
-                >
-                  {selectedIds.size > 0 && (
-                    <>
-                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">Selected ({selectedIds.size})</p>
-                      {[
-                        { key: "csv",   label: "Export CSV" },
-                        { key: "excel", label: "Export Excel" },
-                        { key: "json",  label: "Export JSON" },
-                      ].map((item) => (
-                        <button
-                          key={"sel-" + item.key}
-                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app transition"
-                          onClick={() => {
-                            const sel = leads.filter((l) => selectedIds.has(l._id));
-                            setShowExportMenu(false);
-                            exportRows(item.key, sel);
-                          }}
-                          style={{ background: "transparent" }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                        >
-                          <Download className="h-4 w-4" /> {item.label}
-                        </button>
-                      ))}
-                      <div className="mx-4 my-1 border-t" style={{ borderColor: "var(--app-border)" }} />
-                      <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">All filtered</p>
-                    </>
-                  )}
-                  {[
-                    { key: "csv",   label: "Export CSV" },
-                    { key: "excel", label: "Export Excel" },
-                    { key: "json",  label: "Export JSON" },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app transition"
-                      onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
-                      style={{ background: "transparent" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <Download className="h-4 w-4" /> {item.label}
-                    </button>
-                  ))}
-                  <div className="pb-1" />
-                </div>
-              )}
             </div>
 
             <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
@@ -1291,6 +1251,59 @@ export default function Leads() {
         title={`Delete ${projSelectedIds.size} Lead${projSelectedIds.size !== 1 ? "s" : ""}`}
         message={`Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
       />
+
+      {/* Export dropdown — portal-rendered to escape overflow:hidden parents */}
+      {showExportMenu && createPortal(
+        <>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setShowExportMenu(false)} />
+          <div
+            className="fixed w-56 overflow-hidden rounded-2xl py-1"
+            style={{
+              top: exportMenuPos.top,
+              right: exportMenuPos.right,
+              zIndex: 9999,
+              background: "var(--app-surface)",
+              border: "1px solid var(--app-border)",
+              boxShadow: "var(--app-shadow)",
+            }}
+          >
+            {selectedIds.size > 0 && (
+              <>
+                <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">Selected ({selectedIds.size})</p>
+                {[
+                  { key: "csv",   label: "Export CSV" },
+                  { key: "excel", label: "Export Excel" },
+                  { key: "json",  label: "Export JSON" },
+                ].map((item) => (
+                  <button
+                    key={"sel-" + item.key}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
+                    onClick={() => { const sel = leads.filter((l) => selectedIds.has(l._id)); setShowExportMenu(false); exportRows(item.key, sel); }}
+                  >
+                    <Download className="h-4 w-4" /> {item.label}
+                  </button>
+                ))}
+                <div className="mx-4 my-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+                <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">All filtered</p>
+              </>
+            )}
+            {[
+              { key: "csv",   label: "Export CSV" },
+              { key: "excel", label: "Export Excel" },
+              { key: "json",  label: "Export JSON" },
+            ].map((item) => (
+              <button
+                key={item.key}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
+                onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
+              >
+                <Download className="h-4 w-4" /> {item.label}
+              </button>
+            ))}
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 }
