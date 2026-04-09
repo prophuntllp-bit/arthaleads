@@ -351,10 +351,15 @@ const leadService = {
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
 
     const leadFilter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
-    if (status) leadFilter.status = status;
+    if (status) {
+      leadFilter.status = status;
+      // "New" leads older than 2 days are stale — exclude them
+      if (status === "New") leadFilter.createdAt = { $gte: twoDaysAgo };
+    }
     if (source) leadFilter.source = source;
     if (priority) leadFilter.priority = priority;
     if (followUpToday === "true" || followUpToday === true) {
@@ -381,7 +386,10 @@ const leadService = {
 
     // Post-$addFields filter: status/priority need defaults applied first
     const projPostFilter = {};
-    if (status) projPostFilter.status = status;
+    if (status) {
+      projPostFilter.status = status;
+      if (status === "New") projPostFilter.createdAt = { $gte: twoDaysAgo };
+    }
     if (priority) projPostFilter.priority = priority;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
