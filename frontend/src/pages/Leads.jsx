@@ -21,7 +21,7 @@ const fmtBudget = (val) => {
   return `₹${val}`;
 };
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, write as xlsxWrite } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -617,24 +617,46 @@ export default function Leads() {
         CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : "",
       }));
 
-      if (type === "json") {
-        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const triggerDownload = (blob, fileName) => {
         const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `propcrm-leads-${new Date().toISOString().slice(0, 10)}.json`;
-        link.click();
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast.success("Leads exported as JSON");
+      };
+
+      if (type === "json") {
+        triggerDownload(
+          new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
+          `propcrm-leads-${dateStr}.json`
+        );
+        toast.success("Exported as JSON");
         return;
       }
 
       const worksheet = xlsxUtils.json_to_sheet(rows);
       const workbook = xlsxUtils.book_new();
       xlsxUtils.book_append_sheet(workbook, worksheet, "Leads");
-      const fileName = `propcrm-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
-      xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
-      toast.success(`Leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
+
+      if (type === "csv") {
+        const csv = xlsxUtils.sheet_to_csv(worksheet);
+        triggerDownload(
+          new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+          `propcrm-leads-${dateStr}.csv`
+        );
+        toast.success("Exported as CSV");
+      } else {
+        const buffer = xlsxWrite(workbook, { bookType: "xlsx", type: "array" });
+        triggerDownload(
+          new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+          `propcrm-leads-${dateStr}.xlsx`
+        );
+        toast.success("Exported as Excel");
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
     }
