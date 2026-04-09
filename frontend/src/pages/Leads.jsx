@@ -593,19 +593,21 @@ export default function Leads() {
         sourceLeads = data.leads || [];
       }
 
+      if (!sourceLeads.length) { toast.error("No leads to export"); return; }
+
       const rows = sourceLeads.map((lead) => ({
-        Name: lead.name,
-        Phone: lead.phone,
+        Name: lead.name || "",
+        Phone: lead.phone || "",
         Email: lead.email || "",
-        Source: lead.source,
-        Status: lead.status,
-        Priority: lead.priority,
-        PropertyType: lead.propertyType,
-        BHK: lead.bhk,
-        Purpose: lead.purpose,
+        Source: lead.source || "",
+        Status: lead.status || "",
+        Priority: lead.priority || "",
+        PropertyType: lead.propertyType || "",
+        BHK: lead.bhk || "",
+        Purpose: lead.purpose || "",
         PreferredLocation: lead.preferredLocation || "",
-        BudgetMin: lead.budget?.min || 0,
-        BudgetMax: lead.budget?.max || 0,
+        BudgetMin: lead.budget?.min || "",
+        BudgetMax: lead.budget?.max || "",
         FollowUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
         FollowUpNote: lead.followUpNote || "",
         FollowUp2: lead.followUp2 ? new Date(lead.followUp2).toISOString().slice(0, 10) : "",
@@ -613,52 +615,44 @@ export default function Leads() {
         Remark2: lead.remark2 || "",
         Remark: lead.remark || "",
         Booking: lead.booking || "",
-        AssignedTo: lead.assignedToName || lead.assignedTo?.name || "",
-        CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString() : "",
+        AssignedTo: lead.assignedToName || "",
+        CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
       }));
 
       const dateStr = new Date().toISOString().slice(0, 10);
-      const triggerDownload = (blob, fileName) => {
+      const filename = `propcrm-leads-${dateStr}`;
+
+      const download = (content, name, mime) => {
+        const blob = new Blob([content], { type: mime });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        a.href = url; a.download = name; a.style.display = "none";
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
       };
 
       if (type === "json") {
-        triggerDownload(
-          new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
-          `propcrm-leads-${dateStr}.json`
-        );
-        toast.success("Exported as JSON");
-        return;
-      }
+        download(JSON.stringify(rows, null, 2), `${filename}.json`, "application/json");
+        toast.success(`Exported ${rows.length} leads as JSON`);
 
-      const worksheet = xlsxUtils.json_to_sheet(rows);
-      const workbook = xlsxUtils.book_new();
-      xlsxUtils.book_append_sheet(workbook, worksheet, "Leads");
+      } else if (type === "csv") {
+        const headers = Object.keys(rows[0]);
+        const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+        const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
+        download("\uFEFF" + csv, `${filename}.csv`, "text/csv;charset=utf-8;");
+        toast.success(`Exported ${rows.length} leads as CSV`);
 
-      if (type === "csv") {
-        const csv = xlsxUtils.sheet_to_csv(worksheet);
-        triggerDownload(
-          new Blob([csv], { type: "text/csv;charset=utf-8;" }),
-          `propcrm-leads-${dateStr}.csv`
-        );
-        toast.success("Exported as CSV");
       } else {
-        const buffer = xlsxWrite(workbook, { bookType: "xlsx", type: "array" });
-        triggerDownload(
-          new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-          `propcrm-leads-${dateStr}.xlsx`
-        );
-        toast.success("Exported as Excel");
+        const ws = xlsxUtils.json_to_sheet(rows);
+        const wb = xlsxUtils.book_new();
+        xlsxUtils.book_append_sheet(wb, ws, "Leads");
+        const buf = xlsxWrite(wb, { bookType: "xlsx", type: "array" });
+        download(buf, `${filename}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        toast.success(`Exported ${rows.length} leads as Excel`);
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || "Export failed");
+      console.error("Export error:", e);
+      toast.error("Export failed: " + (e.message || "Unknown error"));
     }
   };
 
