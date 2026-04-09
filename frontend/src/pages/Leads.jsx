@@ -210,80 +210,28 @@ function ProjInlineText({ value, leadId, projectId, field, placeholder = "Add no
   );
 }
 
-// ── Remark popup cell — shows truncated preview, full text in a modal ────────
-function RemarkPopupCell({ value, leadId, projectId, field, onSaved, placeholder = "Add remark…" }) {
-  const [open, setOpen]     = useState(false);
-  const [val, setVal]       = useState(value || "");
-  const [saving, setSaving] = useState(false);
-  const taRef = useRef(null);
+// ── Remark cell — collapsed, expands inline with show more / show less ───────
+const REMARK_PREVIEW_LEN = 40;
+function RemarkPopupCell({ value, placeholder = "—" }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = value || "";
+  const needsToggle = text.length > REMARK_PREVIEW_LEN;
+  const displayed = expanded || !needsToggle ? text : text.slice(0, REMARK_PREVIEW_LEN) + "…";
 
-  const preview = val.length > 28 ? val.slice(0, 28) + "…" : val;
-
-  const save = async () => {
-    if (val === (value || "")) { setOpen(false); return; }
-    setSaving(true);
-    try {
-      const res = projectId
-        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: val })
-        : await api.put(`/leads/${leadId}`, { [field]: val });
-      onSaved(res.data.data);
-      setOpen(false);
-    } catch { toast.error("Save failed"); setVal(value || ""); }
-    finally { setSaving(false); }
-  };
+  if (!text) return <span className="text-xs text-app-soft">{placeholder}</span>;
 
   return (
-    <>
-      <span
-        onClick={() => { setVal(value || ""); setOpen(true); }}
-        className="block cursor-pointer rounded px-1 py-0.5 text-xs transition hover:bg-orange-500/10 min-w-[80px] max-w-[120px]"
-        title={val || placeholder}
-      >
-        {val ? (
-          <span className="text-app">{preview}</span>
-        ) : (
-          <span className="text-app-soft italic">{placeholder}</span>
-        )}
-      </span>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+    <div className="min-w-[100px] max-w-[180px] text-xs text-app leading-relaxed">
+      <span>{displayed}</span>
+      {needsToggle && (
+        <button
+          onClick={() => setExpanded((p) => !p)}
+          className="block mt-0.5 text-orange-400 hover:text-orange-500 font-medium transition"
         >
-          <div className="card w-full max-w-md p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-3 text-sm font-semibold text-app">Remark</h3>
-            <textarea
-              ref={taRef}
-              autoFocus
-              rows={5}
-              className="w-full rounded-xl border px-3 py-2 text-sm focus:outline-none focus:border-orange-400 resize-none"
-              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-              value={val}
-              onChange={(e) => setVal(e.target.value)}
-              placeholder={placeholder}
-              onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setOpen(false)}
-                className="rounded-lg border px-4 py-1.5 text-xs font-medium text-app-soft hover:bg-orange-500/10 transition"
-                style={{ borderColor: "var(--app-border)" }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={save}
-                disabled={saving}
-                className="rounded-lg bg-orange-500 px-4 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 transition disabled:opacity-50"
-              >
-                {saving ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
+          {expanded ? "Show less" : "Show more"}
+        </button>
       )}
-    </>
+    </div>
   );
 }
 
