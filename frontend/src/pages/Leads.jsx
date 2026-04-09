@@ -564,13 +564,19 @@ export default function Leads() {
   };
 
 
-  const exportRows = async (type) => {
+  const exportRows = async (type, leadsOverride = null) => {
     try {
-      const { data } = await api.get("/leads", {
-        params: { ...filters, page: 1, limit: 1000, sortBy: "createdAt", order: "desc" },
-      });
+      let sourceLeads;
+      if (leadsOverride) {
+        sourceLeads = leadsOverride;
+      } else {
+        const { data } = await api.get("/leads/unified", {
+          params: { ...filters, page: 1, limit: 5000 },
+        });
+        sourceLeads = data.leads || [];
+      }
 
-      const rows = (data.leads || []).map((lead) => ({
+      const rows = sourceLeads.map((lead) => ({
         Name: lead.name,
         Phone: lead.phone,
         Email: lead.email || "",
@@ -839,9 +845,36 @@ export default function Leads() {
               </button>
               {showExportMenu && (
                 <div
-                  className="absolute right-0 top-12 z-20 w-48 overflow-hidden rounded-2xl"
-                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}
+                  className="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl"
+                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)", zIndex: 9999 }}
                 >
+                  {selectedIds.size > 0 && (
+                    <>
+                      <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">Selected ({selectedIds.size})</p>
+                      {[
+                        { key: "csv",   label: "Export CSV" },
+                        { key: "excel", label: "Export Excel" },
+                        { key: "json",  label: "Export JSON" },
+                      ].map((item) => (
+                        <button
+                          key={"sel-" + item.key}
+                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app transition"
+                          onClick={() => {
+                            const sel = leads.filter((l) => selectedIds.has(l._id));
+                            setShowExportMenu(false);
+                            exportRows(item.key, sel);
+                          }}
+                          style={{ background: "transparent" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <Download className="h-4 w-4" /> {item.label}
+                        </button>
+                      ))}
+                      <div className="mx-4 my-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+                      <p className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-app-soft">All filtered</p>
+                    </>
+                  )}
                   {[
                     { key: "csv",   label: "Export CSV" },
                     { key: "excel", label: "Export Excel" },
@@ -849,7 +882,7 @@ export default function Leads() {
                   ].map((item) => (
                     <button
                       key={item.key}
-                      className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition"
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app transition"
                       onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
                       style={{ background: "transparent" }}
                       onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
@@ -858,6 +891,7 @@ export default function Leads() {
                       <Download className="h-4 w-4" /> {item.label}
                     </button>
                   ))}
+                  <div className="pb-1" />
                 </div>
               )}
             </div>
