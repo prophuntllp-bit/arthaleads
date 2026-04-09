@@ -227,8 +227,12 @@ export default function Sidebar() {
         {alerts.length === 0 ? (
           <p className="p-4 text-xs text-app-soft text-center">No new leads yet</p>
         ) : alerts.map((lead) => (
-          <div key={lead._id} className="flex items-start gap-3 px-4 py-3 border-b hover:bg-black/5 dark:hover:bg-white/5 transition"
-            style={{ borderColor: "var(--app-border)" }}>
+          <button
+            key={lead._id}
+            className="w-full flex items-start gap-3 px-4 py-3 border-b hover:bg-orange-500/5 transition text-left cursor-pointer"
+            style={{ borderColor: "var(--app-border)" }}
+            onClick={() => { setAlertOpen(false); navigate("/leads", { state: { openLeadId: lead._id } }); }}
+          >
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
               {lead.name?.[0]?.toUpperCase()}
             </div>
@@ -237,7 +241,7 @@ export default function Sidebar() {
               <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
               <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <button
