@@ -479,6 +479,20 @@ export default function Leads() {
     }
   };
 
+  // Auto-mark lead as Contacted when agent clicks call or WhatsApp
+  const handleContact = async (lead) => {
+    const updates = { remark: "Contacted" };
+    if (lead.status === "New") updates.status = "Contacted";
+    // Skip if already contacted and remark already set
+    if (lead.remark === "Contacted" && lead.status !== "New") return;
+    try {
+      const res = lead._type === "project" && lead.projectId
+        ? await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, updates)
+        : await api.put(`/leads/${lead._id}`, updates);
+      upsertLead({ ...lead, ...updates, ...(res.data.data || {}) });
+    } catch { /* silent — the call/chat still happened */ }
+  };
+
   const handleBulkDelete = async () => {
     setBulkDeleting(true);
     try {
@@ -946,8 +960,8 @@ export default function Leads() {
                           )}
                           <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
-                          <td><PhoneActions phone={lead.phone} /></td>
-                          <td><WhatsAppLink phone={lead.phone} /></td>
+                          <td><PhoneActions phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
+                          <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
@@ -1100,8 +1114,8 @@ export default function Leads() {
                         </div>
                       </div>
                     </td>
-                    <td><PhoneActions phone={lead.phone} /></td>
-                    <td><WhatsAppLink phone={lead.phone} /></td>
+                    <td><PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} /></td>
+                    <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact(lead)} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName

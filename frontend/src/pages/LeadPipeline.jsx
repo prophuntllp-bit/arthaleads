@@ -67,6 +67,23 @@ export default function LeadPipeline() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const handleContact = async (lead) => {
+    const updates = { remark: "Contacted" };
+    if (lead.status === "New") updates.status = "Contacted";
+    if (lead.remark === "Contacted" && lead.status !== "New") return;
+    try {
+      let updated;
+      if (lead._type === "project" && lead.projectId) {
+        const { data } = await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, updates);
+        updated = data.data;
+      } else {
+        const { data } = await api.put(`/leads/${lead._id}`, updates);
+        updated = data.data;
+      }
+      setLeads((curr) => curr.map((l) => l._id === lead._id ? { ...l, ...updates, ...(updated || {}), _type: lead._type, projectId: lead.projectId } : l));
+    } catch { /* silent */ }
+  };
+
   const fetchLeads = async () => {
     setLoading(true);
     try {
@@ -161,11 +178,11 @@ export default function LeadPipeline() {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <PhoneActions phone={lead.phone} />
+                          <PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} />
                           <span className="text-xs text-app-soft">· {lead.source}</span>
                         </div>
                         <div className="mt-1.5">
-                          <WhatsAppLink phone={lead.phone} />
+                          <WhatsAppLink phone={lead.phone} onContact={() => handleContact(lead)} />
                         </div>
                       </div>
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />
