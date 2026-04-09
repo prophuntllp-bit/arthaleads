@@ -604,51 +604,67 @@ export default function Leads() {
     CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
   }));
 
+  const triggerDownload = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const doDownload = (rows, type) => {
-    const dateStr = new Date().toISOString().slice(0, 10);
-    const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    try {
+      if (!rows.length) { toast.error("No leads to export"); return; }
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
-    if (type === "json") {
-      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
-      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `leads-${dateStr}.json` });
-      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      toast.success(`Exported ${rows.length} leads as JSON`);
+      if (type === "json") {
+        triggerDownload(
+          new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
+          `leads-${dateStr}.json`
+        );
+        toast.success(`Exported ${rows.length} leads as JSON`);
 
-    } else if (type === "csv") {
-      const headers = Object.keys(rows[0] || {});
-      const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
-      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `leads-${dateStr}.csv` });
-      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      toast.success(`Exported ${rows.length} leads as CSV`);
+      } else if (type === "csv") {
+        const headers = Object.keys(rows[0]);
+        const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
+        triggerDownload(
+          new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }),
+          `leads-${dateStr}.csv`
+        );
+        toast.success(`Exported ${rows.length} leads as CSV`);
 
-    } else {
-      const ws = xlsxUtils.json_to_sheet(rows);
-      const wb = xlsxUtils.book_new();
-      xlsxUtils.book_append_sheet(wb, ws, "Leads");
-      const buf = xlsxWrite(wb, { bookType: "xlsx", type: "array" });
-      const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `leads-${dateStr}.xlsx` });
-      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      toast.success(`Exported ${rows.length} leads as Excel`);
+      } else {
+        const ws = xlsxUtils.json_to_sheet(rows);
+        const wb = xlsxUtils.book_new();
+        xlsxUtils.book_append_sheet(wb, ws, "Leads");
+        const buf = xlsxWrite(wb, { bookType: "xlsx", type: "array" });
+        triggerDownload(
+          new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+          `leads-${dateStr}.xlsx`
+        );
+        toast.success(`Exported ${rows.length} leads as Excel`);
+      }
+    } catch (e) {
+      toast.error("Export failed: " + (e.message || "Unknown error"));
     }
   };
 
   const exportRows = (type, leadsOverride = null) => {
-    // If we already have leads (selected), download immediately — no async needed
     if (leadsOverride) {
       if (!leadsOverride.length) { toast.error("No leads selected"); return; }
       doDownload(buildRows(leadsOverride), type);
       return;
     }
-    // Fetch all filtered leads then download
     const tid = toast.loading("Preparing export…");
     api.get("/leads/unified", { params: { ...filters, page: 1, limit: 5000 } })
       .then(({ data }) => {
         toast.dismiss(tid);
-        const src = data.leads || [];
-        if (!src.length) { toast.error("No leads to export"); return; }
-        doDownload(buildRows(src), type);
+        doDownload(buildRows(data.leads || []), type);
       })
       .catch((e) => { toast.dismiss(tid); toast.error("Export failed: " + (e.message || "Unknown error")); });
   };
