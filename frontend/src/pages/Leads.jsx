@@ -21,7 +21,7 @@ const fmtBudget = (val) => {
   return `₹${val}`;
 };
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import { read as xlsxRead, utils as xlsxUtils, write as xlsxWrite } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -581,92 +581,51 @@ export default function Leads() {
   };
 
 
-  const buildRows = (sourceLeads) => sourceLeads.map((lead) => ({
-    Name: lead.name || "",
-    Phone: lead.phone || "",
-    Email: lead.email || "",
-    Source: lead.source || "",
-    Status: lead.status || "",
-    Priority: lead.priority || "",
-    PropertyType: lead.propertyType || "",
-    BHK: lead.bhk || "",
-    Purpose: lead.purpose || "",
-    BudgetMin: lead.budget?.min || "",
-    BudgetMax: lead.budget?.max || "",
-    FollowUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
-    FollowUpNote: lead.followUpNote || "",
-    Remark1: lead.remark1 || "",
-    Remark2: lead.remark2 || "",
-    ContactStatus: lead.remark || "",
-    Booking: lead.booking || "",
-    AssignedTo: lead.assignedToName || "",
-    Project: lead.projectName || "",
-    CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
-  }));
-
-  const triggerDownload = (blob, filename) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const doDownload = (rows, type) => {
-    try {
-      if (!rows.length) { toast.error("No leads to export"); return; }
-      const dateStr = new Date().toISOString().slice(0, 10);
-      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-
-      if (type === "json") {
-        triggerDownload(
-          new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }),
-          `leads-${dateStr}.json`
-        );
-        toast.success(`Exported ${rows.length} leads as JSON`);
-
-      } else if (type === "csv") {
-        const headers = Object.keys(rows[0]);
-        const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
-        triggerDownload(
-          new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" }),
-          `leads-${dateStr}.csv`
-        );
-        toast.success(`Exported ${rows.length} leads as CSV`);
-
-      } else {
-        const ws = xlsxUtils.json_to_sheet(rows);
-        const wb = xlsxUtils.book_new();
-        xlsxUtils.book_append_sheet(wb, ws, "Leads");
-        const buf = xlsxWrite(wb, { bookType: "xlsx", type: "array" });
-        triggerDownload(
-          new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
-          `leads-${dateStr}.xlsx`
-        );
-        toast.success(`Exported ${rows.length} leads as Excel`);
-      }
-    } catch (e) {
-      toast.error("Export failed: " + (e.message || "Unknown error"));
-    }
-  };
-
   const exportRows = (type, leadsOverride = null) => {
-    if (leadsOverride) {
-      if (!leadsOverride.length) { toast.error("No leads selected"); return; }
-      doDownload(buildRows(leadsOverride), type);
-      return;
-    }
     const tid = toast.loading("Preparing export…");
-    api.get("/leads/unified", { params: { ...filters, page: 1, limit: 5000 } })
-      .then(({ data }) => {
-        toast.dismiss(tid);
-        doDownload(buildRows(data.leads || []), type);
+    const token = localStorage.getItem("crm_token");
+    const base = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
+    const fmt = type === "excel" ? "csv" : type; // backend supports csv and json
+
+    const params = new URLSearchParams();
+    params.set("format", fmt);
+    if (leadsOverride?.length) {
+      params.set("ids", leadsOverride.map((l) => l._id).join(","));
+    } else {
+      if (filters.status)  params.set("status",  filters.status);
+      if (filters.source)  params.set("source",  filters.source);
+      if (filters.priority) params.set("priority", filters.priority);
+      if (filters.search)  params.set("search",  filters.search);
+      if (filters.dateRange) params.set("dateRange", filters.dateRange);
+    }
+
+    const url = `${base}/leads/export?${params.toString()}`;
+    const ext  = fmt === "json" ? "json" : "csv";
+    const mime = fmt === "json" ? "application/json" : "text/csv;charset=utf-8;";
+    const date = new Date().toISOString().slice(0, 10);
+
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        return res.blob();
       })
-      .catch((e) => { toast.dismiss(tid); toast.error("Export failed: " + (e.message || "Unknown error")); });
+      .then((blob) => {
+        toast.dismiss(tid);
+        const blobUrl = URL.createObjectURL(new Blob([blob], { type: mime }));
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `leads-${date}.${ext}`;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        toast.success(`Exported as ${ext.toUpperCase()}`);
+      })
+      .catch((e) => {
+        toast.dismiss(tid);
+        toast.error("Export failed: " + e.message);
+      });
   };
 
   // ── Standard CRM import (Name/Phone/Email columns) ───────────────────────────
