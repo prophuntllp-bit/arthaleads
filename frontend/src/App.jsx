@@ -75,6 +75,7 @@ import Settings      from "./pages/Settings";
 import HelpSupport   from "./pages/HelpSupport";
 import NotFound      from "./pages/NotFound";
 import Privacy       from "./pages/Privacy";
+import Terms         from "./pages/Terms";
 import Projects      from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
@@ -123,6 +124,7 @@ export default function App() {
       <Routes>
         {/* Fully public — no auth needed */}
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms"   element={<Terms />} />
 
         {/* Public routes */}
         <Route element={<RedirectIfAuth />}>

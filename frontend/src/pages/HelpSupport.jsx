@@ -186,10 +186,16 @@ export default function HelpSupport() {
             <Shield className="h-5 w-5 text-orange-500" />
             <h2 className="text-xl font-bold">Privacy Policy</h2>
           </div>
-          <a href="/privacy" target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 stitch-pill text-xs">
-            <ExternalLink className="h-3.5 w-3.5" /> Full Policy
-          </a>
+          <div className="flex items-center gap-2">
+            <a href="/privacy" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 stitch-pill text-xs">
+              <ExternalLink className="h-3.5 w-3.5" /> Privacy Policy
+            </a>
+            <a href="/terms" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 stitch-pill text-xs">
+              <ExternalLink className="h-3.5 w-3.5" /> Terms of Service
+            </a>
+          </div>
         </div>
         <div className="space-y-3">
           {PRIVACY_SECTIONS.map(([q, a]) => (
