@@ -6,6 +6,7 @@ import api from "../services/api";
 import { PageLoader } from "../components/UI";
 
 export default function Performance() {
+  useEffect(() => { document.title = "Analytics & Reports — Arthaleads CRM"; }, []);
   const location = useLocation();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);

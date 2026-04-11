@@ -10,7 +10,7 @@ export default function Privacy() {
             <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
           </svg>
         </div>
-        <span className="text-white font-bold text-lg">PropCRM</span>
+        <span className="text-white font-bold text-lg">Arthaleads</span>
       </div>
 
       {/* Content */}
@@ -20,8 +20,8 @@ export default function Privacy() {
 
         <Section title="1. Introduction">
           <p>
-            PropCRM ("we", "us", or "our") is a real estate customer relationship management (CRM) platform
-            operated by PropHunt LLP. This Privacy Policy explains how we collect, use, store, and protect
+            Arthaleads ("we", "us", or "our") is a real estate customer relationship management (CRM) platform
+            operated by Arthaleads. This Privacy Policy explains how we collect, use, store, and protect
             information when you use our platform, including when our application connects to Meta (Facebook)
             services to retrieve lead data.
           </p>
@@ -98,7 +98,7 @@ export default function Privacy() {
 
         <Section title="9. Children's Privacy">
           <p>
-            PropCRM is a business tool intended for use by adults. We do not knowingly collect personal
+            Arthaleads is a business tool intended for use by adults. We do not knowingly collect personal
             information from anyone under 18 years of age.
           </p>
         </Section>
@@ -116,16 +116,16 @@ export default function Privacy() {
             If you have any questions or requests regarding this Privacy Policy or your data, please contact:
           </p>
           <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
-            <p className="font-semibold">PropHunt LLP</p>
-            <p className="text-gray-600 mt-1">Email: <a href="mailto:info@prophuntllp.com" className="text-orange-600 hover:underline">info@prophuntllp.com</a></p>
-            <p className="text-gray-600">Platform: <a href="https://prophunt-crm.vercel.app" className="text-orange-600 hover:underline">https://prophunt-crm.vercel.app</a></p>
+            <p className="font-semibold">Arthaleads</p>
+            <p className="text-gray-600 mt-1">Email: <a href="mailto:info@arthaleads.com" className="text-orange-600 hover:underline">info@arthaleads.com</a></p>
+            <p className="text-gray-600">Platform: <a href="https://arthaleads.com" className="text-orange-600 hover:underline">https://arthaleads.com</a></p>
           </div>
         </Section>
       </div>
 
       {/* Footer */}
       <div className="border-t border-gray-100 py-6 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} PropHunt LLP · All rights reserved
+        © {new Date().getFullYear()} Arthaleads · All rights reserved
       </div>
     </div>
   );

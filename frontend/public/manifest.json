@@ -1,7 +1,7 @@
 {
-  "name": "PropCRM — Real Estate CRM",
-  "short_name": "PropCRM",
-  "description": "Real Estate CRM for Sales Teams by PropHunt LLP",
+  "name": "Arthaleads — Real Estate CRM",
+  "short_name": "Arthaleads",
+  "description": "Premium real estate CRM for managing property leads, team performance, and deal pipelines. Built for Pune developers and channel partners.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -4,7 +4,7 @@ const PushSubscription = require("../models/PushSubscription");
 const logger = require("../config/logger");
 
 webPush.setVapidDetails(
-  process.env.VAPID_EMAIL || "mailto:info@prophuntllp.com",
+  process.env.VAPID_EMAIL || "mailto:info@arthaleads.com",
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );

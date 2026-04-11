@@ -104,7 +104,7 @@ export default function DumpLeads() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `propcrm-dump-leads-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `arthaleads-dump-leads-${new Date().toISOString().slice(0, 10)}.json`;
         link.click();
         URL.revokeObjectURL(url);
         toast.success("Dump leads exported as JSON");
@@ -114,7 +114,7 @@ export default function DumpLeads() {
       const worksheet = xlsxUtils.json_to_sheet(rows);
       const workbook = xlsxUtils.book_new();
       xlsxUtils.book_append_sheet(workbook, worksheet, "Dump Leads");
-      const fileName = `propcrm-dump-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
+      const fileName = `arthaleads-dump-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
       xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
       toast.success(`Dump leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {

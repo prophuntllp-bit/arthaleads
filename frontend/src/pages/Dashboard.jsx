@@ -27,6 +27,7 @@ const SOURCE_COUNTERS = [
 ];
 
 export default function Dashboard() {
+  useEffect(() => { document.title = "Dashboard — Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();

@@ -48,7 +48,7 @@ function InstallBanner() {
           <Download className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Install PropCRM</p>
+          <p className="text-sm font-semibold text-white">Install Arthaleads</p>
           <p className="text-xs text-white/60">Add to home screen for quick access</p>
         </div>
         <button onClick={install}

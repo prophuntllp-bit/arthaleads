@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Settings() {
+  useEffect(() => { document.title = "Settings — Arthaleads CRM"; }, []);
   const { user, updateUserState, refreshUser } = useAuth();
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);

@@ -338,6 +338,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
 }
 
 export default function Leads() {
+  useEffect(() => { document.title = "Lead Management — Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();

@@ -116,7 +116,7 @@ export default function Sidebar() {
             <Building2 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-sm leading-none tracking-tight text-app">PropCRM</p>
+            <p className="font-bold text-sm leading-none tracking-tight text-app">Arthaleads</p>
             <p className="stitch-kicker mt-1">Premium Real Estate CRM</p>
           </div>
         </div>
@@ -264,7 +264,7 @@ export default function Sidebar() {
             <Building2 className="w-4 h-4 text-white" />
           </div>
           <div>
-            <span className="font-bold text-sm tracking-tight text-app block leading-none">PropCRM</span>
+            <span className="font-bold text-sm tracking-tight text-app block leading-none">Arthaleads</span>
             <span className="stitch-kicker mt-1 block">Real Estate</span>
           </div>
         </div>

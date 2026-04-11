@@ -64,6 +64,7 @@ function fmtDate(d) {
 }
 
 export default function LeadPipeline() {
+  useEffect(() => { document.title = "Sales Pipeline — Arthaleads CRM"; }, []);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 

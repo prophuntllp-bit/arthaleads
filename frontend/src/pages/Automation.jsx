@@ -149,7 +149,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     if (!token) { toast.error("Please log in again"); return; }
     setConnecting(true);
     const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect?token=${encodeURIComponent(token)}`;
-    const popup = window.open(url, "propcrm-fb-oauth", "width=720,height=760,resizable=yes,scrollbars=yes");
+    const popup = window.open(url, "arthaleads-fb-oauth", "width=720,height=760,resizable=yes,scrollbars=yes");
     if (!popup) {
       setConnecting(false);
       toast.error("Please allow popups for this site, then try again.");
@@ -171,7 +171,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       pageId,
       formId,
       accessToken: selectedPageData?.accessToken || editingItem?.accessToken || "",
-      verifyToken: editingItem?.verifyToken || `propcrm_${Date.now()}`,
+      verifyToken: editingItem?.verifyToken || `arthaleads_${Date.now()}`,
       isActive: true,
     };
     try {
@@ -315,7 +315,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   className="input"
                   value={connName}
                   onChange={(e) => setConnName(e.target.value)}
-                  placeholder="e.g. PropHunt LLP — Treetopia Leads"
+                  placeholder="e.g. Arthaleads — Treetopia Leads"
                 />
               </div>
 

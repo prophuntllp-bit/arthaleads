@@ -12,9 +12,9 @@ const supportCards = [
   {
     icon: Mail,
     title: "Email Support",
-    detail: "support@propcrm.in",
+    detail: "support@arthaleads.com",
     note: "Share screenshots or export files for faster debugging.",
-    href: "mailto:support@propcrm.in",
+    href: "mailto:support@arthaleads.com",
   },
   {
     icon: MessageSquareMore,
@@ -39,7 +39,7 @@ const faqs = [
     "Only Admins can update user roles. Go to Team → click on a member → change their role. Managers can view performance reports but cannot modify roles or remove teammates.",
   ],
   [
-    "How do Facebook leads get into PropCRM?",
+    "How do Facebook leads get into Arthaleads?",
     "Connect your Facebook Page via Automation → Connect Facebook. Once connected, any lead submitted through your Facebook Lead Ad forms will automatically appear in the Leads section within seconds.",
   ],
   [
@@ -55,7 +55,7 @@ const faqs = [
 const quickActions = [
   {
     title: "Need onboarding support?",
-    body: "Ask your admin to add your profile, assign your role, and share your login credentials. Once added, sign in at prophunt-crm.vercel.app and you are ready to go.",
+    body: "Ask your admin to add your profile, assign your role, and share your login credentials. Once added, sign in at arthaleads.com and you are ready to go.",
     action: { label: "Go to Sign In", href: "/login" },
   },
   {
@@ -121,7 +121,7 @@ const PRIVACY_SECTIONS = [
   ["Data storage & security", "Data is stored on MongoDB Atlas (AWS). We use HTTPS/TLS encryption, bcrypt-hashed passwords, JWT authentication, and role-based access control."],
   ["Data sharing", "We do not sell or share your data with third parties except infrastructure providers (database hosting). Lead data is never used for advertising."],
   ["Your rights", "You can access, correct, or delete your data at any time. You can export leads as CSV or Excel from the Leads page. Contact us to close your account and remove all data."],
-  ["Contact", "PropHunt LLP · info@prophuntllp.com · Last updated: 3 April 2026"],
+  ["Contact", "Arthaleads · info@arthaleads.com · Last updated: 3 April 2026"],
 ];
 
 export default function HelpSupport() {

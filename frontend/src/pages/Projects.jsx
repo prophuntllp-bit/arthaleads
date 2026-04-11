@@ -16,6 +16,7 @@ function fmtPrice(n) {
 }
 
 export default function Projects() {
+  useEffect(() => { document.title = "Property Inventory — Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
   const canManage = ["admin", "manager"].includes(user?.role);

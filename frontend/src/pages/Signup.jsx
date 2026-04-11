@@ -28,7 +28,7 @@ export default function Signup() {
     setGLoading(true);
     try {
       await googleLogin(credentialResponse.credential);
-      toast.success("Account ready! Welcome to PropCRM.");
+      toast.success("Account ready! Welcome to Arthaleads.");
       navigate("/");
     } catch (e) {
       setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
@@ -49,7 +49,7 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(form);
-      toast.success("Account created! Welcome to PropCRM.");
+      toast.success("Account created! Welcome to Arthaleads.");
       navigate("/");
     } catch (err) {
       // Show the real backend error message if available
@@ -83,7 +83,7 @@ export default function Signup() {
             </div>
             <p className="stitch-kicker mb-3">Team Onboarding</p>
             <h1 className="max-w-md text-5xl font-black leading-[1.02] tracking-tight text-app">
-              Join your real estate team on PropCRM.
+              Join your real estate team on Arthaleads.
             </h1>
             <p className="mt-5 max-w-lg text-sm leading-6 text-app-soft">
               Create your account to start managing leads, tracking follow-ups, and closing deals with your team.
