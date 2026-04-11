@@ -242,14 +242,20 @@ const automationService = {
   async fetchFacebookForms(pageId, pageAccessToken) {
     const params = new URLSearchParams({
       access_token: pageAccessToken,
-      fields: "id,name,status",
+      fields: "id,name,status,created_time",
+      limit: "100",
     });
 
     const response = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}/leadgen_forms?${params.toString()}`);
     const json = await response.json();
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.error(`[fetchFacebookForms] API error for page ${pageId}:`, JSON.stringify(json));
+      return [];
+    }
 
-    return json.data || [];
+    const forms = json.data || [];
+    console.log(`[fetchFacebookForms] page ${pageId} returned ${forms.length} forms:`, forms.map(f => f.name));
+    return forms;
   },
 
   async getFacebookConnectionData(code) {
