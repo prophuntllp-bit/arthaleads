@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get("/facebook/connect", automationController.facebookConnect);
 router.get("/facebook/callback", automationController.facebookCallback);
+router.get("/facebook/result", automationController.getFacebookResult);
 
 router.use(protect, authorize("admin", "manager"));
 

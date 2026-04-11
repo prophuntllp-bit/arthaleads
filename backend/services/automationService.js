@@ -3,6 +3,8 @@ const Automation = require("../models/Automation");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
+const oauthStore = new Map();
+
 const META_GRAPH_VERSION = "v23.0";
 
 const DEFAULTS = {
@@ -263,6 +265,21 @@ const automationService = {
         forms: await this.fetchFacebookForms(page.id, page.access_token),
       }))
     );
+  },
+
+  storeOAuthResult(sessionId, data) {
+    oauthStore.set(sessionId, { data, expiresAt: Date.now() + 5 * 60 * 1000 });
+    // cleanup expired
+    for (const [id, v] of oauthStore) {
+      if (v.expiresAt < Date.now()) oauthStore.delete(id);
+    }
+  },
+
+  getOAuthResult(sessionId) {
+    const entry = oauthStore.get(sessionId);
+    if (!entry || entry.expiresAt < Date.now()) return null;
+    oauthStore.delete(sessionId); // one-time use
+    return entry.data;
   },
 };
 

@@ -75,32 +75,31 @@ const automationController = {
 
   async facebookCallback(req, res) {
     const frontendOrigin = automationService.getFrontendOrigin();
-
-    // Allow window.opener.postMessage — helmet defaults break both of these:
-    // - COOP: same-origin nullifies window.opener
-    // - CSP: script-src 'self' blocks inline <script> tags
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
-    res.setHeader("Content-Security-Policy", "script-src 'unsafe-inline'");
 
     try {
       const { code, state } = req.query;
-      if (!code || !state) {
-        throw new Error("Missing Facebook callback data");
-      }
+      if (!code || !state) throw new Error("Missing Facebook callback data");
 
       automationService.verifyFacebookState(state);
       const pages = await automationService.getFacebookConnectionData(code);
 
-      res.status(200).send(renderPopupScript({
-        type: "facebook_oauth_success",
-        pages,
-      }, frontendOrigin));
+      const sessionId = require("crypto").randomBytes(16).toString("hex");
+      automationService.storeOAuthResult(sessionId, { type: "success", pages });
+      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     } catch (err) {
-      res.status(200).send(renderPopupScript({
-        type: "facebook_oauth_error",
-        message: err.message || "Facebook connection failed",
-      }, frontendOrigin));
+      const sessionId = require("crypto").randomBytes(16).toString("hex");
+      automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Facebook connection failed" });
+      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     }
+  },
+
+  async getFacebookResult(req, res) {
+    const { session } = req.query;
+    if (!session) return res.status(400).json({ error: "Missing session" });
+    const result = automationService.getOAuthResult(session);
+    if (!result) return res.status(404).json({ error: "Session not found or expired" });
+    return res.json(result);
   },
 };
 

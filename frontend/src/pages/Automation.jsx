@@ -106,33 +106,33 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     setConnecting(false);
   }, [open, editingItem]);
 
-  // Listen for OAuth popup result
+  // Listen for OAuth popup result via localStorage storage event
   useEffect(() => {
-    const handler = (event) => {
-      const origin = (apiBase || "").replace(/\/api\/?$/, "");
-      if (event.origin !== origin) return;
+    const handler = (e) => {
+      if (e.key !== "fb_oauth_result" || !e.newValue) return;
+      let result;
+      try { result = JSON.parse(e.newValue); } catch { return; }
+      localStorage.removeItem("fb_oauth_result");
+      setConnecting(false);
 
-      if (event.data?.type === "facebook_oauth_success") {
-        setConnecting(false);
-        const fetchedPages = event.data.pages || [];
+      if (result.type === "facebook_oauth_success") {
+        const fetchedPages = result.pages || [];
         setPages(fetchedPages);
-        if (fetchedPages.length) {
+        if (fetchedPages.length > 0) {
           const first = fetchedPages[0];
-          setPageId(first.id);
-          setFormId(first.forms?.[0]?.id || "");
+          setPageId(first.id || "");
           if (!connName) setConnName(`${first.name} — Lead Ads`);
         }
         setStep("select");
         toast.success("Facebook connected! Choose your page and form.");
       }
-      if (event.data?.type === "facebook_oauth_error") {
-        setConnecting(false);
-        toast.error(event.data.message || "Facebook connection failed. Please try again.");
+      if (result.type === "facebook_oauth_error") {
+        toast.error(result.message || "Facebook connection failed. Please try again.");
       }
     };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, [apiBase, connName]);
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, [step, connName]);
 
   const handlePageChange = (e) => {
     const id = e.target.value;

@@ -76,6 +76,7 @@ import HelpSupport   from "./pages/HelpSupport";
 import NotFound      from "./pages/NotFound";
 import Privacy       from "./pages/Privacy";
 import Terms         from "./pages/Terms";
+import FbCallback    from "./pages/FbCallback";
 import Projects      from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
@@ -123,8 +124,9 @@ export default function App() {
       <InstallBanner />
       <Routes>
         {/* Fully public — no auth needed */}
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms"   element={<Terms />} />
+        <Route path="/privacy"     element={<Privacy />} />
+        <Route path="/terms"       element={<Terms />} />
+        <Route path="/fb-callback" element={<FbCallback />} />
 
         {/* Public routes */}
         <Route element={<RedirectIfAuth />}>
