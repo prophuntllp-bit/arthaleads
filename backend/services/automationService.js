@@ -84,6 +84,7 @@ const automationService = {
     });
     const res = await fetch(`${url}?${params.toString()}`, { method: "POST" });
     const json = await res.json();
+    console.log(`[subscribePageWebhook] page=${pageId} response:`, JSON.stringify(json));
     if (!res.ok || !json.success) {
       throw new Error(json.error?.message || "Failed to subscribe page webhook");
     }

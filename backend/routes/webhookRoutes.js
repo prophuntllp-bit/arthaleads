@@ -52,6 +52,7 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", express.json(), async (req, res) => {
+  console.log("[webhook] POST received:", JSON.stringify(req.body).slice(0, 500));
   try {
     const entries = req.body.entry || [];
     const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");

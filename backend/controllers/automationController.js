@@ -84,6 +84,9 @@ const automationController = {
       automationService.verifyFacebookState(state);
       const pages = await automationService.getFacebookConnectionData(code);
 
+      console.log(`[facebookCallback] pages fetched: ${pages.length}`);
+      pages.forEach(p => console.log(`  page: ${p.name} | forms: ${p.forms?.length ?? 0} | ${JSON.stringify(p.forms?.map(f => f.name))}`));
+
       const sessionId = require("crypto").randomBytes(16).toString("hex");
       automationService.storeOAuthResult(sessionId, { type: "success", pages });
       return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
