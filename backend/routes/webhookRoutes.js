@@ -63,7 +63,13 @@ router.post("/", express.json(), async (req, res) => {
 
         const leadData = change.value || {};
         const automation = await findFacebookAutomationByPayload(leadData);
-        const accessToken = automation?.accessToken || process.env.FB_PAGE_ACCESS_TOKEN;
+
+        if (!automation) {
+          logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no matching automation for page ${leadData.page_id || "unknown"}`);
+          continue;
+        }
+
+        const accessToken = automation.accessToken || process.env.FB_PAGE_ACCESS_TOKEN;
 
         if (!accessToken) {
           logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no access token configured`);
