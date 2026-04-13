@@ -194,11 +194,7 @@ const automationService = {
       response_type: "code",
       scope: [
         "pages_show_list",
-        "pages_manage_metadata",
-        "pages_read_engagement",
-        "pages_manage_ads",
         "leads_retrieval",
-        "ads_management",
       ].join(","),
     });
 
