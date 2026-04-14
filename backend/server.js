@@ -101,6 +101,7 @@ app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
+app.use("/api/voice", require("./routes/voiceRoutes"));
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
