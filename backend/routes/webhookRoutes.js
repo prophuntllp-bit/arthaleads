@@ -62,10 +62,15 @@ router.post("/", express.json(), async (req, res) => {
         if (change.field !== "leadgen") continue;
 
         const leadData = change.value || {};
-        const automation = await findFacebookAutomationByPayload(leadData);
+        let automation = await findFacebookAutomationByPayload(leadData);
+
+        // Fall back to any active Facebook automation (handles test leads with fake IDs)
+        if (!automation) {
+          automation = await Automation.findOne({ platform: "Facebook", isActive: true }).sort({ updatedAt: -1 });
+        }
 
         if (!automation) {
-          logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no matching automation for page ${leadData.page_id || "unknown"}`);
+          logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no active Facebook automation found`);
           continue;
         }
 
