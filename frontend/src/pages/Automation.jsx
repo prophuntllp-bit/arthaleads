@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -519,10 +519,9 @@ function WordPressWizard({ open, onClose, apiBase }) {
   const [connectedForms, setConnectedForms] = useState([]);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    setLoading(true);
-    api.get("/automations/website/token")
+  const fetchStatus = useCallback((isInitial = false) => {
+    if (isInitial) setLoading(true);
+    return api.get("/automations/website/token")
       .then(({ data }) => {
         setToken(data.token || "");
         setStatus(data.status || "draft");
@@ -530,10 +529,23 @@ function WordPressWizard({ open, onClose, apiBase }) {
         setSiteUrl(data.siteUrl || "");
         setSiteName(data.siteName || "");
         setConnectedForms(data.connectedForms || []);
+        return data.status;
       })
-      .catch(() => toast.error("Failed to load website token"))
-      .finally(() => setLoading(false));
-  }, [open]);
+      .catch(() => isInitial && toast.error("Failed to load website token"))
+      .finally(() => isInitial && setLoading(false));
+  }, []);
+
+  // Initial fetch + poll every 3s while draft, stop when connected
+  useEffect(() => {
+    if (!open) return;
+    fetchStatus(true);
+    const interval = setInterval(() => {
+      fetchStatus(false).then((s) => {
+        if (s === "connected") clearInterval(interval);
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [open, fetchStatus]);
 
   const copy = () => {
     navigator.clipboard.writeText(token);
