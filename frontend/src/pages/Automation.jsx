@@ -905,6 +905,37 @@ export default function Automation() {
                         <p className="mt-0.5 font-medium text-app truncate">{item.formId || "All forms"}</p>
                       </div>
                     </div>
+                  ) : item.platform === "Website Form" ? (
+                    <div className="rounded-2xl p-4 stitch-surface-muted space-y-2">
+                      {item.siteName || item.siteUrl ? (
+                        <div>
+                          <p className="text-xs text-app-soft mb-0.5">Connected Website</p>
+                          <p className="font-semibold text-sm text-app">{item.siteName || "WordPress Site"}</p>
+                          {item.siteUrl && <p className="text-xs text-app-soft">{item.siteUrl}</p>}
+                        </div>
+                      ) : null}
+                      {item.connectedForms?.length > 0 && (
+                        <div>
+                          <p className="text-xs text-app-soft mb-1">Active Forms</p>
+                          <div className="flex flex-wrap gap-1">
+                            {item.connectedForms.map((f) => (
+                              <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ {f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">API Endpoint</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
+                            {serverBase}{endpointPath}
+                          </code>
+                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}${endpointPath}`)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="rounded-2xl p-4 stitch-surface-muted">
                       <p className="text-xs text-app-soft mb-2">API Endpoint</p>
