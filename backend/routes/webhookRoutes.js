@@ -81,7 +81,14 @@ router.post("/", express.json(), async (req, res) => {
           continue;
         }
 
-        const leadDetails = leadData.field_data ? leadData : await getFacebookLeadFields(leadData.leadgen_id, accessToken);
+        let leadDetails = leadData;
+        if (!leadData.field_data) {
+          try {
+            leadDetails = await getFacebookLeadFields(leadData.leadgen_id, accessToken);
+          } catch (fetchErr) {
+            logger.warn(`Facebook webhook: could not fetch lead fields for ${leadData.leadgen_id}: ${fetchErr.message}. Using raw payload.`);
+          }
+        }
         const fieldMap = Object.fromEntries((leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
 
         const name =
