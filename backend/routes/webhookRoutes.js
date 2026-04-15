@@ -215,4 +215,29 @@ router.post("/website", express.json(), async (req, res) => {
   }
 });
 
+// ── Website plugin registration (called when plugin saves settings) ───────────
+// POST /webhook/website/register  { token, site_name, site_url, forms: [] }
+router.post("/website/register", express.json(), async (req, res) => {
+  try {
+    const { token, site_name, site_url, forms } = req.body || {};
+    if (!token) return res.status(400).json({ success: false, message: "Missing token" });
+
+    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
+    if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
+
+    if (site_name) automation.siteName = site_name;
+    if (site_url)  automation.siteUrl  = site_url;
+    if (Array.isArray(forms)) automation.connectedForms = forms;
+    automation.status = "connected";
+    automation.lastSyncAt = new Date();
+    await automation.save();
+
+    logger.info(`[website register] connected: ${site_name || site_url} | forms: ${(forms || []).join(", ")}`);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error(`[website register] error: ${err.message}`);
+    res.status(500).json({ success: false });
+  }
+});
+
 module.exports = router;

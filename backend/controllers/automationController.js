@@ -60,6 +60,9 @@ const automationController = {
         status: automation.status,
         lastSyncAt: automation.lastSyncAt,
         automationId: automation._id,
+        siteUrl: automation.siteUrl || "",
+        siteName: automation.siteName || "",
+        connectedForms: automation.connectedForms || [],
       });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });

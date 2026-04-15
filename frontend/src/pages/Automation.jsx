@@ -514,6 +514,9 @@ function WordPressWizard({ open, onClose, apiBase }) {
   const [token, setToken] = useState("");
   const [status, setStatus] = useState("draft");
   const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [siteUrl, setSiteUrl] = useState("");
+  const [siteName, setSiteName] = useState("");
+  const [connectedForms, setConnectedForms] = useState([]);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -524,6 +527,9 @@ function WordPressWizard({ open, onClose, apiBase }) {
         setToken(data.token || "");
         setStatus(data.status || "draft");
         setLastSyncAt(data.lastSyncAt || null);
+        setSiteUrl(data.siteUrl || "");
+        setSiteName(data.siteName || "");
+        setConnectedForms(data.connectedForms || []);
       })
       .catch(() => toast.error("Failed to load website token"))
       .finally(() => setLoading(false));
@@ -565,13 +571,34 @@ function WordPressWizard({ open, onClose, apiBase }) {
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : (
             <>
-              {/* Status */}
-              {isConnected && lastSyncAt && (
-                <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <p className="text-sm text-emerald-400 font-medium">
-                    Receiving leads · Last: {new Date(lastSyncAt).toLocaleString()}
-                  </p>
+              {/* Connected site info */}
+              {isConnected && (
+                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <p className="text-sm text-emerald-400 font-bold">
+                      {siteName || "WordPress Site"} — Connected
+                    </p>
+                  </div>
+                  {siteUrl && (
+                    <p className="text-xs text-emerald-400/70 pl-6">
+                      {siteUrl}
+                    </p>
+                  )}
+                  {lastSyncAt && (
+                    <p className="text-xs text-emerald-400/70 pl-6">
+                      Last lead: {new Date(lastSyncAt).toLocaleString()}
+                    </p>
+                  )}
+                  {connectedForms.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1 pl-6">
+                      {connectedForms.map((f) => (
+                        <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                          ✓ {f}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

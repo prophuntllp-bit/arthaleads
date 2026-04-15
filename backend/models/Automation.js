@@ -83,6 +83,21 @@ const automationSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    siteUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    siteName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: "",
+    },
+    connectedForms: {
+      type: [String],
+      default: [],
+    },
     isActive: {
       type: Boolean,
       default: true,
