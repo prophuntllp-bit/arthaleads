@@ -26,10 +26,24 @@ const SOURCE_COUNTERS = [
   { key: "whatsapp", label: "WA", tone: "bg-green-500/10 text-green-400 border-green-500/20", dot: "bg-green-500" },
 ];
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
+  return "Good night";
+}
+
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard — Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
+  const [greeting, setGreeting] = useState(getGreeting());
+
+  useEffect(() => {
+    const timer = setInterval(() => setGreeting(getGreeting()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +86,7 @@ export default function Dashboard() {
 
           <div>
             <p className="stitch-kicker mb-2">Overview</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Good morning, {user?.name?.split(" ")[0]}</h1>
+            <h1 className="text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
             <p className="mt-1 max-w-2xl text-sm text-app-soft">
               Track source performance, team momentum, and recent lead movement across all your active channels in real time.
             </p>
