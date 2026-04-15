@@ -151,4 +151,68 @@ router.post("/", express.json(), async (req, res) => {
   }
 });
 
+// ── Website / WordPress webhook ───────────────────────────────────────────────
+// POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, page_url }
+router.post("/website", express.json(), async (req, res) => {
+  try {
+    const { token, name, phone, email, message, source_name, form_plugin, page_url } = req.body || {};
+
+    if (!token) return res.status(400).json({ success: false, message: "Missing token" });
+
+    const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
+    if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
+
+    const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");
+
+    const lead = await Lead.create({
+      name: name || "Website Lead",
+      phone: phone || "N/A",
+      email: email || "",
+      source: "Website",
+      status: "New",
+      createdBy: defaultOwner?._id,
+      assignedTo: defaultOwner?._id || null,
+      assignedToName: defaultOwner?.name || "",
+      leadSourceLabel: source_name || automation.name || "Website Form",
+      notes: [
+        {
+          text: [
+            message ? `Message: ${message}` : null,
+            form_plugin ? `Form plugin: ${form_plugin}` : null,
+            page_url ? `Page: ${page_url}` : null,
+          ].filter(Boolean).join("\n") || "Lead received from website contact form",
+          addedBy: defaultOwner?._id,
+          addedByName: defaultOwner?.name || "System",
+        },
+      ],
+      activities: [
+        {
+          type: "created",
+          description: "Lead received from website contact form via Arthaleads plugin",
+          performedBy: defaultOwner?._id,
+          performedByName: defaultOwner?.name || "System",
+          meta: { formPlugin: form_plugin || "", pageUrl: page_url || "", automationId: automation._id?.toString() },
+        },
+      ],
+    });
+
+    automation.status = "connected";
+    automation.lastSyncAt = new Date();
+    await automation.save();
+
+    sendPushToAll({
+      type: "new_lead",
+      title: "New Website Lead 🌐",
+      body: `${lead.name} submitted a form on your website`,
+      data: { leadName: lead.name, source: "Website" },
+    }).catch(() => {});
+
+    logger.info(`[website webhook] lead created: ${lead.name} | ${phone} | plugin: ${form_plugin}`);
+    res.status(200).json({ success: true, message: "Lead received" });
+  } catch (err) {
+    logger.error(`[website webhook] error: ${err.message}`);
+    res.status(500).json({ success: false, message: "Failed to process lead" });
+  }
+});
+
 module.exports = router;

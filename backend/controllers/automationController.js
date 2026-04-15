@@ -21,7 +21,51 @@ function renderPopupScript(payload, targetOrigin) {
 </html>`;
 }
 
+const crypto = require("crypto");
+const Automation = require("../models/Automation");
+
+function generateWebsiteToken() {
+  return "AW-" + crypto.randomBytes(5).toString("hex").toUpperCase().slice(0, 8);
+}
+
 const automationController = {
+  // GET /api/automations/website/token — get or create website token
+  async getWebsiteToken(req, res) {
+    try {
+      let automation = await Automation.findOne({
+        platform: "Website Form",
+        createdBy: req.user._id,
+        isActive: true,
+      }).sort({ createdAt: 1 });
+
+      if (!automation) {
+        automation = await Automation.create({
+          name: "WordPress / Website Forms",
+          platform: "Website Form",
+          mode: "form",
+          status: "draft",
+          leadSourceLabel: "Website",
+          webhookPath: "/webhook/website",
+          verifyToken: generateWebsiteToken(),
+          description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
+          isActive: true,
+          createdBy: req.user._id,
+          updatedBy: req.user._id,
+        });
+      }
+
+      res.json({
+        success: true,
+        token: automation.verifyToken,
+        status: automation.status,
+        lastSyncAt: automation.lastSyncAt,
+        automationId: automation._id,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   async list(req, res, next) {
     try {
       const automations = await automationService.list();

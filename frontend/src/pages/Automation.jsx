@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download,
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
@@ -503,6 +503,148 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
   );
 }
 
+/* ─── WordPress Wizard ─────────────────────────────────────────────────────── */
+const FORM_PLUGINS = [
+  "Contact Form 7", "WPForms", "Elementor", "Gravity Forms",
+  "Ninja Forms", "Forminator", "Fluent Forms",
+];
+
+function WordPressWizard({ open, onClose, apiBase }) {
+  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState("");
+  const [status, setStatus] = useState("draft");
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    api.get("/automations/website/token")
+      .then(({ data }) => {
+        setToken(data.token || "");
+        setStatus(data.status || "draft");
+        setLastSyncAt(data.lastSyncAt || null);
+      })
+      .catch(() => toast.error("Failed to load website token"))
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  const copy = () => {
+    navigator.clipboard.writeText(token);
+    setCopied(true);
+    toast.success("Token copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (!open) return null;
+
+  const isConnected = status === "connected";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-[1.75rem] shell-panel overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
+            <WordPressIcon />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-app">WordPress / Website Forms</h2>
+            <p className="text-xs text-app-soft">Auto-capture leads from any contact form</p>
+          </div>
+          {isConnected && (
+            <span className="ml-auto text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+              ✓ Connected
+            </span>
+          )}
+        </div>
+
+        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+          {loading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <>
+              {/* Status */}
+              {isConnected && lastSyncAt && (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <p className="text-sm text-emerald-400 font-medium">
+                    Receiving leads · Last: {new Date(lastSyncAt).toLocaleString()}
+                  </p>
+                </div>
+              )}
+
+              {/* Token */}
+              <div className="space-y-2">
+                <label className="label">Your Arthaleads Account Token</label>
+                <p className="text-xs text-app-soft">Copy this token and paste it into the plugin settings on your WordPress site.</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded-xl px-4 py-3 text-base font-mono font-bold text-orange-400 tracking-widest" style={{ background: "var(--app-surface-low)" }}>
+                    {token || "Loading…"}
+                  </code>
+                  <button onClick={copy} className="btn-secondary rounded-xl px-4 py-3 shrink-0">
+                    {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Steps */}
+              <div className="rounded-2xl border space-y-0 overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                <p className="px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider" style={{ background: "var(--app-surface-low)" }}>
+                  Setup Steps
+                </p>
+                {[
+                  { n: 1, text: "In your WordPress admin → Plugins → Add New" },
+                  { n: 2, text: 'Search for "Arthaleads" and install the plugin' },
+                  { n: 3, text: 'Activate it, then click "Arthaleads CRM" in the left sidebar' },
+                  { n: 4, text: "Paste your token above into the Account Token field" },
+                  { n: 5, text: "Enter your website name (e.g. Joyville Hinjewadi Website)" },
+                  { n: 6, text: 'Click "Save" — leads will now flow into Arthaleads automatically' },
+                ].map(({ n, text }) => (
+                  <div key={n} className="flex items-start gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold mt-0.5">{n}</span>
+                    <p className="text-sm text-app-soft">{text}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Supported plugins */}
+              <div className="space-y-2">
+                <label className="label">Supported Form Plugins</label>
+                <div className="flex flex-wrap gap-2">
+                  {FORM_PLUGINS.map((p) => (
+                    <span key={p} className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      ✓ {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Manual download note */}
+              <div className="rounded-xl px-4 py-3 text-xs text-app-soft border" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+                💡 Plugin not on WordPress directory yet? Ask your admin to upload <strong>arthaleads-connector.php</strong> manually to <code>/wp-content/plugins/arthaleads-connector/</code>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 px-6 pb-6">
+          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WordPressIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zM3.5 12c0-1.232.252-2.405.7-3.471L7.942 19.1A8.5 8.5 0 013.5 12zm8.5 8.5a8.46 8.46 0 01-2.41-.349l2.56-7.438 2.622 7.186a.95.95 0 00.07.136A8.472 8.472 0 0112 20.5zm1.17-12.485c.512-.027.973-.08.973-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108-.835 0-2.238-.108-2.238-.108-.457-.027-.511.673-.054.7 0 0 .435.053.893.08l1.327 3.635-1.863 5.589-3.102-9.224c.511-.027.972-.08.972-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108a15.1 15.1 0 01-.548-.018A8.5 8.5 0 0120.338 9.2c-.027.001-.054.004-.082.004-.835 0-1.428.726-1.428 1.508 0 .7.403 1.292.835 1.992.323.566.7 1.293.7 2.346 0 .727-.28 1.57-.646 2.75l-.847 2.826-3.07-9.11zm2.832 10.934l2.607-7.533c.487-1.219.65-2.193.65-3.059 0-.314-.021-.607-.058-.883a8.5 8.5 0 01-3.199 11.475z"/>
+    </svg>
+  );
+}
+
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
@@ -512,6 +654,9 @@ export default function Automation() {
   // Facebook wizard state
   const [fbWizardOpen, setFbWizardOpen] = useState(false);
   const [fbEditingItem, setFbEditingItem] = useState(null);
+
+  // WordPress wizard state
+  const [wpWizardOpen, setWpWizardOpen] = useState(false);
 
   // Non-FB source modal state
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
@@ -618,6 +763,12 @@ export default function Automation() {
               onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
             >
               <FacebookIcon2 /> Connect Facebook
+            </button>
+            <button
+              className="btn-secondary rounded-xl"
+              onClick={() => setWpWizardOpen(true)}
+            >
+              <WordPressIcon2 /> WordPress / Website
             </button>
             <button
               className="btn-secondary rounded-xl"
@@ -761,6 +912,13 @@ export default function Automation() {
         </section>
       )}
 
+      {/* WordPress Wizard */}
+      <WordPressWizard
+        open={wpWizardOpen}
+        onClose={() => setWpWizardOpen(false)}
+        apiBase={apiBase}
+      />
+
       {/* Facebook Wizard */}
       <FacebookWizard
         open={fbWizardOpen}
@@ -805,6 +963,14 @@ function FacebookIcon2() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
       <path d="M24 12.073C24 5.404 18.627 0 12 0S0 5.404 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z" />
+    </svg>
+  );
+}
+
+function WordPressIcon2() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zM3.5 12c0-1.232.252-2.405.7-3.471L7.942 19.1A8.5 8.5 0 013.5 12zm8.5 8.5a8.46 8.46 0 01-2.41-.349l2.56-7.438 2.622 7.186a.95.95 0 00.07.136A8.472 8.472 0 0112 20.5zm1.17-12.485c.512-.027.973-.08.973-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108-.835 0-2.238-.108-2.238-.108-.457-.027-.511.673-.054.7 0 0 .435.053.893.08l1.327 3.635-1.863 5.589-3.102-9.224c.511-.027.972-.08.972-.08.457-.054.403-.726-.054-.7 0 0-1.376.108-2.265.108a15.1 15.1 0 01-.548-.018A8.5 8.5 0 0120.338 9.2c-.027.001-.054.004-.082.004-.835 0-1.428.726-1.428 1.508 0 .7.403 1.292.835 1.992.323.566.7 1.293.7 2.346 0 .727-.28 1.57-.646 2.75l-.847 2.826-3.07-9.11zm2.832 10.934l2.607-7.533c.487-1.219.65-2.193.65-3.059 0-.314-.021-.607-.058-.883a8.5 8.5 0 01-3.199 11.475z"/>
     </svg>
   );
 }

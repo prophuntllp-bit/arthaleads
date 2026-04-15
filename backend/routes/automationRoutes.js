@@ -12,6 +12,8 @@ router.get("/facebook/result", automationController.getFacebookResult);
 
 router.use(protect, authorize("admin", "manager"));
 
+router.get("/website/token", automationController.getWebsiteToken);
+
 router.route("/")
   .get(automationController.list)
   .post(validate(createAutomationSchema), automationController.create);
