@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
@@ -24,7 +25,9 @@ export default function DumpLeads() {
   const [page, setPage]             = useState(1);
   const [importing, setImporting]   = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
   const exportMenuRef = useRef(null);
+  const exportBtnRef  = useRef(null);
 
   // ── Bulk select state ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds]     = useState(new Set());
@@ -45,12 +48,15 @@ export default function DumpLeads() {
 
   // Close export menu on outside click
   useEffect(() => {
+    if (!showExportMenu) return;
     const h = (e) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setShowExportMenu(false);
+      if (exportBtnRef.current && exportBtnRef.current.contains(e.target)) return;
+      if (exportMenuRef.current && exportMenuRef.current.contains(e.target)) return;
+      setShowExportMenu(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, []);
+  }, [showExportMenu]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
   const allSelected  = paginated_ids_check() && paginated_ids_check().every((id) => selectedIds.has(id));
@@ -158,7 +164,12 @@ export default function DumpLeads() {
   // ── Export ──────────────────────────────────────────────────────────────────
   const exportRows = async (type) => {
     try {
-      const rows = leads.map((lead) => ({
+      // If leads are selected, export only those; otherwise export all
+      const source = selectedIds.size > 0
+        ? leads.filter((l) => selectedIds.has(l._id + (l._type || "")))
+        : leads;
+
+      const rows = source.map((lead) => ({
         Name: lead.name,
         Phone: lead.phone,
         Email: lead.email || "",
@@ -174,24 +185,27 @@ export default function DumpLeads() {
         AddedOn: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
       }));
 
+      const suffix = selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
+      const dateStr = new Date().toISOString().slice(0, 10);
+
       if (type === "json") {
         const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `arthaleads-dump-leads-${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `arthaleads-dump-leads${suffix}-${dateStr}.json`;
         link.click();
         URL.revokeObjectURL(url);
-        toast.success("Dump leads exported as JSON");
+        toast.success(`Exported ${rows.length} leads as JSON`);
         return;
       }
 
       const worksheet = xlsxUtils.json_to_sheet(rows);
       const workbook = xlsxUtils.book_new();
       xlsxUtils.book_append_sheet(workbook, worksheet, "Dump Leads");
-      const fileName = `arthaleads-dump-leads-${new Date().toISOString().slice(0, 10)}.${type === "excel" ? "xlsx" : "csv"}`;
-      xlsxWriteFile(workbook, fileName, { bookType: type === "excel" ? "xlsx" : "csv" });
-      toast.success(`Dump leads exported as ${type === "excel" ? "Excel" : "CSV"}`);
+      const ext = type === "excel" ? "xlsx" : "csv";
+      xlsxWriteFile(workbook, `arthaleads-dump-leads${suffix}-${dateStr}.${ext}`, { bookType: ext });
+      toast.success(`Exported ${rows.length} leads as ${type === "excel" ? "Excel" : "CSV"}`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Export failed");
     }
@@ -312,36 +326,20 @@ export default function DumpLeads() {
           </label>
 
           {/* Export */}
-          <div className="relative" ref={exportMenuRef}>
+          <div ref={exportMenuRef}>
             <button
+              ref={exportBtnRef}
               className="btn-secondary rounded-xl flex items-center gap-2 text-sm font-medium"
-              onClick={() => setShowExportMenu((c) => !c)}
+              onClick={() => {
+                const rect = exportBtnRef.current?.getBoundingClientRect();
+                if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                setShowExportMenu((c) => !c);
+              }}
             >
-              <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
+              <Download className="h-4 w-4" />
+              {selectedIds.size > 0 ? `Export ${selectedIds.size} selected` : "Export"}
+              <ChevronDown className="h-4 w-4" />
             </button>
-            {showExportMenu && (
-              <div
-                className="absolute right-0 top-12 z-20 w-48 overflow-hidden rounded-2xl"
-                style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}
-              >
-                {[
-                  { key: "csv",   label: "Export CSV" },
-                  { key: "excel", label: "Export Excel" },
-                  { key: "json",  label: "Export JSON" },
-                ].map((item) => (
-                  <button
-                    key={item.key}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition"
-                    onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
-                    style={{ background: "transparent" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-surface-low)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                  >
-                    <Download className="h-4 w-4" /> {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </header>
@@ -519,6 +517,64 @@ export default function DumpLeads() {
           </div>
         )}
       </section>
+
+      {/* Export dropdown — rendered via portal so it's never clipped */}
+      {showExportMenu && createPortal(
+        <div
+          ref={exportMenuRef}
+          className="fixed z-[9999] w-52 overflow-hidden rounded-2xl"
+          style={{
+            top: exportMenuPos.top,
+            right: exportMenuPos.right,
+            background: "var(--app-surface)",
+            border: "1px solid var(--app-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+          }}
+        >
+          {selectedIds.size > 0 && (
+            <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-app-soft">
+              {selectedIds.size} selected
+            </p>
+          )}
+          {[
+            { key: "csv",   label: "Export CSV" },
+            { key: "excel", label: "Export Excel" },
+            { key: "json",  label: "Export JSON" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
+            >
+              <Download className="h-4 w-4" /> {item.label}
+            </button>
+          ))}
+          {selectedIds.size > 0 && (
+            <>
+              <div className="mx-4 border-t" style={{ borderColor: "var(--app-border)" }} />
+              {[
+                { key: "csv",   label: "Export all as CSV" },
+                { key: "excel", label: "Export all as Excel" },
+              ].map((item) => (
+                <button
+                  key={"all-" + item.key}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app-soft transition hover:bg-black/5 dark:hover:bg-white/5"
+                  onClick={() => {
+                    setShowExportMenu(false);
+                    // temporarily clear selection to export all
+                    const saved = new Set(selectedIds);
+                    setSelectedIds(new Set());
+                    setTimeout(() => { exportRows(item.key); setSelectedIds(saved); }, 0);
+                  }}
+                >
+                  <Download className="h-4 w-4" /> {item.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>,
+        document.body
+      )}
 
       {/* Bulk delete confirm dialog */}
       {showBulkConfirm && (
