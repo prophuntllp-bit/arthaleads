@@ -1,13 +1,13 @@
 <?php
 /**
- * Plugin Name:       Arthaleads Connector
+ * Plugin Name:       Arthaleads Integration
  * Plugin URI:        https://arthaleads.com
  * Description:       Automatically send WordPress contact form leads to Arthaleads CRM. Supports Contact Form 7, WPForms, Elementor, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.
  * Version:           1.0.0
  * Author:            Arthaleads
  * Author URI:        https://arthaleads.com
  * License:           GPL-2.0+
- * Text Domain:       arthaleads-connector
+ * Text Domain:       arthaleads-integration
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -32,7 +32,7 @@ add_action( 'admin_menu', function() {
         'Arthaleads CRM',
         'Arthaleads CRM',
         'manage_options',
-        'arthaleads-connector',
+        'arthaleads-integration',
         'arthaleads_settings_page',
         'data:image/svg+xml;base64,' . base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FF6B00"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>'),
         30
@@ -317,3 +317,4 @@ add_action( 'fluentform/submission_inserted', function( $insertId, $formData, $f
         'form_plugin' => 'fluent-forms',
     ] );
 }, 10, 3 );
+
