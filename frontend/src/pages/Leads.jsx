@@ -584,35 +584,28 @@ export default function Leads() {
 
   const exportRows = (type, leadsOverride = null) => {
     const tid = toast.loading("Preparing export…");
-    const token = localStorage.getItem("crm_token");
-    const base = (import.meta.env.VITE_API_URL || "http://localhost:5000/api");
-    const fmt = type === "excel" ? "csv" : type; // backend supports csv and json
+    const fmt = type === "excel" ? "csv" : type;
+    const ext  = fmt === "json" ? "json" : "csv";
+    const mime = fmt === "json" ? "application/json" : "text/csv;charset=utf-8;";
+    const date = new Date().toISOString().slice(0, 10);
 
     const params = new URLSearchParams();
     params.set("format", fmt);
     if (leadsOverride !== null && leadsOverride !== undefined) {
       params.set("ids", leadsOverride.map((l) => l._id).join(","));
     } else {
-      if (filters.status)  params.set("status",  filters.status);
-      if (filters.source)  params.set("source",  filters.source);
-      if (filters.priority) params.set("priority", filters.priority);
-      if (filters.search)  params.set("search",  filters.search);
+      if (filters.status)   params.set("status",    filters.status);
+      if (filters.source)   params.set("source",    filters.source);
+      if (filters.priority) params.set("priority",  filters.priority);
+      if (filters.search)   params.set("search",    filters.search);
       if (filters.dateRange) params.set("dateRange", filters.dateRange);
     }
 
-    const url = `${base}/leads/export?${params.toString()}`;
-    const ext  = fmt === "json" ? "json" : "csv";
-    const mime = fmt === "json" ? "application/json" : "text/csv;charset=utf-8;";
-    const date = new Date().toISOString().slice(0, 10);
-
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
+    // Use api axios instance — it has the correct baseURL and auth token injected automatically
+    api.get(`/leads/export?${params.toString()}`, { responseType: "blob" })
+      .then(({ data }) => {
         toast.dismiss(tid);
-        const blobUrl = URL.createObjectURL(new Blob([blob], { type: mime }));
+        const blobUrl = URL.createObjectURL(new Blob([data], { type: mime }));
         const a = document.createElement("a");
         a.href = blobUrl;
         a.download = `leads-${date}.${ext}`;
@@ -621,11 +614,11 @@ export default function Leads() {
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        toast.success(`Exported as ${ext.toUpperCase()}`);
+        toast.success(`Exported ${leadsOverride ? leadsOverride.length + " leads" : "all leads"} as ${ext.toUpperCase()}`);
       })
       .catch((e) => {
         toast.dismiss(tid);
-        toast.error("Export failed: " + e.message);
+        toast.error("Export failed: " + (e.response?.data?.message || e.message));
       });
   };
 
