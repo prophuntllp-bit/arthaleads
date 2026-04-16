@@ -152,10 +152,10 @@ router.post("/", express.json(), async (req, res) => {
 });
 
 // ── Website / WordPress webhook ───────────────────────────────────────────────
-// POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, page_url }
+// POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, form_name, page_url }
 router.post("/website", express.json(), async (req, res) => {
   try {
-    const { token, name, phone, email, message, source_name, form_plugin, page_url } = req.body || {};
+    const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url } = req.body || {};
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
@@ -164,16 +164,18 @@ router.post("/website", express.json(), async (req, res) => {
 
     const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");
 
-    // Human-readable plugin name
+    // Use the actual form name if the plugin sent it (e.g. "Vanaha Verdant Contact Form")
+    // Fall back to "siteName via PluginName" if no form name available
     const pluginLabels = {
       metform: "MetForm", elementor_form: "Elementor Pro Forms", cf7: "Contact Form 7",
       wpforms: "WPForms", gravity_form: "Gravity Forms", ninja_form: "Ninja Forms",
       forminator_form: "Forminator", fluent_form: "Fluent Forms", manual_test: "Test Lead",
     };
-    const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
     const siteName = source_name || automation.siteName || automation.name || "Website";
-    // e.g. "prophuntllp.com via MetForm"
-    const sourceLabel = pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;
+    const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
+    const sourceLabel = form_name
+      ? form_name                                                      // "Vanaha Verdant Contact Form"
+      : pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;    // fallback
 
     const lead = await Lead.create({
       name: name || "Website Lead",
