@@ -526,9 +526,9 @@ export default function DumpLeads() {
           style={{
             top: exportMenuPos.top,
             right: exportMenuPos.right,
-            background: "var(--app-surface)",
+            background: "var(--app-bg)",
             border: "1px solid var(--app-border)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
           }}
         >
           {selectedIds.size > 0 && (
@@ -543,7 +543,7 @@ export default function DumpLeads() {
           ].map((item) => (
             <button
               key={item.key}
-              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition hover:bg-black/5 dark:hover:bg-white/5"
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition hover:brightness-95"
               onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
             >
               <Download className="h-4 w-4" /> {item.label}
