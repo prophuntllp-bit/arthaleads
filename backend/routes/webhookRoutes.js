@@ -164,6 +164,17 @@ router.post("/website", express.json(), async (req, res) => {
 
     const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");
 
+    // Human-readable plugin name
+    const pluginLabels = {
+      metform: "MetForm", elementor_form: "Elementor Pro Forms", cf7: "Contact Form 7",
+      wpforms: "WPForms", gravity_form: "Gravity Forms", ninja_form: "Ninja Forms",
+      forminator_form: "Forminator", fluent_form: "Fluent Forms", manual_test: "Test Lead",
+    };
+    const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
+    const siteName = source_name || automation.siteName || automation.name || "Website";
+    // e.g. "prophuntllp.com via MetForm"
+    const sourceLabel = pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;
+
     const lead = await Lead.create({
       name: name || "Website Lead",
       phone: phone || "N/A",
@@ -173,7 +184,8 @@ router.post("/website", express.json(), async (req, res) => {
       createdBy: defaultOwner?._id,
       assignedTo: defaultOwner?._id || null,
       assignedToName: defaultOwner?.name || "",
-      leadSourceLabel: source_name || automation.name || "Website Form",
+      leadSourceLabel: sourceLabel,
+      formPlugin: form_plugin || "",
       notes: [
         {
           text: [

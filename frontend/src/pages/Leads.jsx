@@ -1105,7 +1105,16 @@ export default function Leads() {
                     </td>
                     <td><PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} /></td>
                     <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact(lead)} /></td>
-                    <td><SourceBadge source={lead.source} /></td>
+                    <td>
+                      <div className="flex flex-col gap-0.5">
+                        <SourceBadge source={lead.source} />
+                        {lead.leadSourceLabel && (
+                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={lead.leadSourceLabel}>
+                            {lead.leadSourceLabel}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td>
                       {lead.projectName
                         ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>

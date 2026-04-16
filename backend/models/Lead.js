@@ -137,6 +137,10 @@ const leadSchema = new mongoose.Schema(
       default: "",
     },
 
+    // ── Lead Source Metadata ───────────────────────────────────────────────────
+    leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP — Lead Ads", "prophuntllp.com"
+    formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
+
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },
