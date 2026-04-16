@@ -590,7 +590,7 @@ export default function Leads() {
 
     const params = new URLSearchParams();
     params.set("format", fmt);
-    if (leadsOverride?.length) {
+    if (leadsOverride !== null && leadsOverride !== undefined) {
       params.set("ids", leadsOverride.map((l) => l._id).join(","));
     } else {
       if (filters.status)  params.set("status",  filters.status);
@@ -1293,9 +1293,13 @@ export default function Leads() {
                 key={item.key}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
                 onClick={() => {
-                  const src = selectedIds.size > 0 ? leads.filter((l) => selectedIds.has(l._id)) : null;
+                  // Pass selected IDs directly — don't filter through paginated leads
+                  // so cross-page selections work correctly
+                  const selectedArr = selectedIds.size > 0
+                    ? [...selectedIds].map((id) => ({ _id: id }))
+                    : null;
                   setShowExportMenu(false);
-                  exportRows(item.key, src);
+                  exportRows(item.key, selectedArr);
                 }}
               >
                 <Download className="h-4 w-4" /> {item.label}
