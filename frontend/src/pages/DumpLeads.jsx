@@ -26,8 +26,8 @@ export default function DumpLeads() {
   const [importing, setImporting]   = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
-  const exportMenuRef = useRef(null);
-  const exportBtnRef  = useRef(null);
+  const exportBtnRef      = useRef(null);
+  const exportDropdownRef = useRef(null);
 
   // ── Bulk select state ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds]     = useState(new Set());
@@ -50,8 +50,8 @@ export default function DumpLeads() {
   useEffect(() => {
     if (!showExportMenu) return;
     const h = (e) => {
-      if (exportBtnRef.current && exportBtnRef.current.contains(e.target)) return;
-      if (exportMenuRef.current && exportMenuRef.current.contains(e.target)) return;
+      if (exportBtnRef.current?.contains(e.target)) return;
+      if (exportDropdownRef.current?.contains(e.target)) return;
       setShowExportMenu(false);
     };
     document.addEventListener("mousedown", h);
@@ -326,7 +326,7 @@ export default function DumpLeads() {
           </label>
 
           {/* Export */}
-          <div ref={exportMenuRef}>
+          <div>
             <button
               ref={exportBtnRef}
               className="btn-secondary rounded-xl flex items-center gap-2 text-sm font-medium"
@@ -518,10 +518,10 @@ export default function DumpLeads() {
         )}
       </section>
 
-      {/* Export dropdown — rendered via portal so it's never clipped */}
+      {/* Export dropdown — rendered via portal so it's never clipped by overflow:hidden */}
       {showExportMenu && createPortal(
         <div
-          ref={exportMenuRef}
+          ref={exportDropdownRef}
           className="fixed z-[9999] w-52 overflow-hidden rounded-2xl"
           style={{
             top: exportMenuPos.top,
