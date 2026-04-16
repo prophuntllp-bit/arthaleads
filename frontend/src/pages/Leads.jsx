@@ -21,7 +21,7 @@ const fmtBudget = (val) => {
   return `₹${val}`;
 };
 import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
-import { read as xlsxRead, utils as xlsxUtils } from "xlsx";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -582,48 +582,78 @@ export default function Leads() {
   };
 
 
-  const exportRows = async (type, leadsOverride = null) => {
+  const exportRows = async (type, selectedIdsOverride = null) => {
     const tid = toast.loading("Preparing export…");
     try {
-      const fmt  = type === "excel" ? "csv" : type;
-      const ext  = fmt === "json" ? "json" : "csv";
-      const mime = fmt === "json" ? "application/json" : "text/csv;charset=utf-8;";
       const date = new Date().toISOString().slice(0, 10);
 
+      // Fetch all leads from backend (up to 5000), then filter by selected IDs if needed
       const params = new URLSearchParams();
-      params.set("format", fmt);
-      if (leadsOverride !== null && leadsOverride !== undefined) {
-        params.set("ids", leadsOverride.map((l) => l._id).join(","));
-      } else {
-        if (filters.status)    params.set("status",    filters.status);
-        if (filters.source)    params.set("source",    filters.source);
-        if (filters.priority)  params.set("priority",  filters.priority);
-        if (filters.search)    params.set("search",    filters.search);
-        if (filters.dateRange) params.set("dateRange", filters.dateRange);
+      if (filters.status)    params.set("status",    filters.status);
+      if (filters.source)    params.set("source",    filters.source);
+      if (filters.priority)  params.set("priority",  filters.priority);
+      if (filters.search)    params.set("search",    filters.search);
+      if (filters.dateRange) params.set("dateRange", filters.dateRange);
+      params.set("limit", "5000");
+      params.set("page", "1");
+
+      const { data: res } = await api.get(`/leads/unified?${params.toString()}`);
+      let source = res.leads || [];
+
+      // If specific IDs selected, filter to only those
+      if (selectedIdsOverride && selectedIdsOverride.size > 0) {
+        source = source.filter((l) => selectedIdsOverride.has(String(l._id)));
       }
 
-      const { data } = await api.get(`/leads/export?${params.toString()}`, { responseType: "arraybuffer" });
-
-      const blob    = new Blob([data], { type: mime });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = `leads-${date}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      const rows = source.map((lead) => ({
+        Name:          lead.name || "",
+        Phone:         lead.phone || "",
+        Email:         lead.email || "",
+        Source:        lead.source || "",
+        LeadSource:    lead.leadSourceLabel || "",
+        Status:        lead.status || "",
+        Priority:      lead.priority || "",
+        PropertyType:  lead.propertyType || "",
+        BHK:           lead.bhk || "",
+        Purpose:       lead.purpose || "",
+        BudgetMin:     lead.budget?.min || "",
+        BudgetMax:     lead.budget?.max || "",
+        FollowUpDate:  lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
+        FollowUpNote:  lead.followUpNote || "",
+        Remark1:       lead.remark1 || "",
+        Remark2:       lead.remark2 || "",
+        ContactStatus: lead.remark || "",
+        Booking:       lead.booking || "",
+        AssignedTo:    lead.assignedToName || "",
+        Project:       lead.projectName || "",
+        CreatedAt:     lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
+      }));
 
       toast.dismiss(tid);
-      toast.success(`Exported as ${ext.toUpperCase()}`);
+
+      if (rows.length === 0) { toast.error("No leads to export"); return; }
+
+      const label = selectedIdsOverride?.size > 0 ? `${selectedIdsOverride.size}-selected` : "all";
+
+      if (type === "json") {
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+        const url  = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `leads-${label}-${date}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      } else {
+        const ws = xlsxUtils.json_to_sheet(rows);
+        const wb = xlsxUtils.book_new();
+        xlsxUtils.book_append_sheet(wb, ws, "Leads");
+        const ext = type === "excel" ? "xlsx" : "csv";
+        xlsxWriteFile(wb, `leads-${label}-${date}.${ext}`, { bookType: ext });
+      }
+
+      toast.success(`Exported ${rows.length} leads`);
     } catch (e) {
       toast.dismiss(tid);
-      // Decode error body if it came back as arraybuffer
-      let msg = e.message;
-      if (e.response?.data instanceof ArrayBuffer) {
-        try { msg = JSON.parse(new TextDecoder().decode(e.response.data))?.message || msg; } catch {}
-      }
-      toast.error("Export failed: " + msg);
+      toast.error("Export failed: " + (e.response?.data?.message || e.message));
     }
   };
 
@@ -1291,13 +1321,8 @@ export default function Leads() {
                 key={item.key}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition"
                 onClick={() => {
-                  // Pass selected IDs directly — don't filter through paginated leads
-                  // so cross-page selections work correctly
-                  const selectedArr = selectedIds.size > 0
-                    ? [...selectedIds].map((id) => ({ _id: id }))
-                    : null;
                   setShowExportMenu(false);
-                  exportRows(item.key, selectedArr);
+                  exportRows(item.key, selectedIds.size > 0 ? selectedIds : null);
                 }}
               >
                 <Download className="h-4 w-4" /> {item.label}
