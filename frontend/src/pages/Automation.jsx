@@ -42,9 +42,10 @@ const PLATFORM_PRESETS = {
     status: "draft",
     leadSourceLabel: "Website",
     webhookPath: "/api/leads",
-    description: "Use the CRM API endpoint directly from your website or landing page.",
+    description: "Auto-capture leads from any WordPress contact form.",
     icon: Globe2,
-    tone: "bg-cyan-500/10 text-cyan-400",
+    tone: "bg-[#21759b]/10 text-[#21759b]",
+    label: "WordPress / Website Forms",
   },
   Custom: {
     mode: "webhook",
@@ -585,27 +586,27 @@ function WordPressWizard({ open, onClose, apiBase }) {
             <>
               {/* Connected site info */}
               {isConnected && (
-                <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 space-y-1">
+                <div className="rounded-xl bg-emerald-500 px-4 py-3 space-y-1">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                    <p className="text-sm text-emerald-400 font-bold">
+                    <CheckCircle2 className="h-4 w-4 text-white shrink-0" />
+                    <p className="text-sm text-white font-bold">
                       {siteName || "WordPress Site"} — Connected
                     </p>
                   </div>
                   {siteUrl && (
-                    <p className="text-xs text-emerald-400/70 pl-6">
+                    <p className="text-xs text-white/80 pl-6">
                       {siteUrl}
                     </p>
                   )}
                   {lastSyncAt && (
-                    <p className="text-xs text-emerald-400/70 pl-6">
+                    <p className="text-xs text-white/80 pl-6">
                       Last lead: {new Date(lastSyncAt).toLocaleString()}
                     </p>
                   )}
                   {connectedForms.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1 pl-6">
                       {connectedForms.map((f) => (
-                        <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                        <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">
                           ✓ {f}
                         </span>
                       ))}
@@ -858,10 +859,10 @@ export default function Automation() {
                     }
                   }}
                 >
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${preset.tone}`}>
-                    <Icon className="h-5 w-5" />
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isWebsiteForm ? "bg-[#21759b]" : preset.tone}`}>
+                    {isWebsiteForm ? <WordPressIcon /> : <Icon className="h-5 w-5" />}
                   </div>
-                  <h3 className="mt-4 text-base font-semibold text-app">{platform}</h3>
+                  <h3 className="mt-4 text-base font-semibold text-app">{preset.label || platform}</h3>
                   <p className="mt-1 text-xs text-app-soft">{preset.description.split(".")[0]}</p>
                 </button>
               );
