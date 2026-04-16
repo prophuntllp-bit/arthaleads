@@ -26,6 +26,11 @@ export default function DumpLeads() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
 
+  // ── Bulk select state ─────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds]     = useState(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting]   = useState(false);
+
   const canDelete = ["admin", "manager"].includes(user?.role);
 
   useEffect(() => {
@@ -35,6 +40,9 @@ export default function DumpLeads() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Reset selection when page or search changes
+  useEffect(() => { setSelectedIds(new Set()); }, [page, search]);
+
   // Close export menu on outside click
   useEffect(() => {
     const h = (e) => {
@@ -43,6 +51,73 @@ export default function DumpLeads() {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  // ── Selection helpers ──────────────────────────────────────────────────────
+  const allSelected  = paginated_ids_check() && paginated_ids_check().every((id) => selectedIds.has(id));
+  const someSelected = paginated_ids_check() && paginated_ids_check().some((id)  => selectedIds.has(id));
+
+  function paginated_ids_check() {
+    const filtered = leads.filter((l) =>
+      !search ||
+      l.name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.phone?.includes(search) ||
+      l.email?.toLowerCase().includes(search.toLowerCase())
+    );
+    const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+    const safePage   = Math.min(page, totalPages);
+    return filtered.slice((safePage - 1) * limit, safePage * limit).map((l) => l._id + (l._type || ""));
+  }
+
+  const filtered = leads.filter((l) =>
+    !search ||
+    l.name?.toLowerCase().includes(search.toLowerCase()) ||
+    l.phone?.includes(search) ||
+    l.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * limit, safePage * limit);
+
+  const toggleAll = () => {
+    const pageIds = paginated.map((l) => l._id + (l._type || ""));
+    if (pageIds.every((id) => selectedIds.has(id))) {
+      setSelectedIds((prev) => { const next = new Set(prev); pageIds.forEach((id) => next.delete(id)); return next; });
+    } else {
+      setSelectedIds((prev) => { const next = new Set(prev); pageIds.forEach((id) => next.add(id)); return next; });
+    }
+  };
+
+  const toggleOne = (lead) => {
+    const uid = lead._id + (lead._type || "");
+    setSelectedIds((prev) => { const next = new Set(prev); next.has(uid) ? next.delete(uid) : next.add(uid); return next; });
+  };
+
+  const isSelected = (lead) => selectedIds.has(lead._id + (lead._type || ""));
+
+  // ── Bulk delete ────────────────────────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const selected = leads.filter((l) => selectedIds.has(l._id + (l._type || "")));
+      await Promise.all(selected.map((lead) => {
+        if (lead._type === "project") {
+          return api.delete(`/projects/${lead.projectId}/leads/${lead._id}`);
+        } else {
+          return api.delete(`/leads/${lead._id}/permanent`);
+        }
+      }));
+      const deletedUids = new Set(selected.map((l) => l._id + (l._type || "")));
+      setLeads((prev) => prev.filter((l) => !deletedUids.has(l._id + (l._type || ""))));
+      setSelectedIds(new Set());
+      setShowBulkConfirm(false);
+      toast.success(`${selected.length} leads permanently deleted`);
+    } catch {
+      toast.error("Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   // ── Regular lead actions ────────────────────────────────────────────────────
   const handleHardDelete = async (id) => {
@@ -184,7 +259,7 @@ export default function DumpLeads() {
           remark: String(row.Remark  || row.remark  || "").trim(),
           remark1: String(row.Remark1 || row.remark1 || "").trim(),
           remark2: String(row.Remark2 || row.remark2 || "").trim(),
-          booking: "Not Interested",  // imported into dump = Not Interested
+          booking: "Not Interested",
           isDeleted: false,
         }))
         .filter((e) => e.name && e.phone);
@@ -196,7 +271,6 @@ export default function DumpLeads() {
 
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
       toast.success(data.message || `${leadsToImport.length} leads imported to dump`);
-      // Reload dump leads
       const r = await api.get("/leads/dump");
       setLeads(r.data.data);
     } catch (e) {
@@ -207,16 +281,8 @@ export default function DumpLeads() {
     }
   };
 
-  const filtered = leads.filter((l) =>
-    !search ||
-    l.name?.toLowerCase().includes(search.toLowerCase()) ||
-    l.phone?.includes(search) ||
-    l.email?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
-  const safePage   = Math.min(page, totalPages);
-  const paginated  = filtered.slice((safePage - 1) * limit, safePage * limit);
+  const allSelectedOnPage = paginated.length > 0 && paginated.every((l) => isSelected(l));
+  const someSelectedOnPage = paginated.some((l) => isSelected(l));
 
   return (
     <div className="stitch-page space-y-6">
@@ -228,6 +294,16 @@ export default function DumpLeads() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Bulk delete button */}
+          {selectedIds.size > 0 && canDelete && (
+            <button
+              className="btn-danger rounded-xl flex items-center gap-2"
+              onClick={() => setShowBulkConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
+            </button>
+          )}
+
           {/* Import */}
           <label className="btn-secondary cursor-pointer rounded-xl flex items-center gap-2 text-sm font-medium">
             <Upload className="h-4 w-4" />
@@ -299,6 +375,17 @@ export default function DumpLeads() {
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
+                  {canDelete && (
+                    <th className="w-10 px-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelectedOnPage}
+                        ref={(el) => { if (el) el.indeterminate = someSelectedOnPage && !allSelectedOnPage; }}
+                        onChange={toggleAll}
+                        className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                      />
+                    </th>
+                  )}
                   {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
@@ -306,7 +393,20 @@ export default function DumpLeads() {
               </thead>
               <tbody>
                 {paginated.map((lead, i) => (
-                  <tr key={lead._id + (lead._type || "")} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
+                  <tr
+                    key={lead._id + (lead._type || "")}
+                    className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""} ${isSelected(lead) ? "bg-orange-500/5" : ""}`}
+                  >
+                    {canDelete && (
+                      <td className="w-10 px-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(lead)}
+                          onChange={() => toggleOne(lead)}
+                          className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                        />
+                      </td>
+                    )}
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="stitch-surface-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-orange-500">
@@ -376,6 +476,7 @@ export default function DumpLeads() {
                 ))}
               </tbody>
             </table>
+
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
                 <p className="text-xs text-app-soft">
@@ -418,6 +519,40 @@ export default function DumpLeads() {
           </div>
         )}
       </section>
+
+      {/* Bulk delete confirm dialog */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !bulkDeleting && setShowBulkConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                <Trash2 className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-app">Delete {selectedIds.size} leads?</h3>
+                <p className="text-xs text-app-soft">This action is permanent and cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                className="flex-1 btn-secondary rounded-xl"
+                onClick={() => setShowBulkConfirm(false)}
+                disabled={bulkDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 btn-danger rounded-xl flex items-center justify-center gap-2"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? "Deleting…" : <><Trash2 className="h-4 w-4" /> Delete permanently</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
