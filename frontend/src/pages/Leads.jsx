@@ -430,15 +430,7 @@ export default function Leads() {
       .catch(() => toast.error("Unable to open that lead"));
   }, [leads, loading, location.pathname, location.state, navigate]);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-        setShowExportMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Export menu is closed via the backdrop div in the portal (onClick={() => setShowExportMenu(false)})
 
   // Clear selection when page changes
   useEffect(() => { setSelectedIds(new Set()); }, [page, filters]);
