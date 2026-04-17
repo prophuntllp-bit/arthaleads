@@ -6,9 +6,20 @@ export default function FbCallback() {
 
   useEffect(() => {
     const session = params.get("session");
-    if (!session) {
-      localStorage.setItem("fb_oauth_result", JSON.stringify({ type: "error", message: "No session provided" }));
+
+    const send = (payload) => {
+      // postMessage is reliable (synchronous delivery before close)
+      if (window.opener) {
+        window.opener.postMessage(payload, "*");
+      } else {
+        // Fallback: popup was opened as a tab without opener reference
+        localStorage.setItem("fb_oauth_result", JSON.stringify(payload));
+      }
       window.close();
+    };
+
+    if (!session) {
+      send({ type: "facebook_oauth_error", message: "No session provided" });
       return;
     }
 
@@ -21,21 +32,19 @@ export default function FbCallback() {
       .then((r) => r.json())
       .then((data) => {
         if (data.type === "success") {
-          localStorage.setItem("fb_oauth_result", JSON.stringify({ type: "facebook_oauth_success", pages: data.pages }));
+          send({ type: "facebook_oauth_success", pages: data.pages });
         } else {
-          localStorage.setItem("fb_oauth_result", JSON.stringify({ type: "facebook_oauth_error", message: data.message || "Connection failed" }));
+          send({ type: "facebook_oauth_error", message: data.message || "Connection failed" });
         }
-        window.close();
       })
       .catch((e) => {
-        localStorage.setItem("fb_oauth_result", JSON.stringify({ type: "facebook_oauth_error", message: e.message }));
-        window.close();
+        send({ type: "facebook_oauth_error", message: e.message });
       });
   }, []);
 
   return (
-    <div style={{ fontFamily: "Arial, sans-serif", padding: 24 }}>
-      <p>Completing Facebook connection... you can close this tab if it doesn&apos;t close automatically.</p>
+    <div style={{ fontFamily: "Arial, sans-serif", padding: 24, textAlign: "center" }}>
+      <p>Completing Facebook connection… this window will close automatically.</p>
     </div>
   );
 }

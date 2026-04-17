@@ -107,22 +107,17 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     setConnecting(false);
   }, [open, editingItem]);
 
-  // Listen for OAuth popup result via localStorage storage event
+  // Listen for OAuth popup result via postMessage (primary) + storage event (fallback)
   useEffect(() => {
-    const handler = (e) => {
-      if (e.key !== "fb_oauth_result" || !e.newValue) return;
-      let result;
-      try { result = JSON.parse(e.newValue); } catch { return; }
-      localStorage.removeItem("fb_oauth_result");
+    const handleResult = (result) => {
       setConnecting(false);
-
       if (result.type === "facebook_oauth_success") {
         const fetchedPages = result.pages || [];
         setPages(fetchedPages);
         if (fetchedPages.length > 0) {
           const first = fetchedPages[0];
           setPageId(first.id || "");
-          if (!connName) setConnName(`${first.name} — Lead Ads`);
+          setConnName((prev) => prev || `${first.name} — Lead Ads`);
         }
         setStep("select");
         toast.success("Facebook connected! Choose your page and form.");
@@ -131,9 +126,30 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
         toast.error(result.message || "Facebook connection failed. Please try again.");
       }
     };
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, [step, connName]);
+
+    // Primary: postMessage — fires synchronously before window.close()
+    const onMessage = (e) => {
+      const d = e.data;
+      if (!d || typeof d.type !== "string" || !d.type.startsWith("facebook_oauth")) return;
+      handleResult(d);
+    };
+
+    // Fallback: storage event — for when window.opener is unavailable
+    const onStorage = (e) => {
+      if (e.key !== "fb_oauth_result" || !e.newValue) return;
+      let result;
+      try { result = JSON.parse(e.newValue); } catch { return; }
+      localStorage.removeItem("fb_oauth_result");
+      handleResult(result);
+    };
+
+    window.addEventListener("message", onMessage);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   const handlePageChange = (e) => {
     const id = e.target.value;
