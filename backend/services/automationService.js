@@ -247,6 +247,24 @@ const automationService = {
     return shortLivedToken;
   },
 
+  // Get a page-specific access token using the user token
+  // This is needed for Business Manager pages where /owned_pages doesn't return access_token
+  async fetchPageToken(pageId, userAccessToken) {
+    try {
+      const params = new URLSearchParams({ access_token: userAccessToken, fields: "access_token" });
+      const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}?${params.toString()}`);
+      const json = await resp.json();
+      if (json.access_token) {
+        console.log(`[fetchPageToken] Got page token for ${pageId}`);
+        return json.access_token;
+      }
+      console.warn(`[fetchPageToken] No access_token returned for page ${pageId}:`, JSON.stringify(json));
+    } catch (e) {
+      console.warn(`[fetchPageToken] Failed for page ${pageId}:`, e.message);
+    }
+    return userAccessToken; // fallback to user token
+  },
+
   async fetchFacebookPages(accessToken) {
     // 1️⃣ Try /me/accounts — works for pages managed directly by the user
     const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
@@ -264,7 +282,7 @@ const automationService = {
     if (directPages.length > 0) return directPages;
 
     // 2️⃣ Fallback: pages managed through Meta Business Manager
-    console.log("[fetchFacebookPages] No direct pages — trying Business Manager API (requires business_management permission)...");
+    console.log("[fetchFacebookPages] No direct pages — trying Business Manager API...");
     try {
       const bizParams = new URLSearchParams({ access_token: accessToken, fields: "id,name", limit: "50" });
       const bizResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/businesses?${bizParams.toString()}`);
@@ -279,38 +297,38 @@ const automationService = {
       console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) — ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
 
       if (businesses.length === 0) {
-        console.warn("[fetchFacebookPages] No businesses found. User may not manage a Business Account, or business_management permission was not granted.");
+        console.warn("[fetchFacebookPages] No businesses found.");
         return [];
       }
 
       const allPages = [];
       for (const biz of businesses) {
-        const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
-        const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/owned_pages?${pageParams.toString()}`);
-        const pageJson = await pageResp.json();
-        if (pageJson.error) {
-          console.warn(`[fetchFacebookPages] owned_pages for biz ${biz.id} error:`, JSON.stringify(pageJson.error));
-          continue;
+        for (const endpoint of ["owned_pages", "client_pages"]) {
+          const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
+          const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/${endpoint}?${pageParams.toString()}`);
+          const pageJson = await pageResp.json();
+          if (pageJson.error) {
+            console.warn(`[fetchFacebookPages] ${endpoint} for biz ${biz.id} error:`, JSON.stringify(pageJson.error));
+            continue;
+          }
+          const bizPages = pageJson.data || [];
+          console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${bizPages.length} page(s) — ${bizPages.map(p => `${p.name}(token:${!!p.access_token})`).join(", ")}`);
+          allPages.push(...bizPages);
         }
-        const bizPages = pageJson.data || [];
-        console.log(`[fetchFacebookPages] Business "${biz.name}" owned_pages: ${bizPages.length} — ${bizPages.map(p => p.name).join(", ")}`);
-        allPages.push(...bizPages);
       }
 
-      // 3️⃣ Also try client_pages (pages the business has access to but doesn't own)
-      for (const biz of businesses) {
-        const clientParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
-        const clientResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/client_pages?${clientParams.toString()}`);
-        const clientJson = await clientResp.json();
-        if (!clientJson.error && clientJson.data?.length > 0) {
-          console.log(`[fetchFacebookPages] Business "${biz.name}" client_pages: ${clientJson.data.length} — ${clientJson.data.map(p => p.name).join(", ")}`);
-          allPages.push(...clientJson.data);
-        }
-      }
+      // For pages that don't have access_token in the response, fetch it explicitly
+      const enriched = await Promise.all(
+        allPages.map(async (page) => {
+          if (page.access_token) return page;
+          const pageToken = await this.fetchPageToken(page.id, accessToken);
+          return { ...page, access_token: pageToken };
+        })
+      );
 
       // Deduplicate by page ID
       const seen = new Set();
-      return allPages.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+      return enriched.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
     } catch (bizErr) {
       console.warn("[fetchFacebookPages] Business Manager fallback exception:", bizErr.message);
       return [];

@@ -100,19 +100,21 @@ router.post("/", express.json(), async (req, res) => {
         let fetchError = null;
 
         if (!leadData.field_data) {
+          const tokenPreview = accessToken ? accessToken.slice(0, 20) + "..." : "NONE";
+          logger.info(`Facebook webhook: fetching lead ${leadData.leadgen_id} with token ${tokenPreview}`);
           try {
             leadDetails = await getFacebookLeadFields(leadData.leadgen_id, accessToken);
             logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
           } catch (fetchErr) {
             fetchError = fetchErr.message;
             if (fetchErr.isAuthError) {
-              // Token expired/revoked — lead is real but we can't fetch fields
               isAuthError = true;
-              logger.error(`Facebook webhook: ACCESS TOKEN EXPIRED for ${leadData.leadgen_id}. Lead saved but fields missing. Reconnect Facebook in Automation settings. Error: ${fetchErr.message}`);
+              logger.error(`Facebook webhook: ACCESS TOKEN EXPIRED/INVALID for ${leadData.leadgen_id}. Reconnect Facebook in Automation settings. Error: ${fetchErr.message}`);
             } else {
-              // Graph API returned "no lead with this ID" — it's a simulated test lead
+              // For test tool leads: real leadgen_id IS created, so this shouldn't fail with valid token
+              // If it fails with "unsupported get request" or "no lead" → it IS a fake test ID
               isTestLead = true;
-              logger.warn(`Facebook webhook: test lead detected (fake leadgen_id ${leadData.leadgen_id}): ${fetchErr.message}`);
+              logger.warn(`Facebook webhook: lead fetch failed for ${leadData.leadgen_id} (likely test/fake ID): ${fetchErr.message}`);
             }
           }
         }
