@@ -82,33 +82,49 @@ router.post("/", express.json(), async (req, res) => {
         }
 
         let leadDetails = leadData;
+        let isTestLead = false;
+        let fetchError = null;
+
         if (!leadData.field_data) {
           try {
             leadDetails = await getFacebookLeadFields(leadData.leadgen_id, accessToken);
+            logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
           } catch (fetchErr) {
-            logger.warn(`Facebook webhook: could not fetch lead fields for ${leadData.leadgen_id}: ${fetchErr.message}. Using raw payload.`);
+            fetchError = fetchErr.message;
+            isTestLead = true; // Graph API failed → almost certainly a test lead with fake ID
+            logger.warn(`Facebook webhook: could not fetch lead fields for ${leadData.leadgen_id}: ${fetchErr.message}. Treating as test lead.`);
           }
         }
+
         const fieldMap = Object.fromEntries((leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
 
-        const name =
-          fieldMap.full_name ||
-          [fieldMap.first_name, fieldMap.last_name].filter(Boolean).join(" ").trim() ||
-          "Facebook Lead";
+        const name = isTestLead
+          ? "Test Lead"
+          : (fieldMap.full_name ||
+             [fieldMap.first_name, fieldMap.last_name].filter(Boolean).join(" ").trim() ||
+             "Facebook Lead");
+
+        const noteText = isTestLead
+          ? `⚠️ Facebook Test Lead — This was sent using Meta's testing tool. Test leads use simulated IDs that cannot be retrieved from the Graph API. Real leads submitted by users on your Facebook Lead Ad form will include full name, phone, email, and all form fields automatically.\n\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError || "field_data not available"}`
+          : `Imported from Meta Lead Ads.\nLead ID: ${leadData.leadgen_id || "unknown"}${
+              Object.keys(fieldMap).length > 0
+                ? `\nFields received: ${Object.entries(fieldMap).map(([k, v]) => `${k}: ${v}`).join(", ")}`
+                : ""
+            }`;
 
         await Lead.create({
           name,
-          phone: fieldMap.phone_number || fieldMap.phone || "N/A",
+          phone: fieldMap.phone_number || fieldMap.phone || (isTestLead ? "N/A (test)" : "N/A"),
           email: fieldMap.email || "",
           source: "Facebook",
           status: "New",
           createdBy: defaultOwner?._id,
           assignedTo: defaultOwner?._id || null,
           assignedToName: defaultOwner?.name || "",
-          leadSourceLabel: automation?.name || "Facebook Lead Ads",
+          leadSourceLabel: isTestLead ? `${automation?.name || "Facebook Lead Ads"} — Test` : (automation?.name || "Facebook Lead Ads"),
           notes: [
             {
-              text: `Imported from Meta Lead Ads. Lead ID: ${leadData.leadgen_id || "unknown"}`,
+              text: noteText,
               addedBy: defaultOwner?._id,
               addedByName: defaultOwner?.name || "System",
             },

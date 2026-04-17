@@ -208,6 +208,7 @@ const automationService = {
       throw new AppError("Facebook OAuth credentials are not configured", 500);
     }
 
+    // Step 1: Exchange code for short-lived user token
     const params = new URLSearchParams({
       client_id: process.env.FB_APP_ID,
       client_secret: process.env.FB_APP_SECRET,
@@ -221,7 +222,28 @@ const automationService = {
       throw new AppError(json.error?.message || "Failed to exchange Facebook OAuth code", 400);
     }
 
-    return json.access_token;
+    const shortLivedToken = json.access_token;
+
+    // Step 2: Extend to long-lived user token (60 days)
+    // Page tokens derived from a long-lived user token become non-expiring
+    try {
+      const llParams = new URLSearchParams({
+        grant_type: "fb_exchange_token",
+        client_id: process.env.FB_APP_ID,
+        client_secret: process.env.FB_APP_SECRET,
+        fb_exchange_token: shortLivedToken,
+      });
+      const llResponse = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token?${llParams.toString()}`);
+      const llJson = await llResponse.json();
+      if (llResponse.ok && llJson.access_token) {
+        console.log("[facebookOAuth] Extended to long-lived user token successfully");
+        return llJson.access_token;
+      }
+    } catch (extErr) {
+      console.warn("[facebookOAuth] Could not extend token, using short-lived:", extErr.message);
+    }
+
+    return shortLivedToken;
   },
 
   async fetchFacebookPages(accessToken) {
