@@ -282,10 +282,10 @@ const automationService = {
 
   async getFacebookConnectionData(code) {
     const userAccessToken = await this.exchangeFacebookCode(code);
-    const pages = await this.fetchFacebookPages(userAccessToken);
+    const rawPages = await this.fetchFacebookPages(userAccessToken);
 
-    return Promise.all(
-      pages.map(async (page) => ({
+    const pages = await Promise.all(
+      rawPages.map(async (page) => ({
         id: page.id,
         name: page.name,
         tasks: page.tasks || [],
@@ -293,6 +293,9 @@ const automationService = {
         forms: await this.fetchFacebookForms(page.id, page.access_token),
       }))
     );
+
+    // Return pages + the fresh user token (used as fallback access token on reconnect)
+    return { pages, freshToken: userAccessToken };
   },
 
   storeOAuthResult(sessionId, data) {

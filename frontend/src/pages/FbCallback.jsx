@@ -31,8 +31,9 @@ export default function FbCallback() {
     })
       .then((r) => r.json())
       .then((data) => {
+        console.log("[fb-callback] result from server:", data.type, "pages:", data.pages?.length, "freshToken:", !!data.freshToken);
         if (data.type === "success") {
-          send({ type: "facebook_oauth_success", pages: data.pages });
+          send({ type: "facebook_oauth_success", pages: data.pages, freshToken: data.freshToken });
         } else {
           send({ type: "facebook_oauth_error", message: data.message || "Connection failed" });
         }

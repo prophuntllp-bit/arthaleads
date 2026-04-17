@@ -128,14 +128,15 @@ const automationController = {
       const { code, state } = req.query;
       if (!code || !state) throw new Error("Missing Facebook callback data");
 
-      automationService.verifyFacebookState(state);
-      const pages = await automationService.getFacebookConnectionData(code);
+      const statePayload = automationService.verifyFacebookState(state);
+      const { pages, freshToken } = await automationService.getFacebookConnectionData(code);
 
-      console.log(`[facebookCallback] pages fetched: ${pages.length}`);
-      pages.forEach(p => console.log(`  page: ${p.name} | forms: ${p.forms?.length ?? 0} | ${JSON.stringify(p.forms?.map(f => f.name))}`));
+      console.log(`[facebookCallback] pages fetched: ${pages.length} | userId: ${statePayload.userId}`);
+      pages.forEach(p => console.log(`  page: ${p.name} (${p.id}) | forms: ${p.forms?.length ?? 0} | ${JSON.stringify(p.forms?.map(f => f.name))}`));
+      if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned — user may not have approved pages_show_list or has no admin pages");
 
       const sessionId = require("crypto").randomBytes(16).toString("hex");
-      automationService.storeOAuthResult(sessionId, { type: "success", pages });
+      automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
       return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     } catch (err) {
       const sessionId = require("crypto").randomBytes(16).toString("hex");

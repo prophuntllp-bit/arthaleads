@@ -84,6 +84,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   const [formId, setFormId] = useState("");
   const [connName, setConnName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [freshToken, setFreshToken] = useState(""); // from latest OAuth
+  const [noPagesWarning, setNoPagesWarning] = useState(false);
 
   const selectedPage = pages.find((p) => p.id === pageId);
   const formOptions = selectedPage?.forms || [];
@@ -93,7 +95,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     if (!open) return;
     if (editingItem) {
       setStep("select");
-      setPages([]);          // will show manual ID fields
+      setPages([]);
       setPageId(editingItem.pageId || "");
       setFormId(editingItem.formId || "");
       setConnName(editingItem.name || "");
@@ -105,6 +107,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       setConnName("");
     }
     setConnecting(false);
+    setFreshToken("");
+    setNoPagesWarning(false);
   }, [open, editingItem]);
 
   // Listen for OAuth popup result via postMessage (primary) + storage event (fallback)
@@ -114,13 +118,22 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       if (result.type === "facebook_oauth_success") {
         const fetchedPages = result.pages || [];
         setPages(fetchedPages);
+        if (result.freshToken) setFreshToken(result.freshToken);
+
         if (fetchedPages.length > 0) {
           const first = fetchedPages[0];
           setPageId(first.id || "");
+          setFormId(first.forms?.[0]?.id || "");
           setConnName((prev) => prev || `${first.name} — Lead Ads`);
+          setNoPagesWarning(false);
+          toast.success("Facebook connected! Choose your page and form.");
+        } else {
+          // OAuth succeeded but no pages returned — token is stored, show warning
+          setNoPagesWarning(true);
+          // Don't clear existing pageId/formId/connName if editing
+          toast.error("No Facebook Pages found. Please check permissions and try again.");
         }
         setStep("select");
-        toast.success("Facebook connected! Choose your page and form.");
       }
       if (result.type === "facebook_oauth_error") {
         toast.error(result.message || "Facebook connection failed. Please try again.");
@@ -174,10 +187,12 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   };
 
   const handleSave = async () => {
-    if (!pageId) { toast.error("Please select a Facebook Page"); return; }
+    if (!pageId) { toast.error("Please enter a Facebook Page ID"); return; }
     if (!connName.trim()) { toast.error("Please give this connection a name"); return; }
     setSaving(true);
     const selectedPageData = pages.find((p) => p.id === pageId);
+    // Priority: page-specific access token > fresh user token from latest OAuth > existing stored token
+    const accessToken = selectedPageData?.accessToken || freshToken || editingItem?.accessToken || "";
     const payload = {
       name: connName.trim(),
       platform: "Facebook",
@@ -187,7 +202,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       webhookPath: "/webhook",
       pageId,
       formId,
-      accessToken: selectedPageData?.accessToken || editingItem?.accessToken || "",
+      accessToken,
       verifyToken: editingItem?.verifyToken || `arthaleads_${Date.now()}`,
       isActive: true,
     };
@@ -276,12 +291,26 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           {/* ── STEP 2: Select page + form ── */}
           {step === "select" && (
             <div className="space-y-4">
-              {pages.length > 0 && (
+              {pages.length > 0 ? (
                 <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <p className="text-sm text-emerald-400 font-medium">
                     Facebook connected — {pages.length} page{pages.length !== 1 ? "s" : ""} found
                   </p>
+                </div>
+              ) : noPagesWarning && (
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
+                  <p className="text-xs text-app-soft leading-relaxed">
+                    This usually means Facebook didn't grant Pages permission. When the login window opens, make sure to click <strong>"Continue"</strong> on every permission screen — don't uncheck anything.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setStep("connect"); setNoPagesWarning(false); }}
+                    className="text-xs font-semibold text-blue-400 hover:underline"
+                  >
+                    → Try connecting again
+                  </button>
                 </div>
               )}
 
