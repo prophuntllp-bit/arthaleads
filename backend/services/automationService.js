@@ -247,18 +247,47 @@ const automationService = {
   },
 
   async fetchFacebookPages(accessToken) {
-    const params = new URLSearchParams({
-      access_token: accessToken,
-      fields: "id,name,access_token,tasks",
-    });
+    // 1️⃣ Try /me/accounts — works for pages managed directly by the user
+    const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
+    const resp1 = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
+    const json1 = await resp1.json();
 
-    const response = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
-    const json = await response.json();
-    if (!response.ok) {
-      throw new AppError(json.error?.message || "Failed to fetch Facebook pages", 400);
+    if (!resp1.ok) {
+      console.error("[fetchFacebookPages] /me/accounts error:", JSON.stringify(json1));
+      throw new AppError(json1.error?.message || "Failed to fetch Facebook pages", 400);
     }
 
-    return json.data || [];
+    const directPages = json1.data || [];
+    console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} page(s)`);
+
+    if (directPages.length > 0) return directPages;
+
+    // 2️⃣ Fallback: pages managed through Meta Business Manager
+    // e.g. when the page is owned by a Business, not the personal account
+    console.log("[fetchFacebookPages] No direct pages — trying Business Manager API...");
+    try {
+      const bizParams = new URLSearchParams({ access_token: accessToken, fields: "id,name", limit: "50" });
+      const bizResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/businesses?${bizParams.toString()}`);
+      const bizJson = await bizResp.json();
+      console.log(`[fetchFacebookPages] /me/businesses returned ${(bizJson.data || []).length} business(es):`, JSON.stringify((bizJson.data || []).map(b => b.name)));
+
+      const allPages = [];
+      for (const biz of (bizJson.data || [])) {
+        const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
+        const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/owned_pages?${pageParams.toString()}`);
+        const pageJson = await pageResp.json();
+        const bizPages = pageJson.data || [];
+        console.log(`[fetchFacebookPages] Business "${biz.name}" owned_pages: ${bizPages.length} — ${bizPages.map(p => p.name).join(", ")}`);
+        allPages.push(...bizPages);
+      }
+
+      // Deduplicate by page ID
+      const seen = new Set();
+      return allPages.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+    } catch (bizErr) {
+      console.warn("[fetchFacebookPages] Business Manager fallback failed:", bizErr.message);
+      return [];
+    }
   },
 
   async fetchFacebookForms(pageId, pageAccessToken) {
