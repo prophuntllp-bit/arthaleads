@@ -99,6 +99,7 @@ app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 app.use("/api/auth",  authLimiter, authRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
+app.use("/api/routing-rules", require("./routes/routingRuleRoutes"));
 app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));

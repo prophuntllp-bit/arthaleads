@@ -5,6 +5,7 @@ const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToAll } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
+const RoutingRule = require("../models/RoutingRule");
 
 const router = express.Router();
 
@@ -137,8 +138,25 @@ router.post("/", express.json(), async (req, res) => {
                 : ""
             }`;
 
-        const assignee = await getNextAssignee();
-        logger.info(`Facebook webhook: assigning lead "${name}" to ${assignee.name}`);
+        // Check campaign routing rules first (form_id, campaign_id, adset_id, ad_id)
+        const ruleMatch = await RoutingRule.findOne({
+          isActive: true,
+          $or: [
+            { matchField: "form_id",     matchValue: String(leadData.form_id     || leadDetails.form_id     || "") },
+            { matchField: "campaign_id", matchValue: String(leadData.campaign_id || "") },
+            { matchField: "adset_id",    matchValue: String(leadData.adset_id    || "") },
+            { matchField: "ad_id",       matchValue: String(leadData.ad_id       || leadDetails.ad_id       || "") },
+          ].filter((c) => c.matchValue),
+        });
+
+        let assignee;
+        if (ruleMatch) {
+          assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
+          logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched — assigning "${name}" to ${assignee.name}`);
+        } else {
+          assignee = await getNextAssignee();
+          logger.info(`Facebook webhook: no rule matched — round-robin assigning "${name}" to ${assignee.name}`);
+        }
 
         await Lead.create({
           name,

@@ -1099,7 +1099,190 @@ export default function Automation() {
         title="Remove Connection"
         message={deleting ? `Remove "${deleting.name}" from your connections?` : ""}
       />
+
+      {/* Campaign Routing Rules */}
+      <LeadRoutingSection />
     </div>
+  );
+}
+
+/* ─── Lead Routing Rules ───────────────────────────────────────────────────── */
+const SALES_AGENTS = [
+  { id: "69d4ea3a01817aba627ef9b9", name: "Saurabh Sir" },
+  { id: "69d4ea9601817aba627ef9c6", name: "Sandeep Sir" },
+  { id: "69d35698556a7da63c6ca61f", name: "Sheetal Powar" },
+];
+
+const MATCH_FIELD_LABELS = {
+  form_id:     "Form ID",
+  campaign_id: "Campaign ID",
+  adset_id:    "Ad Set ID",
+  ad_id:       "Ad ID",
+};
+
+function LeadRoutingSection() {
+  const [rules, setRules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ label: "", matchField: "form_id", matchValue: "", assignTo: SALES_AGENTS[0].id });
+
+  useEffect(() => {
+    api.get("/routing-rules")
+      .then(({ data }) => setRules(data.rules || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!form.label.trim() || !form.matchValue.trim()) {
+      toast.error("Please fill in all fields"); return;
+    }
+    setSaving(true);
+    try {
+      const { data } = await api.post("/routing-rules", form);
+      setRules((prev) => [data.rule, ...prev]);
+      setForm({ label: "", matchField: "form_id", matchValue: "", assignTo: SALES_AGENTS[0].id });
+      setShowForm(false);
+      toast.success("Routing rule added");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save rule");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleRule = async (rule) => {
+    try {
+      const { data } = await api.patch(`/routing-rules/${rule._id}`, { isActive: !rule.isActive });
+      setRules((prev) => prev.map((r) => r._id === rule._id ? data.rule : r));
+    } catch { toast.error("Failed to update rule"); }
+  };
+
+  const deleteRule = async (id) => {
+    if (!confirm("Delete this routing rule?")) return;
+    try {
+      await api.delete(`/routing-rules/${id}`);
+      setRules((prev) => prev.filter((r) => r._id !== id));
+      toast.success("Rule deleted");
+    } catch { toast.error("Failed to delete rule"); }
+  };
+
+  return (
+    <section className="card p-6 space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-app">Campaign Routing Rules</h2>
+          <p className="text-sm text-app-soft mt-0.5">
+            Route leads from specific Facebook campaigns or forms directly to a team member. All other leads follow the round-robin rotation.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="btn-primary rounded-xl shrink-0"
+        >
+          <Plus className="h-4 w-4" /> Add Rule
+        </button>
+      </div>
+
+      {/* Add rule form */}
+      {showForm && (
+        <form onSubmit={handleAdd} className="rounded-2xl border p-5 space-y-4" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+          <p className="text-sm font-semibold text-app">New Routing Rule</p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <label className="label">Rule Name</label>
+              <input
+                className="input"
+                placeholder="e.g. Joyville Hinjewadi Campaign"
+                value={form.label}
+                onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="label">Assign To</label>
+              <select className="select" value={form.assignTo} onChange={(e) => setForm((f) => ({ ...f, assignTo: e.target.value }))}>
+                {SALES_AGENTS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="label">Match By</label>
+              <select className="select" value={form.matchField} onChange={(e) => setForm((f) => ({ ...f, matchField: e.target.value }))}>
+                {Object.entries(MATCH_FIELD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="label">{MATCH_FIELD_LABELS[form.matchField]} Value</label>
+              <input
+                className="input font-mono text-sm"
+                placeholder="e.g. 9655855458173381"
+                value={form.matchValue}
+                onChange={(e) => setForm((f) => ({ ...f, matchValue: e.target.value.trim() }))}
+              />
+              <p className="text-xs text-app-soft">Find this in Facebook Ads Manager → Campaign → {MATCH_FIELD_LABELS[form.matchField]}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button type="button" className="btn-secondary rounded-xl" onClick={() => setShowForm(false)}>Cancel</button>
+            <button type="submit" className="btn-primary rounded-xl" disabled={saving}>
+              {saving ? <><Spinner size="sm" /> Saving…</> : "Save Rule"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Rules list */}
+      {loading ? (
+        <div className="flex justify-center py-6"><Spinner /></div>
+      ) : rules.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
+          No routing rules yet. Add one above to route specific campaigns to a team member.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {rules.map((rule) => (
+            <div key={rule._id} className={`flex items-center gap-4 rounded-2xl border px-4 py-3 transition ${rule.isActive ? "border-[var(--app-border)]" : "border-dashed border-[var(--app-border)] opacity-50"}`}>
+              {/* Toggle */}
+              <button
+                type="button"
+                onClick={() => toggleRule(rule)}
+                className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${rule.isActive ? "bg-emerald-500" : "bg-white/10"}`}
+              >
+                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform mt-0.5 ${rule.isActive ? "translate-x-4" : "translate-x-0.5"}`} />
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-app truncate">{rule.label}</p>
+                <p className="text-xs text-app-soft">
+                  {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
+                  {" → "}
+                  <span className="text-emerald-400 font-medium">{rule.assignToName}</span>
+                </p>
+              </div>
+
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${rule.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-white/5 text-app-soft"}`}>
+                {rule.isActive ? "Active" : "Paused"}
+              </span>
+
+              <button onClick={() => deleteRule(rule._id)} className="text-app-soft hover:text-red-400 transition shrink-0">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+
+          <p className="text-xs text-app-soft text-center pt-1">
+            All other leads (no match) → round-robin between Saurabh Sir, Sandeep Sir, Sheetal Powar
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
