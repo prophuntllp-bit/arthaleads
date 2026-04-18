@@ -29,18 +29,18 @@ function generateWebsiteToken() {
 }
 
 const automationController = {
-  // GET /api/automations/website/token — get or create website token
+  // GET /api/automations/website/connections — list all website automations
+  // Creates a default one if none exist yet (first-time setup)
   async getWebsiteToken(req, res) {
     try {
-      let automation = await Automation.findOne({
+      let automations = await Automation.find({
         platform: "Website Form",
-        createdBy: req.user._id,
         isActive: true,
       }).sort({ createdAt: 1 });
 
-      if (!automation) {
-        automation = await Automation.create({
-          name: "WordPress / Website Forms",
+      if (automations.length === 0) {
+        const first = await Automation.create({
+          name: "My WordPress Site",
           platform: "Website Form",
           mode: "form",
           status: "draft",
@@ -52,17 +52,56 @@ const automationController = {
           createdBy: req.user._id,
           updatedBy: req.user._id,
         });
+        automations = [first];
       }
 
       res.json({
         success: true,
-        token: automation.verifyToken,
-        status: automation.status,
-        lastSyncAt: automation.lastSyncAt,
-        automationId: automation._id,
-        siteUrl: automation.siteUrl || "",
-        siteName: automation.siteName || "",
-        connectedForms: automation.connectedForms || [],
+        connections: automations.map((a) => ({
+          id: a._id,
+          name: a.name,
+          token: a.verifyToken,
+          status: a.status,
+          lastSyncAt: a.lastSyncAt,
+          siteUrl: a.siteUrl || "",
+          siteName: a.siteName || "",
+          connectedForms: a.connectedForms || [],
+        })),
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // POST /api/automations/website/create — add a new website connection
+  async createWebsiteConnection(req, res) {
+    try {
+      const { name } = req.body || {};
+      const automation = await Automation.create({
+        name: name || "New WordPress Site",
+        platform: "Website Form",
+        mode: "form",
+        status: "draft",
+        leadSourceLabel: "Website",
+        webhookPath: "/webhook/website",
+        verifyToken: generateWebsiteToken(),
+        description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
+        isActive: true,
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+      res.status(201).json({
+        success: true,
+        connection: {
+          id: automation._id,
+          name: automation.name,
+          token: automation.verifyToken,
+          status: automation.status,
+          lastSyncAt: automation.lastSyncAt,
+          siteUrl: "",
+          siteName: "",
+          connectedForms: [],
+        },
       });
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });

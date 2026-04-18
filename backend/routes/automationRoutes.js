@@ -13,6 +13,7 @@ router.get("/facebook/result", automationController.getFacebookResult);
 router.use(protect, authorize("admin", "manager"));
 
 router.get("/website/token", automationController.getWebsiteToken);
+router.post("/website/create", automationController.createWebsiteConnection);
 
 router.route("/")
   .get(automationController.list)

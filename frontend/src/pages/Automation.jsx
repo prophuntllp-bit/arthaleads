@@ -555,54 +555,124 @@ const FORM_PLUGINS = [
   "Ninja Forms", "Forminator", "Fluent Forms",
 ];
 
-function WordPressWizard({ open, onClose, apiBase }) {
-  const [loading, setLoading] = useState(false);
-  const [token, setToken] = useState("");
-  const [status, setStatus] = useState("draft");
-  const [lastSyncAt, setLastSyncAt] = useState(null);
-  const [siteUrl, setSiteUrl] = useState("");
-  const [siteName, setSiteName] = useState("");
-  const [connectedForms, setConnectedForms] = useState([]);
-  const [copied, setCopied] = useState(false);
+function WpSiteCard({ conn, onDelete }) {
+  const [copiedId, setCopiedId] = useState(null);
+  const isConnected = conn.status === "connected";
+  const [deleting, setDeleting] = useState(false);
 
-  const fetchStatus = useCallback((isInitial = false) => {
+  const copy = () => {
+    navigator.clipboard.writeText(conn.token);
+    setCopiedId(conn.id);
+    toast.success("Token copied!");
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/automations/${conn.id}`);
+      onDelete(conn.id);
+      toast.success("Site connection removed");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
+      {/* Site header */}
+      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-[#21759b]"}`}>
+          <WordPressIcon />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>
+            {conn.siteName || conn.name}
+          </p>
+          {conn.siteUrl && <p className={`text-xs truncate ${isConnected ? "text-white/70" : "text-app-soft"}`}>{conn.siteUrl}</p>}
+          {conn.lastSyncAt && <p className={`text-xs ${isConnected ? "text-white/70" : "text-app-soft"}`}>Last lead: {new Date(conn.lastSyncAt).toLocaleString()}</p>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isConnected ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">✓ Connected</span>
+          ) : (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">Pending</span>
+          )}
+          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Connected forms */}
+      {conn.connectedForms?.length > 0 && (
+        <div className="flex flex-wrap gap-1 px-4 py-2" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          {conn.connectedForms.map((f) => (
+            <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ {f}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Token row */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-orange-400 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
+          {conn.token}
+        </code>
+        <button onClick={copy} className="btn-secondary rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 text-xs">
+          {copiedId === conn.id ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+          {copiedId === conn.id ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function WordPressWizard({ open, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [connections, setConnections] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+
+  const load = useCallback((isInitial = false) => {
     if (isInitial) setLoading(true);
     return api.get("/automations/website/token")
       .then(({ data }) => {
-        setToken(data.token || "");
-        setStatus(data.status || "draft");
-        setLastSyncAt(data.lastSyncAt || null);
-        setSiteUrl(data.siteUrl || "");
-        setSiteName(data.siteName || "");
-        setConnectedForms(data.connectedForms || []);
-        return data.status;
+        setConnections(data.connections || []);
+        return (data.connections || []);
       })
-      .catch(() => isInitial && toast.error("Failed to load website token"))
+      .catch(() => isInitial && toast.error("Failed to load connections"))
       .finally(() => isInitial && setLoading(false));
   }, []);
 
-  // Initial fetch + poll every 3s while draft, stop when connected
+  // Poll every 4s while any site is pending, stop when all connected
   useEffect(() => {
     if (!open) return;
-    fetchStatus(true);
+    load(true);
     const interval = setInterval(() => {
-      fetchStatus(false).then((s) => {
-        if (s === "connected") clearInterval(interval);
+      load(false).then((conns) => {
+        if (conns.every((c) => c.status === "connected")) clearInterval(interval);
       });
-    }, 3000);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [open, fetchStatus]);
+  }, [open, load]);
 
-  const copy = () => {
-    navigator.clipboard.writeText(token);
-    setCopied(true);
-    toast.success("Token copied!");
-    setTimeout(() => setCopied(false), 2000);
+  const handleAddSite = async () => {
+    setAdding(true);
+    try {
+      const { data } = await api.post("/automations/website/create", { name: `WordPress Site ${connections.length + 1}` });
+      setConnections((prev) => [...prev, data.connection]);
+      toast.success("New site token created — copy it and paste it into the plugin on your new WordPress site.");
+    } catch {
+      toast.error("Failed to create connection");
+    } finally {
+      setAdding(false);
+    }
   };
 
   if (!open) return null;
-
-  const isConnected = status === "connected";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -615,106 +685,72 @@ function WordPressWizard({ open, onClose, apiBase }) {
           </div>
           <div>
             <h2 className="text-lg font-bold text-app">WordPress / Website Forms</h2>
-            <p className="text-xs text-app-soft">Auto-capture leads from any contact form</p>
+            <p className="text-xs text-app-soft">Connect multiple WordPress sites — each gets its own token</p>
           </div>
-          {isConnected && (
-            <span className="ml-auto text-xs font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-              ✓ Connected
-            </span>
-          )}
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
           {loading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : (
             <>
-              {/* Connected site info */}
-              {isConnected && (
-                <div className="rounded-xl bg-emerald-500 px-4 py-3 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-white shrink-0" />
-                    <p className="text-sm text-white font-bold">
-                      {siteName || "WordPress Site"} — Connected
-                    </p>
-                  </div>
-                  {siteUrl && (
-                    <p className="text-xs text-white/80 pl-6">
-                      {siteUrl}
-                    </p>
-                  )}
-                  {lastSyncAt && (
-                    <p className="text-xs text-white/80 pl-6">
-                      Last lead: {new Date(lastSyncAt).toLocaleString()}
-                    </p>
-                  )}
-                  {connectedForms.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1 pl-6">
-                      {connectedForms.map((f) => (
-                        <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">
-                          ✓ {f}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Connected sites list */}
+              {connections.map((conn) => (
+                <WpSiteCard
+                  key={conn.id}
+                  conn={conn}
+                  onDelete={(id) => setConnections((prev) => prev.filter((c) => c.id !== id))}
+                />
+              ))}
 
-              {/* Token */}
-              <div className="space-y-2">
-                <label className="label">Your Arthaleads Account Token</label>
-                <p className="text-xs text-app-soft">Copy this token and paste it into the plugin settings on your WordPress site.</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded-xl px-4 py-3 text-base font-mono font-bold text-orange-400 tracking-widest" style={{ background: "var(--app-surface-low)" }}>
-                    {token || "Loading…"}
-                  </code>
-                  <button onClick={copy} className="btn-secondary rounded-xl px-4 py-3 shrink-0">
-                    {copied ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+              {/* Add another site */}
+              <button
+                type="button"
+                onClick={handleAddSite}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-[#21759b] hover:text-[#21759b] transition"
+              >
+                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
+                {adding ? "Creating…" : "Add Another WordPress Site"}
+              </button>
 
-              {/* Steps */}
-              <div className="rounded-2xl border space-y-0 overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
-                <p className="px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider" style={{ background: "var(--app-surface-low)" }}>
-                  Setup Steps
-                </p>
-                {[
-                  { n: 1, text: "In your WordPress admin → Plugins → Add New" },
-                  { n: 2, text: 'Search for "Arthaleads" and install the plugin' },
-                  { n: 3, text: 'Activate it, then click "Arthaleads CRM" in the left sidebar' },
-                  { n: 4, text: "Paste your token above into the Account Token field" },
-                  { n: 5, text: "Enter your website name (e.g. Joyville Hinjewadi Website)" },
-                  { n: 6, text: 'Click "Save" — leads will now flow into Arthaleads automatically' },
-                ].map(({ n, text }) => (
-                  <div key={n} className="flex items-start gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold mt-0.5">{n}</span>
+              {/* Setup steps (collapsible) */}
+              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSteps((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
+                  style={{ background: "var(--app-surface-low)" }}
+                >
+                  <span>Setup Steps</span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showSteps ? "rotate-90" : ""}`} />
+                </button>
+                {showSteps && [
+                  "In your WordPress admin → Plugins → Add New",
+                  'Search for "Arthaleads" and install the plugin',
+                  'Activate it, then click "Arthaleads CRM" in the left sidebar',
+                  "Copy your site's token above and paste it into the Account Token field",
+                  "Enter your website name, then click Save",
+                  "Leads will now flow into Arthaleads automatically",
+                ].map((text, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold mt-0.5">{i + 1}</span>
                     <p className="text-sm text-app-soft">{text}</p>
                   </div>
                 ))}
               </div>
 
               {/* Supported plugins */}
-              <div className="space-y-2">
-                <label className="label">Supported Form Plugins</label>
-                <div className="flex flex-wrap gap-2">
-                  {FORM_PLUGINS.map((p) => (
-                    <span key={p} className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                      ✓ {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Manual download note */}
-              <div className="rounded-xl px-4 py-3 text-xs text-app-soft border" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                💡 Plugin not on WordPress directory yet? Ask your admin to upload <strong>arthaleads-connector.php</strong> manually to <code>/wp-content/plugins/arthaleads-connector/</code>
+              <div className="flex flex-wrap gap-2">
+                {FORM_PLUGINS.map((p) => (
+                  <span key={p} className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">✓ {p}</span>
+                ))}
               </div>
             </>
           )}
         </div>
 
-        <div className="flex justify-end gap-3 px-6 pb-6">
+        <div className="flex justify-end px-6 pb-6">
           <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
         </div>
       </div>
