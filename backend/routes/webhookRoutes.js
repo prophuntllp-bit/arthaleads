@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToAll } = require("../utils/push");
+const { getNextAssignee } = require("../utils/assignLead");
 
 const router = express.Router();
 
@@ -68,7 +69,6 @@ router.post("/", express.json(), async (req, res) => {
   console.log("[webhook] POST received:", JSON.stringify(req.body).slice(0, 500));
   try {
     const entries = req.body.entry || [];
-    const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");
 
     for (const entry of entries) {
       for (const change of entry.changes || []) {
@@ -137,31 +137,34 @@ router.post("/", express.json(), async (req, res) => {
                 : ""
             }`;
 
+        const assignee = await getNextAssignee();
+        logger.info(`Facebook webhook: assigning lead "${name}" to ${assignee.name}`);
+
         await Lead.create({
           name,
           phone: fieldMap.phone_number || fieldMap.phone || (isTestLead ? "N/A (test)" : "N/A"),
           email: fieldMap.email || "",
           source: "Facebook",
           status: "New",
-          createdBy: defaultOwner?._id,
-          assignedTo: defaultOwner?._id || null,
-          assignedToName: defaultOwner?.name || "",
+          createdBy: assignee._id,
+          assignedTo: assignee._id,
+          assignedToName: assignee.name,
           leadSourceLabel: isTestLead
             ? `${automation?.name || "Facebook Lead Ads"} — Test`
             : (automation?.name || "Facebook Lead Ads"),
           notes: [
             {
               text: noteText,
-              addedBy: defaultOwner?._id,
-              addedByName: defaultOwner?.name || "System",
+              addedBy: assignee._id,
+              addedByName: assignee.name,
             },
           ],
           activities: [
             {
               type: "created",
-              description: "Lead received from Meta Lead Ads webhook",
-              performedBy: defaultOwner?._id,
-              performedByName: defaultOwner?.name || "System",
+              description: `Lead received from Meta Lead Ads webhook — auto-assigned to ${assignee.name}`,
+              performedBy: assignee._id,
+              performedByName: assignee.name,
               meta: {
                 formId: leadDetails.form_id || leadData.form_id || "",
                 pageId: leadDetails.page_id || leadData.page_id || "",
@@ -205,7 +208,7 @@ router.post("/website", express.json(), async (req, res) => {
     const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
-    const defaultOwner = await User.findOne({ role: "admin" }).select("_id name");
+    const assignee = await getNextAssignee();
 
     // Use the actual form name if the plugin sent it (e.g. "Vanaha Verdant Contact Form")
     // Fall back to "siteName via PluginName" if no form name available
@@ -217,8 +220,8 @@ router.post("/website", express.json(), async (req, res) => {
     const siteName = source_name || automation.siteName || automation.name || "Website";
     const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
     const sourceLabel = form_name
-      ? form_name                                                      // "Vanaha Verdant Contact Form"
-      : pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;    // fallback
+      ? form_name
+      : pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;
 
     const lead = await Lead.create({
       name: name || "Website Lead",
@@ -226,9 +229,9 @@ router.post("/website", express.json(), async (req, res) => {
       email: email || "",
       source: "Website",
       status: "New",
-      createdBy: defaultOwner?._id,
-      assignedTo: defaultOwner?._id || null,
-      assignedToName: defaultOwner?.name || "",
+      createdBy: assignee._id,
+      assignedTo: assignee._id,
+      assignedToName: assignee.name,
       leadSourceLabel: sourceLabel,
       formPlugin: form_plugin || "",
       notes: [
@@ -238,16 +241,16 @@ router.post("/website", express.json(), async (req, res) => {
             form_plugin ? `Form plugin: ${form_plugin}` : null,
             page_url ? `Page: ${page_url}` : null,
           ].filter(Boolean).join("\n") || "Lead received from website contact form",
-          addedBy: defaultOwner?._id,
-          addedByName: defaultOwner?.name || "System",
+          addedBy: assignee._id,
+          addedByName: assignee.name,
         },
       ],
       activities: [
         {
           type: "created",
-          description: "Lead received from website contact form via Arthaleads plugin",
-          performedBy: defaultOwner?._id,
-          performedByName: defaultOwner?.name || "System",
+          description: `Lead received from website contact form — auto-assigned to ${assignee.name}`,
+          performedBy: assignee._id,
+          performedByName: assignee.name,
           meta: { formPlugin: form_plugin || "", pageUrl: page_url || "", automationId: automation._id?.toString() },
         },
       ],
