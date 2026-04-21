@@ -974,14 +974,14 @@ export default function Automation() {
               const isFb = item.platform === "Facebook";
               const endpointPath = item.webhookPath || "/api/leads";
               return (
-                <article key={item._id} className="card p-5 space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isFb ? "bg-[#1877F2]" : preset.tone}`}>
-                        {isFb ? <FacebookIcon /> : <Icon className="h-5 w-5" />}
+                <article key={item._id} className="card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isFb ? "bg-[#1877F2]" : preset.tone}`}>
+                        {isFb ? <FacebookIcon /> : <Icon className="h-4 w-4" />}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="truncate text-base font-semibold text-app">{item.name}</h3>
+                        <h3 className="truncate text-sm font-semibold text-app">{item.name}</h3>
                         <p className="text-xs text-app-soft">{item.platform}</p>
                       </div>
                     </div>
@@ -991,7 +991,7 @@ export default function Automation() {
                   </div>
 
                   {isFb ? (
-                    <div className="grid grid-cols-2 gap-3 rounded-2xl p-4 stitch-surface-muted text-sm">
+                    <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
                       <div>
                         <p className="text-xs text-app-soft">Page ID</p>
                         <p className="mt-0.5 font-medium text-app truncate">{item.pageId || "All pages"}</p>
@@ -1002,7 +1002,7 @@ export default function Automation() {
                       </div>
                     </div>
                   ) : item.platform === "Website Form" ? (
-                    <div className="rounded-2xl p-4 stitch-surface-muted space-y-2">
+                    <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
                       {item.siteName || item.siteUrl ? (
                         <div>
                           <p className="text-xs text-app-soft mb-0.5">Connected Website</p>
@@ -1033,7 +1033,7 @@ export default function Automation() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl p-4 stitch-surface-muted">
+                    <div className="rounded-xl p-3 stitch-surface-muted">
                       <p className="text-xs text-app-soft mb-2">API Endpoint</p>
                       <div className="flex items-center gap-2">
                         <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
