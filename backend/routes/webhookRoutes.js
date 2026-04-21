@@ -43,11 +43,70 @@ async function findFacebookAutomationByPayload(leadData) {
     isActive: true,
   }).sort({ updatedAt: -1 });
 
-  return candidates.find((item) => {
+  // Priority 1: exact page + form match
+  const exactMatch = candidates.find((item) => {
     const pageMatch = !item.pageId || item.pageId === String(leadData.page_id || "");
     const formMatch = !item.formId || item.formId === String(leadData.form_id || "");
     return pageMatch && formMatch;
   });
+  if (exactMatch) return exactMatch;
+
+  // Priority 2: match by page_id only (covers any new form on that page)
+  if (leadData.page_id) {
+    const pageMatch = candidates.find(
+      (item) => item.pageId && item.pageId === String(leadData.page_id)
+    );
+    if (pageMatch) return pageMatch;
+  }
+
+  // Priority 3: any automation with no page restriction
+  return candidates.find((item) => !item.pageId) || null;
+}
+
+// Try all active Facebook tokens until one successfully fetches the lead
+async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationId) {
+  // First try the primary token
+  try {
+    const result = await getFacebookLeadFields(leadgenId, primaryToken);
+    return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+  } catch (err) {
+    if (err.isAuthError) {
+      // Primary token is expired — try other automations' tokens
+      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying fallback tokens`);
+    } else {
+      // Non-auth error on primary — could be wrong page token, try others before declaring test lead
+      logger.warn(`Facebook webhook: primary token failed for lead ${leadgenId} (${err.message}), trying fallback tokens`);
+    }
+  }
+
+  // Try all other active automation tokens as fallback
+  const allAutomations = await Automation.find({
+    platform: "Facebook",
+    isActive: true,
+    accessToken: { $exists: true, $ne: "" },
+    _id: { $ne: primaryAutomationId },
+  });
+
+  for (const auto of allAutomations) {
+    try {
+      const result = await getFacebookLeadFields(leadgenId, auto.accessToken);
+      logger.info(`Facebook webhook: fallback token from automation "${auto.name}" succeeded for lead ${leadgenId}`);
+      return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+    } catch (e) {
+      if (e.isAuthError) continue; // Try next token
+      // Non-auth error (e.g. "No lead with leadgen id") = fake/test ID — stop trying
+      return { leadDetails: null, isAuthError: false, isTestLead: true, fetchError: e.message };
+    }
+  }
+
+  // All tokens exhausted without a definitive "fake ID" error — mark as auth error
+  // so the user gets a clear message to reconnect
+  return {
+    leadDetails: null,
+    isAuthError: true,
+    isTestLead: false,
+    fetchError: "All access tokens failed. Please reconnect Facebook in Automation settings.",
+  };
 }
 
 router.get("/", async (req, res) => {
@@ -103,20 +162,16 @@ router.post("/", express.json(), async (req, res) => {
         if (!leadData.field_data) {
           const tokenPreview = accessToken ? accessToken.slice(0, 20) + "..." : "NONE";
           logger.info(`Facebook webhook: fetching lead ${leadData.leadgen_id} with token ${tokenPreview}`);
-          try {
-            leadDetails = await getFacebookLeadFields(leadData.leadgen_id, accessToken);
+          const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation._id);
+          if (fetchResult.leadDetails) {
+            leadDetails = fetchResult.leadDetails;
             logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
-          } catch (fetchErr) {
-            fetchError = fetchErr.message;
-            if (fetchErr.isAuthError) {
-              isAuthError = true;
-              logger.error(`Facebook webhook: ACCESS TOKEN EXPIRED/INVALID for ${leadData.leadgen_id}. Reconnect Facebook in Automation settings. Error: ${fetchErr.message}`);
-            } else {
-              // For test tool leads: real leadgen_id IS created, so this shouldn't fail with valid token
-              // If it fails with "unsupported get request" or "no lead" → it IS a fake test ID
-              isTestLead = true;
-              logger.warn(`Facebook webhook: lead fetch failed for ${leadData.leadgen_id} (likely test/fake ID): ${fetchErr.message}`);
-            }
+          } else {
+            isTestLead  = fetchResult.isTestLead;
+            isAuthError = fetchResult.isAuthError;
+            fetchError  = fetchResult.fetchError;
+            if (isAuthError) logger.error(`Facebook webhook: all tokens failed for lead ${leadData.leadgen_id}: ${fetchError}`);
+            if (isTestLead)  logger.warn(`Facebook webhook: lead ${leadData.leadgen_id} is a test/fake ID: ${fetchError}`);
           }
         }
 
