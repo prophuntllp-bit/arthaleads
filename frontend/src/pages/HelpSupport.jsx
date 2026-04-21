@@ -145,13 +145,13 @@ export default function HelpSupport() {
                 window.location.href = href;
               }
             }}
-            className="card p-5 block cursor-pointer hover:ring-2 hover:ring-orange-500/30 hover:shadow-md transition-all">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
-              <Icon className="h-5 w-5" />
+            className="card p-4 block cursor-pointer hover:ring-2 hover:ring-orange-500/30 hover:shadow-md transition-all">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">
+              <Icon className="h-4 w-4" />
             </div>
-            <h2 className="mt-4 text-lg font-semibold text-app">{title}</h2>
-            <p className="mt-2 text-sm font-medium text-orange-500">{detail}</p>
-            <p className="mt-2 text-sm text-app-soft">{note}</p>
+            <h2 className="mt-3 text-sm font-semibold text-app">{title}</h2>
+            <p className="mt-1 text-xs font-medium text-orange-500">{detail}</p>
+            <p className="mt-1 text-xs text-app-soft">{note}</p>
           </a>
         ))}
       </section>
