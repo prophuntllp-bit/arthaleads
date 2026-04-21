@@ -14,7 +14,7 @@ const supportCards = [
     title: "Email Support",
     detail: "support@arthaleads.com",
     note: "Share screenshots or export files for faster debugging.",
-    href: "mailto:support@arthaleads.com",
+    href: "https://mail.google.com/mail/?view=cm&to=support@arthaleads.com&su=Support%20Request",
   },
   {
     icon: MessageSquareMore,
