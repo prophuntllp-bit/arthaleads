@@ -135,8 +135,9 @@ export default function HelpSupport() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {supportCards.map(({ icon: Icon, title, detail, note, href }) => (
-          <a key={title} href={href} target={href.startsWith("http") ? "_blank" : "_self"}
-            rel="noopener noreferrer"
+          <a key={title} href={href}
+            target={href.startsWith("http") ? "_blank" : undefined}
+            rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
             className="card p-5 block cursor-pointer hover:ring-2 hover:ring-orange-500/30 hover:shadow-md transition-all">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
               <Icon className="h-5 w-5" />
