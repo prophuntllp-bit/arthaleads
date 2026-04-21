@@ -1079,7 +1079,7 @@ export default function Leads() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="stitch-table min-w-[1800px] text-sm">
+            <table className="stitch-table min-w-[2100px] text-sm">
               <thead>
                 <tr>
                   {canDelete && (
@@ -1140,35 +1140,35 @@ export default function Leads() {
                         ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>
                         : <span className="text-xs text-app-soft">—</span>}
                     </td>
-                    <td><StatusBadge status={lead.status} /></td>
-                    <td><PriorityBadge priority={lead.priority} /></td>
-                    <td className="max-w-[200px]">
+                    <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
+                    <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
+                    <td className="min-w-[180px] max-w-[220px]">
                       {lead.requirements
                         ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={lead.requirements}>{lead.requirements}</p>
                         : <span className="text-xs text-app-soft">—</span>}
                     </td>
-                    <td>
-                      <span className="text-xs text-app whitespace-nowrap">
+                    <td className="whitespace-nowrap">
+                      <span className="text-xs text-app">
                         {lead.budget?.min || lead.budget?.max
                           ? `${fmtBudget(lead.budget.min)}${lead.budget.max && lead.budget.max !== lead.budget.min ? ` - ${fmtBudget(lead.budget.max)}` : ""}`
                           : <span className="text-app-soft">—</span>}
                       </span>
                     </td>
-                    <td>
+                    <td className="whitespace-nowrap">
                       <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">—</span>}</span>
                     </td>
                     {/* Remark (contact status) — same dropdown for all lead types */}
-                    <td>
+                    <td className="min-w-[140px]">
                       <ContactStatusCell
                         lead={lead}
                         projectId={lead._type === "project" ? lead.projectId : undefined}
                         onUpdated={handleInlineUpdate}
                       />
                     </td>
-                    <td>
+                    <td className="min-w-[110px]">
                       <RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
                     </td>
-                    <td>
+                    <td className="min-w-[110px]">
                       <RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
                     </td>
                     <td>
