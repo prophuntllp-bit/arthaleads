@@ -140,6 +140,7 @@ const leadSchema = new mongoose.Schema(
     // ── Lead Source Metadata ───────────────────────────────────────────────────
     leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP — Lead Ads", "prophuntllp.com"
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
+    requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
 
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],

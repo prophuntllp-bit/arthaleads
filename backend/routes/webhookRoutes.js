@@ -177,6 +177,13 @@ router.post("/", express.json(), async (req, res) => {
 
         const fieldMap = Object.fromEntries((leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
 
+        // Extract custom form answers as requirements (exclude standard contact fields)
+        const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone"]);
+        const requirements = Object.entries(fieldMap)
+          .filter(([k]) => !STANDARD_FIELDS.has(k) && fieldMap[k])
+          .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+          .join(" · ");
+
         const name = isTestLead
           ? "Test Lead (Facebook)"
           : (fieldMap.full_name ||
@@ -219,6 +226,7 @@ router.post("/", express.json(), async (req, res) => {
           email: fieldMap.email || "",
           source: "Facebook",
           status: "New",
+          requirements: isTestLead ? "" : requirements,
           createdBy: assignee._id,
           assignedTo: assignee._id,
           assignedToName: assignee.name,
@@ -302,6 +310,7 @@ router.post("/website", express.json(), async (req, res) => {
       email: email || "",
       source: "Website",
       status: "New",
+      requirements: message || "",
       createdBy: assignee._id,
       assignedTo: assignee._id,
       assignedToName: assignee.name,

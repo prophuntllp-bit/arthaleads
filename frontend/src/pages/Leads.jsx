@@ -1094,7 +1094,7 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Budget", "Purpose", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Requirements", "Budget", "Purpose", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -1142,6 +1142,11 @@ export default function Leads() {
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td><PriorityBadge priority={lead.priority} /></td>
+                    <td className="max-w-[200px]">
+                      {lead.requirements
+                        ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={lead.requirements}>{lead.requirements}</p>
+                        : <span className="text-xs text-app-soft">—</span>}
+                    </td>
                     <td>
                       <span className="text-xs text-app whitespace-nowrap">
                         {lead.budget?.min || lead.budget?.max
