@@ -112,6 +112,7 @@ const automationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   },
   { timestamps: true }
 );

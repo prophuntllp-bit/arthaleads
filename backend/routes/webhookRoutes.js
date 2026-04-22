@@ -201,7 +201,10 @@ router.post("/", express.json(), async (req, res) => {
             }`;
 
         // Check campaign routing rules first (form_id, campaign_id, adset_id, ad_id)
+        const orgId = automation.orgId;
+
         const ruleMatch = await RoutingRule.findOne({
+          orgId,
           isActive: true,
           $or: [
             { matchField: "form_id",     matchValue: String(leadData.form_id     || leadDetails.form_id     || "") },
@@ -216,7 +219,7 @@ router.post("/", express.json(), async (req, res) => {
           assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
           logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched — assigning "${name}" to ${assignee.name}`);
         } else {
-          assignee = await getNextAssignee();
+          assignee = await getNextAssignee(orgId);
           logger.info(`Facebook webhook: no rule matched — round-robin assigning "${name}" to ${assignee.name}`);
         }
 
@@ -227,6 +230,7 @@ router.post("/", express.json(), async (req, res) => {
           source: "Facebook",
           status: "New",
           requirements: isTestLead ? "" : requirements,
+          orgId,
           createdBy: assignee._id,
           assignedTo: assignee._id,
           assignedToName: assignee.name,
@@ -289,7 +293,8 @@ router.post("/website", express.json(), async (req, res) => {
     const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
-    const assignee = await getNextAssignee();
+    const orgId = automation.orgId;
+    const assignee = await getNextAssignee(orgId);
 
     // Use the actual form name if the plugin sent it (e.g. "Vanaha Verdant Contact Form")
     // Fall back to "siteName via PluginName" if no form name available
@@ -311,6 +316,7 @@ router.post("/website", express.json(), async (req, res) => {
       source: "Website",
       status: "New",
       requirements: message || "",
+      orgId,
       createdBy: assignee._id,
       assignedTo: assignee._id,
       assignedToName: assignee.name,

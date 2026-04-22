@@ -110,7 +110,7 @@ const leadController = {
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, message: "ids array is required" });
       }
-      const count = await leadService.bulkDelete(ids);
+      const count = await leadService.bulkDelete(ids, req.orgId);
       res.json({ success: true, message: `${count} lead(s) deleted` });
     } catch (err) {
       next(err);
@@ -119,14 +119,14 @@ const leadController = {
 
   async restore(req, res, next) {
     try {
-      const lead = await leadService.restore(req.params.id);
+      const lead = await leadService.restore(req.params.id, req.orgId);
       res.json({ success: true, data: lead });
     } catch (err) { next(err); }
   },
 
   async permanentDelete(req, res, next) {
     try {
-      await leadService.permanentDelete(req.params.id);
+      await leadService.permanentDelete(req.params.id, req.orgId);
       res.json({ success: true });
     } catch (err) { next(err); }
   },

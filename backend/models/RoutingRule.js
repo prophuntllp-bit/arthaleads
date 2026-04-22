@@ -15,6 +15,7 @@ const routingRuleSchema = new mongoose.Schema(
     assignToName: { type: String, trim: true, default: "" },
     isActive: { type: Boolean, default: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   },
   { timestamps: true }
 );

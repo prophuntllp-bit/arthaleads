@@ -25,7 +25,8 @@ const protect = async (req, res, next) => {
     if (!user) return next(new AppError("User no longer exists.", 401));
     if (!user.isActive) return next(new AppError("Your account has been deactivated.", 403));
 
-    req.user = user; // attach to request
+    req.user  = user;
+    req.orgId = user.orgId; // every protected route gets org scope automatically
     next();
   } catch (err) {
     next(err);

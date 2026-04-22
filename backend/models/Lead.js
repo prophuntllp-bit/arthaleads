@@ -147,6 +147,7 @@ const leadSchema = new mongoose.Schema(
     isArchived: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     deletedAt:  { type: Date, default: null },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   },
   { timestamps: true }
 );

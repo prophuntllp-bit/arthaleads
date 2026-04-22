@@ -101,6 +101,7 @@ const leadService = {
 
     const lead = new Lead({
       ...data,
+      orgId: user.orgId,
       createdBy: user._id,
       assignedToName,
     });
@@ -127,7 +128,7 @@ const leadService = {
       dateRange, from, to,
     } = query;
 
-    const filter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
+    const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     const andConditions = [];
 
     // Agents can only see their own leads
@@ -178,7 +179,7 @@ const leadService = {
 
   // ── Get single ─────────────────────────────────────────────────────────────
   async getById(id, user) {
-    const lead = await Lead.findById(id)
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId })
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email")
       .populate("notes.addedBy", "name")
@@ -200,7 +201,7 @@ const leadService = {
 
   // ── Update ─────────────────────────────────────────────────────────────────
   async update(id, updates, user) {
-    const lead = await Lead.findById(id);
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
 
     // Track status change
@@ -249,7 +250,7 @@ const leadService = {
 
   // ── Delete (soft) ─────────────────────────────────────────────────────────
   async delete(id, user) {
-    const lead = await Lead.findById(id);
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
     if (user.role === "agent") throw new AppError("Agents cannot delete leads", 403);
     lead.isDeleted = true;
@@ -258,9 +259,9 @@ const leadService = {
   },
 
   // ── Bulk Delete (soft) ────────────────────────────────────────────────────
-  async bulkDelete(ids) {
+  async bulkDelete(ids, orgId) {
     const result = await Lead.updateMany(
-      { _id: { $in: ids } },
+      { _id: { $in: ids }, orgId },
       { $set: { isDeleted: true, deletedAt: new Date() } }
     );
     return result.modifiedCount;
@@ -268,7 +269,7 @@ const leadService = {
 
   // ── Add Note ───────────────────────────────────────────────────────────────
   async addNote(id, text, user) {
-    const lead = await Lead.findById(id);
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
 
     lead.notes.push({ text, addedBy: user._id, addedByName: user.name });
@@ -282,8 +283,8 @@ const leadService = {
     if (user.role === "agent") throw new AppError("Agents cannot reassign leads", 403);
 
     const [lead, agent] = await Promise.all([
-      Lead.findById(id),
-      User.findById(agentId),
+      Lead.findOne({ _id: id, orgId: user.orgId }),
+      User.findOne({ _id: agentId, orgId: user.orgId }),
     ]);
     if (!lead) throw new AppError("Lead not found", 404);
     if (!agent) throw new AppError("Agent not found", 404);
@@ -326,6 +327,7 @@ const leadService = {
           max: item.budget?.max || 0,
           currency: item.budget?.currency || "INR",
         },
+        orgId: user.orgId,
         createdBy: user._id,
         assignedToName,
       });
@@ -353,7 +355,7 @@ const leadService = {
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
 
-    const leadFilter = { isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
+    const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     if (status) {
       leadFilter.status = status;
@@ -428,7 +430,7 @@ const leadService = {
   },
 
   async getAnalytics(user, query = {}) {
-    const baseMatch = { isArchived: false, isDeleted: { $ne: true } };
+    const baseMatch = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") {
       baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
@@ -502,8 +504,8 @@ const leadService = {
   },
 
   // ── Restore (undo soft delete) ────────────────────────────────────────────
-  async restore(id) {
-    const lead = await Lead.findById(id);
+  async restore(id, orgId) {
+    const lead = await Lead.findOne({ _id: id, orgId });
     if (!lead) throw new AppError("Lead not found", 404);
     lead.isDeleted = false;
     lead.deletedAt = null;
@@ -512,15 +514,15 @@ const leadService = {
   },
 
   // ── Permanent delete ──────────────────────────────────────────────────────
-  async permanentDelete(id) {
-    const lead = await Lead.findByIdAndDelete(id);
+  async permanentDelete(id, orgId) {
+    const lead = await Lead.findOneAndDelete({ _id: id, orgId });
     if (!lead) throw new AppError("Lead not found", 404);
   },
 
   // ── Automation Alerts — recent leads from all sources ────────────────────
   async getAlerts(user) {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const filter = { isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };
+    const filter = { orgId: user.orgId, isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };
     if (user.role === "agent") {
       filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
@@ -532,6 +534,7 @@ const leadService = {
 
   async getDump(user) {
     const leadFilter = {
+      orgId: user.orgId,
       $or: [
         { isDeleted: true },
         { booking: "Not Interested" },

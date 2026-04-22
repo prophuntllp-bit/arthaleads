@@ -7,10 +7,10 @@ const avatarSchema = Joi.string()
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const signupSchema = Joi.object({
+  orgName: Joi.string().min(2).max(100).required(),
   name: Joi.string().min(2).max(80).required(),
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid("admin", "manager", "agent").default("agent"),
   phone: Joi.string().allow("").optional(),
 });
 

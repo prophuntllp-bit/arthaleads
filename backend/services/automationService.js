@@ -52,14 +52,15 @@ function applyDefaults(payload = {}) {
 }
 
 const automationService = {
-  async list() {
-    return Automation.find().sort({ createdAt: -1 });
+  async list(orgId) {
+    return Automation.find({ orgId }).sort({ createdAt: -1 });
   },
 
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
     const automation = await Automation.create({
       ...normalized,
+      orgId: actor.orgId,
       createdBy: actor._id,
       updatedBy: actor._id,
     });
@@ -92,7 +93,7 @@ const automationService = {
   },
 
   async update(id, payload, actor) {
-    const automation = await Automation.findById(id);
+    const automation = await Automation.findOne({ _id: id, orgId: actor.orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
 
     const normalized = applyDefaults({ ...automation.toObject(), ...payload });
@@ -132,8 +133,8 @@ const automationService = {
     return automation;
   },
 
-  async remove(id) {
-    const automation = await Automation.findById(id);
+  async remove(id, orgId) {
+    const automation = await Automation.findOne({ _id: id, orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
     await automation.deleteOne();
     return true;

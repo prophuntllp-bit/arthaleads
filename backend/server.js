@@ -25,6 +25,7 @@ const leadRoutes = require("./routes/leadRoutes");
 const automationRoutes = require("./routes/automationRoutes");
 const webhookRoutes = require("./routes/webhookRoutes");
 const projectRoutes = require("./routes/projectRoutes");
+const orgRoutes = require("./routes/orgRoutes");
 const pushRoutes = require("./routes/pushRoutes");
 require("./utils/scheduler");
 
@@ -97,6 +98,7 @@ app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth",  authLimiter, authRoutes);
+app.use("/api/org",   orgRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
 app.use("/api/routing-rules", require("./routes/routingRuleRoutes"));

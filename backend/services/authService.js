@@ -2,6 +2,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
+const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 
 const signToken = (id) =>
@@ -14,9 +15,18 @@ const authService = {
     const existing = await User.findOne({ email: data.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    const user = await User.create(data);
+    // Create organization first
+    const orgName = data.orgName || `${data.name}'s Workspace`;
+    let slug = Organization.generateSlug(orgName);
+    // Ensure slug uniqueness
+    const slugExists = await Organization.findOne({ slug });
+    if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
+
+    const org = await Organization.create({ name: orgName, slug });
+
+    const user = await User.create({ ...data, orgId: org._id, role: "admin" });
     const token = signToken(user._id);
-    return { token, user };
+    return { token, user, org };
   },
 
   async login(email, password) {
@@ -87,8 +97,8 @@ const authService = {
     return user;
   },
 
-  async getAllAgents() {
-    return User.find({ isActive: true }).select("name email role phone avatar");
+  async getAllAgents(orgId) {
+    return User.find({ orgId, isActive: true }).select("name email role phone avatar");
   },
 
   async updateProfile(userId, updates, actor) {
@@ -125,15 +135,15 @@ const authService = {
   },
 
   // Admin only
-  async getAllUsers() {
-    return User.find().select("-password").sort({ createdAt: -1 });
+  async getAllUsers(orgId) {
+    return User.find({ orgId }).select("-password").sort({ createdAt: -1 });
   },
 
-  async createUser(payload) {
+  async createUser(payload, orgId) {
     const existing = await User.findOne({ email: payload.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    return User.create(payload);
+    return User.create({ ...payload, orgId });
   },
 
   async updateUser(targetId, updates, adminId) {
@@ -178,27 +188,28 @@ const authService = {
 
   async getPerformance(actor) {
     const memberMatch = actor.role === "manager"
-      ? { role: { $in: ["manager", "agent"] } }
-      : { role: { $in: ["admin", "manager", "agent"] } };
+      ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
+      : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
 
     const users = await User.find(memberMatch).select("name email role avatar isActive");
     const userIds = users.map((user) => user._id);
 
+    const orgId = actor.orgId;
     const [assignedCounts, closedWonCounts, siteVisitCounts, newCounts] = await Promise.all([
       Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false } },
+        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
         { $group: { _id: "$assignedTo", totalAssigned: { $sum: 1 } } },
       ]),
       Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "Closed Won" } },
+        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "Closed Won" } },
         { $group: { _id: "$assignedTo", closedWon: { $sum: 1 } } },
       ]),
       Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "Site Visit" } },
+        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "Site Visit" } },
         { $group: { _id: "$assignedTo", siteVisits: { $sum: 1 } } },
       ]),
       Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "New" } },
+        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "New" } },
         { $group: { _id: "$assignedTo", newLeads: { $sum: 1 } } },
       ]),
     ]);

@@ -14,11 +14,11 @@ export default function Signup() {
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState({
+    orgName: "",
     name: "",
     email: "",
     password: "",
     phone: "",
-    role: "agent", // always agent — admin promotes via Team page
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -118,7 +118,19 @@ export default function Signup() {
             <form onSubmit={handleSubmit} className="space-y-4">
 
               <div>
-                <label className="label">Full Name</label>
+                <label className="label">Company / Organization Name</label>
+                <input
+                  className="input"
+                  value={form.orgName}
+                  onChange={set("orgName")}
+                  placeholder="e.g. PropHunt LLP"
+                  required
+                  minLength={2}
+                />
+              </div>
+
+              <div>
+                <label className="label">Your Full Name</label>
                 <input
                   className="input"
                   value={form.name}
@@ -172,7 +184,7 @@ export default function Signup() {
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-app-soft">Your admin will assign your role after you join.</p>
+                <p className="mt-1 text-xs text-app-soft">You'll be the admin of your workspace. Add your team after signing in.</p>
               </div>
 
               {error && (

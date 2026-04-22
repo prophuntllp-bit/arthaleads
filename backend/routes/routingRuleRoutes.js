@@ -10,7 +10,7 @@ router.use(protect, authorize("admin", "manager"));
 // GET /api/routing-rules
 router.get("/", async (req, res) => {
   try {
-    const rules = await RoutingRule.find().sort({ createdAt: -1 });
+    const rules = await RoutingRule.find({ orgId: req.orgId }).sort({ createdAt: -1 });
     res.json({ success: true, rules });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -24,7 +24,7 @@ router.post("/", async (req, res) => {
     if (!label || !matchValue || !assignTo) {
       return res.status(400).json({ success: false, message: "label, matchValue and assignTo are required" });
     }
-    const agent = await User.findById(assignTo).select("_id name");
+    const agent = await User.findOne({ _id: assignTo, orgId: req.orgId }).select("_id name");
     if (!agent) return res.status(404).json({ success: false, message: "Agent not found" });
 
     const rule = await RoutingRule.create({
@@ -34,6 +34,7 @@ router.post("/", async (req, res) => {
       assignTo: agent._id,
       assignToName: agent.name,
       isActive: true,
+      orgId: req.orgId,
       createdBy: req.user._id,
     });
     res.status(201).json({ success: true, rule });
@@ -45,7 +46,7 @@ router.post("/", async (req, res) => {
 // PATCH /api/routing-rules/:id  (toggle active)
 router.patch("/:id", async (req, res) => {
   try {
-    const rule = await RoutingRule.findById(req.params.id);
+    const rule = await RoutingRule.findOne({ _id: req.params.id, orgId: req.orgId });
     if (!rule) return res.status(404).json({ success: false, message: "Rule not found" });
     if (req.body.isActive !== undefined) rule.isActive = req.body.isActive;
     await rule.save();
@@ -58,7 +59,7 @@ router.patch("/:id", async (req, res) => {
 // DELETE /api/routing-rules/:id
 router.delete("/:id", async (req, res) => {
   try {
-    await RoutingRule.findByIdAndDelete(req.params.id);
+    await RoutingRule.findOneAndDelete({ _id: req.params.id, orgId: req.orgId });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

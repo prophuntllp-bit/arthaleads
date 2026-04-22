@@ -34,6 +34,7 @@ const automationController = {
   async getWebsiteToken(req, res) {
     try {
       let automations = await Automation.find({
+        orgId: req.user.orgId,
         platform: "Website Form",
         isActive: true,
       }).sort({ createdAt: 1 });
@@ -49,6 +50,7 @@ const automationController = {
           verifyToken: generateWebsiteToken(),
           description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
           isActive: true,
+          orgId: req.user.orgId,
           createdBy: req.user._id,
           updatedBy: req.user._id,
         });
@@ -87,6 +89,7 @@ const automationController = {
         verifyToken: generateWebsiteToken(),
         description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
         isActive: true,
+        orgId: req.user.orgId,
         createdBy: req.user._id,
         updatedBy: req.user._id,
       });
@@ -110,7 +113,7 @@ const automationController = {
 
   async list(req, res, next) {
     try {
-      const automations = await automationService.list();
+      const automations = await automationService.list(req.user.orgId);
       res.json({ success: true, automations });
     } catch (err) {
       next(err);
@@ -137,7 +140,7 @@ const automationController = {
 
   async remove(req, res, next) {
     try {
-      await automationService.remove(req.params.id);
+      await automationService.remove(req.params.id, req.user.orgId);
       res.json({ success: true, message: "Automation source removed successfully" });
     } catch (err) {
       next(err);

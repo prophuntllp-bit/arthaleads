@@ -51,7 +51,7 @@ const authController = {
 
   async getAgents(req, res, next) {
     try {
-      const agents = await authService.getAllAgents();
+      const agents = await authService.getAllAgents(req.orgId);
       res.json({ success: true, agents });
     } catch (err) {
       next(err);
@@ -60,7 +60,7 @@ const authController = {
 
   async getAllUsers(req, res, next) {
     try {
-      const users = await authService.getAllUsers();
+      const users = await authService.getAllUsers(req.orgId);
       res.json({ success: true, users });
     } catch (err) {
       next(err);
@@ -69,7 +69,7 @@ const authController = {
 
   async createUser(req, res, next) {
     try {
-      const user = await authService.createUser(req.body);
+      const user = await authService.createUser(req.body, req.orgId);
       res.status(201).json({ success: true, user });
     } catch (err) {
       next(err);
