@@ -66,7 +66,7 @@ export default function Signup() {
 
   return (
     <div className="auth-shell flex items-center justify-center p-4">
-      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[0.98fr_1.02fr]">
+      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-stretch">
 
         {/* Left panel — desktop only */}
         <div
@@ -105,7 +105,7 @@ export default function Signup() {
         </div>
 
         {/* Right panel — form */}
-        <div className="w-full max-w-2xl lg:ml-auto lg:max-w-none">
+        <div className="w-full max-w-2xl lg:ml-auto lg:max-w-none lg:flex lg:flex-col">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg lg:hidden">
               <Building2 className="h-7 w-7 text-white" />
@@ -114,8 +114,8 @@ export default function Signup() {
             <p className="mt-2 text-sm text-app-soft">Start managing real estate leads with your team.</p>
           </div>
 
-          <div className="auth-card">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="auth-card lg:flex-1">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
 
               <div>
                 <label className="label">Company / Organization Name</label>
@@ -124,6 +124,7 @@ export default function Signup() {
                   value={form.orgName}
                   onChange={set("orgName")}
                   placeholder="e.g. PropHunt LLP"
+                  autoComplete="organization"
                   required
                   minLength={2}
                 />
@@ -136,6 +137,7 @@ export default function Signup() {
                   value={form.name}
                   onChange={set("name")}
                   placeholder="e.g. Abhishek Ghadge"
+                  autoComplete="name"
                   required
                   minLength={2}
                 />
@@ -149,6 +151,7 @@ export default function Signup() {
                   value={form.email}
                   onChange={set("email")}
                   placeholder="you@company.com"
+                  autoComplete="username"
                   required
                 />
               </div>
@@ -161,6 +164,7 @@ export default function Signup() {
                   value={form.phone}
                   onChange={set("phone")}
                   placeholder="e.g. 8080197945"
+                  autoComplete="tel"
                 />
               </div>
 
@@ -173,6 +177,7 @@ export default function Signup() {
                     value={form.password}
                     onChange={set("password")}
                     placeholder="Minimum 6 characters"
+                    autoComplete="new-password"
                     required
                     minLength={6}
                   />
