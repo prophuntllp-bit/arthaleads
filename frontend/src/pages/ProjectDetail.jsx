@@ -35,7 +35,7 @@ function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
   const name     = r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
-  const rawPhone = r["phone number"] || r["phone"] || r["mobile"] || r["contact"] || r["mobile number"] || r["ph"] || "";
+  const rawPhone = r["phone number"] || r["phone"] || r["mobile"] || r["contact"] || r["mobile number"] || r["ph"] || r["number"] || r["mob"] || r["whatsapp"] || r["contact number"] || r["cell"] || "";
   const phone    = cleanPhone(rawPhone);
   const email    = r["email"] || r["email address"] || r["mail"] || "";
   const source   = r["source"] || r["lead source"] || "Facebook";
