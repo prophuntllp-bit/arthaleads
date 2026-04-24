@@ -122,7 +122,7 @@ export default function Login() {
               </div>
             </div>
 
-            <form onSubmit={submit} className="space-y-4">
+            <form onSubmit={submit} className="space-y-4" autoComplete="off">
               <div>
                 <label className="label">Email</label>
                 <input
@@ -132,7 +132,8 @@ export default function Login() {
                   onChange={set("email")}
                   placeholder="you@company.com"
                   required
-                  autoComplete="email"
+                  autoComplete="username"
+                  name="email"
                 />
               </div>
               <div>
@@ -143,9 +144,10 @@ export default function Login() {
                     type={showPwd ? "text" : "password"}
                     value={form.password}
                     onChange={set("password")}
-                    placeholder="��������"
+                    placeholder="••••••••"
                     required
                     autoComplete="current-password"
+                    name="password"
                   />
                   <button
                     type="button"
