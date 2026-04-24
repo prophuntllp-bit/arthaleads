@@ -275,12 +275,29 @@ export default function ProjectDetail() {
 
   const [leadsLimit, setLeadsLimit] = useState(10);
 
+  // Prospective leads state (Interested + Site Visit Booked)
+  const PROSP_FILTER = "Interested,Site Visit Booked";
+  const [prospLeads, setProspLeads]   = useState([]);
+  const [prospTotal, setProspTotal]   = useState(0);
+  const [prospPage, setProspPage]     = useState(1);
+  const [prospPages, setProspPages]   = useState(1);
+  const [prospLoading, setProspLoading] = useState(false);
+  const [prospSearch, setProspSearch] = useState("");
+  const PROSP_LIMIT = 50;
+
   useEffect(() => {
     api.get(`/projects/${id}`)
       .then((r) => setProject(r.data.data))
       .catch(() => { toast.error("Project not found"); navigate("/projects"); })
       .finally(() => setLoading(false));
   }, [id, navigate]);
+
+  // Fetch initial prospective count alongside project (so tab badge is populated)
+  useEffect(() => {
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
+      .then((r) => setProspTotal(r.data.total))
+      .catch(() => {});
+  }, [id]);
 
   useEffect(() => {
     if (tab !== "leads") return;
@@ -290,6 +307,15 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load leads"))
       .finally(() => setLeadsLoading(false));
   }, [id, tab, leadsPage, search, leadsLimit]);
+
+  useEffect(() => {
+    if (tab !== "prospective") return;
+    setProspLoading(true);
+    api.get(`/projects/${id}/leads`, { params: { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, bookingIn: PROSP_FILTER } })
+      .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
+      .catch(() => toast.error("Failed to load prospective leads"))
+      .finally(() => setProspLoading(false));
+  }, [id, tab, prospPage, prospSearch]);
 
   const handleSearch = (e) => { setSearch(e.target.value); setLeadsPage(1); };
 
@@ -336,6 +362,15 @@ export default function ProjectDetail() {
 
   const handleLeadUpdated = (updated) => {
     setLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+    // Refresh prospective count if booking status may have changed
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
+      .then((r) => setProspTotal(r.data.total)).catch(() => {});
+    // If currently on prospective tab, also refresh the list
+    if (tab === "prospective") {
+      api.get(`/projects/${id}/leads`, { params: { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, bookingIn: PROSP_FILTER } })
+        .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
+        .catch(() => {});
+    }
   };
 
   const handleBulkDelete = async () => {
@@ -436,15 +471,23 @@ export default function ProjectDetail() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl p-1 w-fit stitch-surface-muted">
-        {["info", "leads"].map((t) => (
+        {[
+          { key: "info",        label: "Info" },
+          { key: "leads",       label: `Leads (${leadsTotal})` },
+          { key: "prospective", label: `Prospective${prospTotal > 0 ? ` (${prospTotal})` : ""}` },
+        ].map(({ key, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-xl px-5 py-2 text-sm font-semibold capitalize transition ${
-              tab === t ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
+            key={key}
+            onClick={() => setTab(key)}
+            className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
+              tab === key
+                ? key === "prospective"
+                  ? "bg-green-600 text-white shadow-sm"
+                  : "bg-orange-500 text-white shadow-sm"
+                : "text-app-soft hover:text-app"
             }`}
           >
-            {t === "leads" ? `Leads (${leadsTotal})` : "Info"}
+            {label}
           </button>
         ))}
       </div>
@@ -691,6 +734,127 @@ export default function ProjectDetail() {
                       disabled={leadsPage === leadsPages || leadsPages === 0} onClick={() => setLeadsPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
                   </div>
                 </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── PROSPECTIVE TAB ── */}
+      {tab === "prospective" && (
+        <div className="space-y-4">
+          {/* Header bar */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-500/15">
+                <Users className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-app">Prospective Leads</p>
+                <p className="text-xs text-app-soft">Marked as Interested or Site Visit Booked</p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+              <input
+                className="input pl-9 py-2 text-sm w-56"
+                placeholder="Search name or phone…"
+                value={prospSearch}
+                onChange={(e) => { setProspSearch(e.target.value); setProspPage(1); }}
+              />
+            </div>
+          </div>
+
+          <div className="card overflow-hidden">
+            {prospLoading ? (
+              <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+            ) : prospLeads.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No prospective leads yet"
+                desc="Leads marked as Interested or Site Visit Booked will appear here automatically."
+              />
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="stitch-table min-w-[900px]">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>WhatsApp</th>
+                        <th>Status</th>
+                        <th>Follow Up</th>
+                        <th>Remark 1</th>
+                        <th>Remark 2</th>
+                        <th>Note</th>
+                        <th>Updated By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prospLeads.map((lead, i) => {
+                        const bookingColor = lead.booking === "Interested"
+                          ? "bg-blue-500/10 text-blue-600 border-blue-500/25"
+                          : "bg-violet-500/10 text-violet-600 border-violet-500/25";
+                        return (
+                          <tr key={lead._id}>
+                            <td className="text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
+                            <td className="font-semibold text-app whitespace-nowrap">{lead.name}</td>
+                            <td><PhoneActions phone={lead.phone} /></td>
+                            <td><WhatsAppLink phone={lead.phone} /></td>
+                            <td>
+                              <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold whitespace-nowrap ${bookingColor}`}>
+                                {lead.booking}
+                              </span>
+                            </td>
+                            <td>
+                              <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp"
+                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…"
+                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…"
+                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline
+                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                            </td>
+                            <td className="text-xs text-app-soft whitespace-nowrap">
+                              {lead.remarkUpdatedBy?.name || "—"}
+                              {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {prospPages > 1 && (
+                  <div className="flex items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+                    <span className="text-xs text-app-soft">
+                      {`${(prospPage - 1) * PROSP_LIMIT + 1} – ${Math.min(prospPage * PROSP_LIMIT, prospTotal)} of ${prospTotal}`}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={prospPage === 1} onClick={() => setProspPage((p) => p - 1)}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={prospPage === prospPages} onClick={() => setProspPage((p) => p + 1)}>
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

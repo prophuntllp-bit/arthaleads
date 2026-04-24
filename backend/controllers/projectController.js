@@ -51,11 +51,12 @@ const projectController = {
 
   async getLeads(req, res, next) {
     try {
-      const { page, limit, search } = req.query;
+      const { page, limit, search, bookingIn } = req.query;
       const result = await projectService.getLeads(req.params.id, {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 50,
         search: search || "",
+        bookingIn: bookingIn || null,
       });
       res.json({ success: true, ...result });
     } catch (err) { next(err); }

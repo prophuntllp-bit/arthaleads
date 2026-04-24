@@ -105,11 +105,15 @@ const projectService = {
     return { inserted: inserted.length, skipped: rows.length - valid.length };
   },
 
-  async getLeads(projectId, { page = 1, limit = 50, search = "" }) {
+  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }) {
     const filter = { project: projectId };
     if (search) {
       const re = new RegExp(search, "i");
       filter.$or = [{ name: re }, { phone: re }, { email: re }];
+    }
+    // bookingIn = comma-separated values e.g. "Interested,Site Visit Booked"
+    if (bookingIn) {
+      filter.booking = { $in: bookingIn.split(",").map((v) => v.trim()) };
     }
 
     const skip = (page - 1) * limit;
