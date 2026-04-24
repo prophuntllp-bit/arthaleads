@@ -110,8 +110,14 @@ export default function Sidebar() {
         <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg mb-3">
           <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
         </div>
-        <p className="font-black text-base leading-none tracking-tight text-app">Arthaleads</p>
-        <p className="stitch-kicker mt-1">Premium Real Estate CRM</p>
+        <p className="font-black text-base leading-none tracking-tight">
+          <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+        </p>
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+          <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase">Turning Opportunities Into Value</p>
+          <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+        </div>
       </div>
 
       {/* Alerts bell - desktop sidebar */}
