@@ -78,9 +78,18 @@ export default function Login() {
           }}
         >
           <div>
-            <div className="mb-6 flex justify-center">
-              <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-lg">
+            {/* Brand block */}
+            <div className="flex flex-col items-center text-center mb-10">
+              <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-lg mb-4">
                 <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+              </div>
+              <h2 className="text-3xl font-black tracking-tight leading-none">
+                <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+              </h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span style={{ display: "block", width: 28, height: 2, background: "#FF6B00", borderRadius: 1 }} />
+                <p className="text-[10px] font-semibold tracking-[0.18em] text-app-soft uppercase">Turning Opportunities Into Value</p>
+                <span style={{ display: "block", width: 28, height: 2, background: "#FF6B00", borderRadius: 1 }} />
               </div>
             </div>
             <p className="stitch-kicker mb-3">Premium Real Estate CRM</p>
