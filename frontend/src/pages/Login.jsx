@@ -70,22 +70,39 @@ export default function Login() {
     <div className="auth-shell flex items-center justify-center p-4 overflow-x-hidden">
       <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <div
-          className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:items-center lg:justify-center"
+          className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
           style={{
             borderColor: "var(--app-border)",
             background: "linear-gradient(135deg, color-mix(in srgb, var(--app-surface) 88%, transparent), color-mix(in srgb, var(--app-surface-low) 92%, transparent))",
             boxShadow: "var(--app-shadow)",
           }}
         >
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-6 h-24 w-24 rounded-3xl overflow-hidden shadow-2xl">
-              <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+          <div>
+            <div className="mb-6 flex justify-center">
+              <div className="h-16 w-16 rounded-2xl overflow-hidden shadow-lg">
+                <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+              </div>
             </div>
-            <h1 className="text-4xl font-black tracking-tight text-app mb-2">Arthaleads</h1>
-            <p className="stitch-kicker mb-6">Premium Real Estate CRM</p>
-            <p className="max-w-xs text-sm leading-6 text-app-soft text-center">
-              Manage every property lead in one premium workspace. Facebook ads, Google campaigns, WhatsApp enquiries, and team follow-ups — all in one place.
+            <p className="stitch-kicker mb-3">Premium Real Estate CRM</p>
+            <h1 className="max-w-md text-5xl font-black leading-[1.02] tracking-tight text-app">
+              Manage every property lead in one premium workspace.
+            </h1>
+            <p className="mt-5 max-w-lg text-sm leading-6 text-app-soft">
+              Facebook ads, Google campaigns, WhatsApp enquiries, team follow-ups, and conversions all stitched into one dark-mode-ready CRM.
             </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "Live Leads", value: "128" },
+              { label: "Hot Sources", value: "3" },
+              { label: "Active Agents", value: "12" },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[1.5rem] p-4 stitch-surface-muted">
+                <p className="stitch-kicker mb-2">{item.label}</p>
+                <p className="text-2xl font-black text-app">{item.value}</p>
+              </div>
+            ))}
           </div>
         </div>
 
