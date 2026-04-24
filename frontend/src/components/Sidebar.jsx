@@ -256,8 +256,8 @@ export default function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
         style={{ borderColor: "var(--app-border)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
-            <Building2 className="w-4 h-4 text-white" />
+          <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0">
+            <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
           <div>
             <span className="font-bold text-sm tracking-tight text-app block leading-none">Arthaleads</span>
