@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Building2, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { GoogleLogin } from "@react-oauth/google";
@@ -78,8 +78,8 @@ export default function Login() {
           }}
         >
           <div>
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
-              <Building2 className="h-7 w-7 text-white" />
+            <div className="mb-6 h-14 w-14 rounded-2xl overflow-hidden shadow-lg">
+              <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
             </div>
             <p className="stitch-kicker mb-3">Premium Real Estate CRM</p>
             <h1 className="max-w-md text-5xl font-black leading-[1.02] tracking-tight text-app">
@@ -106,8 +106,8 @@ export default function Login() {
 
         <div className="w-full max-w-md lg:ml-auto lg:max-w-none min-w-0">
           <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
-              <Building2 className="h-7 w-7 text-white" />
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl overflow-hidden shadow-lg">
+              <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-black tracking-tight text-app">Welcome to Arthaleads</h1>
             <p className="mt-2 text-sm text-app-soft">Sign in to your premium real estate workspace</p>

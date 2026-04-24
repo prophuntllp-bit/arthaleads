@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Building2, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -108,8 +108,8 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       <div className="px-5 pt-6 pb-7">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
-            <Building2 className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg flex-shrink-0">
+            <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
           <div>
             <p className="font-bold text-sm leading-none tracking-tight text-app">Arthaleads</p>
