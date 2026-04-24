@@ -12,14 +12,14 @@ const projectController = {
 
   async getAll(req, res, next) {
     try {
-      const projects = await projectService.getAll();
+      const projects = await projectService.getAll(req.user);
       res.json({ success: true, data: projects });
     } catch (err) { next(err); }
   },
 
   async getById(req, res, next) {
     try {
-      const project = await projectService.getById(req.params.id);
+      const project = await projectService.getById(req.params.id, req.user);
       res.json({ success: true, data: project });
     } catch (err) { next(err); }
   },

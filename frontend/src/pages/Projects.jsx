@@ -166,6 +166,35 @@ export default function Projects() {
                     ))}
                   </div>
                 )}
+
+                {/* Assigned members badge */}
+                {proj.assignedTo?.length > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <div className="flex -space-x-1.5">
+                      {proj.assignedTo.slice(0, 3).map((m) => {
+                        const member = typeof m === "object" ? m : { _id: m, name: "?" };
+                        const initials = member.name
+                          ? member.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+                          : "?";
+                        return (
+                          <span
+                            key={member._id}
+                            title={member.name}
+                            className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold text-white"
+                            style={{ background: "var(--color-orange-500, #f97316)", borderColor: "var(--app-surface)" }}
+                          >
+                            {initials}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <span className="text-[11px] text-app-soft">
+                      {proj.assignedTo.length > 3
+                        ? `${proj.assignedTo.slice(0, 3).map((m) => (typeof m === "object" ? m.name : "")).filter(Boolean).join(", ")} +${proj.assignedTo.length - 3} more`
+                        : proj.assignedTo.map((m) => (typeof m === "object" ? m.name : "")).filter(Boolean).join(", ")}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ))}

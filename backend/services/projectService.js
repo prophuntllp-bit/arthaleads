@@ -6,13 +6,25 @@ const { AppError } = require("../middlewares/errorHandler");
 
 const projectService = {
   async create(data, user) {
-    const project = await Project.create({ ...data, createdBy: user._id });
+    const project = await Project.create({ ...data, createdBy: user._id, orgId: user.orgId });
     return project;
   },
 
-  async getAll() {
-    const projects = await Project.find({ isArchived: false })
+  async getAll(user) {
+    const filter = { isArchived: false, orgId: user.orgId };
+
+    // Agents can only see projects assigned to them (or unassigned)
+    if (user.role === "agent") {
+      filter.$or = [
+        { assignedTo: { $size: 0 } },
+        { assignedTo: { $exists: false } },
+        { assignedTo: user._id },
+      ];
+    }
+
+    const projects = await Project.find(filter)
       .populate("createdBy", "name")
+      .populate("assignedTo", "name avatar")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -33,9 +45,21 @@ const projectService = {
     }));
   },
 
-  async getById(id) {
-    const project = await Project.findOne({ _id: id, isArchived: false })
-      .populate("createdBy", "name");
+  async getById(id, user) {
+    const filter = { _id: id, isArchived: false, orgId: user.orgId };
+
+    // Agents can only access projects assigned to them (or unassigned)
+    if (user.role === "agent") {
+      filter.$or = [
+        { assignedTo: { $size: 0 } },
+        { assignedTo: { $exists: false } },
+        { assignedTo: user._id },
+      ];
+    }
+
+    const project = await Project.findOne(filter)
+      .populate("createdBy", "name")
+      .populate("assignedTo", "name avatar");
     if (!project) throw new AppError("Project not found", 404);
     return project;
   },

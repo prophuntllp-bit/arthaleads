@@ -417,6 +417,23 @@ export default function ProjectDetail() {
         )}
       </div>
 
+      {/* Assigned members info bar */}
+      {project.assignedTo?.length > 0 && (
+        <div className="flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+          <Users className="h-4 w-4 text-orange-500 flex-shrink-0" />
+          <span className="text-app-soft">
+            Assigned to:{" "}
+            <span className="font-semibold text-app">
+              {project.assignedTo
+                .map((m) => (typeof m === "object" ? m.name : ""))
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+          </span>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl p-1 w-fit stitch-surface-muted">
         {["info", "leads"].map((t) => (

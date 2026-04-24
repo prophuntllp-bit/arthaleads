@@ -23,7 +23,10 @@ const projectSchema = new mongoose.Schema(
     possessionDate: { type: Date, default: null },
     reraNumber:     { type: String, trim: true, default: "" },
 
+    assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
     isArchived: { type: Boolean, default: false },
+    orgId:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
     createdBy:  { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
@@ -31,5 +34,6 @@ const projectSchema = new mongoose.Schema(
 
 projectSchema.index({ createdAt: -1 });
 projectSchema.index({ createdBy: 1 });
+projectSchema.index({ orgId: 1 });
 
 module.exports = mongoose.model("Project", projectSchema);

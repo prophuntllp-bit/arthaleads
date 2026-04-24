@@ -1,5 +1,5 @@
 // components/ProjectForm.jsx
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Modal, Spinner } from "./UI";
 import { ImageOff, Plus, Upload, X } from "lucide-react";
 import api from "../services/api";
@@ -21,6 +21,7 @@ const empty = {
   images: [], priceMin: "", priceMax: "",
   bhkTypes: [], area: "", amenities: [],
   possessionDate: "", reraNumber: "",
+  assignedTo: [], // array of { _id, name } objects for display
 };
 
 function toForm(p) {
@@ -31,6 +32,10 @@ function toForm(p) {
     bhkTypes: p.bhkTypes || [], area: p.area || "", amenities: p.amenities || [],
     possessionDate: p.possessionDate ? p.possessionDate.slice(0, 10) : "",
     reraNumber: p.reraNumber || "",
+    // assignedTo from API is array of populated objects { _id, name, avatar } or IDs
+    assignedTo: Array.isArray(p.assignedTo)
+      ? p.assignedTo.map((m) => (typeof m === "object" ? { _id: m._id, name: m.name } : { _id: m, name: m }))
+      : [],
   };
 }
 
@@ -66,6 +71,16 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const [uploadingImg, setUploadingImg]   = useState(false);
   const [saving, setSaving]       = useState(false);
   const imgFileRef = useRef(null);
+
+  // Team access
+  const [allAgents, setAllAgents] = useState([]);
+  const [memberSelect, setMemberSelect] = useState("");
+
+  useEffect(() => {
+    api.get("/auth/agents")
+      .then((r) => setAllAgents(r.data.agents || []))
+      .catch(() => {}); // silently fail — not critical
+  }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -121,6 +136,19 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const removeAmenity = (i) =>
     setForm((f) => ({ ...f, amenities: f.amenities.filter((_, idx) => idx !== i) }));
 
+  // ── Team Access ───────────────────────────────────────────────────────────
+  const addMember = () => {
+    if (!memberSelect) return;
+    const agent = allAgents.find((a) => a._id === memberSelect);
+    if (!agent) return;
+    if (form.assignedTo.some((m) => m._id === agent._id)) return;
+    setForm((f) => ({ ...f, assignedTo: [...f.assignedTo, { _id: agent._id, name: agent.name }] }));
+    setMemberSelect("");
+  };
+
+  const removeMember = (id) =>
+    setForm((f) => ({ ...f, assignedTo: f.assignedTo.filter((m) => m._id !== id) }));
+
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,6 +159,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
       priceMin: form.priceMin ? Number(form.priceMin) : 0,
       priceMax: form.priceMax ? Number(form.priceMax) : 0,
       possessionDate: form.possessionDate || null,
+      // Send only IDs to the backend
+      assignedTo: form.assignedTo.map((m) => m._id),
     };
 
     setSaving(true);
@@ -323,6 +353,51 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Team Access ── */}
+        <div className="space-y-3">
+          <p className="stitch-kicker">Team Access</p>
+
+          {/* Member picker */}
+          <div className="flex gap-2">
+            <select
+              className="select flex-1"
+              value={memberSelect}
+              onChange={(e) => setMemberSelect(e.target.value)}
+            >
+              <option value="">Add member...</option>
+              {allAgents
+                .filter((a) => !form.assignedTo.some((m) => m._id === a._id))
+                .map((a) => (
+                  <option key={a._id} value={a._id}>{a.name}{a.role ? ` (${a.role})` : ""}</option>
+                ))}
+            </select>
+            <button type="button" onClick={addMember} className="btn-secondary flex-shrink-0">
+              <Plus className="h-4 w-4" /> Add
+            </button>
+          </div>
+
+          {/* Selected member chips */}
+          {form.assignedTo.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {form.assignedTo.map((m) => (
+                <span key={m._id} className="stitch-pill gap-1">
+                  {m.name}
+                  <button type="button" onClick={() => removeMember(m._id)}
+                    className="hover:text-red-500 transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <p className="text-xs text-app-soft">
+            {form.assignedTo.length > 0
+              ? "Only assigned members (and admins/managers) can see this project."
+              : "Visible to all team members."}
+          </p>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
