@@ -421,30 +421,23 @@ const leadService = {
     const createdAtFilter = getDateRangeFilter(query.dateRange, query.from, query.to);
     if (createdAtFilter) baseMatch.createdAt = createdAtFilter;
 
-    // ProjectLead base filter (no isDeleted/isArchived, exclude Not Interested)
-    const projMatch = { booking: { $ne: "Not Interested" } };
-    if (user.role === "agent") projMatch.importedBy = user._id;
-    if (createdAtFilter) projMatch.createdAt = createdAtFilter;
-
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const followUpMatch    = { ...baseMatch,  followUpDate: { $ne: null } };
-    const projFollowUpMatch = { ...projMatch, followUp:     { $ne: null } };
+    const followUpMatch = { ...baseMatch, followUpDate: { $ne: null } };
     delete followUpMatch.createdAt;
-    delete projFollowUpMatch.createdAt;
 
+    // Analytics only covers pipeline leads (Lead model).
+    // Project leads (ProjectLead) are manually-imported bulk contacts and
+    // should not inflate dashboard counts / source charts.
     const [
-      leadTotal, projTotal,
-      byStatus, bySource, projBySource,
+      leadTotal,
+      byStatus, bySource,
       byPriority, byAgent, recentLeads,
-      todayFollowUps, projTodayFollowUps,
-      totalFollowUps, projTotalFollowUps,
+      todayFollowUps, totalFollowUps,
     ] = await Promise.all([
       Lead.countDocuments(baseMatch),
-      ProjectLead.countDocuments(projMatch),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
-      ProjectLead.aggregate([{ $match: projMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
       Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$priority", count: { $sum: 1 } } }]),
       Lead.aggregate([
         { $match: { ...baseMatch, assignedTo: { $ne: null } } },
@@ -456,34 +449,27 @@ const leadService = {
       ]),
       Lead.find(baseMatch).sort({ createdAt: -1 }).limit(5)
         .select("name source status priority createdAt assignedToName"),
-      Lead.countDocuments({ ...followUpMatch,     followUpDate: { $gte: todayStart, $lte: todayEnd } }),
-      ProjectLead.countDocuments({ ...projFollowUpMatch, followUp: { $gte: todayStart, $lte: todayEnd } }),
+      Lead.countDocuments({ ...followUpMatch, followUpDate: { $gte: todayStart, $lte: todayEnd } }),
       Lead.countDocuments(followUpMatch),
-      ProjectLead.countDocuments(projFollowUpMatch),
     ]);
 
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
-
-    // Merge source counts from both collections
-    const mergedSourceMap = {};
-    [...bySource, ...projBySource].forEach(({ _id, count }) => {
-      mergedSourceMap[_id] = (mergedSourceMap[_id] || 0) + count;
-    });
+    const sourceMap = toMap(bySource);
 
     return {
-      totalLeads: leadTotal + projTotal,
+      totalLeads: leadTotal,
       byStatus: toMap(byStatus),
-      bySource: mergedSourceMap,
+      bySource: sourceMap,
       byPriority: toMap(byPriority),
       sourceHighlights: {
-        facebook: mergedSourceMap.Facebook || 0,
-        google:   mergedSourceMap.Google   || 0,
-        whatsapp: mergedSourceMap.WhatsApp || 0,
+        facebook: sourceMap.Facebook || 0,
+        google:   sourceMap.Google   || 0,
+        whatsapp: sourceMap.WhatsApp || 0,
       },
       byAgent,
       recentLeads,
-      todayFollowUps:  todayFollowUps  + projTodayFollowUps,
-      totalFollowUps:  totalFollowUps  + projTotalFollowUps,
+      todayFollowUps,
+      totalFollowUps,
     };
   },
 

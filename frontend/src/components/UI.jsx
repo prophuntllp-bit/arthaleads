@@ -2,6 +2,7 @@
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { X, Loader2, Phone, MessageCircle, ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";
 
 export function StatusBadge({ status }) {
   return (
@@ -159,9 +160,42 @@ export function WhatsAppLink({ phone, onContact }) {
 
   const waNumber = toWaNumber(phone);
   const waUrl    = `https://wa.me/${waNumber}`;
-  // WhatsApp Business registers https://api.whatsapp.com on Android —
-  // tapping this URL opens WA Business directly, not the personal app.
-  const wabUrl   = `https://api.whatsapp.com/send?phone=${waNumber}`;
+
+  // Open WhatsApp Business with app-launch detection.
+  // Android: use intent:// URL with WA Business package — Chrome shows native
+  //   "App not installed" dialog automatically if WA Business isn't present.
+  // iOS / desktop: try deep link, detect via visibilitychange; toast if no app.
+  const handleWABusiness = (e) => {
+    e.preventDefault();
+    setOpen(false);
+    onContact?.();
+
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isMobile  = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isAndroid) {
+      // Chrome on Android: intent:// with package name → Android OS handles
+      // "App not installed" natively (shows Play Store or error dialog).
+      window.location.href =
+        `intent://send?phone=${waNumber}#Intent;package=com.whatsapp.w4b;scheme=https;end`;
+      return;
+    }
+
+    // iOS / desktop: open link, wait to see if page hides (app launched)
+    let appLaunched = false;
+    const onHide = () => { appLaunched = true; };
+    document.addEventListener("visibilitychange", onHide);
+
+    // Open in same tab so visibilitychange fires reliably on iOS Safari
+    window.location.href = `https://api.whatsapp.com/send?phone=${waNumber}`;
+
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", onHide);
+      if (!appLaunched && isMobile) {
+        toast.error("WhatsApp Business is not installed on your device", { duration: 4000 });
+      }
+    }, 2500);
+  };
 
   const btnCls = "inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400";
 
@@ -182,7 +216,7 @@ export function WhatsAppLink({ phone, onContact }) {
           className="absolute left-0 top-full z-50 mt-1 min-w-[190px] rounded-xl border py-1 shadow-xl"
           style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
         >
-          {/* WhatsApp */}
+          {/* WhatsApp Personal */}
           <a
             href={waUrl}
             target="_blank"
@@ -201,22 +235,20 @@ export function WhatsAppLink({ phone, onContact }) {
 
           <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
 
-          {/* WhatsApp Business */}
-          <a
-            href={wabUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => { setOpen(false); onContact?.(); }}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
+          {/* WhatsApp Business — with app-launch detection */}
+          <button
+            type="button"
+            onClick={handleWABusiness}
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-600/15 flex-shrink-0">
               <MessageCircle className="h-3.5 w-3.5 text-green-700" />
             </span>
-            <div>
+            <div className="text-left">
               <p className="font-semibold">WhatsApp Business</p>
               <p className="text-[10px] text-app-soft">Business account</p>
             </div>
-          </a>
+          </button>
         </div>
       )}
     </div>
