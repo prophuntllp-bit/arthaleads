@@ -159,10 +159,9 @@ export function WhatsAppLink({ phone, onContact }) {
 
   const waNumber = toWaNumber(phone);
   const waUrl    = `https://wa.me/${waNumber}`;
-  // WhatsApp Business uses the same wa.me URL — the OS shows an "Open with?" picker
-  // when both apps are installed. We open the Business link in a fresh tab so Chrome
-  // mobile treats it as a new navigation and re-fires the app-chooser.
-  const wabUrl   = `https://wa.me/${waNumber}`;
+  // WhatsApp Business registers https://api.whatsapp.com on Android —
+  // tapping this URL opens WA Business directly, not the personal app.
+  const wabUrl   = `https://api.whatsapp.com/send?phone=${waNumber}`;
 
   const btnCls = "inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400";
 

@@ -396,27 +396,11 @@ const leadService = {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    // Project leads are accessible via their own project pages — excluded here
+    // so that manually-imported bulk project leads don't bury fresh pipeline leads.
     const [result] = await Lead.aggregate([
       { $match: leadFilter },
       { $addFields: { _type: "lead" } },
-      { $unionWith: {
-        coll: "projectleads",
-        pipeline: [
-          { $match: projFilter },
-          { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "_proj" } },
-          { $addFields: {
-            _type: "project",
-            projectName: { $arrayElemAt: ["$_proj.name", 0] },
-            projectId: { $arrayElemAt: ["$_proj._id", 0] },
-            status: { $ifNull: ["$status", "New"] },
-            priority: { $ifNull: ["$priority", "Medium"] },
-            assignedToName: { $ifNull: ["$assignedToName", ""] },
-            followUpDate: { $ifNull: ["$followUp", null] },
-          }},
-          { $project: { _proj: 0 } },
-          ...(Object.keys(projPostFilter).length ? [{ $match: projPostFilter }] : []),
-        ],
-      }},
       { $sort: { createdAt: -1 } },
       { $facet: {
         data: [{ $skip: skip }, { $limit: parseInt(limit) }],
