@@ -64,7 +64,7 @@ async function findFacebookAutomationByPayload(leadData) {
 }
 
 // Try all active Facebook tokens until one successfully fetches the lead
-async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationId) {
+async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationId, orgId) {
   // First try the primary token
   try {
     const result = await getFacebookLeadFields(leadgenId, primaryToken);
@@ -79,28 +79,49 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationI
     }
   }
 
-  // Try all other active automation tokens as fallback
+  // Try all other active automation tokens from SAME ORG as fallback
   const allAutomations = await Automation.find({
+    orgId,  // NEW: only try tokens from the same org
     platform: "Facebook",
     isActive: true,
     accessToken: { $exists: true, $ne: "" },
     _id: { $ne: primaryAutomationId },
   });
 
+  const errors = [];
   for (const auto of allAutomations) {
     try {
       const result = await getFacebookLeadFields(leadgenId, auto.accessToken);
       logger.info(`Facebook webhook: fallback token from automation "${auto.name}" succeeded for lead ${leadgenId}`);
       return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
     } catch (e) {
-      if (e.isAuthError) continue; // Try next token
-      // Non-auth error (e.g. "No lead with leadgen id") = fake/test ID — stop trying
-      return { leadDetails: null, isAuthError: false, isTestLead: true, fetchError: e.message };
+      if (e.isAuthError) {
+        errors.push({ type: "auth", message: e.message, automation: auto.name });
+        continue; // Try next token
+      }
+      // Non-auth error — capture it but keep trying
+      errors.push({ type: "other", message: e.message, automation: auto.name });
+      logger.debug(`Facebook webhook: fallback token from automation "${auto.name}" failed for lead ${leadgenId}: ${e.message}`);
     }
   }
 
-  // All tokens exhausted without a definitive "fake ID" error — mark as auth error
-  // so the user gets a clear message to reconnect
+  // All tokens exhausted — determine if this is a test lead or auth error
+  const hasNoLeadErrors = errors.some((e) => e.message?.includes("No lead with leadgen id"));
+
+  if (hasNoLeadErrors && errors.every((e) => e.message?.includes("No lead with leadgen id"))) {
+    // Consistently "No lead with leadgen id" from all tokens = test/fake ID
+    return {
+      leadDetails: null,
+      isAuthError: false,
+      isTestLead: true,
+      fetchError: "No lead with leadgen id — appears to be a test/simulated ID",
+    };
+  }
+
+  // Mixed errors or other non-auth errors = token/connection problem
+  const errorSummary = errors.map((e) => `${e.automation}: ${e.message}`).join("; ");
+  logger.warn(`Facebook webhook: all tokens failed for lead ${leadgenId} — errors: ${errorSummary}`);
+
   return {
     leadDetails: null,
     isAuthError: true,
@@ -162,7 +183,7 @@ router.post("/", express.json(), async (req, res) => {
         if (!leadData.field_data) {
           const tokenPreview = accessToken ? accessToken.slice(0, 20) + "..." : "NONE";
           logger.info(`Facebook webhook: fetching lead ${leadData.leadgen_id} with token ${tokenPreview}`);
-          const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation._id);
+          const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation._id, automation.orgId);
           if (fetchResult.leadDetails) {
             leadDetails = fetchResult.leadDetails;
             logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
