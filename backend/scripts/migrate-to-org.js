@@ -13,6 +13,7 @@ const User = require("../models/User");
 const Lead = require("../models/Lead");
 const Automation = require("../models/Automation");
 const RoutingRule = require("../models/RoutingRule");
+const Project = require("../models/Project");
 
 async function run() {
   await mongoose.connect(process.env.MONGO_URI);
@@ -61,6 +62,13 @@ async function run() {
     { $set: { orgId } }
   );
   console.log(`RoutingRules updated: ${ruleResult.modifiedCount}`);
+
+  // 6. Backfill Projects
+  const projectResult = await Project.updateMany(
+    { orgId: { $exists: false } },
+    { $set: { orgId } }
+  );
+  console.log(`Projects updated: ${projectResult.modifiedCount}`);
 
   console.log("\n✅ Migration complete. All existing data is now assigned to PropHunt LLP.");
   process.exit(0);
