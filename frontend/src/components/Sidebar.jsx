@@ -106,16 +106,12 @@ export default function Sidebar() {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      <div className="px-5 pt-6 pb-7">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl overflow-hidden shadow-lg flex-shrink-0">
-            <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <p className="font-bold text-sm leading-none tracking-tight text-app">Arthaleads</p>
-            <p className="stitch-kicker mt-1">Premium Real Estate CRM</p>
-          </div>
+      <div className="px-5 pt-6 pb-5 flex flex-col items-center text-center">
+        <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg mb-3">
+          <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
         </div>
+        <p className="font-black text-base leading-none tracking-tight text-app">Arthaleads</p>
+        <p className="stitch-kicker mt-1">Premium Real Estate CRM</p>
       </div>
 
       {/* Alerts bell - desktop sidebar */}
@@ -255,14 +251,11 @@ export default function Sidebar() {
       {AlertsPortal}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
         style={{ borderColor: "var(--app-border)" }}>
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow">
             <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
-          <div>
-            <span className="font-bold text-sm tracking-tight text-app block leading-none">Arthaleads</span>
-            <span className="stitch-kicker mt-1 block">Real Estate</span>
-          </div>
+          <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
         </div>
         <div className="flex items-center gap-2">
           <div ref={mobileBellRef}>
