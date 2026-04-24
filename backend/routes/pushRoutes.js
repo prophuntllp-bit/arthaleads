@@ -17,7 +17,7 @@ router.post("/subscribe", protect, async (req, res) => {
     }
     await PushSubscription.findOneAndUpdate(
       { endpoint },
-      { userId: req.user._id, endpoint, keys },
+      { userId: req.user._id, orgId: req.user.orgId, endpoint, keys },
       { upsert: true, new: true }
     );
     res.json({ success: true });

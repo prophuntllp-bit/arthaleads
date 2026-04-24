@@ -286,13 +286,13 @@ router.post("/", express.json(), async (req, res) => {
           await automation.save();
         }
 
-        // Send push notification to all subscribed users
+        // Send push notification to all subscribed users in this org
         sendPushToAll({
           type: "new_lead",
           title: "New Facebook Lead 🏠",
           body: `${name} just submitted a lead from Facebook`,
           data: { leadName: name, source: "Facebook" },
-        }).catch((e) => logger.warn("Push notification failed:", e.message));
+        }, orgId).catch((e) => logger.warn("Push notification failed:", e.message));
       }
     }
 
@@ -374,7 +374,7 @@ router.post("/website", express.json(), async (req, res) => {
       title: "New Website Lead 🌐",
       body: `${lead.name} submitted a form on your website`,
       data: { leadName: lead.name, source: "Website" },
-    }).catch(() => {});
+    }, orgId).catch(() => {});
 
     logger.info(`[website webhook] lead created: ${lead.name} | ${phone} | plugin: ${form_plugin}`);
     res.status(200).json({ success: true, message: "Lead received" });

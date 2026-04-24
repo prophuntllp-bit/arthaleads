@@ -10,13 +10,16 @@ webPush.setVapidDetails(
 );
 
 /**
- * Send push notification to all stored subscriptions.
+ * Send push notification to all subscriptions in the same org.
+ * Pass orgId to scope to a single org (required for multi-tenancy).
  * Silently removes expired/invalid subscriptions (410 Gone).
  */
-async function sendPushToAll(payload) {
+async function sendPushToAll(payload, orgId) {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
 
-  const subs = await PushSubscription.find({});
+  // Scope to org if provided — prevents cross-org notification leaks
+  const filter = orgId ? { orgId } : {};
+  const subs = await PushSubscription.find(filter);
   const results = await Promise.allSettled(
     subs.map((sub) =>
       webPush.sendNotification(
@@ -32,7 +35,7 @@ async function sendPushToAll(payload) {
   );
 
   const sent = results.filter((r) => r.status === "fulfilled").length;
-  logger.info(`Push sent to ${sent}/${subs.length} subscribers`);
+  logger.info(`Push sent to ${sent}/${subs.length} subscribers${orgId ? ` (org: ${orgId})` : ""}`);
 }
 
 /**

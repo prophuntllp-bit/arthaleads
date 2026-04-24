@@ -6,13 +6,13 @@ const leadController = {
     try {
       const lead = await leadService.create(req.body, req.user);
       res.status(201).json({ success: true, data: lead });
-      // Send push notification for new manual lead
+      // Send push notification for new manual lead — scoped to this org
       sendPushToAll({
         type: "new_lead",
         title: `New Lead: ${lead.name}`,
         body: `${lead.source} lead added by ${req.user.name}`,
         data: { source: lead.source },
-      }).catch(() => {});
+      }, req.user.orgId).catch(() => {});
     } catch (err) {
       next(err);
     }
@@ -90,14 +90,14 @@ const leadController = {
         message: `${imported.length} lead(s) imported successfully`,
         data: imported,
       });
-      // Single notification for bulk import
+      // Single notification for bulk import — scoped to this org
       if (imported.length > 0) {
         sendPushToAll({
           type: "bulk_import",
           title: `${imported.length} New Leads Added`,
           body: `${req.user.name} just imported ${imported.length} leads. Check now!`,
           data: { count: imported.length },
-        }).catch(() => {});
+        }, req.user.orgId).catch(() => {});
       }
     } catch (err) {
       next(err);

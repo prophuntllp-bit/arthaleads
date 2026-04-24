@@ -10,7 +10,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
-import { subscribeToPush } from "../utils/pushNotifications";
+// subscribeToPush is now handled by NotificationBanner in App.jsx (requires user gesture)
 
 const navItems = [
   { to: "/",           label: "Dashboard",    icon: LayoutDashboard },
@@ -57,11 +57,7 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Register push subscription once logged in
-  useEffect(() => {
-    if (!user) return;
-    subscribeToPush();
-  }, [user]);
+  // Push subscription is handled by NotificationBanner in App.jsx
 
   // Close alerts panel on outside click
   useEffect(() => {
