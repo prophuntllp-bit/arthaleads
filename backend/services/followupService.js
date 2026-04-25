@@ -8,45 +8,82 @@ const followupService = {
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const baseLeadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
-    if (user.role === "agent") baseLeadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+    // Agent-scoped base conditions (applied via $and so they never get overwritten)
+    const agentLeadCond = user.role === "agent"
+      ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
+      : [];
+    const agentProjCond = user.role === "agent"
+      ? [{ importedBy: user._id }]
+      : [];
 
-    let leadFilter = { ...baseLeadFilter };
+    const baseLeadFilter = {
+      orgId: user.orgId,
+      isArchived: false,
+      isDeleted: { $ne: true },
+    };
+
+    let leadFilter = {};
     let projFilter = {};
 
     if (section === "past") {
       const pastFilter = { $lt: todayStart };
       leadFilter = {
-        ...baseLeadFilter,
-        status: { $nin: ["Closed Won", "Closed Lost"] },
-        $or: [
-          { followUpDate: pastFilter },
-          { followUpDate: null, createdAt: pastFilter, status: "New" },
+        $and: [
+          baseLeadFilter,
+          ...agentLeadCond,
+          {
+            status: { $nin: ["Closed Won", "Closed Lost"] },
+            $or: [
+              { followUpDate: pastFilter },
+              { followUpDate: null, createdAt: pastFilter, status: "New" },
+            ],
+          },
         ],
       };
       projFilter = {
-        booking: { $nin: ["Not Interested", "Booked"] },
-        $or: [
-          { followUp: pastFilter },
-          { followUp: null, createdAt: pastFilter, remark: { $in: ["", null] } },
+        $and: [
+          ...agentProjCond,
+          {
+            booking: { $nin: ["Not Interested", "Booked"] },
+            $or: [
+              { followUp: pastFilter },
+              { followUp: null, createdAt: pastFilter, remark: { $in: ["", null] } },
+            ],
+          },
         ],
       };
-      if (user.role === "agent") projFilter.importedBy = user._id;
     } else if (section === "present") {
-      leadFilter = { ...baseLeadFilter, createdAt: { $gte: todayStart, $lte: todayEnd } };
-      projFilter = { createdAt: { $gte: todayStart, $lte: todayEnd } };
-      if (user.role === "agent") projFilter.importedBy = user._id;
+      const todayRange = { $gte: todayStart, $lte: todayEnd };
+      leadFilter = {
+        $and: [
+          baseLeadFilter,
+          ...agentLeadCond,
+          { createdAt: todayRange },
+        ],
+      };
+      projFilter = {
+        $and: [
+          ...agentProjCond,
+          { createdAt: todayRange },
+        ],
+      };
     } else if (section === "future") {
       const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
       const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;
+      const futureFollowUp = { $gt: todayEnd, ...(toDate ? { $lte: toDate } : {}) };
       leadFilter = {
-        ...baseLeadFilter,
-        followUpDate: { $gt: todayEnd, ...(toDate ? { $lte: toDate } : {}) },
+        $and: [
+          baseLeadFilter,
+          ...agentLeadCond,
+          { followUpDate: futureFollowUp },
+        ],
       };
       projFilter = {
-        followUp: { $gt: todayEnd, ...(toDate ? { $lte: toDate } : {}) },
+        $and: [
+          ...agentProjCond,
+          { followUp: futureFollowUp },
+        ],
       };
-      if (user.role === "agent") projFilter.importedBy = user._id;
     }
 
     const orgIdObj = typeof user.orgId === "string" ? new mongoose.Types.ObjectId(user.orgId) : user.orgId;
