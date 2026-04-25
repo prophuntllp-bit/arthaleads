@@ -301,6 +301,11 @@ export default function ProjectDetail() {
 
   const fileRef = useRef(null);
 
+  // Top scrollbar refs (leads tab table)
+  const topScrollRef   = useRef(null);
+  const tableScrollRef = useRef(null);
+  const topSpacerRef   = useRef(null);
+
   const [leadsLimit, setLeadsLimit] = useState(10);
 
   // Prospective leads state (Interested + Site Visit Booked)
@@ -347,6 +352,27 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
   }, [id, tab, prospPage, prospSearch, refreshKey]);
+
+  // Sync top scrollbar ↔ table scrollbar with dynamic width via ResizeObserver
+  useEffect(() => {
+    const top    = topScrollRef.current;
+    const table  = tableScrollRef.current;
+    const spacer = topSpacerRef.current;
+    if (!top || !table) return;
+    const syncWidth = () => { if (spacer) spacer.style.width = table.scrollWidth + "px"; };
+    syncWidth();
+    const ro = new ResizeObserver(syncWidth);
+    ro.observe(table);
+    const onTopScroll   = () => { table.scrollLeft = top.scrollLeft; };
+    const onTableScroll = () => { top.scrollLeft   = table.scrollLeft; };
+    top.addEventListener("scroll",   onTopScroll);
+    table.addEventListener("scroll", onTableScroll);
+    return () => {
+      ro.disconnect();
+      top.removeEventListener("scroll",   onTopScroll);
+      table.removeEventListener("scroll", onTableScroll);
+    };
+  });
 
   const handleSearch = (e) => { setSearch(e.target.value); setLeadsPage(1); };
 
@@ -647,7 +673,15 @@ export default function ProjectDetail() {
               />
             ) : (
               <>
-                <div className="overflow-x-auto">
+                {/* Top scroll mirror */}
+                <div
+                  ref={topScrollRef}
+                  className="overflow-x-auto border-b"
+                  style={{ borderColor: "var(--app-border)" }}
+                >
+                  <div ref={topSpacerRef} style={{ height: 1 }} />
+                </div>
+                <div ref={tableScrollRef} className="overflow-x-auto">
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
