@@ -8,12 +8,10 @@ const followupService = {
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Agent-scoped base conditions (applied via $and so they never get overwritten)
+    // Agent-scoped conditions for main leads only.
+    // Project leads are shared project resources — org is enforced via project lookup, no per-agent filter.
     const agentLeadCond = user.role === "agent"
       ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
-      : [];
-    const agentProjCond = user.role === "agent"
-      ? [{ importedBy: user._id }]
       : [];
 
     const baseLeadFilter = {
@@ -41,15 +39,10 @@ const followupService = {
         ],
       };
       projFilter = {
-        $and: [
-          ...agentProjCond,
-          {
-            booking: { $nin: ["Not Interested", "Booked"] },
-            $or: [
-              { followUp: pastFilter },
-              { followUp: null, createdAt: pastFilter, remark: { $in: ["", null] } },
-            ],
-          },
+        booking: { $nin: ["Not Interested", "Booked"] },
+        $or: [
+          { followUp: pastFilter },
+          { followUp: null, createdAt: pastFilter, remark: { $in: ["", null] } },
         ],
       };
     } else if (section === "present") {
@@ -61,12 +54,7 @@ const followupService = {
           { createdAt: todayRange },
         ],
       };
-      projFilter = {
-        $and: [
-          ...agentProjCond,
-          { createdAt: todayRange },
-        ],
-      };
+      projFilter = { createdAt: todayRange };
     } else if (section === "future") {
       const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
       const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;
@@ -78,12 +66,7 @@ const followupService = {
           { followUpDate: futureFollowUp },
         ],
       };
-      projFilter = {
-        $and: [
-          ...agentProjCond,
-          { followUp: futureFollowUp },
-        ],
-      };
+      projFilter = { followUp: futureFollowUp };
     }
 
     const orgIdObj = typeof user.orgId === "string" ? new mongoose.Types.ObjectId(user.orgId) : user.orgId;
@@ -96,6 +79,7 @@ const followupService = {
         pipeline: [
           { $match: projFilter },
           { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "_proj" } },
+          // Enforce org scope — only project leads belonging to this org's projects
           { $match: { "_proj.0.orgId": orgIdObj } },
           { $addFields: {
             _type: "project",
