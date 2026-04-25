@@ -213,7 +213,7 @@ export default function Sidebar() {
             ? { right: dropdownPos.right }
             : { left: dropdownPos.left }),
           zIndex: 9999,
-          background: isDark ? "rgb(28, 28, 46)" : "rgb(255, 255, 255)",
+          background: isDark ? "rgb(30, 29, 32)" : "rgb(255, 255, 255)",
           border: "1px solid var(--app-border)",
           boxShadow: "0 24px 64px rgba(0,0,0,0.30), 0 4px 16px rgba(0,0,0,0.15)",
         }}
