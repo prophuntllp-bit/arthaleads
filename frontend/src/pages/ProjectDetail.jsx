@@ -320,8 +320,11 @@ export default function ProjectDetail() {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  // Fetch initial prospective count alongside project (so tab badge is populated)
+  // Pre-fetch lead counts so tab badges are correct on first render
   useEffect(() => {
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1 } })
+      .then((r) => setLeadsTotal(r.data.total))
+      .catch(() => {});
     api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
       .then((r) => setProspTotal(r.data.total))
       .catch(() => {});
