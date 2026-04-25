@@ -15,19 +15,21 @@ import {
 // Tap to reveal full name; default shows first name only
 function NameCell({ name, bold }) {
   const [expanded, setExpanded] = useState(false);
+  const hasMore = name && name.trim().includes(" ");
   const first = name?.split(" ")[0] || name || "—";
   return (
     <button
       type="button"
       onClick={() => setExpanded((v) => !v)}
       className="text-left w-full focus:outline-none"
-      title={expanded ? "Tap to collapse" : name}
     >
-      <span className={`block text-xs truncate ${bold ? "font-semibold" : "font-medium"} text-app`}>
+      <span className={`block text-xs leading-snug ${bold ? "font-semibold" : "font-medium"} text-app ${expanded ? "whitespace-normal break-words" : "truncate"}`}>
         {expanded ? name : first}
       </span>
-      {!expanded && name && name.includes(" ") && (
-        <span className="text-[9px] text-orange-400 leading-none">tap for full</span>
+      {hasMore && (
+        <span className="text-[9px] text-orange-400 leading-none">
+          {expanded ? "tap to hide" : "tap for full"}
+        </span>
       )}
     </button>
   );
