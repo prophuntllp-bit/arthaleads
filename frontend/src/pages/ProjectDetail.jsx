@@ -111,24 +111,24 @@ function InlineText({ value, leadId, projectId, field, placeholder = "Add note�
   );
 }
 
-// ── IST helpers (UTC+5:30) ────────────────────────────────────────────────────
-function toISTLocal(utcStr) {
+// ── Local time helpers (timezone-agnostic, uses browser local time) ───────────
+const _pad = n => String(n).padStart(2, "0");
+function toLocalInput(utcStr) {
   if (!utcStr) return "";
   const d = new Date(utcStr);
-  const ist = new Date(d.getTime() + 330 * 60 * 1000);
-  return ist.toISOString().slice(0, 16);
+  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
 }
-function fromISTLocal(localStr) {
+function fromLocalInput(localStr) {
   if (!localStr) return null;
-  const d = new Date(localStr);
-  return new Date(d.getTime() - 330 * 60 * 1000).toISOString();
+  return new Date(localStr).toISOString();
 }
-function nowIST() { return toISTLocal(new Date().toISOString()); }
-function fmt12hIST(utcStr) {
+function nowLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
+}
+function fmtLocalTime(utcStr) {
   if (!utcStr) return "";
-  const ist = new Date(new Date(utcStr).getTime() + 330 * 60 * 1000);
-  const h = ist.getUTCHours(), m = ist.getUTCMinutes().toString().padStart(2, "0");
-  return `${h % 12 || 12}:${m} ${h >= 12 ? "PM" : "AM"} IST`;
+  return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 // ── Inline date cell ──────────────────────────────────────────────────────────
@@ -138,13 +138,13 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const save = async (dateStr) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromISTLocal(dateStr) });
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromLocalInput(dateStr) });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
 
-  const dateVal = toISTLocal(value);
+  const dateVal = toLocalInput(value);
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <div className="flex flex-col gap-0.5">
@@ -156,11 +156,11 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
           value={dateVal}
           onChange={(e) => save(e.target.value)}
         />
-        <button type="button" title="Set to current IST time" onClick={() => save(nowIST())}
+        <button type="button" title="Set to current time" onClick={() => save(nowLocal())}
           className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
           style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
       </div>
-      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmt12hIST(value)}</span>}
+      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(value)}</span>}
     </div>
   );
 }
