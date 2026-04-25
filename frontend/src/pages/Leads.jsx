@@ -405,6 +405,8 @@ export default function Leads() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
   const exportBtnRef = useRef(null);
+  const topScrollRef   = useRef(null);
+  const tableScrollRef = useRef(null);
   const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
 
   // ── Bulk select state ─────────────────────────────────────────────────────
@@ -884,6 +886,21 @@ export default function Leads() {
 
   const canDelete = user?.role !== "agent";
 
+  // Sync top scrollbar ↔ table scrollbar
+  useEffect(() => {
+    const top   = topScrollRef.current;
+    const table = tableScrollRef.current;
+    if (!top || !table) return;
+    const onTopScroll   = () => { table.scrollLeft = top.scrollLeft; };
+    const onTableScroll = () => { top.scrollLeft   = table.scrollLeft; };
+    top.addEventListener("scroll",   onTopScroll);
+    table.addEventListener("scroll", onTableScroll);
+    return () => {
+      top.removeEventListener("scroll",   onTopScroll);
+      table.removeEventListener("scroll", onTableScroll);
+    };
+  });
+
   return (
     <div className="stitch-page space-y-6">
       <section className="card p-6">
@@ -1131,7 +1148,16 @@ export default function Leads() {
             action={<button className="btn-primary" onClick={() => setShowForm(true)}><Plus className="w-4 h-4" /> Add Lead</button>}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* Top scroll mirror — synced with the table scroll below */}
+            <div
+              ref={topScrollRef}
+              className="overflow-x-auto border-b"
+              style={{ borderColor: "var(--app-border)" }}
+            >
+              <div style={{ minWidth: 2100, height: 1 }} />
+            </div>
+          <div ref={tableScrollRef} className="overflow-x-auto">
             <table className="stitch-table min-w-[2100px] text-sm">
               <thead>
                 <tr>
@@ -1279,6 +1305,7 @@ export default function Leads() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
