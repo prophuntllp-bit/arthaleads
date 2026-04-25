@@ -212,25 +212,65 @@ function ProjInlineText({ value, leadId, projectId, field, placeholder = "Add no
   );
 }
 
-// ── Remark cell — collapsed, expands inline with show more / show less ───────
+// ── Remark cell — click to edit inline, blur/Enter to save ──────────────────
 const REMARK_PREVIEW_LEN = 40;
-function RemarkPopupCell({ value, placeholder = "—" }) {
+function RemarkPopupCell({ value, leadId, projectId, field, placeholder = "Add remark…", onSaved }) {
+  const [editing, setEditing]   = useState(false);
+  const [val, setVal]           = useState(value || "");
+  const [saving, setSaving]     = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const text = value || "";
-  const needsToggle = text.length > REMARK_PREVIEW_LEN;
-  const displayed = expanded || !needsToggle ? text : text.slice(0, REMARK_PREVIEW_LEN) + "…";
 
-  if (!text) return <span className="text-xs text-app-soft">{placeholder}</span>;
+  // keep local val in sync when parent refreshes data
+  useEffect(() => { if (!editing) setVal(value || ""); }, [value, editing]);
+
+  const save = async () => {
+    setEditing(false);
+    if (val === (value || "")) return;
+    setSaving(true);
+    try {
+      const res = projectId
+        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: val })
+        : await api.put(`/leads/${leadId}`, { [field]: val });
+      onSaved?.(res.data.data);
+    } catch { toast.error("Save failed"); setVal(value || ""); }
+    finally { setSaving(false); }
+  };
+
+  if (saving) return <span className="flex items-center px-1"><Spinner size="sm" /></span>;
+
+  if (editing) {
+    return (
+      <textarea
+        autoFocus
+        rows={2}
+        className="w-full min-w-[130px] rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400 resize-none"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Escape") { setEditing(false); setVal(value || ""); } }}
+      />
+    );
+  }
+
+  const needsToggle = val.length > REMARK_PREVIEW_LEN;
+  const displayed = expanded || !needsToggle ? val : val.slice(0, REMARK_PREVIEW_LEN) + "…";
 
   return (
-    <div className="min-w-[100px] max-w-[180px] text-xs text-app leading-relaxed">
-      <span>{displayed}</span>
+    <div className="min-w-[100px] max-w-[180px]">
+      <span
+        onClick={() => setEditing(true)}
+        className="block cursor-pointer rounded px-1 py-0.5 text-xs leading-relaxed text-app transition hover:bg-orange-500/10"
+        title="Click to edit"
+      >
+        {val ? displayed : <span className="text-app-soft italic">{placeholder}</span>}
+      </span>
       {needsToggle && (
         <button
-          onClick={() => setExpanded((p) => !p)}
-          className="block mt-0.5 text-orange-400 hover:text-orange-500 font-medium transition"
+          onClick={(e) => { e.stopPropagation(); setExpanded((p) => !p); }}
+          className="block mt-0.5 ml-1 text-orange-400 hover:text-orange-500 text-[10px] font-medium transition"
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? "less" : "more"}
         </button>
       )}
     </div>
