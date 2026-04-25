@@ -633,7 +633,7 @@ export default function ProjectDetail() {
                           </th>
                         )}
                         <th>#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface)" }}>Name</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>Name</th>
                         <th>Phone</th>
                         <th>WhatsApp</th>
                         <th>Email</th>
@@ -663,7 +663,9 @@ export default function ProjectDetail() {
                             </td>
                           )}
                           <td className="text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
-                          <td className="font-medium text-app whitespace-nowrap sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)]" style={{ background: "var(--app-surface)" }}>{lead.name}</td>
+                          <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>
+                            <span className="block font-medium text-app text-xs truncate" title={lead.name}>{lead.name}</span>
+                          </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "—"}</td>
@@ -781,7 +783,7 @@ export default function ProjectDetail() {
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface)" }}>Name</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>Name</th>
                         <th>Phone</th>
                         <th>WhatsApp</th>
                         <th>Status</th>
@@ -800,7 +802,9 @@ export default function ProjectDetail() {
                         return (
                           <tr key={lead._id}>
                             <td className="text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
-                            <td className="font-semibold text-app whitespace-nowrap sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)]" style={{ background: "var(--app-surface)" }}>{lead.name}</td>
+                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>
+                              <span className="block font-semibold text-app text-xs truncate" title={lead.name}>{lead.name}</span>
+                            </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} /></td>
                             <td>
