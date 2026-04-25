@@ -407,6 +407,7 @@ export default function Leads() {
   const exportBtnRef = useRef(null);
   const topScrollRef   = useRef(null);
   const tableScrollRef = useRef(null);
+  const topSpacerRef   = useRef(null);
   const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
 
   // ── Bulk select state ─────────────────────────────────────────────────────
@@ -886,16 +887,28 @@ export default function Leads() {
 
   const canDelete = user?.role !== "agent";
 
-  // Sync top scrollbar ↔ table scrollbar
+  // Sync top scrollbar ↔ table scrollbar, and keep spacer width = table scrollWidth
   useEffect(() => {
-    const top   = topScrollRef.current;
-    const table = tableScrollRef.current;
+    const top    = topScrollRef.current;
+    const table  = tableScrollRef.current;
+    const spacer = topSpacerRef.current;
     if (!top || !table) return;
+
+    // Keep spacer width in sync with actual table scroll width
+    const syncWidth = () => {
+      if (spacer) spacer.style.width = table.scrollWidth + "px";
+    };
+    syncWidth();
+
+    const ro = new ResizeObserver(syncWidth);
+    ro.observe(table);
+
     const onTopScroll   = () => { table.scrollLeft = top.scrollLeft; };
     const onTableScroll = () => { top.scrollLeft   = table.scrollLeft; };
     top.addEventListener("scroll",   onTopScroll);
     table.addEventListener("scroll", onTableScroll);
     return () => {
+      ro.disconnect();
       top.removeEventListener("scroll",   onTopScroll);
       table.removeEventListener("scroll", onTableScroll);
     };
@@ -1149,13 +1162,13 @@ export default function Leads() {
           />
         ) : (
           <>
-            {/* Top scroll mirror — synced with the table scroll below */}
+            {/* Top scroll mirror — width synced to real table scrollWidth via ResizeObserver */}
             <div
               ref={topScrollRef}
               className="overflow-x-auto border-b"
               style={{ borderColor: "var(--app-border)" }}
             >
-              <div style={{ minWidth: 2100, height: 1 }} />
+              <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} className="overflow-x-auto">
             <table className="stitch-table min-w-[2100px] text-sm">
