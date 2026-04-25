@@ -4,11 +4,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
+import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import {
-  ArrowLeft, Building2, Calendar, ChevronLeft, ChevronRight,
+  ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronLeft, ChevronRight,
   ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
@@ -294,6 +295,10 @@ export default function ProjectDetail() {
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting]       = useState(false);
 
+  // Transfer modal
+  const [transferTarget, setTransferTarget] = useState(null); // lead object to transfer
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const fileRef = useRef(null);
 
   const [leadsLimit, setLeadsLimit] = useState(10);
@@ -329,7 +334,7 @@ export default function ProjectDetail() {
       .then((r) => { setLeads(r.data.leads); setLeadsTotal(r.data.total); setLeadsPages(r.data.pages); })
       .catch(() => toast.error("Failed to load leads"))
       .finally(() => setLeadsLoading(false));
-  }, [id, tab, leadsPage, search, leadsLimit]);
+  }, [id, tab, leadsPage, search, leadsLimit, refreshKey]);
 
   useEffect(() => {
     if (tab !== "prospective") return;
@@ -338,7 +343,7 @@ export default function ProjectDetail() {
       .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
-  }, [id, tab, prospPage, prospSearch]);
+  }, [id, tab, prospPage, prospSearch, refreshKey]);
 
   const handleSearch = (e) => { setSearch(e.target.value); setLeadsPage(1); };
 
@@ -669,7 +674,7 @@ export default function ProjectDetail() {
                         <th>Remark</th>
                         <th>Status</th>
                         <th>Updated By</th>
-                        {canManage && <th></th>}
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -720,17 +725,26 @@ export default function ProjectDetail() {
                               <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>
                             )}
                           </td>
-                          {canManage && (
-                            <td>
+                          <td>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                               <button
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-red-500/10 hover:text-red-400"
-                                onClick={() => setDeletingLeadId(lead._id)}
-                                title="Delete lead"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
+                                onClick={() => setTransferTarget(lead)}
+                                title="Transfer lead"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <ArrowRightLeft className="h-4 w-4" />
                               </button>
-                            </td>
-                          )}
+                              {canManage && (
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400"
+                                  onClick={() => setDeletingLeadId(lead._id)}
+                                  title="Delete lead"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -815,6 +829,7 @@ export default function ProjectDetail() {
                         <th>Remark 2</th>
                         <th>Note</th>
                         <th>Updated By</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -854,6 +869,15 @@ export default function ProjectDetail() {
                             <td className="text-xs text-app-soft whitespace-nowrap">
                               {lead.remarkUpdatedBy?.name || "—"}
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
+                            </td>
+                            <td>
+                              <button
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-orange-500/10 hover:text-orange-500"
+                                onClick={() => setTransferTarget(lead)}
+                                title="Transfer lead"
+                              >
+                                <ArrowRightLeft className="h-4 w-4" />
+                              </button>
                             </td>
                           </tr>
                         );
@@ -922,6 +946,18 @@ export default function ProjectDetail() {
         loading={deletingProject}
         title="Delete Project"
         message={`Are you sure you want to delete "${project.name}"? All imported leads will remain but the project will be removed.`}
+      />
+
+      <TransferModal
+        open={!!transferTarget}
+        onClose={() => setTransferTarget(null)}
+        lead={transferTarget}
+        leadType="project"
+        currentProjectId={id}
+        onTransferred={() => {
+          setTransferTarget(null);
+          setRefreshKey((k) => k + 1);
+        }}
       />
     </div>
   );

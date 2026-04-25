@@ -223,6 +223,7 @@ import FbCallback    from "./pages/FbCallback";
 import Projects      from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
+import FollowUps     from "./pages/FollowUps";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -288,6 +289,7 @@ export default function App() {
           <Route path="/help-support"  element={<HelpSupport />} />
           <Route path="/projects"      element={<Projects />} />
           <Route path="/projects/:id"  element={<ProjectDetail />} />
+          <Route path="/followups"     element={<FollowUps />} />
 
           {/* Admin only */}
           <Route element={<RequireRole roles={["admin"]} />}>

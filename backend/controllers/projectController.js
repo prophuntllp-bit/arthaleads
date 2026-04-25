@@ -98,6 +98,16 @@ const projectController = {
       res.json({ success: true, message: `${count} lead(s) deleted` });
     } catch (err) { next(err); }
   },
+
+  async transferLead(req, res, next) {
+    try {
+      const { toProjectId, toLeads, source } = req.body;
+      const result = await projectService.transferLead(
+        req.params.leadId, req.params.id, { toProjectId, toLeads, source }, req.user
+      );
+      res.json({ success: true, data: result.data, message: result.message });
+    } catch (err) { next(err); }
+  },
 };
 
 module.exports = projectController;

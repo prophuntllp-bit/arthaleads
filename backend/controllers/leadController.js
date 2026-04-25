@@ -1,5 +1,6 @@
 const leadService = require("../services/leadService");
 const { sendPushToAll } = require("../utils/push");
+const { AppError } = require("../middlewares/errorHandler");
 
 const leadController = {
   async create(req, res, next) {
@@ -156,6 +157,15 @@ const leadController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  async transferLead(req, res, next) {
+    try {
+      const { toProjectId } = req.body;
+      if (!toProjectId) return next(new AppError("toProjectId required", 400));
+      const result = await leadService.transferToProject(req.params.id, toProjectId, req.user);
+      res.json({ success: true, data: result });
+    } catch (err) { next(err); }
   },
 
   async exportLeads(req, res, next) {

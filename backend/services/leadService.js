@@ -1,6 +1,7 @@
 // services/leadService.js
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const Project = require("../models/Project");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
@@ -500,6 +501,21 @@ const leadService = {
       .sort({ createdAt: -1 })
       .limit(50)
       .select("name phone source status createdAt assignedToName");
+  },
+
+  async transferToProject(leadId, toProjectId, user) {
+    const lead = await Lead.findOne({ _id: leadId, orgId: user.orgId });
+    if (!lead) throw new AppError("Lead not found", 404);
+    const project = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
+    if (!project) throw new AppError("Project not found", 404);
+    const pl = await ProjectLead.create({
+      project: toProjectId, name: lead.name, phone: lead.phone,
+      email: lead.email || "", source: lead.source || "Manual",
+      importedBy: user._id,
+    });
+    lead.isArchived = true;
+    await lead.save({ validateBeforeSave: false });
+    return pl;
   },
 
   async getDump(user) {

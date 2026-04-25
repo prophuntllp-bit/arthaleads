@@ -19,6 +19,7 @@ router.get("/:id/leads",          projectController.getLeads);
 router.patch("/:id/leads/:leadId/remark", projectController.updateRemark);
 router.delete("/:id/leads/bulk", authorize("admin", "manager"), projectController.bulkDeleteLeads);
 router.patch("/:id/leads/:leadId",        projectController.updateLeadFields);
+router.post("/:id/leads/:leadId/transfer", projectController.transferLead);
 router.delete("/:id/leads/:leadId", authorize("admin", "manager"), projectController.deleteLead);
 
 module.exports = router;

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -17,6 +17,7 @@ const navItems = [
   { to: "/leads",      label: "Leads",        icon: Users },
   { to: "/pipeline",   label: "Pipeline",     icon: Kanban },
   { to: "/projects",   label: "Projects",     icon: FolderKanban },
+  { to: "/followups",  label: "Follow Ups",   icon: CalendarClock },
   { to: "/dump-leads", label: "Dump Leads",   icon: Archive, roles: ["admin", "manager"] },
   { to: "/team",       label: "Team",         icon: UserCheck, roles: ["admin"] },
   { to: "/automation", label: "Automation",   icon: Workflow, roles: ["admin", "manager"] },

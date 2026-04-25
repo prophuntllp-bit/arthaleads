@@ -8,6 +8,7 @@ import {
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
+import TransferModal from "../components/TransferModal";
 import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -20,7 +21,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
@@ -358,6 +359,8 @@ export default function Leads() {
   const [detailLead, setDetailLead] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // transferMeta: { lead, leadType: "lead"|"project", projectId: string|null }
+  const [transferMeta, setTransferMeta] = useState(null);
   const [importing, setImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
@@ -370,6 +373,7 @@ export default function Leads() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // ── Project-wise leads ────────────────────────────────────────────────────
+  const [projRefreshKey, setProjRefreshKey] = useState(0);
   const [projects, setProjects]               = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [projLeads, setProjLeads]             = useState([]);
@@ -403,7 +407,7 @@ export default function Leads() {
       .then((r) => { setProjLeads(r.data.leads); setProjTotal(r.data.total); setProjPages(r.data.pages); })
       .catch(() => toast.error("Failed to load project leads"))
       .finally(() => setProjLoading(false));
-  }, [selectedProject, projPage, projSearch, projLimit]);
+  }, [selectedProject, projPage, projSearch, projLimit, projRefreshKey]);
 
   useEffect(() => {
     if (user?.role !== "agent") {
@@ -949,7 +953,7 @@ export default function Leads() {
                         <th>#</th><th>Name</th><th>Phone</th><th>WhatsApp</th><th>Email</th><th>Source</th>
                         <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
                         <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Status</th>
-                        {canDelete && <th></th>}
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -980,17 +984,26 @@ export default function Leads() {
                           <td><RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={selectedProject._id} field="remark2" placeholder="Remark 2…" onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineBooking value={lead.booking} leadId={lead._id} projectId={selectedProject._id} onSaved={handleProjLeadUpdated} /></td>
-                          {canDelete && (
-                            <td>
+                          <td>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                               <button
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-red-500/10 hover:text-red-400"
-                                onClick={() => setProjDeletingId(lead._id)}
-                                title="Delete lead"
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
+                                onClick={() => setTransferMeta({ lead, leadType: "project", projectId: selectedProject._id })}
+                                title="Transfer lead"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <ArrowRightLeft className="h-4 w-4" />
                               </button>
-                            </td>
-                          )}
+                              {canDelete && (
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400"
+                                  onClick={() => setProjDeletingId(lead._id)}
+                                  title="Delete lead"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1211,6 +1224,9 @@ export default function Leads() {
                         <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
+                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500" onClick={() => setTransferMeta({ lead, leadType: "lead", projectId: null })} title="Transfer to project">
+                          <ArrowRightLeft className="h-4 w-4" />
+                        </button>
                         {canDelete && (
                           <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingId(lead._id)} title="Delete">
                             <Trash2 className="h-4 w-4" />
@@ -1287,6 +1303,26 @@ export default function Leads() {
         loading={projBulkDeleting}
         title={`Delete ${projSelectedIds.size} Lead${projSelectedIds.size !== 1 ? "s" : ""}`}
         message={`Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+      />
+
+      <TransferModal
+        open={!!transferMeta}
+        onClose={() => setTransferMeta(null)}
+        lead={transferMeta?.lead}
+        leadType={transferMeta?.leadType || "lead"}
+        currentProjectId={transferMeta?.projectId}
+        onTransferred={() => {
+          const meta = transferMeta;
+          setTransferMeta(null);
+          if (meta?.leadType === "project") {
+            // Remove from project leads list optimistically
+            setProjLeads((prev) => prev.filter((l) => l._id !== meta.lead._id));
+            setProjRefreshKey((k) => k + 1);
+          } else {
+            // Remove transferred lead from main pipeline list
+            removeLead(meta?.lead._id);
+          }
+        }}
       />
 
       {/* Export dropdown — portal-rendered to escape overflow:hidden parents */}

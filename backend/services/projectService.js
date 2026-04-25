@@ -1,6 +1,7 @@
 // services/projectService.js
 const Project = require("../models/Project");
 const ProjectLead = require("../models/ProjectLead");
+const Lead = require("../models/Lead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -164,6 +165,32 @@ const projectService = {
   async bulkDeleteLeads(projectId, ids) {
     const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
     return result.deletedCount;
+  },
+
+  async transferLead(leadId, fromProjectId, { toProjectId, toLeads, source }, user) {
+    const lead = await ProjectLead.findOne({ _id: leadId, project: fromProjectId });
+    if (!lead) throw new AppError("Lead not found", 404);
+
+    if (toProjectId) {
+      const target = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
+      if (!target) throw new AppError("Target project not found", 404);
+      lead.project = toProjectId;
+      await lead.save();
+      return { data: lead, message: `Transferred to ${target.name}` };
+    }
+
+    if (toLeads) {
+      const newLead = await Lead.create({
+        name: lead.name, phone: lead.phone, email: lead.email || "",
+        source: source || lead.source || "Manual",
+        createdBy: user._id, orgId: user.orgId,
+        remark1: lead.remark1 || "", remark2: lead.remark2 || "",
+      });
+      await ProjectLead.findByIdAndDelete(leadId);
+      return { data: newLead, message: "Transferred to main pipeline" };
+    }
+
+    throw new AppError("Specify toProjectId or toLeads=true", 400);
   },
 };
 
