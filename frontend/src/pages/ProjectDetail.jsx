@@ -12,6 +12,27 @@ import {
   ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
+// Tap to reveal full name; default shows first name only
+function NameCell({ name, bold }) {
+  const [expanded, setExpanded] = useState(false);
+  const first = name?.split(" ")[0] || name || "—";
+  return (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      className="text-left w-full focus:outline-none"
+      title={expanded ? "Tap to collapse" : name}
+    >
+      <span className={`block text-xs truncate ${bold ? "font-semibold" : "font-medium"} text-app`}>
+        {expanded ? name : first}
+      </span>
+      {!expanded && name && name.includes(" ") && (
+        <span className="text-[9px] text-orange-400 leading-none">tap for full</span>
+      )}
+    </button>
+  );
+}
+
 function fmtPrice(n) {
   if (!n) return null;
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(1)}Cr`;
@@ -621,19 +642,19 @@ export default function ProjectDetail() {
                     <thead>
                       <tr>
                         {canManage && (
-                          <th className="w-10 px-3">
+                          <th className="w-6 px-1">
                             <input
                               type="checkbox"
                               checked={allSelected}
                               ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
                               onChange={toggleAll}
-                              className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                              className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
                               title="Select all"
                             />
                           </th>
                         )}
-                        <th>#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>Name</th>
+                        <th className="w-6 px-1 text-center">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
                         <th>Phone</th>
                         <th>WhatsApp</th>
                         <th>Email</th>
@@ -653,18 +674,18 @@ export default function ProjectDetail() {
                       {leads.map((lead, i) => (
                         <tr key={lead._id} className={`group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
                           {canManage && (
-                            <td className="w-10 px-3">
+                            <td className="w-6 px-1">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(lead._id)}
                                 onChange={() => toggleOne(lead._id)}
-                                className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                                className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
                               />
                             </td>
                           )}
-                          <td className="text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
-                          <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>
-                            <span className="block font-medium text-app text-xs truncate" title={lead.name}>{lead.name}</span>
+                          <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
+                          <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
+                            <NameCell name={lead.name} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} /></td>
@@ -782,8 +803,8 @@ export default function ProjectDetail() {
                   <table className="stitch-table min-w-[900px]">
                     <thead>
                       <tr>
-                        <th>#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>Name</th>
+                        <th className="w-6 px-1 text-center">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
                         <th>Phone</th>
                         <th>WhatsApp</th>
                         <th>Status</th>
@@ -801,9 +822,9 @@ export default function ProjectDetail() {
                           : "bg-violet-500/10 text-violet-600 border-violet-500/25";
                         return (
                           <tr key={lead._id}>
-                            <td className="text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
-                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[100px] min-w-[100px] max-w-[100px]" style={{ background: "var(--app-surface)" }}>
-                              <span className="block font-semibold text-app text-xs truncate" title={lead.name}>{lead.name}</span>
+                            <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
+                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
+                              <NameCell name={lead.name} bold />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} /></td>
