@@ -147,16 +147,16 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
+              <table className="w-full text-xs min-w-[780px]">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Name</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Phone</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px] hidden sm:table-cell">WhatsApp</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px] hidden md:table-cell">Source</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">WhatsApp</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Source</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status / Remark</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px] hidden lg:table-cell">Follow-up Date</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px] hidden lg:table-cell">Project</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Follow-up Date</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Project</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Type</th>
                   </tr>
                 </thead>
@@ -180,10 +180,10 @@ export default function FollowUps() {
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <PhoneActions phone={lead.phone} />
                       </td>
-                      <td className="px-4 py-3 hidden sm:table-cell" onClick={e => e.stopPropagation()}>
+                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <WhatsAppLink phone={lead.phone} />
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-4 py-3">
                         {lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">—</span>}
                       </td>
                       <td className="px-4 py-3">
@@ -191,10 +191,10 @@ export default function FollowUps() {
                           {lead.status || lead.remark || "—"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-app-soft">{fmtDate(lead.followUpDate || lead.followUp)}</span>
+                      <td className="px-4 py-3">
+                        <span className="text-app-soft whitespace-nowrap">{fmtDate(lead.followUpDate || lead.followUp)}</span>
                       </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
+                      <td className="px-4 py-3">
                         {lead._type === "project" ? (
                           <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "—"}</span>
                         ) : (
@@ -202,7 +202,7 @@ export default function FollowUps() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
                           lead._type === "project"
                             ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
                             : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
