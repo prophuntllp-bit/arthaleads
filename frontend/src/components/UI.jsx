@@ -161,40 +161,15 @@ export function WhatsAppLink({ phone, onContact }) {
   const waNumber = toWaNumber(phone);
   const waUrl    = `https://wa.me/${waNumber}`;
 
-  // Open WhatsApp Business with app-launch detection.
-  // Android: use intent:// URL with WA Business package — Chrome shows native
-  //   "App not installed" dialog automatically if WA Business isn't present.
-  // iOS / desktop: try deep link, detect via visibilitychange; toast if no app.
+  // WhatsApp Business — open direct chat using wa.me universal link.
+  // Works on all platforms without redirecting to Play Store.
   const handleWABusiness = (e) => {
     e.preventDefault();
     setOpen(false);
     onContact?.();
-
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isMobile  = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    if (isAndroid) {
-      // Chrome on Android: intent:// with package name → Android OS handles
-      // "App not installed" natively (shows Play Store or error dialog).
-      window.location.href =
-        `intent://send?phone=${waNumber}#Intent;package=com.whatsapp.w4b;scheme=https;end`;
-      return;
-    }
-
-    // iOS / desktop: open link, wait to see if page hides (app launched)
-    let appLaunched = false;
-    const onHide = () => { appLaunched = true; };
-    document.addEventListener("visibilitychange", onHide);
-
-    // Open in same tab so visibilitychange fires reliably on iOS Safari
-    window.location.href = `https://api.whatsapp.com/send?phone=${waNumber}`;
-
-    setTimeout(() => {
-      document.removeEventListener("visibilitychange", onHide);
-      if (!appLaunched && isMobile) {
-        toast.error("WhatsApp Business is not installed on your device", { duration: 4000 });
-      }
-    }, 2500);
+    // wa.me opens WhatsApp (personal or business, whichever is installed/default)
+    // Opens browser WhatsApp Web as fallback on desktop — no Play Store redirect ever.
+    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
   };
 
   const btnCls = "inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400";

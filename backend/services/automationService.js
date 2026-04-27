@@ -111,6 +111,7 @@ const automationService = {
       "webhookPath",
       "verifyToken",
       "accessToken",
+      "userToken",
       "mappingNotes",
       "lastSyncAt",
       "isActive",

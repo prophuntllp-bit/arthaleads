@@ -193,6 +193,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     const selectedPageData = pages.find((p) => p.id === pageId);
     // Priority: page-specific access token > fresh user token from latest OAuth > existing stored token
     const accessToken = selectedPageData?.accessToken || freshToken || editingItem?.accessToken || "";
+    // Always save the fresh long-lived user token — used for silent page-token auto-refresh
+    const userToken = freshToken || editingItem?.userToken || "";
     const payload = {
       name: connName.trim(),
       platform: "Facebook",
@@ -203,6 +205,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       pageId,
       formId,
       accessToken,
+      userToken,
       verifyToken: editingItem?.verifyToken || `arthaleads_${Date.now()}`,
       isActive: true,
     };

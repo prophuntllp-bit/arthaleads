@@ -73,6 +73,12 @@ const automationSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    // Long-lived Facebook user access token — used to auto-refresh expired page tokens
+    userToken: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     mappingNotes: {
       type: String,
       trim: true,

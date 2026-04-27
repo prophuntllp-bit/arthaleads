@@ -63,25 +63,63 @@ async function findFacebookAutomationByPayload(leadData) {
   return candidates.find((item) => !item.pageId) || null;
 }
 
-// Try all active Facebook tokens until one successfully fetches the lead
-async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationId, orgId) {
-  // First try the primary token
+// ── Auto-refresh a page token using the stored long-lived user token ──────────
+// Returns the new page access token string, or null if it can't refresh.
+// Saves the new page token to the DB so the next webhook call succeeds.
+const META_GRAPH_VERSION = "v23.0";
+async function autoRefreshPageToken(auto) {
+  if (!auto.userToken || !auto.pageId) return null;
+  try {
+    const params = new URLSearchParams({ access_token: auto.userToken, fields: "access_token" });
+    const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${auto.pageId}?${params.toString()}`);
+    const json = await resp.json();
+    if (json.access_token) {
+      await Automation.findByIdAndUpdate(auto._id, { accessToken: json.access_token });
+      logger.info(`Facebook webhook: silently refreshed page token for automation "${auto.name}" — no reconnection needed`);
+      return json.access_token;
+    }
+    logger.warn(`Facebook webhook: auto-refresh for "${auto.name}" returned no token: ${JSON.stringify(json)}`);
+  } catch (e) {
+    logger.warn(`Facebook webhook: auto-refresh failed for "${auto.name}": ${e.message}`);
+  }
+  return null;
+}
+
+// Try all active Facebook tokens until one successfully fetches the lead.
+// If all page tokens fail with auth errors, auto-refresh them using stored userToken
+// before giving up — this makes the system self-healing without manual reconnection.
+async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
+  const primaryAutomationId = primaryAutomation?._id;
+
+  // 1️⃣ Try the primary token first
   try {
     const result = await getFacebookLeadFields(leadgenId, primaryToken);
     return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
   } catch (err) {
     if (err.isAuthError) {
-      // Primary token is expired — try other automations' tokens
-      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying fallback tokens`);
+      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying auto-refresh then fallbacks`);
     } else {
-      // Non-auth error on primary — could be wrong page token, try others before declaring test lead
       logger.warn(`Facebook webhook: primary token failed for lead ${leadgenId} (${err.message}), trying fallback tokens`);
     }
   }
 
-  // Try all other active automation tokens from SAME ORG as fallback
+  // 2️⃣ Auto-refresh primary automation's page token using its userToken
+  if (primaryAutomation?.userToken && primaryAutomation?.pageId) {
+    const refreshed = await autoRefreshPageToken(primaryAutomation);
+    if (refreshed) {
+      try {
+        const result = await getFacebookLeadFields(leadgenId, refreshed);
+        logger.info(`Facebook webhook: auto-refreshed primary token succeeded for lead ${leadgenId}`);
+        return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+      } catch (e) {
+        logger.warn(`Facebook webhook: auto-refreshed primary token also failed for lead ${leadgenId}: ${e.message}`);
+      }
+    }
+  }
+
+  // 3️⃣ Try all other active automation tokens from the SAME ORG
   const allAutomations = await Automation.find({
-    orgId,  // NEW: only try tokens from the same org
+    orgId,
     platform: "Facebook",
     isActive: true,
     accessToken: { $exists: true, $ne: "" },
@@ -96,20 +134,31 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationI
       return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
     } catch (e) {
       if (e.isAuthError) {
-        errors.push({ type: "auth", message: e.message, automation: auto.name });
-        continue; // Try next token
+        errors.push({ type: "auth", message: e.message, automation: auto.name, doc: auto });
+        continue;
       }
-      // Non-auth error — capture it but keep trying
       errors.push({ type: "other", message: e.message, automation: auto.name });
-      logger.debug(`Facebook webhook: fallback token from automation "${auto.name}" failed for lead ${leadgenId}: ${e.message}`);
+      logger.debug(`Facebook webhook: fallback token from automation "${auto.name}" failed: ${e.message}`);
     }
   }
 
-  // All tokens exhausted — determine if this is a test lead or auth error
-  const hasNoLeadErrors = errors.some((e) => e.message?.includes("No lead with leadgen id"));
+  // 4️⃣ Auto-refresh all fallback automations that had auth errors and have a userToken
+  for (const errEntry of errors.filter(e => e.type === "auth" && e.doc?.userToken)) {
+    const refreshed = await autoRefreshPageToken(errEntry.doc);
+    if (refreshed) {
+      try {
+        const result = await getFacebookLeadFields(leadgenId, refreshed);
+        logger.info(`Facebook webhook: auto-refreshed fallback "${errEntry.automation}" succeeded for lead ${leadgenId}`);
+        return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+      } catch (e) {
+        logger.warn(`Facebook webhook: auto-refreshed fallback "${errEntry.automation}" also failed: ${e.message}`);
+      }
+    }
+  }
 
-  if (hasNoLeadErrors && errors.every((e) => e.message?.includes("No lead with leadgen id"))) {
-    // Consistently "No lead with leadgen id" from all tokens = test/fake ID
+  // 5️⃣ All tokens exhausted — check if it's just a test lead
+  const hasNoLeadErrors = errors.some(e => e.message?.includes("No lead with leadgen id"));
+  if (hasNoLeadErrors && errors.every(e => e.message?.includes("No lead with leadgen id"))) {
     return {
       leadDetails: null,
       isAuthError: false,
@@ -118,8 +167,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomationI
     };
   }
 
-  // Mixed errors or other non-auth errors = token/connection problem
-  const errorSummary = errors.map((e) => `${e.automation}: ${e.message}`).join("; ");
+  const errorSummary = errors.map(e => `${e.automation}: ${e.message}`).join("; ");
   logger.warn(`Facebook webhook: all tokens failed for lead ${leadgenId} — errors: ${errorSummary}`);
 
   return {
@@ -183,7 +231,7 @@ router.post("/", express.json(), async (req, res) => {
         if (!leadData.field_data) {
           const tokenPreview = accessToken ? accessToken.slice(0, 20) + "..." : "NONE";
           logger.info(`Facebook webhook: fetching lead ${leadData.leadgen_id} with token ${tokenPreview}`);
-          const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation._id, automation.orgId);
+          const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation, automation.orgId);
           if (fetchResult.leadDetails) {
             leadDetails = fetchResult.leadDetails;
             logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
