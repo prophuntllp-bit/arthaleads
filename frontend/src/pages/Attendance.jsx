@@ -5,7 +5,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   Clock, ChevronLeft, ChevronRight, CalendarDays,
-  Users, Timer, CheckCircle2, XCircle, LogIn
+  Users, Timer, CheckCircle2, LogIn, Filter
 } from "lucide-react";
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -35,25 +35,24 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Live elapsed timer for an active clock-in
+// Live elapsed timer — seeds correct elapsed time on mount/change (not just on first render)
 function LiveTimer({ since }) {
-  const [secs, setSecs] = useState(() => Math.floor((Date.now() - new Date(since)) / 1000));
+  const [secs, setSecs] = useState(0);
   useEffect(() => {
+    if (!since) { setSecs(0); return; }
+    setSecs(Math.floor((Date.now() - new Date(since)) / 1000));
     const iv = setInterval(() => setSecs(s => s + 1), 1000);
     return () => clearInterval(iv);
   }, [since]);
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  return <span className="tabular-nums">{pad(h)}:{pad(m)}:{pad(s)}</span>;
+  return <span className="tabular-nums">{pad(Math.floor(secs / 3600))}:{pad(Math.floor((secs % 3600) / 60))}:{pad(secs % 60)}</span>;
 }
 
 export default function Attendance() {
   const { user } = useAuth();
   const isAdmin = ["admin", "manager"].includes(user?.role);
 
-  // Today's status
-  const [status, setStatus] = useState(null);       // null | Attendance doc
+  // Today's own status
+  const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [clocking, setClocking] = useState(false);
 
@@ -68,39 +67,43 @@ export default function Attendance() {
   const [teamToday, setTeamToday] = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
 
+  // Team members list for filter (admin/manager)
+  const [teamMembers, setTeamMembers] = useState([]);
+
   // Filters
   const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 29);
+    const d = new Date(); d.setDate(d.getDate() - 29);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
   const [to, setTo] = useState(todayStr);
-  const [tab, setTab] = useState("records"); // "records" | "team"
+  const [filterUser, setFilterUser] = useState(""); // admin: filter by member
+  const [tab, setTab] = useState("team"); // "team" | "records" — admin default is team
 
-  // Fetch today's clock status
+  // Fetch today's own clock status
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
     try {
       const r = await api.get("/attendance/status");
       setStatus(r.data.data);
-    } catch { /* ignore */ }
+    } catch { /**/ }
     finally { setStatusLoading(false); }
   }, []);
 
-  // Fetch records list
+  // Fetch records
   const fetchRecords = useCallback(async () => {
     setListLoading(true);
     try {
       const params = new URLSearchParams({ page, limit: 60 });
       if (from) params.set("from", from);
       if (to)   params.set("to", to);
+      if (filterUser) params.set("userId", filterUser);
       const r = await api.get(`/attendance?${params}`);
       setRecords(r.data.data || []);
       setTotal(r.data.total || 0);
       setPages(r.data.pages || 1);
     } catch { toast.error("Failed to load records"); }
     finally { setListLoading(false); }
-  }, [page, from, to]);
+  }, [page, from, to, filterUser]);
 
   // Fetch team today
   const fetchTeamToday = useCallback(async () => {
@@ -109,14 +112,26 @@ export default function Attendance() {
     try {
       const r = await api.get("/attendance/team-today");
       setTeamToday(r.data.data || []);
-    } catch { /* ignore */ }
+    } catch { /**/ }
     finally { setTeamLoading(false); }
+  }, [isAdmin]);
+
+  // Fetch team member list for filter dropdown
+  const fetchTeamMembers = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const r = await api.get("/auth/users");
+      setTeamMembers(r.data.users || r.data.data || []);
+    } catch { /**/ }
   }, [isAdmin]);
 
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
-  useEffect(() => { if (tab === "team") fetchTeamToday(); }, [tab, fetchTeamToday]);
-  useEffect(() => { setPage(1); }, [from, to]);
+  useEffect(() => { fetchTeamToday(); fetchTeamMembers(); }, [fetchTeamToday, fetchTeamMembers]);
+  useEffect(() => { setPage(1); }, [from, to, filterUser]);
+
+  // Non-admin defaults to records tab
+  useEffect(() => { if (!isAdmin) setTab("records"); }, [isAdmin]);
 
   const handleClockIn = async () => {
     setClocking(true);
@@ -124,11 +139,10 @@ export default function Attendance() {
       const r = await api.post("/attendance/clockin");
       setStatus(r.data.data);
       toast.success("Clocked in successfully!");
-      if (isAdmin) fetchTeamToday();
+      fetchTeamToday();
       fetchRecords();
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Clock in failed");
-    } finally { setClocking(false); }
+    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
+    finally { setClocking(false); }
   };
 
   const handleClockOut = async () => {
@@ -137,18 +151,39 @@ export default function Attendance() {
       const r = await api.post("/attendance/clockout");
       setStatus(r.data.data);
       toast.success("Clocked out! Great work today.");
-      if (isAdmin) fetchTeamToday();
+      fetchTeamToday();
       fetchRecords();
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Clock out failed");
-    } finally { setClocking(false); }
+    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
+    finally { setClocking(false); }
   };
 
   const isClockedIn  = status?.clockIn && !status?.clockOut;
   const isClockedOut = status?.clockIn && status?.clockOut;
 
+  // ── Status badge helper ──────────────────────────────────────────────────────
+  function StatusBadge({ a }) {
+    const isIn  = a?.clockIn && !a?.clockOut;
+    const isOut = a?.clockIn && a?.clockOut;
+    if (isOut) return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+        <CheckCircle2 className="w-3 h-3" /> Completed
+      </span>
+    );
+    if (isIn) return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
+      </span>
+    );
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
+        Absent
+      </span>
+    );
+  }
+
   return (
     <div className="stitch-page">
+
       {/* ── Top bar ── */}
       <div className="stitch-topbar">
         <div className="flex items-center gap-3">
@@ -178,25 +213,15 @@ export default function Attendance() {
                 style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
                 <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-app-soft text-xs">Active —</span>
-                <span className="text-green-500 font-bold text-sm">
-                  <LiveTimer since={status.clockIn} />
-                </span>
+                <span className="text-green-500 font-bold text-sm"><LiveTimer since={status.clockIn} /></span>
               </div>
-              <button
-                onClick={handleClockOut}
-                disabled={clocking}
-                className="btn-danger py-2 px-4 text-sm"
-              >
-                {clocking ? <Spinner size="sm" /> : <XCircle className="h-4 w-4" />}
+              <button onClick={handleClockOut} disabled={clocking} className="btn-danger py-2 px-4 text-sm">
+                {clocking ? <Spinner size="sm" /> : null}
                 Clock Out
               </button>
             </div>
           ) : (
-            <button
-              onClick={handleClockIn}
-              disabled={clocking}
-              className="btn-primary py-2 px-5 text-sm"
-            >
+            <button onClick={handleClockIn} disabled={clocking} className="btn-primary py-2 px-5 text-sm">
               {clocking ? <Spinner size="sm" /> : <LogIn className="h-4 w-4" />}
               Clock In
             </button>
@@ -204,14 +229,14 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* ── Today card ── */}
+      {/* ── Today's own status cards ── */}
       {!statusLoading && status && (
         <div className="px-4 lg:px-6 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Clock In",  value: fmtTime(status.clockIn),  color: "text-green-500" },
             { label: "Clock Out", value: fmtTime(status.clockOut), color: "text-red-400" },
             { label: "Duration",  value: isClockedOut ? fmtDuration(status.totalMinutes) : isClockedIn ? "Active" : "—", color: "text-orange-500" },
-            { label: "Date",      value: fmtDate(status.date),     color: "text-app" },
+            { label: "Date",      value: fmtDate(status.date), color: "text-app" },
           ].map(({ label, value, color }) => (
             <div key={label} className="card px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
@@ -221,28 +246,21 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* ── Tabs (admin/manager only) ── */}
-      {isAdmin && (
-        <div className="px-4 lg:px-6 pt-4">
-          <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            {[
-              { key: "records", label: "My Records",   icon: CalendarDays },
-              { key: "team",    label: "Team Today",   icon: Users },
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  tab === key ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
+      {/* ── Tabs ── */}
+      <div className="px-4 lg:px-6 pt-4">
+        <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          {isAdmin && (
+            <button onClick={() => setTab("team")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "team" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"}`}>
+              <Users className="w-3.5 h-3.5" /> Team Today
+            </button>
+          )}
+          <button onClick={() => setTab("records")}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "records" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"}`}>
+            <CalendarDays className="w-3.5 h-3.5" /> {isAdmin ? "All Records" : "My Records"}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* ── Team Today tab ── */}
       {tab === "team" && isAdmin && (
@@ -253,13 +271,15 @@ export default function Attendance() {
             <div className="card overflow-hidden">
               <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: "var(--app-border)" }}>
                 <p className="text-sm font-bold text-app">Today's Attendance</p>
-                <span className="stitch-kicker">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</span>
+                <span className="stitch-kicker">
+                  {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[600px]">
+                <table className="w-full text-xs min-w-[640px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                      {["Member", "Role", "Status", "Clock In", "Clock Out", "Hours"].map(h => (
+                      {["Member", "Role", "Clock In", "Clock Out", "Hours", "Status"].map(h => (
                         <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
                     </tr>
@@ -272,38 +292,39 @@ export default function Attendance() {
                         <tr key={u._id} className="border-b hover:bg-orange-500/5 transition" style={{ borderColor: "var(--app-border)" }}>
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 text-xs font-bold flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 text-xs font-bold flex-shrink-0">
                                 {u.name?.[0]?.toUpperCase()}
                               </div>
-                              <span className="font-semibold text-app truncate max-w-[120px]">{u.name}</span>
+                              <div>
+                                <p className="font-semibold text-app">{u.name}</p>
+                                <p className="text-app-soft text-[10px]">{u.email}</p>
+                              </div>
                             </div>
                           </td>
                           <td className="px-5 py-3 capitalize text-app-soft">{u.role}</td>
                           <td className="px-5 py-3">
-                            {isOut ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                <CheckCircle2 className="w-3 h-3" /> Completed
-                              </span>
-                            ) : isIn ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
-                                Absent
-                              </span>
-                            )}
+                            {a?.clockIn ? (
+                              <span className="text-green-500 font-semibold">{fmtTime(a.clockIn)}</span>
+                            ) : <span className="text-app-soft">—</span>}
                           </td>
-                          <td className="px-5 py-3 text-app-soft">{fmtTime(a?.clockIn)}</td>
-                          <td className="px-5 py-3 text-app-soft">{fmtTime(a?.clockOut)}</td>
-                          <td className="px-5 py-3 font-medium text-app">
-                            {isOut ? fmtDuration(a.totalMinutes) : isIn ? (
-                              <span className="text-green-500 font-bold"><LiveTimer since={a.clockIn} /></span>
-                            ) : "—"}
+                          <td className="px-5 py-3">
+                            {a?.clockOut ? (
+                              <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
+                            ) : <span className="text-app-soft">—</span>}
                           </td>
+                          <td className="px-5 py-3 font-bold text-app">
+                            {isOut ? fmtDuration(a.totalMinutes) :
+                             isIn  ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span> : "—"}
+                          </td>
+                          <td className="px-5 py-3"><StatusBadge a={a} /></td>
                         </tr>
                       );
                     })}
+                    {teamToday.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -315,8 +336,10 @@ export default function Attendance() {
       {/* ── Records tab ── */}
       {tab === "records" && (
         <div className="px-4 lg:px-6 pt-4 pb-6">
+
           {/* Filters */}
           <div className="flex items-center gap-3 flex-wrap mb-4">
+            <Filter className="w-4 h-4 text-app-soft flex-shrink-0" />
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">From</label>
               <input type="date" className="input text-xs py-1.5 px-3" value={from}
@@ -327,17 +350,29 @@ export default function Attendance() {
               <input type="date" className="input text-xs py-1.5 px-3" value={to}
                 onChange={e => { setTo(e.target.value); setPage(1); }} />
             </div>
+            {isAdmin && teamMembers.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-app-soft font-medium">Member</label>
+                <select className="input text-xs py-1.5 px-3" value={filterUser}
+                  onChange={e => { setFilterUser(e.target.value); setPage(1); }}>
+                  <option value="">All members</option>
+                  {teamMembers.map(m => (
+                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <span className="text-xs text-app-soft">{total} record{total !== 1 ? "s" : ""}</span>
           </div>
 
           {listLoading ? (
             <div className="flex justify-center py-16"><Spinner size="lg" /></div>
           ) : records.length === 0 ? (
-            <EmptyState icon={Timer} title="No attendance records" desc="No records found for the selected date range." />
+            <EmptyState icon={Timer} title="No attendance records" desc="No records found for the selected filters." />
           ) : (
             <div className="card overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[600px]">
+                <table className="w-full text-xs min-w-[640px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                       {[
@@ -361,32 +396,28 @@ export default function Attendance() {
                           {isAdmin && (
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 text-[10px] font-bold flex-shrink-0">
+                                <div className="w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 text-[10px] font-bold flex-shrink-0">
                                   {rec.userId?.name?.[0]?.toUpperCase()}
                                 </div>
                                 <div>
                                   <p className="font-semibold text-app">{rec.userId?.name}</p>
-                                  <p className="text-app-soft capitalize">{rec.userId?.role}</p>
+                                  <p className="text-app-soft capitalize text-[10px]">{rec.userId?.role}</p>
                                 </div>
                               </div>
                             </td>
                           )}
-                          <td className="px-5 py-3 text-app-soft">{fmtTime(rec.clockIn)}</td>
-                          <td className="px-5 py-3 text-app-soft">{fmtTime(rec.clockOut)}</td>
-                          <td className="px-5 py-3 font-medium text-app">{fmtDuration(rec.totalMinutes)}</td>
                           <td className="px-5 py-3">
-                            {isOut ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                <CheckCircle2 className="w-3 h-3" /> Completed
-                              </span>
-                            ) : isIn ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
-                              </span>
-                            ) : (
-                              <span className="text-app-soft">—</span>
-                            )}
+                            <span className="text-green-500 font-semibold">{fmtTime(rec.clockIn)}</span>
                           </td>
+                          <td className="px-5 py-3">
+                            {rec.clockOut
+                              ? <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
+                              : isIn
+                                ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
+                                : <span className="text-app-soft">—</span>}
+                          </td>
+                          <td className="px-5 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
+                          <td className="px-5 py-3"><StatusBadge a={rec} /></td>
                         </tr>
                       );
                     })}

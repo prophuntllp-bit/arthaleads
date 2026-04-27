@@ -28,11 +28,13 @@ const navItems = [
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
 
-// Live elapsed clock timer
+// Live elapsed clock timer — recalculates correctly when `since` arrives async
 function useLiveClock(since) {
-  const [secs, setSecs] = useState(() => since ? Math.floor((Date.now() - new Date(since)) / 1000) : 0);
+  const [secs, setSecs] = useState(0);
   useEffect(() => {
-    if (!since) return;
+    if (!since) { setSecs(0); return; }
+    // Seed with real elapsed time whenever `since` changes (e.g. after API fetch)
+    setSecs(Math.floor((Date.now() - new Date(since)) / 1000));
     const iv = setInterval(() => setSecs(s => s + 1), 1000);
     return () => clearInterval(iv);
   }, [since]);
