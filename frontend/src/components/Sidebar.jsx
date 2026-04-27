@@ -200,11 +200,12 @@ export default function Sidebar() {
             />
           </div>
           <p className="text-sm font-bold text-app leading-tight truncate w-full mb-2.5">{org.name}</p>
-          {/* Powered by ArthaLeads — clearly visible below org name */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+          {/* Powered by ArthaLeads */}
+          <p className="text-[9px] font-medium text-app-soft mb-1 tracking-wide">Powered By —</p>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            <img src="/logo.png" alt="ArthaLeads" className="w-4 h-4 rounded-md object-cover flex-shrink-0" />
-            <span className="text-[10px] font-bold leading-none">
+            <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover flex-shrink-0" />
+            <span className="text-xs font-bold leading-none">
               <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
             </span>
           </div>
