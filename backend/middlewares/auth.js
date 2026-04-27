@@ -35,14 +35,15 @@ const protect = async (req, res, next) => {
 
 // ── Authorize: restrict to specific roles ─────────────────────────────────────
 // Usage: authorize("admin", "manager")
+// super_admin bypasses all role gates (platform-level access)
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return next(
-        new AppError(`Access denied. Required role: ${roles.join(" or ")}`, 403)
-      );
+    if (req.user.role === "super_admin" || roles.includes(req.user.role)) {
+      return next();
     }
-    next();
+    return next(
+      new AppError(`Access denied. Required role: ${roles.join(" or ")}`, 403)
+    );
   };
 };
 
