@@ -208,7 +208,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
         {filtered.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -399,7 +399,7 @@ export default function Sidebar() {
       )}
 
       <div
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col overflow-hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{ overscrollBehavior: "contain" }}
       >
         <NavContent />
