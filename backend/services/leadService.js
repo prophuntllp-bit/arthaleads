@@ -366,7 +366,7 @@ const leadService = {
     }
 
     // Project leads: pre-$addFields filter (fields that exist in the raw doc)
-    const projFilter = { booking: { $ne: "Not Interested" } };
+    const projFilter = { booking: { $ne: "Not Interested" }, orgId: user.orgId };
     if (source) projFilter.source = source;
     if (followUpToday === "true" || followUpToday === true) {
       projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
@@ -518,7 +518,7 @@ const leadService = {
       leadFilter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
     }
 
-    const projFilter = { booking: "Not Interested" };
+    const projFilter = { booking: "Not Interested", orgId: user.orgId };
     if (user.role === "agent") projFilter.importedBy = user._id;
 
     const [regularLeads, projectLeads] = await Promise.all([
