@@ -56,6 +56,7 @@ export default function Sidebar() {
   const [dropdownPos, setDropdownPos] = useState({ top: 80, left: 268, right: undefined });
   const alertRef = useRef(null);
   const mobileBellRef = useRef(null);
+  const mobileSidebarRef = useRef(null);
   const lastSeenRef = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
 
   // ── Clock In / Out state ──────────────────────────────────────────────────
@@ -90,21 +91,29 @@ export default function Sidebar() {
     finally { setClocking(false); }
   };
 
-  // Lock body scroll when mobile sidebar is open (works on iOS too)
-  // overflow:hidden alone doesn't stop iOS rubber-band scroll — position:fixed does.
+  // Prevent background page scroll while sidebar is open.
+  // Strategy: block touchmove on document UNLESS the touch originates inside
+  // the sidebar panel — that lets the nav scroll freely on iOS/Android.
+  // Also block wheel events on the body for desktop.
   useEffect(() => {
     if (!open) return;
-    const scrollY = window.scrollY;
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
+
+    const preventScroll = (e) => {
+      if (mobileSidebarRef.current && mobileSidebarRef.current.contains(e.target)) return;
+      e.preventDefault();
+    };
+
+    const prevWheelBody = (e) => {
+      if (mobileSidebarRef.current && mobileSidebarRef.current.contains(e.target)) return;
+      e.preventDefault();
+    };
+
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+    document.addEventListener("wheel",     prevWheelBody, { passive: false });
+
     return () => {
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.width = "";
-      document.body.style.overflow = "";
-      window.scrollTo(0, scrollY);   // restore exact scroll position
+      document.removeEventListener("touchmove", preventScroll);
+      document.removeEventListener("wheel",     prevWheelBody);
     };
   }, [open]);
 
@@ -399,6 +408,7 @@ export default function Sidebar() {
       )}
 
       <div
+        ref={mobileSidebarRef}
         className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{ overscrollBehavior: "contain" }}
       >
