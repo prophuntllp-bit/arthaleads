@@ -4,27 +4,44 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
+import toast from "react-hot-toast";
 // subscribeToPush is now handled by NotificationBanner in App.jsx (requires user gesture)
 
 const navItems = [
-  { to: "/",           label: "Dashboard",    icon: LayoutDashboard },
-  { to: "/leads",      label: "Leads",        icon: Users },
-  { to: "/pipeline",   label: "Pipeline",     icon: Kanban },
-  { to: "/projects",   label: "Projects",     icon: FolderKanban },
-  { to: "/followups",  label: "Follow Ups",   icon: CalendarClock },
-  { to: "/dump-leads", label: "Dump Leads",   icon: Archive, roles: ["admin", "manager"] },
-  { to: "/team",       label: "Team",         icon: UserCheck, roles: ["admin"] },
-  { to: "/automation", label: "Automation",   icon: Workflow, roles: ["admin", "manager"] },
-  { to: "/performance",label: "Performance",  icon: BarChart3, roles: ["admin", "manager"] },
-  { to: "/settings",   label: "Settings",     icon: Settings },
+  { to: "/",            label: "Dashboard",    icon: LayoutDashboard },
+  { to: "/leads",       label: "Leads",        icon: Users },
+  { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
+  { to: "/projects",    label: "Projects",     icon: FolderKanban },
+  { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
+  { to: "/attendance",  label: "Attendance",   icon: Clock },
+  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive, roles: ["admin", "manager"] },
+  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin"] },
+  { to: "/automation",  label: "Automation",   icon: Workflow, roles: ["admin", "manager"] },
+  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager"] },
+  { to: "/settings",    label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
+
+// Live elapsed clock timer
+function useLiveClock(since) {
+  const [secs, setSecs] = useState(() => since ? Math.floor((Date.now() - new Date(since)) / 1000) : 0);
+  useEffect(() => {
+    if (!since) return;
+    const iv = setInterval(() => setSecs(s => s + 1), 1000);
+    return () => clearInterval(iv);
+  }, [since]);
+  if (!since) return null;
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -38,6 +55,38 @@ export default function Sidebar() {
   const alertRef = useRef(null);
   const mobileBellRef = useRef(null);
   const lastSeenRef = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
+
+  // ── Clock In / Out state ──────────────────────────────────────────────────
+  const [clockStatus, setClockStatus] = useState(null); // null | attendance doc
+  const [clocking, setClocking] = useState(false);
+  const clockTimer = useLiveClock(clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null);
+
+  const fetchClockStatus = useCallback(() => {
+    if (!user) return;
+    api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
+  }, [user]);
+
+  useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
+
+  const handleClockIn = async () => {
+    setClocking(true);
+    try {
+      const r = await api.post("/attendance/clockin");
+      setClockStatus(r.data.data);
+      toast.success("Clocked in!");
+    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
+    finally { setClocking(false); }
+  };
+
+  const handleClockOut = async () => {
+    setClocking(true);
+    try {
+      const r = await api.post("/attendance/clockout");
+      setClockStatus(r.data.data);
+      toast.success("Clocked out! Great work today.");
+    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
+    finally { setClocking(false); }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -183,6 +232,43 @@ export default function Sidebar() {
               <p className="text-xs capitalize text-app-soft">{user?.role}</p>
             </div>
           </div>
+
+          {/* ── Clock In / Out button ── */}
+          {(() => {
+            const isClockedIn  = clockStatus?.clockIn && !clockStatus?.clockOut;
+            const isClockedOut = clockStatus?.clockIn && clockStatus?.clockOut;
+            return (
+              <div className="mb-2">
+                {isClockedOut ? (
+                  <div className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                    <Clock className="w-3.5 h-3.5 text-app-soft flex-shrink-0" />
+                    <span className="text-app-soft">Done today</span>
+                  </div>
+                ) : isClockedIn ? (
+                  <button
+                    onClick={handleClockOut}
+                    disabled={clocking}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm rounded-xl transition-all font-semibold text-red-500 hover:bg-red-500/10 disabled:opacity-60"
+                  >
+                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleClockIn}
+                    disabled={clocking}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm rounded-xl transition-all font-semibold text-green-600 hover:bg-green-500/10 disabled:opacity-60"
+                  >
+                    <LogInIcon className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left">Clock In</span>
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-red-500 hover:bg-red-500/10"

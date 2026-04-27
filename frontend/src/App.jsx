@@ -224,6 +224,7 @@ import Projects      from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
 import FollowUps     from "./pages/FollowUps";
+import Attendance    from "./pages/Attendance";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -290,6 +291,7 @@ export default function App() {
           <Route path="/projects"      element={<Projects />} />
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
+          <Route path="/attendance"    element={<Attendance />} />
 
           {/* Admin only */}
           <Route element={<RequireRole roles={["admin"]} />}>

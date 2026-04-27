@@ -105,7 +105,8 @@ app.use("/api/routing-rules", require("./routes/routingRuleRoutes"));
 app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));
-app.use("/api/followups", require("./routes/followupRoutes"));
+app.use("/api/followups",   require("./routes/followupRoutes"));
+app.use("/api/attendance", require("./routes/attendanceRoutes"));
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
