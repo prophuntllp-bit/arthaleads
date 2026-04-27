@@ -188,22 +188,25 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* ── Sidebar header: org logo if set, else default ArthaLeads branding ── */}
       {org?.logo ? (
-        /* Custom org logo — org takes center stage, ArthaLeads in corner */
-        <div className="px-4 pt-5 pb-4 flex flex-col items-center text-center relative">
+        /* Custom org logo — org takes center stage, ArthaLeads branding below */
+        <div className="px-4 pt-5 pb-4 flex flex-col items-center text-center">
           {/* Org logo - prominent center */}
-          <div className="w-20 h-16 flex items-center justify-center mb-2">
+          <div className="w-24 h-20 flex items-center justify-center mb-2 rounded-2xl overflow-hidden p-1"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <img
               src={org.logo}
               alt={org.name}
               className="max-w-full max-h-full object-contain"
-              style={{ borderRadius: 8 }}
             />
           </div>
-          <p className="text-sm font-bold text-app leading-tight truncate w-full">{org.name}</p>
-          {/* Powered by ArthaLeads — small, bottom-right corner */}
-          <div className="absolute top-3 right-3 flex items-center gap-1 opacity-60">
-            <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover" />
-            <span className="text-[8px] font-bold text-app-soft leading-none">AL</span>
+          <p className="text-sm font-bold text-app leading-tight truncate w-full mb-2.5">{org.name}</p>
+          {/* Powered by ArthaLeads — clearly visible below org name */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <img src="/logo.png" alt="ArthaLeads" className="w-4 h-4 rounded-md object-cover flex-shrink-0" />
+            <span className="text-[10px] font-bold leading-none">
+              <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+            </span>
           </div>
         </div>
       ) : (
