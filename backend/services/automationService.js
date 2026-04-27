@@ -1,9 +1,8 @@
 ﻿const jwt = require("jsonwebtoken");
 const Automation = require("../models/Automation");
+const OAuthSession = require("../models/OAuthSession");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
-
-const oauthStore = new Map();
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -374,19 +373,19 @@ const automationService = {
     return { pages, freshToken: userAccessToken };
   },
 
-  storeOAuthResult(sessionId, data) {
-    oauthStore.set(sessionId, { data, expiresAt: Date.now() + 5 * 60 * 1000 });
-    // cleanup expired
-    for (const [id, v] of oauthStore) {
-      if (v.expiresAt < Date.now()) oauthStore.delete(id);
-    }
+  async storeOAuthResult(sessionId, data) {
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    await OAuthSession.findOneAndUpdate(
+      { sessionId },
+      { sessionId, data, expiresAt },
+      { upsert: true }
+    );
   },
 
-  getOAuthResult(sessionId) {
-    const entry = oauthStore.get(sessionId);
-    if (!entry || entry.expiresAt < Date.now()) return null;
-    oauthStore.delete(sessionId); // one-time use
-    return entry.data;
+  async getOAuthResult(sessionId) {
+    const entry = await OAuthSession.findOneAndDelete({ sessionId });
+    if (!entry || entry.expiresAt < new Date()) return null;
+    return entry.data; // one-time use (deleted above)
   },
 };
 

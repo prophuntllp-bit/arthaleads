@@ -88,7 +88,7 @@ export default function Projects() {
           {projects.map((proj) => (
             <div
               key={proj._id}
-              className="card cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+              className="group card cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
               onClick={() => navigate(`/projects/${proj._id}`)}
             >
               {/* Image */}

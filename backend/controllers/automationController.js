@@ -178,11 +178,11 @@ const automationController = {
       if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned — user may not have approved pages_show_list or has no admin pages");
 
       const sessionId = require("crypto").randomBytes(16).toString("hex");
-      automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
+      await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
       return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     } catch (err) {
       const sessionId = require("crypto").randomBytes(16).toString("hex");
-      automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Facebook connection failed" });
+      await automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Facebook connection failed" });
       return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     }
   },
@@ -190,7 +190,7 @@ const automationController = {
   async getFacebookResult(req, res) {
     const { session } = req.query;
     if (!session) return res.status(400).json({ error: "Missing session" });
-    const result = automationService.getOAuthResult(session);
+    const result = await automationService.getOAuthResult(session);
     if (!result) return res.status(404).json({ error: "Session not found or expired" });
     return res.json(result);
   },

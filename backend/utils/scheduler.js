@@ -13,11 +13,29 @@ function getTodayRange() {
   return { start, end };
 }
 
+// Cache managers per org to avoid redundant queries within a single scheduler run
+async function getManagersByOrg(orgIds) {
+  const managers = await User.find({
+    orgId: { $in: orgIds },
+    role: { $in: ["admin", "manager"] },
+  }).select("_id orgId").lean();
+
+  // Map orgId -> [userId, ...]
+  const map = {};
+  for (const m of managers) {
+    const key = String(m.orgId);
+    if (!map[key]) map[key] = [];
+    map[key].push(m._id);
+  }
+  return map;
+}
+
 async function notifyLeads(leads, labelFn) {
   if (!leads.length) return;
 
-  const managers = await User.find({ role: { $in: ["admin", "manager"] } }).select("_id").lean();
-  const managerIds = managers.map((u) => u._id);
+  // Collect distinct orgIds so we only query managers for relevant orgs
+  const orgIds = [...new Set(leads.map((l) => l.orgId).filter(Boolean).map(String))];
+  const managersByOrg = await getManagersByOrg(orgIds);
 
   for (const lead of leads) {
     const payload = {
@@ -30,7 +48,9 @@ async function notifyLeads(leads, labelFn) {
       await sendPushToUser(lead.assignedTo, payload);
     }
 
-    for (const managerId of managerIds) {
+    // Only notify managers/admins from the same org
+    const orgManagers = managersByOrg[String(lead.orgId)] || [];
+    for (const managerId of orgManagers) {
       if (lead.assignedTo && managerId.toString() === lead.assignedTo.toString()) continue;
       await sendPushToUser(managerId, payload);
     }
@@ -45,13 +65,20 @@ async function runDailyReminder() {
     followUpDate: { $gte: start, $lte: end },
     isArchived: false,
     isDeleted: { $ne: true },
-  }).select("name phone assignedTo followUpDate").lean();
+  }).select("name phone assignedTo followUpDate orgId").lean();
 
+  // ProjectLead now has orgId; for legacy rows without orgId, resolve via project
   const projLeads = await ProjectLead.find({
     followUp: { $gte: start, $lte: end },
-  }).select("name phone assignedTo followUp").lean();
+  }).populate("project", "orgId").select("name phone followUp project orgId").lean();
 
-  const allLeads = [...leads, ...projLeads];
+  // Ensure orgId is set (fallback to project.orgId for legacy docs without orgId)
+  const normalizedProjLeads = projLeads.map((l) => ({
+    ...l,
+    orgId: l.orgId || l.project?.orgId,
+  }));
+
+  const allLeads = [...leads, ...normalizedProjLeads];
 
   if (!allLeads.length) {
     logger.info("Daily reminder: no follow-ups today");
@@ -72,13 +99,18 @@ async function runUpcomingReminder() {
     followUpDate: { $gte: windowStart, $lt: windowEnd },
     isArchived: false,
     isDeleted: { $ne: true },
-  }).select("name phone assignedTo followUpDate").lean();
+  }).select("name phone assignedTo followUpDate orgId").lean();
 
   const projLeads = await ProjectLead.find({
     followUp: { $gte: windowStart, $lt: windowEnd },
-  }).select("name phone assignedTo followUp").lean();
+  }).populate("project", "orgId").select("name phone followUp project orgId").lean();
 
-  const allLeads = [...leads, ...projLeads];
+  const normalizedProjLeads = projLeads.map((l) => ({
+    ...l,
+    orgId: l.orgId || l.project?.orgId,
+  }));
+
+  const allLeads = [...leads, ...normalizedProjLeads];
   if (!allLeads.length) return;
 
   logger.info(`Upcoming reminder: ${allLeads.length} follow-up(s) in ~10 minutes`);

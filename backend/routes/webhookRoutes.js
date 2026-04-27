@@ -204,15 +204,13 @@ router.post("/", express.json(), async (req, res) => {
         if (change.field !== "leadgen") continue;
 
         const leadData = change.value || {};
-        let automation = await findFacebookAutomationByPayload(leadData);
-
-        // Fall back to any active Facebook automation (handles test leads with fake IDs)
-        if (!automation) {
-          automation = await Automation.findOne({ platform: "Facebook", isActive: true }).sort({ updatedAt: -1 });
-        }
+        // findFacebookAutomationByPayload already scopes by page_id / form_id.
+        // Removed the cross-org catch-all fallback — it could route leads to the
+        // wrong tenant's pipeline when page_id is absent (e.g. test payloads).
+        const automation = await findFacebookAutomationByPayload(leadData);
 
         if (!automation) {
-          logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no active Facebook automation found`);
+          logger.warn(`Facebook webhook skipped lead ${leadData.leadgen_id || "unknown"}: no matching active Facebook automation found`);
           continue;
         }
 

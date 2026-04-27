@@ -48,10 +48,18 @@ const projectLeadSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    // Tenant isolation — mirrors the parent Project's orgId for direct queries
+    orgId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      index: true,
+    },
   },
   { timestamps: true }
 );
 
 projectLeadSchema.index({ project: 1, createdAt: -1 });
+projectLeadSchema.index({ orgId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("ProjectLead", projectLeadSchema);

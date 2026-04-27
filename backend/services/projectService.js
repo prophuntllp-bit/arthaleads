@@ -65,9 +65,9 @@ const projectService = {
     return project;
   },
 
-  async update(id, data) {
+  async update(id, data, user) {
     const project = await Project.findOneAndUpdate(
-      { _id: id, isArchived: false },
+      { _id: id, isArchived: false, orgId: user.orgId },
       data,
       { new: true, runValidators: true }
     );
@@ -75,9 +75,9 @@ const projectService = {
     return project;
   },
 
-  async remove(id) {
+  async remove(id, user) {
     const project = await Project.findOneAndUpdate(
-      { _id: id, isArchived: false },
+      { _id: id, isArchived: false, orgId: user.orgId },
       { isArchived: true },
       { new: true }
     );
@@ -86,8 +86,8 @@ const projectService = {
   },
 
   async importLeads(projectId, rows, user) {
-    // Verify project exists
-    const project = await Project.findOne({ _id: projectId, isArchived: false });
+    // Verify project belongs to the same org
+    const project = await Project.findOne({ _id: projectId, isArchived: false, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
 
     const valid = rows.filter((r) => r.name && r.phone);
@@ -99,14 +99,19 @@ const projectService = {
       phone: r.phone,
       email: r.email || "",
       source: r.source || "Facebook",
+      remarkNote: r.remarkNote || "",  // preserve custom Facebook form answers
       importedBy: user._id,
+      orgId: user.orgId,  // propagate tenant id for direct filtering
     }));
 
     const inserted = await ProjectLead.insertMany(docs, { ordered: false });
     return { inserted: inserted.length, skipped: rows.length - valid.length };
   },
 
-  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }) {
+  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }, user) {
+    // Verify the project belongs to the requesting user's org
+    const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
+    if (!project) throw new AppError("Project not found", 404);
     const filter = { project: projectId };
     if (search) {
       const re = new RegExp(search, "i");
@@ -145,9 +150,11 @@ const projectService = {
     return lead;
   },
 
-  async updateLeadFields(leadId, data) {
-    const lead = await ProjectLead.findById(leadId);
+  async updateLeadFields(leadId, data, user) {
+    // Scope by orgId: look up via parent project
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId");
     if (!lead) throw new AppError("Lead not found", 404);
+    if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
 
     // Only update fields that exist in the ProjectLead schema
     const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "followUp", "followUp2", "booking"];
@@ -157,9 +164,11 @@ const projectService = {
     return lead;
   },
 
-  async deleteLead(leadId) {
-    const lead = await ProjectLead.findByIdAndDelete(leadId);
+  async deleteLead(leadId, user) {
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId");
     if (!lead) throw new AppError("Lead not found", 404);
+    if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    await lead.deleteOne();
   },
 
   async bulkDeleteLeads(projectId, ids) {
@@ -168,6 +177,9 @@ const projectService = {
   },
 
   async transferLead(leadId, fromProjectId, { toProjectId, toLeads, source }, user) {
+    // Ensure source project belongs to the user's org
+    const fromProject = await Project.findOne({ _id: fromProjectId, orgId: user.orgId });
+    if (!fromProject) throw new AppError("Source project not found", 404);
     const lead = await ProjectLead.findOne({ _id: leadId, project: fromProjectId });
     if (!lead) throw new AppError("Lead not found", 404);
 

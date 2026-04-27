@@ -95,7 +95,7 @@ const leadService = {
     let assignedToName = "";
 
     if (data.assignedTo) {
-      const agent = await User.findById(data.assignedTo);
+      const agent = await User.findOne({ _id: data.assignedTo, orgId: user.orgId });
       if (!agent) throw new AppError("Assigned agent not found", 404);
       assignedToName = agent.name;
     }
@@ -220,7 +220,7 @@ const leadService = {
     if ("assignedTo" in updates) {
       if (updates.assignedTo) {
         if (updates.assignedTo !== lead.assignedTo?.toString()) {
-          const agent = await User.findById(updates.assignedTo);
+          const agent = await User.findOne({ _id: updates.assignedTo, orgId: user.orgId });
           if (!agent) throw new AppError("Agent not found", 404);
           updates.assignedToName = agent.name;
           logActivity(lead, "assigned", `Assigned to ${agent.name}`, user, { agentId: agent._id, agentName: agent.name });
@@ -310,43 +310,38 @@ const leadService = {
 
   // ── Analytics ──────────────────────────────────────────────────────────────
   async bulkImport(leads, user) {
-    const imported = [];
-
+    // Phase 1: validate all assignees before touching the DB (prevents partial imports)
+    const assigneeCache = {};
     for (const item of leads) {
-      let assignedToName = "";
-
-      if (item.assignedTo) {
-        const agent = await User.findById(item.assignedTo);
-        if (!agent) throw new AppError(`Assigned agent not found for ${item.name}`, 404);
-        assignedToName = agent.name;
+      if (item.assignedTo && !assigneeCache[item.assignedTo]) {
+        const agent = await User.findOne({ _id: item.assignedTo, orgId: user.orgId });
+        if (!agent) throw new AppError(`Assigned agent not found: ${item.assignedTo}`, 404);
+        assigneeCache[item.assignedTo] = agent.name;
       }
+    }
 
-      const lead = new Lead({
+    // Phase 2: build all docs in memory
+    const docs = leads.map((item) => {
+      const assignedToName = item.assignedTo ? (assigneeCache[item.assignedTo] || "") : "";
+      const activities = [
+        { type: "created", description: `Lead imported by ${user.name}`, performedBy: user._id, performedByName: user.name },
+      ];
+      if (item.assignedTo) {
+        activities.push({ type: "assigned", description: `Assigned to ${assignedToName}`, performedBy: user._id, performedByName: user.name, meta: { agentId: item.assignedTo, agentName: assignedToName } });
+      }
+      return {
         ...item,
-        budget: {
-          min: item.budget?.min || 0,
-          max: item.budget?.max || 0,
-          currency: item.budget?.currency || "INR",
-        },
+        budget: { min: item.budget?.min || 0, max: item.budget?.max || 0, currency: item.budget?.currency || "INR" },
         orgId: user.orgId,
         createdBy: user._id,
         assignedToName,
-      });
+        activities,
+      };
+    });
 
-      logActivity(lead, "created", `Lead imported by ${user.name}`, user);
-
-      if (item.assignedTo) {
-        logActivity(lead, "assigned", `Assigned to ${assignedToName}`, user, {
-          agentId: item.assignedTo,
-          agentName: assignedToName,
-        });
-      }
-
-      await lead.save();
-      imported.push(lead);
-    }
-
-    return imported;
+    // Phase 3: insertMany is atomic per batch; if it throws, nothing is persisted
+    const inserted = await Lead.insertMany(docs, { ordered: true });
+    return inserted;
   },
 
   async getAllUnified(query, user) {
@@ -354,16 +349,11 @@ const leadService = {
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
 
     const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
-    if (status) {
-      leadFilter.status = status;
-      // "New" leads older than 2 days are stale — exclude them
-      if (status === "New") leadFilter.createdAt = { $gte: twoDaysAgo };
-    }
-    if (source) leadFilter.source = source;
+    if (status)   leadFilter.status   = status;
+    if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
@@ -389,10 +379,7 @@ const leadService = {
 
     // Post-$addFields filter: status/priority need defaults applied first
     const projPostFilter = {};
-    if (status) {
-      projPostFilter.status = status;
-      if (status === "New") projPostFilter.createdAt = { $gte: twoDaysAgo };
-    }
+    if (status)   projPostFilter.status   = status;
     if (priority) projPostFilter.priority = priority;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);

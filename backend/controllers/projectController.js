@@ -26,14 +26,14 @@ const projectController = {
 
   async update(req, res, next) {
     try {
-      const project = await projectService.update(req.params.id, req.body);
+      const project = await projectService.update(req.params.id, req.body, req.user);
       res.json({ success: true, data: project });
     } catch (err) { next(err); }
   },
 
   async remove(req, res, next) {
     try {
-      await projectService.remove(req.params.id);
+      await projectService.remove(req.params.id, req.user);
       res.json({ success: true, message: "Project archived" });
     } catch (err) { next(err); }
   },
@@ -57,7 +57,7 @@ const projectController = {
         limit: parseInt(limit) || 50,
         search: search || "",
         bookingIn: bookingIn || null,
-      });
+      }, req.user);
       res.json({ success: true, ...result });
     } catch (err) { next(err); }
   },
@@ -76,14 +76,14 @@ const projectController = {
 
   async updateLeadFields(req, res, next) {
     try {
-      const lead = await projectService.updateLeadFields(req.params.leadId, req.body);
+      const lead = await projectService.updateLeadFields(req.params.leadId, req.body, req.user);
       res.json({ success: true, data: lead });
     } catch (err) { next(err); }
   },
 
   async deleteLead(req, res, next) {
     try {
-      await projectService.deleteLead(req.params.leadId);
+      await projectService.deleteLead(req.params.leadId, req.user);
       res.json({ success: true, message: "Lead deleted" });
     } catch (err) { next(err); }
   },

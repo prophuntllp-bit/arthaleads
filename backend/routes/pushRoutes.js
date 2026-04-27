@@ -26,11 +26,12 @@ router.post("/subscribe", protect, async (req, res) => {
   }
 });
 
-// DELETE /api/push/subscribe — remove a subscription
+// DELETE /api/push/subscribe — remove a subscription (scoped to current user)
 router.delete("/subscribe", protect, async (req, res) => {
   try {
     const { endpoint } = req.body;
-    await PushSubscription.deleteOne({ endpoint });
+    // Include userId so a user can only delete their own subscriptions
+    await PushSubscription.deleteOne({ endpoint, userId: req.user._id });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -74,13 +74,20 @@ const authService = {
       }
       if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
     } else {
-      // New user — create account (role defaults to agent, admin can change via Team page)
+      // New Google user — create their own org and make them admin
+      const orgName = `${name}'s Workspace`;
+      let slug = Organization.generateSlug(orgName);
+      const slugExists = await Organization.findOne({ slug });
+      if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
+      const org = await Organization.create({ name: orgName, slug });
+
       user = await User.create({
         name,
         email,
         googleId,
         avatar: picture || "",
-        role: "agent",
+        role: "admin",
+        orgId: org._id,
       });
     }
 

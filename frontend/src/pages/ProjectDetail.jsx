@@ -55,15 +55,38 @@ function cleanPhone(raw) {
     .trim();
 }
 
+// Standard contact columns (Facebook Graph API style + common spreadsheet headers)
+const STANDARD_IMPORT_KEYS = new Set([
+  "full name", "full_name", "name", "customer name", "lead name",
+  "phone number", "phone_number", "phone", "mobile", "contact",
+  "mobile number", "ph", "number", "mob", "whatsapp", "contact number", "cell",
+  "email", "email address", "email_address", "mail",
+  "source", "lead source",
+]);
+
 function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
-  const name     = r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
-  const rawPhone = r["phone number"] || r["phone"] || r["mobile"] || r["contact"] || r["mobile number"] || r["ph"] || r["number"] || r["mob"] || r["whatsapp"] || r["contact number"] || r["cell"] || "";
-  const phone    = cleanPhone(rawPhone);
-  const email    = r["email"] || r["email address"] || r["mail"] || "";
-  const source   = r["source"] || r["lead source"] || "Facebook";
-  return { name, phone, email, source };
+
+  // Name: support both spreadsheet headers and Facebook's full_name field
+  const name = r["full_name"] || r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
+
+  // Phone: support Facebook's phone_number and all common variants
+  const rawPhone = r["phone_number"] || r["phone number"] || r["phone"] || r["mobile"] ||
+    r["contact"] || r["mobile number"] || r["ph"] || r["number"] || r["mob"] ||
+    r["whatsapp"] || r["contact number"] || r["cell"] || "";
+  const phone = cleanPhone(rawPhone);
+
+  const email  = r["email_address"] || r["email address"] || r["email"] || r["mail"] || "";
+  const source = r["source"] || r["lead source"] || "Facebook";
+
+  // Capture dynamic Facebook MCQ / custom form answers as structured notes
+  const extraAnswers = Object.entries(r)
+    .filter(([k, v]) => !STANDARD_IMPORT_KEYS.has(k) && v)
+    .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+    .join(" · ");
+
+  return { name, phone, email, source, remarkNote: extraAnswers || "" };
 }
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
@@ -875,7 +898,7 @@ export default function ProjectDetail() {
                           ? "bg-blue-500/10 text-blue-600 border-blue-500/25"
                           : "bg-violet-500/10 text-violet-600 border-violet-500/25";
                         return (
-                          <tr key={lead._id}>
+                          <tr key={lead._id} className="group">
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
                               <NameCell name={lead.name} bold />

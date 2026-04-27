@@ -26,7 +26,7 @@ const projectSchema = new mongoose.Schema(
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     isArchived: { type: Boolean, default: false },
-    orgId:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+    orgId:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     createdBy:  { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }

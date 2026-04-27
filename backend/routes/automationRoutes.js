@@ -6,11 +6,14 @@ const { createAutomationSchema, updateAutomationSchema } = require("../validatio
 
 const router = express.Router();
 
+// Public OAuth endpoints (Facebook initiates/redirects here — no auth cookie possible)
 router.get("/facebook/connect", automationController.facebookConnect);
 router.get("/facebook/callback", automationController.facebookCallback);
-router.get("/facebook/result", automationController.getFacebookResult);
 
 router.use(protect, authorize("admin", "manager"));
+
+// Protected: only authenticated admin/manager can read the OAuth result
+router.get("/facebook/result", automationController.getFacebookResult);
 
 router.get("/website/token", automationController.getWebsiteToken);
 router.post("/website/create", automationController.createWebsiteConnection);
