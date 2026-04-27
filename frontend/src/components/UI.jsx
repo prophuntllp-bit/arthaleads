@@ -188,8 +188,12 @@ export function WhatsAppLink({ phone, onContact }) {
 
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 min-w-[190px] rounded-xl border py-1 shadow-xl"
-          style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
+          className="absolute left-0 top-full z-50 mt-1 min-w-[190px] rounded-xl border py-1 shadow-2xl"
+          style={{
+            background: "var(--wa-dropdown-bg, #ffffff)",
+            borderColor: "var(--app-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
+          }}
         >
           {/* WhatsApp Personal */}
           <a

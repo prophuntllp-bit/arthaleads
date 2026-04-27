@@ -90,6 +90,16 @@ export default function Sidebar() {
     finally { setClocking(false); }
   };
 
+  // Lock body scroll when mobile sidebar is open (prevents the scroll-jump bug)
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   useEffect(() => {
     if (!user) return;
     const fetchAlerts = () => {
@@ -346,12 +356,13 @@ export default function Sidebar() {
       {AlertsPortal}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
         style={{ borderColor: "var(--app-border)" }}>
-        <div className="flex items-center gap-2.5">
+        {/* Clickable logo → home */}
+        <NavLink to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow">
             <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
           <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
-        </div>
+        </NavLink>
         <div className="flex items-center gap-2">
           <div ref={mobileBellRef}>
             <button
@@ -380,7 +391,7 @@ export default function Sidebar() {
       )}
 
       <div
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col overflow-hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <NavContent />
       </div>
