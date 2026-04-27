@@ -225,6 +225,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
 import FollowUps     from "./pages/FollowUps";
 import Attendance    from "./pages/Attendance";
+import SuperAdmin    from "./pages/SuperAdmin";
 
 // ── Route guards ──────────────────────────────────────────────────────────────
 
@@ -252,8 +253,9 @@ function RequireAuth() {
 
 function RequireRole({ roles }) {
   const { user } = useAuth();
-  if (!roles.includes(user?.role)) return <Navigate to="/" replace />;
-  return <Outlet />;
+  // super_admin bypasses all role gates
+  if (user?.role === "super_admin" || roles.includes(user?.role)) return <Outlet />;
+  return <Navigate to="/" replace />;
 }
 
 function RedirectIfAuth() {
@@ -303,6 +305,11 @@ export default function App() {
             <Route path="/automation"  element={<Automation />} />
             <Route path="/performance" element={<Performance />} />
             <Route path="/dump-leads"  element={<DumpLeads />} />
+          </Route>
+
+          {/* Super Admin only */}
+          <Route element={<RequireRole roles={["super_admin"]} />}>
+            <Route path="/super-admin" element={<SuperAdmin />} />
           </Route>
         </Route>
 

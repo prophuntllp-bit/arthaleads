@@ -33,8 +33,8 @@ const authController = {
 
   async getMe(req, res, next) {
     try {
-      const user = await authService.getMe(req.user._id);
-      res.json({ success: true, user });
+      const { user, org } = await authService.getMe(req.user._id);
+      res.json({ success: true, user, org });
     } catch (err) {
       next(err);
     }

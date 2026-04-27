@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -14,16 +14,17 @@ import toast from "react-hot-toast";
 // subscribeToPush is now handled by NotificationBanner in App.jsx (requires user gesture)
 
 const navItems = [
+  { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"] },
   { to: "/",            label: "Dashboard",    icon: LayoutDashboard },
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
   { to: "/attendance",  label: "Attendance",   icon: Clock },
-  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive, roles: ["admin", "manager"] },
-  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin"] },
-  { to: "/automation",  label: "Automation",   icon: Workflow, roles: ["admin", "manager"] },
-  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager"] },
+  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive, roles: ["admin", "manager", "super_admin"] },
+  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "super_admin"] },
+  { to: "/automation",  label: "Automation",   icon: Workflow, roles: ["admin", "manager", "super_admin"] },
+  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"] },
   { to: "/settings",    label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
@@ -46,7 +47,7 @@ function useLiveClock(since) {
 }
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user, org, logout } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -185,19 +186,42 @@ export default function Sidebar() {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      <div className="px-5 pt-6 pb-5 flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg mb-3">
-          <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+      {/* ── Sidebar header: org logo if set, else default ArthaLeads branding ── */}
+      {org?.logo ? (
+        /* Custom org logo — org takes center stage, ArthaLeads in corner */
+        <div className="px-4 pt-5 pb-4 flex flex-col items-center text-center relative">
+          {/* Org logo - prominent center */}
+          <div className="w-20 h-16 flex items-center justify-center mb-2">
+            <img
+              src={org.logo}
+              alt={org.name}
+              className="max-w-full max-h-full object-contain"
+              style={{ borderRadius: 8 }}
+            />
+          </div>
+          <p className="text-sm font-bold text-app leading-tight truncate w-full">{org.name}</p>
+          {/* Powered by ArthaLeads — small, bottom-right corner */}
+          <div className="absolute top-3 right-3 flex items-center gap-1 opacity-60">
+            <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover" />
+            <span className="text-[8px] font-bold text-app-soft leading-none">AL</span>
+          </div>
         </div>
-        <p className="font-black text-base leading-none tracking-tight">
-          <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
-        </p>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
-          <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase">Turning Opportunities Into Value</p>
-          <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+      ) : (
+        /* Default ArthaLeads branding */
+        <div className="px-5 pt-6 pb-5 flex flex-col items-center text-center">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg mb-3">
+            <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+          </div>
+          <p className="font-black text-base leading-none tracking-tight">
+            <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+          </p>
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+            <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase">Turning Opportunities Into Value</p>
+            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Alerts bell - desktop sidebar */}
       <div className="px-3 pb-2">
@@ -375,10 +399,25 @@ export default function Sidebar() {
         style={{ borderColor: "var(--app-border)" }}>
         {/* Clickable logo → home */}
         <NavLink to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow">
-            <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
-          </div>
-          <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
+          {org?.logo ? (
+            <>
+              <div className="h-8 max-w-[80px] flex items-center flex-shrink-0">
+                <img src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 6 }} />
+              </div>
+              <span className="font-bold text-sm text-app truncate max-w-[100px]">{org.name}</span>
+              {/* Tiny ArthaLeads badge */}
+              <div className="flex items-center gap-1 opacity-50 flex-shrink-0">
+                <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover" />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow">
+                <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+              </div>
+              <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
+            </>
+          )}
         </NavLink>
         <div className="flex items-center gap-2">
           <div ref={mobileBellRef}>

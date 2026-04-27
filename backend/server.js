@@ -106,7 +106,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));
 app.use("/api/followups",   require("./routes/followupRoutes"));
-app.use("/api/attendance", require("./routes/attendanceRoutes"));
+app.use("/api/attendance",   require("./routes/attendanceRoutes"));
+app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

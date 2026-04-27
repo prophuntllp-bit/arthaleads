@@ -27,6 +27,7 @@ const orgSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     industry: { type: String, default: "Real Estate" },
+    logo: { type: String, default: "" },  // base64 data-URI or hosted URL
   },
   { timestamps: true }
 );

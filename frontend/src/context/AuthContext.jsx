@@ -5,12 +5,15 @@ import api from "../services/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(() => JSON.parse(localStorage.getItem("crm_user") || "null"));
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("crm_user") || "null"));
+  const [org,  setOrg]  = useState(() => JSON.parse(localStorage.getItem("crm_org")  || "null"));
   const [loading, setLoading] = useState(true);
 
-  const persistUser = useCallback((nextUser) => {
+  const persist = useCallback((nextUser, nextOrg) => {
     localStorage.setItem("crm_user", JSON.stringify(nextUser));
+    localStorage.setItem("crm_org",  JSON.stringify(nextOrg || null));
     setUser(nextUser);
+    setOrg(nextOrg || null);
   }, []);
 
   // Re-validate token on mount
@@ -19,57 +22,63 @@ export function AuthProvider({ children }) {
     if (!token) { setLoading(false); return; }
 
     api.get("/auth/me")
-      .then((r) => persistUser(r.data.user))
+      .then((r) => persist(r.data.user, r.data.org))
       .catch((err) => {
-        // Only force-logout on explicit 401 (invalid/expired token).
-        // Network errors or 5xx (Railway restarting) keep the user logged in.
         if (err.response?.status === 401) {
           localStorage.clear();
           setUser(null);
+          setOrg(null);
         }
       })
       .finally(() => setLoading(false));
-  }, [persistUser]);
+  }, [persist]);
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
     localStorage.setItem("crm_token", data.token);
-    persistUser(data.user);
+    persist(data.user, data.org);
     return data;
-  }, [persistUser]);
+  }, [persist]);
 
   const signup = useCallback(async (payload) => {
     const { data } = await api.post("/auth/signup", payload);
     localStorage.setItem("crm_token", data.token);
-    persistUser(data.user);
+    persist(data.user, data.org);
     return data;
-  }, [persistUser]);
+  }, [persist]);
 
   const googleLogin = useCallback(async (credential) => {
     const { data } = await api.post("/auth/google", { credential });
     localStorage.setItem("crm_token", data.token);
-    persistUser(data.user);
+    persist(data.user, data.org);
     return data;
-  }, [persistUser]);
+  }, [persist]);
 
   const refreshUser = useCallback(async () => {
     const { data } = await api.get("/auth/me");
-    persistUser(data.user);
+    persist(data.user, data.org);
     return data.user;
-  }, [persistUser]);
+  }, [persist]);
 
   const updateUserState = useCallback((nextUser) => {
-    persistUser(nextUser);
-  }, [persistUser]);
+    persist(nextUser, org);
+  }, [persist, org]);
+
+  const updateOrg = useCallback((nextOrg) => {
+    localStorage.setItem("crm_org", JSON.stringify(nextOrg));
+    setOrg(nextOrg);
+  }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem("crm_token");
     localStorage.removeItem("crm_user");
+    localStorage.removeItem("crm_org");
     setUser(null);
+    setOrg(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, logout, refreshUser, updateUserState }}>
+    <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, logout, refreshUser, updateUserState, updateOrg }}>
       {children}
     </AuthContext.Provider>
   );
