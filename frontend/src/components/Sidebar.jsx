@@ -90,14 +90,22 @@ export default function Sidebar() {
     finally { setClocking(false); }
   };
 
-  // Lock body scroll when mobile sidebar is open (prevents the scroll-jump bug)
+  // Lock body scroll when mobile sidebar is open (works on iOS too)
+  // overflow:hidden alone doesn't stop iOS rubber-band scroll — position:fixed does.
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
+    if (!open) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
       document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
+      window.scrollTo(0, scrollY);   // restore exact scroll position
+    };
   }, [open]);
 
   useEffect(() => {
@@ -392,6 +400,7 @@ export default function Sidebar() {
 
       <div
         className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col overflow-hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
+        style={{ overscrollBehavior: "contain" }}
       >
         <NavContent />
       </div>
