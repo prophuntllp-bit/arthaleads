@@ -144,9 +144,73 @@ export function PhoneActions({ phone, onContact }) {
   );
 }
 
+// Detect platform for deep-link strategy
+function getPlatform() {
+  const ua = navigator.userAgent || "";
+  if (/android/i.test(ua)) return "android";
+  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+  return "desktop";
+}
+
+// Open WhatsApp Personal specifically (package=com.whatsapp on Android)
+function openWAPersonal(waNumber) {
+  const platform = getPlatform();
+  if (platform === "android") {
+    // Android intent URL — targets com.whatsapp package only (personal WA)
+    // fallback_url is wa.me so if only WA Business is installed it still works via browser
+    const fallback = encodeURIComponent(`https://wa.me/${waNumber}`);
+    window.location.href =
+      `intent://send?phone=${waNumber}` +
+      `#Intent;package=com.whatsapp;scheme=whatsapp;` +
+      `S.browser_fallback_url=${fallback};end`;
+  } else if (platform === "ios") {
+    // iOS — both WA and WA Business share the whatsapp:// scheme
+    window.location.href = `whatsapp://send?phone=${waNumber}`;
+  } else {
+    // Desktop — open WhatsApp Web
+    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
+  }
+}
+
+// Open WhatsApp Business specifically (package=com.whatsapp.w4b on Android)
+// Returns true if app launch was attempted (false = not on Android)
+function openWABusiness(waNumber, onNotInstalled) {
+  const platform = getPlatform();
+  if (platform === "android") {
+    // Use about:blank as fallback so Play Store never opens.
+    // We detect "not installed" by watching if the page regains focus.
+    const intentUrl =
+      `intent://send?phone=${waNumber}` +
+      `#Intent;package=com.whatsapp.w4b;scheme=whatsapp;` +
+      `S.browser_fallback_url=${encodeURIComponent("about:blank")};end`;
+
+    let launched = false;
+    const onVisibilityChange = () => {
+      // If the document becomes hidden, the app opened successfully
+      if (document.hidden) { launched = true; }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    window.location.href = intentUrl;
+
+    // After 2 s — if we never went hidden, the app is not installed
+    setTimeout(() => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (!launched) onNotInstalled?.();
+    }, 2000);
+  } else if (platform === "ios") {
+    // iOS has no separate WA Business deep-link scheme — try wa.me with a note
+    window.location.href = `whatsapp://send?phone=${waNumber}`;
+  } else {
+    // Desktop — open WhatsApp Web (no Business-specific web client)
+    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
+  }
+}
+
 // Green "Chat on WhatsApp" button — shows a dropdown to choose WhatsApp or WhatsApp Business
 export function WhatsAppLink({ phone, onContact }) {
   const [open, setOpen] = useState(false);
+  const [wabNotInstalled, setWabNotInstalled] = useState(false);
   const ref = useRef(null);
 
   useEffect(() => {
@@ -156,20 +220,26 @@ export function WhatsAppLink({ phone, onContact }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // Reset "not installed" hint whenever dropdown closes
+  useEffect(() => { if (!open) setWabNotInstalled(false); }, [open]);
+
   if (!phone) return <span className="text-xs text-app-soft">—</span>;
 
   const waNumber = toWaNumber(phone);
-  const waUrl    = `https://wa.me/${waNumber}`;
 
-  // WhatsApp Business — open direct chat using wa.me universal link.
-  // Works on all platforms without redirecting to Play Store.
-  const handleWABusiness = (e) => {
+  const handlePersonal = (e) => {
     e.preventDefault();
     setOpen(false);
     onContact?.();
-    // wa.me opens WhatsApp (personal or business, whichever is installed/default)
-    // Opens browser WhatsApp Web as fallback on desktop — no Play Store redirect ever.
-    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
+    openWAPersonal(waNumber);
+  };
+
+  const handleBusiness = (e) => {
+    e.preventDefault();
+    onContact?.();
+    openWABusiness(waNumber, () => setWabNotInstalled(true));
+    // Keep dropdown open on Android so the "Download" hint can appear
+    if (getPlatform() !== "android") setOpen(false);
   };
 
   const btnCls = "inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400";
@@ -188,36 +258,34 @@ export function WhatsAppLink({ phone, onContact }) {
 
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 min-w-[190px] rounded-xl border py-1 shadow-2xl"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[200px] rounded-xl border py-1 shadow-2xl"
           style={{
             background: "var(--wa-dropdown-bg, #ffffff)",
             borderColor: "var(--app-border)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
           }}
         >
-          {/* WhatsApp Personal */}
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => { setOpen(false); onContact?.(); }}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
+          {/* WhatsApp Personal — targets com.whatsapp only */}
+          <button
+            type="button"
+            onClick={handlePersonal}
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/15 flex-shrink-0">
               <MessageCircle className="h-3.5 w-3.5 text-green-600" />
             </span>
-            <div>
+            <div className="text-left">
               <p className="font-semibold">WhatsApp</p>
               <p className="text-[10px] text-app-soft">Personal account</p>
             </div>
-          </a>
+          </button>
 
           <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
 
-          {/* WhatsApp Business — with app-launch detection */}
+          {/* WhatsApp Business — targets com.whatsapp.w4b only */}
           <button
             type="button"
-            onClick={handleWABusiness}
+            onClick={handleBusiness}
             className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-600/15 flex-shrink-0">
@@ -228,6 +296,30 @@ export function WhatsAppLink({ phone, onContact }) {
               <p className="text-[10px] text-app-soft">Business account</p>
             </div>
           </button>
+
+          {/* Show download link if WA Business wasn't detected on Android */}
+          {wabNotInstalled && (
+            <>
+              <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
+              <a
+                href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-orange-500/8 transition"
+                style={{ color: "var(--app-primary)" }}
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0"
+                      style={{ background: "rgba(255,107,0,0.12)" }}>
+                  <MessageCircle className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+                </span>
+                <div className="text-left">
+                  <p className="font-semibold">Download WA Business</p>
+                  <p className="text-[10px] text-app-soft">App not found on device</p>
+                </div>
+              </a>
+            </>
+          )}
         </div>
       )}
     </div>
