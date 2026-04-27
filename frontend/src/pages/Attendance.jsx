@@ -49,7 +49,7 @@ function LiveTimer({ since }) {
 
 export default function Attendance() {
   const { user } = useAuth();
-  const isAdmin = ["admin", "manager"].includes(user?.role);
+  const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   // Today's own status
   const [status, setStatus] = useState(null);
