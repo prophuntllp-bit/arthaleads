@@ -74,7 +74,7 @@ export default function Login() {
 
   return (
     <div className="auth-shell flex items-center justify-center p-4 overflow-x-hidden">
-      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
         <div
           className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
           style={{
@@ -121,8 +121,9 @@ export default function Login() {
           </div>
         </div>
 
-        <div className="w-full max-w-md lg:ml-auto lg:max-w-none min-w-0">
-          <div className="mb-8 text-center">
+        <div className="w-full max-w-md lg:ml-auto lg:max-w-none min-w-0 flex flex-col">
+          {/* Mobile logo/heading — shown only on small screens */}
+          <div className="mb-8 text-center lg:hidden">
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl overflow-hidden shadow-lg">
               <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
             </div>
@@ -130,7 +131,15 @@ export default function Login() {
             <p className="mt-2 text-sm text-app-soft">Sign in to your premium real estate workspace</p>
           </div>
 
-          <div className="auth-card">
+          <div className="auth-card flex-1">
+            {/* Desktop heading inside card */}
+            <div className="hidden lg:block mb-6 text-center">
+              <div className="mx-auto mb-4 h-14 w-14 rounded-2xl overflow-hidden shadow-lg">
+                <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+              </div>
+              <h1 className="text-3xl font-black tracking-tight text-app">Welcome to Arthaleads</h1>
+              <p className="mt-2 text-sm text-app-soft">Sign in to your premium real estate workspace</p>
+            </div>
             <div className="mb-6 flex items-center gap-3 rounded-2xl px-4 py-3 stitch-surface-muted">
               <ShieldCheck className="h-5 w-5 text-orange-500" />
               <div>
