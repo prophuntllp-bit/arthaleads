@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
@@ -23,6 +23,8 @@ export default function Signup() {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const googleBtnRef = useRef(null);
+
   const handleGoogleSuccess = async (credentialResponse) => {
     setError("");
     setGLoading(true);
@@ -35,6 +37,10 @@ export default function Signup() {
     } finally {
       setGLoading(false);
     }
+  };
+
+  const triggerGoogleBtn = () => {
+    googleBtnRef.current?.querySelector("div[role=button]")?.click();
   };
 
   const handleSubmit = async (e) => {
@@ -246,26 +252,37 @@ export default function Signup() {
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
             </div>
 
-            <div className="flex justify-center">
-              {gLoading ? (
-                <div
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border text-sm text-app-soft"
-                  style={{ borderColor: "var(--app-border)" }}
-                >
-                  <Spinner size="sm" /> Signing up with Google…
-                </div>
-              ) : (
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => setError("Google sign-up failed. Please try again.")}
-                  theme="filled_black"
-                  shape="rectangular"
-                  size="large"
-                  width="400"
-                  text="signup_with"
-                />
-              )}
+            {/* Hidden real Google button — triggered programmatically */}
+            <div ref={googleBtnRef} className="absolute opacity-0 pointer-events-none h-0 overflow-hidden">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google sign-up failed. Please try again.")}
+                useOneTap={false}
+              />
             </div>
+
+            {/* Custom button so we control the text */}
+            <button
+              type="button"
+              onClick={triggerGoogleBtn}
+              disabled={gLoading}
+              className="w-full flex items-center justify-center gap-3 rounded-2xl border px-4 py-2.5 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+            >
+              {gLoading ? (
+                <><Spinner size="sm" /> Signing up…</>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.2 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13 17.7 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
+                    <path fill="#FBBC05" d="M10.5 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.1.7-4.6l-7.9-6.1A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/>
+                    <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/>
+                  </svg>
+                  Sign up with Google
+                </>
+              )}
+            </button>
 
             <p className="mt-6 text-center text-sm text-app-soft">
               Already have an account?{" "}
