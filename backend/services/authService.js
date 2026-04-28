@@ -108,7 +108,7 @@ const authService = {
   },
 
   async getAllAgents(orgId) {
-    return User.find({ orgId, isActive: true }).select("name email role phone avatar");
+    return User.find({ orgId, isActive: true, role: "agent" }).select("name email role phone avatar");
   },
 
   async updateProfile(userId, updates, actor) {

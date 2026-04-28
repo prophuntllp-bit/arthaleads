@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 import { GoogleLogin } from "@react-oauth/google";
@@ -69,53 +69,58 @@ export default function Signup() {
     }
   };
 
+  const features = [
+    { icon: Zap,       text: "Access your leads and pipeline instantly" },
+    { icon: Bell,      text: "Get notified on follow-ups and site visits" },
+    { icon: Users,     text: "Collaborate with your team in real time" },
+    { icon: PhoneCall, text: "Track every call, WhatsApp and site visit" },
+    { icon: BarChart3, text: "Monitor team performance and conversions" },
+    { icon: Shield,    text: "Role-based access for admins, managers & agents" },
+  ];
+
   return (
     <div className="auth-shell min-h-screen flex items-center justify-center px-4 py-10">
       <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-2 lg:items-stretch">
 
         {/* ── Left panel — desktop only ── */}
         <div
-          className="hidden rounded-[2rem] border p-10 lg:flex lg:flex-col lg:justify-between"
+          className="hidden rounded-[2rem] border p-8 lg:flex lg:flex-col"
           style={{
             borderColor: "var(--app-border)",
             background: "linear-gradient(145deg, color-mix(in srgb, var(--app-surface) 88%, transparent), color-mix(in srgb, var(--app-surface-low) 92%, transparent))",
             boxShadow: "var(--app-shadow)",
           }}
         >
-          <div>
-            {/* Logo */}
-            <div className="mb-7 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg flex-shrink-0">
-                <img src="/logo.png" alt="ArthaLeads" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <p className="font-black text-lg leading-none tracking-tight">
-                  <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
-                </p>
-                <p className="text-[9px] font-semibold tracking-[0.15em] text-app-soft uppercase mt-0.5">
-                  Turning Opportunities Into Value
-                </p>
-              </div>
+          {/* Logo */}
+          <div className="mb-6 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex-shrink-0">
+              <img src="/logo.png" alt="ArthaLeads" className="w-full h-full object-cover" />
             </div>
-
-            <p className="stitch-kicker mb-3">Team Onboarding</p>
-            <h2 className="max-w-sm text-4xl font-black leading-[1.05] tracking-tight text-app">
-              Join your real estate team on Arthaleads.
-            </h2>
-            <p className="mt-4 max-w-sm text-sm leading-6 text-app-soft">
-              Create your account to start managing leads, tracking follow-ups, and closing deals with your team.
-            </p>
+            <div>
+              <p className="font-black text-base leading-none tracking-tight">
+                <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+              </p>
+              <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase mt-0.5">
+                Turning Opportunities Into Value
+              </p>
+            </div>
           </div>
 
-          <div className="space-y-3 mt-10">
-            {[
-              "Access your leads and pipeline instantly",
-              "Get notified on follow-ups and site visits",
-              "Collaborate with your team in real time",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />
-                <span className="text-sm text-app">{item}</span>
+          <p className="stitch-kicker mb-2">Team Onboarding</p>
+          <h2 className="text-3xl font-black leading-tight tracking-tight text-app mb-2">
+            Join your real estate team on Arthaleads.
+          </h2>
+          <p className="text-sm leading-6 text-app-soft mb-6">
+            One workspace for all your leads, follow-ups, projects and team activity.
+          </p>
+
+          <div className="grid grid-cols-1 gap-2.5 flex-1">
+            {features.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3 rounded-2xl p-3 stitch-surface-muted">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-500/10 flex-shrink-0">
+                  <Icon className="h-3.5 w-3.5 text-orange-500" />
+                </div>
+                <span className="text-sm text-app">{text}</span>
               </div>
             ))}
           </div>
@@ -133,12 +138,6 @@ export default function Signup() {
             </p>
           </div>
 
-          {/* Desktop heading above card */}
-          <div className="hidden lg:block mb-6 text-center">
-            <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
-            <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
-          </div>
-
           {/* Mobile heading */}
           <div className="mb-5 text-center lg:hidden">
             <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
@@ -146,6 +145,11 @@ export default function Signup() {
           </div>
 
           <div className="auth-card flex-1">
+            {/* Desktop heading inside card */}
+            <div className="hidden lg:block mb-5 text-center">
+              <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
+              <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
 
               <div>

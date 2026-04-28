@@ -53,6 +53,7 @@ const projectLeadSchema = new mongoose.Schema(
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
+      required: true,
       index: true,
     },
   },

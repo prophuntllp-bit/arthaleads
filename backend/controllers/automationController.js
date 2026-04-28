@@ -29,33 +29,14 @@ function generateWebsiteToken() {
 }
 
 const automationController = {
-  // GET /api/automations/website/connections — list all website automations
-  // Creates a default one if none exist yet (first-time setup)
+  // GET /api/automations/website/connections — list all website automations (read-only)
   async getWebsiteToken(req, res) {
     try {
-      let automations = await Automation.find({
+      const automations = await Automation.find({
         orgId: req.user.orgId,
         platform: "Website Form",
         isActive: true,
       }).sort({ createdAt: 1 });
-
-      if (automations.length === 0) {
-        const first = await Automation.create({
-          name: "My WordPress Site",
-          platform: "Website Form",
-          mode: "form",
-          status: "draft",
-          leadSourceLabel: "Website",
-          webhookPath: "/webhook/website",
-          verifyToken: generateWebsiteToken(),
-          description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
-          isActive: true,
-          orgId: req.user.orgId,
-          createdBy: req.user._id,
-          updatedBy: req.user._id,
-        });
-        automations = [first];
-      }
 
       res.json({
         success: true,

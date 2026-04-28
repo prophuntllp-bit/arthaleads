@@ -94,7 +94,7 @@ const projectController = {
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, message: "ids array is required" });
       }
-      const count = await projectService.bulkDeleteLeads(req.params.id, ids);
+      const count = await projectService.bulkDeleteLeads(req.params.id, ids, req.user);
       res.json({ success: true, message: `${count} lead(s) deleted` });
     } catch (err) { next(err); }
   },

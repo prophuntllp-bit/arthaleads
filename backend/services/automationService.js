@@ -360,13 +360,17 @@ const automationService = {
     const rawPages = await this.fetchFacebookPages(userAccessToken);
 
     const pages = await Promise.all(
-      rawPages.map(async (page) => ({
-        id: page.id,
-        name: page.name,
-        tasks: page.tasks || [],
-        accessToken: page.access_token || "",
-        forms: await this.fetchFacebookForms(page.id, page.access_token),
-      }))
+      rawPages.map(async (page) => {
+        // page.access_token may be absent for Business Manager pages; fall back to user token
+        const pageToken = page.access_token || userAccessToken;
+        return {
+          id: page.id,
+          name: page.name,
+          tasks: page.tasks || [],
+          accessToken: pageToken,
+          forms: await this.fetchFacebookForms(page.id, pageToken),
+        };
+      })
     );
 
     // Return pages + the fresh user token (used as fallback access token on reconnect)

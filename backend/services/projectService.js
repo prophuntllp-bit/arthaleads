@@ -171,7 +171,10 @@ const projectService = {
     await lead.deleteOne();
   },
 
-  async bulkDeleteLeads(projectId, ids) {
+  async bulkDeleteLeads(projectId, ids, user) {
+    // Verify the project belongs to the requesting user's org before mass-delete
+    const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
+    if (!project) throw new AppError("Project not found", 404);
     const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
     return result.deletedCount;
   },
