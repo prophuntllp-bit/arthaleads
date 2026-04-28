@@ -4,11 +4,13 @@ import toast from "react-hot-toast";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [gLoading, setGLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [form, setForm] = useState({
@@ -20,6 +22,20 @@ export default function Signup() {
   });
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setGLoading(true);
+    try {
+      await googleLogin(credentialResponse.credential);
+      toast.success("Account ready! Welcome to Arthaleads.");
+      navigate("/");
+    } catch (e) {
+      setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
+    } finally {
+      setGLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -223,6 +239,33 @@ export default function Signup() {
                 )}
               </button>
             </form>
+
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+              <span className="text-xs text-app-soft">or sign up with</span>
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+            </div>
+
+            <div className="flex justify-center">
+              {gLoading ? (
+                <div
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl border text-sm text-app-soft"
+                  style={{ borderColor: "var(--app-border)" }}
+                >
+                  <Spinner size="sm" /> Signing up with Google…
+                </div>
+              ) : (
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError("Google sign-up failed. Please try again.")}
+                  theme="filled_black"
+                  shape="rectangular"
+                  size="large"
+                  width="400"
+                  text="signup_with"
+                />
+              )}
+            </div>
 
             <p className="mt-6 text-center text-sm text-app-soft">
               Already have an account?{" "}
