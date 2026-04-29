@@ -412,14 +412,19 @@ export default function ProjectDetail() {
       const rows = raw.map(parseRow).filter((r) => r.name && r.phone);
       if (!rows.length) return toast.error("No valid rows found. Columns needed: Name, Phone Number");
       const res = await api.post(`/projects/${id}/leads/import`, { rows });
-      const { inserted, skipped, duplicates } = res.data;
-      const parts = [`✓ ${inserted} lead${inserted !== 1 ? "s" : ""} imported`];
-      if (duplicates) parts.push(`${duplicates} duplicate${duplicates !== 1 ? "s" : ""} skipped`);
-      if (skipped)    parts.push(`${skipped} invalid row${skipped !== 1 ? "s" : ""} skipped`);
-      if (inserted === 0 && duplicates > 0) {
-        toast.error(`All ${duplicates} leads already exist in this project — nothing imported`);
+      const inserted  = res.data?.inserted  ?? 0;
+      const duplicates = res.data?.duplicates ?? 0;
+      const skippedInvalid = res.data?.skipped ?? 0;
+
+      if (inserted > 0) {
+        const parts = [`${inserted} lead${inserted !== 1 ? "s" : ""} imported successfully`];
+        if (duplicates > 0)    parts.push(`${duplicates} duplicate${duplicates !== 1 ? "s" : ""} skipped`);
+        if (skippedInvalid > 0) parts.push(`${skippedInvalid} invalid row${skippedInvalid !== 1 ? "s" : ""} ignored`);
+        toast.success(parts.join(" · "), { duration: 5000 });
+      } else if (duplicates > 0) {
+        toast.error(`All ${duplicates} leads already exist in this project — nothing new added`, { duration: 5000 });
       } else {
-        toast.success(parts.join(" · "));
+        toast.error("No leads were imported");
       }
       setLeadsPage(1); setSearch("");
       const fresh = await api.get(`/projects/${id}/leads`, { params: { page: 1, limit: leadsLimit } });
