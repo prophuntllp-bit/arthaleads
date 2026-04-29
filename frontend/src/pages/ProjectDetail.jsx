@@ -291,7 +291,7 @@ export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const canManage = ["admin", "manager"].includes(user?.role);
+  const canManage = ["admin", "manager", "super_admin"].includes(user?.role);
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);

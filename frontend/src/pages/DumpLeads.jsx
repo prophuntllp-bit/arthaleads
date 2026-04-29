@@ -34,7 +34,7 @@ export default function DumpLeads() {
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting]   = useState(false);
 
-  const canDelete = ["admin", "manager"].includes(user?.role);
+  const canDelete = ["admin", "manager", "super_admin"].includes(user?.role);
 
   useEffect(() => {
     api.get("/leads/dump")

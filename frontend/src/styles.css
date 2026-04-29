@@ -334,4 +334,33 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 107, 0, 0.30);
   }
+
+  /* ── Safe area insets (notched phones & gesture bars) ── */
+
+  /* Page content: extra bottom padding so last card clears gesture bar */
+  .stitch-page {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Desktop sidebar: prevent bottom content hiding behind home indicator */
+  aside.sidebar-glass {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Mobile top bar: push below notch / Dynamic Island */
+  .mobile-topbar {
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0.75rem));
+  }
+
+  /* main scroll container: extra bottom space for Android gesture bar */
+  main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* On mobile (<lg), main must clear taller notch-aware topbar */
+  @media (max-width: 1023px) {
+    main {
+      padding-top: calc(4rem + env(safe-area-inset-top, 0px)) !important;
+    }
+  }
 }

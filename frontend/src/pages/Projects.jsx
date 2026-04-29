@@ -19,7 +19,7 @@ export default function Projects() {
   useEffect(() => { document.title = "Property Inventory — Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const canManage = ["admin", "manager"].includes(user?.role);
+  const canManage = ["admin", "manager", "super_admin"].includes(user?.role);
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading]   = useState(true);

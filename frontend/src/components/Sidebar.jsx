@@ -399,7 +399,7 @@ export default function Sidebar() {
   return (
     <>
       {AlertsPortal}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass"
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass mobile-topbar"
         style={{ borderColor: "var(--app-border)" }}>
         {/* Clickable logo → home */}
         <NavLink to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
