@@ -67,9 +67,16 @@ const superAdminController = {
   // PATCH /api/super-admin/orgs/:id — update plan / isActive
   async updateOrg(req, res, next) {
     try {
-      const allowed = ["plan", "isActive", "name"];
+      const allowed = ["plan", "isActive", "name", "brandColor"];
       const update  = {};
       allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+
+      // Validate brandColor if provided
+      if (update.brandColor !== undefined && update.brandColor !== "") {
+        if (!/^#[0-9A-Fa-f]{6}$/.test(update.brandColor)) {
+          return next(new AppError("brandColor must be a valid 6-digit hex colour (e.g. #2563eb)", 400));
+        }
+      }
 
       const org = await Organization.findByIdAndUpdate(req.params.id, update, { new: true });
       if (!org) return next(new AppError("Organization not found", 404));

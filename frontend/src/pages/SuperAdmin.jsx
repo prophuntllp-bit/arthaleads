@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image, RefreshCw } from "lucide-react";
+import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image, RefreshCw, Palette } from "lucide-react";
 
 function PlanBadge({ plan }) {
   const cls = {
@@ -104,6 +104,104 @@ function LogoUploader({ org, onUpdated }) {
       </div>
 
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
+function BrandColorPicker({ org, onUpdated }) {
+  const original = org.brandColor || "";
+  const [hex, setHex]       = useState(original);
+  const [saving, setSaving] = useState(false);
+
+  const isValidHex = (v) => /^#[0-9A-Fa-f]{6}$/.test(v);
+  const textValid  = hex === "" || isValidHex(hex);
+  const isDirty    = hex !== original;
+  const canSave    = isDirty && textValid;
+
+  // Keep input in sync if parent passes a new org prop (after external update)
+  useEffect(() => { setHex(org.brandColor || ""); }, [org.brandColor]);
+
+  const save = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { brandColor: hex });
+      onUpdated(data.org);
+      toast.success(hex ? `Brand colour applied to ${org.name}` : `Brand colour cleared for ${org.name}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update colour");
+      setHex(original); // revert on error
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Swatch colour — what to show in the circle preview
+  const swatchColor = isValidHex(hex) ? hex : (isValidHex(original) ? original : "#ff6b00");
+
+  return (
+    <div className="flex items-center gap-2.5">
+      {/* Colour swatch — clicking opens the native OS colour picker */}
+      <label className="relative flex-shrink-0 cursor-pointer" title="Click to open colour picker">
+        <input
+          type="color"
+          value={swatchColor}
+          onChange={(e) => setHex(e.target.value.toLowerCase())}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer rounded-xl"
+        />
+        <span
+          className="w-8 h-8 rounded-xl border-2 block transition-transform hover:scale-110"
+          style={{
+            background: swatchColor,
+            borderColor: "var(--app-border-strong)",
+            boxShadow: `0 0 8px ${swatchColor}55`,
+          }}
+        />
+      </label>
+
+      {/* Hex input + action */}
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <input
+          value={hex}
+          onChange={(e) => {
+            let v = e.target.value.toLowerCase().replace(/[^#0-9a-f]/g, "");
+            if (v && !v.startsWith("#")) v = `#${v}`;
+            setHex(v.slice(0, 7));
+          }}
+          onBlur={() => { if (!textValid && hex !== "") setHex(original); }}
+          placeholder="#ff6b00"
+          maxLength={7}
+          style={{
+            width: "5.5rem",
+            borderRadius: "0.5rem",
+            padding: "3px 8px",
+            fontSize: "11px",
+            fontFamily: "monospace",
+            background: "var(--app-surface-low)",
+            border: `1px solid ${!textValid ? "#ef4444" : "var(--app-border)"}`,
+            color: "var(--app-text)",
+            outline: "none",
+          }}
+        />
+        <div className="h-4 flex items-center">
+          {canSave ? (
+            <button
+              onClick={save}
+              disabled={saving}
+              className="text-[10px] font-bold text-orange-500 hover:text-orange-400 disabled:opacity-40 transition leading-none"
+            >
+              {saving ? "Saving…" : hex ? "Apply →" : "Clear →"}
+            </button>
+          ) : original && !isDirty ? (
+            <button
+              onClick={() => { setHex(""); }}
+              className="text-[10px] text-app-soft hover:text-red-400 transition leading-none"
+            >
+              Reset
+            </button>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -214,13 +312,14 @@ export default function SuperAdmin() {
                 <th className="text-center">Users</th>
                 <th className="text-center">Leads</th>
                 <th>Logo</th>
+                <th>Brand Colour</th>
                 <th className="text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
+                  <td colSpan={7} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
                 </tr>
               ) : filtered.map((org) => (
                 <tr key={org._id}>
@@ -236,6 +335,9 @@ export default function SuperAdmin() {
                   <td className="text-center font-bold text-app">{org.leadCount}</td>
                   <td>
                     <LogoUploader org={org} onUpdated={handleOrgUpdated} />
+                  </td>
+                  <td>
+                    <BrandColorPicker org={org} onUpdated={handleOrgUpdated} />
                   </td>
                   <td className="text-center">
                     <button

@@ -7,6 +7,35 @@ import { Spinner } from "./components/UI";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 
+// ── Brand Colour ──────────────────────────────────────────────────────────────
+// Applies a customer's hex accent colour as CSS-variable overrides so the
+// entire UI theme switches without a page reload.  Passing "" or null resets
+// back to the default orange palette defined in styles.css.
+export function applyBrandColor(hex) {
+  const root = document.documentElement;
+  const VARS = ["--app-primary", "--app-primary-deep", "--app-primary-rgb", "--app-primary-deep-rgb"];
+
+  if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+    VARS.forEach((v) => root.style.removeProperty(v));
+    return;
+  }
+
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // Deep = darken ~37 % to match original #ff6b00 → #a04100 ratio
+  const dr = Math.round(r * 0.627);
+  const dg = Math.round(g * 0.627);
+  const db = Math.round(b * 0.627);
+  const toHex = (n) => n.toString(16).padStart(2, "0");
+  const deepHex = `#${toHex(dr)}${toHex(dg)}${toHex(db)}`;
+
+  root.style.setProperty("--app-primary",          hex);
+  root.style.setProperty("--app-primary-deep",     deepHex);
+  root.style.setProperty("--app-primary-rgb",      `${r}, ${g}, ${b}`);
+  root.style.setProperty("--app-primary-deep-rgb", `${dr}, ${dg}, ${db}`);
+}
+
 // ── Detect iOS ────────────────────────────────────────────────────────────────
 function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
@@ -230,7 +259,11 @@ import SuperAdmin    from "./pages/SuperAdmin";
 // ── Route guards ──────────────────────────────────────────────────────────────
 
 function RequireAuth() {
-  const { user, loading } = useAuth();
+  const { user, org, loading } = useAuth();
+
+  // Apply (or clear) the org's custom brand colour whenever it changes
+  useEffect(() => { applyBrandColor(org?.brandColor); }, [org?.brandColor]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

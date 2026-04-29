@@ -27,7 +27,8 @@ const orgSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     industry: { type: String, default: "Real Estate" },
-    logo: { type: String, default: "" },  // base64 data-URI or hosted URL
+    logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
+    brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
   },
   { timestamps: true }
 );

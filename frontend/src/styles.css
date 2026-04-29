@@ -11,12 +11,15 @@
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
     --app-text-soft: #71717a;
-    --app-border: rgba(160, 65, 0, 0.12);
-    --app-border-strong: rgba(160, 65, 0, 0.22);
-    --app-primary: #ff6b00;
-    --app-primary-deep: #a04100;
-    --app-shadow: 0 8px 32px rgba(160, 65, 0, 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
-    --app-shadow-lg: 0 24px 64px rgba(160, 65, 0, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+    /* Brand-colour tokens — overridden at runtime by applyBrandColor() in App.jsx */
+    --app-primary:           #ff6b00;
+    --app-primary-deep:      #a04100;
+    --app-primary-rgb:       255, 107, 0;   /* used in rgba(var(--app-primary-rgb), alpha) */
+    --app-primary-deep-rgb:  160, 65, 0;
+    --app-border:            rgba(var(--app-primary-deep-rgb), 0.12);
+    --app-border-strong:     rgba(var(--app-primary-deep-rgb), 0.22);
+    --app-shadow:    0 8px 32px rgba(var(--app-primary-deep-rgb), 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --app-shadow-lg: 0 24px 64px rgba(var(--app-primary-deep-rgb), 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
     --glass-blur: blur(20px) saturate(160%);
     --glass-blur-heavy: blur(40px) saturate(180%);
   }
@@ -30,9 +33,9 @@
     --app-text: #ededed;
     --app-text-soft: #969696;
     --app-border: rgba(255, 255, 255, 0.10);
-    --app-border-strong: rgba(255, 107, 0, 0.28);
-    --app-primary: #ff6b00;
-    --app-primary-deep: #a04100;
+    --app-border-strong:    rgba(var(--app-primary-rgb), 0.28);
+    --app-primary:          #ff6b00;
+    --app-primary-deep:     #a04100;
     --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.08) inset;
     --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.10) inset;
     --glass-blur: blur(24px) saturate(170%);
@@ -49,17 +52,17 @@
     /* Light mode: warm cream with subtle orange tint */
     background-color: #f0ede8;
     background-image:
-      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(255, 107, 0, 0.18) 0%, transparent 55%),
-      radial-gradient(ellipse 70% 55% at 85% 90%, rgba(160, 65, 0, 0.14) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(255, 150, 50, 0.06) 0%, transparent 65%);
+      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(var(--app-primary-rgb), 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 55% at 85% 90%, rgba(var(--app-primary-deep-rgb), 0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(var(--app-primary-rgb), 0.06) 0%, transparent 65%);
     background-attachment: fixed;
   }
 
   html.dark body {
     background-color: #111113;
     background-image:
-      radial-gradient(ellipse 65% 45% at 10% 5%,  rgba(255, 107, 0, 0.12) 0%, transparent 55%),
-      radial-gradient(ellipse 55% 40% at 90% 95%, rgba(140, 55, 0, 0.13) 0%, transparent 55%);
+      radial-gradient(ellipse 65% 45% at 10% 5%,  rgba(var(--app-primary-rgb), 0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 40% at 90% 95%, rgba(var(--app-primary-deep-rgb), 0.13) 0%, transparent 55%);
     background-attachment: fixed;
   }
 
@@ -102,8 +105,8 @@
 
   .input:focus {
     outline: none;
-    border-color: rgba(255, 107, 0, 0.45);
-    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.12), 0 2px 12px rgba(255, 107, 0, 0.08);
+    border-color: rgba(var(--app-primary-rgb), 0.45);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12), 0 2px 12px rgba(var(--app-primary-rgb), 0.08);
     background: var(--app-surface);
   }
 
@@ -119,7 +122,7 @@
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
     background-image: linear-gradient(135deg, var(--app-primary-deep), var(--app-primary));
-    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
+    box-shadow: 0 8px 24px rgba(var(--app-primary-rgb), 0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
     position: relative;
     overflow: hidden;
   }
@@ -134,13 +137,13 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 12px 32px rgba(255, 107, 0, 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
+    box-shadow: 0 12px 32px rgba(var(--app-primary-rgb), 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
     transform: translateY(-1px);
   }
 
   .btn-primary:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.30);
+    box-shadow: 0 4px 16px rgba(var(--app-primary-rgb), 0.30);
   }
 
   .btn-secondary {
@@ -268,9 +271,9 @@
   .auth-shell {
     min-height: 100vh;
     background:
-      radial-gradient(ellipse at 15% 15%, rgba(255, 107, 0, 0.20) 0%, transparent 45%),
-      radial-gradient(ellipse at 85% 85%, rgba(160, 65, 0, 0.16) 0%, transparent 40%),
-      radial-gradient(ellipse at 50% 50%, rgba(255, 150, 50, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 15% 15%, rgba(var(--app-primary-rgb), 0.20) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(var(--app-primary-deep-rgb), 0.16) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(var(--app-primary-rgb), 0.06) 0%, transparent 60%),
       var(--app-bg);
   }
 
@@ -293,7 +296,7 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--app-primary-rgb), 0.4), transparent);
     border-radius: 999px;
   }
 
@@ -308,7 +311,7 @@
 
   /* ── Glow accent for active/highlight states ── */
   .glow-orange {
-    box-shadow: 0 0 24px rgba(255, 107, 0, 0.25), 0 4px 12px rgba(255, 107, 0, 0.15);
+    box-shadow: 0 0 24px rgba(var(--app-primary-rgb), 0.25), 0 4px 12px rgba(var(--app-primary-rgb), 0.15);
   }
 
   /* ── Sidebar glass ── */
@@ -332,7 +335,7 @@
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 107, 0, 0.30);
+    background: rgba(var(--app-primary-rgb), 0.30);
   }
 
   /* ── Safe area insets (notched phones & gesture bars) ── */
