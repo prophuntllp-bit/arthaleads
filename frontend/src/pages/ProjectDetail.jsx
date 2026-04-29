@@ -412,7 +412,15 @@ export default function ProjectDetail() {
       const rows = raw.map(parseRow).filter((r) => r.name && r.phone);
       if (!rows.length) return toast.error("No valid rows found. Columns needed: Name, Phone Number");
       const res = await api.post(`/projects/${id}/leads/import`, { rows });
-      toast.success(`Imported ${res.data.inserted} leads${res.data.skipped ? `, skipped ${res.data.skipped}` : ""}`);
+      const { inserted, skipped, duplicates } = res.data;
+      const parts = [`✓ ${inserted} lead${inserted !== 1 ? "s" : ""} imported`];
+      if (duplicates) parts.push(`${duplicates} duplicate${duplicates !== 1 ? "s" : ""} skipped`);
+      if (skipped)    parts.push(`${skipped} invalid row${skipped !== 1 ? "s" : ""} skipped`);
+      if (inserted === 0 && duplicates > 0) {
+        toast.error(`All ${duplicates} leads already exist in this project — nothing imported`);
+      } else {
+        toast.success(parts.join(" · "));
+      }
       setLeadsPage(1); setSearch("");
       const fresh = await api.get(`/projects/${id}/leads`, { params: { page: 1, limit: leadsLimit } });
       setLeads(fresh.data.leads); setLeadsTotal(fresh.data.total); setLeadsPages(fresh.data.pages);

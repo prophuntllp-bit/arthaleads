@@ -90,10 +90,38 @@ const projectService = {
     const project = await Project.findOne({ _id: projectId, isArchived: false, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
 
+    const invalid = rows.length - rows.filter((r) => r.name && r.phone).length;
     const valid = rows.filter((r) => r.name && r.phone);
     if (!valid.length) throw new AppError("No valid rows found. Each row needs at least name and phone.", 400);
 
-    const docs = valid.map((r) => ({
+    // Normalize phone to digits only so format differences don't create false duplicates
+    // e.g. "+91 98765-43210", "9876543210", "098765 43210" all match
+    const normalizePhone = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1");
+
+    // Fetch every phone already in this project for O(1) lookup
+    const existing = await ProjectLead.find({ project: projectId }, "phone").lean();
+    const existingSet = new Set(existing.map((l) => normalizePhone(l.phone)));
+
+    // Split: also deduplicate within the file itself (same number appearing twice in the CSV)
+    const seenInBatch = new Set();
+    const newRows     = [];
+    let   duplicates  = 0;
+
+    for (const row of valid) {
+      const norm = normalizePhone(row.phone);
+      if (existingSet.has(norm) || seenInBatch.has(norm)) {
+        duplicates++;
+      } else {
+        seenInBatch.add(norm);
+        newRows.push(row);
+      }
+    }
+
+    if (!newRows.length) {
+      return { inserted: 0, skipped: invalid, duplicates };
+    }
+
+    const docs = newRows.map((r) => ({
       project: projectId,
       name: r.name,
       phone: r.phone,
@@ -105,7 +133,7 @@ const projectService = {
     }));
 
     const inserted = await ProjectLead.insertMany(docs, { ordered: false });
-    return { inserted: inserted.length, skipped: rows.length - valid.length };
+    return { inserted: inserted.length, skipped: invalid, duplicates };
   },
 
   async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }, user) {
