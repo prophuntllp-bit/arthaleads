@@ -83,7 +83,8 @@ const attendanceController = {
   async list(req, res, next) {
     try {
       const { from, to, userId, page = 1, limit = 60 } = req.query;
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const safePage = Math.max(1, parseInt(page) || 1);
+      const skip = (safePage - 1) * parseInt(limit);
 
       const filter = { orgId: req.user.orgId };
 
@@ -113,7 +114,7 @@ const attendanceController = {
         success: true,
         data: records,
         total,
-        page: parseInt(page),
+        page: safePage,
         pages: Math.ceil(total / parseInt(limit)),
       });
     } catch (err) { next(err); }
