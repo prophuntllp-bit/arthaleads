@@ -137,6 +137,12 @@ const projectService = {
   },
 
   async updateRemark(leadId, { remark, remarkNote }, user) {
+    // Verify org ownership via parent project (works for both old and new leads,
+    // regardless of whether orgId is backfilled on the ProjectLead doc yet)
+    const check = await ProjectLead.findById(leadId).populate("project", "orgId");
+    if (!check) throw new AppError("Lead not found", 404);
+    if (String(check.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+
     const update = {
       remark,
       remarkNote: remark === "Contacted" ? (remarkNote || "") : "",
@@ -144,13 +150,8 @@ const projectService = {
       remarkUpdatedAt: new Date(),
     };
 
-    // Scope by orgId — prevents IDOR across tenants
-    const lead = await ProjectLead.findOneAndUpdate(
-      { _id: leadId, orgId: user.orgId },
-      update,
-      { new: true }
-    ).populate("remarkUpdatedBy", "name");
-    if (!lead) throw new AppError("Lead not found", 404);
+    const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
+      .populate("remarkUpdatedBy", "name");
     return lead;
   },
 

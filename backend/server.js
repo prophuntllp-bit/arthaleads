@@ -48,6 +48,29 @@ connectDB().then(async () => {
     );
     if (r.modifiedCount > 0) console.log(`[MIGRATION] Cleared ${r.modifiedCount} default 'Not Contacted' remarks`);
   } catch (e) { console.error("[MIGRATION] remark clear failed:", e.message); }
+
+  // Backfill orgId on ProjectLeads that were imported before the field was added
+  try {
+    const mongoose = require("mongoose");
+    const missing = await mongoose.connection.collection("projectleads")
+      .find({ orgId: { $exists: false } }).toArray();
+    if (missing.length > 0) {
+      console.log(`[MIGRATION] Backfilling orgId on ${missing.length} project lead(s)…`);
+      const projectIds = [...new Set(missing.map((l) => l.project?.toString()).filter(Boolean))];
+      const projects = await mongoose.connection.collection("projects")
+        .find({ _id: { $in: projectIds.map((id) => new mongoose.Types.ObjectId(id)) } })
+        .toArray();
+      const projMap = Object.fromEntries(projects.map((p) => [p._id.toString(), p.orgId]));
+      for (const lead of missing) {
+        const orgId = projMap[lead.project?.toString()];
+        if (orgId) {
+          await mongoose.connection.collection("projectleads")
+            .updateOne({ _id: lead._id }, { $set: { orgId } });
+        }
+      }
+      console.log(`[MIGRATION] orgId backfill complete`);
+    }
+  } catch (e) { console.error("[MIGRATION] orgId backfill failed:", e.message); }
 }).catch((e) => console.error("[BOOT] DB error:", e.message));
 
 // ── Security Middleware ───────────────────────────────────────────────────────
