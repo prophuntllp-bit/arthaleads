@@ -9,7 +9,7 @@ const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, imp
 // All lead routes require authentication
 router.use(protect);
 
-router.get("/analytics", authorize("admin", "manager"), leadController.getAnalytics);
+router.get("/analytics", leadController.getAnalytics);
 router.get("/dump", authorize("admin", "manager"), leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/unified", leadController.getAllUnified);
@@ -30,6 +30,6 @@ router.patch("/:id/restore", authorize("admin", "manager"), leadController.resto
 router.delete("/:id/permanent", authorize("admin", "manager"), leadController.permanentDelete);
 router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
 router.post("/:id/assign", authorize("admin", "manager"), validate(assignLeadSchema), leadController.assign);
-router.post("/:id/transfer", authorize("admin", "manager"), leadController.transferLead);
+router.post("/:id/transfer", leadController.transferLead);
 
 module.exports = router;
