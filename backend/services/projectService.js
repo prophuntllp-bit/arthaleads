@@ -152,6 +152,7 @@ const projectService = {
 
     const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
       .populate("remarkUpdatedBy", "name");
+    if (!lead) throw new AppError("Lead not found", 404);
     return lead;
   },
 
