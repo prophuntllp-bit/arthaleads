@@ -206,7 +206,7 @@ export default function Sidebar() {
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover flex-shrink-0" />
             <span className="text-xs font-bold leading-none">
-              <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+              <span style={{ color: "var(--app-primary)" }}>Artha</span><span className="text-app">Leads</span>
             </span>
           </div>
         </div>
@@ -217,12 +217,12 @@ export default function Sidebar() {
             <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
           <p className="font-black text-base leading-none tracking-tight">
-            <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+            <span style={{ color: "var(--app-primary)" }}>Artha</span><span className="text-app">Leads</span>
           </p>
           <div className="flex items-center gap-1.5 mt-1.5">
-            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 16, height: 1.5, background: "var(--app-primary)", borderRadius: 1 }} />
             <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase">Turning Opportunities Into Value</p>
-            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 16, height: 1.5, background: "var(--app-primary)", borderRadius: 1 }} />
           </div>
         </div>
       )}
@@ -237,7 +237,8 @@ export default function Sidebar() {
             <Bell className="w-4 h-4 flex-shrink-0" />
             Alerts
             {alertCount > 0 && (
-              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white">
+              <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ background: "var(--app-primary)" }}>
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
@@ -253,12 +254,17 @@ export default function Sidebar() {
             end={to === "/"}
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all ${
+              `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all border-r-2 ${
                 isActive
-                  ? "text-orange-500 bg-orange-500/10 border-r-2 border-orange-500"
-                  : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                  ? "font-semibold"
+                  : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 border-transparent"
               }`
             }
+            style={({ isActive }) => isActive ? {
+              color: "var(--app-primary)",
+              background: "rgba(var(--app-primary-rgb), 0.10)",
+              borderColor: "var(--app-primary)",
+            } : {}}
           >
             <Icon className="w-4 h-4 flex-shrink-0" />
             {label}
@@ -273,7 +279,7 @@ export default function Sidebar() {
           style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
         >
           <span className="flex items-center gap-3 text-sm font-medium">
-            {isDark ? <MoonStar className="w-4 h-4 text-orange-500" /> : <SunMedium className="w-4 h-4 text-orange-500" />}
+            {isDark ? <MoonStar className="w-4 h-4" style={{ color: "var(--app-primary)" }} /> : <SunMedium className="w-4 h-4" style={{ color: "var(--app-primary)" }} />}
             {theme === "dark" ? "Dark Mode" : "Light Mode"}
           </span>
           <span className="stitch-kicker">{theme}</span>
@@ -281,7 +287,8 @@ export default function Sidebar() {
 
         <div className="rounded-[1.35rem] px-4 py-4 shell-panel">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 font-bold text-sm flex-shrink-0">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
+              style={{ background: "rgba(var(--app-primary-rgb), 0.10)", color: "var(--app-primary)" }}>
               {user?.name?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -371,23 +378,29 @@ export default function Sidebar() {
         ) : alerts.map((lead) => (
           <button
             key={lead._id}
-            className="w-full flex items-start gap-3 px-4 py-3 border-b hover:bg-orange-500/5 transition text-left cursor-pointer"
+            className="w-full flex items-start gap-3 px-4 py-3 border-b transition text-left cursor-pointer"
+            onMouseEnter={(e) => e.currentTarget.style.background = `rgba(var(--app-primary-rgb), 0.05)`}
+            onMouseLeave={(e) => e.currentTarget.style.background = ""}
             style={{ borderColor: "var(--app-border)" }}
             onClick={() => { setAlertOpen(false); navigate("/leads", { state: { openLeadId: lead._id } }); }}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+              style={{ background: "rgba(var(--app-primary-rgb), 0.10)", color: "var(--app-primary)" }}>
               {lead.name?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
-              <p className="text-[11px] text-app-soft">{lead.phone} · <span className="text-orange-500">{lead.source}</span></p>
+              <p className="text-[11px] text-app-soft">{lead.phone} · <span style={{ color: "var(--app-primary)" }}>{lead.source}</span></p>
               <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
             </div>
           </button>
         ))}
       </div>
       <button
-        className="px-4 py-2.5 text-xs font-semibold text-orange-500 border-t hover:bg-orange-500/5 transition text-center"
+        className="px-4 py-2.5 text-xs font-semibold border-t transition text-center"
+        style={{ color: "var(--app-primary)" }}
+        onMouseEnter={(e) => e.currentTarget.style.background = `rgba(var(--app-primary-rgb), 0.05)`}
+        onMouseLeave={(e) => e.currentTarget.style.background = ""}
         style={{ borderColor: "var(--app-border)" }}
         onClick={() => { setAlertOpen(false); navigate("/leads"); }}
       >View All Leads →</button>
@@ -432,7 +445,8 @@ export default function Sidebar() {
             >
               <Bell className="w-5 h-5" />
               {alertCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white animate-pulse">
+                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white animate-pulse"
+                  style={{ background: "var(--app-primary)" }}>
                   {alertCount > 9 ? "9+" : alertCount}
                 </span>
               )}

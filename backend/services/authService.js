@@ -41,7 +41,10 @@ const authService = {
     await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id);
-    return { token, user };
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor").lean()
+      : null;
+    return { token, user, org };
   },
 
   async googleAuth(credential) {
@@ -95,7 +98,10 @@ const authService = {
     await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id);
-    return { token, user };
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor").lean()
+      : null;
+    return { token, user, org };
   },
 
   async getMe(userId) {
