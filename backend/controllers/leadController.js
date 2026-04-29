@@ -217,7 +217,12 @@ const leadController = {
       }
 
       // CSV (default)
-      const headers = Object.keys(rows[0] || {});
+      if (!rows.length) {
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename="leads-${date}.csv"`);
+        return res.send("﻿" + "Name,Phone,Email,Source,Status,Priority,CreatedAt\r\n");
+      }
+      const headers = Object.keys(rows[0]);
       const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");

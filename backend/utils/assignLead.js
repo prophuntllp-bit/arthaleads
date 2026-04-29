@@ -10,11 +10,12 @@ async function getNextAssignee(orgId) {
 
   if (!orgId) throw new Error("orgId is required for lead assignment");
 
-  const agents = await User.find({
-    orgId,
-    isActive: true,
-    role: { $in: ["admin", "manager", "agent"] },
-  }).select("_id name").lean();
+  // Round-robin among active agents only.
+  // Falls back to managers, then admins, only if no agents exist.
+  let agents = await User.find({ orgId, isActive: true, role: "agent" }).select("_id name").lean();
+  if (!agents.length) {
+    agents = await User.find({ orgId, isActive: true, role: { $in: ["manager", "admin"] } }).select("_id name").lean();
+  }
 
   if (!agents.length) throw new Error(`No active users found in org ${orgId}`);
 

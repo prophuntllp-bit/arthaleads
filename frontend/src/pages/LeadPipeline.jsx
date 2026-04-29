@@ -5,12 +5,10 @@ import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
 
-const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
-
 const STAGE_META = {
   "New": {
     title: "New",
-    subtitle: "Fresh enquiries — last 2 days",
+    subtitle: "All uncontacted enquiries",
     icon: Clock3,
     stripe: "from-sky-500/25 via-sky-500/10 to-transparent",
     badge: "bg-sky-500/15 text-sky-300",
@@ -82,7 +80,9 @@ export default function LeadPipeline() {
         updated = data.data;
       }
       setLeads((curr) => curr.map((l) => l._id === lead._id ? { ...l, ...updates, ...(updated || {}), _type: lead._type, projectId: lead.projectId } : l));
-    } catch { /* silent */ }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update contact status");
+    }
   };
 
   const fetchLeads = async () => {
@@ -99,19 +99,12 @@ export default function LeadPipeline() {
 
   useEffect(() => { fetchLeads(); }, []);
 
-  const cutoff = Date.now() - TWO_DAYS_MS;
-
   const grouped = useMemo(() => {
     return STATUS_OPTIONS.reduce((acc, status) => {
-      acc[status] = leads.filter((lead) => {
-        if (lead.status !== status) return false;
-        // "New" column: only show leads created in the last 2 days
-        if (status === "New" && new Date(lead.createdAt).getTime() < cutoff) return false;
-        return true;
-      });
+      acc[status] = leads.filter((lead) => lead.status === status);
       return acc;
     }, {});
-  }, [leads, cutoff]);
+  }, [leads]);
 
   const handleMove = async (lead, nextStatus) => {
     if (lead.status === nextStatus) return;

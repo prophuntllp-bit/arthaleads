@@ -144,8 +144,12 @@ const projectService = {
       remarkUpdatedAt: new Date(),
     };
 
-    const lead = await ProjectLead.findByIdAndUpdate(leadId, update, { new: true })
-      .populate("remarkUpdatedBy", "name");
+    // Scope by orgId — prevents IDOR across tenants
+    const lead = await ProjectLead.findOneAndUpdate(
+      { _id: leadId, orgId: user.orgId },
+      update,
+      { new: true }
+    ).populate("remarkUpdatedBy", "name");
     if (!lead) throw new AppError("Lead not found", 404);
     return lead;
   },

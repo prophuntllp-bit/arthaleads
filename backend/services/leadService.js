@@ -499,6 +499,7 @@ const leadService = {
       project: toProjectId, name: lead.name, phone: lead.phone,
       email: lead.email || "", source: lead.source || "Manual",
       importedBy: user._id,
+      orgId: user.orgId,  // required — must match parent project's org
     });
     lead.isArchived = true;
     await lead.save({ validateBeforeSave: false });
