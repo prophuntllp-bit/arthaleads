@@ -1,6 +1,7 @@
 // middlewares/auth.js
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Organization = require("../models/Organization");
 const { AppError } = require("./errorHandler");
 
 // ── Protect: verify JWT and attach user to req ────────────────────────────────
@@ -26,7 +27,17 @@ const protect = async (req, res, next) => {
     if (!user.isActive) return next(new AppError("Your account has been deactivated.", 403));
 
     req.user  = user;
-    req.orgId = user.orgId; // every protected route gets org scope automatically
+    req.orgId = user.orgId;
+
+    // ── Org-level access guard (skip for super_admin — platform-wide access) ──
+    if (user.role !== "super_admin" && user.orgId) {
+      const org = await Organization.findById(user.orgId).select("isActive plan trialEndsAt");
+      if (!org || !org.isActive) {
+        return next(new AppError("ORGANISATION_INACTIVE", 403));
+      }
+      req.org = org;
+    }
+
     next();
   } catch (err) {
     next(err);

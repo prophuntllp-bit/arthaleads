@@ -23,7 +23,7 @@ const orgSchema = new mongoose.Schema(
     },
     trialEndsAt: {
       type: Date,
-      default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7-day trial
     },
     isActive: { type: Boolean, default: true },
     industry: { type: String, default: "Real Estate" },

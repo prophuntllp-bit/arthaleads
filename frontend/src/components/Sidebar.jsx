@@ -206,7 +206,7 @@ export default function Sidebar() {
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover flex-shrink-0" />
             <span className="text-xs font-bold leading-none">
-              <span style={{ color: "var(--app-primary)" }}>Artha</span><span className="text-app">Leads</span>
+              <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
             </span>
           </div>
         </div>
@@ -217,12 +217,12 @@ export default function Sidebar() {
             <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
           </div>
           <p className="font-black text-base leading-none tracking-tight">
-            <span style={{ color: "var(--app-primary)" }}>Artha</span><span className="text-app">Leads</span>
+            <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
           </p>
           <div className="flex items-center gap-1.5 mt-1.5">
-            <span style={{ display: "block", width: 16, height: 1.5, background: "var(--app-primary)", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
             <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase">Turning Opportunities Into Value</p>
-            <span style={{ display: "block", width: 16, height: 1.5, background: "var(--app-primary)", borderRadius: 1 }} />
+            <span style={{ display: "block", width: 16, height: 1.5, background: "#FF6B00", borderRadius: 1 }} />
           </div>
         </div>
       )}
@@ -271,6 +271,39 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {/* ── Trial countdown (only for trial plan orgs, not super_admin) ── */}
+      {org && org.plan === "trial" && org.trialEndsAt && user?.role !== "super_admin" && (() => {
+        const msLeft = new Date(org.trialEndsAt) - Date.now();
+        const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+        const pct = Math.min(100, Math.round((daysLeft / 7) * 100));
+        const expired = daysLeft === 0;
+        const urgent  = daysLeft <= 2 && !expired;
+        const color   = expired ? "#ef4444" : urgent ? "#f59e0b" : "#22c55e";
+        return (
+          <div className="mx-3 mb-2 px-3 py-3 rounded-2xl border"
+            style={{ background: expired ? "rgba(239,68,68,0.06)" : urgent ? "rgba(245,158,11,0.06)" : "rgba(34,197,94,0.06)", borderColor: expired ? "rgba(239,68,68,0.2)" : urgent ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.15)" }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+                {expired ? "Trial Expired" : "Free Trial"}
+              </span>
+              <span className="text-[11px] font-black" style={{ color }}>
+                {expired ? "Upgrade Now" : `${daysLeft}d left`}
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+            </div>
+            {expired ? (
+              <p className="mt-1.5 text-[10px] text-app-soft leading-tight">Contact us to continue using Arthaleads</p>
+            ) : (
+              <p className="mt-1.5 text-[10px] text-app-soft leading-tight">
+                {urgent ? "Trial ending soon — " : ""}Upgrade anytime for full access
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="mt-auto p-4 space-y-3">
         <button

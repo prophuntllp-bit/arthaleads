@@ -257,13 +257,80 @@ import FollowUps     from "./pages/FollowUps";
 import Attendance    from "./pages/Attendance";
 import SuperAdmin    from "./pages/SuperAdmin";
 
+// ── Org Inactive overlay ──────────────────────────────────────────────────────
+function OrgInactiveScreen({ onLogout }) {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="max-w-sm w-full rounded-3xl p-8 text-center shadow-2xl"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-5">
+          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-black text-app mb-2">Account Deactivated</h2>
+        <p className="text-sm text-app-soft leading-relaxed mb-6">
+          Your organisation's account has been deactivated by an administrator. Please contact Arthaleads support to restore access.
+        </p>
+        <a href="mailto:hello@arthaleads.com"
+          className="block w-full py-3 rounded-2xl bg-[#FF6B00] text-white font-semibold text-sm mb-3 hover:bg-[#e05f00] transition">
+          Contact Support
+        </a>
+        <button onClick={onLogout}
+          className="block w-full py-2.5 rounded-2xl text-app-soft text-sm hover:text-app transition">
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Trial Expired overlay ─────────────────────────────────────────────────────
+function TrialExpiredScreen({ onLogout }) {
+  return (
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="max-w-sm w-full rounded-3xl p-8 text-center shadow-2xl"
+        style={{ background: "var(--app-surface)", border: "1px solid rgba(255,107,0,0.3)" }}>
+        <div className="w-16 h-16 rounded-full bg-[#FF6B00]/10 flex items-center justify-center mx-auto mb-5">
+          <svg className="w-8 h-8 text-[#FF6B00]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-black text-app mb-2">Your Free Trial Has Ended</h2>
+        <p className="text-sm text-app-soft leading-relaxed mb-1">
+          Your 7-day free trial has expired. Upgrade to a paid plan to continue managing your leads and team without interruption.
+        </p>
+        <p className="text-xs text-app-soft mb-6">All your data is safe and will be restored immediately on upgrade.</p>
+        <a href="mailto:hello@arthaleads.com?subject=Upgrade%20Arthaleads%20Plan"
+          className="block w-full py-3 rounded-2xl bg-[#FF6B00] text-white font-semibold text-sm mb-3 hover:bg-[#e05f00] transition shadow-lg shadow-orange-500/20">
+          Contact Us to Upgrade
+        </a>
+        <button onClick={onLogout}
+          className="block w-full py-2.5 rounded-2xl text-app-soft text-sm hover:text-app transition">
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Route guards ──────────────────────────────────────────────────────────────
 
 function RequireAuth() {
-  const { user, org, loading } = useAuth();
+  const { user, org, loading, logout } = useAuth();
+  const [orgInactive, setOrgInactive] = useState(false);
 
   // Apply (or clear) the org's custom brand colour whenever it changes
   useEffect(() => { applyBrandColor(org?.brandColor); }, [org?.brandColor]);
+
+  // Listen for org-inactive event fired by the API interceptor
+  useEffect(() => {
+    const handler = () => setOrgInactive(true);
+    window.addEventListener("org:inactive", handler);
+    return () => window.removeEventListener("org:inactive", handler);
+  }, []);
+
+  const handleLogout = () => { logout(); window.location.href = "/login"; };
 
   if (loading) {
     return (
@@ -273,6 +340,16 @@ function RequireAuth() {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+
+  // Check if org is set to inactive by super admin (also caught by API interceptor above)
+  const isInactive = orgInactive || (org && org.isActive === false);
+
+  // Check trial expiry (only for non-super_admin, on trial plan)
+  const trialExpired = user.role !== "super_admin"
+    && org?.plan === "trial"
+    && org?.trialEndsAt
+    && new Date() > new Date(org.trialEndsAt);
+
   return (
     <div className="flex min-h-screen text-app" style={{ background: "transparent" }}>
       <Sidebar />
@@ -281,6 +358,9 @@ function RequireAuth() {
       </main>
       {/* Notification permission prompt — only shows if permission not yet granted */}
       <NotificationBanner />
+      {/* Blocking overlays — rendered on top of everything */}
+      {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
+      {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
     </div>
   );
 }

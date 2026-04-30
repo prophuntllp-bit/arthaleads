@@ -13,4 +13,15 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Propagate org-inactive 403 as a recognisable error the UI can handle
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 403 && err.response?.data?.message === "ORGANISATION_INACTIVE") {
+      window.dispatchEvent(new CustomEvent("org:inactive"));
+    }
+    return Promise.reject(err);
+  }
+);
+
 export default api;
