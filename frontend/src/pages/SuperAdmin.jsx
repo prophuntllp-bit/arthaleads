@@ -20,6 +20,58 @@ function PlanBadge({ plan }) {
   );
 }
 
+// ── Extract dominant vibrant colour from a base64 image via Canvas ────────────
+function extractDominantColor(dataUri) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        // Downsample to 40×40 for speed — enough colour resolution
+        const SIZE = 40;
+        const canvas = document.createElement("canvas");
+        canvas.width = SIZE; canvas.height = SIZE;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+
+        // Score each pixel: skip transparent, near-white, near-black, near-gray
+        const freq = {};
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          if (a < 100) continue;                  // transparent
+          const brightness = (r + g + b) / 3;
+          if (brightness > 230) continue;         // near-white
+          if (brightness < 25)  continue;         // near-black
+
+          // Saturation: max-min distance; skip grays (low saturation)
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          const sat = max === 0 ? 0 : (max - min) / max;
+          if (sat < 0.25) continue;               // near-gray / desaturated
+
+          // Quantise to 24-step buckets (10px resolution) for grouping
+          const qr = Math.round(r / 24) * 24;
+          const qg = Math.round(g / 24) * 24;
+          const qb = Math.round(b / 24) * 24;
+          const key = `${qr},${qg},${qb}`;
+          // Weight by saturation so more vibrant colours win
+          freq[key] = (freq[key] || 0) + sat;
+        }
+
+        if (!Object.keys(freq).length) { resolve(null); return; }
+
+        const best = Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0];
+        const [r, g, b] = best.split(",").map(Number);
+        const toHex = (n) => Math.min(255, n).toString(16).padStart(2, "0");
+        resolve(`#${toHex(r)}${toHex(g)}${toHex(b)}`);
+      } catch {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUri;
+  });
+}
+
 function LogoUploader({ org, onUpdated }) {
   const inputRef  = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -37,9 +89,25 @@ function LogoUploader({ org, onUpdated }) {
       setPreview(dataUri);
       setLoading(true);
       try {
+        // Upload logo
         const { data } = await api.patch(`/super-admin/orgs/${org._id}/logo`, { logo: dataUri });
-        onUpdated(data.org);
-        toast.success(`Logo updated for ${org.name}`);
+
+        // Extract dominant colour from the logo and auto-apply as brand colour
+        const dominant = await extractDominantColor(dataUri);
+        if (dominant) {
+          try {
+            const { data: colorData } = await api.patch(`/super-admin/orgs/${org._id}`, { brandColor: dominant });
+            onUpdated(colorData.org);
+            toast.success(`Logo uploaded · Brand colour auto-set to ${dominant}`);
+          } catch {
+            // Colour update failed — still show logo success
+            onUpdated(data.org);
+            toast.success(`Logo updated for ${org.name}`);
+          }
+        } else {
+          onUpdated(data.org);
+          toast.success(`Logo updated for ${org.name}`);
+        }
       } catch (err) {
         toast.error(err.response?.data?.message || "Upload failed");
         setPreview(org.logo || "");
