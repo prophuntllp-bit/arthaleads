@@ -232,16 +232,12 @@ const authService = {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
 
-    try {
-      await sendPasswordResetEmail(user.email, user.name, resetUrl);
-    } catch (err) {
-      // If email fails, clear the token so the user can retry
-      user.passwordResetToken   = undefined;
-      user.passwordResetExpires = undefined;
-      await user.save({ validateBeforeSave: false });
-      console.error("[forgotPassword] email failed:", err.message);
-      throw new AppError("Failed to send reset email. Please try again later.", 500);
-    }
+    // Fire-and-forget — don't await so the API responds immediately.
+    // SMTP can take 10-30s on cold connections; holding the request open causes timeouts.
+    sendPasswordResetEmail(user.email, user.name, resetUrl).catch((err) => {
+      console.error("[forgotPassword] email send failed:", err.message);
+    });
+    // Return immediately — user sees success, email delivers in background
   },
 
   // ── Reset password — verify token + set new password ─────────────────────
