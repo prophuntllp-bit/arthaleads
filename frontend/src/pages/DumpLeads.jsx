@@ -390,8 +390,12 @@ export default function DumpLeads() {
             {/* ── Top scrollbar mirror ── */}
             <div
               ref={topScrollRef}
-              className="overflow-x-auto"
-              style={{ borderBottom: "1px solid var(--app-border)" }}
+              style={{
+                overflowX: "auto",
+                overflowY: "hidden",
+                height: 16,
+                borderBottom: "1px solid var(--app-border)",
+              }}
             >
               <div style={{ minWidth: 900, height: 1 }} />
             </div>
