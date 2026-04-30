@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
   useEffect(() => { document.title = "Sign In — Arthaleads Real Estate CRM"; }, []);
@@ -18,25 +18,23 @@ export default function Login() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const googleBtnRef = useRef(null);
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setErr("");
-    setGLoading(true);
-    try {
-      await googleLogin(credentialResponse.credential);
-      toast.success("Welcome back!");
-      navigate("/");
-    } catch (e) {
-      setErr(e.response?.data?.message || "Google sign-in failed. Please try again.");
-    } finally {
-      setGLoading(false);
-    }
-  };
-
-  const triggerGoogleBtn = () => {
-    googleBtnRef.current?.querySelector("div[role=button]")?.click();
-  };
+  // useGoogleLogin gives a callable function — no hidden-button hack needed
+  const triggerGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setErr("");
+      setGLoading(true);
+      try {
+        await googleLogin(tokenResponse.access_token);
+        toast.success("Welcome back!");
+        navigate("/dashboard");
+      } catch (e) {
+        setErr(e.response?.data?.message || "Google sign-in failed. Please try again.");
+      } finally {
+        setGLoading(false);
+      }
+    },
+    onError: () => setErr("Google sign-in failed. Please try again."),
+  });
 
   const submit = async (e) => {
     e.preventDefault();
@@ -49,7 +47,7 @@ export default function Login() {
       try {
         await login(form.email, form.password);
         toast.success("Welcome back!");
-        navigate("/");
+        navigate("/dashboard");
         return;
       } catch (e) {
         const isNetworkErr = !e.response && e.request;
@@ -202,19 +200,9 @@ export default function Login() {
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
             </div>
 
-            {/* Hidden real Google button — triggered programmatically */}
-            <div ref={googleBtnRef} className="absolute opacity-0 pointer-events-none h-0 overflow-hidden">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setErr("Google sign-in failed. Please try again.")}
-                useOneTap={false}
-              />
-            </div>
-
-            {/* Custom full-width button */}
             <button
               type="button"
-              onClick={triggerGoogleBtn}
+              onClick={() => triggerGoogle()}
               disabled={gLoading}
               className="w-full flex items-center justify-center gap-3 rounded-2xl border px-4 py-2.5 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
               style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}

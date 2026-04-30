@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, CheckCircle2, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
+import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -23,25 +23,22 @@ export default function Signup() {
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const googleBtnRef = useRef(null);
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setError("");
-    setGLoading(true);
-    try {
-      await googleLogin(credentialResponse.credential);
-      toast.success("Account ready! Welcome to Arthaleads.");
-      navigate("/");
-    } catch (e) {
-      setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
-    } finally {
-      setGLoading(false);
-    }
-  };
-
-  const triggerGoogleBtn = () => {
-    googleBtnRef.current?.querySelector("div[role=button]")?.click();
-  };
+  const triggerGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setError("");
+      setGLoading(true);
+      try {
+        await googleLogin(tokenResponse.access_token);
+        toast.success("Account ready! Welcome to Arthaleads.");
+        navigate("/dashboard");
+      } catch (e) {
+        setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
+      } finally {
+        setGLoading(false);
+      }
+    },
+    onError: () => setError("Google sign-up failed. Please try again."),
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,7 +53,7 @@ export default function Signup() {
     try {
       await signup(form);
       toast.success("Account created! Welcome to Arthaleads.");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       const msg =
         err.response?.data?.message ||
@@ -256,19 +253,9 @@ export default function Signup() {
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
             </div>
 
-            {/* Hidden real Google button — triggered programmatically */}
-            <div ref={googleBtnRef} className="absolute opacity-0 pointer-events-none h-0 overflow-hidden">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setError("Google sign-up failed. Please try again.")}
-                useOneTap={false}
-              />
-            </div>
-
-            {/* Custom button so we control the text */}
             <button
               type="button"
-              onClick={triggerGoogleBtn}
+              onClick={() => triggerGoogle()}
               disabled={gLoading}
               className="w-full flex items-center justify-center gap-3 rounded-2xl border px-4 py-2.5 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
               style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}

@@ -48,17 +48,15 @@ const authService = {
   },
 
   async googleAuth(credential) {
-    // Verify the Google ID token using Google's tokeninfo endpoint (no external library needed)
+    // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
+    // Verify it by calling Google's userinfo endpoint — no client-secret needed.
     const response = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
+      `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${credential}`
     );
     const payload = await response.json();
 
     if (!response.ok || payload.error) {
       throw new AppError("Invalid Google token", 401);
-    }
-    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
-      throw new AppError("Google token audience mismatch", 401);
     }
 
     const { sub: googleId, email, name, picture } = payload;
