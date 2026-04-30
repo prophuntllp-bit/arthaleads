@@ -338,6 +338,20 @@
     background: rgba(var(--app-primary-rgb), 0.30);
   }
 
+  /* ── Top-scrollbar mirror strip — always show the track ── */
+  .top-scroll-mirror::-webkit-scrollbar { height: 8px; display: block; }
+  .top-scroll-mirror::-webkit-scrollbar-track {
+    background: var(--app-surface-low);
+    border-radius: 999px;
+  }
+  .top-scroll-mirror::-webkit-scrollbar-thumb {
+    background: var(--app-border-strong);
+    border-radius: 999px;
+  }
+  .top-scroll-mirror::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--app-primary-rgb), 0.40);
+  }
+
   /* ── Safe area insets (notched phones & gesture bars) ── */
 
   /* Page content: extra bottom padding so last card clears gesture bar */

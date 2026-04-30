@@ -387,13 +387,14 @@ export default function DumpLeads() {
           <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
         ) : (
           <>
-            {/* ── Top scrollbar mirror ── */}
+            {/* ── Top scrollbar mirror — always-visible horizontal bar ── */}
             <div
               ref={topScrollRef}
+              className="top-scroll-mirror"
               style={{
-                overflowX: "auto",
+                overflowX: "scroll",
                 overflowY: "hidden",
-                height: 16,
+                height: 14,
                 borderBottom: "1px solid var(--app-border)",
               }}
             >
