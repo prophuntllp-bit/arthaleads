@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image, RefreshCw, Palette } from "lucide-react";
+import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon, RefreshCw, Palette } from "lucide-react";
 
 function PlanBadge({ plan }) {
   const cls = {
@@ -182,7 +182,7 @@ function LogoUploader({ org, onUpdated }) {
         ) : preview ? (
           <img src={preview} alt="logo" className="max-w-full max-h-full object-contain p-1" />
         ) : (
-          <Image className="w-5 h-5 text-app-soft" />
+          <ImageIcon className="w-5 h-5 text-app-soft" />
         )}
       </div>
 
