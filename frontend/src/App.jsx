@@ -255,7 +255,9 @@ import ProjectDetail from "./pages/ProjectDetail";
 import DumpLeads     from "./pages/DumpLeads";
 import FollowUps     from "./pages/FollowUps";
 import Attendance    from "./pages/Attendance";
-import SuperAdmin    from "./pages/SuperAdmin";
+import SuperAdmin      from "./pages/SuperAdmin";
+import ForgotPassword  from "./pages/ForgotPassword";
+import ResetPassword   from "./pages/ResetPassword";
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -402,9 +404,11 @@ export default function App() {
         <Route path="/" element={<RootRoute />} />
 
         {/* Fully public — no auth needed */}
-        <Route path="/privacy"     element={<Privacy />} />
-        <Route path="/terms"       element={<Terms />} />
-        <Route path="/fb-callback" element={<FbCallback />} />
+        <Route path="/privacy"              element={<Privacy />} />
+        <Route path="/terms"                element={<Terms />} />
+        <Route path="/fb-callback"          element={<FbCallback />} />
+        <Route path="/forgot-password"      element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>

@@ -1,9 +1,11 @@
 // services/authService.js
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
+const { sendPasswordResetEmail } = require("../utils/email");
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -200,6 +202,69 @@ const authService = {
     user.isActive = !user.isActive;
     await user.save({ validateBeforeSave: false });
     return user;
+  },
+
+  // ── Forgot password — generate token + send email ─────────────────────────
+  async forgotPassword(email) {
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select("+passwordResetToken +passwordResetExpires");
+
+    // Always respond with success to prevent email enumeration attacks
+    if (!user) return;
+
+    // Google-only accounts have no password — block reset
+    const hasPassword = await User.findById(user._id).select("+password");
+    if (!hasPassword?.password) {
+      throw new AppError(
+        "This account uses Google Sign-In. Please sign in with Google instead.",
+        400
+      );
+    }
+
+    // Generate a 32-byte random token, store the SHA-256 hash in DB
+    const rawToken   = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.passwordResetToken   = hashedToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
+
+    try {
+      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    } catch (err) {
+      // If email fails, clear the token so the user can retry
+      user.passwordResetToken   = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      console.error("[forgotPassword] email failed:", err.message);
+      throw new AppError("Failed to send reset email. Please try again later.", 500);
+    }
+  },
+
+  // ── Reset password — verify token + set new password ─────────────────────
+  async resetPassword(rawToken, newPassword) {
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken:   hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    }).select("+passwordResetToken +passwordResetExpires");
+
+    if (!user) throw new AppError("Reset link is invalid or has expired.", 400);
+
+    user.password             = newPassword;
+    user.passwordResetToken   = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    const token = signToken(user._id);
+    const org   = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt").lean()
+      : null;
+    return { token, user, org };
   },
 
   async getPerformance(actor) {

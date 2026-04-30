@@ -111,6 +111,32 @@ const authController = {
       next(err);
     }
   },
+
+  async forgotPassword(req, res, next) {
+    try {
+      const { email } = req.body;
+      if (!email) return next(new AppError("Email is required", 400));
+      await authService.forgotPassword(email);
+      // Always return 200 — prevents email enumeration
+      res.json({ success: true, message: "If that email exists, a reset link has been sent." });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async resetPassword(req, res, next) {
+    try {
+      const { token } = req.params;
+      const { password } = req.body;
+      if (!password || password.length < 6) {
+        return next(new AppError("Password must be at least 6 characters", 400));
+      }
+      const data = await authService.resetPassword(token, password);
+      res.json({ success: true, ...data });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = authController;

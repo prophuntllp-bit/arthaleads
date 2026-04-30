@@ -193,6 +193,14 @@ export default function Login() {
               <button type="submit" className="btn-primary w-full justify-center py-3" disabled={loading}>
                 {loading ? <Spinner size="sm" /> : "Sign In"}
               </button>
+
+              <div className="flex justify-end">
+                <Link to="/forgot-password"
+                  className="text-xs font-medium hover:underline underline-offset-2 transition-colors"
+                  style={{ color: "var(--app-primary)" }}>
+                  Forgot password?
+                </Link>
+              </div>
             </form>
 
             <div className="my-5 flex items-center gap-3">
