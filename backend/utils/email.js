@@ -1,28 +1,18 @@
-// utils/email.js — Nodemailer email sender
-const nodemailer = require("nodemailer");
+// utils/email.js — Email via Resend HTTP API (no SMTP, works on Railway)
+const { Resend } = require("resend");
 
-function createTransporter() {
-  return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST || "smtp.gmail.com",
-    port:   parseInt(process.env.SMTP_PORT) || 465,
-    secure: true,  // SSL on port 465 — avoids Railway's IPv6 STARTTLS block
-    family: 4,     // Force IPv4 — Railway cannot reach Gmail over IPv6
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    connectionTimeout: 15000,
-    greetingTimeout:   10000,
-    socketTimeout:     15000,
-  });
+function getResend() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY environment variable is not set");
+  }
+  return new Resend(process.env.RESEND_API_KEY);
 }
 
-const FROM = (name = "Arthaleads") =>
-  `"${name}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`;
+const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
 
 // ── Password reset email ──────────────────────────────────────────────────────
 async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
-  const transporter = createTransporter();
+  const resend = getResend();
 
   const html = `
 <!DOCTYPE html>
@@ -44,8 +34,8 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
               <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
                 <tr>
                   <td style="vertical-align:middle;padding-right:10px;">
-                    <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#a04100,#ff6b00);display:inline-flex;align-items:center;justify-content:center;">
-                      <span style="color:#fff;font-weight:900;font-size:18px;line-height:1;">A</span>
+                    <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#a04100,#ff6b00);display:inline-block;text-align:center;line-height:36px;">
+                      <span style="color:#fff;font-weight:900;font-size:18px;">A</span>
                     </div>
                   </td>
                   <td style="vertical-align:middle;">
@@ -70,7 +60,7 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
                 <tr>
                   <td align="center" style="padding:8px 0 24px;">
                     <a href="${resetUrl}"
-                      style="display:inline-block;background:#ff6b00;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;letter-spacing:0.01em;">
+                      style="display:inline-block;background:#ff6b00;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 32px;border-radius:12px;">
                       Reset Password →
                     </a>
                   </td>
@@ -78,13 +68,13 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
               </table>
 
               <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;line-height:1.6;">
-                This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password won't change.
+                This link expires in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email.
               </p>
 
               <hr style="border:none;border-top:1px solid #f0f0f0;margin:20px 0;" />
 
               <p style="margin:0;font-size:11px;color:#d1d5db;word-break:break-all;">
-                If the button doesn't work, copy and paste this URL into your browser:<br/>
+                If the button doesn't work, copy and paste this URL:<br/>
                 <a href="${resetUrl}" style="color:#ff6b00;">${resetUrl}</a>
               </p>
             </td>
@@ -107,13 +97,16 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 </html>
   `.trim();
 
-  await transporter.sendMail({
-    from:    FROM(),
+  const { data, error } = await resend.emails.send({
+    from:    FROM_ADDRESS,
     to:      toEmail,
     subject: "Reset your Arthaleads password",
     html,
-    text: `Hi ${toName || "there"},\n\nReset your Arthaleads password by visiting:\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore this email.\n\n— Arthaleads Team`,
+    text: `Hi ${toName || "there"},\n\nReset your Arthaleads password:\n${resetUrl}\n\nThis link expires in 1 hour.\n\n— Arthaleads Team`,
   });
+
+  if (error) throw new Error(error.message || "Resend API error");
+  return data;
 }
 
 module.exports = { sendPasswordResetEmail };
