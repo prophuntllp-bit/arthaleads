@@ -300,6 +300,19 @@ export default function DumpLeads() {
   const allSelectedOnPage = paginated.length > 0 && paginated.every((l) => isSelected(l));
   const someSelectedOnPage = paginated.some((l) => isSelected(l));
 
+  // ── Track actual table scroll width for the top mirror spacer ───────────
+  const [tableScrollWidth, setTableScrollWidth] = useState(900);
+
+  useEffect(() => {
+    const table = tableWrapRef.current;
+    if (!table) return;
+    const update = () => setTableScrollWidth(table.scrollWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [loading, filtered.length]);
+
   // ── Sync top ↔ bottom scrollbars ─────────────────────────────────────────
   useEffect(() => {
     const top   = topScrollRef.current;
@@ -313,7 +326,7 @@ export default function DumpLeads() {
       top.removeEventListener("scroll",   syncFromTop);
       table.removeEventListener("scroll", syncFromTable);
     };
-  }, [loading, filtered.length]); // re-bind when table content changes
+  }, [loading, filtered.length]);
 
   return (
     <div className="stitch-page space-y-6">
@@ -398,7 +411,7 @@ export default function DumpLeads() {
                 borderBottom: "1px solid var(--app-border)",
               }}
             >
-              <div style={{ minWidth: 900, height: 1 }} />
+              <div style={{ minWidth: tableScrollWidth, height: 1 }} />
             </div>
 
           <div ref={tableWrapRef} className="overflow-x-auto">
