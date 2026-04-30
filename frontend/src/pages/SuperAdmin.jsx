@@ -20,6 +20,34 @@ function PlanBadge({ plan }) {
   );
 }
 
+// ── Compress + normalise any image format to a compact JPEG data-URI ─────────
+// Resizes to max 400px on the longest side, exports as JPEG quality 0.88.
+// This converts WebP / HEIC-alike / PNG / GIF → JPEG before upload,
+// keeping MongoDB documents small and bypassing any server-side format quirks.
+function compressImage(dataUri) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 400;
+      let { naturalWidth: w, naturalHeight: h } = img;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round((h / w) * MAX); w = MAX; }
+        else        { w = Math.round((w / h) * MAX); h = MAX; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      // Fill white background so transparent PNGs don't go black in JPEG
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.onerror = () => reject(new Error("Could not load image"));
+    img.src = dataUri;
+  });
+}
+
 // ── Extract dominant vibrant colour from a base64 image via Canvas ────────────
 function extractDominantColor(dataUri) {
   return new Promise((resolve) => {
@@ -81,15 +109,18 @@ function LogoUploader({ org, onUpdated }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return toast.error("Only image files are supported");
-    if (file.size > 2 * 1024 * 1024) return toast.error("Logo must be under 2 MB");
+    if (file.size > 10 * 1024 * 1024) return toast.error("Logo must be under 10 MB");
 
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      const dataUri = ev.target.result;
-      setPreview(dataUri);
+      const rawDataUri = ev.target.result;
       setLoading(true);
       try {
-        // Upload logo
+        // Compress + convert to JPEG (handles WebP, PNG, GIF, etc.)
+        const dataUri = await compressImage(rawDataUri);
+        setPreview(dataUri);
+
+        // Upload compressed logo
         const { data } = await api.patch(`/super-admin/orgs/${org._id}/logo`, { logo: dataUri });
 
         // Extract dominant colour from the logo and auto-apply as brand colour
