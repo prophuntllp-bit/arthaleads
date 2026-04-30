@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"] },
-  { to: "/",            label: "Dashboard",    icon: LayoutDashboard },
+  { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
@@ -415,7 +415,7 @@ export default function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass mobile-topbar"
         style={{ borderColor: "var(--app-border)" }}>
         {/* Clickable logo → home */}
-        <NavLink to="/" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
+        <NavLink to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
           {org?.logo ? (
             <>
               <div className="h-8 max-w-[80px] flex items-center flex-shrink-0">

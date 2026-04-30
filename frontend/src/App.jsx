@@ -235,6 +235,7 @@ function NotificationBanner() {
   );
 }
 
+import Landing      from "./pages/Landing";
 import Login        from "./pages/Login";
 import Signup       from "./pages/Signup";
 import Dashboard    from "./pages/Dashboard";
@@ -288,14 +289,26 @@ function RequireRole({ roles }) {
   const { user } = useAuth();
   // super_admin bypasses all role gates
   if (user?.role === "super_admin" || roles.includes(user?.role)) return <Outlet />;
-  return <Navigate to="/" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 function RedirectIfAuth() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
   return <Outlet />;
+}
+
+// Show landing page to guests; redirect logged-in users to dashboard
+function RootRoute() {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spinner size="lg" />
+    </div>
+  );
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
@@ -305,12 +318,15 @@ export default function App() {
     <AuthProvider>
       <InstallBanner />
       <Routes>
+        {/* Landing — guest sees homepage, logged-in user goes to dashboard */}
+        <Route path="/" element={<RootRoute />} />
+
         {/* Fully public — no auth needed */}
         <Route path="/privacy"     element={<Privacy />} />
         <Route path="/terms"       element={<Terms />} />
         <Route path="/fb-callback" element={<FbCallback />} />
 
-        {/* Public routes */}
+        {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>
           <Route path="/login"  element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -318,7 +334,7 @@ export default function App() {
 
         {/* Protected routes */}
         <Route element={<RequireAuth />}>
-          <Route path="/"          element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/leads"     element={<Leads />} />
           <Route path="/pipeline"  element={<LeadPipeline />} />
           <Route path="/settings"      element={<Settings />} />
