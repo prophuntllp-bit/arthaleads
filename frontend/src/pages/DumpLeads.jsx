@@ -28,6 +28,8 @@ export default function DumpLeads() {
   const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
   const exportBtnRef      = useRef(null);
   const exportDropdownRef = useRef(null);
+  const topScrollRef      = useRef(null);
+  const tableWrapRef      = useRef(null);
 
   // ── Bulk select state ─────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds]     = useState(new Set());
@@ -298,6 +300,21 @@ export default function DumpLeads() {
   const allSelectedOnPage = paginated.length > 0 && paginated.every((l) => isSelected(l));
   const someSelectedOnPage = paginated.some((l) => isSelected(l));
 
+  // ── Sync top ↔ bottom scrollbars ─────────────────────────────────────────
+  useEffect(() => {
+    const top   = topScrollRef.current;
+    const table = tableWrapRef.current;
+    if (!top || !table) return;
+    const syncFromTop   = () => { table.scrollLeft = top.scrollLeft; };
+    const syncFromTable = () => { top.scrollLeft   = table.scrollLeft; };
+    top.addEventListener("scroll",   syncFromTop);
+    table.addEventListener("scroll", syncFromTable);
+    return () => {
+      top.removeEventListener("scroll",   syncFromTop);
+      table.removeEventListener("scroll", syncFromTable);
+    };
+  }, [loading, filtered.length]); // re-bind when table content changes
+
   return (
     <div className="stitch-page space-y-6">
       <header className="stitch-topbar">
@@ -369,7 +386,17 @@ export default function DumpLeads() {
         ) : filtered.length === 0 ? (
           <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* ── Top scrollbar mirror ── */}
+            <div
+              ref={topScrollRef}
+              className="overflow-x-auto"
+              style={{ borderBottom: "1px solid var(--app-border)" }}
+            >
+              <div style={{ minWidth: 900, height: 1 }} />
+            </div>
+
+          <div ref={tableWrapRef} className="overflow-x-auto">
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
@@ -515,6 +542,7 @@ export default function DumpLeads() {
               </div>
             )}
           </div>
+          </>
         )}
       </section>
 
