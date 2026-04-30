@@ -43,7 +43,7 @@ function compressImage(dataUri) {
       ctx.drawImage(img, 0, 0, w, h);
       resolve(canvas.toDataURL("image/jpeg", 0.88));
     };
-    img.onerror = () => reject(new Error("Could not load image"));
+    img.onerror = () => resolve(null); // resolve null so callers can fallback gracefully
     img.src = dataUri;
   });
 }
@@ -107,6 +107,8 @@ function LogoUploader({ org, onUpdated }) {
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
+    // Reset so the same file can be re-selected after an error
+    e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) return toast.error("Only image files are supported");
     if (file.size > 10 * 1024 * 1024) return toast.error("Logo must be under 10 MB");
@@ -117,7 +119,9 @@ function LogoUploader({ org, onUpdated }) {
       setLoading(true);
       try {
         // Compress + convert to JPEG (handles WebP, PNG, GIF, etc.)
-        const dataUri = await compressImage(rawDataUri);
+        // compressImage resolves null if the image can't be loaded — fall back to raw
+        const compressed = await compressImage(rawDataUri);
+        const dataUri = compressed || rawDataUri;
         setPreview(dataUri);
 
         // Upload compressed logo
@@ -140,7 +144,7 @@ function LogoUploader({ org, onUpdated }) {
           toast.success(`Logo updated for ${org.name}`);
         }
       } catch (err) {
-        toast.error(err.response?.data?.message || "Upload failed");
+        toast.error(err.response?.data?.message || err.message || "Upload failed");
         setPreview(org.logo || "");
       } finally {
         setLoading(false);

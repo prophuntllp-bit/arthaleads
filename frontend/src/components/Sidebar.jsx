@@ -272,7 +272,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* ── Trial countdown (only for trial plan orgs, not super_admin) ── */}
+      {/* ── Trial countdown — compact single-line strip ── */}
       {org && org.plan === "trial" && org.trialEndsAt && user?.role !== "super_admin" && (() => {
         const msLeft = new Date(org.trialEndsAt) - Date.now();
         const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
@@ -281,26 +281,15 @@ export default function Sidebar() {
         const urgent  = daysLeft <= 2 && !expired;
         const color   = expired ? "#ef4444" : urgent ? "#f59e0b" : "#22c55e";
         return (
-          <div className="mx-3 mb-2 px-3 py-3 rounded-2xl border"
-            style={{ background: expired ? "rgba(239,68,68,0.06)" : urgent ? "rgba(245,158,11,0.06)" : "rgba(34,197,94,0.06)", borderColor: expired ? "rgba(239,68,68,0.2)" : urgent ? "rgba(245,158,11,0.2)" : "rgba(34,197,94,0.15)" }}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
-                {expired ? "Trial Expired" : "Free Trial"}
-              </span>
-              <span className="text-[11px] font-black" style={{ color }}>
-                {expired ? "Upgrade Now" : `${daysLeft}d left`}
-              </span>
+          <div className="mx-3 mb-1 px-3 py-1.5 rounded-xl flex items-center gap-2"
+            style={{ background: expired ? "rgba(239,68,68,0.07)" : urgent ? "rgba(245,158,11,0.07)" : "rgba(34,197,94,0.07)", border: `1px solid ${expired ? "rgba(239,68,68,0.18)" : urgent ? "rgba(245,158,11,0.18)" : "rgba(34,197,94,0.14)"}` }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+            <span className="text-[10px] font-bold flex-1 truncate" style={{ color }}>
+              {expired ? "Trial Expired" : `Free Trial · ${daysLeft}d left`}
+            </span>
+            <div className="w-10 h-1 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(0,0,0,0.12)" }}>
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
             </div>
-            <div className="h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-            </div>
-            {expired ? (
-              <p className="mt-1.5 text-[10px] text-app-soft leading-tight">Contact us to continue using Arthaleads</p>
-            ) : (
-              <p className="mt-1.5 text-[10px] text-app-soft leading-tight">
-                {urgent ? "Trial ending soon — " : ""}Upgrade anytime for full access
-              </p>
-            )}
           </div>
         );
       })()}
