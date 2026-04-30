@@ -24,6 +24,7 @@ export default function Signup() {
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const triggerGoogle = useGoogleLogin({
+    scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
       setError("");
       setGLoading(true);

@@ -20,6 +20,7 @@ export default function Login() {
 
   // useGoogleLogin gives a callable function — no hidden-button hack needed
   const triggerGoogle = useGoogleLogin({
+    scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
       setErr("");
       setGLoading(true);

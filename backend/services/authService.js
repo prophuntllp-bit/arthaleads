@@ -51,12 +51,14 @@ const authService = {
     // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
     // Verify it by calling Google's userinfo endpoint — no client-secret needed.
     const response = await fetch(
-      `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${credential}`
+      `https://www.googleapis.com/oauth2/v3/userinfo`,
+      { headers: { Authorization: `Bearer ${credential}` } }
     );
     const payload = await response.json();
 
     if (!response.ok || payload.error) {
-      throw new AppError("Invalid Google token", 401);
+      console.error("[googleAuth] userinfo failed:", payload);
+      throw new AppError("Google sign-in failed. Please try again.", 401);
     }
 
     const { sub: googleId, email, name, picture } = payload;
