@@ -4,17 +4,16 @@ const nodemailer = require("nodemailer");
 function createTransporter() {
   return nodemailer.createTransport({
     host:   process.env.SMTP_HOST || "smtp.gmail.com",
-    port:   parseInt(process.env.SMTP_PORT) || 587,
-    secure: false, // TLS via STARTTLS on port 587
+    port:   parseInt(process.env.SMTP_PORT) || 465,
+    secure: true,  // SSL on port 465 — avoids Railway's IPv6 STARTTLS block
+    family: 4,     // Force IPv4 — Railway cannot reach Gmail over IPv6
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    connectionTimeout: 15000, // 15s — fail fast instead of hanging
+    connectionTimeout: 15000,
     greetingTimeout:   10000,
     socketTimeout:     15000,
-    logger: false,
-    debug:  false,
   });
 }
 
