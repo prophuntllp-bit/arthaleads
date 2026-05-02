@@ -39,3 +39,16 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </GoogleOAuthProvider>
   </React.StrictMode>
 );
+
+// Fade out splash once React has painted its first frame
+// Two rAF calls ensure the DOM has actually been painted before we hide
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const splash = document.getElementById("app-splash");
+    if (splash) {
+      splash.classList.add("splash-hidden");
+      // Remove from DOM after the CSS transition completes (0.55s)
+      setTimeout(() => splash.remove(), 600);
+    }
+  });
+});
