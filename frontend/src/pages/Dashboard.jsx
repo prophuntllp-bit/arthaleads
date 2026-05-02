@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [greeting, setGreeting] = useState(getGreeting());
 
   useEffect(() => {
-    const timer = setInterval(() => setGreeting(getGreeting()), 60_000);
+    const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min — greeting only changes AM/PM
     return () => clearInterval(timer);
   }, []);
   const navigate = useNavigate();

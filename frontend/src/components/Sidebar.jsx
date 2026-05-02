@@ -133,7 +133,7 @@ export default function Sidebar() {
         .catch(() => {});
     };
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 30000); // poll every 30s
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000); // poll every 5 min (was 30s = 2880 req/day)
     return () => clearInterval(interval);
   }, [user]);
 

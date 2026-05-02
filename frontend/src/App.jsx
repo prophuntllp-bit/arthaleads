@@ -1,11 +1,19 @@
 // App.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Sidebar from "./components/Sidebar";
 import { Spinner } from "./components/UI";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
+
+// ── Page-level code splitting ─────────────────────────────────────────────────
+// Each page is loaded only when first visited — reduces initial bundle ~50%
+const PageFallback = () => (
+  <div className="flex min-h-[60vh] items-center justify-center">
+    <Spinner size="lg" />
+  </div>
+);
 
 // ── Brand Colour ──────────────────────────────────────────────────────────────
 // Applies a customer's hex accent colour as CSS-variable overrides so the
@@ -235,29 +243,29 @@ function NotificationBanner() {
   );
 }
 
-import Landing      from "./pages/Landing";
-import Login        from "./pages/Login";
-import Signup       from "./pages/Signup";
-import Dashboard    from "./pages/Dashboard";
-import Leads        from "./pages/Leads";
-import LeadPipeline from "./pages/LeadPipeline";
-import Team         from "./pages/Team";
-import Performance  from "./pages/Performance";
-import Automation   from "./pages/Automation";
-import Settings      from "./pages/Settings";
-import HelpSupport   from "./pages/HelpSupport";
-import NotFound      from "./pages/NotFound";
-import Privacy       from "./pages/Privacy";
-import Terms         from "./pages/Terms";
-import FbCallback    from "./pages/FbCallback";
-import Projects      from "./pages/Projects";
-import ProjectDetail from "./pages/ProjectDetail";
-import DumpLeads     from "./pages/DumpLeads";
-import FollowUps     from "./pages/FollowUps";
-import Attendance    from "./pages/Attendance";
-import SuperAdmin      from "./pages/SuperAdmin";
-import ForgotPassword  from "./pages/ForgotPassword";
-import ResetPassword   from "./pages/ResetPassword";
+const Landing        = lazy(() => import("./pages/Landing"));
+const Login          = lazy(() => import("./pages/Login"));
+const Signup         = lazy(() => import("./pages/Signup"));
+const Dashboard      = lazy(() => import("./pages/Dashboard"));
+const Leads          = lazy(() => import("./pages/Leads"));
+const LeadPipeline   = lazy(() => import("./pages/LeadPipeline"));
+const Team           = lazy(() => import("./pages/Team"));
+const Performance    = lazy(() => import("./pages/Performance"));
+const Automation     = lazy(() => import("./pages/Automation"));
+const Settings       = lazy(() => import("./pages/Settings"));
+const HelpSupport    = lazy(() => import("./pages/HelpSupport"));
+const NotFound       = lazy(() => import("./pages/NotFound"));
+const Privacy        = lazy(() => import("./pages/Privacy"));
+const Terms          = lazy(() => import("./pages/Terms"));
+const FbCallback     = lazy(() => import("./pages/FbCallback"));
+const Projects       = lazy(() => import("./pages/Projects"));
+const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
+const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
+const FollowUps      = lazy(() => import("./pages/FollowUps"));
+const Attendance     = lazy(() => import("./pages/Attendance"));
+const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -399,6 +407,7 @@ export default function App() {
   return (
     <AuthProvider>
       <InstallBanner />
+      <Suspense fallback={<PageFallback />}>
       <Routes>
         {/* Landing — guest sees homepage, logged-in user goes to dashboard */}
         <Route path="/" element={<RootRoute />} />
@@ -449,6 +458,7 @@ export default function App() {
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </AuthProvider>
   );
 }

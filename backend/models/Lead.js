@@ -153,13 +153,25 @@ const leadSchema = new mongoose.Schema(
 );
 
 // ── Indexes ───────────────────────────────────────────────────────────────────
-leadSchema.index({ status: 1 });
-leadSchema.index({ source: 1 });
-leadSchema.index({ assignedTo: 1 });
-leadSchema.index({ createdBy: 1 });
+// Single-field (kept for backward compat)
 leadSchema.index({ followUpDate: 1 });
-leadSchema.index({ priority: 1 });
 leadSchema.index({ createdAt: -1 });
+
+// Compound indexes — these cover the most common multi-field queries:
+// "all active leads for this org sorted by date" (dashboard, leads list)
+leadSchema.index({ orgId: 1, isArchived: 1, createdAt: -1 });
+// "leads by status for this org" (pipeline, analytics)
+leadSchema.index({ orgId: 1, status: 1, isArchived: 1 });
+// "leads assigned to a user for this org" (agent view, performance)
+leadSchema.index({ orgId: 1, assignedTo: 1, isArchived: 1 });
+// "deleted/dump leads for this org"
+leadSchema.index({ orgId: 1, isDeleted: 1 });
+// "follow-up leads for this org by date" (followups page)
+leadSchema.index({ orgId: 1, followUpDate: 1, isArchived: 1 });
+// "alerts: new leads by org + date" (sidebar alert polling)
+leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
+// phone dedup check
+leadSchema.index({ orgId: 1, phone: 1 });
 
 const Lead = mongoose.model("Lead", leadSchema);
 module.exports = Lead;
