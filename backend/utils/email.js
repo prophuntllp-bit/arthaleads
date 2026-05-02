@@ -22,68 +22,60 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reset your password</title>
 </head>
-<body style="margin:0;padding:0;background:#0f0f13;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f13;padding:48px 16px;">
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:540px;">
+        <table width="100%" style="max-width:520px;">
 
-          <!-- Top logo -->
+          <!-- Logo -->
           <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
-                <tr>
-                  <td style="vertical-align:middle;padding-right:10px;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#c05200,#ff6b00);display:inline-block;text-align:center;line-height:38px;">
-                      <span style="color:#fff;font-weight:900;font-size:19px;font-family:'Segoe UI',Arial,sans-serif;">A</span>
-                    </div>
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <span style="color:#ffffff;font-weight:700;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha</span><span style="color:#ff6b00;font-weight:700;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">leads</span>
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding-bottom:24px;">
+              <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
+                style="display:inline-block;border-radius:14px;border:0;" />
+              <br/>
+              <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha<span style="color:#ff6b00;">leads</span></span>
             </td>
           </tr>
 
           <!-- Card -->
           <tr>
-            <td style="background:#1a1a24;border-radius:20px;border:1px solid #2a2a38;overflow:hidden;">
+            <td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 0 0 1px rgba(255,107,0,0.06),0 20px 60px rgba(0,0,0,0.22),0 0 40px rgba(255,107,0,0.06);overflow:hidden;">
 
-              <!-- Card header band -->
+              <!-- Header with orange gradient glow -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="background:linear-gradient(135deg,#1e1030 0%,#1a1520 50%,#0f1020 100%);padding:36px 40px 32px;border-bottom:1px solid #2a2a38;">
-                    <!-- Shield icon -->
-                    <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+                  <td style="background:linear-gradient(160deg,rgba(255,107,0,0.12) 0%,rgba(30,29,32,0) 55%);padding:36px 40px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
+
+                    <!-- Icon badge -->
+                    <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
                       <tr>
-                        <td>
-                          <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#2a1500,#3d2000);border:1px solid rgba(255,107,0,0.25);display:inline-block;text-align:center;line-height:56px;">
-                            <span style="font-size:26px;line-height:56px;display:inline-block;margin-top:2px;">🔑</span>
-                          </div>
+                        <td style="background:rgba(255,107,0,0.12);border:1px solid rgba(255,107,0,0.22);border-radius:14px;width:52px;height:52px;text-align:center;vertical-align:middle;">
+                          <span style="font-size:24px;line-height:1;">🔑</span>
                         </td>
                       </tr>
                     </table>
-                    <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.6px;line-height:1.2;">Reset your password</h1>
-                    <p style="margin:0;font-size:14px;color:#8b8fa8;line-height:1.6;">
-                      Hi <strong style="color:#c8cade;">${toName || "there"}</strong> — we received a request to reset your Arthaleads CRM password.
+
+                    <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">Reset your password</h1>
+                    <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
+                      Hi <strong style="color:#d4d4d4;">${toName || "there"}</strong> — we received a request to reset your Arthaleads CRM password.
                     </p>
                   </td>
                 </tr>
 
                 <!-- Body -->
                 <tr>
-                  <td style="padding:32px 40px;">
-                    <p style="margin:0 0 28px;font-size:14px;color:#8b8fa8;line-height:1.75;">
-                      Click the button below to choose a new password. This link will expire in <span style="color:#ff8a3d;font-weight:600;">1 hour</span> for your security.
+                  <td style="padding:32px 40px 36px;">
+                    <p style="margin:0 0 28px;font-size:14px;color:#969696;line-height:1.75;">
+                      Click the button below to set a new password. This link will expire in <strong style="color:#ff8a3d;">1 hour</strong> for your security.
                     </p>
 
-                    <!-- CTA -->
+                    <!-- CTA Button -->
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="center" style="padding-bottom:32px;">
                           <a href="${resetUrl}"
-                            style="display:inline-block;background:linear-gradient(135deg,#d95e00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:16px 48px;border-radius:12px;letter-spacing:0.3px;box-shadow:0 0 0 1px rgba(255,107,0,0.4),0 8px 24px rgba(255,107,0,0.25);">
+                            style="display:inline-block;background:linear-gradient(135deg,#e05d00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 44px;border-radius:14px;letter-spacing:0.3px;box-shadow:0 4px 20px rgba(255,107,0,0.30),0 0 0 1px rgba(255,140,0,0.3);">
                             Reset Password &nbsp;&rarr;
                           </a>
                         </td>
@@ -93,26 +85,26 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
                     <!-- Divider -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                       <tr>
-                        <td style="border-top:1px solid #2a2a38;font-size:0;line-height:0;">&nbsp;</td>
+                        <td style="border-top:1px solid rgba(255,255,255,0.06);font-size:0;line-height:0;">&nbsp;</td>
                       </tr>
                     </table>
 
                     <!-- Security note -->
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="background:#13131c;border-radius:12px;border:1px solid #252535;padding:16px 18px;">
-                          <p style="margin:0;font-size:12.5px;color:#6b6f88;line-height:1.65;">
-                            <span style="color:#ff8a3d;font-weight:700;">⚠&nbsp; Didn't request this?</span><br/>
-                            If you didn't ask to reset your password, no action is needed — your account is safe and your password remains unchanged.
+                        <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px;">
+                          <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#ff8a3d;">⚠ &nbsp;Didn't request this?</p>
+                          <p style="margin:0;font-size:12px;color:#666;line-height:1.65;">
+                            If you didn't ask to reset your password, no action is needed. Your account is safe and your password remains unchanged.
                           </p>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Fallback URL -->
-                    <p style="margin:22px 0 0;font-size:11px;color:#3d3f52;line-height:1.7;word-break:break-all;">
-                      If the button isn't working, paste this link into your browser:<br/>
-                      <a href="${resetUrl}" style="color:#ff6b00;text-decoration:none;opacity:0.8;">${resetUrl}</a>
+                    <p style="margin:22px 0 0;font-size:11px;color:#444;line-height:1.7;word-break:break-all;">
+                      Button not working? Copy this link into your browser:<br/>
+                      <a href="${resetUrl}" style="color:#ff6b00;text-decoration:none;">${resetUrl}</a>
                     </p>
                   </td>
                 </tr>
@@ -122,12 +114,12 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding:28px 0 8px;">
-              <p style="margin:0 0 4px;font-size:11.5px;color:#3d3f52;">
+            <td align="center" style="padding:26px 0 8px;">
+              <p style="margin:0 0 4px;font-size:11.5px;color:#999;">
                 © ${new Date().getFullYear()} Arthaleads &nbsp;·&nbsp; Prophunt LLP &nbsp;·&nbsp; Pune, India
               </p>
-              <p style="margin:0;font-size:11px;color:#2e3040;">
-                This email was sent because a password reset was requested for your account.
+              <p style="margin:0;font-size:11px;color:#bbb;">
+                You're receiving this because a password reset was requested for your account.
               </p>
             </td>
           </tr>
