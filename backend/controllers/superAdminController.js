@@ -3,6 +3,7 @@ const Organization = require("../models/Organization");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
 const { AppError } = require("../middlewares/errorHandler");
+const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
 const superAdminController = {
   // GET /api/super-admin/orgs — list all orgs with live stats
@@ -36,24 +37,39 @@ const superAdminController = {
     }
   },
 
-  // PATCH /api/super-admin/orgs/:id/logo — upload base64 logo for an org (logo:"" removes it)
+  // PATCH /api/super-admin/orgs/:id/logo — upload logo to Cloudinary, store URL (logo:"" removes it)
   async updateLogo(req, res, next) {
     try {
       const { logo } = req.body;
       if (logo === undefined) return next(new AppError("logo field is required", 400));
 
-      // Accept empty string (remove), base64 data-URI, or plain URL
+      let logoUrl = "";
+
       if (logo !== "") {
-        const isValid =
-          logo.startsWith("data:image/") ||
-          logo.startsWith("http://") ||
-          logo.startsWith("https://");
-        if (!isValid) return next(new AppError("logo must be a data-URI or HTTPS URL", 400));
+        const isBase64 = logo.startsWith("data:image/");
+        const isUrl    = logo.startsWith("https://") || logo.startsWith("http://");
+
+        if (!isBase64 && !isUrl) {
+          return next(new AppError("logo must be a data-URI or HTTPS URL", 400));
+        }
+
+        if (isBase64) {
+          // Upload to Cloudinary — org ID used as stable public_id so re-uploads overwrite
+          console.log(`[updateLogo] uploading logo to Cloudinary for org ${req.params.id}`);
+          logoUrl = await uploadOrgLogo(logo, req.params.id);
+          console.log(`[updateLogo] ✅ Cloudinary URL: ${logoUrl}`);
+        } else {
+          // Already a hosted URL (e.g. re-submitting an existing Cloudinary URL) — store as-is
+          logoUrl = logo;
+        }
+      } else {
+        // Empty string = remove logo — clean up from Cloudinary too
+        deleteOrgLogo(req.params.id); // fire-and-forget, don't block response
       }
 
       const org = await Organization.findByIdAndUpdate(
         req.params.id,
-        { logo },
+        { logo: logoUrl },
         { new: true }
       ).select("name logo");
       if (!org) return next(new AppError("Organization not found", 404));
