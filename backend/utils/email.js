@@ -22,91 +22,98 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reset your password</title>
 </head>
-<body style="margin:0;padding:0;background:#f0f0f2;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f2;padding:48px 16px;">
+<body style="margin:0;padding:0;background:#0f0f13;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f13;padding:48px 16px;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width:520px;">
+        <table width="100%" style="max-width:540px;">
 
-          <!-- Logo above card -->
+          <!-- Top logo -->
           <tr>
-            <td align="center" style="padding-bottom:24px;">
+            <td align="center" style="padding-bottom:28px;">
               <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
                 <tr>
                   <td style="vertical-align:middle;padding-right:10px;">
-                    <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#b04500,#ff6b00);display:inline-block;text-align:center;line-height:40px;">
-                      <span style="color:#fff;font-weight:900;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">A</span>
+                    <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#c05200,#ff6b00);display:inline-block;text-align:center;line-height:38px;">
+                      <span style="color:#fff;font-weight:900;font-size:19px;font-family:'Segoe UI',Arial,sans-serif;">A</span>
                     </div>
                   </td>
                   <td style="vertical-align:middle;">
-                    <span style="color:#111827;font-weight:800;font-size:22px;font-family:'Segoe UI',Arial,sans-serif;">Artha</span><span style="color:#ff6b00;font-weight:800;font-size:22px;font-family:'Segoe UI',Arial,sans-serif;">leads</span>
+                    <span style="color:#ffffff;font-weight:700;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha</span><span style="color:#ff6b00;font-weight:700;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">leads</span>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Main card -->
+          <!-- Card -->
           <tr>
-            <td style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.10);">
+            <td style="background:#1a1a24;border-radius:20px;border:1px solid #2a2a38;overflow:hidden;">
 
-              <!-- Orange accent bar -->
-              <div style="height:5px;background:linear-gradient(90deg,#ff6b00,#ff9a40);"></div>
-
-              <!-- Body -->
+              <!-- Card header band -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding:40px 40px 32px;">
-
-                    <!-- Icon -->
-                    <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                  <td style="background:linear-gradient(135deg,#1e1030 0%,#1a1520 50%,#0f1020 100%);padding:36px 40px 32px;border-bottom:1px solid #2a2a38;">
+                    <!-- Shield icon -->
+                    <table cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
                       <tr>
                         <td>
-                          <div style="width:52px;height:52px;border-radius:16px;background:#fff4ec;text-align:center;line-height:52px;font-size:26px;">
-                            🔐
+                          <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#2a1500,#3d2000);border:1px solid rgba(255,107,0,0.25);display:inline-block;text-align:center;line-height:56px;">
+                            <span style="font-size:26px;line-height:56px;display:inline-block;margin-top:2px;">🔑</span>
                           </div>
                         </td>
                       </tr>
                     </table>
+                    <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.6px;line-height:1.2;">Reset your password</h1>
+                    <p style="margin:0;font-size:14px;color:#8b8fa8;line-height:1.6;">
+                      Hi <strong style="color:#c8cade;">${toName || "there"}</strong> — we received a request to reset your Arthaleads CRM password.
+                    </p>
+                  </td>
+                </tr>
 
-                    <h1 style="margin:0 0 6px;font-size:24px;font-weight:800;color:#111827;letter-spacing:-0.5px;">Reset your password</h1>
-                    <p style="margin:0 0 6px;font-size:15px;color:#374151;font-weight:500;">Hi ${toName || "there"},</p>
-                    <p style="margin:0 0 28px;font-size:14px;color:#6b7280;line-height:1.7;">
-                      We received a request to reset your Arthaleads password. Click the button below — the link is valid for <strong style="color:#374151;">1 hour</strong>.
+                <!-- Body -->
+                <tr>
+                  <td style="padding:32px 40px;">
+                    <p style="margin:0 0 28px;font-size:14px;color:#8b8fa8;line-height:1.75;">
+                      Click the button below to choose a new password. This link will expire in <span style="color:#ff8a3d;font-weight:600;">1 hour</span> for your security.
                     </p>
 
-                    <!-- CTA Button -->
+                    <!-- CTA -->
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
-                        <td style="padding-bottom:28px;">
+                        <td align="center" style="padding-bottom:32px;">
                           <a href="${resetUrl}"
-                            style="display:inline-block;background:linear-gradient(135deg,#e85d00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 36px;border-radius:14px;box-shadow:0 4px 16px rgba(255,107,0,0.35);letter-spacing:0.2px;">
-                            Reset Password &rarr;
+                            style="display:inline-block;background:linear-gradient(135deg,#d95e00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:16px 48px;border-radius:12px;letter-spacing:0.3px;box-shadow:0 0 0 1px rgba(255,107,0,0.4),0 8px 24px rgba(255,107,0,0.25);">
+                            Reset Password &nbsp;&rarr;
                           </a>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Divider -->
-                    <hr style="border:none;border-top:1px solid #f3f4f6;margin:0 0 20px;" />
-
-                    <!-- Warning note -->
-                    <table cellpadding="0" cellspacing="0" style="width:100%;background:#fafafa;border-radius:12px;border:1px solid #f0f0f0;">
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                       <tr>
-                        <td style="padding:14px 16px;">
-                          <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
-                            🔒 If you didn't request this, you can safely ignore this email. Your password won't change.
+                        <td style="border-top:1px solid #2a2a38;font-size:0;line-height:0;">&nbsp;</td>
+                      </tr>
+                    </table>
+
+                    <!-- Security note -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background:#13131c;border-radius:12px;border:1px solid #252535;padding:16px 18px;">
+                          <p style="margin:0;font-size:12.5px;color:#6b6f88;line-height:1.65;">
+                            <span style="color:#ff8a3d;font-weight:700;">⚠&nbsp; Didn't request this?</span><br/>
+                            If you didn't ask to reset your password, no action is needed — your account is safe and your password remains unchanged.
                           </p>
                         </td>
                       </tr>
                     </table>
 
                     <!-- Fallback URL -->
-                    <p style="margin:20px 0 0;font-size:11px;color:#d1d5db;line-height:1.6;word-break:break-all;">
-                      Button not working? Copy this link:<br/>
-                      <a href="${resetUrl}" style="color:#ff6b00;text-decoration:none;">${resetUrl}</a>
+                    <p style="margin:22px 0 0;font-size:11px;color:#3d3f52;line-height:1.7;word-break:break-all;">
+                      If the button isn't working, paste this link into your browser:<br/>
+                      <a href="${resetUrl}" style="color:#ff6b00;text-decoration:none;opacity:0.8;">${resetUrl}</a>
                     </p>
-
                   </td>
                 </tr>
               </table>
@@ -115,12 +122,12 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding:24px 0 8px;">
-              <p style="margin:0;font-size:11px;color:#9ca3af;">
-                © ${new Date().getFullYear()} <strong style="color:#6b7280;">Arthaleads</strong> · Prophunt LLP · Pune, India
+            <td align="center" style="padding:28px 0 8px;">
+              <p style="margin:0 0 4px;font-size:11.5px;color:#3d3f52;">
+                © ${new Date().getFullYear()} Arthaleads &nbsp;·&nbsp; Prophunt LLP &nbsp;·&nbsp; Pune, India
               </p>
-              <p style="margin:6px 0 0;font-size:11px;color:#c4c4c4;">
-                You're receiving this because a password reset was requested for your account.
+              <p style="margin:0;font-size:11px;color:#2e3040;">
+                This email was sent because a password reset was requested for your account.
               </p>
             </td>
           </tr>
