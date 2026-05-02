@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Sidebar from "./components/Sidebar";
 import { Spinner } from "./components/UI";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 
@@ -406,6 +407,7 @@ function RootRoute() {
 export default function App() {
   return (
     <AuthProvider>
+      <ErrorBoundary>
       <InstallBanner />
       <Suspense fallback={<PageFallback />}>
       <Routes>
@@ -459,6 +461,7 @@ export default function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
+      </ErrorBoundary>
     </AuthProvider>
   );
 }
