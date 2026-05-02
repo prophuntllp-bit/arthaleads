@@ -40,15 +40,18 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   </React.StrictMode>
 );
 
-// Fade out splash once React has painted its first frame
-// Two rAF calls ensure the DOM has actually been painted before we hide
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    const splash = document.getElementById("app-splash");
-    if (splash) {
-      splash.classList.add("splash-hidden");
-      // Remove from DOM after the CSS transition completes (0.55s)
-      setTimeout(() => splash.remove(), 600);
-    }
-  });
+// Fade out splash only after BOTH conditions are met:
+//  1. React has painted its first frame (double rAF)
+//  2. At least 1.8s has passed so the animation is actually visible
+const reactReady = new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve));
+});
+const minDisplay = new Promise((resolve) => setTimeout(resolve, 1800));
+
+Promise.all([reactReady, minDisplay]).then(() => {
+  const splash = document.getElementById("app-splash");
+  if (splash) {
+    splash.classList.add("splash-hidden");
+    setTimeout(() => splash.remove(), 600);
+  }
 });
