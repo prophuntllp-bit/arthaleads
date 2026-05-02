@@ -127,7 +127,7 @@ const authService = {
   },
 
   async getAllAgents(orgId) {
-    return User.find({ orgId, isActive: true, role: "agent" }).select("name email role phone avatar");
+    return User.find({ orgId, isActive: true, role: "agent" }).select("name email role phone avatar").lean();
   },
 
   async updateProfile(userId, updates, actor) {
@@ -165,7 +165,7 @@ const authService = {
 
   // Admin only
   async getAllUsers(orgId) {
-    return User.find({ orgId }).select("-password").sort({ createdAt: -1 });
+    return User.find({ orgId }).select("-password").sort({ createdAt: -1 }).lean();
   },
 
   async createUser(payload, orgId, addedByName) {

@@ -166,7 +166,8 @@ const leadService = {
         .skip(skip)
         .limit(parseInt(limit))
         .populate("createdBy", "name email")
-        .populate("assignedTo", "name email"),
+        .populate("assignedTo", "name email")
+        .lean(),
       Lead.countDocuments(filter),
     ]);
 
@@ -184,7 +185,8 @@ const leadService = {
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email")
       .populate("notes.addedBy", "name")
-      .populate("activities.performedBy", "name");
+      .populate("activities.performedBy", "name")
+      .lean();
 
     if (!lead) throw new AppError("Lead not found", 404);
 
@@ -526,7 +528,8 @@ const leadService = {
     return Lead.find(filter)
       .sort({ createdAt: -1 })
       .limit(50)
-      .select("name phone source status createdAt assignedToName");
+      .select("name phone source status createdAt assignedToName")
+      .lean();
   },
 
   async transferToProject(leadId, toProjectId, user) {
@@ -566,26 +569,26 @@ const leadService = {
         .sort({ updatedAt: -1 })
         .limit(1000)
         .populate("assignedTo", "name email")
-        .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt"),
+        .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt")
+        .lean(),
       ProjectLead.find(projFilter)
         .sort({ updatedAt: -1 })
         .limit(500)
         .populate("project", "name _id")
-        .select("name phone email source booking remark remark1 remark2 createdAt updatedAt project importedBy"),
+        .select("name phone email source booking remark remark1 remark2 createdAt updatedAt project importedBy")
+        .lean(),
     ]);
 
-    const projFormatted = projectLeads.map((l) => {
-      const obj = l.toObject();
-      return {
-        ...obj,
-        _type: "project",
-        projectName: obj.project?.name,
-        projectId: obj.project?._id,
-        isDeleted: false,
-      };
-    });
+    // .lean() already returns plain objects — no .toObject() needed
+    const projFormatted = projectLeads.map((l) => ({
+      ...l,
+      _type: "project",
+      projectName: l.project?.name,
+      projectId: l.project?._id,
+      isDeleted: false,
+    }));
 
-    const regularFormatted = regularLeads.map((l) => ({ ...l.toObject(), _type: "lead" }));
+    const regularFormatted = regularLeads.map((l) => ({ ...l, _type: "lead" }));
 
     return [...regularFormatted, ...projFormatted].sort(
       (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
