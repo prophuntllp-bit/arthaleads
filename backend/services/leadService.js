@@ -402,62 +402,101 @@ const leadService = {
   },
 
   async getAnalytics(user, query = {}) {
+    // ── Base match (NO date filter — applied per-facet below) ─────────────────
+    // Analytics only covers pipeline leads (Lead model).
+    // Project leads (ProjectLead) are manually-imported bulk contacts and
+    // should not inflate dashboard counts / source charts.
     const baseMatch = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") {
       baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
+
+    // Date range stage — spread into facets that respect the selected period.
+    // Follow-up counts intentionally skip this (they cover ALL scheduled follow-ups).
     const createdAtFilter = getDateRangeFilter(query.dateRange, query.from, query.to);
-    if (createdAtFilter) baseMatch.createdAt = createdAtFilter;
+    const dateStage = createdAtFilter ? [{ $match: { createdAt: createdAtFilter } }] : [];
 
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const followUpMatch = { ...baseMatch, followUpDate: { $ne: null } };
-    delete followUpMatch.createdAt;
 
-    // Analytics only covers pipeline leads (Lead model).
-    // Project leads (ProjectLead) are manually-imported bulk contacts and
-    // should not inflate dashboard counts / source charts.
-    const [
-      leadTotal,
-      byStatus, bySource,
-      byPriority, byAgent, recentLeads,
-      todayFollowUps, totalFollowUps,
-    ] = await Promise.all([
-      Lead.countDocuments(baseMatch),
-      Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$status", count: { $sum: 1 } } }]),
-      Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$source", count: { $sum: 1 } } }]),
-      Lead.aggregate([{ $match: baseMatch }, { $group: { _id: "$priority", count: { $sum: 1 } } }]),
-      Lead.aggregate([
-        { $match: { ...baseMatch, assignedTo: { $ne: null } } },
-        { $group: { _id: "$assignedTo", name: { $first: "$assignedToName" }, count: { $sum: 1 } } },
-        { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
-        { $match: { "user.0": { $exists: true }, "user.0.isActive": { $ne: false } } },
-        { $sort: { count: -1 } }, { $limit: 10 },
-        { $project: { _id: 1, name: 1, count: 1 } },
-      ]),
-      Lead.find(baseMatch).sort({ createdAt: -1 }).limit(5)
-        .select("name source status priority createdAt assignedToName"),
-      Lead.countDocuments({ ...followUpMatch, followUpDate: { $gte: todayStart, $lte: todayEnd } }),
-      Lead.countDocuments(followUpMatch),
+    // ── Single $facet aggregation — 1 round-trip instead of 8 ────────────────
+    const [result] = await Lead.aggregate([
+      { $match: baseMatch },
+      {
+        $facet: {
+          // Total lead count for the selected date range
+          totalLeads: [
+            ...dateStage,
+            { $count: "count" },
+          ],
+
+          // Pipeline breakdown — date-range filtered
+          byStatus: [
+            ...dateStage,
+            { $group: { _id: "$status",   count: { $sum: 1 } } },
+          ],
+          bySource: [
+            ...dateStage,
+            { $group: { _id: "$source",   count: { $sum: 1 } } },
+          ],
+          byPriority: [
+            ...dateStage,
+            { $group: { _id: "$priority", count: { $sum: 1 } } },
+          ],
+
+          // Top agents — date-range filtered, joined with users to skip deactivated agents
+          byAgent: [
+            ...dateStage,
+            { $match: { assignedTo: { $ne: null } } },
+            { $group: { _id: "$assignedTo", name: { $first: "$assignedToName" }, count: { $sum: 1 } } },
+            { $lookup: { from: "users", localField: "_id", foreignField: "_id", as: "user" } },
+            { $match: { "user.0": { $exists: true }, "user.0.isActive": { $ne: false } } },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+            { $project: { _id: 1, name: 1, count: 1 } },
+          ],
+
+          // 5 most recent leads — date-range filtered
+          recentLeads: [
+            ...dateStage,
+            { $sort: { createdAt: -1 } },
+            { $limit: 5 },
+            { $project: { name: 1, source: 1, status: 1, priority: 1, createdAt: 1, assignedToName: 1 } },
+          ],
+
+          // Follow-ups intentionally ignore the date-range filter —
+          // agents need to see ALL scheduled follow-ups, not just ones
+          // created in the last 30 days.
+          todayFollowUps: [
+            { $match: { followUpDate: { $gte: todayStart, $lte: todayEnd } } },
+            { $count: "count" },
+          ],
+          totalFollowUps: [
+            { $match: { followUpDate: { $ne: null } } },
+            { $count: "count" },
+          ],
+        },
+      },
     ]);
 
+    // ── Shape the response (identical to the old shape — no frontend changes) ─
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
-    const sourceMap = toMap(bySource);
+    const sourceMap = toMap(result.bySource);
 
     return {
-      totalLeads: leadTotal,
-      byStatus: toMap(byStatus),
-      bySource: sourceMap,
-      byPriority: toMap(byPriority),
+      totalLeads:     result.totalLeads[0]?.count  || 0,
+      byStatus:       toMap(result.byStatus),
+      bySource:       sourceMap,
+      byPriority:     toMap(result.byPriority),
       sourceHighlights: {
         facebook: sourceMap.Facebook || 0,
         google:   sourceMap.Google   || 0,
         whatsapp: sourceMap.WhatsApp || 0,
       },
-      byAgent,
-      recentLeads,
-      todayFollowUps,
-      totalFollowUps,
+      byAgent:        result.byAgent,
+      recentLeads:    result.recentLeads,
+      todayFollowUps: result.todayFollowUps[0]?.count || 0,
+      totalFollowUps: result.totalFollowUps[0]?.count || 0,
     };
   },
 
