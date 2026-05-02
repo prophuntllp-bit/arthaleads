@@ -69,7 +69,7 @@ const authController = {
 
   async createUser(req, res, next) {
     try {
-      const user = await authService.createUser(req.body, req.orgId);
+      const user = await authService.createUser(req.body, req.orgId, req.user?.name);
       res.status(201).json({ success: true, user });
     } catch (err) {
       next(err);

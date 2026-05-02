@@ -5,7 +5,7 @@ const User = require("../models/User");
 const Lead = require("../models/Lead");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
-const { sendPasswordResetEmail } = require("../utils/email");
+const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -28,6 +28,12 @@ const authService = {
 
     const user = await User.create({ ...data, orgId: org._id, role: "admin" });
     const token = signToken(user._id);
+
+    // Fire-and-forget welcome email — don't block the signup response
+    sendWelcomeEmail(user.email, user.name, org.name)
+      .then(() => console.log(`[signup] ✅ welcome email sent to ${user.email}`))
+      .catch((err) => console.error(`[signup] ❌ welcome email failed:`, err.message));
+
     return { token, user, org };
   },
 
@@ -94,6 +100,11 @@ const authService = {
         role: "admin",
         orgId: org._id,
       });
+
+      // Fire-and-forget welcome email for new Google signups
+      sendWelcomeEmail(user.email, user.name, org.name)
+        .then(() => console.log(`[googleAuth] ✅ welcome email sent to ${user.email}`))
+        .catch((err) => console.error(`[googleAuth] ❌ welcome email failed:`, err.message));
     }
 
     user.lastLogin = new Date();
@@ -157,11 +168,19 @@ const authService = {
     return User.find({ orgId }).select("-password").sort({ createdAt: -1 });
   },
 
-  async createUser(payload, orgId) {
+  async createUser(payload, orgId, addedByName) {
     const existing = await User.findOne({ email: payload.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    return User.create({ ...payload, orgId });
+    const user = await User.create({ ...payload, orgId });
+
+    // Look up org name for the invite email
+    Organization.findById(orgId).select("name").lean()
+      .then((org) => sendTeamInviteEmail(user.email, user.name, org?.name || "your workspace", addedByName))
+      .then(() => console.log(`[createUser] ✅ invite email sent to ${user.email}`))
+      .catch((err) => console.error(`[createUser] ❌ invite email failed:`, err.message));
+
+    return user;
   },
 
   async updateUser(targetId, updates, adminId) {
