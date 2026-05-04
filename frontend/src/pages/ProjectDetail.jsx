@@ -395,7 +395,7 @@ export default function ProjectDetail() {
       top.removeEventListener("scroll",   onTopScroll);
       table.removeEventListener("scroll", onTableScroll);
     };
-  });
+  }, []);
 
   const handleSearch = (e) => { setSearch(e.target.value); setLeadsPage(1); };
 

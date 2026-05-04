@@ -914,7 +914,7 @@ export default function Leads() {
       top.removeEventListener("scroll",   onTopScroll);
       table.removeEventListener("scroll", onTableScroll);
     };
-  });
+  }, []);
 
   return (
     <div className="stitch-page space-y-6">
