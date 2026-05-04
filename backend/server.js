@@ -11,11 +11,12 @@ process.on("unhandledRejection", (reason) => {
 require("dotenv").config();
 console.log("[BOOT] dotenv OK, PORT:", process.env.PORT, "MONGO:", !!process.env.MONGO_URI);
 console.log("[BOOT] Loading modules...");
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const rateLimit = require("express-rate-limit");
+const express    = require("express");
+const cors       = require("cors");
+const helmet     = require("helmet");
+const morgan     = require("morgan");
+const rateLimit  = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
 const logger = require("./config/logger");
@@ -115,9 +116,10 @@ if (process.env.NODE_ENV !== "test") {
 // ── Webhook BEFORE json parser (needs raw body option) ────────────────────────
 app.use("/webhook", webhookRoutes);
 
-// ── Body Parsing ──────────────────────────────────────────────────────────────
+// ── Body Parsing + Cookie Parsing ─────────────────────────────────────────────
 app.use(express.json({ limit: "8mb" }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
+app.use(cookieParser());
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth",  authLimiter, authRoutes);

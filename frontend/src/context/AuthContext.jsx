@@ -5,6 +5,8 @@ import api from "../services/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  // Non-sensitive display data kept in localStorage for instant UI hydration.
+  // The actual auth token lives in an httpOnly cookie — JS cannot read or steal it.
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("crm_user") || "null"));
   const [org,  setOrg]  = useState(() => JSON.parse(localStorage.getItem("crm_org")  || "null"));
   const [loading, setLoading] = useState(true);
@@ -16,40 +18,39 @@ export function AuthProvider({ children }) {
     setOrg(nextOrg || null);
   }, []);
 
-  // Re-validate token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("crm_token");
-    if (!token) { setLoading(false); return; }
+  const clearSession = useCallback(() => {
+    localStorage.removeItem("crm_user");
+    localStorage.removeItem("crm_org");
+    setUser(null);
+    setOrg(null);
+  }, []);
 
+  // Re-validate session on mount — cookie is sent automatically via withCredentials
+  useEffect(() => {
     api.get("/auth/me")
       .then((r) => persist(r.data.user, r.data.org))
       .catch((err) => {
-        if (err.response?.status === 401) {
-          localStorage.clear();
-          setUser(null);
-          setOrg(null);
-        }
+        // 401 = cookie expired or missing — clear stale display data
+        if (err.response?.status === 401) clearSession();
       })
       .finally(() => setLoading(false));
-  }, [persist]);
+  }, [persist, clearSession]);
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    localStorage.setItem("crm_token", data.token);
+    // Backend sets httpOnly cookie; we only store display-safe fields locally
     persist(data.user, data.org);
     return data;
   }, [persist]);
 
   const signup = useCallback(async (payload) => {
     const { data } = await api.post("/auth/signup", payload);
-    localStorage.setItem("crm_token", data.token);
     persist(data.user, data.org);
     return data;
   }, [persist]);
 
   const googleLogin = useCallback(async (credential) => {
     const { data } = await api.post("/auth/google", { credential });
-    localStorage.setItem("crm_token", data.token);
     persist(data.user, data.org);
     return data;
   }, [persist]);
@@ -69,13 +70,16 @@ export function AuthProvider({ children }) {
     setOrg(nextOrg);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("crm_token");
-    localStorage.removeItem("crm_user");
-    localStorage.removeItem("crm_org");
-    setUser(null);
-    setOrg(null);
-  }, []);
+  const logout = useCallback(async () => {
+    try {
+      // Ask backend to clear the httpOnly cookie
+      await api.post("/auth/logout");
+    } catch {
+      // Proceed even if request fails (e.g. offline)
+    } finally {
+      clearSession();
+    }
+  }, [clearSession]);
 
   return (
     <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, logout, refreshUser, updateUserState, updateOrg }}>

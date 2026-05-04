@@ -6,6 +6,10 @@ const Lead = require("../models/Lead");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
+const logger = require("../config/logger");
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS          = 15 * 60 * 1000; // 15 minutes
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -37,15 +41,43 @@ const authService = {
     return { token, user, org };
   },
 
-  async login(email, password) {
-    // Explicitly select password (it's excluded by default)
-    const user = await User.findOne({ email }).select("+password");
-    if (!user || !(await user.comparePassword(password))) {
+  async login(email, password, ip = "unknown") {
+    // Select lockout fields alongside password
+    const user = await User.findOne({ email })
+      .select("+password +loginAttempts +lockoutUntil");
+
+    // ── Brute-force lockout check ─────────────────────────────────────────────
+    if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
+      const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
+      logger.warn(`[login] locked account attempt — email: ${email}, ip: ${ip}`);
+      throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
+    }
+
+    const validPassword = user && await user.comparePassword(password);
+
+    if (!user || !validPassword) {
+      // Log and increment attempt counter
+      logger.warn(`[login] failed attempt — email: ${email}, ip: ${ip}`);
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
+          user.loginAttempts = 0;
+          await user.save({ validateBeforeSave: false });
+          logger.warn(`[login] account locked — email: ${email}, ip: ${ip}, locked for 15 min`);
+          throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
+        }
+        await user.save({ validateBeforeSave: false });
+      }
       throw new AppError("Invalid email or password", 401);
     }
+
     if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
 
-    user.lastLogin = new Date();
+    // ── Successful login — reset lockout fields ───────────────────────────────
+    user.loginAttempts = 0;
+    user.lockoutUntil  = null;
+    user.lastLogin     = new Date();
     await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id);

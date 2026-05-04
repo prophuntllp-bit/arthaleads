@@ -9,8 +9,11 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Accept token from Authorization header OR cookie
-    if (req.headers.authorization?.startsWith("Bearer ")) {
+    // 1. Prefer httpOnly cookie (browser clients — XSS-safe)
+    if (req.cookies?.crm_token) {
+      token = req.cookies.crm_token;
+    // 2. Fall back to Authorization header (API clients, mobile, Postman)
+    } else if (req.headers.authorization?.startsWith("Bearer ")) {
       token = req.headers.authorization.split(" ")[1];
     }
 
