@@ -32,8 +32,8 @@ router.put("/me", authorize("admin"), async (req, res) => {
   }
 });
 
-// PATCH /api/org/me/auto-assign — toggle round-robin auto-assignment (admin only)
-router.patch("/me/auto-assign", authorize("admin"), async (req, res) => {
+// PATCH /api/org/me/auto-assign — toggle round-robin auto-assignment (admin + super_admin)
+router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const { autoAssign } = req.body;
     if (typeof autoAssign !== "boolean") {

@@ -208,8 +208,8 @@ export default function Settings() {
         </section>
       </div>
 
-      {/* Auto-assign toggle — admin only */}
-      {user?.role === "admin" && (
+      {/* Auto-assign toggle — admin + super_admin */}
+      {(user?.role === "admin" || user?.role === "super_admin") && (
         <section className="card p-6">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-4">
