@@ -10,6 +10,7 @@
     "audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
+    "@sentry/node": "^10.51.0",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",

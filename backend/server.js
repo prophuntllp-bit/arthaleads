@@ -1,4 +1,7 @@
 // server.js — Production-ready CRM entry point
+// ⚠️  Sentry MUST be the very first import — before express, mongoose, everything
+require("./instrument");
+
 console.log("[BOOT] server.js starting, node:", process.version);
 
 process.on("uncaughtException", (err) => {
@@ -147,6 +150,12 @@ app.get("/health", (req, res) => {
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
+
+// ── Sentry error handler (must be BEFORE our own errorHandler) ───────────────
+const Sentry = require("./instrument");
+if (process.env.SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
