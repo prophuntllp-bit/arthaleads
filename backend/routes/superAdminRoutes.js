@@ -9,5 +9,6 @@ router.use(protect, authorize("super_admin"));
 router.get("/orgs",             ctrl.listOrgs);
 router.patch("/orgs/:id",       ctrl.updateOrg);
 router.patch("/orgs/:id/logo",  ctrl.updateLogo);
+router.post("/backup",          ctrl.triggerBackup);
 
 module.exports = router;

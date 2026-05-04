@@ -4,6 +4,7 @@ const User = require("../models/User");
 const Lead = require("../models/Lead");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
+const { runBackup } = require("../utils/backup");
 
 const superAdminController = {
   // GET /api/super-admin/orgs — list all orgs with live stats
@@ -98,6 +99,24 @@ const superAdminController = {
       if (!org) return next(new AppError("Organization not found", 404));
 
       res.json({ success: true, org });
+    } catch (err) {
+      next(err);
+    }
+  },
+  // POST /api/super-admin/backup — trigger a manual backup immediately
+  async triggerBackup(req, res, next) {
+    try {
+      const result = await runBackup();
+      if (result.skipped) {
+        return res.status(400).json({ success: false, message: result.reason });
+      }
+      res.json({
+        success: true,
+        message: `Backup sent to ${process.env.BACKUP_EMAIL}`,
+        stats:   result.stats,
+        size:    result.gzipSize,
+        docs:    result.totalDocs,
+      });
     } catch (err) {
       next(err);
     }

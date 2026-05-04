@@ -4,6 +4,7 @@ const ProjectLead = require("../models/ProjectLead");
 const User = require("../models/User");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
+const { runBackup } = require("./backup");
 
 function getTodayRange() {
   const start = new Date();
@@ -117,12 +118,19 @@ async function runUpcomingReminder() {
   await notifyLeads(allLeads, (lead) => `Follow-up in 10 minutes: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
+// ── Daily 9 AM IST: follow-up reminders ─────────────────────────────────────
 cron.schedule("0 9 * * *", () => {
   runDailyReminder().catch((err) => logger.error(`Daily reminder error: ${err.message}`));
 });
 
+// ── Every minute: 10-min-before alert ───────────────────────────────────────
 cron.schedule("* * * * *", () => {
   runUpcomingReminder().catch((err) => logger.error(`Upcoming reminder error: ${err.message}`));
 });
 
-module.exports = { runDailyReminder, runUpcomingReminder };
+// ── Daily 2 AM IST (UTC 8:30 PM = 20:30): full DB backup via email ──────────
+cron.schedule("30 20 * * *", () => {
+  runBackup().catch((err) => logger.error(`[backup] cron failed: ${err.message}`));
+});
+
+module.exports = { runDailyReminder, runUpcomingReminder, runBackup };
