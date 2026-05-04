@@ -1,14 +1,16 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound } from "lucide-react";
+import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Settings() {
   useEffect(() => { document.title = "Settings — Arthaleads CRM"; }, []);
-  const { user, updateUserState, refreshUser } = useAuth();
+  const { user, org, updateOrg, updateUserState, refreshUser } = useAuth();
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
+  const [autoAssign, setAutoAssign]         = useState(org?.autoAssign ?? true);
+  const [togglingAA, setTogglingAA]         = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -55,6 +57,21 @@ export default function Settings() {
     reader.onerror = () => toast.error("Could not read that image");
     reader.readAsDataURL(file);
     event.target.value = "";
+  };
+
+  const handleAutoAssignToggle = async () => {
+    const next = !autoAssign;
+    setTogglingAA(true);
+    try {
+      await api.patch("/org/me/auto-assign", { autoAssign: next });
+      setAutoAssign(next);
+      updateOrg({ ...org, autoAssign: next });
+      toast.success(`Auto-assignment ${next ? "enabled" : "disabled"}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update setting");
+    } finally {
+      setTogglingAA(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -190,6 +207,44 @@ export default function Settings() {
           </form>
         </section>
       </div>
+
+      {/* Auto-assign toggle — admin only */}
+      {user?.role === "admin" && (
+        <section className="card p-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+                <Shuffle className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+              </div>
+              <div>
+                <p className="font-semibold text-app">Auto Lead Assignment</p>
+                <p className="text-sm text-app-soft mt-1 max-w-lg">
+                  When enabled, new leads (manual, imported, or from Facebook/website) are automatically
+                  assigned to agents in round-robin rotation — always to the agent with the fewest leads.
+                  Turn off if you prefer to assign all leads manually.
+                </p>
+                <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
+                  {autoAssign ? "✅ Currently enabled — leads auto-assign on creation" : "⏸ Currently disabled — leads are unassigned until manually set"}
+                </p>
+              </div>
+            </div>
+            {/* Toggle switch */}
+            <button
+              onClick={handleAutoAssignToggle}
+              disabled={togglingAA}
+              className="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+              style={{ background: autoAssign ? "var(--app-primary)" : "var(--app-border-strong)" }}
+              title={autoAssign ? "Disable auto-assignment" : "Enable auto-assignment"}
+            >
+              <span
+                className="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200"
+                style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }}
+              />
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -3,8 +3,10 @@ const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const Project = require("../models/Project");
 const User = require("../models/User");
+const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
+const { getNextAssignee } = require("../utils/assignLead");
 
 const getDateRangeFilter = (dateRange, from, to) => {
   const now = new Date();
@@ -95,9 +97,22 @@ const leadService = {
     let assignedToName = "";
 
     if (data.assignedTo) {
+      // Explicit assignment — validate the agent belongs to this org
       const agent = await User.findOne({ _id: data.assignedTo, orgId: user.orgId });
       if (!agent) throw new AppError("Assigned agent not found", 404);
       assignedToName = agent.name;
+    } else {
+      // No agent specified — auto-assign via round-robin if org has it enabled
+      try {
+        const org = await Organization.findById(user.orgId).select("autoAssign").lean();
+        if (org?.autoAssign !== false) {
+          const assignee = await getNextAssignee(user.orgId);
+          data = { ...data, assignedTo: assignee._id };
+          assignedToName = assignee.name;
+        }
+      } catch {
+        // No active agents available — leave unassigned
+      }
     }
 
     const lead = new Lead({
@@ -312,8 +327,18 @@ const leadService = {
 
   // ── Analytics ──────────────────────────────────────────────────────────────
   async bulkImport(leads, user) {
-    // Phase 1: validate all assignees before touching the DB (prevents partial imports)
+    // Check if org has auto-assign enabled
+    const org = await Organization.findById(user.orgId).select("autoAssign").lean();
+    const shouldAutoAssign = org?.autoAssign !== false;
+
+    // Phase 1: validate explicit assignees + pre-fetch auto-assignee if needed
     const assigneeCache = {};
+    let autoAssignee = null;
+
+    if (shouldAutoAssign) {
+      try { autoAssignee = await getNextAssignee(user.orgId); } catch { /* no agents */ }
+    }
+
     for (const item of leads) {
       if (item.assignedTo && !assigneeCache[item.assignedTo]) {
         const agent = await User.findOne({ _id: item.assignedTo, orgId: user.orgId });
@@ -324,15 +349,21 @@ const leadService = {
 
     // Phase 2: build all docs in memory
     const docs = leads.map((item) => {
-      const assignedToName = item.assignedTo ? (assigneeCache[item.assignedTo] || "") : "";
+      // Use explicit assignee if provided, otherwise auto-assign
+      const effectiveAssignee = item.assignedTo
+        ? { _id: item.assignedTo, name: assigneeCache[item.assignedTo] || "" }
+        : autoAssignee || null;
+
+      const assignedToName = effectiveAssignee?.name || "";
       const activities = [
         { type: "created", description: `Lead imported by ${user.name}`, performedBy: user._id, performedByName: user.name },
       ];
-      if (item.assignedTo) {
-        activities.push({ type: "assigned", description: `Assigned to ${assignedToName}`, performedBy: user._id, performedByName: user.name, meta: { agentId: item.assignedTo, agentName: assignedToName } });
+      if (effectiveAssignee) {
+        activities.push({ type: "assigned", description: `Assigned to ${assignedToName}`, performedBy: user._id, performedByName: user.name, meta: { agentId: effectiveAssignee._id, agentName: assignedToName } });
       }
       return {
         ...item,
+        assignedTo: effectiveAssignee?._id || item.assignedTo || null,
         budget: { min: item.budget?.min || 0, max: item.budget?.max || 0, currency: item.budget?.currency || "INR" },
         orgId: user.orgId,
         createdBy: user._id,
