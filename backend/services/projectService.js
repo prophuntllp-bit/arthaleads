@@ -199,16 +199,57 @@ const projectService = {
   },
 
   async deleteLead(leadId, user) {
-    const lead = await ProjectLead.findById(leadId).populate("project", "orgId");
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId name");
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
-    await lead.deleteOne();
+
+    if (user.role === "super_admin") {
+      // Permanent hard delete — no dump record
+      await lead.deleteOne();
+    } else {
+      // Soft delete — convert to Lead with isDeleted so it appears in Dump Leads
+      const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
+      const mappedSource = validSources.includes(lead.source) ? lead.source : "Other";
+      await Lead.create({
+        name: lead.name,
+        phone: lead.phone,
+        email: lead.email || "",
+        source: mappedSource,
+        createdBy: user._id,
+        orgId: user.orgId,
+        isDeleted: true,
+        deletedAt: new Date(),
+      });
+      await lead.deleteOne();
+    }
   },
 
   async bulkDeleteLeads(projectId, ids, user) {
     // Verify the project belongs to the requesting user's org before mass-delete
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
+
+    if (user.role === "super_admin") {
+      // Permanent hard delete — no dump records
+      const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
+      return result.deletedCount;
+    }
+
+    // Soft delete — convert each to a Lead with isDeleted so they appear in Dump Leads
+    const projectLeads = await ProjectLead.find({ _id: { $in: ids }, project: projectId });
+    const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
+    const now = new Date();
+    const dumpDocs = projectLeads.map((pl) => ({
+      name: pl.name,
+      phone: pl.phone,
+      email: pl.email || "",
+      source: validSources.includes(pl.source) ? pl.source : "Other",
+      createdBy: user._id,
+      orgId: user.orgId,
+      isDeleted: true,
+      deletedAt: now,
+    }));
+    if (dumpDocs.length > 0) await Lead.insertMany(dumpDocs, { ordered: false });
     const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
     return result.deletedCount;
   },

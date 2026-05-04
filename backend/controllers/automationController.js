@@ -133,7 +133,9 @@ const automationController = {
     // nullifies window.opener on the very first popup page load
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     try {
-      const rawToken = req.query.token || "";
+      // Cookie is sent automatically by browser for same-origin popup navigation;
+      // fall back to query param for backward compatibility
+      const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
       const state = automationService.createFacebookState({ userId: user._id.toString(), crmToken: rawToken });
       const authUrl = automationService.getFacebookAuthUrl(state);

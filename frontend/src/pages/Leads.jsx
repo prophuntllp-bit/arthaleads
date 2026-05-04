@@ -887,7 +887,7 @@ export default function Leads() {
     }
   };
 
-  const canDelete = user?.role !== "agent";
+  const canDelete = true; // all roles can delete; super_admin = permanent, others = soft → dump
 
   // Sync top scrollbar ↔ table scrollbar, and keep spacer width = table scrollWidth
   useEffect(() => {
@@ -1361,14 +1361,29 @@ export default function Leads() {
 
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />
       <LeadDetail open={!!detailLead} onClose={() => setDetailLead(null)} lead={detailLead} onUpdated={handleDetailUpdated} />
-      <ConfirmDialog open={!!deletingId} onClose={() => setDeletingId(null)} onConfirm={handleDelete} loading={deleteLoading} title="Move to Dump" message="This lead will be moved to the Dump section. You can restore or permanently delete it from there." />
+      <ConfirmDialog
+        open={!!deletingId}
+        onClose={() => setDeletingId(null)}
+        onConfirm={handleDelete}
+        loading={deleteLoading}
+        title={user?.role === "super_admin" ? "Delete Lead" : "Move to Dump"}
+        message={
+          user?.role === "super_admin"
+            ? "Are you sure you want to permanently delete this lead? This cannot be undone."
+            : "This lead will be moved to the Dump section. You can restore or permanently delete it from there."
+        }
+      />
       <ConfirmDialog
         open={showBulkConfirm}
         onClose={() => setShowBulkConfirm(false)}
         onConfirm={handleBulkDelete}
         loading={bulkDeleting}
-        title={`Move ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""} to Dump`}
-        message={`${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""} will be moved to the Dump section. You can restore or permanently delete them from there.`}
+        title={user?.role === "super_admin" ? `Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}` : `Move ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""} to Dump`}
+        message={
+          user?.role === "super_admin"
+            ? `Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
+            : `${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""} will be moved to the Dump section. You can restore or permanently delete them from there.`
+        }
       />
       <ConfirmDialog
         open={!!projDeletingId}
@@ -1376,7 +1391,11 @@ export default function Leads() {
         onConfirm={handleProjDeleteLead}
         loading={projDeleting}
         title="Delete Project Lead"
-        message="Are you sure you want to permanently delete this lead? This cannot be undone."
+        message={
+          user?.role === "super_admin"
+            ? "Are you sure you want to permanently delete this lead? This cannot be undone."
+            : "This lead will be moved to Dump Leads. You can restore or permanently delete it from there."
+        }
       />
       <ConfirmDialog
         open={showProjBulkConfirm}
@@ -1384,7 +1403,11 @@ export default function Leads() {
         onConfirm={handleProjBulkDelete}
         loading={projBulkDeleting}
         title={`Delete ${projSelectedIds.size} Lead${projSelectedIds.size !== 1 ? "s" : ""}`}
-        message={`Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+        message={
+          user?.role === "super_admin"
+            ? `Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
+            : `${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""} will be moved to Dump Leads. You can restore or permanently delete them from there.`
+        }
       />
 
       <TransferModal

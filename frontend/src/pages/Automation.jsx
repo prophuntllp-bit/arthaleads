@@ -175,10 +175,9 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   };
 
   const openOAuth = () => {
-    const token = localStorage.getItem("crm_token");
-    if (!token) { toast.error("Please log in again"); return; }
     setConnecting(true);
-    const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect?token=${encodeURIComponent(token)}`;
+    // Cookie (httpOnly) is sent automatically by the browser on same-origin navigation
+    const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect`;
     const popup = window.open(url, "arthaleads-fb-oauth", "width=720,height=760,resizable=yes,scrollbars=yes");
     if (!popup) {
       setConnecting(false);

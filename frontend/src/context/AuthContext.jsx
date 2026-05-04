@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
     api.get("/auth/me")
       .then((r) => persist(r.data.user, r.data.org))
       .catch((err) => {
-        // 401 = cookie expired or missing — clear stale display data
-        if (err.response?.status === 401) clearSession();
+        // 401 = cookie expired / missing; 403 = org inactive — clear stale display data
+        if (err.response?.status === 401 || err.response?.status === 403) clearSession();
       })
       .finally(() => setLoading(false));
   }, [persist, clearSession]);

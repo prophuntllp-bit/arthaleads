@@ -23,11 +23,11 @@ export default function FbCallback() {
       return;
     }
 
-    const token = localStorage.getItem("crm_token");
     const base = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+    // Cookie (httpOnly) is sent automatically via credentials: 'include'
     fetch(`${base}/automations/facebook/result?session=${session}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
     })
       .then((r) => r.json())
       .then((data) => {

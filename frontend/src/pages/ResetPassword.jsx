@@ -36,9 +36,8 @@ export default function ResetPassword() {
     if (!allOk) return setErr("Please meet all the requirements above.");
     setLoading(true);
     try {
-      const { data } = await api.post(`/auth/reset-password/${token}`, { password });
-      // Store token then refresh auth context (calls /auth/me with new token)
-      localStorage.setItem("crm_token", data.token);
+      await api.post(`/auth/reset-password/${token}`, { password });
+      // Backend sets httpOnly cookie; refresh auth context to hydrate user state
       await refreshUser();
       setDone(true);
       toast.success("Password reset! Welcome back.");

@@ -682,7 +682,7 @@ export default function ProjectDetail() {
                 onChange={handleSearch}
               />
             </div>
-            {canManage && selectedIds.size > 0 && (
+            {selectedIds.size > 0 && (
               <button className="btn-danger" onClick={() => setShowBulkConfirm(true)}>
                 <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
               </button>
@@ -721,18 +721,16 @@ export default function ProjectDetail() {
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
-                        {canManage && (
-                          <th className="w-6 px-1">
-                            <input
-                              type="checkbox"
-                              checked={allSelected}
-                              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                              onChange={toggleAll}
-                              className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
-                              title="Select all"
-                            />
-                          </th>
-                        )}
+                        <th className="w-6 px-1">
+                          <input
+                            type="checkbox"
+                            checked={allSelected}
+                            ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                            onChange={toggleAll}
+                            className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
+                            title="Select all"
+                          />
+                        </th>
                         <th className="w-6 px-1 text-center">#</th>
                         <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
                         <th>Phone</th>
@@ -753,16 +751,14 @@ export default function ProjectDetail() {
                     <tbody>
                       {leads.map((lead, i) => (
                         <tr key={lead._id} className={`group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
-                          {canManage && (
-                            <td className="w-6 px-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.has(lead._id)}
-                                onChange={() => toggleOne(lead._id)}
-                                className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
-                              />
-                            </td>
-                          )}
+                          <td className="w-6 px-1">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(lead._id)}
+                              onChange={() => toggleOne(lead._id)}
+                              className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
+                            />
+                          </td>
                           <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
                             <NameCell name={lead.name} />
@@ -807,15 +803,13 @@ export default function ProjectDetail() {
                               >
                                 <ArrowRightLeft className="h-4 w-4" />
                               </button>
-                              {canManage && (
-                                <button
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400"
-                                  onClick={() => setDeletingLeadId(lead._id)}
-                                  title="Delete lead"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+                              <button
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400"
+                                onClick={() => setDeletingLeadId(lead._id)}
+                                title={user?.role === "super_admin" ? "Permanently delete lead" : "Move lead to Dump"}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1000,7 +994,11 @@ export default function ProjectDetail() {
         onConfirm={handleDeleteLead}
         loading={deletingLead}
         title="Delete Lead"
-        message="Are you sure you want to permanently delete this lead? This cannot be undone."
+        message={
+          user?.role === "super_admin"
+            ? "Are you sure you want to permanently delete this lead? This cannot be undone."
+            : "Are you sure you want to delete this lead? It will be moved to Dump Leads."
+        }
       />
 
       <ConfirmDialog
@@ -1009,7 +1007,11 @@ export default function ProjectDetail() {
         onConfirm={handleBulkDelete}
         loading={bulkDeleting}
         title={`Delete ${selectedIds.size} Lead${selectedIds.size !== 1 ? "s" : ""}`}
-        message={`Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`}
+        message={
+          user?.role === "super_admin"
+            ? `Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
+            : `Are you sure you want to delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? They will be moved to Dump Leads.`
+        }
       />
 
       <ConfirmDialog

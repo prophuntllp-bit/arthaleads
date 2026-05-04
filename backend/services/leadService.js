@@ -266,20 +266,29 @@ const leadService = {
     return Lead.findById(lead._id).populate("assignedTo", "name").lean();
   },
 
-  // ── Delete (soft) ─────────────────────────────────────────────────────────
+  // ── Delete ────────────────────────────────────────────────────────────────
+  // super_admin → permanent hard delete; everyone else → soft delete (dump)
   async delete(id, user) {
     const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
-    if (user.role === "agent") throw new AppError("Agents cannot delete leads", 403);
-    lead.isDeleted = true;
-    lead.deletedAt = new Date();
-    await lead.save({ validateBeforeSave: false });
+    if (user.role === "super_admin") {
+      await lead.deleteOne();
+    } else {
+      lead.isDeleted = true;
+      lead.deletedAt = new Date();
+      await lead.save({ validateBeforeSave: false });
+    }
   },
 
-  // ── Bulk Delete (soft) ────────────────────────────────────────────────────
-  async bulkDelete(ids, orgId) {
+  // ── Bulk Delete ───────────────────────────────────────────────────────────
+  // super_admin → permanent hard delete; everyone else → soft delete (dump)
+  async bulkDelete(ids, user) {
+    if (user.role === "super_admin") {
+      const result = await Lead.deleteMany({ _id: { $in: ids }, orgId: user.orgId });
+      return result.deletedCount;
+    }
     const result = await Lead.updateMany(
-      { _id: { $in: ids }, orgId },
+      { _id: { $in: ids }, orgId: user.orgId },
       { $set: { isDeleted: true, deletedAt: new Date() } }
     );
     return result.modifiedCount;

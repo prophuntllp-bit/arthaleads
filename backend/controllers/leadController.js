@@ -111,7 +111,7 @@ const leadController = {
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, message: "ids array is required" });
       }
-      const count = await leadService.bulkDelete(ids, req.orgId);
+      const count = await leadService.bulkDelete(ids, req.user);
       res.json({ success: true, message: `${count} lead(s) deleted` });
     } catch (err) {
       next(err);
