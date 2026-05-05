@@ -4,6 +4,26 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { AppError } = require("./errorHandler");
 
+// ── In-memory org cache (60 s TTL) ───────────────────────────────────────────
+// Avoids a DB round-trip on every authenticated request.
+// Invalidated automatically by TTL; worst-case a deactivated org stays cached 60 s.
+const _orgCache = new Map();
+const ORG_CACHE_TTL = 60_000; // 60 seconds
+
+function _getCachedOrg(orgId) {
+  const entry = _orgCache.get(String(orgId));
+  if (entry && entry.expiresAt > Date.now()) return entry.org;
+  _orgCache.delete(String(orgId));
+  return null;
+}
+function _setCachedOrg(orgId, org) {
+  _orgCache.set(String(orgId), { org, expiresAt: Date.now() + ORG_CACHE_TTL });
+}
+// Call this from orgRoutes / superAdminController when org is updated/deactivated
+function invalidateOrgCache(orgId) {
+  _orgCache.delete(String(orgId));
+}
+
 // ── Protect: verify JWT and attach user to req ────────────────────────────────
 const protect = async (req, res, next) => {
   try {
@@ -34,9 +54,17 @@ const protect = async (req, res, next) => {
 
     // ── Org-level access guard (skip for super_admin — platform-wide access) ──
     if (user.role !== "super_admin" && user.orgId) {
-      const org = await Organization.findById(user.orgId).select("isActive plan trialEndsAt");
+      let org = _getCachedOrg(user.orgId);
+      if (!org) {
+        org = await Organization.findById(user.orgId).select("isActive plan trialEndsAt").lean();
+        if (org) _setCachedOrg(user.orgId, org);
+      }
       if (!org || !org.isActive) {
         return next(new AppError("ORGANISATION_INACTIVE", 403));
+      }
+      // Trial expiry check — only for orgs still on the trial plan
+      if (org.plan === "trial" && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)) {
+        return next(new AppError("TRIAL_EXPIRED", 403));
       }
       req.org = org;
     }
@@ -61,4 +89,4 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+module.exports = { protect, authorize, invalidateOrgCache };

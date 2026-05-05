@@ -9,7 +9,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    search: "",
+    search: initialFilters.search || "",
     status: initialFilters.status || "",
     source: initialFilters.source || "",
     priority: initialFilters.priority || "",

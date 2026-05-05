@@ -44,7 +44,12 @@ const projectController = {
       if (!Array.isArray(rows) || !rows.length) {
         return next(new AppError("rows array is required", 400));
       }
-      const result = await projectService.importLeads(req.params.id, rows, req.user);
+      if (rows.length > 5000) {
+        return next(new AppError("Maximum 5000 rows per import. Split your file and retry.", 400));
+      }
+      // Basic field sanitization — strip any attempt to set isDeleted / orgId via import
+      const sanitized = rows.map(({ isDeleted, orgId, _id, createdBy, ...rest }) => rest);
+      const result = await projectService.importLeads(req.params.id, sanitized, req.user);
       res.status(201).json({ success: true, ...result });
     } catch (err) { next(err); }
   },

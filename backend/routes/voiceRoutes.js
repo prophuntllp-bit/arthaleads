@@ -1,6 +1,7 @@
 // routes/voiceRoutes.js
 // External API for AI voice platform integration
 // Auth: X-Api-Key header or ?api_key= query param (set VOICE_API_KEY in Railway)
+// Org scope: set VOICE_ORG_ID in Railway env, or pass ?org_id= / X-Org-Id header
 
 const express = require("express");
 const router = express.Router();
@@ -9,23 +10,40 @@ const apiKeyAuth = require("../middlewares/apiKey");
 
 router.use(apiKeyAuth);
 
+// ── Org-scope middleware ───────────────────────────────────────────────────────
+// Every voice route must be scoped to a single org to prevent cross-tenant leaks.
+// Priority: X-Org-Id header > ?org_id param > VOICE_ORG_ID env var
+router.use((req, res, next) => {
+  const orgId = req.headers["x-org-id"] || req.query.org_id || process.env.VOICE_ORG_ID;
+  if (!orgId) {
+    return res.status(400).json({
+      success: false,
+      message: "org_id is required. Pass X-Org-Id header, ?org_id= param, or set VOICE_ORG_ID env var.",
+    });
+  }
+  req.voiceOrgId = orgId;
+  next();
+});
+
 // GET /api/voice/leads?campaign_id=joyville&limit=5
 // campaign_id maps to leadSourceLabel or source field
 router.get("/leads", async (req, res) => {
   try {
     const { campaign_id, limit = 20, page = 1, status, phone } = req.query;
 
-    const filter = { isDeleted: { $ne: true }, isArchived: false };
+    const escRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const filter = { orgId: req.voiceOrgId, isDeleted: { $ne: true }, isArchived: false };
 
     if (campaign_id && campaign_id !== "preview") {
+      const safe = escRx(campaign_id);
       filter.$or = [
-        { leadSourceLabel: { $regex: campaign_id, $options: "i" } },
-        { source: { $regex: campaign_id, $options: "i" } },
+        { leadSourceLabel: { $regex: safe, $options: "i" } },
+        { source: { $regex: safe, $options: "i" } },
       ];
     }
 
     if (status) filter.status = status;
-    if (phone) filter.phone = { $regex: phone.replace(/\D/g, ""), $options: "i" };
+    if (phone) filter.phone = { $regex: escRx(phone.replace(/\D/g, "")), $options: "i" };
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -46,7 +64,7 @@ router.get("/leads", async (req, res) => {
       leads,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -59,15 +77,16 @@ router.get("/leads/search", async (req, res) => {
       return res.status(400).json({ success: false, message: "Provide at least one of: phone, name, email" });
     }
 
-    const filter = { isDeleted: { $ne: true } };
+    const escRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const filter = { orgId: req.voiceOrgId, isDeleted: { $ne: true } };
     const orConditions = [];
 
     if (phone) {
-      const digits = phone.replace(/\D/g, "");
+      const digits = escRx(phone.replace(/\D/g, ""));
       orConditions.push({ phone: { $regex: digits, $options: "i" } });
     }
-    if (name) orConditions.push({ name: { $regex: name, $options: "i" } });
-    if (email) orConditions.push({ email: { $regex: email, $options: "i" } });
+    if (name) orConditions.push({ name: { $regex: escRx(name), $options: "i" } });
+    if (email) orConditions.push({ email: { $regex: escRx(email), $options: "i" } });
 
     if (orConditions.length) filter.$or = orConditions;
 
@@ -78,7 +97,7 @@ router.get("/leads/search", async (req, res) => {
 
     res.json({ success: true, count: leads.length, leads });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -96,8 +115,9 @@ router.patch("/leads/:id", async (req, res) => {
       return res.status(400).json({ success: false, message: "No valid fields to update" });
     }
 
-    const lead = await Lead.findByIdAndUpdate(
-      req.params.id,
+    // Scope update to org so the voice platform can't mutate other tenants' leads
+    const lead = await Lead.findOneAndUpdate(
+      { _id: req.params.id, orgId: req.voiceOrgId },
       { $set: update },
       { new: true, runValidators: true }
     ).select("name phone email status remark priority followUpDate assignedToName updatedAt");
@@ -106,7 +126,7 @@ router.patch("/leads/:id", async (req, res) => {
 
     res.json({ success: true, data: lead });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 

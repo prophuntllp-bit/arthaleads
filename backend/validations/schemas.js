@@ -204,7 +204,6 @@ const importLeadsSchema = Joi.object({
       ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
       booking: Joi.string().valid("Not Interested","Interested","Booked","Call Back","Site Visit Booked","").allow("").optional(),
-      isDeleted: Joi.boolean().optional(),
       remark: Joi.string().allow("").optional(),
       remark1: Joi.string().allow("").optional(),
       remark2: Joi.string().allow("").optional(),

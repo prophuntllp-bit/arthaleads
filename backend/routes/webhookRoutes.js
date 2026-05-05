@@ -1,4 +1,5 @@
 const express = require("express");
+const crypto  = require("crypto");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const Automation = require("../models/Automation");
@@ -8,6 +9,27 @@ const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule = require("../models/RoutingRule");
 
 const router = express.Router();
+
+// ── Facebook signature verification ──────────────────────────────────────────
+// Uses the `verify` callback of express.json() to access the raw buffer
+// before parsing. Throws 403 if the signature doesn't match FB_APP_SECRET.
+function verifyFbSignature(req, res, buf) {
+  const sig = req.headers["x-hub-signature-256"];
+  if (!sig || !process.env.FB_APP_SECRET) return; // skip if unconfigured
+  const expected = "sha256=" + crypto
+    .createHmac("sha256", process.env.FB_APP_SECRET)
+    .update(buf)
+    .digest("hex");
+  // constant-time compare to prevent timing attacks
+  const sigBuf = Buffer.from(sig);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    logger.warn("Facebook webhook: invalid X-Hub-Signature-256 — request rejected");
+    const err = new Error("Invalid Facebook webhook signature");
+    err.status = 403;
+    throw err;
+  }
+}
 
 async function getFacebookLeadFields(leadgenId, accessToken) {
   const params = new URLSearchParams({
@@ -194,7 +216,7 @@ router.get("/", async (req, res) => {
   return res.status(403).json({ success: false, message: "Webhook verification failed" });
 });
 
-router.post("/", express.json(), async (req, res) => {
+router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) => {
   console.log("[webhook] POST received:", JSON.stringify(req.body).slice(0, 500));
   try {
     const entries = req.body.entry || [];

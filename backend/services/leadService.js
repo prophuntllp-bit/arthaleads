@@ -160,11 +160,12 @@ const leadService = {
     if (createdAtFilter) filter.createdAt = createdAtFilter;
 
     if (search) {
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       andConditions.push({ $or: [
-        { name: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { preferredLocation: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { phone: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { preferredLocation: { $regex: safeSearch, $options: "i" } },
       ] });
     }
 

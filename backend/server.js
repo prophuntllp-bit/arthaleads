@@ -146,6 +146,22 @@ app.get("/health", (req, res) => {
   });
 });
 
+// ── Frontend Error Report (ErrorBoundary → Sentry) ───────────────────────────
+// Accepts render crashes from the React ErrorBoundary and forwards to Sentry.
+// No auth required — the boundary catches pre-auth crashes too.
+app.post("/api/error-report", express.json({ limit: "16kb" }), (req, res) => {
+  const { message, stack, componentStack, url } = req.body || {};
+  logger.error(`[frontend-error] ${message} | url: ${url}\n${stack}\n${componentStack}`);
+  const Sentry = require("./instrument");
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(new Error(`[Frontend] ${message}`), {
+      extra: { stack, componentStack, url },
+      tags: { source: "ErrorBoundary" },
+    });
+  }
+  res.json({ success: true });
+});
+
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
@@ -163,8 +179,31 @@ app.use(errorHandler);
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 console.log("[BOOT] Calling app.listen on port", PORT);
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   logger.info(`🚀 CRM Server running on port ${PORT} [${process.env.NODE_ENV || "development"}]`);
 });
+
+// ── Graceful Shutdown ─────────────────────────────────────────────────────────
+// Railway sends SIGTERM before killing the container on deploy/restart.
+// Stop accepting new connections, wait for in-flight requests, then exit cleanly.
+function shutdown(signal) {
+  logger.info(`[${signal}] Graceful shutdown initiated…`);
+  server.close(() => {
+    logger.info("HTTP server closed — all connections drained");
+    const mongoose = require("mongoose");
+    mongoose.disconnect().then(() => {
+      logger.info("MongoDB disconnected — process exiting");
+      process.exit(0);
+    });
+  });
+  // Force-exit after 15 s if connections don't drain
+  setTimeout(() => {
+    logger.error("Forced exit after 15 s — connections did not drain");
+    process.exit(1);
+  }, 15_000);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
 
 module.exports = app;

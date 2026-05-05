@@ -16,8 +16,22 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    // Log to console in dev; swap for Sentry / LogRocket in production
     console.error("[ErrorBoundary] Uncaught error:", error, info);
+    // Fire-and-forget: report to backend so Sentry captures frontend render crashes
+    try {
+      const base = import.meta.env.VITE_API_URL || "/api";
+      fetch(`${base}/error-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          message: error?.message || "Unknown render error",
+          stack: error?.stack?.slice(0, 1500) || "",
+          componentStack: info?.componentStack?.slice(0, 1500) || "",
+          url: window.location.href,
+        }),
+      }).catch(() => {}); // never throw from error boundary
+    } catch { /* ignore */ }
   }
 
   handleReset = () => {

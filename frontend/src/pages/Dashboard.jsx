@@ -39,6 +39,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [greeting, setGreeting] = useState(getGreeting());
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min — greeting only changes AM/PM
@@ -71,7 +72,17 @@ export default function Dashboard() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[260px] flex-1 max-w-xl">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-              <input className="input rounded-full pl-11 pr-4" placeholder="Search properties or leads..." />
+              <input
+                className="input rounded-full pl-11 pr-4"
+                placeholder="Search leads by name, phone or email…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
+                  }
+                }}
+              />
             </div>
             <div className="hidden h-4 w-px lg:block" style={{ background: "var(--app-border)" }} />
             <div className="flex flex-wrap items-center gap-2">

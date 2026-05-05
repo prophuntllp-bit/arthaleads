@@ -390,6 +390,7 @@ export default function Leads() {
     filters, setFilter,
     upsertLead, removeLead, pages, limit, changeLimit,
   } = useLeads("unified", {
+    search: location.state?.presetSearch || "",
     status: location.state?.presetStatus || "",
     source: location.state?.presetSource || "",
     followUpToday: location.state?.presetFollowUpToday ? "true" : "",
@@ -436,7 +437,7 @@ export default function Leads() {
 
   // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
-    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday) {
+    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday || location.state?.presetSearch) {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, []);

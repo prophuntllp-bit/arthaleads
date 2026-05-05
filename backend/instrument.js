@@ -18,6 +18,7 @@ if (!process.env.SENTRY_DSN) {
     ignoreErrors: [
       "Not authenticated",
       "ORGANISATION_INACTIVE",
+      "TRIAL_EXPIRED",
       "Invalid email or password",
       "Too many failed attempts",
       "Too many requests",
