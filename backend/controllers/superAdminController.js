@@ -7,10 +7,17 @@ const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
 
 const superAdminController = {
-  // GET /api/super-admin/orgs — list all orgs with live stats
+  // GET /api/super-admin/orgs — list all orgs with live stats (paginated)
   async listOrgs(req, res, next) {
     try {
-      const orgs = await Organization.find().sort({ createdAt: -1 }).lean();
+      const page  = Math.max(1, parseInt(req.query.page)  || 1);
+      const limit = Math.min(200, parseInt(req.query.limit) || 50);
+      const skip  = (page - 1) * limit;
+
+      const [orgs, total] = await Promise.all([
+        Organization.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Organization.countDocuments(),
+      ]);
 
       // Attach user count + lead count per org in two aggregations
       const [userCounts, leadCounts] = await Promise.all([
@@ -32,7 +39,7 @@ const superAdminController = {
         leadCount: leadMap[String(org._id)] || 0,
       }));
 
-      res.json({ success: true, total: orgs.length, orgs: enriched });
+      res.json({ success: true, total, page, pages: Math.ceil(total / limit), orgs: enriched });
     } catch (err) {
       next(err);
     }

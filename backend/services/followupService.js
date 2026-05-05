@@ -51,10 +51,10 @@ const followupService = {
         $and: [
           baseLeadFilter,
           ...agentLeadCond,
-          { createdAt: todayRange },
+          { followUpDate: todayRange },
         ],
       };
-      projFilter = { createdAt: todayRange };
+      projFilter = { followUp: todayRange };
     } else if (section === "future") {
       const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
       const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;

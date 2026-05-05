@@ -10,7 +10,7 @@ const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, imp
 router.use(protect);
 
 router.get("/analytics", leadController.getAnalytics);
-router.get("/dump", authorize("admin", "manager"), leadController.getDump);
+router.get("/dump", leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/unified", leadController.getAllUnified);
 router.get("/export", leadController.exportLeads);

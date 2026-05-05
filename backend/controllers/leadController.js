@@ -143,8 +143,9 @@ const leadController = {
 
   async getDump(req, res, next) {
     try {
-      const leads = await leadService.getDump(req.user);
-      res.json({ success: true, data: leads });
+      const { page = 1, limit = 50 } = req.query;
+      const result = await leadService.getDump(req.user, { page, limit });
+      res.json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
@@ -173,16 +174,24 @@ const leadController = {
       const { format = "csv", ids } = req.query;
       let sourceLeads;
 
+      const EXPORT_LIMIT = 5000;
+      let truncated = false;
+
       if (ids) {
         // Export specific IDs (selected leads)
         const idList = ids.split(",").filter(Boolean);
-        const { leads } = await leadService.getAllUnified({ limit: 5000, page: 1 }, req.user);
+        const { leads } = await leadService.getAllUnified({ limit: EXPORT_LIMIT, page: 1 }, req.user);
         sourceLeads = leads.filter((l) => idList.includes(String(l._id)));
       } else {
-        const query = { ...req.query, limit: 5000, page: 1 };
+        const query = { ...req.query, limit: EXPORT_LIMIT + 1, page: 1 };
         delete query.format;
         const { leads } = await leadService.getAllUnified(query, req.user);
-        sourceLeads = leads;
+        if (leads.length > EXPORT_LIMIT) {
+          truncated = true;
+          sourceLeads = leads.slice(0, EXPORT_LIMIT);
+        } else {
+          sourceLeads = leads;
+        }
       }
 
       const rows = sourceLeads.map((lead) => ({
@@ -223,10 +232,12 @@ const leadController = {
         return res.send("﻿" + "Name,Phone,Email,Source,Status,Priority,CreatedAt\r\n");
       }
       const headers = Object.keys(rows[0]);
-      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      // Escape double-quotes and strip newlines so each row stays on one line
+      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""').replace(/[\r\n]+/g, " ")}"`;
       const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="leads-${date}.csv"`);
+      if (truncated) res.setHeader("X-Truncated", "true");
       res.send("\uFEFF" + csv);
     } catch (err) {
       next(err);

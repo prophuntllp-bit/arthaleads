@@ -118,8 +118,8 @@ async function runUpcomingReminder() {
   await notifyLeads(allLeads, (lead) => `Follow-up in 10 minutes: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
-// ── Daily 9 AM IST: follow-up reminders ─────────────────────────────────────
-cron.schedule("0 9 * * *", () => {
+// ── Daily 9 AM IST (UTC 03:30): follow-up reminders ─────────────────────────
+cron.schedule("30 3 * * *", () => {
   runDailyReminder().catch((err) => logger.error(`Daily reminder error: ${err.message}`));
 });
 

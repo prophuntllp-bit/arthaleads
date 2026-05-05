@@ -589,7 +589,10 @@ const leadService = {
     return pl;
   },
 
-  async getDump(user) {
+  async getDump(user, { page = 1, limit = 50 } = {}) {
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const lim  = parseInt(limit);
+
     const leadFilter = {
       orgId: user.orgId,
       $or: [
@@ -605,23 +608,26 @@ const leadService = {
     const projFilter = { booking: "Not Interested", orgId: user.orgId };
     if (user.role === "agent") projFilter.importedBy = user._id;
 
-    const [regularLeads, projectLeads] = await Promise.all([
+    const [regularLeads, projLeads, totalLeads, totalProj] = await Promise.all([
       Lead.find(leadFilter)
         .sort({ updatedAt: -1 })
-        .limit(1000)
+        .skip(skip)
+        .limit(lim)
         .populate("assignedTo", "name email")
         .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt")
         .lean(),
       ProjectLead.find(projFilter)
         .sort({ updatedAt: -1 })
-        .limit(500)
+        .skip(skip)
+        .limit(lim)
         .populate("project", "name _id")
         .select("name phone email source booking remark remark1 remark2 createdAt updatedAt project importedBy")
         .lean(),
+      Lead.countDocuments(leadFilter),
+      ProjectLead.countDocuments(projFilter),
     ]);
 
-    // .lean() already returns plain objects — no .toObject() needed
-    const projFormatted = projectLeads.map((l) => ({
+    const projFormatted = projLeads.map((l) => ({
       ...l,
       _type: "project",
       projectName: l.project?.name,
@@ -631,9 +637,17 @@ const leadService = {
 
     const regularFormatted = regularLeads.map((l) => ({ ...l, _type: "lead" }));
 
-    return [...regularFormatted, ...projFormatted].sort(
+    const combined = [...regularFormatted, ...projFormatted].sort(
       (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
     );
+
+    const total = totalLeads + totalProj;
+    return {
+      leads: combined,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / lim),
+    };
   },
 };
 

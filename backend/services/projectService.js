@@ -132,8 +132,17 @@ const projectService = {
       orgId: user.orgId,  // propagate tenant id for direct filtering
     }));
 
-    const inserted = await ProjectLead.insertMany(docs, { ordered: false });
-    return { inserted: inserted.length, skipped: invalid, duplicates };
+    let insertedCount = 0;
+    let writeErrors = 0;
+    try {
+      const result = await ProjectLead.insertMany(docs, { ordered: false });
+      insertedCount = result.length;
+    } catch (bulkErr) {
+      // BulkWriteError — some docs succeeded, some failed validation/uniqueness
+      insertedCount = bulkErr.insertedDocs?.length ?? 0;
+      writeErrors   = bulkErr.writeErrors?.length  ?? 0;
+    }
+    return { inserted: insertedCount, skipped: invalid + writeErrors, duplicates };
   },
 
   async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }, user) {

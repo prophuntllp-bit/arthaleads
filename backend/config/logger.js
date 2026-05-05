@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === "production" ? "warn" : "debug",
+  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
   format: combine(
     timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     errors({ stack: true }),

@@ -322,35 +322,28 @@ const authService = {
     const userIds = users.map((user) => user._id);
 
     const orgId = actor.orgId;
-    const [assignedCounts, closedWonCounts, siteVisitCounts, newCounts] = await Promise.all([
-      Lead.aggregate([
-        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
-        { $group: { _id: "$assignedTo", totalAssigned: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "Closed Won" } },
-        { $group: { _id: "$assignedTo", closedWon: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "Site Visit" } },
-        { $group: { _id: "$assignedTo", siteVisits: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, status: "New" } },
-        { $group: { _id: "$assignedTo", newLeads: { $sum: 1 } } },
-      ]),
+
+    // Single aggregation with $facet — 4x fewer round trips to MongoDB
+    const [facetResult] = await Lead.aggregate([
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
+      { $facet: {
+        assigned:   [{ $group: { _id: "$assignedTo", totalAssigned: { $sum: 1 } } }],
+        closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", closedWon:  { $sum: 1 } } }],
+        siteVisits: [{ $match: { status: "Site Visit"  } }, { $group: { _id: "$assignedTo", siteVisits: { $sum: 1 } } }],
+        newLeads:   [{ $match: { status: "New"         } }, { $group: { _id: "$assignedTo", newLeads:   { $sum: 1 } } }],
+      }},
     ]);
 
     const mapFrom = (items, field) =>
-      items.reduce((acc, item) => {
+      (items || []).reduce((acc, item) => {
         acc[item._id.toString()] = item[field];
         return acc;
       }, {});
 
-    const assignedMap = mapFrom(assignedCounts, "totalAssigned");
-    const wonMap = mapFrom(closedWonCounts, "closedWon");
-    const visitMap = mapFrom(siteVisitCounts, "siteVisits");
-    const newMap = mapFrom(newCounts, "newLeads");
+    const assignedMap = mapFrom(facetResult?.assigned,   "totalAssigned");
+    const wonMap      = mapFrom(facetResult?.closedWon,  "closedWon");
+    const visitMap    = mapFrom(facetResult?.siteVisits, "siteVisits");
+    const newMap      = mapFrom(facetResult?.newLeads,   "newLeads");
 
     return users.map((user) => {
       const id = user._id.toString();
