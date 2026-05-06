@@ -39,8 +39,8 @@ export default function DumpLeads() {
   const canDelete = ["admin", "manager", "super_admin"].includes(user?.role);
 
   useEffect(() => {
-    api.get("/leads/dump")
-      .then((r) => setLeads(r.data.data))
+    api.get("/leads/dump", { params: { limit: 2000 } })
+      .then((r) => setLeads(r.data.leads ?? r.data.data ?? []))
       .catch(() => toast.error("Failed to load dump leads"))
       .finally(() => setLoading(false));
   }, []);
@@ -287,8 +287,8 @@ export default function DumpLeads() {
 
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
       toast.success(data.message || `${leadsToImport.length} leads imported to dump`);
-      const r = await api.get("/leads/dump");
-      setLeads(r.data.data);
+      const r = await api.get("/leads/dump", { params: { limit: 2000 } });
+      setLeads(r.data.leads ?? r.data.data ?? []);
     } catch (e) {
       toast.error(e.response?.data?.message || e.message || "Import failed");
     } finally {
