@@ -1165,11 +1165,15 @@ export default function Leads() {
           />
         ) : (
           <>
-            {/* Top scroll mirror — width synced to real table scrollWidth via ResizeObserver */}
+            {/* Top scroll mirror — always-visible horizontal scrollbar above the table */}
             <div
               ref={topScrollRef}
-              className="overflow-x-auto border-b"
-              style={{ borderColor: "var(--app-border)" }}
+              style={{
+                overflowX: "scroll",
+                overflowY: "hidden",
+                height: 14,
+                borderBottom: "1px solid var(--app-border)",
+              }}
             >
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
