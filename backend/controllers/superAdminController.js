@@ -5,6 +5,14 @@ const Lead = require("../models/Lead");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
+const { invalidateOrgCache } = require("../middlewares/auth");
+
+// Helper — compute effective trial status for a single org doc
+function trialStatus(org) {
+  if (org.plan !== "trial") return null; // non-trial orgs don't have trial state
+  if (!org.trialEndsAt) return "active";
+  return new Date() > new Date(org.trialEndsAt) ? "expired" : "active";
+}
 
 const superAdminController = {
   // GET /api/super-admin/orgs — list all orgs with live stats (paginated)
@@ -35,8 +43,9 @@ const superAdminController = {
 
       const enriched = orgs.map((org) => ({
         ...org,
-        userCount: userMap[String(org._id)] || 0,
-        leadCount: leadMap[String(org._id)] || 0,
+        userCount:    userMap[String(org._id)] || 0,
+        leadCount:    leadMap[String(org._id)] || 0,
+        trialExpired: trialStatus(org) === "expired",
       }));
 
       res.json({ success: true, total, page, pages: Math.ceil(total / limit), orgs: enriched });
@@ -105,11 +114,57 @@ const superAdminController = {
       const org = await Organization.findByIdAndUpdate(req.params.id, update, { new: true });
       if (!org) return next(new AppError("Organization not found", 404));
 
+      invalidateOrgCache(req.params.id);
       res.json({ success: true, org });
     } catch (err) {
       next(err);
     }
   },
+
+  // PATCH /api/super-admin/orgs/:id/extend-trial — extend an org's trial period
+  async extendTrial(req, res, next) {
+    try {
+      const { days } = req.body;
+
+      if (!days || typeof days !== "number" || days < 1 || days > 3650) {
+        return next(new AppError("days must be a number between 1 and 3650", 400));
+      }
+
+      const org = await Organization.findById(req.params.id);
+      if (!org) return next(new AppError("Organization not found", 404));
+
+      // Start extension from today if trial already expired, otherwise extend from current end
+      const base = (!org.trialEndsAt || new Date() > new Date(org.trialEndsAt))
+        ? new Date()
+        : new Date(org.trialEndsAt);
+
+      const newTrialEndsAt = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+
+      const updated = await Organization.findByIdAndUpdate(
+        req.params.id,
+        {
+          trialEndsAt: newTrialEndsAt,
+          plan:        org.plan === "trial" ? "trial" : org.plan, // keep plan as-is for non-trial
+          isActive:    true, // re-activate if it was deactivated due to expiry
+        },
+        { new: true }
+      );
+
+      invalidateOrgCache(req.params.id);
+
+      res.json({
+        success: true,
+        org: {
+          ...updated.toObject(),
+          trialExpired: false,
+        },
+        message: `Trial extended by ${days} day${days > 1 ? "s" : ""} — new expiry: ${newTrialEndsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // POST /api/super-admin/backup — trigger a manual backup immediately
   async triggerBackup(req, res, next) {
     try {

@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon, RefreshCw, Palette } from "lucide-react";
+import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon, RefreshCw, Clock, CalendarClock, ChevronDown } from "lucide-react";
 
 function PlanBadge({ plan }) {
   const cls = {
@@ -309,6 +309,130 @@ function BrandColorPicker({ org, onUpdated }) {
   );
 }
 
+// ── TrialExtender ─────────────────────────────────────────────────────────────
+// Dropdown with preset durations + "Other" custom-date picker.
+// Only rendered for trial-plan orgs.
+function TrialExtender({ org, onUpdated }) {
+  const PRESETS = [
+    { label: "7 days",   days: 7 },
+    { label: "14 days",  days: 14 },
+    { label: "1 month",  days: 30 },
+    { label: "3 months", days: 90 },
+    { label: "Other…",   days: null },
+  ];
+
+  const [open,    setOpen]    = useState(false);
+  const [custom,  setCustom]  = useState(""); // ISO date string for "Other"
+  const [saving,  setSaving]  = useState(false);
+  const dropRef = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (!dropRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const extend = async (days) => {
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}/extend-trial`, { days });
+      onUpdated(data.org);
+      toast.success(data.message);
+      setOpen(false);
+      setCustom("");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to extend trial");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCustomSubmit = () => {
+    if (!custom) return toast.error("Pick a date first");
+    const target = new Date(custom);
+    target.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    if (days < 1) return toast.error("Date must be in the future");
+    extend(days);
+  };
+
+  // Min date = tomorrow
+  const minDate = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+
+  // Current expiry display
+  const expiryLabel = org.trialEndsAt
+    ? new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    : "—";
+
+  return (
+    <div className="relative" ref={dropRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={saving}
+        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold border transition"
+        style={{
+          background: "rgba(234,88,12,0.06)",
+          borderColor: "rgba(234,88,12,0.25)",
+          color: "#ea580c",
+        }}
+        title={`Current expiry: ${expiryLabel}`}
+      >
+        {saving ? <Spinner size="sm" /> : <CalendarClock className="w-3 h-3" />}
+        Extend Trial
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute z-50 left-0 mt-1.5 w-52 rounded-2xl overflow-hidden shadow-xl"
+          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        >
+          {/* Current expiry hint */}
+          <p className="px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-app-soft">
+            Expires: {expiryLabel}
+          </p>
+          <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+
+          {PRESETS.map((p) =>
+            p.days ? (
+              <button
+                key={p.label}
+                onClick={() => extend(p.days)}
+                disabled={saving}
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-app hover:bg-orange-500/5 transition disabled:opacity-40"
+              >
+                <Clock className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                {p.label}
+              </button>
+            ) : (
+              <div key="other" className="px-3 py-2 space-y-2">
+                <p className="text-[11px] font-semibold text-app-soft">Custom end date</p>
+                <input
+                  type="date"
+                  min={minDate}
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  className="input w-full text-xs py-1.5 px-2"
+                />
+                <button
+                  onClick={handleCustomSubmit}
+                  disabled={!custom || saving}
+                  className="w-full btn-primary text-xs py-1.5 rounded-xl disabled:opacity-40"
+                >
+                  {saving ? "Extending…" : "Apply custom date"}
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   useEffect(() => { document.title = "Super Admin — Arthaleads"; }, []);
   const { user } = useAuth();
@@ -353,7 +477,8 @@ export default function SuperAdmin() {
 
   const totalUsers = orgs.reduce((s, o) => s + (o.userCount || 0), 0);
   const totalLeads = orgs.reduce((s, o) => s + (o.leadCount || 0), 0);
-  const activeOrgs = orgs.filter((o) => o.isActive).length;
+  // Active = isActive AND not trial-expired
+  const activeOrgs = orgs.filter((o) => o.isActive && !o.trialExpired).length;
 
   if (loading) return <PageLoader />;
 
@@ -407,7 +532,7 @@ export default function SuperAdmin() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="stitch-table min-w-[700px]">
+          <table className="stitch-table min-w-[900px]">
             <thead>
               <tr>
                 <th>Organization</th>
@@ -417,49 +542,85 @@ export default function SuperAdmin() {
                 <th>Logo</th>
                 <th>Brand Colour</th>
                 <th className="text-center">Status</th>
+                <th>Extend Trial</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
+                  <td colSpan={8} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
                 </tr>
-              ) : filtered.map((org) => (
-                <tr key={org._id}>
-                  <td>
-                    <div>
-                      <p className="font-semibold text-sm text-app">{org.name}</p>
-                      <p className="text-[10px] text-app-soft">{org.slug}</p>
-                      <p className="text-[10px] text-app-soft">{new Date(org.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
-                    </div>
-                  </td>
-                  <td><PlanBadge plan={org.plan} /></td>
-                  <td className="text-center font-bold text-app">{org.userCount}</td>
-                  <td className="text-center font-bold text-app">{org.leadCount}</td>
-                  <td>
-                    <LogoUploader org={org} onUpdated={handleOrgUpdated} />
-                  </td>
-                  <td>
-                    <BrandColorPicker org={org} onUpdated={handleOrgUpdated} />
-                  </td>
-                  <td className="text-center">
-                    <button
-                      onClick={() => toggleActive(org)}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border transition ${
-                        org.isActive
-                          ? "bg-green-500/10 text-green-600 border-green-500/25 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/25"
-                          : "bg-red-500/10 text-red-500 border-red-500/25 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/25"
-                      }`}
-                      title={org.isActive ? "Click to deactivate" : "Click to activate"}
-                    >
-                      {org.isActive
-                        ? <><CheckCircle2 className="w-3 h-3" /> Active</>
-                        : <><XCircle className="w-3 h-3" /> Inactive</>
-                      }
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              ) : filtered.map((org) => {
+                const isTrialExpired = !!org.trialExpired;
+                const effectivelyActive = org.isActive && !isTrialExpired;
+
+                return (
+                  <tr key={org._id}>
+                    <td>
+                      <div>
+                        <p className="font-semibold text-sm text-app">{org.name}</p>
+                        <p className="text-[10px] text-app-soft">{org.slug}</p>
+                        <p className="text-[10px] text-app-soft">{new Date(org.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+                        {org.plan === "trial" && org.trialEndsAt && (
+                          <p className={`text-[10px] mt-0.5 font-semibold ${isTrialExpired ? "text-red-500" : "text-amber-500"}`}>
+                            {isTrialExpired
+                              ? `Expired ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+                              : `Trial ends ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td><PlanBadge plan={org.plan} /></td>
+                    <td className="text-center font-bold text-app">{org.userCount}</td>
+                    <td className="text-center font-bold text-app">{org.leadCount}</td>
+                    <td>
+                      <LogoUploader org={org} onUpdated={handleOrgUpdated} />
+                    </td>
+                    <td>
+                      <BrandColorPicker org={org} onUpdated={handleOrgUpdated} />
+                    </td>
+                    <td className="text-center">
+                      {/* Trial Expired takes priority over Active/Inactive */}
+                      {isTrialExpired ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold border bg-amber-500/10 text-amber-600 border-amber-500/25">
+                            <Clock className="w-3 h-3" /> Trial Expired
+                          </span>
+                          <button
+                            onClick={() => toggleActive(org)}
+                            className="text-[9px] text-app-soft hover:text-red-500 transition"
+                            title="Click to deactivate org entirely"
+                          >
+                            Deactivate org
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggleActive(org)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border transition ${
+                            effectivelyActive
+                              ? "bg-green-500/10 text-green-600 border-green-500/25 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/25"
+                              : "bg-red-500/10 text-red-500 border-red-500/25 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/25"
+                          }`}
+                          title={effectivelyActive ? "Click to deactivate" : "Click to activate"}
+                        >
+                          {effectivelyActive
+                            ? <><CheckCircle2 className="w-3 h-3" /> Active</>
+                            : <><XCircle className="w-3 h-3" /> Inactive</>}
+                        </button>
+                      )}
+                    </td>
+                    <td>
+                      {/* Only show for trial-plan orgs */}
+                      {org.plan === "trial" ? (
+                        <TrialExtender org={org} onUpdated={handleOrgUpdated} />
+                      ) : (
+                        <span className="text-xs text-app-soft">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
