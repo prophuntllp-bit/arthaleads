@@ -1,6 +1,6 @@
 const BlogPost     = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
-const AppError     = require("../utils/AppError");
+const { AppError } = require("../middlewares/errorHandler");
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function slugify(text) {
