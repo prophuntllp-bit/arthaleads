@@ -107,8 +107,15 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_AUTH) || 20,
+  max: parseInt(process.env.RATE_LIMIT_AUTH) || 50,
   message: { success: false, message: "Too many login attempts, please wait." },
+  skip: (req) => {
+    // Skip rate limit for super admin email (configured via env) or localhost
+    const ip = req.ip || "";
+    const email = (req.body?.email || "").toLowerCase();
+    const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase();
+    return ip === "::1" || ip === "127.0.0.1" || (superAdminEmail && email === superAdminEmail);
+  },
 });
 
 app.use(generalLimiter);
