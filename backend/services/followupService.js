@@ -3,7 +3,7 @@ const ProjectLead = require("../models/ProjectLead");
 const mongoose = require("mongoose");
 
 const followupService = {
-  async get(user, { section, from, to, page = 1, limit = 50 }) {
+  async get(user, { section, from, to, page = 1, limit = 50, sort }) {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -119,7 +119,11 @@ const followupService = {
           { $project: { _proj: 0 } },
         ],
       }},
-      { $sort: { followUpDate: 1, createdAt: -1 } },
+      // Smart default: past → latest missed first (desc); future/present → soonest first (asc)
+      { $sort: {
+        followUpDate: sort === "asc" ? 1 : sort === "desc" ? -1 : (section === "past" ? -1 : 1),
+        createdAt: -1,
+      }},
       { $facet: {
         data:  [{ $skip: skip }, { $limit: parseInt(limit) }],
         count: [{ $count: "total" }],

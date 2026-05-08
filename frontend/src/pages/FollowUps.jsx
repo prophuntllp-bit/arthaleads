@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 const SECTIONS = [
   { key: "past",    label: "Past Events",    icon: Clock,         color: "text-red-500",   bg: "bg-red-500/10",   activeBg: "bg-red-500",    badge: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400" },
@@ -32,13 +32,15 @@ export default function FollowUps() {
   const [loading, setLoading] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  // Smart defaults: past = latest missed first (desc), future/present = soonest first (asc)
+  const [sort, setSort] = useState("desc"); // "asc" | "desc"
 
   const limit = 50;
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ section, page, limit });
+      const params = new URLSearchParams({ section, page, limit, sort });
       if (section === "future") {
         if (from) params.set("from", from);
         if (to) params.set("to", to);
@@ -52,10 +54,12 @@ export default function FollowUps() {
     } finally {
       setLoading(false);
     }
-  }, [section, page, from, to]);
+  }, [section, page, from, to, sort]);
 
+  // Reset page + set smart sort default when switching sections
   useEffect(() => {
     setPage(1);
+    setSort(section === "past" ? "desc" : "asc");
   }, [section]);
 
   useEffect(() => {
@@ -102,37 +106,66 @@ export default function FollowUps() {
         </div>
       </div>
 
-      {/* Future date filters */}
-      {section === "future" && (
-        <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-app-soft font-medium">From</label>
-            <input
-              type="date"
-              className="input text-xs py-1.5 px-3"
-              value={from}
-              onChange={e => { setFrom(e.target.value); setPage(1); }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-app-soft font-medium">To</label>
-            <input
-              type="date"
-              className="input text-xs py-1.5 px-3"
-              value={to}
-              onChange={e => { setTo(e.target.value); setPage(1); }}
-            />
-          </div>
-          {(from || to) && (
-            <button
-              className="text-xs text-orange-500 hover:underline"
-              onClick={() => { setFrom(""); setTo(""); setPage(1); }}
-            >
-              Clear
-            </button>
-          )}
+      {/* Controls row — sort toggle + future date filters */}
+      <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
+        {/* Sort toggle — always visible */}
+        <div className="flex items-center gap-1 p-0.5 rounded-xl" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <button
+            onClick={() => { setSort("desc"); setPage(1); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+              sort === "desc"
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-app-soft hover:text-app"
+            }`}
+          >
+            <ArrowDown className="w-3 h-3" />
+            Latest First
+          </button>
+          <button
+            onClick={() => { setSort("asc"); setPage(1); }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+              sort === "asc"
+                ? "bg-orange-500 text-white shadow-sm"
+                : "text-app-soft hover:text-app"
+            }`}
+          >
+            <ArrowUp className="w-3 h-3" />
+            Earliest First
+          </button>
         </div>
-      )}
+
+        {/* Future date range filters */}
+        {section === "future" && (
+          <>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-app-soft font-medium">From</label>
+              <input
+                type="date"
+                className="input text-xs py-1.5 px-3"
+                value={from}
+                onChange={e => { setFrom(e.target.value); setPage(1); }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-app-soft font-medium">To</label>
+              <input
+                type="date"
+                className="input text-xs py-1.5 px-3"
+                value={to}
+                onChange={e => { setTo(e.target.value); setPage(1); }}
+              />
+            </div>
+            {(from || to) && (
+              <button
+                className="text-xs text-orange-500 hover:underline"
+                onClick={() => { setFrom(""); setTo(""); setPage(1); }}
+              >
+                Clear
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Table */}
       <div className="px-4 lg:px-6 pt-4 pb-6">
@@ -155,7 +188,16 @@ export default function FollowUps() {
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">WhatsApp</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Source</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status / Remark</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Follow-up Date</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">
+                      <button
+                        onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
+                        className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors"
+                        title="Toggle sort order"
+                      >
+                        Follow-up Date
+                        {sort === "desc" ? <ArrowDown className="w-3 h-3 text-orange-500" /> : <ArrowUp className="w-3 h-3 text-orange-500" />}
+                      </button>
+                    </th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Project</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Type</th>
                   </tr>
