@@ -42,7 +42,7 @@ async function notifyLeads(leads, labelFn) {
     const payload = {
       title: "Follow-up Reminder",
       body: labelFn(lead),
-      data: { url: "/leads" },
+      data: { url: "/followups" },
     };
 
     // Regular leads use assignedTo; project leads use importedBy (no assignedTo field)

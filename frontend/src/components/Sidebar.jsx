@@ -137,7 +137,40 @@ export default function Sidebar() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Push subscription is handled by NotificationBanner in App.jsx
+  // ── Service worker push → in-app toast + instant bell increment ─────────────
+  // When the app IS open, the service worker forwards the push payload via
+  // postMessage. We catch it here, show a toast, and bump the bell count so
+  // the user sees the alert even if they're actively using the app.
+  useEffect(() => {
+    if (!user || !("serviceWorker" in navigator)) return;
+    const handler = (e) => {
+      if (e.data?.type !== "PUSH_NOTIFICATION") return;
+      const { title, body, data: notifData } = e.data;
+      // Show a dismissible in-app toast
+      toast(
+        (t) => (
+          <div
+            className="flex items-start gap-3 cursor-pointer"
+            onClick={() => {
+              toast.dismiss(t.id);
+              if (notifData?.url) window.location.href = notifData.url;
+            }}
+          >
+            <Bell className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold leading-tight">{title}</p>
+              <p className="text-xs text-app-soft mt-0.5">{body}</p>
+            </div>
+          </div>
+        ),
+        { duration: 8000 }
+      );
+      // Bump the bell badge count
+      setAlertCount((c) => c + 1);
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [user]);
 
   // Close alerts panel on outside click
   useEffect(() => {
