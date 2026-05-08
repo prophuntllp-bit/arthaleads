@@ -38,11 +38,13 @@ const followupService = {
           },
         ],
       };
+      // Check followUp OR followUp2 — either missed date qualifies
       projFilter = {
         booking: { $nin: ["Not Interested", "Booked"] },
         $or: [
-          { followUp: pastFilter },
-          { followUp: null, createdAt: pastFilter, remark: { $in: ["", null] } },
+          { followUp:  pastFilter },
+          { followUp2: pastFilter },
+          { followUp: null, followUp2: null, createdAt: pastFilter, remark: { $in: ["", null] } },
         ],
       };
     } else if (section === "present") {
@@ -54,7 +56,13 @@ const followupService = {
           { followUpDate: todayRange },
         ],
       };
-      projFilter = { followUp: todayRange };
+      // Match project leads whose followUp OR followUp2 falls today
+      projFilter = {
+        $or: [
+          { followUp:  todayRange },
+          { followUp2: todayRange },
+        ],
+      };
     } else if (section === "future") {
       const fromDate = from ? new Date(from) : new Date(todayEnd.getTime() + 1000);
       const toDate   = to ? (() => { const d = new Date(to); d.setHours(23, 59, 59, 999); return d; })() : null;
@@ -66,7 +74,13 @@ const followupService = {
           { followUpDate: futureFollowUp },
         ],
       };
-      projFilter = { followUp: futureFollowUp };
+      // Match project leads whose followUp OR followUp2 is in the future window
+      projFilter = {
+        $or: [
+          { followUp:  futureFollowUp },
+          { followUp2: futureFollowUp },
+        ],
+      };
     }
 
     const orgIdObj = typeof user.orgId === "string" ? new mongoose.Types.ObjectId(user.orgId) : user.orgId;
@@ -85,7 +99,20 @@ const followupService = {
             _type: "project",
             projectName: { $arrayElemAt: ["$_proj.name", 0] },
             projectId:   { $arrayElemAt: ["$_proj._id", 0] },
-            followUpDate: { $ifNull: ["$followUp", "$createdAt"] },
+            // Use whichever follow-up date is latest (followUp2 supersedes followUp when set)
+            followUpDate: {
+              $cond: [
+                { $and: [
+                  { $ne: ["$followUp2", null] },
+                  { $or: [
+                    { $eq: ["$followUp", null] },
+                    { $gte: ["$followUp2", "$followUp"] },
+                  ]},
+                ]},
+                "$followUp2",
+                { $ifNull: ["$followUp", "$createdAt"] },
+              ],
+            },
             status: { $ifNull: ["$remark", ""] },
             assignedToName: "",
           }},

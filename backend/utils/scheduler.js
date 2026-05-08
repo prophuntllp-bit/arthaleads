@@ -45,14 +45,16 @@ async function notifyLeads(leads, labelFn) {
       data: { url: "/leads" },
     };
 
-    if (lead.assignedTo) {
-      await sendPushToUser(lead.assignedTo, payload);
+    // Regular leads use assignedTo; project leads use importedBy (no assignedTo field)
+    const primaryRecipient = lead.assignedTo || lead.importedBy || null;
+    if (primaryRecipient) {
+      await sendPushToUser(primaryRecipient, payload);
     }
 
-    // Only notify managers/admins from the same org
+    // Notify managers/admins from the same org (skip if already the primary recipient)
     const orgManagers = managersByOrg[String(lead.orgId)] || [];
     for (const managerId of orgManagers) {
-      if (lead.assignedTo && managerId.toString() === lead.assignedTo.toString()) continue;
+      if (primaryRecipient && managerId.toString() === primaryRecipient.toString()) continue;
       await sendPushToUser(managerId, payload);
     }
   }
@@ -68,13 +70,25 @@ async function runDailyReminder() {
     isDeleted: { $ne: true },
   }).select("name phone assignedTo followUpDate orgId").lean();
 
-  // ProjectLead now has orgId; for legacy rows without orgId, resolve via project
+  // Check both followUp and followUp2 — deduplicate by _id so a lead with both
+  // dates today only fires one notification
   const projLeads = await ProjectLead.find({
-    followUp: { $gte: start, $lte: end },
-  }).populate("project", "orgId").select("name phone followUp project orgId").lean();
+    $or: [
+      { followUp:  { $gte: start, $lte: end } },
+      { followUp2: { $gte: start, $lte: end } },
+    ],
+  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy").lean();
 
-  // Ensure orgId is set (fallback to project.orgId for legacy docs without orgId)
-  const normalizedProjLeads = projLeads.map((l) => ({
+  // Deduplicate project leads (same _id might match both followUp and followUp2)
+  const seen = new Set();
+  const uniqueProjLeads = projLeads.filter((l) => {
+    const key = String(l._id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const normalizedProjLeads = uniqueProjLeads.map((l) => ({
     ...l,
     orgId: l.orgId || l.project?.orgId,
   }));
@@ -102,11 +116,24 @@ async function runUpcomingReminder() {
     isDeleted: { $ne: true },
   }).select("name phone assignedTo followUpDate orgId").lean();
 
+  // Check both followUp and followUp2 so project leads with either date get notified
   const projLeads = await ProjectLead.find({
-    followUp: { $gte: windowStart, $lt: windowEnd },
-  }).populate("project", "orgId").select("name phone followUp project orgId").lean();
+    $or: [
+      { followUp:  { $gte: windowStart, $lt: windowEnd } },
+      { followUp2: { $gte: windowStart, $lt: windowEnd } },
+    ],
+  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy").lean();
 
-  const normalizedProjLeads = projLeads.map((l) => ({
+  // Deduplicate (lead with both dates in window fires only one alert)
+  const seen = new Set();
+  const uniqueProjLeads = projLeads.filter((l) => {
+    const key = String(l._id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const normalizedProjLeads = uniqueProjLeads.map((l) => ({
     ...l,
     orgId: l.orgId || l.project?.orgId,
   }));
