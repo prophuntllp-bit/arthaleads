@@ -831,17 +831,43 @@ export default function ProjectDetail() {
                       >{n}</button>
                     ))}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-app-soft">{leadsTotal === 0 ? "0" : `${(leadsPage - 1) * leadsLimit + 1} – ${Math.min(leadsPage * leadsLimit, leadsTotal)} of ${leadsTotal}`}</span>
+                    {/* Go to page */}
+                    {leadsPages > 1 && (
+                      <div className="flex items-center gap-1.5 text-xs text-app-soft">
+                        <span>Go to</span>
+                        <input
+                          key={leadsPage}
+                          type="number"
+                          min={1}
+                          max={leadsPages}
+                          defaultValue={leadsPage}
+                          className="w-14 rounded-lg border text-center text-xs py-1 px-1 outline-none focus:border-orange-400"
+                          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const v = Math.max(1, Math.min(leadsPages, parseInt(e.target.value) || 1));
+                              setLeadsPage(v);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const v = Math.max(1, Math.min(leadsPages, parseInt(e.target.value) || 1));
+                            if (v !== leadsPage) setLeadsPage(v);
+                          }}
+                        />
+                        <span>of {leadsPages}</span>
+                      </div>
+                    )}
                     <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                       style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                      disabled={leadsPage === 1} onClick={() => setLeadsPage(1)}><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
+                      disabled={leadsPage === 1} onClick={() => setLeadsPage(1)} title="First page"><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
                     <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                       style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                      disabled={leadsPage === 1} onClick={() => setLeadsPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
+                      disabled={leadsPage === 1} onClick={() => setLeadsPage((p) => p - 1)} title="Previous page"><ChevronLeft className="h-4 w-4" /></button>
                     <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                       style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                      disabled={leadsPage === leadsPages || leadsPages === 0} onClick={() => setLeadsPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
+                      disabled={leadsPage === leadsPages || leadsPages === 0} onClick={() => setLeadsPage((p) => p + 1)} title="Next page"><ChevronRight className="h-4 w-4" /></button>
                   </div>
                 </div>
               </>
@@ -964,14 +990,38 @@ export default function ProjectDetail() {
                       {`${(prospPage - 1) * PROSP_LIMIT + 1} – ${Math.min(prospPage * PROSP_LIMIT, prospTotal)} of ${prospTotal}`}
                     </span>
                     <div className="flex items-center gap-2">
+                      {/* Go to page */}
+                      <div className="flex items-center gap-1.5 text-xs text-app-soft">
+                        <span>Go to</span>
+                        <input
+                          key={prospPage}
+                          type="number"
+                          min={1}
+                          max={prospPages}
+                          defaultValue={prospPage}
+                          className="w-14 rounded-lg border text-center text-xs py-1 px-1 outline-none focus:border-orange-400"
+                          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const v = Math.max(1, Math.min(prospPages, parseInt(e.target.value) || 1));
+                              setProspPage(v);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const v = Math.max(1, Math.min(prospPages, parseInt(e.target.value) || 1));
+                            if (v !== prospPage) setProspPage(v);
+                          }}
+                        />
+                        <span>of {prospPages}</span>
+                      </div>
                       <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={prospPage === 1} onClick={() => setProspPage((p) => p - 1)}>
+                        disabled={prospPage === 1} onClick={() => setProspPage((p) => p - 1)} title="Previous page">
                         <ChevronLeft className="h-4 w-4" />
                       </button>
                       <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={prospPage === prospPages} onClick={() => setProspPage((p) => p + 1)}>
+                        disabled={prospPage === prospPages} onClick={() => setProspPage((p) => p + 1)} title="Next page">
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>

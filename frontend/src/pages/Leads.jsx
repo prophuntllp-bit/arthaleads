@@ -1092,6 +1092,31 @@ export default function Leads() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-app-soft">{projTotal === 0 ? "0 results" : `${(projPage - 1) * projLimit + 1} – ${Math.min(projPage * projLimit, projTotal)} of ${projTotal}`}</span>
+                      {projPages > 1 && (
+                        <div className="flex items-center gap-1.5 text-xs text-app-soft">
+                          <span>Go to</span>
+                          <input
+                            key={projPage}
+                            type="number"
+                            min={1}
+                            max={projPages}
+                            defaultValue={projPage}
+                            className="w-14 rounded-lg border text-center text-xs py-1 px-1 outline-none focus:border-orange-400"
+                            style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                const v = Math.max(1, Math.min(projPages, parseInt(e.target.value) || 1));
+                                setProjPage(v);
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const v = Math.max(1, Math.min(projPages, parseInt(e.target.value) || 1));
+                              if (v !== projPage) setProjPage(v);
+                            }}
+                          />
+                          <span>of {projPages}</span>
+                        </div>
+                      )}
                       <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
                         disabled={projPage === 1} onClick={() => setProjPage(1)}><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
@@ -1341,10 +1366,36 @@ export default function Leads() {
             ))}
           </div>
           {/* Page info + navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-app-soft">
               {total === 0 ? "0 results" : `${(page - 1) * limit + 1} – ${Math.min(page * limit, total)} of ${total}`}
             </span>
+            {/* Go to page */}
+            {pages > 1 && (
+              <div className="flex items-center gap-1.5 text-xs text-app-soft">
+                <span>Go to</span>
+                <input
+                  key={page}
+                  type="number"
+                  min={1}
+                  max={pages}
+                  defaultValue={page}
+                  className="w-14 rounded-lg border text-center text-xs py-1 px-1 outline-none focus:border-orange-400"
+                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const v = Math.max(1, Math.min(pages, parseInt(e.target.value) || 1));
+                      setPage(v);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const v = Math.max(1, Math.min(pages, parseInt(e.target.value) || 1));
+                    if (v !== page) setPage(v);
+                  }}
+                />
+                <span>of {pages}</span>
+              </div>
+            )}
             <button
               className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
               style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
