@@ -1,5 +1,6 @@
 // pages/SuperAdmin.jsx — Saurabh's platform-level dashboard
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
@@ -311,7 +312,7 @@ function BrandColorPicker({ org, onUpdated }) {
 
 // ── TrialExtender ─────────────────────────────────────────────────────────────
 // Dropdown with preset durations + "Other" custom-date picker.
-// Only rendered for trial-plan orgs.
+// Rendered via a portal so it isn't clipped by the table's overflow container.
 function TrialExtender({ org, onUpdated }) {
   const PRESETS = [
     { label: "7 days",   days: 7 },
@@ -321,15 +322,33 @@ function TrialExtender({ org, onUpdated }) {
     { label: "Other…",   days: null },
   ];
 
-  const [open,    setOpen]    = useState(false);
-  const [custom,  setCustom]  = useState(""); // ISO date string for "Other"
-  const [saving,  setSaving]  = useState(false);
+  const [open,   setOpen]   = useState(false);
+  const [custom, setCustom] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+  const btnRef  = useRef(null);
   const dropRef = useRef(null);
+
+  // Position the portal dropdown below the button
+  const openDropdown = () => {
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (rect) {
+      setDropPos({
+        top:  rect.bottom + window.scrollY + 6,
+        left: rect.left   + window.scrollX,
+      });
+    }
+    setOpen((v) => !v);
+  };
 
   // Close on outside click
   useEffect(() => {
     if (!open) return;
-    const h = (e) => { if (!dropRef.current?.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (dropRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
@@ -353,30 +372,27 @@ function TrialExtender({ org, onUpdated }) {
     if (!custom) return toast.error("Pick a date first");
     const target = new Date(custom);
     target.setHours(23, 59, 59, 999);
-    const now = new Date();
-    const days = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((target - new Date()) / (1000 * 60 * 60 * 24));
     if (days < 1) return toast.error("Date must be in the future");
     extend(days);
   };
 
-  // Min date = tomorrow
-  const minDate = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
-
-  // Current expiry display
+  const minDate    = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
   const expiryLabel = org.trialEndsAt
     ? new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
     : "—";
 
   return (
-    <div className="relative" ref={dropRef}>
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={openDropdown}
         disabled={saving}
-        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold border transition"
+        className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold border transition whitespace-nowrap"
         style={{
-          background: "rgba(234,88,12,0.06)",
-          borderColor: "rgba(234,88,12,0.25)",
-          color: "#ea580c",
+          background:   "rgba(234,88,12,0.06)",
+          borderColor:  "rgba(234,88,12,0.25)",
+          color:        "#ea580c",
         }}
         title={`Current expiry: ${expiryLabel}`}
       >
@@ -385,16 +401,26 @@ function TrialExtender({ org, onUpdated }) {
         <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute z-50 left-0 mt-1.5 w-52 rounded-2xl overflow-hidden shadow-xl"
-          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+          ref={dropRef}
+          className="rounded-2xl shadow-2xl overflow-hidden"
+          style={{
+            position:    "absolute",
+            top:         dropPos.top,
+            left:        dropPos.left,
+            width:       220,
+            zIndex:      9999,
+            background:  "var(--app-surface)",
+            border:      "1px solid var(--app-border)",
+            boxShadow:   "0 8px 32px rgba(0,0,0,0.22)",
+          }}
         >
-          {/* Current expiry hint */}
-          <p className="px-3 pt-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-app-soft">
+          {/* Expiry hint */}
+          <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-app-soft">
             Expires: {expiryLabel}
           </p>
-          <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+          <div className="mx-4 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
 
           {PRESETS.map((p) =>
             p.days ? (
@@ -402,13 +428,13 @@ function TrialExtender({ org, onUpdated }) {
                 key={p.label}
                 onClick={() => extend(p.days)}
                 disabled={saving}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-app hover:bg-orange-500/5 transition disabled:opacity-40"
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-app hover:bg-orange-500/5 transition disabled:opacity-40"
               >
                 <Clock className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
                 {p.label}
               </button>
             ) : (
-              <div key="other" className="px-3 py-2 space-y-2">
+              <div key="other" className="px-4 py-3 space-y-2 border-t" style={{ borderColor: "var(--app-border)" }}>
                 <p className="text-[11px] font-semibold text-app-soft">Custom end date</p>
                 <input
                   type="date"
@@ -427,9 +453,10 @@ function TrialExtender({ org, onUpdated }) {
               </div>
             )
           )}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }
 
