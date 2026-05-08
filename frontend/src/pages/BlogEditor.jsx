@@ -6,7 +6,102 @@ import {
   ArrowLeft, Save, Globe, FileText, Image as ImageIcon, Quote, List, ListOrdered,
   Minus, ChevronDown, Plus, Trash2, Code, Heading2, Heading3,
   Heading4, AlignLeft, X, Tag, Search, Check, ExternalLink, Upload, RefreshCw,
+  ClipboardPaste,
 } from "lucide-react";
+
+// ── Markdown → Blocks parser ───────────────────────────────────────────────────
+function parseMarkdown(text) {
+  const lines   = text.split("\n");
+  const blocks  = [];
+  let   title   = "";
+  let   i       = 0;
+
+  // Inline markdown → HTML (bold, italic, inline code, links)
+  const inlineHtml = (s) =>
+    s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+     .replace(/\*(.+?)\*/g,     "<em>$1</em>")
+     .replace(/`(.+?)`/g,       "<code>$1</code>")
+     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+
+  while (i < lines.length) {
+    const raw  = lines[i];
+    const line = raw.trim();
+
+    // Skip empty
+    if (!line) { i++; continue; }
+
+    // H1 → post title (only first one)
+    if (line.startsWith("# ") && !line.startsWith("## ")) {
+      if (!title) title = line.slice(2).trim();
+      else blocks.push({ id: genId(), type: "h2", content: line.slice(2).trim() });
+      i++; continue;
+    }
+    // H2
+    if (line.startsWith("## ")) {
+      blocks.push({ id: genId(), type: "h2", content: inlineHtml(line.slice(3).trim()), items: [""] });
+      i++; continue;
+    }
+    // H3
+    if (line.startsWith("### ")) {
+      blocks.push({ id: genId(), type: "h3", content: inlineHtml(line.slice(4).trim()), items: [""] });
+      i++; continue;
+    }
+    // H4
+    if (line.startsWith("#### ")) {
+      blocks.push({ id: genId(), type: "h4", content: inlineHtml(line.slice(5).trim()), items: [""] });
+      i++; continue;
+    }
+    // Divider
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+      blocks.push({ id: genId(), type: "divider", content: "", items: [""] });
+      i++; continue;
+    }
+    // Blockquote
+    if (line.startsWith("> ")) {
+      const quoteLines = [];
+      while (i < lines.length && lines[i].trim().startsWith("> ")) {
+        quoteLines.push(lines[i].trim().slice(2));
+        i++;
+      }
+      blocks.push({ id: genId(), type: "quote", content: inlineHtml(quoteLines.join(" ")), items: [""] });
+      continue;
+    }
+    // Bullet list
+    if (/^[-*] /.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[-*] /.test(lines[i].trim())) {
+        items.push(lines[i].trim().slice(2));
+        i++;
+      }
+      blocks.push({ id: genId(), type: "bulletList", content: "", items });
+      continue;
+    }
+    // Numbered list
+    if (/^\d+[.)]\s/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+[.)]\s/.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^\d+[.)]\s/, ""));
+        i++;
+      }
+      blocks.push({ id: genId(), type: "numberedList", content: "", items });
+      continue;
+    }
+    // Paragraph — collect until blank line or next special line
+    const paraLines = [];
+    while (i < lines.length) {
+      const l = lines[i].trim();
+      if (!l) { i++; break; }
+      if (/^#{1,4} |^[-*] |^\d+[.)]\s|^> |^(-{3,}|\*{3,}|_{3,})$/.test(l)) break;
+      paraLines.push(l);
+      i++;
+    }
+    if (paraLines.length) {
+      blocks.push({ id: genId(), type: "paragraph", content: inlineHtml(paraLines.join(" ")), items: [""] });
+    }
+  }
+
+  return { title, blocks: blocks.length ? blocks : [newBlock()] };
+}
 
 // ── Block type definitions ─────────────────────────────────────────────────────
 const BLOCK_TYPES = [
@@ -371,6 +466,85 @@ function SeoScore({ title, metaTitle, metaDescription, focusKeyword, blocks, fea
   );
 }
 
+// ── Paste & Import modal ──────────────────────────────────────────────────────
+function ImportModal({ onImport, onClose }) {
+  const [text, setText] = useState("");
+
+  const handleImport = () => {
+    if (!text.trim()) return;
+    const result = parseMarkdown(text.trim());
+    onImport(result);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+      <div className="w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: "85vh" }}>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
+          <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center">
+            <ClipboardPaste className="w-4 h-4 text-orange-500" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-app">Paste & Import Content</h2>
+            <p className="text-xs text-app-soft">Supports Markdown — headings, lists, quotes and dividers are auto-detected</p>
+          </div>
+          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-app-soft">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Cheatsheet */}
+        <div className="px-5 py-3 border-b flex flex-wrap gap-x-5 gap-y-1" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+          {[
+            ["# Title",    "→ Post title"],
+            ["## Text",    "→ Heading 2"],
+            ["### Text",   "→ Heading 3"],
+            ["- item",     "→ Bullet list"],
+            ["1. item",    "→ Numbered list"],
+            ["> text",     "→ Quote"],
+            ["---",        "→ Divider"],
+            ["**bold**",   "→ Bold"],
+            ["*italic*",   "→ Italic"],
+          ].map(([code, label]) => (
+            <span key={code} className="text-[10px] text-app-soft">
+              <code className="font-mono text-orange-500 bg-orange-500/8 px-1 rounded">{code}</code> {label}
+            </span>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          autoFocus
+          value={text}
+          onChange={e => setText(e.target.value)}
+          className="flex-1 w-full p-5 text-sm font-mono text-app bg-transparent outline-none resize-none"
+          style={{ minHeight: 320 }}
+          placeholder={"# Your Post Title\n\n## First Heading\n\nYour paragraph text here...\n\n## Second Heading\n\n- Bullet item one\n- Bullet item two\n\n> A great quote goes here\n\n---"}
+        />
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-t" style={{ borderColor: "var(--app-border)" }}>
+          <p className="text-xs text-app-soft">
+            {text.trim().split("\n").filter(Boolean).length} lines — will create approx.{" "}
+            <strong>{Math.max(1, text.trim().split(/\n\n+/).filter(Boolean).length)}</strong> blocks
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose}
+              className="px-4 py-2 rounded-xl text-xs font-semibold border text-app-soft hover:text-app transition"
+              style={{ borderColor: "var(--app-border)" }}>Cancel</button>
+            <button onClick={handleImport} disabled={!text.trim()}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white transition disabled:opacity-40">
+              Import Content
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main BlogEditor ────────────────────────────────────────────────────────────
 export default function BlogEditor() {
   const navigate  = useNavigate();
@@ -404,6 +578,7 @@ export default function BlogEditor() {
   const [addingBlock,    setAddingBlock]    = useState(null);
   const [showBlockPicker,setShowBlockPicker]= useState(false);
   const [publishMenu,    setPublishMenu]    = useState(false);
+  const [showImport,     setShowImport]     = useState(false);
   const [sidebarTab,     setSidebarTab]     = useState("post"); // "post" | "seo"
 
   // Auto-slug
@@ -553,6 +728,11 @@ export default function BlogEditor() {
               <ExternalLink className="w-3.5 h-3.5" /> Preview
             </a>
           )}
+          <button onClick={() => setShowImport(true)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border text-app-soft hover:text-orange-500 hover:border-orange-400 transition"
+            style={{ borderColor: "var(--app-border)" }}>
+            <ClipboardPaste className="w-3.5 h-3.5" /> Import
+          </button>
           <button onClick={() => save("draft")} disabled={saving}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border text-app-soft hover:text-orange-500 hover:border-orange-400 transition"
             style={{ borderColor: "var(--app-border)" }}>
@@ -863,6 +1043,18 @@ export default function BlogEditor() {
           pointer-events: none;
         }
       `}</style>
+
+      {/* Paste & Import modal */}
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImport={({ title: importedTitle, blocks: importedBlocks }) => {
+            if (importedTitle && !title) setTitle(importedTitle);
+            setBlocks(importedBlocks);
+            toast.success(`Imported ${importedBlocks.length} blocks`);
+          }}
+        />
+      )}
     </div>
   );
 }
