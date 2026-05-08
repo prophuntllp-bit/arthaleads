@@ -267,6 +267,10 @@ const Attendance     = lazy(() => import("./pages/Attendance"));
 const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
+const PublicBlog     = lazy(() => import("./pages/PublicBlog"));
+const PublicBlogPost = lazy(() => import("./pages/PublicBlogPost"));
+const BlogManager    = lazy(() => import("./pages/BlogManager"));
+const BlogEditor     = lazy(() => import("./pages/BlogEditor"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -420,6 +424,8 @@ export default function App() {
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/blog"                 element={<PublicBlog />} />
+        <Route path="/blog/:slug"           element={<PublicBlogPost />} />
 
         {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>
@@ -453,7 +459,10 @@ export default function App() {
 
           {/* Super Admin only */}
           <Route element={<RequireRole roles={["super_admin"]} />}>
-            <Route path="/super-admin" element={<SuperAdmin />} />
+            <Route path="/super-admin"                    element={<SuperAdmin />} />
+            <Route path="/super-admin/blog"               element={<BlogManager />} />
+            <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
+            <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
           </Route>
         </Route>
 

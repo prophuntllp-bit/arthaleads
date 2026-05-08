@@ -31,6 +31,8 @@ const webhookRoutes = require("./routes/webhookRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const orgRoutes = require("./routes/orgRoutes");
 const pushRoutes = require("./routes/pushRoutes");
+const blogRoutes = require("./routes/blogRoutes");
+const blogController = require("./controllers/blogController");
 require("./utils/scheduler");
 
 console.log("[BOOT] Modules loaded, creating app...");
@@ -136,6 +138,10 @@ app.use("/api/voice", require("./routes/voiceRoutes"));
 app.use("/api/followups",   require("./routes/followupRoutes"));
 app.use("/api/attendance",   require("./routes/attendanceRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
+app.use("/api/blog",        blogRoutes);
+
+// ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────
+app.get("/sitemap.xml", blogController.getSitemap);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {

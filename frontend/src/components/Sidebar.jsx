@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck, PenLine,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -15,6 +15,7 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"] },
+  { to: "/super-admin/blog", label: "Blog",    icon: PenLine,    roles: ["super_admin"] },
   { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
