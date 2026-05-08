@@ -16,6 +16,7 @@ router.get   ("/admin/posts/:id",       ...adminOnly, ctrl.adminGetPost);
 router.post  ("/admin/posts",           ...adminOnly, ctrl.createPost);
 router.put   ("/admin/posts/:id",       ...adminOnly, ctrl.updatePost);
 router.delete("/admin/posts/:id",       ...adminOnly, ctrl.deletePost);
+router.post  ("/admin/upload-image",    ...adminOnly, ctrl.uploadImage);
 router.post  ("/admin/categories",      ...adminOnly, ctrl.createCategory);
 router.delete("/admin/categories/:id",  ...adminOnly, ctrl.deleteCategory);
 

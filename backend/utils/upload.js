@@ -41,4 +41,19 @@ async function deleteOrgLogo(orgId) {
   }
 }
 
-module.exports = { uploadOrgLogo, deleteOrgLogo };
+/**
+ * Upload a blog image (base64 data-URI) to Cloudinary.
+ * Generates a unique public_id using timestamp so each upload is a new asset.
+ */
+async function uploadBlogImage(dataUri) {
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder:        "arthaleads/blog",
+    resource_type: "image",
+    transformation: [
+      { width: 1200, crop: "limit", quality: "auto:good", fetch_format: "auto" },
+    ],
+  });
+  return result.secure_url;
+}
+
+module.exports = { uploadOrgLogo, deleteOrgLogo, uploadBlogImage };

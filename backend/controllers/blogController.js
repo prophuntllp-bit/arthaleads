@@ -1,6 +1,7 @@
 const BlogPost     = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
 const { AppError } = require("../middlewares/errorHandler");
+const { uploadBlogImage } = require("../utils/upload");
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function slugify(text) {
@@ -238,10 +239,26 @@ ${allEntries
     } catch (err) { next(err); }
   },
 
+  // ── ADMIN: upload blog image to Cloudinary ────────────────────────────────
+  async uploadImage(req, res, next) {
+    try {
+      const { dataUri } = req.body;
+      if (!dataUri || !dataUri.startsWith("data:image/")) {
+        return next(new AppError("Invalid image data", 400));
+      }
+      // 5 MB limit (base64 is ~1.33× raw — so 5 MB base64 ≈ 3.7 MB raw)
+      if (dataUri.length > 7 * 1024 * 1024) {
+        return next(new AppError("Image too large — max 5 MB", 400));
+      }
+      const url = await uploadBlogImage(dataUri);
+      res.json({ success: true, url });
+    } catch (err) { next(err); }
+  },
+
   // ── ADMIN: create category ─────────────────────────────────────────────────
   async createCategory(req, res, next) {
     try {
-      const { name, description, color } = req.body;
+      const { name, description } = req.body;
       if (!name?.trim()) return next(new AppError("Category name is required", 400));
       const slug = slugify(name.trim());
       if (!slug) return next(new AppError("Invalid category name", 400));
@@ -251,7 +268,6 @@ ${allEntries
         name: name.trim(),
         slug,
         description: description?.trim() || "",
-        color: color || "#f97316",
       });
       res.status(201).json({ success: true, category });
     } catch (err) { next(err); }
