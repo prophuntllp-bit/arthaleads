@@ -39,7 +39,7 @@ const projectLeadSchema = new mongoose.Schema(
     followUp2: { type: Date, default: null },
     booking: {
       type: String,
-      enum: ["", "Interested", "Site Visit Booked", "Booked", "Not Interested", "Call Back"],
+      enum: ["", "Interested", "Site Visit Booked", "Booked", "Not Interested", "Call Back", "Not Reachable"],
       default: "",
     },
 
