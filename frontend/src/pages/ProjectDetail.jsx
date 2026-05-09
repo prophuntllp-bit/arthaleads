@@ -196,6 +196,18 @@ const BOOKING_OPTIONS = [
   { value: "Site Visit Booked", label: "Site Visit Booked",  color: "text-violet-600" },
   { value: "Booked",            label: "Booked",             color: "text-green-600" },
   { value: "Not Interested",    label: "Not Interested",     color: "text-red-500" },
+  { value: "Not Reachable",     label: "Not Reachable",      color: "text-gray-500" },
+];
+
+// Filter pills shown above the leads table (same values minus the empty one)
+const STATUS_FILTERS = [
+  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",            text: "text-app-soft" },
+  { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",          text: "text-blue-600 dark:text-blue-400" },
+  { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",        text: "text-amber-600 dark:text-amber-400" },
+  { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",      text: "text-violet-600 dark:text-violet-400" },
+  { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",        text: "text-green-600 dark:text-green-400" },
+  { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",            text: "text-red-500 dark:text-red-400" },
+  { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",             text: "text-gray-500 dark:text-gray-400" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -330,6 +342,7 @@ export default function ProjectDetail() {
   const topSpacerRef   = useRef(null);
 
   const [leadsLimit, setLeadsLimit] = useState(10);
+  const [bookingFilter, setBookingFilter] = useState("");
 
   // Prospective leads state (Interested + Site Visit Booked)
   const PROSP_FILTER = "Interested,Site Visit Booked";
@@ -361,11 +374,11 @@ export default function ProjectDetail() {
   useEffect(() => {
     if (tab !== "leads") return;
     setLeadsLoading(true);
-    api.get(`/projects/${id}/leads`, { params: { page: leadsPage, limit: leadsLimit, search } })
+    api.get(`/projects/${id}/leads`, { params: { page: leadsPage, limit: leadsLimit, search, ...(bookingFilter && { bookingIn: bookingFilter }) } })
       .then((r) => { setLeads(r.data.leads); setLeadsTotal(r.data.total); setLeadsPages(r.data.pages); })
       .catch(() => toast.error("Failed to load leads"))
       .finally(() => setLeadsLoading(false));
-  }, [id, tab, leadsPage, search, leadsLimit, refreshKey]);
+  }, [id, tab, leadsPage, search, leadsLimit, bookingFilter, refreshKey]);
 
   useEffect(() => {
     if (tab !== "prospective") return;
@@ -696,6 +709,26 @@ export default function ProjectDetail() {
                 </button>
               </>
             )}
+          </div>
+
+          {/* Status filter pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {STATUS_FILTERS.map((f) => {
+              const active = bookingFilter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => { setBookingFilter(f.value); setLeadsPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    active
+                      ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
+                      : "bg-gray-100 dark:bg-white/5 text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="card overflow-hidden">

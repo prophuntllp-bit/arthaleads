@@ -14,8 +14,8 @@ import toast from "react-hot-toast";
 // subscribeToPush is now handled by NotificationBanner in App.jsx (requires user gesture)
 
 const navItems = [
-  { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"] },
-  { to: "/super-admin/blog", label: "Blog",    icon: PenLine,    roles: ["super_admin"] },
+  { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
+  { to: "/super-admin/blog", label: "Blog",    icon: PenLine,    roles: ["super_admin"], end: false },
   { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
@@ -281,11 +281,11 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-        {filtered.map(({ to, label, icon: Icon }) => (
+        {filtered.map(({ to, label, icon: Icon, end: endMatch }) => (
           <NavLink
             key={to}
             to={to}
-            end={to === "/"}
+            end={endMatch !== undefined ? endMatch : to === "/"}
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all border-r-2 ${
