@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const updates = [
@@ -146,9 +146,5 @@ function ProductUpdatesInner() {
 }
 
 export default function ProductUpdates() {
-  return (
-    <PublicThemeProvider>
-      <ProductUpdatesInner />
-    </PublicThemeProvider>
-  );
+  return <ProductUpdatesInner />;
 }

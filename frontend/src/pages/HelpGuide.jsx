@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown, ArrowRight, Mail } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const steps = [
@@ -189,9 +189,5 @@ function HelpGuideInner() {
 }
 
 export default function HelpGuide() {
-  return (
-    <PublicThemeProvider>
-      <HelpGuideInner />
-    </PublicThemeProvider>
-  );
+  return <HelpGuideInner />;
 }

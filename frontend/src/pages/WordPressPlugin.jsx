@@ -3,7 +3,7 @@ import { Check, Download, ArrowRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const SUPPORTED_FORMS = [
@@ -254,9 +254,5 @@ function WordPressPluginInner() {
 }
 
 export default function WordPressPlugin() {
-  return (
-    <PublicThemeProvider>
-      <WordPressPluginInner />
-    </PublicThemeProvider>
-  );
+  return <WordPressPluginInner />;
 }

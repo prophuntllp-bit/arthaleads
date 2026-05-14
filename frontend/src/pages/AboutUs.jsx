@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, Check } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const values = [
@@ -186,9 +186,5 @@ function AboutUsInner() {
 }
 
 export default function AboutUs() {
-  return (
-    <PublicThemeProvider>
-      <AboutUsInner />
-    </PublicThemeProvider>
-  );
+  return <AboutUsInner />;
 }

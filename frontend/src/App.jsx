@@ -2,6 +2,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -414,6 +415,7 @@ function RootRoute() {
 
 export default function App() {
   return (
+    <PublicThemeProvider>
     <AuthProvider>
       <ErrorBoundary>
       <InstallBanner />
@@ -481,5 +483,6 @@ export default function App() {
       </Suspense>
       </ErrorBoundary>
     </AuthProvider>
+    </PublicThemeProvider>
   );
 }

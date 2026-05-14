@@ -10,7 +10,8 @@ import {
   FileSpreadsheet, UserCheck, Activity
 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
-import { PublicThemeProvider } from "../context/PublicThemeContext";
+import PublicFooter from "../components/PublicFooter";
+import { usePublicTheme } from "../context/PublicThemeContext";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -18,17 +19,40 @@ function scrollTo(id) {
 }
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
-function Hero() {
+function Hero({ isDark }) {
+  const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)";
+  const headingClr = isDark ? "#ffffff" : "#111827";
+  const bodyClr    = isDark ? "rgba(255,255,255,0.6)" : "#6b7280";
+  const softClr    = isDark ? "rgba(255,255,255,0.4)" : "#9ca3af";
+  const btnBorder  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
+  const cardBg     = isDark
+    ? "linear-gradient(135deg, rgba(255,107,0,0.05) 0%, rgba(13,13,26,0.9) 50%)"
+    : "linear-gradient(135deg, rgba(255,107,0,0.04) 0%, rgba(249,250,251,0.95) 50%)";
+  const cardBorder = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const statCardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const statCardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const statLabel   = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+  const statVal     = isDark ? "#ffffff" : "#111827";
+  const gridOpacity = isDark ? "0.03" : "0.04";
+  const urlBarBg    = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
+  const urlText     = isDark ? "rgba(255,255,255,0.20)" : "rgba(0,0,0,0.25)";
+  const barTrack    = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)";
+  const srcText     = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
+  const srcVal      = isDark ? "#ffffff" : "#111827";
+  const scrollChevr = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+
   return (
-    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden bg-[#0d0d1a]">
+    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden"
+      style={{ background: heroBg }}>
       {/* Background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ff6b00]/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-900/10 rounded-full blur-3xl" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6b00]/5 rounded-full blur-3xl" />
         {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
+        <div className="absolute inset-0"
+          style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20 lg:pt-36 lg:pb-28">
@@ -43,7 +67,8 @@ function Hero() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-white leading-[1.1] mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6"
+            style={{ color: headingClr }}>
             Manage Every Lead.{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               Close More Deals.
@@ -51,7 +76,8 @@ function Hero() {
           </h1>
 
           {/* Subheading */}
-          <p className="text-lg sm:text-xl text-white/60 leading-relaxed max-w-2xl mx-auto mb-10">
+          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10"
+            style={{ color: bodyClr }}>
             Arthaleads brings every property enquiry — Facebook ads, Google campaigns, WhatsApp chats,
             and walk-ins — into one powerful workspace. Built for real estate developers and channel partners.
           </p>
@@ -64,7 +90,8 @@ function Hero() {
               <ArrowRight className="w-5 h-5" />
             </Link>
             <button onClick={() => scrollTo("features")}
-              className="flex items-center gap-2 text-white/70 hover:text-white border border-white/10 hover:border-white/30 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium">
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
+              style={{ color: btnText, borderColor: btnBorder }}>
               <PlayCircle className="w-5 h-5" />
               See How It Works
             </button>
@@ -79,7 +106,7 @@ function Hero() {
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="text-2xl sm:text-3xl font-black text-[#ff6b00]">{s.num}</div>
-                <div className="text-xs sm:text-sm text-white/40 mt-0.5">{s.label}</div>
+                <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
               </div>
             ))}
           </div>
@@ -87,15 +114,15 @@ function Hero() {
 
         {/* Dashboard preview card */}
         <div className="mt-20 max-w-5xl mx-auto">
-          <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-black/50"
-            style={{ background: "linear-gradient(135deg, rgba(255,107,0,0.05) 0%, rgba(13,13,26,0.9) 50%)" }}>
-            <div className="p-4 sm:p-6 border-b border-white/5">
+          <div className="relative rounded-2xl overflow-hidden shadow-2xl"
+            style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
+            <div className="p-4 sm:p-6" style={{ borderBottom: `1px solid ${statCardBdr}` }}>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-500/60" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
                 <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                <div className="ml-4 flex-1 max-w-xs h-6 rounded-lg bg-white/5 flex items-center px-3">
-                  <span className="text-white/20 text-xs">arthaleads.com/dashboard</span>
+                <div className="ml-4 flex-1 max-w-xs h-6 rounded-lg flex items-center px-3" style={{ background: urlBarBg }}>
+                  <span className="text-xs" style={{ color: urlText }}>arthaleads.com/dashboard</span>
                 </div>
               </div>
             </div>
@@ -106,14 +133,14 @@ function Hero() {
                 { label: "Follow-ups",     val: "128",    color: "#3b82f6", icon: Clock },
                 { label: "Closed Won",     val: "91",     color: "#a855f7", icon: Target },
               ].map(({ label, val, color, icon: Icon }) => (
-                <div key={label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div key={label} className="rounded-xl p-4" style={{ background: statCardBg, border: `1px solid ${statCardBdr}` }}>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-white/40 text-xs font-medium uppercase tracking-wide">{label}</span>
+                    <span className="text-xs font-medium uppercase tracking-wide" style={{ color: statLabel }}>{label}</span>
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${color}18` }}>
                       <Icon className="w-3.5 h-3.5" style={{ color }} />
                     </div>
                   </div>
-                  <div className="text-2xl font-black text-white">{val}</div>
+                  <div className="text-2xl font-black" style={{ color: statVal }}>{val}</div>
                 </div>
               ))}
             </div>
@@ -123,12 +150,12 @@ function Hero() {
                 { source: "WhatsApp",  count: 890,  pct: 31 },
                 { source: "Google",    count: 717,  pct: 25 },
               ].map(({ source, count, pct }) => (
-                <div key={source} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div key={source} className="rounded-xl p-4" style={{ background: statCardBg, border: `1px solid ${statCardBdr}` }}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/60 text-sm">{source}</span>
-                    <span className="text-white text-sm font-bold">{count}</span>
+                    <span className="text-sm" style={{ color: srcText }}>{source}</span>
+                    <span className="text-sm font-bold" style={{ color: srcVal }}>{count}</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-white/5">
+                  <div className="h-1.5 rounded-full" style={{ background: barTrack }}>
                     <div className="h-full rounded-full bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] transition-all"
                       style={{ width: `${pct}%` }} />
                   </div>
@@ -140,7 +167,8 @@ function Hero() {
 
         {/* Scroll indicator */}
         <div className="mt-12 flex justify-center">
-          <button onClick={() => scrollTo("features")} className="animate-bounce text-white/30 hover:text-white/60 transition-colors">
+          <button onClick={() => scrollTo("features")} className="animate-bounce transition-colors"
+            style={{ color: scrollChevr }}>
             <ChevronDown className="w-6 h-6" />
           </button>
         </div>
@@ -150,7 +178,14 @@ function Hero() {
 }
 
 // ── Sources strip ─────────────────────────────────────────────────────────────
-function SourcesStrip() {
+function SourcesStrip({ isDark }) {
+  const bg       = isDark ? "#0d0d1a" : "#f9fafb";
+  const border   = isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb";
+  const label    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const chipBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const chipBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const chipText = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
+
   const sources = [
     { name: "Facebook Ads",  icon: Facebook,       color: "#1877F2" },
     { name: "WhatsApp",      icon: MessageCircle,  color: "#25D366" },
@@ -163,16 +198,17 @@ function SourcesStrip() {
   ];
 
   return (
-    <section className="py-10 bg-[#0d0d1a] border-y border-white/5">
+    <section className="py-10" style={{ background: bg, borderTop: `1px solid ${border}`, borderBottom: `1px solid ${border}` }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-white/30 text-xs font-semibold uppercase tracking-widest mb-8">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest mb-8" style={{ color: label }}>
           Capture leads from every source
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           {sources.map(({ name, icon: Icon, color }) => (
-            <div key={name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-white/8 bg-white/3 hover:bg-white/6 transition-colors">
+            <div key={name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-colors"
+              style={{ background: chipBg, border: `1px solid ${chipBdr}` }}>
               <Icon className="w-4 h-4" style={{ color }} />
-              <span className="text-white/60 text-sm font-medium">{name}</span>
+              <span className="text-sm font-medium" style={{ color: chipText }}>{name}</span>
             </div>
           ))}
         </div>
@@ -239,22 +275,29 @@ const FEATURES = [
   },
 ];
 
-function Features() {
+function Features({ isDark }) {
+  const bg       = isDark ? "#0d0d1a" : "#ffffff";
+  const heading  = isDark ? "#ffffff" : "#111827";
+  const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const cardBg   = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)" : "#ffffff";
+  const cardBdr  = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+
   return (
-    <section id="features" className="py-24 lg:py-32 bg-[#0d0d1a]">
+    <section id="features" className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Zap className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Powerful Features</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Everything your team needs to{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               close more deals
             </span>
           </h2>
-          <p className="text-white/50 text-lg max-w-2xl mx-auto">
+          <p className="text-lg max-w-2xl mx-auto" style={{ color: body }}>
             Built specifically for the Indian real estate market — from small channel partner offices to large developer sales teams.
           </p>
         </div>
@@ -262,14 +305,14 @@ function Features() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map(({ icon: Icon, color, title, desc }) => (
             <div key={title}
-              className="group p-6 rounded-2xl border border-white/6 hover:border-white/12 transition-all duration-300 hover:-translate-y-1"
-              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)" }}>
+              className="group p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1"
+              style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-transform duration-200 group-hover:scale-110"
                 style={{ background: `${color}18` }}>
                 <Icon className="w-6 h-6" style={{ color }} />
               </div>
-              <h3 className="text-white font-bold text-lg mb-2">{title}</h3>
-              <p className="text-white/50 text-sm leading-relaxed">{desc}</p>
+              <h3 className="font-bold text-lg mb-2" style={{ color: heading }}>{title}</h3>
+              <p className="text-sm leading-relaxed" style={{ color: cardText }}>{desc}</p>
             </div>
           ))}
         </div>
@@ -279,7 +322,7 @@ function Features() {
 }
 
 // ── How it works ──────────────────────────────────────────────────────────────
-function HowItWorks() {
+function HowItWorks({ isDark }) {
   const steps = [
     {
       num: "01",
@@ -307,21 +350,27 @@ function HowItWorks() {
     },
   ];
 
+  const bg      = isDark ? "#080810" : "#f9fafb";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const stepBd  = isDark ? "rgba(255,255,255,0.45)" : "#374151";
+  const badgeBg = isDark ? "#0d0d1a" : "#ffffff";
+
   return (
-    <section className="py-24 lg:py-32 bg-[#080810]">
+    <section className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Activity className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">How It Works</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Up and running in{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               minutes
             </span>
           </h2>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
+          <p className="text-lg max-w-xl mx-auto" style={{ color: body }}>
             No complex onboarding. Your team can start managing leads the same day.
           </p>
         </div>
@@ -337,12 +386,13 @@ function HowItWorks() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff6b00] to-[#a04100] flex items-center justify-center shadow-xl shadow-orange-500/20">
                     <Icon className="w-8 h-8 text-white" />
                   </div>
-                  <span className="absolute -top-2 -right-2 text-[10px] font-black text-[#ff6b00] bg-[#0d0d1a] border border-[#ff6b00]/30 rounded-full w-6 h-6 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 text-[10px] font-black text-[#ff6b00] border border-[#ff6b00]/30 rounded-full w-6 h-6 flex items-center justify-center"
+                    style={{ background: badgeBg }}>
                     {num.slice(1)}
                   </span>
                 </div>
-                <h3 className="text-white font-bold text-base mb-2">{title}</h3>
-                <p className="text-white/45 text-sm leading-relaxed">{desc}</p>
+                <h3 className="font-bold text-base mb-2" style={{ color: heading }}>{title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: body }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -353,7 +403,7 @@ function HowItWorks() {
 }
 
 // ── About ─────────────────────────────────────────────────────────────────────
-function About() {
+function About({ isDark }) {
   const points = [
     "Founded by real estate professionals who felt the pain of managing hundreds of leads across WhatsApp, email, and spreadsheets.",
     "Designed for the Indian market — we understand the way property sales teams actually work in Pune, Mumbai, and across Maharashtra.",
@@ -361,8 +411,15 @@ function About() {
     "Continuously improved based on direct feedback from our customers' daily workflows.",
   ];
 
+  const bg      = isDark ? "#0d0d1a" : "#ffffff";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const cardBg  = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+
   return (
-    <section id="about" className="py-24 lg:py-32 bg-[#0d0d1a]">
+    <section id="about" className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
@@ -372,16 +429,16 @@ function About() {
               <Building2 className="w-3.5 h-3.5 text-[#ff6b00]" />
               <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">About Arthaleads</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-6 leading-tight">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-6 leading-tight" style={{ color: heading }}>
               Built by real estate people,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
                 for real estate people
               </span>
             </h2>
-            <p className="text-white/55 text-base leading-relaxed mb-8">
+            <p className="text-base leading-relaxed mb-8" style={{ color: body }}>
               Arthaleads was born out of frustration. We watched sales teams lose hot leads because they were scattered across six different WhatsApp groups, three spreadsheets, and someone's personal notebook.
             </p>
-            <p className="text-white/55 text-base leading-relaxed mb-10">
+            <p className="text-base leading-relaxed mb-10" style={{ color: body }}>
               We built the CRM we always wished we had — one that speaks the language of property sales, handles the volume of real estate campaigns, and makes every agent's job easier from day one.
             </p>
             <div className="space-y-3">
@@ -390,7 +447,7 @@ function About() {
                   <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#ff6b00]/15 flex items-center justify-center mt-0.5">
                     <Check className="w-3 h-3 text-[#ff6b00]" />
                   </div>
-                  <p className="text-white/60 text-sm leading-relaxed">{p}</p>
+                  <p className="text-sm leading-relaxed" style={{ color: body }}>{p}</p>
                 </div>
               ))}
             </div>
@@ -404,11 +461,10 @@ function About() {
               { val: "98%",     label: "Uptime Guaranteed",    sub: "enterprise-grade reliability", color: "#3b82f6" },
               { val: "3×",      label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
             ].map(({ val, label, sub, color }) => (
-              <div key={label} className="p-6 rounded-2xl border border-white/6"
-                style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" }}>
+              <div key={label} className="p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
                 <div className="text-3xl font-black mb-1" style={{ color }}>{val}</div>
-                <div className="text-white font-semibold text-sm mb-1">{label}</div>
-                <div className="text-white/35 text-xs">{sub}</div>
+                <div className="font-semibold text-sm mb-1" style={{ color: heading }}>{label}</div>
+                <div className="text-xs" style={{ color: cardSub }}>{sub}</div>
               </div>
             ))}
           </div>
@@ -419,7 +475,7 @@ function About() {
 }
 
 // ── Testimonials ──────────────────────────────────────────────────────────────
-function Testimonials() {
+function Testimonials({ isDark }) {
   const reviews = [
     {
       name: "Rajesh Patil",
@@ -441,15 +497,23 @@ function Testimonials() {
     },
   ];
 
+  const bg      = isDark ? "#080810" : "#f9fafb";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const cardBg  = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const quoteClr= isDark ? "rgba(255,255,255,0.65)" : "#6b7280";
+  const nameClr = isDark ? "#ffffff" : "#111827";
+  const roleClr = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+
   return (
-    <section className="py-24 lg:py-32 bg-[#080810]">
+    <section className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Star className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Customer Stories</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: heading }}>
             Trusted by teams across{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               Maharashtra
@@ -458,17 +522,17 @@ function Testimonials() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {reviews.map(({ name, role, quote, stars }) => (
-            <div key={name} className="p-6 rounded-2xl border border-white/6 flex flex-col gap-5"
-              style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" }}>
+            <div key={name} className="p-6 rounded-2xl flex flex-col gap-5"
+              style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
               <div className="flex gap-1">
                 {Array.from({ length: stars }).map((_, i) => (
                   <Star key={i} className="w-4 h-4 fill-[#ff6b00] text-[#ff6b00]" />
                 ))}
               </div>
-              <p className="text-white/65 text-sm leading-relaxed flex-1">"{quote}"</p>
+              <p className="text-sm leading-relaxed flex-1" style={{ color: quoteClr }}>"{quote}"</p>
               <div>
-                <div className="text-white font-semibold text-sm">{name}</div>
-                <div className="text-white/35 text-xs mt-0.5">{role}</div>
+                <div className="font-semibold text-sm" style={{ color: nameClr }}>{name}</div>
+                <div className="text-xs mt-0.5" style={{ color: roleClr }}>{role}</div>
               </div>
             </div>
           ))}
@@ -479,7 +543,7 @@ function Testimonials() {
 }
 
 // ── Pricing ───────────────────────────────────────────────────────────────────
-function Pricing() {
+function Pricing({ isDark }) {
   const plans = [
     {
       name: "Starter",
@@ -530,21 +594,36 @@ function Pricing() {
     },
   ];
 
+  const bg         = isDark ? "#0d0d1a" : "#ffffff";
+  const heading    = isDark ? "#ffffff" : "#111827";
+  const body       = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const cardBg     = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const popBg      = isDark ? "linear-gradient(135deg, rgba(255,107,0,0.07), rgba(13,13,26,0.95))" : "linear-gradient(135deg, #fff7f0, #fff)";
+  const taglineClr = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+  const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const priceClr   = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const chevClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const featClr    = isDark ? "rgba(255,255,255,0.65)" : "#374151";
+  const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
+  const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
+  const noteClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+
   return (
-    <section id="pricing" className="py-24 lg:py-32 bg-[#0d0d1a]">
+    <section id="pricing" className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Pricing Plans</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Plans for every{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               team size
             </span>
           </h2>
-          <p className="text-white/50 text-lg max-w-xl mx-auto">
+          <p className="text-lg max-w-xl mx-auto" style={{ color: body }}>
             Transparent, flexible pricing with no hidden fees. Start free, scale as you grow.
             Contact us for exact pricing tailored to your team.
           </p>
@@ -553,14 +632,10 @@ function Pricing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {plans.map(({ name, tagline, color, popular, features, cta }) => (
             <div key={name}
-              className={`relative p-7 rounded-2xl border transition-all duration-300 ${
-                popular
-                  ? "border-[#ff6b00]/40 shadow-2xl shadow-orange-500/10 scale-105"
-                  : "border-white/6"
-              }`}
-              style={{ background: popular
-                ? "linear-gradient(135deg, rgba(255,107,0,0.07), rgba(13,13,26,0.95))"
-                : "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))"
+              className={`relative p-7 rounded-2xl transition-all duration-300 ${popular ? "shadow-2xl shadow-orange-500/10 scale-105" : ""}`}
+              style={{
+                background: popular ? popBg : cardBg,
+                border: popular ? "1px solid rgba(255,107,0,0.40)" : `1px solid ${cardBdr}`,
               }}>
               {popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -574,15 +649,15 @@ function Pricing() {
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
                     <Zap className="w-4 h-4" style={{ color }} />
                   </div>
-                  <h3 className="text-white font-black text-xl">{name}</h3>
+                  <h3 className="font-black text-xl" style={{ color: heading }}>{name}</h3>
                 </div>
-                <p className="text-white/40 text-sm">{tagline}</p>
+                <p className="text-sm" style={{ color: taglineClr }}>{tagline}</p>
               </div>
 
-              <div className="mb-6 pb-6 border-b border-white/6">
+              <div className="mb-6 pb-6" style={{ borderBottom: `1px solid ${divBdr}` }}>
                 <div className="flex items-center gap-2">
-                  <span className="text-white/50 text-sm">Pricing available on request</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-white/30" />
+                  <span className="text-sm" style={{ color: priceClr }}>Pricing available on request</span>
+                  <ChevronRight className="w-3.5 h-3.5" style={{ color: chevClr }} />
                 </div>
               </div>
 
@@ -592,17 +667,16 @@ function Pricing() {
                     <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: `${color}20` }}>
                       <Check className="w-2.5 h-2.5" style={{ color }} />
                     </div>
-                    <span className="text-white/65 text-sm">{f}</span>
+                    <span className="text-sm" style={{ color: featClr }}>{f}</span>
                   </li>
                 ))}
               </ul>
 
               <button onClick={() => scrollTo("contact")}
                 className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                  popular
-                    ? "bg-[#ff6b00] hover:bg-[#e05f00] text-white shadow-lg shadow-orange-500/20"
-                    : "border border-white/10 text-white/70 hover:text-white hover:border-white/25"
-                }`}>
+                  popular ? "bg-[#ff6b00] hover:bg-[#e05f00] text-white shadow-lg shadow-orange-500/20" : ""
+                }`}
+                style={popular ? {} : { border: `1px solid ${altBtnBdr}`, color: altBtnClr }}>
                 {cta}
               </button>
             </div>
@@ -610,7 +684,7 @@ function Pricing() {
         </div>
 
         {/* Bottom note */}
-        <p className="text-center text-white/30 text-sm mt-10">
+        <p className="text-center text-sm mt-10" style={{ color: noteClr }}>
           All plans include a 14-day free trial. No credit card required to get started.
         </p>
       </div>
@@ -619,7 +693,7 @@ function Pricing() {
 }
 
 // ── Contact ───────────────────────────────────────────────────────────────────
-function Contact() {
+function Contact({ isDark }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -640,8 +714,23 @@ function Contact() {
     { icon: MapPin,  label: "Based In",      val: "Pune, Maharashtra, India", href: null },
   ];
 
+  const bg        = isDark ? "#080810" : "#f9fafb";
+  const heading   = isDark ? "#ffffff" : "#111827";
+  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+  const infoVal   = isDark ? "#ffffff" : "#111827";
+  const cardBg    = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBdr   = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const labelClr  = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const inputBg   = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
+  const inputBdr  = isDark ? "rgba(255,255,255,0.08)" : "#d1d5db";
+  const inputClr  = isDark ? "#ffffff" : "#111827";
+  const inputPh   = isDark ? "rgba(255,255,255,0.20)" : "#9ca3af";
+  const waText    = isDark ? "#ffffff" : "#111827";
+  const waSub     = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+
   return (
-    <section id="contact" className="py-24 lg:py-32 bg-[#080810]">
+    <section id="contact" className="py-24 lg:py-32" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
@@ -651,13 +740,13 @@ function Contact() {
               <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
               <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">
+            <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: heading }}>
               Ready to transform your{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
                 lead management?
               </span>
             </h2>
-            <p className="text-white/55 text-base leading-relaxed mb-10">
+            <p className="text-base leading-relaxed mb-10" style={{ color: body }}>
               Talk to our team for a personalised demo, pricing information, or any questions about how Arthaleads can fit your workflow.
             </p>
 
@@ -668,11 +757,11 @@ function Contact() {
                     <Icon className="w-5 h-5 text-[#ff6b00]" />
                   </div>
                   <div>
-                    <div className="text-white/35 text-xs font-medium">{label}</div>
+                    <div className="text-xs font-medium" style={{ color: infoLabel }}>{label}</div>
                     {href ? (
-                      <a href={href} className="text-white text-sm font-medium hover:text-[#ff6b00] transition-colors">{val}</a>
+                      <a href={href} className="text-sm font-medium hover:text-[#ff6b00] transition-colors" style={{ color: infoVal }}>{val}</a>
                     ) : (
-                      <div className="text-white text-sm font-medium">{val}</div>
+                      <div className="text-sm font-medium" style={{ color: infoVal }}>{val}</div>
                     )}
                   </div>
                 </div>
@@ -685,29 +774,28 @@ function Contact() {
               className="mt-10 inline-flex items-center gap-3 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-colors px-5 py-3 rounded-xl">
               <MessageCircle className="w-5 h-5 text-[#25D366]" />
               <div>
-                <div className="text-white text-sm font-semibold">Chat on WhatsApp</div>
-                <div className="text-white/40 text-xs">Usually replies within minutes</div>
+                <div className="text-sm font-semibold" style={{ color: waText }}>Chat on WhatsApp</div>
+                <div className="text-xs" style={{ color: waSub }}>Usually replies within minutes</div>
               </div>
             </a>
           </div>
 
           {/* Right — form */}
-          <div className="p-7 rounded-2xl border border-white/6"
-            style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" }}>
+          <div className="p-7 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
             {sent ? (
               <div className="h-full flex flex-col items-center justify-center text-center py-12">
                 <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
                   <Check className="w-8 h-8 text-green-400" />
                 </div>
-                <h3 className="text-white font-bold text-xl mb-2">Message Sent!</h3>
-                <p className="text-white/50 text-sm">We'll get back to you within 24 hours. Check your email for confirmation.</p>
+                <h3 className="font-bold text-xl mb-2" style={{ color: heading }}>Message Sent!</h3>
+                <p className="text-sm" style={{ color: body }}>We'll get back to you within 24 hours. Check your email for confirmation.</p>
                 <button onClick={() => setSent(false)} className="mt-6 text-[#ff6b00] text-sm font-medium hover:underline">
                   Send another message
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <h3 className="text-white font-bold text-lg mb-6">Send us a message</h3>
+                <h3 className="font-bold text-lg mb-6" style={{ color: heading }}>Send us a message</h3>
                 {[
                   { id: "name",    label: "Your Name",     type: "text",  ph: "Rajesh Patil",          req: true },
                   { id: "email",   label: "Email Address", type: "email", ph: "rajesh@example.com",    req: true },
@@ -715,18 +803,20 @@ function Contact() {
                   { id: "company", label: "Company / Team",type: "text",  ph: "Milestone Properties",   req: false },
                 ].map(({ id, label, type, ph, req }) => (
                   <div key={id}>
-                    <label className="block text-white/50 text-xs font-medium mb-1.5">{label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}</label>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>{label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}</label>
                     <input
                       type={type} placeholder={ph} required={req}
                       value={form[id]} onChange={(e) => setForm({ ...form, [id]: e.target.value })}
-                      className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-[#ff6b00]/50 focus:bg-white/8 transition-all" />
+                      className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all"
+                      style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr, "::placeholder": { color: inputPh } }} />
                   </div>
                 ))}
                 <div>
-                  <label className="block text-white/50 text-xs font-medium mb-1.5">Message</label>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>Message</label>
                   <textarea rows={4} placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
                     value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className="w-full bg-white/5 border border-white/8 rounded-xl px-4 py-2.5 text-white placeholder-white/20 text-sm focus:outline-none focus:border-[#ff6b00]/50 focus:bg-white/8 transition-all resize-none" />
+                    className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all resize-none"
+                    style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
                 </div>
                 <button type="submit"
                   className="w-full bg-[#ff6b00] hover:bg-[#e05f00] text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 flex items-center justify-center gap-2">
@@ -743,21 +833,27 @@ function Contact() {
 }
 
 // ── Final CTA ─────────────────────────────────────────────────────────────────
-function FinalCTA() {
+function FinalCTA({ isDark }) {
+  const bg      = isDark ? "#0d0d1a" : "#fff7f0";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const btnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const btnText = isDark ? "rgba(255,255,255,0.70)" : "#374151";
+
   return (
-    <section className="py-20 bg-[#0d0d1a] relative overflow-hidden">
+    <section className="py-20 relative overflow-hidden" style={{ background: bg }}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-[0.06]"
           style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #ff6b00 0%, transparent 70%)" }} />
       </div>
       <div className="relative max-w-3xl mx-auto text-center px-4 sm:px-6">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
           Stop losing leads to{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
             messy spreadsheets
           </span>
         </h2>
-        <p className="text-white/50 text-lg mb-10">
+        <p className="text-lg mb-10" style={{ color: body }}>
           Join 50+ real estate teams already closing more deals with Arthaleads.
           Start your free trial today — no credit card needed.
         </p>
@@ -768,7 +864,8 @@ function FinalCTA() {
             <ArrowRight className="w-5 h-5" />
           </Link>
           <button onClick={() => scrollTo("contact")}
-            className="flex items-center gap-2 text-white/70 hover:text-white border border-white/10 hover:border-white/30 px-8 py-4 rounded-2xl transition-all duration-200 font-medium">
+            className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 font-medium border"
+            style={{ color: btnText, borderColor: btnBdr }}>
             Talk to Sales
           </button>
         </div>
@@ -777,92 +874,11 @@ function FinalCTA() {
   );
 }
 
-// ── Footer ────────────────────────────────────────────────────────────────────
-function Footer() {
-  const year = new Date().getFullYear();
-
-  const sections = [
-    {
-      title: "Product",
-      links: [
-        { label: "Features",   action: () => scrollTo("features") },
-        { label: "Pricing",    action: () => scrollTo("pricing") },
-        { label: "How It Works", action: () => scrollTo("features") },
-      ],
-    },
-    {
-      title: "Company",
-      links: [
-        { label: "About Us",   action: () => scrollTo("about") },
-        { label: "Contact",    action: () => scrollTo("contact") },
-      ],
-    },
-    {
-      title: "Legal",
-      links: [
-        { label: "Privacy Policy", href: "/privacy" },
-        { label: "Terms of Service", href: "/terms" },
-      ],
-    },
-  ];
-
-  return (
-    <footer className="bg-[#080810] border-t border-white/5">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff6b00] to-[#a04100] flex items-center justify-center">
-                <span className="text-white font-black text-sm">A</span>
-              </div>
-              <div>
-                <span className="text-white font-bold text-lg leading-none">Artha</span>
-                <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
-              </div>
-            </div>
-            <p className="text-white/35 text-sm leading-relaxed max-w-xs">
-              Real estate CRM built for Indian property teams. Every lead, one place.
-            </p>
-          </div>
-
-          {sections.map((s) => (
-            <div key={s.title}>
-              <h4 className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-4">{s.title}</h4>
-              <ul className="space-y-3">
-                {s.links.map((l) => (
-                  <li key={l.label}>
-                    {l.href ? (
-                      <Link to={l.href} className="text-white/40 hover:text-white text-sm transition-colors">{l.label}</Link>
-                    ) : (
-                      <button onClick={l.action} className="text-white/40 hover:text-white text-sm transition-colors">{l.label}</button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-white/25 text-sm">© {year} Arthaleads. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <a href="mailto:hello@arthaleads.com" className="text-white/25 hover:text-white/60 transition-colors">
-              <Mail className="w-4 h-4" />
-            </a>
-            <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer"
-              className="text-white/25 hover:text-white/60 transition-colors">
-              <MessageCircle className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Landing() {
+  const { isDark } = usePublicTheme();
+
   useEffect(() => {
     window.scrollTo(0, 0);
     document.title = "Arthaleads — Real Estate CRM | Manage Every Property Lead";
@@ -872,20 +888,18 @@ export default function Landing() {
   }, []);
 
   return (
-    <PublicThemeProvider>
-      <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
-        <PublicNav onScrollTo={scrollTo} />
-        <Hero />
-        <SourcesStrip />
-        <Features />
-        <HowItWorks />
-        <About />
-        <Testimonials />
-        <Pricing />
-        <Contact />
-        <FinalCTA />
-        <Footer />
-      </div>
-    </PublicThemeProvider>
+    <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
+      <PublicNav onScrollTo={scrollTo} />
+      <Hero isDark={isDark} />
+      <SourcesStrip isDark={isDark} />
+      <Features isDark={isDark} />
+      <HowItWorks isDark={isDark} />
+      <About isDark={isDark} />
+      <Testimonials isDark={isDark} />
+      <Pricing isDark={isDark} />
+      <Contact isDark={isDark} />
+      <FinalCTA isDark={isDark} />
+      <PublicFooter />
+    </div>
   );
 }

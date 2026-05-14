@@ -4,7 +4,7 @@ import api from "../services/api";
 import { Clock, Calendar, ArrowLeft, Tag, BookOpen, Share2, ChevronRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 
 // ── SEO meta helper ────────────────────────────────────────────────────────────
 function useSEO(post) {
@@ -400,9 +400,5 @@ function BlogPostInner() {
 }
 
 export default function PublicBlogPost() {
-  return (
-    <PublicThemeProvider>
-      <BlogPostInner />
-    </PublicThemeProvider>
-  );
+  return <BlogPostInner />;
 }

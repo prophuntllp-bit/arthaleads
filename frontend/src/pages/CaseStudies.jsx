@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Calendar, Clock } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
-import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
+import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 import api from "../services/api";
 
@@ -203,9 +203,5 @@ function CaseStudiesInner() {
 }
 
 export default function CaseStudies() {
-  return (
-    <PublicThemeProvider>
-      <CaseStudiesInner />
-    </PublicThemeProvider>
-  );
+  return <CaseStudiesInner />;
 }
