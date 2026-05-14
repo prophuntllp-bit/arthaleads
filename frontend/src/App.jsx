@@ -399,15 +399,14 @@ function RedirectIfAuth() {
   return <Outlet />;
 }
 
-// Show landing page to guests; redirect logged-in users to dashboard
+// Always show the landing page at / — logged-in users can still visit the homepage
 function RootRoute() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Spinner size="lg" />
     </div>
   );
-  if (user) return <Navigate to="/dashboard" replace />;
   return <Landing />;
 }
 
