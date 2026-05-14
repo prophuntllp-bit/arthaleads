@@ -2,110 +2,18 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  Menu, X, ChevronRight, Check, ArrowRight,
+  ChevronRight, Check, ArrowRight,
   BarChart3, Users, Zap, Building2, PhoneCall,
   Bell, Target, TrendingUp, Shield, Star,
   Facebook, MessageCircle, Mail, Phone, MapPin,
   ChevronDown, PlayCircle, Layers, Clock, Filter,
   FileSpreadsheet, UserCheck, Activity
 } from "lucide-react";
+import PublicNav from "../components/PublicNav";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-// ── Navbar ────────────────────────────────────────────────────────────────────
-function Navbar() {
-  const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", fn);
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
-
-  const navLinks = [
-    { label: "Home",       id: "hero" },
-    { label: "Features",   id: "features" },
-    { label: "About Us",   id: "about" },
-    { label: "Pricing",    id: "pricing" },
-    { label: "Contact",    id: "contact" },
-  ];
-
-  return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      scrolled ? "bg-[#0d0d1a]/95 backdrop-blur-xl shadow-2xl border-b border-white/5" : "bg-transparent"
-    }`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-
-          {/* Logo */}
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => scrollTo("hero")}>
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#ff6b00] to-[#a04100] flex items-center justify-center shadow-lg shadow-orange-500/30">
-              <span className="text-white font-black text-sm">A</span>
-            </div>
-            <div>
-              <span className="text-white font-bold text-lg leading-none">Artha</span>
-              <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
-            </div>
-          </div>
-
-          {/* Desktop links */}
-          <div className="hidden lg:flex items-center gap-8">
-            {navLinks.map((l) => (
-              <button key={l.id} onClick={() => scrollTo(l.id)}
-                className="text-white/70 hover:text-white text-sm font-medium transition-colors duration-200">
-                {l.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Desktop CTAs */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Link to="/login"
-              className="text-white/80 hover:text-white text-sm font-medium transition-colors px-4 py-2">
-              Login
-            </Link>
-            <Link to="/signup"
-              className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5">
-              Get Started Free
-            </Link>
-          </div>
-
-          {/* Mobile hamburger */}
-          <button onClick={() => setOpen(!open)} className="lg:hidden text-white/80 hover:text-white">
-            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {open && (
-        <div className="lg:hidden bg-[#0d0d1a]/98 backdrop-blur-xl border-t border-white/5">
-          <div className="px-4 py-4 space-y-1">
-            {navLinks.map((l) => (
-              <button key={l.id} onClick={() => { scrollTo(l.id); setOpen(false); }}
-                className="block w-full text-left px-4 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-xl text-sm font-medium transition-colors">
-                {l.label}
-              </button>
-            ))}
-            <div className="pt-3 flex flex-col gap-2 border-t border-white/5 mt-3">
-              <Link to="/login" onClick={() => setOpen(false)}
-                className="text-center py-2.5 text-white/80 hover:text-white text-sm font-medium border border-white/10 rounded-xl">
-                Login
-              </Link>
-              <Link to="/signup" onClick={() => setOpen(false)}
-                className="text-center bg-[#ff6b00] text-white py-2.5 rounded-xl text-sm font-semibold">
-                Get Started Free
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-    </nav>
-  );
 }
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
@@ -954,12 +862,17 @@ function Footer() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Landing() {
-  // Scroll to top on mount
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.title = "Arthaleads — Real Estate CRM | Manage Every Property Lead";
+    let desc = document.querySelector('meta[name="description"]');
+    if (!desc) { desc = document.createElement("meta"); desc.name = "description"; document.head.appendChild(desc); }
+    desc.content = "Arthaleads is India's #1 real estate CRM. Capture Facebook, Google, WhatsApp & website leads automatically. Built for developers, brokers & channel partners.";
+  }, []);
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
-      <Navbar />
+      <PublicNav onScrollTo={scrollTo} />
       <Hero />
       <SourcesStrip />
       <Features />

@@ -271,6 +271,10 @@ const PublicBlog     = lazy(() => import("./pages/PublicBlog"));
 const PublicBlogPost = lazy(() => import("./pages/PublicBlogPost"));
 const BlogManager    = lazy(() => import("./pages/BlogManager"));
 const BlogEditor     = lazy(() => import("./pages/BlogEditor"));
+const AboutUs        = lazy(() => import("./pages/AboutUs"));
+const CaseStudies    = lazy(() => import("./pages/CaseStudies"));
+const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
+const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -426,6 +430,10 @@ export default function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
+        <Route path="/about-us"             element={<AboutUs />} />
+        <Route path="/case-studies"         element={<CaseStudies />} />
+        <Route path="/product-updates"      element={<ProductUpdates />} />
+        <Route path="/help-guide"           element={<HelpGuide />} />
 
         {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>
