@@ -247,7 +247,7 @@ function NavInner({ onScrollTo }) {
             </div>
 
             <NavLink id="pricing"  label="Pricing" />
-            <NavLink id="contact"  label="Contact" />
+            <NavLink href="/contact" label="Contact" />
             <NavLink href="/wordpress-plugin" label="WordPress Plugin" />
           </div>
 
@@ -344,7 +344,7 @@ function NavInner({ onScrollTo }) {
             ))}
 
             <MobileNavLink id="pricing"  label="Pricing" />
-            <MobileNavLink id="contact"  label="Contact" />
+            <MobileNavLink href="/contact" label="Contact" />
             <MobileNavLink href="/wordpress-plugin" label="WordPress Plugin" />
 
             <div
