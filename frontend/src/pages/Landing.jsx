@@ -10,6 +10,7 @@ import {
   FileSpreadsheet, UserCheck, Activity
 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
+import { PublicThemeProvider } from "../context/PublicThemeContext";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -871,18 +872,20 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
-      <PublicNav onScrollTo={scrollTo} />
-      <Hero />
-      <SourcesStrip />
-      <Features />
-      <HowItWorks />
-      <About />
-      <Testimonials />
-      <Pricing />
-      <Contact />
-      <FinalCTA />
-      <Footer />
-    </div>
+    <PublicThemeProvider>
+      <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
+        <PublicNav onScrollTo={scrollTo} />
+        <Hero />
+        <SourcesStrip />
+        <Features />
+        <HowItWorks />
+        <About />
+        <Testimonials />
+        <Pricing />
+        <Contact />
+        <FinalCTA />
+        <Footer />
+      </div>
+    </PublicThemeProvider>
   );
 }

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import { Clock, Calendar, ArrowLeft, Tag, BookOpen, Share2, ChevronRight } from "lucide-react";
+import PublicNav from "../components/PublicNav";
+import PublicFooter from "../components/PublicFooter";
+import { PublicThemeProvider, usePublicTheme } from "../context/PublicThemeContext";
 
 // ── SEO meta helper ────────────────────────────────────────────────────────────
 function useSEO(post) {
@@ -70,33 +73,39 @@ function fmtDate(d) {
 }
 
 // ── Block renderer ─────────────────────────────────────────────────────────────
-function RenderBlock({ block }) {
+function RenderBlock({ block, isDark }) {
+  const textColor = isDark ? "rgba(255,255,255,0.80)" : "#374151";
+  const headingColor = isDark ? "#ffffff" : "#111827";
   switch (block.type) {
     case "paragraph":
       return (
         <p
-          className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4 text-base"
+          className="leading-relaxed mb-4 text-base"
+          style={{ color: textColor }}
           dangerouslySetInnerHTML={{ __html: block.content || "" }}
         />
       );
     case "h2":
       return (
         <h2
-          className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mt-10 mb-4 leading-tight"
+          className="text-2xl font-extrabold mt-10 mb-4 leading-tight"
+          style={{ color: headingColor }}
           dangerouslySetInnerHTML={{ __html: block.content || "" }}
         />
       );
     case "h3":
       return (
         <h3
-          className="text-xl font-bold text-gray-900 dark:text-gray-100 mt-8 mb-3 leading-tight"
+          className="text-xl font-bold mt-8 mb-3 leading-tight"
+          style={{ color: headingColor }}
           dangerouslySetInnerHTML={{ __html: block.content || "" }}
         />
       );
     case "h4":
       return (
         <h4
-          className="text-lg font-bold text-gray-900 dark:text-gray-100 mt-6 mb-2 leading-tight"
+          className="text-lg font-bold mt-6 mb-2 leading-tight"
+          style={{ color: headingColor }}
           dangerouslySetInnerHTML={{ __html: block.content || "" }}
         />
       );
@@ -118,9 +127,13 @@ function RenderBlock({ block }) {
       ) : null;
     case "quote":
       return (
-        <blockquote className="border-l-4 border-orange-400 pl-6 py-2 my-6 bg-orange-50 dark:bg-orange-500/5 rounded-r-xl">
+        <blockquote
+          className="border-l-4 border-orange-400 pl-6 py-2 my-6 rounded-r-xl"
+          style={{ background: isDark ? "rgba(255,107,0,0.05)" : "#fff7ed" }}
+        >
           <p
-            className="text-lg italic text-gray-600 dark:text-gray-400 leading-relaxed"
+            className="text-lg italic leading-relaxed"
+            style={{ color: isDark ? "rgba(255,255,255,0.65)" : "#6b7280" }}
             dangerouslySetInnerHTML={{ __html: block.content || "" }}
           />
         </blockquote>
@@ -129,7 +142,7 @@ function RenderBlock({ block }) {
       return (
         <ul className="list-none space-y-2 my-4 pl-0">
           {(block.items || []).map((item, i) => (
-            <li key={i} className="flex items-start gap-2.5 text-gray-700 dark:text-gray-300">
+            <li key={i} className="flex items-start gap-2.5" style={{ color: textColor }}>
               <span className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
               <span className="leading-relaxed">{item}</span>
             </li>
@@ -140,7 +153,7 @@ function RenderBlock({ block }) {
       return (
         <ol className="space-y-2 my-4 pl-0">
           {(block.items || []).map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
+            <li key={i} className="flex items-start gap-3" style={{ color: textColor }}>
               <span className="w-6 h-6 rounded-full bg-orange-500/10 text-orange-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
               <span className="leading-relaxed">{item}</span>
             </li>
@@ -163,9 +176,9 @@ function RenderBlock({ block }) {
     case "divider":
       return (
         <div className="flex items-center gap-4 my-10">
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 h-px" style={{ background: isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb" }} />
           <div className="w-2 h-2 rounded-full bg-orange-400" />
-          <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+          <div className="flex-1 h-px" style={{ background: isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb" }} />
         </div>
       );
     default:
@@ -173,19 +186,24 @@ function RenderBlock({ block }) {
   }
 }
 
-// ── Table of Contents from headings ───────────────────────────────────────────
-function TableOfContents({ blocks }) {
+// ── Table of Contents ─────────────────────────────────────────────────────────
+function TableOfContents({ blocks, isDark }) {
   const headings = blocks.filter((b) => b.type === "h2" || b.type === "h3");
   if (headings.length < 2) return null;
+  const cardBg     = isDark ? "rgba(255,255,255,0.04)" : "#f9fafb";
+  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const softText   = isDark ? "rgba(255,255,255,0.45)" : "#9ca3af";
+  const itemText   = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
   return (
-    <nav className="rounded-2xl border p-5 mb-8" style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}>
-      <h3 className="text-xs font-bold uppercase tracking-widest text-app-soft mb-3">Table of Contents</h3>
+    <nav className="rounded-2xl border p-5 mb-8" style={{ background: cardBg, borderColor: cardBorder }}>
+      <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: softText }}>Table of Contents</h3>
       <ol className="space-y-1.5">
         {headings.map((h, i) => (
           <li key={i} className={`flex items-center gap-2 ${h.type === "h3" ? "pl-4" : ""}`}>
             <ChevronRight className="w-3 h-3 text-orange-400 flex-shrink-0" />
             <span
-              className="text-sm text-app-soft hover:text-orange-500 cursor-pointer transition leading-snug"
+              className="text-sm hover:text-orange-500 cursor-pointer transition leading-snug"
+              style={{ color: itemText }}
               dangerouslySetInnerHTML={{ __html: h.content || `Section ${i + 1}` }}
             />
           </li>
@@ -195,11 +213,11 @@ function TableOfContents({ blocks }) {
   );
 }
 
-export default function PublicBlogPost() {
-  const { slug }      = useParams();
-  const navigate      = useNavigate();
-  const [post, setPost]     = useState(null);
-  const [loading, setLoading] = useState(true);
+function BlogPostInner() {
+  const { isDark } = usePublicTheme();
+  const { slug }   = useParams();
+  const [post, setPost]         = useState(null);
+  const [loading, setLoading]   = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useSEO(post);
@@ -224,9 +242,14 @@ export default function PublicBlogPost() {
     }
   };
 
+  const bg         = isDark ? "#0d0d1a" : "#ffffff";
+  const textColor  = isDark ? "#ffffff" : "#111827";
+  const softText   = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--app-bg)" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: bg }}>
         <div className="w-10 h-10 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
       </div>
     );
@@ -234,34 +257,29 @@ export default function PublicBlogPost() {
 
   if (notFound || !post) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center" style={{ background: "var(--app-bg)" }}>
-        <BookOpen className="w-16 h-16 text-orange-200 mb-6" />
-        <h1 className="text-2xl font-bold text-app mb-2">Post Not Found</h1>
-        <p className="text-app-soft mb-6">This article doesn't exist or has been removed.</p>
-        <Link to="/blog" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition">
-          <ArrowLeft className="w-4 h-4" /> Back to Blog
-        </Link>
+      <div className="min-h-screen" style={{ background: bg }}>
+        <PublicNav />
+        <div className="flex flex-col items-center justify-center px-4 text-center min-h-[70vh]">
+          <BookOpen className="w-16 h-16 text-orange-200 mb-6" />
+          <h1 className="text-2xl font-bold mb-2" style={{ color: textColor }}>Post Not Found</h1>
+          <p className="mb-6" style={{ color: softText }}>This article doesn't exist or has been removed.</p>
+          <Link to="/blog" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white font-semibold transition">
+            <ArrowLeft className="w-4 h-4" /> Back to Blog
+          </Link>
+        </div>
+        <PublicFooter />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--app-bg)" }}>
-      {/* ── Nav ── */}
-      <nav className="sticky top-0 z-40 border-b backdrop-blur-xl" style={{ background: "rgba(var(--app-surface-rgb, 255,255,255), 0.95)", borderColor: "var(--app-border)" }}>
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link to="/blog" className="flex items-center gap-2 text-app-soft hover:text-orange-500 transition text-sm font-medium">
-            <ArrowLeft className="w-4 h-4" /> Blog
-          </Link>
-          <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
-          <Link to="/" className="text-sm font-bold text-orange-500">Arthaleads</Link>
-        </div>
-      </nav>
+    <div className="min-h-screen" style={{ background: bg }}>
+      <PublicNav />
 
-      {/* ── Article ── */}
-      <article className="max-w-3xl mx-auto px-4 py-10">
+      {/* Article */}
+      <article className="max-w-3xl mx-auto px-4 pt-28 pb-10">
         {/* Category + breadcrumb */}
-        <div className="flex items-center gap-2 mb-4 text-xs text-app-soft">
+        <div className="flex items-center gap-2 mb-4 text-xs" style={{ color: softText }}>
           <Link to="/blog" className="hover:text-orange-500 transition">Blog</Link>
           {post.category && (
             <>
@@ -276,12 +294,15 @@ export default function PublicBlogPost() {
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-gray-100 leading-tight mb-6">
+        <h1 className="text-3xl md:text-4xl font-extrabold leading-tight mb-6" style={{ color: textColor }}>
           {post.title}
         </h1>
 
         {/* Meta row */}
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-8 pb-8 border-b" style={{ borderColor: "var(--app-border)" }}>
+        <div
+          className="flex flex-wrap items-center gap-4 text-sm mb-8 pb-8 border-b"
+          style={{ color: softText, borderColor: cardBorder }}
+        >
           {post.publishedAt && (
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" /> {fmtDate(post.publishedAt)}
@@ -295,8 +316,8 @@ export default function PublicBlogPost() {
           )}
           <button
             onClick={share}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold text-app-soft hover:text-orange-500 hover:border-orange-400 transition"
-            style={{ borderColor: "var(--app-border)" }}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold hover:text-orange-500 hover:border-orange-400 transition"
+            style={{ borderColor: cardBorder, color: softText }}
           >
             <Share2 className="w-3.5 h-3.5" /> Share
           </button>
@@ -313,41 +334,51 @@ export default function PublicBlogPost() {
           </figure>
         )}
 
-        {/* Excerpt / lead */}
+        {/* Excerpt */}
         {post.excerpt && (
-          <p className="text-lg text-gray-600 dark:text-gray-400 font-medium leading-relaxed mb-8 p-5 rounded-2xl border-l-4 border-orange-400 bg-orange-50 dark:bg-orange-500/5">
+          <p
+            className="text-lg font-medium leading-relaxed mb-8 p-5 rounded-2xl border-l-4 border-orange-400"
+            style={{
+              color: isDark ? "rgba(255,255,255,0.65)" : "#6b7280",
+              background: isDark ? "rgba(255,107,0,0.05)" : "#fff7ed",
+            }}
+          >
             {post.excerpt}
           </p>
         )}
 
         {/* Table of contents */}
-        <TableOfContents blocks={post.blocks || []} />
+        <TableOfContents blocks={post.blocks || []} isDark={isDark} />
 
         {/* Content blocks */}
         <div className="prose-content">
           {(post.blocks || []).map((block) => (
-            <RenderBlock key={block.id} block={block} />
+            <RenderBlock key={block.id} block={block} isDark={isDark} />
           ))}
         </div>
 
         {/* Tags */}
         {post.tags?.length > 0 && (
-          <div className="mt-10 pt-8 border-t flex flex-wrap gap-2" style={{ borderColor: "var(--app-border)" }}>
-            <span className="text-xs text-app-soft flex items-center gap-1 mr-1">
+          <div className="mt-10 pt-8 border-t flex flex-wrap gap-2" style={{ borderColor: cardBorder }}>
+            <span className="text-xs flex items-center gap-1 mr-1" style={{ color: softText }}>
               <Tag className="w-3 h-3" /> Tags:
             </span>
             {post.tags.map((tag) => (
               <Link
                 key={tag}
                 to={`/blog?tag=${tag}`}
-                className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400 hover:bg-orange-200 transition"
+                className="inline-block px-3 py-1 rounded-full text-xs font-medium hover:bg-orange-200 transition"
+                style={{
+                  background: isDark ? "rgba(255,107,0,0.15)" : "#ffedd5",
+                  color: isDark ? "#fda462" : "#c2410c",
+                }}
               >#{tag}</Link>
             ))}
           </div>
         )}
 
         {/* Back CTA */}
-        <div className="mt-12 pt-8 border-t flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "var(--app-border)" }}>
+        <div className="mt-12 pt-8 border-t flex items-center justify-between flex-wrap gap-4" style={{ borderColor: cardBorder }}>
           <Link
             to="/blog"
             className="inline-flex items-center gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600 transition"
@@ -363,15 +394,15 @@ export default function PublicBlogPost() {
         </div>
       </article>
 
-      {/* Footer */}
-      <div className="border-t py-8 text-center text-xs text-app-soft mt-10" style={{ borderColor: "var(--app-border)" }}>
-        <p>© {new Date().getFullYear()} Arthaleads (Prophunt LLP). All rights reserved.</p>
-        <div className="flex items-center justify-center gap-4 mt-2">
-          <Link to="/privacy" className="hover:text-orange-500 transition">Privacy</Link>
-          <Link to="/terms" className="hover:text-orange-500 transition">Terms</Link>
-          <Link to="/login" className="hover:text-orange-500 transition">CRM Login</Link>
-        </div>
-      </div>
+      <PublicFooter />
     </div>
+  );
+}
+
+export default function PublicBlogPost() {
+  return (
+    <PublicThemeProvider>
+      <BlogPostInner />
+    </PublicThemeProvider>
   );
 }
