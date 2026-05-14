@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -6,10 +6,21 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 
 export default function Contact() {
   const { isDark } = usePublicTheme();
+  const [iframeHeight, setIframeHeight] = useState(680);
 
   useEffect(() => {
     document.title = "Contact Us — Arthaleads CRM | Get in Touch";
     return () => { document.title = "Arthaleads — Real Estate CRM"; };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === "iframeH" && e.data.h > 100) {
+        setIframeHeight(e.data.h);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
   }, []);
 
   const bg        = isDark ? "#080810" : "#f9fafb";
@@ -111,10 +122,10 @@ export default function Contact() {
                 src="https://prophuntllp.com/metform-form/arthaleads-contact-form/"
                 title="Contact Form"
                 width="100%"
-                height="820"
+                height={iframeHeight}
                 frameBorder="0"
-                scrolling="auto"
-                style={{ display: "block", border: "none", minHeight: "820px" }}
+                scrolling="no"
+                style={{ display: "block", border: "none" }}
               />
             </div>
 
