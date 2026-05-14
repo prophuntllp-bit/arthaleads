@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
 import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -6,6 +6,11 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 
 export default function Contact() {
   const { isDark } = usePublicTheme();
+
+  useEffect(() => {
+    document.title = "Contact Us — Arthaleads CRM | Get in Touch";
+    return () => { document.title = "Arthaleads — Real Estate CRM"; };
+  }, []);
 
   const bg        = isDark ? "#080810" : "#f9fafb";
   const heading   = isDark ? "#ffffff" : "#111827";
@@ -23,16 +28,6 @@ export default function Contact() {
 
   return (
     <>
-      <Helmet>
-        <title>Contact Us — Arthaleads CRM | Get in Touch</title>
-        <meta name="description" content="Get in touch with the Arthaleads team. Ask about pricing, request a demo, or get help with your real estate CRM setup. We typically respond within 24 hours." />
-        <meta name="keywords" content="contact Arthaleads, CRM support, real estate CRM demo, Arthaleads pricing" />
-        <link rel="canonical" href="https://www.arthaleads.com/contact" />
-        <meta property="og:title" content="Contact Us — Arthaleads CRM" />
-        <meta property="og:description" content="Get in touch with the Arthaleads team for a demo, pricing, or support." />
-        <meta property="og:url" content="https://www.arthaleads.com/contact" />
-      </Helmet>
-
       <PublicNav />
 
       <main style={{ background: bg, minHeight: "100vh" }}>
