@@ -290,7 +290,7 @@ async function sendWelcomeEmail(toEmail, toName, orgName) {
       ${divider}
       <p style="margin:0;font-size:12px;color:#555;line-height:1.65;">
         Need help getting started? Reply to this email or reach us at
-        <a href="mailto:hello@arthaleads.com" style="color:#ff6b00;text-decoration:none;">hello@arthaleads.com</a>
+        <a href="mailto:contact@arthaleads.com" style="color:#ff6b00;text-decoration:none;">contact@arthaleads.com</a>
       </p>`,
     footerNote: "You're receiving this because you just created an Arthaleads account.",
   });
@@ -300,7 +300,7 @@ async function sendWelcomeEmail(toEmail, toName, orgName) {
     to:      toEmail,
     subject: `Welcome to Arthaleads, ${firstName}! Your workspace is ready 🎉`,
     html,
-    text: `Hi ${firstName},\n\nWelcome to Arthaleads! Your workspace "${orgName}" is ready.\n\nGo to your dashboard: ${DASHBOARD_URL}\n\nNeed help? Email us at hello@arthaleads.com\n\n— Arthaleads Team`,
+    text: `Hi ${firstName},\n\nWelcome to Arthaleads! Your workspace "${orgName}" is ready.\n\nGo to your dashboard: ${DASHBOARD_URL}\n\nNeed help? Email us at contact@arthaleads.com\n\n— Arthaleads Team`,
   });
 
   if (error) throw new Error(error.message || "Resend API error");
@@ -350,7 +350,7 @@ async function sendTeamInviteEmail(toEmail, toName, orgName, addedByName) {
           <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px 16px;">
             <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#ff8a3d;">⚠ &nbsp;Wasn't expecting this?</p>
             <p style="margin:0;font-size:12px;color:#666;line-height:1.65;">
-              If you weren't expecting to be added, you can ignore this email or contact <a href="mailto:hello@arthaleads.com" style="color:#ff6b00;text-decoration:none;">hello@arthaleads.com</a>.
+              If you weren't expecting to be added, you can ignore this email or contact <a href="mailto:contact@arthaleads.com" style="color:#ff6b00;text-decoration:none;">contact@arthaleads.com</a>.
             </p>
           </td>
         </tr>

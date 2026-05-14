@@ -124,8 +124,8 @@ export default function Privacy() {
           <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
-            <a href="mailto:hello@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
-              hello@arthaleads.com
+            <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
+              contact@arthaleads.com
             </a>
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>

@@ -75,7 +75,7 @@ export default function NotFound() {
         {/* Subtle help text */}
         <p className="mt-10 text-xs text-app-soft">
           Still lost?{" "}
-          <a href="mailto:hello@arthaleads.com" className="text-orange-500 hover:underline">
+          <a href="mailto:contact@arthaleads.com" className="text-orange-500 hover:underline">
             Contact support
           </a>
         </p>

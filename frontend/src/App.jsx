@@ -277,6 +277,7 @@ const CaseStudies    = lazy(() => import("./pages/CaseStudies"));
 const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
 const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
+const Contact         = lazy(() => import("./pages/Contact"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -293,7 +294,7 @@ function OrgInactiveScreen({ onLogout }) {
         <p className="text-sm text-app-soft leading-relaxed mb-6">
           Your organisation's account has been deactivated by an administrator. Please contact Arthaleads support to restore access.
         </p>
-        <a href="mailto:hello@arthaleads.com"
+        <a href="mailto:contact@arthaleads.com"
           className="block w-full py-3 rounded-2xl bg-[#FF6B00] text-white font-semibold text-sm mb-3 hover:bg-[#e05f00] transition">
           Contact Support
         </a>
@@ -322,7 +323,7 @@ function TrialExpiredScreen({ onLogout }) {
           Your 7-day free trial has expired. Upgrade to a paid plan to continue managing your leads and team without interruption.
         </p>
         <p className="text-xs text-app-soft mb-6">All your data is safe and will be restored immediately on upgrade.</p>
-        <a href="mailto:hello@arthaleads.com?subject=Upgrade%20Arthaleads%20Plan"
+        <a href="mailto:contact@arthaleads.com?subject=Upgrade%20Arthaleads%20Plan"
           className="block w-full py-3 rounded-2xl bg-[#FF6B00] text-white font-semibold text-sm mb-3 hover:bg-[#e05f00] transition shadow-lg shadow-orange-500/20">
           Contact Us to Upgrade
         </a>
@@ -437,6 +438,7 @@ export default function App() {
         <Route path="/product-updates"      element={<ProductUpdates />} />
         <Route path="/help-guide"           element={<HelpGuide />} />
         <Route path="/wordpress-plugin"     element={<WordPressPlugin />} />
+        <Route path="/contact"              element={<Contact />} />
 
         {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>

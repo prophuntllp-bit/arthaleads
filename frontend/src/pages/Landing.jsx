@@ -696,20 +696,34 @@ function Pricing({ isDark }) {
 function Contact({ isDark }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Open a mailto as a simple contact mechanism
-    const subject = encodeURIComponent(`Arthaleads Enquiry from ${form.name}`);
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone}\nCompany: ${form.company}\n\nMessage:\n${form.message}`
-    );
-    window.open(`mailto:hello@arthaleads.com?subject=${subject}&body=${body}`);
-    setSent(true);
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSent(true);
+      } else {
+        setError(data.message || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const info = [
-    { icon: Mail,    label: "Email Us",      val: "hello@arthaleads.com",    href: "mailto:hello@arthaleads.com" },
+    { icon: Mail,    label: "Email Us",      val: "contact@arthaleads.com",    href: "mailto:contact@arthaleads.com" },
     { icon: Phone,   label: "Call Us",       val: "+91 98765 43210",          href: "tel:+919876543210" },
     { icon: MapPin,  label: "Based In",      val: "Pune, Maharashtra, India", href: null },
   ];
@@ -818,10 +832,13 @@ function Contact({ isDark }) {
                     className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-all resize-none"
                     style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
                 </div>
-                <button type="submit"
-                  className="w-full bg-[#ff6b00] hover:bg-[#e05f00] text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 flex items-center justify-center gap-2">
-                  Send Message
-                  <ArrowRight className="w-4 h-4" />
+                {error && (
+                  <p className="text-sm text-red-400 text-center">{error}</p>
+                )}
+                <button type="submit" disabled={loading}
+                  className="w-full bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 flex items-center justify-center gap-2">
+                  {loading ? "Sending…" : "Send Message"}
+                  {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
               </form>
             )}

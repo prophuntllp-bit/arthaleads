@@ -128,7 +128,7 @@ export default class ErrorBoundary extends Component {
 
           <p className="mt-10 text-xs text-app-soft">
             Need help?{" "}
-            <a href="mailto:hello@arthaleads.com" className="text-orange-500 hover:underline">
+            <a href="mailto:contact@arthaleads.com" className="text-orange-500 hover:underline">
               Contact support
             </a>
           </p>

@@ -146,6 +146,7 @@ app.use("/api/followups",   require("./routes/followupRoutes"));
 app.use("/api/attendance",   require("./routes/attendanceRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 app.use("/api/blog",        blogRoutes);
+app.use("/api/contact",    require("./routes/contactRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────
 app.get("/sitemap.xml", blogController.getSitemap);

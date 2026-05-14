@@ -51,7 +51,8 @@ export default function PublicFooter() {
               {[["Privacy Policy", "/privacy"], ["Terms of Service", "/terms"]].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
               ))}
-              <a href="mailto:support@arthaleads.com" style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">support@arthaleads.com</a>
+              <Link to="/contact" style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">Contact Us</Link>
+              <a href="mailto:contact@arthaleads.com" style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">contact@arthaleads.com</a>
             </div>
           </div>
         </div>
