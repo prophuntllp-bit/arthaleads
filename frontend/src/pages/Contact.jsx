@@ -32,13 +32,13 @@ export default function Contact() {
 
       <main style={{ background: bg, minHeight: "100vh" }}>
         {/* Hero */}
-        <section className="pt-32 pb-16 px-4" style={{ background: isDark ? "#0d0d1a" : "#fff7f0" }}>
+        <section className="pt-24 pb-8 px-4" style={{ background: isDark ? "#0d0d1a" : "#fff7f0" }}>
           <div className="max-w-3xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
               <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
               <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl font-black mb-4" style={{ color: heading }}>
+            <h1 className="text-3xl sm:text-4xl font-black mb-3" style={{ color: heading }}>
               We'd love to{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
                 hear from you
@@ -51,8 +51,8 @@ export default function Contact() {
         </section>
 
         {/* Main content */}
-        <section className="py-16 px-4">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16">
+        <section className="py-10 px-4">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
 
             {/* Left — info */}
             <div>
@@ -111,10 +111,10 @@ export default function Contact() {
                 src="https://prophuntllp.com/metform-form/arthaleads-contact-form/"
                 title="Contact Form"
                 width="100%"
-                height="680"
+                height="820"
                 frameBorder="0"
-                scrolling="no"
-                style={{ display: "block", border: "none" }}
+                scrolling="auto"
+                style={{ display: "block", border: "none", minHeight: "820px" }}
               />
             </div>
 
