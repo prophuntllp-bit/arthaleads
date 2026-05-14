@@ -209,9 +209,9 @@ export default function Sidebar() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
   };
 
   const filtered = navItems.filter(
