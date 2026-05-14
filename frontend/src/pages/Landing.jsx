@@ -761,22 +761,96 @@ function Contact({ isDark }) {
             </a>
           </div>
 
-          {/* Right — MetForm iframe */}
-          <div className="rounded-2xl overflow-hidden" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-            <iframe
-              src="https://prophuntllp.com/metform-form/arthaleads-contact-form/"
-              title="Contact Form"
-              width="100%"
-              height="620"
-              frameBorder="0"
-              scrolling="no"
-              style={{ display: "block", border: "none" }}
-            />
+          {/* Right — form */}
+          <div className="p-7 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
+            <ContactForm isDark={isDark} />
           </div>
 
         </div>
       </div>
     </section>
+  );
+}
+
+function ContactForm({ isDark }) {
+  const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", message: "" });
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
+    try {
+      const res = await fetch(`${apiBase}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) setSent(true);
+      else setError(data.message || "Something went wrong. Please try again.");
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const heading  = isDark ? "#ffffff" : "#111827";
+  const body     = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const labelClr = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const inputBg  = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
+  const inputBdr = isDark ? "rgba(255,255,255,0.08)" : "#d1d5db";
+  const inputClr = isDark ? "#ffffff" : "#111827";
+
+  if (sent) return (
+    <div className="flex flex-col items-center justify-center text-center py-16">
+      <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+        <Check className="w-8 h-8 text-green-400" />
+      </div>
+      <h3 className="font-bold text-xl mb-2" style={{ color: heading }}>Message Sent!</h3>
+      <p className="text-sm" style={{ color: body }}>We'll get back to you at <strong>{form.email}</strong> within 24 hours.</p>
+      <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
+        className="mt-6 text-[#ff6b00] text-sm font-medium hover:underline">Send another message</button>
+    </div>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="font-bold text-lg mb-6" style={{ color: heading }}>Send us a message</h3>
+      {[
+        { id: "name",    label: "Your Name",      type: "text",  ph: "Rajesh Patil",        req: true },
+        { id: "email",   label: "Email Address",  type: "email", ph: "rajesh@example.com",  req: true },
+        { id: "phone",   label: "Phone Number",   type: "tel",   ph: "+91 98765 43210",     req: false },
+        { id: "company", label: "Company / Team", type: "text",  ph: "Milestone Properties", req: false },
+      ].map(({ id, label, type, ph, req }) => (
+        <div key={id}>
+          <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>
+            {label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}
+          </label>
+          <input type={type} placeholder={ph} required={req}
+            value={form[id]} onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+            className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all"
+            style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
+        </div>
+      ))}
+      <div>
+        <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>Message</label>
+        <textarea rows={4} placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
+          value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
+          className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all resize-none"
+          style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
+      </div>
+      {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+      <button type="submit" disabled={loading}
+        className="w-full bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
+        {loading ? "Sending…" : "Send Message"}
+        {!loading && <ArrowRight className="w-4 h-4" />}
+      </button>
+    </form>
   );
 }
 
