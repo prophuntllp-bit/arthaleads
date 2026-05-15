@@ -161,7 +161,11 @@ const projectService = {
     if (followUpFrom || followUpTo) {
       filter.followUp = {};
       if (followUpFrom) filter.followUp.$gte = new Date(followUpFrom);
-      if (followUpTo)   filter.followUp.$lte = new Date(followUpTo);
+      if (followUpTo) {
+        const end = new Date(followUpTo);
+        end.setUTCHours(23, 59, 59, 999); // include the full end day
+        filter.followUp.$lte = end;
+      }
     }
 
     const skip = (page - 1) * limit;
