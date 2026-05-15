@@ -6,7 +6,8 @@ const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToAll } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
-const RoutingRule = require("../models/RoutingRule");
+const RoutingRule     = require("../models/RoutingRule");
+const Organization    = require("../models/Organization");
 
 const router = express.Router();
 
@@ -303,13 +304,22 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           ].filter((c) => c.matchValue),
         });
 
-        let assignee;
+        // Routing rules always assign regardless of autoAssign (they are explicit overrides).
+        // Round-robin fallback only runs when autoAssign is enabled.
+        let assignee = null;
         if (ruleMatch) {
           assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
           logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched — assigning "${name}" to ${assignee.name}`);
         } else {
-          assignee = await getNextAssignee(orgId);
-          logger.info(`Facebook webhook: no rule matched — round-robin assigning "${name}" to ${assignee.name}`);
+          const fbOrg = await Organization.findById(orgId).select("autoAssign").lean();
+          if (fbOrg?.autoAssign !== false) {
+            try {
+              assignee = await getNextAssignee(orgId);
+              logger.info(`Facebook webhook: no rule matched — round-robin assigning "${name}" to ${assignee.name}`);
+            } catch { /* no active agents */ }
+          } else {
+            logger.info(`Facebook webhook: auto-assignment disabled — "${name}" left unassigned`);
+          }
         }
 
         await Lead.create({
@@ -320,25 +330,27 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           status: "New",
           requirements: isTestLead ? "" : requirements,
           orgId,
-          createdBy: assignee._id,
-          assignedTo: assignee._id,
-          assignedToName: assignee.name,
+          createdBy: assignee?._id || null,
+          assignedTo: assignee?._id || null,
+          assignedToName: assignee?.name || "",
           leadSourceLabel: isTestLead
             ? `${automation?.name || "Facebook Lead Ads"} — Test`
             : (automation?.name || "Facebook Lead Ads"),
           notes: [
             {
               text: noteText,
-              addedBy: assignee._id,
-              addedByName: assignee.name,
+              addedBy: assignee?._id || null,
+              addedByName: assignee?.name || "",
             },
           ],
           activities: [
             {
               type: "created",
-              description: `Lead received from Meta Lead Ads webhook — auto-assigned to ${assignee.name}`,
-              performedBy: assignee._id,
-              performedByName: assignee.name,
+              description: assignee
+                ? `Lead received from Meta Lead Ads webhook — auto-assigned to ${assignee.name}`
+                : "Lead received from Meta Lead Ads webhook — unassigned (auto-assignment disabled)",
+              performedBy: assignee?._id || null,
+              performedByName: assignee?.name || "",
               meta: {
                 formId: leadDetails.form_id || leadData.form_id || "",
                 pageId: leadDetails.page_id || leadData.page_id || "",
@@ -383,7 +395,13 @@ router.post("/website", express.json(), async (req, res) => {
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     const orgId = automation.orgId;
-    const assignee = await getNextAssignee(orgId);
+
+    // Respect the org's Auto Lead Assignment setting
+    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    let assignee = null;
+    if (org?.autoAssign !== false) {
+      try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
+    }
 
     // Use the actual form name if the plugin sent it (e.g. "Vanaha Verdant Contact Form")
     // Fall back to "siteName via PluginName" if no form name available
@@ -406,9 +424,9 @@ router.post("/website", express.json(), async (req, res) => {
       status: "New",
       requirements: message || "",
       orgId,
-      createdBy: assignee._id,
-      assignedTo: assignee._id,
-      assignedToName: assignee.name,
+      createdBy: assignee?._id || automation.createdBy || null,
+      assignedTo: assignee?._id || null,
+      assignedToName: assignee?.name || "",
       leadSourceLabel: sourceLabel,
       formPlugin: form_plugin || "",
       notes: [
@@ -418,16 +436,18 @@ router.post("/website", express.json(), async (req, res) => {
             form_plugin ? `Form plugin: ${form_plugin}` : null,
             page_url ? `Page: ${page_url}` : null,
           ].filter(Boolean).join("\n") || "Lead received from website contact form",
-          addedBy: assignee._id,
-          addedByName: assignee.name,
+          addedBy: assignee?._id || null,
+          addedByName: assignee?.name || "",
         },
       ],
       activities: [
         {
           type: "created",
-          description: `Lead received from website contact form — auto-assigned to ${assignee.name}`,
-          performedBy: assignee._id,
-          performedByName: assignee.name,
+          description: assignee
+            ? `Lead received from website contact form — auto-assigned to ${assignee.name}`
+            : "Lead received from website contact form — unassigned (auto-assignment disabled)",
+          performedBy: assignee?._id || null,
+          performedByName: assignee?.name || "",
           meta: { formPlugin: form_plugin || "", pageUrl: page_url || "", automationId: automation._id?.toString() },
         },
       ],
