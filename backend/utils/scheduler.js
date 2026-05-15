@@ -24,9 +24,9 @@ async function notifyLeads(leads, labelFn) {
       data: { url: "/followups" },
     };
 
-    // Only notify the agent assigned to (or who imported) this lead.
-    // Regular leads use assignedTo; project leads use importedBy.
-    const recipient = lead.assignedTo || lead.importedBy || null;
+    // Priority: person who SET the follow-up → assignedTo → importedBy
+    // This ensures only the person who actually set the reminder gets notified.
+    const recipient = lead.followUpSetBy || lead.assignedTo || lead.importedBy || null;
     if (recipient) {
       await sendPushToUser(recipient, payload);
     }
@@ -41,7 +41,7 @@ async function runDailyReminder() {
     followUpDate: { $gte: start, $lte: end },
     isArchived: false,
     isDeleted: { $ne: true },
-  }).select("name phone assignedTo followUpDate orgId").lean();
+  }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
 
   // Check both followUp and followUp2 — deduplicate by _id so a lead with both
   // dates today only fires one notification
@@ -50,7 +50,7 @@ async function runDailyReminder() {
       { followUp:  { $gte: start, $lte: end } },
       { followUp2: { $gte: start, $lte: end } },
     ],
-  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy").lean();
+  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy followUpSetBy").lean();
 
   // Deduplicate project leads (same _id might match both followUp and followUp2)
   const seen = new Set();
@@ -87,7 +87,7 @@ async function runUpcomingReminder() {
     followUpDate: { $gte: windowStart, $lt: windowEnd },
     isArchived: false,
     isDeleted: { $ne: true },
-  }).select("name phone assignedTo followUpDate orgId").lean();
+  }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
 
   // Check both followUp and followUp2 so project leads with either date get notified
   const projLeads = await ProjectLead.find({
@@ -95,7 +95,7 @@ async function runUpcomingReminder() {
       { followUp:  { $gte: windowStart, $lt: windowEnd } },
       { followUp2: { $gte: windowStart, $lt: windowEnd } },
     ],
-  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy").lean();
+  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy followUpSetBy").lean();
 
   // Deduplicate (lead with both dates in window fires only one alert)
   const seen = new Set();

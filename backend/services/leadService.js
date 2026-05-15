@@ -258,7 +258,12 @@ const leadService = {
     }
 
     if (updates.followUpDate) {
+      updates.followUpSetBy     = user._id;
+      updates.followUpSetByName = user.name;
       logActivity(lead, "follow_up_set", `Follow-up set for ${new Date(updates.followUpDate).toDateString()}`, user);
+    } else if (updates.followUpDate === null) {
+      updates.followUpSetBy     = null;
+      updates.followUpSetByName = "";
     }
 
     Object.assign(lead, updates);

@@ -114,8 +114,10 @@ const leadSchema = new mongoose.Schema(
     assignedToName: { type: String, default: "" }, // denormalized
 
     // ── Follow-up ─────────────────────────────────────────────────────────────
-    followUpDate: { type: Date, default: null },
-    followUpNote: { type: String, default: "" },
+    followUpDate:       { type: Date,   default: null },
+    followUpNote:       { type: String, default: "" },
+    followUpSetBy:      { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    followUpSetByName:  { type: String, default: "" },
 
     // ── Activity & Notes ──────────────────────────────────────────────────────
     notes: [noteSchema],

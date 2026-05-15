@@ -203,6 +203,12 @@ const projectService = {
     const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "followUp", "followUp2", "booking"];
     allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
 
+    // Track who set the follow-up so notifications go to the right person
+    if (data.followUp || data.followUp2) {
+      lead.followUpSetBy     = user._id;
+      lead.followUpSetByName = user.name;
+    }
+
     await lead.save();
     return lead;
   },
