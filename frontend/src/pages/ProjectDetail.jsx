@@ -346,12 +346,16 @@ export default function ProjectDetail() {
 
   // Prospective leads state (Interested + Site Visit Booked)
   const PROSP_FILTER = "Interested,Site Visit Booked";
+  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked"]);
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
   const [prospPages, setProspPages]   = useState(1);
   const [prospLoading, setProspLoading] = useState(false);
   const [prospSearch, setProspSearch] = useState("");
+  const [prospBookingFilter, setProspBookingFilter] = useState(""); // "" = all prospective
+  const [prospDateFrom, setProspDateFrom] = useState("");
+  const [prospDateTo, setProspDateTo]     = useState("");
   const PROSP_LIMIT = 50;
 
   useEffect(() => {
@@ -383,11 +387,19 @@ export default function ProjectDetail() {
   useEffect(() => {
     if (tab !== "prospective") return;
     setProspLoading(true);
-    api.get(`/projects/${id}/leads`, { params: { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, bookingIn: PROSP_FILTER } })
+    const params = {
+      page: prospPage,
+      limit: PROSP_LIMIT,
+      search: prospSearch,
+      bookingIn: prospBookingFilter || PROSP_FILTER,
+    };
+    if (prospDateFrom) params.followUpFrom = prospDateFrom;
+    if (prospDateTo)   params.followUpTo   = prospDateTo;
+    api.get(`/projects/${id}/leads`, { params })
       .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
-  }, [id, tab, prospPage, prospSearch, refreshKey]);
+  }, [id, tab, prospPage, prospSearch, prospBookingFilter, prospDateFrom, prospDateTo, refreshKey]);
 
   // Sync top scrollbar ↔ table scrollbar with dynamic width via ResizeObserver
   useEffect(() => {
@@ -934,6 +946,67 @@ export default function ProjectDetail() {
             </div>
           </div>
 
+          {/* Status filter pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",          text: "text-app-soft" },
+              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",        text: "text-blue-600 dark:text-blue-400" },
+              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",    text: "text-violet-600 dark:text-violet-400" },
+              { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",      text: "text-amber-600 dark:text-amber-400" },
+              { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",      text: "text-green-600 dark:text-green-400" },
+              { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",          text: "text-red-500 dark:text-red-400" },
+              { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",           text: "text-gray-500 dark:text-gray-400" },
+            ].map((f) => {
+              const active = prospBookingFilter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => { setProspBookingFilter(f.value); setProspPage(1); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                    active
+                      ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
+                      : "bg-gray-100 dark:bg-white/5 text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Date window filter */}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-semibold text-app-soft">Follow-up date:</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
+                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                value={prospDateFrom}
+                onChange={(e) => { setProspDateFrom(e.target.value); setProspPage(1); }}
+                title="From date"
+              />
+              <span className="text-xs text-app-soft">to</span>
+              <input
+                type="date"
+                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
+                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                value={prospDateTo}
+                onChange={(e) => { setProspDateTo(e.target.value); setProspPage(1); }}
+                title="To date"
+              />
+              {(prospDateFrom || prospDateTo) && (
+                <button
+                  className="rounded-xl px-2.5 py-1 text-xs font-semibold text-orange-500 hover:bg-orange-500/10 transition border"
+                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                  onClick={() => { setProspDateFrom(""); setProspDateTo(""); setProspPage(1); }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="card overflow-hidden">
             {prospLoading ? (
               <div className="flex justify-center py-16"><Spinner size="lg" /></div>
@@ -946,7 +1019,7 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[900px]">
+                  <table className="stitch-table min-w-[1600px]">
                     <thead>
                       <tr>
                         <th className="w-6 px-1 text-center">#</th>
@@ -955,8 +1028,11 @@ export default function ProjectDetail() {
                         <th>WhatsApp</th>
                         <th>Status</th>
                         <th>Follow Up</th>
+                        <th>Follow Up 2</th>
                         <th>Remark 1</th>
                         <th>Remark 2</th>
+                        <th>Remark 3</th>
+                        <th>Remark 4</th>
                         <th>Note</th>
                         <th>Updated By</th>
                         <th></th>
@@ -964,9 +1040,18 @@ export default function ProjectDetail() {
                     </thead>
                     <tbody>
                       {prospLeads.map((lead, i) => {
-                        const bookingColor = lead.booking === "Interested"
-                          ? "bg-blue-500/10 text-blue-600 border-blue-500/25"
-                          : "bg-violet-500/10 text-violet-600 border-violet-500/25";
+                        const handleProspUpdate = (updated) => {
+                          const stillProsp = PROSP_VALUES.has(updated.booking || "");
+                          if (!stillProsp) {
+                            setProspLeads((prev) => prev.filter((l) => l._id !== updated._id));
+                            setProspTotal((t) => Math.max(0, t - 1));
+                          } else {
+                            setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+                          }
+                          // Refresh badge count on tab
+                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
+                            .then((r) => setProspTotal(r.data.total)).catch(() => {});
+                        };
                         return (
                           <tr key={lead._id} className="group">
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
@@ -976,25 +1061,28 @@ export default function ProjectDetail() {
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} /></td>
                             <td>
-                              <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-bold whitespace-nowrap ${bookingColor}`}>
-                                {lead.booking}
-                              </span>
+                              <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleProspUpdate} />
                             </td>
                             <td>
-                              <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp"
-                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                              <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp" onSaved={handleProspUpdate} />
                             </td>
                             <td>
-                              <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…"
-                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                              <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleProspUpdate} />
                             </td>
                             <td>
-                              <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…"
-                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                              <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleProspUpdate} />
                             </td>
                             <td>
-                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline
-                                onSaved={(updated) => setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l))} />
+                              <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…" onSaved={handleProspUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark3} leadId={lead._id} projectId={id} field="remark3" placeholder="Remark 3…" onSaved={handleProspUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark4} leadId={lead._id} projectId={id} field="remark4" placeholder="Remark 4…" onSaved={handleProspUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline onSaved={handleProspUpdate} />
                             </td>
                             <td className="text-xs text-app-soft whitespace-nowrap">
                               {lead.remarkUpdatedBy?.name || "—"}

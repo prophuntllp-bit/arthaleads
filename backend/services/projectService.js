@@ -145,7 +145,7 @@ const projectService = {
     return { inserted: insertedCount, skipped: invalid + writeErrors, duplicates };
   },
 
-  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null }, user) {
+  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null, followUpFrom = null, followUpTo = null }, user) {
     // Verify the project belongs to the requesting user's org
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
@@ -157,6 +157,11 @@ const projectService = {
     // bookingIn = comma-separated values e.g. "Interested,Site Visit Booked"
     if (bookingIn) {
       filter.booking = { $in: bookingIn.split(",").map((v) => v.trim()) };
+    }
+    if (followUpFrom || followUpTo) {
+      filter.followUp = {};
+      if (followUpFrom) filter.followUp.$gte = new Date(followUpFrom);
+      if (followUpTo)   filter.followUp.$lte = new Date(followUpTo);
     }
 
     const skip = (page - 1) * limit;
@@ -200,7 +205,7 @@ const projectService = {
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
 
     // Only update fields that exist in the ProjectLead schema
-    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "followUp", "followUp2", "booking"];
+    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking"];
     allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
 
     // Track who set the follow-up so notifications go to the right person

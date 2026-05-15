@@ -35,6 +35,8 @@ const projectLeadSchema = new mongoose.Schema(
     // ── Telecaller extra columns ──────────────────────────────────────────────
     remark1:   { type: String, trim: true, default: "" },
     remark2:   { type: String, trim: true, default: "" },
+    remark3:   { type: String, trim: true, default: "" },
+    remark4:   { type: String, trim: true, default: "" },
     followUp:           { type: Date, default: null },
     followUp2:          { type: Date, default: null },
     followUpSetBy:      { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

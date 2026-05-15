@@ -21,7 +21,7 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
     setSource("Facebook");
     setProjLoading(true);
     api.get("/projects")
-      .then(r => setProjects((r.data.data || []).filter(p => String(p._id) !== String(currentProjectId))))
+      .then(r => setProjects(r.data.data || []))
       .catch(() => {})
       .finally(() => setProjLoading(false));
   }, [open, currentProjectId]);
@@ -83,7 +83,9 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
               <select className="select w-full" value={toProjectId} onChange={e => setToProjectId(e.target.value)}>
                 <option value="">Choose project…</option>
                 {projects.map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
+                  <option key={p._id} value={p._id}>
+                    {p.name}{String(p._id) === String(currentProjectId) ? " (current project)" : ""}
+                  </option>
                 ))}
               </select>
             )}
