@@ -344,9 +344,9 @@ export default function ProjectDetail() {
   const [leadsLimit, setLeadsLimit] = useState(10);
   const [bookingFilter, setBookingFilter] = useState("");
 
-  // Prospective leads state (Interested + Site Visit Booked)
-  const PROSP_FILTER = "Interested,Site Visit Booked";
-  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked"]);
+  // Prospective = any lead with a booking status set (non-empty)
+  const PROSP_FILTER = "Interested,Site Visit Booked,Call Back,Booked,Not Interested,Not Reachable";
+  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked", "Call Back", "Booked", "Not Interested", "Not Reachable"]);
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
@@ -934,7 +934,7 @@ export default function ProjectDetail() {
               </div>
               <div>
                 <p className="text-sm font-bold text-app">Prospective Leads</p>
-                <p className="text-xs text-app-soft">Marked as Interested or Site Visit Booked</p>
+                <p className="text-xs text-app-soft">All leads with an active booking status</p>
               </div>
             </div>
             <div className="relative">
@@ -1016,7 +1016,7 @@ export default function ProjectDetail() {
               <EmptyState
                 icon={Users}
                 title="No prospective leads yet"
-                desc="Leads marked as Interested or Site Visit Booked will appear here automatically."
+                desc="Leads with any booking status (Interested, Call Back, Booked, etc.) appear here."
               />
             ) : (
               <>
