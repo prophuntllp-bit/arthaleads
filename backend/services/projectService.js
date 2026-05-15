@@ -295,10 +295,23 @@ const projectService = {
 
     if (toLeads) {
       const newLead = await Lead.create({
-        name: lead.name, phone: lead.phone, email: lead.email || "",
-        source: source || lead.source || "Manual",
-        createdBy: user._id, orgId: user.orgId,
-        remark1: lead.remark1 || "", remark2: lead.remark2 || "",
+        name:    lead.name,
+        phone:   lead.phone,
+        email:   lead.email || "",
+        source:  source || lead.source || "Manual",
+        createdBy: user._id,
+        orgId:   user.orgId,
+        // Preserve all telecaller remark fields
+        remark1:      lead.remark1      || "",
+        remark2:      lead.remark2      || "",
+        remark3:      lead.remark3      || "",
+        remark4:      lead.remark4      || "",
+        remark:       lead.remarkNote   || "", // ProjectLead.remarkNote → Lead.remark
+        followUpDate: lead.followUp     || null,
+        followUp2:    lead.followUp2    || null,
+        booking:      lead.booking      || "",
+        followUpSetBy:      lead.followUpSetBy     || null,
+        followUpSetByName:  lead.followUpSetByName || "",
       });
       await ProjectLead.findByIdAndDelete(leadId);
       return { data: newLead, message: "Transferred to main pipeline" };

@@ -584,10 +584,24 @@ const leadService = {
     const project = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
     const pl = await ProjectLead.create({
-      project: toProjectId, name: lead.name, phone: lead.phone,
-      email: lead.email || "", source: lead.source || "Manual",
+      project:    toProjectId,
+      name:       lead.name,
+      phone:      lead.phone,
+      email:      lead.email || "",
+      source:     lead.source || "Manual",
       importedBy: user._id,
-      orgId: user.orgId,  // required — must match parent project's org
+      orgId:      user.orgId,
+      // Preserve all telecaller remark fields
+      remark1:    lead.remark1   || "",
+      remark2:    lead.remark2   || "",
+      remark3:    lead.remark3   || "",
+      remark4:    lead.remark4   || "",
+      remarkNote: lead.remark    || "", // Lead.remark (plain note) → ProjectLead.remarkNote
+      followUp:   lead.followUpDate  || null,
+      followUp2:  lead.followUp2     || null,
+      booking:    lead.booking       || "",
+      followUpSetBy:      lead.followUpSetBy     || null,
+      followUpSetByName:  lead.followUpSetByName || "",
     });
     lead.isArchived = true;
     await lead.save({ validateBeforeSave: false });

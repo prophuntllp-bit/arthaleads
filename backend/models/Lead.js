@@ -131,6 +131,8 @@ const leadSchema = new mongoose.Schema(
     // ── Telecaller Remarks ────────────────────────────────────────────────────
     remark1:   { type: String, trim: true, default: "" },
     remark2:   { type: String, trim: true, default: "" },
+    remark3:   { type: String, trim: true, default: "" },
+    remark4:   { type: String, trim: true, default: "" },
     remark:    { type: String, trim: true, default: "" },
     followUp2: { type: Date, default: null },
     booking: {
