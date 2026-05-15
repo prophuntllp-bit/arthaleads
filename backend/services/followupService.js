@@ -25,12 +25,12 @@ const followupService = {
 
     if (section === "past") {
       const pastFilter = { $lt: todayStart };
+      // Past events = full history view; do NOT filter by status (show closed deals too)
       leadFilter = {
         $and: [
           baseLeadFilter,
           ...agentLeadCond,
           {
-            status: { $nin: ["Closed Won", "Closed Lost"] },
             $or: [
               { followUpDate: pastFilter },
               { followUpDate: null, createdAt: pastFilter, status: "New" },
@@ -38,9 +38,8 @@ const followupService = {
           },
         ],
       };
-      // Check followUp OR followUp2 — either missed date qualifies
+      // Check followUp OR followUp2 — either missed date qualifies; show all booking states in history
       projFilter = {
-        booking: { $nin: ["Not Interested", "Booked"] },
         $or: [
           { followUp:  pastFilter },
           { followUp2: pastFilter },

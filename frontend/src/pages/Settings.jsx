@@ -12,6 +12,13 @@ export default function Settings() {
   const [autoAssign, setAutoAssign]         = useState(org?.autoAssign ?? true);
   const [togglingAA, setTogglingAA]         = useState(false);
 
+  // Sync toggle state whenever org data loads/changes (e.g. after auth/me refresh)
+  useEffect(() => {
+    if (org && typeof org.autoAssign === "boolean") {
+      setAutoAssign(org.autoAssign);
+    }
+  }, [org?.autoAssign]);
+
   const [form, setForm] = useState({
     name: "",
     phone: "",

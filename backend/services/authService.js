@@ -82,7 +82,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
       : null;
     return { token, user, org };
   },
@@ -144,7 +144,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
       : null;
     return { token, user, org };
   },
@@ -153,7 +153,7 @@ const authService = {
     const user = await User.findById(userId);
     if (!user) throw new AppError("User not found", 404);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
       : null;
     return { user, org };
   },
@@ -308,7 +308,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org   = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
       : null;
     return { token, user, org };
   },

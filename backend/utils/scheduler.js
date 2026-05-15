@@ -1,7 +1,6 @@
 const cron = require("node-cron");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
-const User = require("../models/User");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
@@ -14,29 +13,9 @@ function getTodayRange() {
   return { start, end };
 }
 
-// Cache managers per org to avoid redundant queries within a single scheduler run
-async function getManagersByOrg(orgIds) {
-  const managers = await User.find({
-    orgId: { $in: orgIds },
-    role: { $in: ["admin", "manager"] },
-  }).select("_id orgId").lean();
-
-  // Map orgId -> [userId, ...]
-  const map = {};
-  for (const m of managers) {
-    const key = String(m.orgId);
-    if (!map[key]) map[key] = [];
-    map[key].push(m._id);
-  }
-  return map;
-}
 
 async function notifyLeads(leads, labelFn) {
   if (!leads.length) return;
-
-  // Collect distinct orgIds so we only query managers for relevant orgs
-  const orgIds = [...new Set(leads.map((l) => l.orgId).filter(Boolean).map(String))];
-  const managersByOrg = await getManagersByOrg(orgIds);
 
   for (const lead of leads) {
     const payload = {
@@ -45,17 +24,11 @@ async function notifyLeads(leads, labelFn) {
       data: { url: "/followups" },
     };
 
-    // Regular leads use assignedTo; project leads use importedBy (no assignedTo field)
-    const primaryRecipient = lead.assignedTo || lead.importedBy || null;
-    if (primaryRecipient) {
-      await sendPushToUser(primaryRecipient, payload);
-    }
-
-    // Notify managers/admins from the same org (skip if already the primary recipient)
-    const orgManagers = managersByOrg[String(lead.orgId)] || [];
-    for (const managerId of orgManagers) {
-      if (primaryRecipient && managerId.toString() === primaryRecipient.toString()) continue;
-      await sendPushToUser(managerId, payload);
+    // Only notify the agent assigned to (or who imported) this lead.
+    // Regular leads use assignedTo; project leads use importedBy.
+    const recipient = lead.assignedTo || lead.importedBy || null;
+    if (recipient) {
+      await sendPushToUser(recipient, payload);
     }
   }
 }
