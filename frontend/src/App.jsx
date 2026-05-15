@@ -8,7 +8,6 @@ import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
-import CursorGlow from "./components/CursorGlow";
 
 // ── Page-level code splitting ─────────────────────────────────────────────────
 // Each page is loaded only when first visited — reduces initial bundle ~50%
@@ -420,7 +419,6 @@ export default function App() {
     <PublicThemeProvider>
     <AuthProvider>
       <ErrorBoundary>
-      <CursorGlow />
       <InstallBanner />
       <Suspense fallback={<PageFallback />}>
       <Routes>
