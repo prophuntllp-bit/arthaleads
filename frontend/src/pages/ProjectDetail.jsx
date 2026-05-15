@@ -344,9 +344,9 @@ export default function ProjectDetail() {
   const [leadsLimit, setLeadsLimit] = useState(10);
   const [bookingFilter, setBookingFilter] = useState("");
 
-  // Prospective = any lead with a booking status set (non-empty)
-  const PROSP_FILTER = "Interested,Site Visit Booked,Call Back,Booked,Not Interested,Not Reachable";
-  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked", "Call Back", "Booked", "Not Interested", "Not Reachable"]);
+  // Prospective = leads marked Interested or Site Visit Booked only
+  const PROSP_FILTER = "Interested,Site Visit Booked";
+  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked"]);
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
@@ -934,7 +934,7 @@ export default function ProjectDetail() {
               </div>
               <div>
                 <p className="text-sm font-bold text-app">Prospective Leads</p>
-                <p className="text-xs text-app-soft">All leads with an active booking status</p>
+                <p className="text-xs text-app-soft">Marked as Interested or Site Visit Booked</p>
               </div>
             </div>
             <div className="relative">
@@ -948,16 +948,12 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Status filter pills */}
+          {/* Status filter pills — scoped to Prospective only */}
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",          text: "text-app-soft" },
-              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",        text: "text-blue-600 dark:text-blue-400" },
-              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",    text: "text-violet-600 dark:text-violet-400" },
-              { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",      text: "text-amber-600 dark:text-amber-400" },
-              { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",      text: "text-green-600 dark:text-green-400" },
-              { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",          text: "text-red-500 dark:text-red-400" },
-              { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",           text: "text-gray-500 dark:text-gray-400" },
+              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",        text: "text-app-soft" },
+              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",      text: "text-blue-600 dark:text-blue-400" },
+              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",  text: "text-violet-600 dark:text-violet-400" },
             ].map((f) => {
               const active = prospBookingFilter === f.value;
               return (
@@ -1016,7 +1012,7 @@ export default function ProjectDetail() {
               <EmptyState
                 icon={Users}
                 title="No prospective leads yet"
-                desc="Leads with any booking status (Interested, Call Back, Booked, etc.) appear here."
+                desc="Leads marked as Interested or Site Visit Booked will appear here automatically."
               />
             ) : (
               <>
