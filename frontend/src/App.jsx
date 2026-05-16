@@ -272,6 +272,8 @@ const PublicBlog     = lazy(() => import("./pages/PublicBlog"));
 const PublicBlogPost = lazy(() => import("./pages/PublicBlogPost"));
 const BlogManager    = lazy(() => import("./pages/BlogManager"));
 const BlogEditor     = lazy(() => import("./pages/BlogEditor"));
+const BlogCategories = lazy(() => import("./pages/BlogCategories"));
+const BlogTags       = lazy(() => import("./pages/BlogTags"));
 const AboutUs        = lazy(() => import("./pages/AboutUs"));
 const CaseStudies    = lazy(() => import("./pages/CaseStudies"));
 const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
@@ -475,6 +477,8 @@ export default function App() {
             <Route path="/super-admin"                    element={<SuperAdmin />} />
             <Route path="/super-admin/blog"               element={<BlogManager />} />
             <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
+            <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
+            <Route path="/super-admin/blog/tags"          element={<BlogTags />} />
             <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
           </Route>
         </Route>

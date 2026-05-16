@@ -1,10 +1,10 @@
 // components/Sidebar.jsx
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Users, UserCheck, Settings,
-  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck, PenLine,
+  LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow, FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck, PenLine, ChevronDown, Tag, FileText, Plus, List,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -15,7 +15,15 @@ import toast from "react-hot-toast";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
-  { to: "/super-admin/blog", label: "Blog",    icon: PenLine,    roles: ["super_admin"], end: false },
+  {
+    label: "Posts", icon: PenLine, roles: ["super_admin"],
+    children: [
+      { to: "/super-admin/blog",             label: "All Posts",   icon: List,     end: true },
+      { to: "/super-admin/blog/new",         label: "Add Post",    icon: Plus,     end: true },
+      { to: "/super-admin/blog/categories",  label: "Categories",  icon: FileText, end: true },
+      { to: "/super-admin/blog/tags",        label: "Tags",        icon: Tag,      end: true },
+    ],
+  },
   { to: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
@@ -51,7 +59,9 @@ export default function Sidebar() {
   const { user, org, logout } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [postsOpen, setPostsOpen] = useState(location.pathname.startsWith("/super-admin/blog"));
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
@@ -218,6 +228,11 @@ export default function Sidebar() {
     (n) => !n.roles || n.roles.includes(user?.role)
   );
 
+  // Auto-expand Posts group when navigating to a blog route
+  useEffect(() => {
+    if (location.pathname.startsWith("/super-admin/blog")) setPostsOpen(true);
+  }, [location.pathname]);
+
   const NavContent = () => (
     <div className="flex flex-col h-full">
       {/* ── Sidebar header: org logo if set, else default ArthaLeads branding ── */}
@@ -281,29 +296,83 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-        {filtered.map(({ to, label, icon: Icon, end: endMatch }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={endMatch !== undefined ? endMatch : to === "/"}
-            onClick={() => setOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all border-r-2 ${
-                isActive
-                  ? "font-semibold"
-                  : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 border-transparent"
-              }`
-            }
-            style={({ isActive }) => isActive ? {
-              color: "var(--app-primary)",
-              background: "rgba(var(--app-primary-rgb), 0.10)",
-              borderColor: "var(--app-primary)",
-            } : {}}
-          >
-            <Icon className="w-4 h-4 flex-shrink-0" />
-            {label}
-          </NavLink>
-        ))}
+        {filtered.map((item) => {
+          if (item.children) {
+            // ── Collapsible group (e.g. Posts) ──────────────────────────────
+            const isGroupActive = item.children.some(c => location.pathname === c.to || location.pathname.startsWith(c.to + "/"));
+            const expanded = item.label === "Posts" ? postsOpen : false;
+            const toggle   = item.label === "Posts" ? () => setPostsOpen(v => !v) : () => {};
+            return (
+              <div key={item.label}>
+                <button
+                  onClick={toggle}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all border-r-2 ${
+                    isGroupActive
+                      ? "font-semibold border-r-2"
+                      : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 border-transparent"
+                  }`}
+                  style={isGroupActive ? { color: "var(--app-primary)", background: "rgba(var(--app-primary-rgb),0.10)", borderColor: "var(--app-primary)" } : {}}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform flex-shrink-0 ${expanded ? "rotate-180" : ""}`} />
+                </button>
+                {expanded && (
+                  <div className="ml-4 mt-0.5 space-y-0.5 border-l pl-3" style={{ borderColor: "var(--app-border)" }}>
+                    {item.children.map(({ to, label, icon: CIcon, end: endMatch }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={endMatch !== undefined ? endMatch : true}
+                        onClick={() => setOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                            isActive
+                              ? "font-semibold"
+                              : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                          }`
+                        }
+                        style={({ isActive }) => isActive ? {
+                          color: "var(--app-primary)",
+                          background: "rgba(var(--app-primary-rgb),0.10)",
+                        } : {}}
+                      >
+                        <CIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                        {label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // ── Regular nav link ─────────────────────────────────────────────
+          const { to, label, icon: Icon, end: endMatch } = item;
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={endMatch !== undefined ? endMatch : to === "/"}
+              onClick={() => setOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all border-r-2 ${
+                  isActive
+                    ? "font-semibold"
+                    : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 border-transparent"
+                }`
+              }
+              style={({ isActive }) => isActive ? {
+                color: "var(--app-primary)",
+                background: "rgba(var(--app-primary-rgb), 0.10)",
+                borderColor: "var(--app-primary)",
+              } : {}}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" />
+              {label}
+            </NavLink>
+          );
+        })}
       </nav>
 
       {/* ── Trial countdown — compact single-line strip ── */}

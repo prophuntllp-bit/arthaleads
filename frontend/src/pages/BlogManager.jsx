@@ -86,7 +86,7 @@ export default function BlogManager() {
             <PenLine className="h-5 w-5 text-orange-500" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-app leading-none">Blog Manager</h1>
+            <h1 className="text-lg font-bold text-app leading-none">Posts</h1>
             <p className="text-xs text-app-soft mt-0.5">{total} post{total !== 1 ? "s" : ""}</p>
           </div>
         </div>

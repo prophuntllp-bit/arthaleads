@@ -1,5 +1,6 @@
 const BlogPost     = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
+const BlogTag      = require("../models/BlogTag");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadBlogImage } = require("../utils/upload");
 
@@ -280,6 +281,36 @@ ${allEntries
       if (inUse) return next(new AppError("Category is used by one or more posts — reassign them first", 400));
       await BlogCategory.findByIdAndDelete(req.params.id);
       res.json({ success: true, message: "Category deleted" });
+    } catch (err) { next(err); }
+  },
+
+  // ── PUBLIC: list tags ────────────────────────────────────────────────────────
+  async getTags(req, res, next) {
+    try {
+      const tags = await BlogTag.find().sort({ name: 1 });
+      res.json({ success: true, tags });
+    } catch (err) { next(err); }
+  },
+
+  // ── ADMIN: create tag ────────────────────────────────────────────────────────
+  async createTag(req, res, next) {
+    try {
+      const { name, description } = req.body;
+      if (!name?.trim()) return next(new AppError("Tag name is required", 400));
+      const slug = slugify(name.trim());
+      if (!slug) return next(new AppError("Invalid tag name", 400));
+      const existing = await BlogTag.findOne({ slug });
+      if (existing) return next(new AppError("Tag with this name already exists", 400));
+      const tag = await BlogTag.create({ name: name.trim(), slug, description: description?.trim() || "" });
+      res.status(201).json({ success: true, tag });
+    } catch (err) { next(err); }
+  },
+
+  // ── ADMIN: delete tag ────────────────────────────────────────────────────────
+  async deleteTag(req, res, next) {
+    try {
+      await BlogTag.findByIdAndDelete(req.params.id);
+      res.json({ success: true, message: "Tag deleted" });
     } catch (err) { next(err); }
   },
 };
