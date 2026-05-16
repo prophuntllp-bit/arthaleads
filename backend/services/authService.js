@@ -345,21 +345,23 @@ const authService = {
     const pl_visits     = mapFrom(pipelineFacet?.siteVisits, "count");
     const pl_new        = mapFrom(pipelineFacet?.newLeads,   "count");
 
-    // ── Project pipeline (ProjectLead model, keyed by importedBy) ────────────
+    // ── Project pipeline (ProjectLead model, keyed by remarkUpdatedBy) ──────────
+    // remarkUpdatedBy is set when an agent actually calls/contacts a lead.
+    // importedBy is NOT used — that just tracks who bulk-uploaded, not who worked.
     const [projectFacet] = await ProjectLead.aggregate([
-      { $match: { orgId, importedBy: { $in: userIds } } },
+      { $match: { orgId, remarkUpdatedBy: { $in: userIds } } },
       { $facet: {
-        assigned:        [{ $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
-        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        worked:          [{ $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
       }},
     ]);
 
-    const pr_assigned        = mapFrom(projectFacet?.assigned,        "count");
+    const pr_assigned        = mapFrom(projectFacet?.worked,          "count");
     const pr_booked          = mapFrom(projectFacet?.booked,          "count");
     const pr_siteVisitBooked = mapFrom(projectFacet?.siteVisitBooked, "count");
     const pr_interested      = mapFrom(projectFacet?.interested,      "count");
