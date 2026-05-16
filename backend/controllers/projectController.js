@@ -56,12 +56,15 @@ const projectController = {
 
   async getLeads(req, res, next) {
     try {
-      const { page, limit, search, bookingIn } = req.query;
+      const { page, limit, search, bookingIn, isProspective, followUpFrom, followUpTo } = req.query;
       const result = await projectService.getLeads(req.params.id, {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 50,
         search: search || "",
         bookingIn: bookingIn || null,
+        isProspective: isProspective || false,
+        followUpFrom: followUpFrom || null,
+        followUpTo: followUpTo || null,
       }, req.user);
       res.json({ success: true, ...result });
     } catch (err) { next(err); }
