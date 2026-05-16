@@ -84,10 +84,8 @@ const blogController = {
         .limit(1000);
 
       const staticPages = [
-        { url: "/",        priority: "1.0", changefreq: "weekly" },
-        { url: "/blog",    priority: "0.9", changefreq: "daily"  },
-        { url: "/privacy", priority: "0.3", changefreq: "yearly" },
-        { url: "/terms",   priority: "0.3", changefreq: "yearly" },
+        { url: "/",     priority: "1.0", changefreq: "weekly" },
+        { url: "/blog", priority: "0.9", changefreq: "daily"  },
       ];
 
       const blogEntries = posts.map((p) => ({
