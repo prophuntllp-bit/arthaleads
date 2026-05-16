@@ -344,9 +344,8 @@ export default function ProjectDetail() {
   const [leadsLimit, setLeadsLimit] = useState(10);
   const [bookingFilter, setBookingFilter] = useState("");
 
-  // Prospective = leads marked Interested or Site Visit Booked only
-  const PROSP_FILTER = "Interested,Site Visit Booked";
-  const PROSP_VALUES = new Set(["Interested", "Site Visit Booked"]);
+  // Prospective entry statuses — used only for badge pre-fetch fallback
+  const PROSP_ENTRY = "Interested,Site Visit Booked";
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
@@ -370,7 +369,7 @@ export default function ProjectDetail() {
     api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1 } })
       .then((r) => setLeadsTotal(r.data.total))
       .catch(() => {});
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
       .then((r) => setProspTotal(r.data.total))
       .catch(() => {});
   }, [id]);
@@ -391,12 +390,13 @@ export default function ProjectDetail() {
       page: prospPage,
       limit: PROSP_LIMIT,
       search: prospSearch,
-      // "All Prospective" uses base Interested+Site Visit filter; specific status uses that value directly
-      bookingIn: prospBookingFilter || PROSP_FILTER,
+      isProspective: true,
     };
-    // Send ISO strings so the backend can parse them; followUpTo gets end-of-day on backend
-    if (prospDateFrom) params.followUpFrom = new Date(prospDateFrom).toISOString();
-    if (prospDateTo)   params.followUpTo   = prospDateTo; // backend adds T23:59:59Z
+    // Filter pills narrow within the prospective scope
+    if (prospBookingFilter) params.bookingIn = prospBookingFilter;
+    // Date range
+    if (prospDateFrom) params.followUpFrom = prospDateFrom;
+    if (prospDateTo)   params.followUpTo   = prospDateTo;
     api.get(`/projects/${id}/leads`, { params })
       .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
       .catch(() => toast.error("Failed to load prospective leads"))
@@ -482,12 +482,14 @@ export default function ProjectDetail() {
 
   const handleLeadUpdated = (updated) => {
     setLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-    // Refresh prospective count if booking status may have changed
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
+    // Refresh prospective badge count
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
       .then((r) => setProspTotal(r.data.total)).catch(() => {});
     // If currently on prospective tab, also refresh the list
     if (tab === "prospective") {
-      api.get(`/projects/${id}/leads`, { params: { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, bookingIn: PROSP_FILTER } })
+      const params = { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, isProspective: true };
+      if (prospBookingFilter) params.bookingIn = prospBookingFilter;
+      api.get(`/projects/${id}/leads`, { params })
         .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
         .catch(() => {});
     }
@@ -948,12 +950,16 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Status filter pills — scoped to Prospective only */}
+          {/* Status filter pills — all scoped to isProspective leads only */}
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",        text: "text-app-soft" },
-              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",      text: "text-blue-600 dark:text-blue-400" },
-              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",  text: "text-violet-600 dark:text-violet-400" },
+              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",          text: "text-app-soft" },
+              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",        text: "text-blue-600 dark:text-blue-400" },
+              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",    text: "text-violet-600 dark:text-violet-400" },
+              { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",      text: "text-amber-600 dark:text-amber-400" },
+              { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",      text: "text-green-600 dark:text-green-400" },
+              { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",          text: "text-red-500 dark:text-red-400" },
+              { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",           text: "text-gray-500 dark:text-gray-400" },
             ].map((f) => {
               const active = prospBookingFilter === f.value;
               return (
@@ -1039,16 +1045,8 @@ export default function ProjectDetail() {
                     <tbody>
                       {prospLeads.map((lead, i) => {
                         const handleProspUpdate = (updated) => {
-                          const stillProsp = PROSP_VALUES.has(updated.booking || "");
-                          if (!stillProsp) {
-                            setProspLeads((prev) => prev.filter((l) => l._id !== updated._id));
-                            setProspTotal((t) => Math.max(0, t - 1));
-                          } else {
-                            setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-                          }
-                          // Refresh badge count on tab
-                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, bookingIn: PROSP_FILTER } })
-                            .then((r) => setProspTotal(r.data.total)).catch(() => {});
+                          // Lead always stays in Prospective once it enters — just update in place
+                          setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
                         };
                         return (
                           <tr key={lead._id} className="group">

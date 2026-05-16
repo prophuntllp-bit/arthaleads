@@ -145,19 +145,31 @@ const projectService = {
     return { inserted: insertedCount, skipped: invalid + writeErrors, duplicates };
   },
 
-  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null, followUpFrom = null, followUpTo = null }, user) {
+  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null, followUpFrom = null, followUpTo = null, isProspective = false }, user) {
     // Verify the project belongs to the requesting user's org
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
+
     const filter = { project: projectId };
+
     if (search) {
       const re = new RegExp(search, "i");
       filter.$or = [{ name: re }, { phone: re }, { email: re }];
     }
-    // bookingIn = comma-separated values e.g. "Interested,Site Visit Booked"
-    if (bookingIn) {
+
+    if (isProspective === "true" || isProspective === true) {
+      // Prospective scope: flag set OR (for existing data) originally Interested/Site Visit Booked
+      const prospScope = { $or: [{ isProspective: true }, { booking: { $in: ["Interested", "Site Visit Booked"] } }] };
+      if (bookingIn) {
+        // Further narrow by specific status within Prospective
+        filter.$and = [prospScope, { booking: { $in: bookingIn.split(",").map((v) => v.trim()) } }];
+      } else {
+        filter.$and = [prospScope];
+      }
+    } else if (bookingIn) {
       filter.booking = { $in: bookingIn.split(",").map((v) => v.trim()) };
     }
+
     if (followUpFrom || followUpTo) {
       filter.followUp = {};
       if (followUpFrom) filter.followUp.$gte = new Date(followUpFrom);
@@ -211,6 +223,11 @@ const projectService = {
     // Only update fields that exist in the ProjectLead schema
     const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking"];
     allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
+
+    // One-way flag: once Interested or Site Visit Booked, always Prospective
+    if (data.booking === "Interested" || data.booking === "Site Visit Booked") {
+      lead.isProspective = true;
+    }
 
     // Track who set the follow-up so notifications go to the right person
     if (data.followUp || data.followUp2) {

@@ -47,6 +47,9 @@ const projectLeadSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Set to true when booking reaches Interested/Site Visit Booked — never unset
+    isProspective: { type: Boolean, default: false, index: true },
+
     importedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
