@@ -136,10 +136,10 @@ export default function Performance() {
                 <div className="flex items-center gap-2 px-4 py-2.5" style={{ background: "var(--app-surface-low)" }}>
                   <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
                   <span className="text-xs font-semibold text-app">Project Pipeline</span>
-                  <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} contacted</span>
+                  <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} leads</span>
                 </div>
                 <div className="p-3 grid grid-cols-4 gap-2">
-                  <SmallTile label="Contacted"    value={project.totalAssigned   || 0} />
+                  <SmallTile label="Assigned"     value={project.totalAssigned   || 0} />
                   <SmallTile label="Interested"   value={project.interested      || 0} />
                   <SmallTile label="Site Visit"   value={project.siteVisitBooked || 0} />
                   <SmallTile label="Booked"       value={project.booked          || 0} highlight={project.booked > 0} />

@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Lead        = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const Project     = require("../models/Project");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
@@ -345,23 +346,35 @@ const authService = {
     const pl_visits     = mapFrom(pipelineFacet?.siteVisits, "count");
     const pl_new        = mapFrom(pipelineFacet?.newLeads,   "count");
 
-    // ── Project pipeline (ProjectLead model, keyed by remarkUpdatedBy) ──────────
-    // remarkUpdatedBy is set when an agent actually calls/contacts a lead.
-    // importedBy is NOT used — that just tracks who bulk-uploaded, not who worked.
+    // ── Project pipeline — keyed by Project.assignedTo ───────────────────────
+    // The project's assignedTo array tells us which agents are responsible for
+    // working those leads. We $lookup the parent project, $unwind assignedTo,
+    // then group by the assigned user — regardless of who imported the leads.
     const [projectFacet] = await ProjectLead.aggregate([
-      { $match: { orgId, remarkUpdatedBy: { $in: userIds } } },
+      { $match: { orgId } },
+      { $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "proj",
+      }},
+      { $unwind: "$proj" },
+      // One row per (lead × assigned user)
+      { $unwind: "$proj.assignedTo" },
+      // Only count for users in our visible team
+      { $match: { "proj.assignedTo": { $in: userIds } } },
       { $facet: {
-        worked:          [{ $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
-        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$remarkUpdatedBy", count: { $sum: 1 } } }],
+        assigned:        [{ $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
       }},
     ]);
 
-    const pr_assigned        = mapFrom(projectFacet?.worked,          "count");
+    const pr_assigned        = mapFrom(projectFacet?.assigned,        "count");
     const pr_booked          = mapFrom(projectFacet?.booked,          "count");
     const pr_siteVisitBooked = mapFrom(projectFacet?.siteVisitBooked, "count");
     const pr_interested      = mapFrom(projectFacet?.interested,      "count");
