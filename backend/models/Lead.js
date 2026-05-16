@@ -6,8 +6,8 @@ const mongoose = require("mongoose");
 const noteSchema = new mongoose.Schema(
   {
     text: { type: String, required: true, trim: true },
-    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    addedByName: { type: String }, // denormalized for fast display
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // optional — system/webhook notes have no user
+    addedByName: { type: String, default: "" },
   },
   { timestamps: true }
 );
