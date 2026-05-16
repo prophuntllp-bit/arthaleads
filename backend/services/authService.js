@@ -2,7 +2,8 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const Lead = require("../models/Lead");
+const Lead        = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
@@ -318,21 +319,9 @@ const authService = {
       ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
       : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
 
-    const users = await User.find(memberMatch).select("name email role avatar isActive");
-    const userIds = users.map((user) => user._id);
-
-    const orgId = actor.orgId;
-
-    // Single aggregation with $facet — 4x fewer round trips to MongoDB
-    const [facetResult] = await Lead.aggregate([
-      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
-      { $facet: {
-        assigned:   [{ $group: { _id: "$assignedTo", totalAssigned: { $sum: 1 } } }],
-        closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", closedWon:  { $sum: 1 } } }],
-        siteVisits: [{ $match: { status: "Site Visit"  } }, { $group: { _id: "$assignedTo", siteVisits: { $sum: 1 } } }],
-        newLeads:   [{ $match: { status: "New"         } }, { $group: { _id: "$assignedTo", newLeads:   { $sum: 1 } } }],
-      }},
-    ]);
+    const users   = await User.find(memberMatch).select("name email role avatar isActive");
+    const userIds = users.map((u) => u._id);
+    const orgId   = actor.orgId;
 
     const mapFrom = (items, field) =>
       (items || []).reduce((acc, item) => {
@@ -340,25 +329,80 @@ const authService = {
         return acc;
       }, {});
 
-    const assignedMap = mapFrom(facetResult?.assigned,   "totalAssigned");
-    const wonMap      = mapFrom(facetResult?.closedWon,  "closedWon");
-    const visitMap    = mapFrom(facetResult?.siteVisits, "siteVisits");
-    const newMap      = mapFrom(facetResult?.newLeads,   "newLeads");
+    // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
+    const [pipelineFacet] = await Lead.aggregate([
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
+      { $facet: {
+        assigned:   [{ $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        siteVisits: [{ $match: { status: "Site Visit"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        newLeads:   [{ $match: { status: "New"         } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+      }},
+    ]);
+
+    const pl_assigned   = mapFrom(pipelineFacet?.assigned,   "count");
+    const pl_won        = mapFrom(pipelineFacet?.closedWon,  "count");
+    const pl_visits     = mapFrom(pipelineFacet?.siteVisits, "count");
+    const pl_new        = mapFrom(pipelineFacet?.newLeads,   "count");
+
+    // ── Project pipeline (ProjectLead model, keyed by importedBy) ────────────
+    const [projectFacet] = await ProjectLead.aggregate([
+      { $match: { orgId, importedBy: { $in: userIds } } },
+      { $facet: {
+        assigned:        [{ $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$importedBy", count: { $sum: 1 } } }],
+      }},
+    ]);
+
+    const pr_assigned        = mapFrom(projectFacet?.assigned,        "count");
+    const pr_booked          = mapFrom(projectFacet?.booked,          "count");
+    const pr_siteVisitBooked = mapFrom(projectFacet?.siteVisitBooked, "count");
+    const pr_interested      = mapFrom(projectFacet?.interested,      "count");
+    const pr_callBack        = mapFrom(projectFacet?.callBack,        "count");
+    const pr_notInterested   = mapFrom(projectFacet?.notInterested,   "count");
+    const pr_notReachable    = mapFrom(projectFacet?.notReachable,    "count");
 
     return users.map((user) => {
       const id = user._id.toString();
-      const totalAssigned = assignedMap[id] || 0;
-      const closedWon = wonMap[id] || 0;
-      const siteVisits = visitMap[id] || 0;
-      const newLeads = newMap[id] || 0;
+
+      // Pipeline stats
+      const pipeline = {
+        totalAssigned:  pl_assigned[id] || 0,
+        newLeads:       pl_new[id]       || 0,
+        siteVisits:     pl_visits[id]    || 0,
+        closedWon:      pl_won[id]       || 0,
+      };
+      pipeline.conversionRate = pipeline.totalAssigned
+        ? Number(((pipeline.closedWon / pipeline.totalAssigned) * 100).toFixed(1)) : 0;
+
+      // Project pipeline stats
+      const project = {
+        totalAssigned:    pr_assigned[id]        || 0,
+        interested:       pr_interested[id]      || 0,
+        siteVisitBooked:  pr_siteVisitBooked[id] || 0,
+        booked:           pr_booked[id]          || 0,
+        callBack:         pr_callBack[id]        || 0,
+        notInterested:    pr_notInterested[id]   || 0,
+        notReachable:     pr_notReachable[id]    || 0,
+      };
+      project.conversionRate = project.totalAssigned
+        ? Number(((project.booked / project.totalAssigned) * 100).toFixed(1)) : 0;
 
       return {
         ...user.toJSON(),
-        totalAssigned,
-        closedWon,
-        siteVisits,
-        newLeads,
-        conversionRate: totalAssigned ? Number(((closedWon / totalAssigned) * 100).toFixed(1)) : 0,
+        // top-level totals (combined) for summary cards
+        totalAssigned: pipeline.totalAssigned + project.totalAssigned,
+        siteVisits:    pipeline.siteVisits    + project.siteVisitBooked,
+        closedWon:     pipeline.closedWon     + project.booked,
+        newLeads:      pipeline.newLeads,
+        // per-pipeline breakdown
+        pipeline,
+        project,
       };
     });
   },
