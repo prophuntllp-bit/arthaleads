@@ -47,7 +47,10 @@ self.addEventListener("push", (e) => {
   const showNotif = self.registration.showNotification(title, {
     body,
     icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-72x72.png",
+    // badge must be a white-on-transparent monochrome PNG for Android status bar.
+    // Using the full-colour 192px icon here so it renders correctly instead of
+    // showing as an empty white box.
+    badge: "/icons/icon-192x192.png",
     vibrate: [200, 100, 200],
     tag: `propcrm-${Date.now()}`,
     silent: false,

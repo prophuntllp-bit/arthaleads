@@ -24,12 +24,27 @@ async function notifyLeads(leads, labelFn) {
       data: { url: "/followups" },
     };
 
-    // Priority: person who SET the follow-up → assignedTo → importedBy
-    // This ensures only the person who actually set the reminder gets notified.
-    const recipient = lead.followUpSetBy || lead.assignedTo || lead.importedBy || null;
-    if (recipient) {
-      await sendPushToUser(recipient, payload);
+    // Priority for project leads:
+    //   1. followUpSetBy  — person who explicitly set this follow-up date
+    //   2. project.assignedTo[] — agents assigned to work this project
+    //   3. (importedBy is intentionally skipped — that's an admin action, not work)
+    //
+    // Priority for main pipeline leads:
+    //   1. followUpSetBy → assignedTo
+
+    if (lead.followUpSetBy) {
+      // Someone explicitly set this follow-up — notify only them
+      await sendPushToUser(lead.followUpSetBy, payload);
+    } else if (lead.project?.assignedTo?.length) {
+      // Project lead with no explicit setter — notify all agents assigned to that project
+      for (const userId of lead.project.assignedTo) {
+        await sendPushToUser(userId, payload);
+      }
+    } else if (lead.assignedTo) {
+      // Main pipeline lead with an assigned agent
+      await sendPushToUser(lead.assignedTo, payload);
     }
+    // If none of the above match, skip silently (no notification to wrong people)
   }
 }
 
@@ -50,7 +65,7 @@ async function runDailyReminder() {
       { followUp:  { $gte: start, $lte: end } },
       { followUp2: { $gte: start, $lte: end } },
     ],
-  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy followUpSetBy").lean();
+  }).populate("project", "orgId assignedTo").select("name phone followUp followUp2 project orgId followUpSetBy").lean();
 
   // Deduplicate project leads (same _id might match both followUp and followUp2)
   const seen = new Set();
@@ -95,7 +110,7 @@ async function runUpcomingReminder() {
       { followUp:  { $gte: windowStart, $lt: windowEnd } },
       { followUp2: { $gte: windowStart, $lt: windowEnd } },
     ],
-  }).populate("project", "orgId").select("name phone followUp followUp2 project orgId importedBy followUpSetBy").lean();
+  }).populate("project", "orgId assignedTo").select("name phone followUp followUp2 project orgId followUpSetBy").lean();
 
   // Deduplicate (lead with both dates in window fires only one alert)
   const seen = new Set();
