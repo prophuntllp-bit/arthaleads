@@ -14,13 +14,9 @@ const projectService = {
   async getAll(user) {
     const filter = { isArchived: false, orgId: user.orgId };
 
-    // Agents can only see projects assigned to them (or unassigned)
+    // Agents can ONLY see projects explicitly assigned to them
     if (user.role === "agent") {
-      filter.$or = [
-        { assignedTo: { $size: 0 } },
-        { assignedTo: { $exists: false } },
-        { assignedTo: user._id },
-      ];
+      filter.assignedTo = user._id;
     }
 
     const projects = await Project.find(filter)
@@ -49,13 +45,9 @@ const projectService = {
   async getById(id, user) {
     const filter = { _id: id, isArchived: false, orgId: user.orgId };
 
-    // Agents can only access projects assigned to them (or unassigned)
+    // Agents can ONLY access projects explicitly assigned to them
     if (user.role === "agent") {
-      filter.$or = [
-        { assignedTo: { $size: 0 } },
-        { assignedTo: { $exists: false } },
-        { assignedTo: user._id },
-      ];
+      filter.assignedTo = user._id;
     }
 
     const project = await Project.findOne(filter)
