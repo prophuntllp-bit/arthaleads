@@ -1,4 +1,4 @@
-// server.js — Production-ready CRM entry point
+// server.js — Production-ready CRM entry point (v3)
 // ⚠️  Sentry MUST be the very first import — before express, mongoose, everything
 require("./instrument");
 
