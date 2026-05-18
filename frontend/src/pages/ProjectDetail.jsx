@@ -798,6 +798,7 @@ export default function ProjectDetail() {
                         <th>Remark</th>
                         <th>Status</th>
                         <th>Updated By</th>
+                        <th>Assigned To</th>
                         <th></th>
                       </tr>
                     </thead>
@@ -845,6 +846,25 @@ export default function ProjectDetail() {
                             {lead.remarkUpdatedBy?.name || "—"}
                             {lead.remarkUpdatedAt && (
                               <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>
+                            )}
+                          </td>
+                          <td className="text-xs whitespace-nowrap">
+                            {project.assignedTo?.length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                {project.assignedTo
+                                  .map((m) => (typeof m === "object" ? m.name : null))
+                                  .filter(Boolean)
+                                  .map((name, idx) => (
+                                    <span key={idx} className="inline-flex items-center gap-1">
+                                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-500/20 text-orange-500 text-[9px] font-bold flex-shrink-0">
+                                        {name[0]?.toUpperCase()}
+                                      </span>
+                                      <span className="text-app font-medium">{name}</span>
+                                    </span>
+                                  ))}
+                              </div>
+                            ) : (
+                              <span className="text-app-soft">—</span>
                             )}
                           </td>
                           <td>

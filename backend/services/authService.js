@@ -161,7 +161,12 @@ const authService = {
   },
 
   async getAllAgents(orgId) {
-    return User.find({ orgId, isActive: true, role: "agent" }).select("name email role phone avatar").lean();
+    // Return all active team members (agents + managers + admins) so any of them
+    // can be assigned to a project. Excludes super_admin (system-level role).
+    return User.find({ orgId, isActive: true, role: { $in: ["agent", "manager", "admin"] } })
+      .select("name email role phone avatar")
+      .sort({ name: 1 })
+      .lean();
   },
 
   async updateProfile(userId, updates, actor) {

@@ -355,9 +355,15 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           </div>
         </div>
 
-        {/* ── Team Access ── */}
+        {/* ── Assign Agents ── */}
         <div className="space-y-3">
-          <p className="stitch-kicker">Team Access</p>
+          <div>
+            <p className="stitch-kicker">Assign Agents</p>
+            <p className="text-xs text-app-soft mt-0.5">
+              Select team members responsible for working on this project's leads.
+              Their performance will be tracked under this project.
+            </p>
+          </div>
 
           {/* Member picker */}
           <div className="flex gap-2">
@@ -366,11 +372,13 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
               value={memberSelect}
               onChange={(e) => setMemberSelect(e.target.value)}
             >
-              <option value="">Add member...</option>
+              <option value="">— Select a team member —</option>
               {allAgents
                 .filter((a) => !form.assignedTo.some((m) => m._id === a._id))
                 .map((a) => (
-                  <option key={a._id} value={a._id}>{a.name}{a.role ? ` (${a.role})` : ""}</option>
+                  <option key={a._id} value={a._id}>
+                    {a.name} ({a.role})
+                  </option>
                 ))}
             </select>
             <button type="button" onClick={addMember} className="btn-secondary flex-shrink-0">
@@ -378,26 +386,29 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </button>
           </div>
 
-          {/* Selected member chips */}
+          {/* Assigned member chips */}
           {form.assignedTo.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {form.assignedTo.map((m) => (
-                <span key={m._id} className="stitch-pill gap-1">
+                <span key={m._id}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500/20 text-orange-500 text-[10px] font-bold">
+                    {m.name?.[0]?.toUpperCase()}
+                  </span>
                   {m.name}
                   <button type="button" onClick={() => removeMember(m._id)}
-                    className="hover:text-red-500 transition-colors">
+                    className="ml-0.5 hover:text-red-500 transition-colors">
                     <X className="h-3 w-3" />
                   </button>
                 </span>
               ))}
             </div>
-          ) : null}
-
-          <p className="text-xs text-app-soft">
-            {form.assignedTo.length > 0
-              ? "Only assigned members (and admins/managers) can see this project."
-              : "Visible to all team members."}
-          </p>
+          ) : (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              ⚠ No agents assigned yet — follow-up notifications will not be sent for this project's leads.
+            </p>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
