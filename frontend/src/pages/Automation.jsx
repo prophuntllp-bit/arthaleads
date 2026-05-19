@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -174,15 +174,35 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     }
   };
 
+  const popupTimerRef = useRef(null);
+
+  // Clean up the popup monitor on unmount
+  useEffect(() => () => clearInterval(popupTimerRef.current), []);
+
   const openOAuth = () => {
     setConnecting(true);
-    // Cookie (httpOnly) is sent automatically by the browser on same-origin navigation
     const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect`;
     const popup = window.open(url, "arthaleads-fb-oauth", "width=720,height=760,resizable=yes,scrollbars=yes");
+
     if (!popup) {
       setConnecting(false);
       toast.error("Please allow popups for this site, then try again.");
+      return;
     }
+
+    // Poll every 600ms — if the popup closes without sending a result,
+    // reset the button so the user can retry instead of being stuck forever.
+    clearInterval(popupTimerRef.current);
+    popupTimerRef.current = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(popupTimerRef.current);
+        // Only reset if we haven't already received a result (which sets connecting=false)
+        setConnecting((prev) => {
+          if (prev) toast("Facebook window closed. Click 'Continue with Facebook' to try again.", { icon: "ℹ️" });
+          return false;
+        });
+      }
+    }, 600);
   };
 
   const handleSave = async () => {
