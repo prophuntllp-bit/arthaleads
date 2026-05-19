@@ -5,6 +5,12 @@ const { AppError } = require("../middlewares/errorHandler");
 const { uploadBlogImage } = require("../utils/upload");
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+// Escape special regex characters in user-supplied search strings to prevent ReDoS
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function slugify(text) {
   return text
     .toLowerCase()
@@ -33,7 +39,7 @@ const blogController = {
       const filter = { status: "published" };
       if (category) filter.category = category;
       if (tag)      filter.tags = tag;
-      if (search)   filter.title = { $regex: search, $options: "i" };
+      if (search)   filter.title = { $regex: escapeRegex(search), $options: "i" };
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [posts, total] = await Promise.all([

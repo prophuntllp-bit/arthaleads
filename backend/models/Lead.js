@@ -109,7 +109,8 @@ const leadSchema = new mongoose.Schema(
     },
 
     // ── Ownership & Assignment ────────────────────────────────────────────────
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // required removed — external webhook leads (Facebook, Website) have no CRM creator
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedToName: { type: String, default: "" }, // denormalized
 

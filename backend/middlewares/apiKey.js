@@ -2,7 +2,7 @@
 // Set VOICE_API_KEY in Railway environment variables
 
 module.exports = function apiKeyAuth(req, res, next) {
-  const key = req.headers["x-api-key"] || req.query.api_key;
+  const key = req.headers["x-api-key"];
   if (!process.env.VOICE_API_KEY) {
     return res.status(503).json({ success: false, message: "Voice API not configured" });
   }

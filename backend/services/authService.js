@@ -222,9 +222,12 @@ const authService = {
     return user;
   },
 
-  async updateUser(targetId, updates, adminId) {
+  async updateUser(targetId, updates, adminId, adminOrgId) {
     const user = await User.findById(targetId).select("+password");
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
     if (targetId === adminId.toString() && updates.isActive === false) {
       throw new AppError("You cannot deactivate yourself", 400);
     }
@@ -241,22 +244,28 @@ const authService = {
     return user;
   },
 
-  async deleteUser(targetId, adminId) {
+  async deleteUser(targetId, adminId, adminOrgId) {
     if (targetId === adminId.toString()) {
       throw new AppError("You cannot delete yourself", 400);
     }
 
     const user = await User.findById(targetId);
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
 
     await user.deleteOne();
     return true;
   },
 
-  async toggleUserActive(targetId, adminId) {
+  async toggleUserActive(targetId, adminId, adminOrgId) {
     if (targetId === adminId.toString()) throw new AppError("Cannot deactivate yourself", 400);
     const user = await User.findById(targetId);
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
     user.isActive = !user.isActive;
     await user.save({ validateBeforeSave: false });
     return user;

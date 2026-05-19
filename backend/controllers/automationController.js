@@ -25,7 +25,8 @@ const crypto = require("crypto");
 const Automation = require("../models/Automation");
 
 function generateWebsiteToken() {
-  return "AW-" + crypto.randomBytes(5).toString("hex").toUpperCase().slice(0, 8);
+  // 192 bits of entropy — URL-safe hex, no need for slice
+  return "AW-" + crypto.randomBytes(24).toString("hex");
 }
 
 const automationController = {
@@ -137,7 +138,8 @@ const automationController = {
       // fall back to query param for backward compatibility
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
-      const state = automationService.createFacebookState({ userId: user._id.toString(), crmToken: rawToken });
+      // Pass only userId — never embed the session token in the OAuth state (URL-visible)
+      const state = automationService.createFacebookState({ userId: user._id.toString() });
       const authUrl = automationService.getFacebookAuthUrl(state);
       res.redirect(authUrl);
     } catch (err) {

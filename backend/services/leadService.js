@@ -8,6 +8,11 @@ const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 
+// Escape special regex characters in user-supplied search strings to prevent ReDoS
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const getDateRangeFilter = (dateRange, from, to) => {
   const now = new Date();
 
@@ -223,6 +228,15 @@ const leadService = {
     const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
 
+    // Agents can only modify leads assigned to or created by them
+    if (
+      user.role === "agent" &&
+      lead.assignedTo?.toString() !== user._id.toString() &&
+      lead.createdBy?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("Access denied", 403);
+    }
+
     // Track status change
     if (updates.status && updates.status !== lead.status) {
       logActivity(
@@ -277,6 +291,15 @@ const leadService = {
   async delete(id, user) {
     const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
+
+    // Agents can only delete leads assigned to or created by them
+    if (
+      user.role === "agent" &&
+      lead.assignedTo?.toString() !== user._id.toString() &&
+      lead.createdBy?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("Access denied", 403);
+    }
     if (user.role === "super_admin") {
       await lead.deleteOne();
     } else {
@@ -289,12 +312,17 @@ const leadService = {
   // ── Bulk Delete ───────────────────────────────────────────────────────────
   // super_admin → permanent hard delete; everyone else → soft delete (dump)
   async bulkDelete(ids, user) {
+    // Agents can only delete leads assigned to or created by them
+    const ownerFilter = user.role === "agent"
+      ? { $or: [{ assignedTo: user._id }, { createdBy: user._id }] }
+      : {};
+
     if (user.role === "super_admin") {
       const result = await Lead.deleteMany({ _id: { $in: ids }, orgId: user.orgId });
       return result.deletedCount;
     }
     const result = await Lead.updateMany(
-      { _id: { $in: ids }, orgId: user.orgId },
+      { _id: { $in: ids }, orgId: user.orgId, ...ownerFilter },
       { $set: { isDeleted: true, deletedAt: new Date() } }
     );
     return result.modifiedCount;
@@ -304,6 +332,15 @@ const leadService = {
   async addNote(id, text, user) {
     const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
+
+    // Agents can only add notes to leads assigned to or created by them
+    if (
+      user.role === "agent" &&
+      lead.assignedTo?.toString() !== user._id.toString() &&
+      lead.createdBy?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("Access denied", 403);
+    }
 
     lead.notes.push({ text, addedBy: user._id, addedByName: user.name });
     logActivity(lead, "note_added", `Note added by ${user.name}`, user);
@@ -409,7 +446,7 @@ const leadService = {
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (search) {
-      const rx = { $regex: search, $options: "i" };
+      const rx = { $regex: escapeRegex(search), $options: "i" };
       leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
     }
 
@@ -420,7 +457,7 @@ const leadService = {
       projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
     }
     if (search) {
-      const rx = { $regex: search, $options: "i" };
+      const rx = { $regex: escapeRegex(search), $options: "i" };
       projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
     }
     if (user.role === "agent") projFilter.importedBy = user._id;

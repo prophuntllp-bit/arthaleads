@@ -233,7 +233,12 @@ const leadController = {
       }
       const headers = Object.keys(rows[0]);
       // Escape double-quotes and strip newlines so each row stays on one line
-      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""').replace(/[\r\n]+/g, " ")}"`;
+      const escape = (v) => {
+        let s = String(v ?? "").replace(/"/g, '""').replace(/[\r\n]+/g, " ");
+        // Neutralize CSV formula injection (=, +, -, @, tab, carriage return at start)
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return `"${s}"`;
+      };
       const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\r\n");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="leads-${date}.csv"`);

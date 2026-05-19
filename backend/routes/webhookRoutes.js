@@ -16,7 +16,15 @@ const router = express.Router();
 // before parsing. Throws 403 if the signature doesn't match FB_APP_SECRET.
 function verifyFbSignature(req, res, buf) {
   const sig = req.headers["x-hub-signature-256"];
-  if (!sig || !process.env.FB_APP_SECRET) return; // skip if unconfigured
+  if (!process.env.FB_APP_SECRET) {
+    logger.warn("Facebook webhook: FB_APP_SECRET not configured — webhook signature verification disabled");
+    return; // allow in dev; configure FB_APP_SECRET in prod
+  }
+  if (!sig) {
+    const err = new Error("Missing X-Hub-Signature-256 header");
+    err.status = 403;
+    throw err;
+  }
   const expected = "sha256=" + crypto
     .createHmac("sha256", process.env.FB_APP_SECRET)
     .update(buf)
@@ -82,8 +90,10 @@ async function findFacebookAutomationByPayload(leadData) {
     if (pageMatch) return pageMatch;
   }
 
-  // Priority 3: any automation with no page restriction
-  return candidates.find((item) => !item.pageId) || null;
+  // Priority 3 (wildcard catch-all) intentionally removed — it could capture
+  // leads from other orgs when a pageId is absent (e.g. test payloads).
+  logger.warn(`Facebook webhook: no matching automation found for page_id="${leadData.page_id || ""}" form_id="${leadData.form_id || ""}"`);
+  return null;
 }
 
 // ── Auto-refresh a page token using the stored long-lived user token ──────────

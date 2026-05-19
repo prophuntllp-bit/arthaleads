@@ -72,6 +72,15 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// ── HTML sanitizer — strips script tags, event handlers, and javascript: URIs ──
+function sanitizeHtml(html) {
+  return (html || "")
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/\son\w+\s*=\s*[^\s>]*/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
 // ── Block renderer ─────────────────────────────────────────────────────────────
 function RenderBlock({ block, isDark }) {
   const textColor = isDark ? "rgba(255,255,255,0.80)" : "#374151";
@@ -82,7 +91,7 @@ function RenderBlock({ block, isDark }) {
         <p
           className="leading-relaxed mb-4 text-base"
           style={{ color: textColor }}
-          dangerouslySetInnerHTML={{ __html: block.content || "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
       );
     case "h2":
@@ -90,7 +99,7 @@ function RenderBlock({ block, isDark }) {
         <h2
           className="text-2xl font-extrabold mt-10 mb-4 leading-tight"
           style={{ color: headingColor }}
-          dangerouslySetInnerHTML={{ __html: block.content || "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
       );
     case "h3":
@@ -98,7 +107,7 @@ function RenderBlock({ block, isDark }) {
         <h3
           className="text-xl font-bold mt-8 mb-3 leading-tight"
           style={{ color: headingColor }}
-          dangerouslySetInnerHTML={{ __html: block.content || "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
       );
     case "h4":
@@ -106,7 +115,7 @@ function RenderBlock({ block, isDark }) {
         <h4
           className="text-lg font-bold mt-6 mb-2 leading-tight"
           style={{ color: headingColor }}
-          dangerouslySetInnerHTML={{ __html: block.content || "" }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
       );
     case "image":
@@ -134,7 +143,7 @@ function RenderBlock({ block, isDark }) {
           <p
             className="text-lg italic leading-relaxed"
             style={{ color: isDark ? "rgba(255,255,255,0.65)" : "#6b7280" }}
-            dangerouslySetInnerHTML={{ __html: block.content || "" }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
           />
         </blockquote>
       );
@@ -204,7 +213,7 @@ function TableOfContents({ blocks, isDark }) {
             <span
               className="text-sm hover:text-orange-500 cursor-pointer transition leading-snug"
               style={{ color: itemText }}
-              dangerouslySetInnerHTML={{ __html: h.content || `Section ${i + 1}` }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(h.content) || `Section ${i + 1}` }}
             />
           </li>
         ))}

@@ -99,7 +99,7 @@ const authController = {
 
   async updateUser(req, res, next) {
     try {
-      const user = await authService.updateUser(req.params.id, req.body, req.user._id);
+      const user = await authService.updateUser(req.params.id, req.body, req.user._id, req.user.orgId);
       res.json({ success: true, user });
     } catch (err) {
       next(err);
@@ -108,7 +108,7 @@ const authController = {
 
   async toggleUserActive(req, res, next) {
     try {
-      const user = await authService.toggleUserActive(req.params.id, req.user._id);
+      const user = await authService.toggleUserActive(req.params.id, req.user._id, req.user.orgId);
       res.json({ success: true, user });
     } catch (err) {
       next(err);
@@ -117,7 +117,7 @@ const authController = {
 
   async deleteUser(req, res, next) {
     try {
-      await authService.deleteUser(req.params.id, req.user._id);
+      await authService.deleteUser(req.params.id, req.user._id, req.user.orgId);
       res.json({ success: true, message: "User removed successfully" });
     } catch (err) {
       next(err);

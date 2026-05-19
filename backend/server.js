@@ -6,9 +6,11 @@ console.log("[BOOT] server.js starting, node:", process.version);
 
 process.on("uncaughtException", (err) => {
   console.error("[FATAL] Uncaught Exception:", err.message, err.stack);
+  process.exit(1);
 });
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] Unhandled Rejection:", reason?.message || String(reason));
+  process.exit(1);
 });
 
 require("dotenv").config();
@@ -77,7 +79,10 @@ connectDB().then(async () => {
       console.log(`[MIGRATION] orgId backfill complete`);
     }
   } catch (e) { console.error("[MIGRATION] orgId backfill failed:", e.message); }
-}).catch((e) => console.error("[BOOT] DB error:", e.message));
+}).catch((e) => {
+  console.error("[BOOT] DB connection failed — cannot start:", e.message);
+  process.exit(1);
+});
 
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
@@ -110,11 +115,9 @@ const authLimiter = rateLimit({
   max: parseInt(process.env.RATE_LIMIT_AUTH) || 50,
   message: { success: false, message: "Too many login attempts, please wait." },
   skip: (req) => {
-    // Skip rate limit for super admin email (configured via env) or localhost
+    // Only skip rate limit for localhost — never bypass based on email
     const ip = req.ip || "";
-    const email = (req.body?.email || "").toLowerCase();
-    const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || "").toLowerCase();
-    return ip === "::1" || ip === "127.0.0.1" || (superAdminEmail && email === superAdminEmail);
+    return ip === "::1" || ip === "127.0.0.1";
   },
 });
 

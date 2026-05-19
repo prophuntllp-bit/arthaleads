@@ -52,7 +52,7 @@ function applyDefaults(payload = {}) {
 
 const automationService = {
   async list(orgId) {
-    return Automation.find({ orgId }).sort({ createdAt: -1 });
+    return Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
   },
 
   async create(payload, actor) {
@@ -159,9 +159,10 @@ const automationService = {
     return user;
   },
 
-  createFacebookState({ userId, crmToken }) {
+  createFacebookState({ userId }) {
+    // Only embed userId — never the session JWT (which would leak via URL/browser history)
     return jwt.sign(
-      { userId, crmToken, type: "facebook_oauth" },
+      { userId, type: "facebook_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -171,7 +172,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "facebook_oauth") throw new Error("Invalid state type");
-      return decoded;
+      return { userId: decoded.userId };
     } catch {
       throw new AppError("Invalid Facebook OAuth state", 400);
     }

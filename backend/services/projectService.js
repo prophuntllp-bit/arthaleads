@@ -5,6 +5,11 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
+// Escape special regex characters in user-supplied search strings to prevent ReDoS
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 const projectService = {
   async create(data, user) {
     const project = await Project.create({ ...data, createdBy: user._id, orgId: user.orgId });
@@ -142,10 +147,15 @@ const projectService = {
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
 
+    // Agents can only access projects they are assigned to
+    if (user.role === "agent" && !project.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
+
     const filter = { project: projectId };
 
     if (search) {
-      const re = new RegExp(search, "i");
+      const re = new RegExp(escapeRegex(search), "i");
       filter.$or = [{ name: re }, { phone: re }, { email: re }];
     }
 
@@ -189,9 +199,12 @@ const projectService = {
   async updateRemark(leadId, { remark, remarkNote }, user) {
     // Verify org ownership via parent project (works for both old and new leads,
     // regardless of whether orgId is backfilled on the ProjectLead doc yet)
-    const check = await ProjectLead.findById(leadId).populate("project", "orgId");
+    const check = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
     if (!check) throw new AppError("Lead not found", 404);
     if (String(check.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    if (user.role === "agent" && !check.project?.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
 
     const update = {
       remark,
@@ -208,9 +221,12 @@ const projectService = {
 
   async updateLeadFields(leadId, data, user) {
     // Scope by orgId: look up via parent project
-    const lead = await ProjectLead.findById(leadId).populate("project", "orgId");
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
 
     // Only update fields that exist in the ProjectLead schema
     const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking"];
@@ -232,9 +248,12 @@ const projectService = {
   },
 
   async deleteLead(leadId, user) {
-    const lead = await ProjectLead.findById(leadId).populate("project", "orgId name");
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId name assignedTo");
     if (!lead) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
 
     if (user.role === "super_admin") {
       // Permanent hard delete — no dump record
@@ -261,6 +280,11 @@ const projectService = {
     // Verify the project belongs to the requesting user's org before mass-delete
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
+
+    // Agents can only bulk-delete from projects they are assigned to
+    if (user.role === "agent" && !project.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
 
     if (user.role === "super_admin") {
       // Permanent hard delete — no dump records
