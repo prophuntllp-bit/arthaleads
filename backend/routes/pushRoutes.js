@@ -3,8 +3,8 @@ const router = express.Router();
 const { protect } = require("../middlewares/auth");
 const PushSubscription = require("../models/PushSubscription");
 
-// GET /api/push/vapid-public-key — used by frontend to subscribe
-router.get("/vapid-public-key", (req, res) => {
+// GET /api/push/vapid-public-key — requires auth; VAPID key is fetched after login
+router.get("/vapid-public-key", protect, (req, res) => {
   res.json({ key: process.env.VAPID_PUBLIC_KEY || "" });
 });
 

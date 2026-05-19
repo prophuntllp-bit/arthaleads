@@ -121,6 +121,23 @@ const authLimiter = rateLimit({
   },
 });
 
+// Strict limiter for public unauthenticated endpoints that trigger external actions
+const contactLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // max 10 contact form submissions per IP per 15 min
+  message: { success: false, message: "Too many submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const blogLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60, // 60 blog reads per minute per IP
+  message: { success: false, message: "Too many requests." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use(generalLimiter);
 
 // ── Logging ───────────────────────────────────────────────────────────────────
@@ -136,6 +153,15 @@ app.use(express.json({ limit: "8mb" }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 app.use(cookieParser());
 
+// ── Global API hardening headers ──────────────────────────────────────────────
+// Applied to every /api/* and /webhook response — not the frontend.
+app.use(["/api", "/webhook", "/health"], (req, res, next) => {
+  res.setHeader("X-Robots-Tag", "noindex, nofollow");     // no search engine indexing
+  res.setHeader("X-Content-Type-Options", "nosniff");     // no MIME sniffing
+  res.setHeader("Cache-Control", "no-store");             // never cache API responses
+  next();
+});
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api/auth",  authLimiter, authRoutes);
 app.use("/api/org",   orgRoutes);
@@ -148,8 +174,8 @@ app.use("/api/voice", require("./routes/voiceRoutes"));
 app.use("/api/followups",   require("./routes/followupRoutes"));
 app.use("/api/attendance",   require("./routes/attendanceRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
-app.use("/api/blog",        blogRoutes);
-app.use("/api/contact",    require("./routes/contactRoutes"));
+app.use("/api/blog",        blogLimiter, blogRoutes);
+app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────
 app.get("/sitemap.xml", blogController.getSitemap);

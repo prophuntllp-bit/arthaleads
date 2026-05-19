@@ -10,11 +10,32 @@ const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev
 const CONTACT_EMAIL = "contact@arthaleads.com";
 const YEAR = new Date().getFullYear();
 
-async function sendContactForm(req, res) {
-  const { name, email, phone, company, message } = req.body || {};
+// Strip HTML tags and dangerous chars from user input
+function sanitize(str, maxLen = 200) {
+  return String(str || "")
+    .replace(/<[^>]*>/g, "")          // strip HTML tags
+    .replace(/[\r\n]{3,}/g, "\n\n")   // collapse excessive newlines
+    .trim()
+    .slice(0, maxLen);
+}
 
-  if (!name?.trim() || !email?.trim()) {
+// Simple RFC-5322 email check
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+async function sendContactForm(req, res) {
+  const raw = req.body || {};
+
+  const name    = sanitize(raw.name,    100);
+  const email   = sanitize(raw.email,   254);
+  const phone   = sanitize(raw.phone,   20);
+  const company = sanitize(raw.company, 100);
+  const message = sanitize(raw.message, 2000);
+
+  if (!name || !email) {
     return res.status(400).json({ success: false, message: "Name and email are required." });
+  }
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ success: false, message: "Invalid email address." });
   }
 
   try {
