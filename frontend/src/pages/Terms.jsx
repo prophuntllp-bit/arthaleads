@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 
 export default function Terms() {
-  useEffect(() => { document.title = "Terms of Service — Arthaleads"; }, []);
+  useEffect(() => {
+    document.title = "Terms of Service — Arthaleads";
+    // Tell search engines not to index this page
+    let meta = document.querySelector('meta[name="robots"]');
+    if (!meta) { meta = document.createElement("meta"); meta.name = "robots"; document.head.appendChild(meta); }
+    meta.content = "noindex, nofollow";
+    return () => { meta.content = "index, follow"; };
+  }, []);
 
   return (
     <LegalLayout title="Terms of Service" badge="Legal" updated="11 April 2026">

@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 
 export default function Privacy() {
-  useEffect(() => { document.title = "Privacy Policy — Arthaleads"; }, []);
+  useEffect(() => {
+    document.title = "Privacy Policy — Arthaleads";
+    // Tell search engines not to index this page
+    let meta = document.querySelector('meta[name="robots"]');
+    if (!meta) { meta = document.createElement("meta"); meta.name = "robots"; document.head.appendChild(meta); }
+    meta.content = "noindex, nofollow";
+    return () => { meta.content = "index, follow"; };
+  }, []);
 
   return (
     <LegalLayout title="Privacy Policy" badge="Privacy" updated="3 April 2026">
