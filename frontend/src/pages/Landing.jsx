@@ -112,56 +112,29 @@ function Hero({ isDark }) {
           </div>
         </div>
 
-        {/* Dashboard preview card */}
+        {/* Dashboard preview — real screenshot */}
         <div className="mt-20 max-w-5xl mx-auto">
           <div className="relative rounded-2xl overflow-hidden shadow-2xl"
-            style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-            <div className="p-4 sm:p-6" style={{ borderBottom: `1px solid ${statCardBdr}` }}>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500/60" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
-                <div className="w-3 h-3 rounded-full bg-green-500/60" />
-                <div className="ml-4 flex-1 max-w-xs h-6 rounded-lg flex items-center px-3" style={{ background: urlBarBg }}>
-                  <span className="text-xs" style={{ color: urlText }}>arthaleads.com/dashboard</span>
-                </div>
+            style={{ border: `1px solid ${cardBorder}` }}>
+            {/* Browser chrome bar */}
+            <div className="flex items-center gap-2 px-4 py-3"
+              style={{ background: cardBg, borderBottom: `1px solid ${statCardBdr}` }}>
+              <div className="w-3 h-3 rounded-full bg-red-500/70" />
+              <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
+              <div className="w-3 h-3 rounded-full bg-green-500/70" />
+              <div className="ml-4 flex-1 max-w-xs h-6 rounded-lg flex items-center px-3"
+                style={{ background: urlBarBg }}>
+                <span className="text-xs" style={{ color: urlText }}>arthaleads.com/dashboard</span>
               </div>
             </div>
-            <div className="p-4 sm:p-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: "Total Leads",   val: "2,847",  color: "#ff6b00", icon: Users },
-                { label: "New Today",      val: "34",     color: "#22c55e", icon: TrendingUp },
-                { label: "Follow-ups",     val: "128",    color: "#3b82f6", icon: Clock },
-                { label: "Closed Won",     val: "91",     color: "#a855f7", icon: Target },
-              ].map(({ label, val, color, icon: Icon }) => (
-                <div key={label} className="rounded-xl p-4" style={{ background: statCardBg, border: `1px solid ${statCardBdr}` }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium uppercase tracking-wide" style={{ color: statLabel }}>{label}</span>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${color}18` }}>
-                      <Icon className="w-3.5 h-3.5" style={{ color }} />
-                    </div>
-                  </div>
-                  <div className="text-2xl font-black" style={{ color: statVal }}>{val}</div>
-                </div>
-              ))}
-            </div>
-            <div className="px-4 sm:px-8 pb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { source: "Facebook",  count: 1240, pct: 44 },
-                { source: "WhatsApp",  count: 890,  pct: 31 },
-                { source: "Google",    count: 717,  pct: 25 },
-              ].map(({ source, count, pct }) => (
-                <div key={source} className="rounded-xl p-4" style={{ background: statCardBg, border: `1px solid ${statCardBdr}` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm" style={{ color: srcText }}>{source}</span>
-                    <span className="text-sm font-bold" style={{ color: srcVal }}>{count}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full" style={{ background: barTrack }}>
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] transition-all"
-                      style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* Actual screenshot — switches with dark/light mode */}
+            <img
+              src={isDark ? "/dashboard-dark.png" : "/dashboard-light.png"}
+              alt="Arthaleads CRM Dashboard"
+              className="w-full block"
+              style={{ display: "block" }}
+              loading="lazy"
+            />
           </div>
         </div>
 
