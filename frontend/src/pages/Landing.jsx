@@ -112,30 +112,15 @@ function Hero({ isDark }) {
           </div>
         </div>
 
-        {/* Dashboard preview — real screenshot */}
-        <div className="mt-20 max-w-5xl mx-auto">
-          <div className="relative rounded-2xl overflow-hidden shadow-2xl"
-            style={{ border: `1px solid ${cardBorder}` }}>
-            {/* Browser chrome bar */}
-            <div className="flex items-center gap-2 px-4 py-3"
-              style={{ background: cardBg, borderBottom: `1px solid ${statCardBdr}` }}>
-              <div className="w-3 h-3 rounded-full bg-red-500/70" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/70" />
-              <div className="w-3 h-3 rounded-full bg-green-500/70" />
-              <div className="ml-4 flex-1 max-w-xs h-6 rounded-lg flex items-center px-3"
-                style={{ background: urlBarBg }}>
-                <span className="text-xs" style={{ color: urlText }}>arthaleads.com/dashboard</span>
-              </div>
-            </div>
-            {/* Actual screenshot — switches with dark/light mode */}
-            <img
-              src={isDark ? "/dashboard-dark.png" : "/dashboard-light.png"}
-              alt="Arthaleads CRM Dashboard"
-              className="w-full block"
-              style={{ display: "block" }}
-              loading="lazy"
-            />
-          </div>
+        {/* Dashboard preview — MacBook mockup (frame is part of the PNG) */}
+        <div className="mt-16 max-w-4xl mx-auto px-4">
+          <link rel="preload" as="image" href="/dashboard-light.png" />
+          <img
+            src="/dashboard-light.png"
+            alt="Arthaleads CRM Dashboard"
+            className="w-full"
+            style={{ display: "block" }}
+          />
         </div>
 
         {/* Scroll indicator */}
