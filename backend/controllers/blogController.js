@@ -83,7 +83,7 @@ const blogController = {
   // ── PUBLIC: sitemap XML ────────────────────────────────────────────────────
   async getSitemap(req, res, next) {
     try {
-      const baseUrl = "https://arthaleads.com";
+      const baseUrl = "https://www.arthaleads.com";
       const posts = await BlogPost.find({ status: "published" })
         .select("slug publishedAt updatedAt")
         .sort({ publishedAt: -1 })

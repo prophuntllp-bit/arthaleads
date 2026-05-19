@@ -32,4 +32,4 @@ Disallow: /privacy
 Disallow: /terms
 Disallow: /api/
 
-Sitemap: https://arthaleads.com/sitemap.xml
+Sitemap: https://www.arthaleads.com/sitemap.xml
