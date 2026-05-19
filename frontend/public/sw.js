@@ -1,7 +1,8 @@
-// PropCRM Service Worker — PWA + Web Push notifications
-const CACHE_NAME = "propcrm-v8";
+// PropCRM Service Worker — PWA + Web Push + Background Sync + Periodic Sync
+const CACHE_NAME = "propcrm-v9";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
+// ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -9,6 +10,7 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
 });
 
+// ── Activate ──────────────────────────────────────────────────────────────────
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
@@ -18,7 +20,7 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Network-first strategy: try network, fall back to cache
+// ── Fetch — Network-first, fall back to cache ─────────────────────────────────
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (e.request.url.includes("/api/")) return;
@@ -34,30 +36,85 @@ self.addEventListener("fetch", (e) => {
   );
 });
 
+// ── Background Sync ───────────────────────────────────────────────────────────
+// Retries queued API mutations (lead updates, remarks, follow-ups) that
+// failed while the device was offline.
+const SYNC_STORE = "propcrm-pending-sync";
+
+self.addEventListener("sync", (e) => {
+  if (e.tag === "sync-pending-requests") {
+    e.waitUntil(replayPendingRequests());
+  }
+});
+
+async function replayPendingRequests() {
+  let db;
+  try {
+    db = await openSyncDB();
+    const tx  = db.transaction(SYNC_STORE, "readwrite");
+    const store = tx.objectStore(SYNC_STORE);
+    const all = await idbGetAll(store);
+
+    for (const item of all) {
+      try {
+        const res = await fetch(item.url, {
+          method:  item.method,
+          headers: item.headers,
+          body:    item.body,
+        });
+        if (res.ok) {
+          store.delete(item.id);
+        }
+      } catch {
+        // Still offline — leave in queue, will retry next sync
+      }
+    }
+    await tx.complete;
+  } catch (err) {
+    console.error("[SW] Background sync failed:", err);
+  } finally {
+    db?.close();
+  }
+}
+
+// ── Periodic Sync ─────────────────────────────────────────────────────────────
+// Fires hourly (when the OS permits) to let open tabs refresh follow-up data
+// and check for new leads — no server polling, just wakes the tab.
+self.addEventListener("periodicsync", (e) => {
+  if (e.tag === "check-followups") {
+    e.waitUntil(notifyClientsToRefresh("followups"));
+  }
+  if (e.tag === "check-leads") {
+    e.waitUntil(notifyClientsToRefresh("leads"));
+  }
+});
+
+async function notifyClientsToRefresh(resource) {
+  const clientList = await clients.matchAll({ type: "window", includeUncontrolled: true });
+  clientList.forEach((c) =>
+    c.postMessage({ type: "PERIODIC_SYNC", resource })
+  );
+}
+
 // ── Web Push ──────────────────────────────────────────────────────────────────
 self.addEventListener("push", (e) => {
   let data = {};
   try { data = e.data?.json() || {}; } catch { data = {}; }
 
-  const title = data.title || "PropCRM";
-  const body  = data.body  || "You have a new notification";
+  const title     = data.title || "PropCRM";
+  const body      = data.body  || "You have a new notification";
   const notifData = { url: "/leads", ...(data.data || {}) };
 
-  // Always show the system notification (works in background AND foreground)
   const showNotif = self.registration.showNotification(title, {
     body,
-    icon: "/icons/icon-192x192.png",
-    // badge must be a white-on-transparent monochrome PNG for Android status bar.
-    // Using the full-colour 192px icon here so it renders correctly instead of
-    // showing as an empty white box.
-    badge: "/icons/icon-192x192.png",
+    icon:    "/icons/icon-192x192.png",
+    badge:   "/icons/icon-192x192.png",
     vibrate: [200, 100, 200],
-    tag: `propcrm-${Date.now()}`,
-    silent: false,
-    data: notifData,
+    tag:     `propcrm-${Date.now()}`,
+    silent:  false,
+    data:    notifData,
   });
 
-  // Also forward to any open tabs so they can show an in-app toast
   const notifyClients = clients
     .matchAll({ type: "window", includeUncontrolled: true })
     .then((list) =>
@@ -82,3 +139,48 @@ self.addEventListener("notificationclick", (e) => {
     })
   );
 });
+
+// ── IndexedDB helpers (no idb lib dependency) ─────────────────────────────────
+function openSyncDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("propcrm-sync", 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(SYNC_STORE)) {
+        db.createObjectStore(SYNC_STORE, { keyPath: "id", autoIncrement: true });
+      }
+    };
+    req.onsuccess  = (e) => resolve(e.target.result);
+    req.onerror    = (e) => reject(e.target.error);
+  });
+}
+
+function idbGetAll(store) {
+  return new Promise((resolve, reject) => {
+    const req = store.getAll();
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+// ── Public helper: queue a request for background sync ────────────────────────
+// Called from the app via postMessage when a fetch fails offline.
+self.addEventListener("message", (e) => {
+  if (e.data?.type === "QUEUE_SYNC") {
+    queueRequest(e.data.payload);
+  }
+});
+
+async function queueRequest({ url, method, headers, body }) {
+  try {
+    const db    = await openSyncDB();
+    const tx    = db.transaction(SYNC_STORE, "readwrite");
+    tx.objectStore(SYNC_STORE).add({ url, method, headers, body, queuedAt: Date.now() });
+    await tx.complete;
+    db.close();
+    // Register the sync tag so the browser retries as soon as online
+    self.registration.sync.register("sync-pending-requests").catch(() => {});
+  } catch (err) {
+    console.error("[SW] Failed to queue request:", err);
+  }
+}

@@ -2,24 +2,59 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import toast from "react-hot-toast";
 
-// Register service worker and listen for foreground push messages
+// ── Service Worker registration + messaging ───────────────────────────────────
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+
+      // ── Periodic Sync: refresh follow-ups + leads hourly ──────────────────
+      if ("periodicSync" in registration) {
+        try {
+          const perm = await navigator.permissions.query({ name: "periodic-background-sync" });
+          if (perm.state === "granted") {
+            await registration.periodicSync.register("check-followups", {
+              minInterval: 60 * 60 * 1000, // 1 hour
+            });
+            await registration.periodicSync.register("check-leads", {
+              minInterval: 2 * 60 * 60 * 1000, // 2 hours
+            });
+          }
+        } catch {
+          // periodic-background-sync not supported on this browser — silent fail
+        }
+      }
+
+      // ── Background Sync: retry queued offline mutations ───────────────────
+      if ("sync" in registration) {
+        // Pre-register the tag; the SW will replay as soon as the device is online
+        registration.sync.register("sync-pending-requests").catch(() => {});
+      }
+    } catch {
+      // SW registration failed — app still works, just no offline support
+    }
   });
 
-  // When app is open and a push arrives, SW sends a message → show toast
+  // ── Messages from the Service Worker → in-app UI ─────────────────────────
   navigator.serviceWorker.addEventListener("message", (event) => {
-    if (event.data?.type === "PUSH_NOTIFICATION") {
-      const { title, body } = event.data;
+    const { type, title, body, resource } = event.data || {};
+
+    if (type === "PUSH_NOTIFICATION") {
+      // Push arrived while app is open → show toast instead of system notification
       toast(body || title, {
         duration: 6000,
         icon: "🔔",
         style: { fontWeight: "500" },
       });
     }
+
+    if (type === "PERIODIC_SYNC") {
+      // Periodic sync fired → silently ask React query/store to re-fetch
+      window.dispatchEvent(new CustomEvent("propcrm:refresh", { detail: { resource } }));
+    }
   });
 }
+
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";

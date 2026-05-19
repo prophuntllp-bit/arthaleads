@@ -97,5 +97,17 @@
       "form_factor": "narrow",
       "label": "Arthaleads CRM"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": {
+      "title": "name",
+      "text":  "text",
+      "url":   "url"
+    }
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
 }

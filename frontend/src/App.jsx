@@ -280,6 +280,7 @@ const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
 const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
+const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -441,6 +442,7 @@ export default function App() {
         <Route path="/help-guide"           element={<HelpGuide />} />
         <Route path="/wordpress-plugin"     element={<WordPressPlugin />} />
         <Route path="/contact"              element={<Contact />} />
+        <Route path="/share-target"         element={<ShareTarget />} />
 
         {/* Public routes — redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>
