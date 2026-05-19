@@ -182,7 +182,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   const openOAuth = () => {
     setConnecting(true);
     const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect`;
-    const popup = window.open(url, "arthaleads-fb-oauth", "width=720,height=760,resizable=yes,scrollbars=yes");
+    const popup = window.open(url, `arthaleads-fb-oauth-${Date.now()}`, "width=720,height=760,resizable=yes,scrollbars=yes");
 
     if (!popup) {
       setConnecting(false);
