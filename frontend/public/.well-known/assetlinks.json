@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.arthaleads.crm",
+      "package_name": "com.arthaleads.www.twa",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_SHA256_FROM_PWABUILDER"
+        "A4:35:FB:86:C7:D5:34:48:35:6F:E5:07:86:98:2F:53:23:8B:D6:3F:BA:4A:94:87:C3:F4:D6:DC:D9:AF:A2:B7"
       ]
     }
   }
