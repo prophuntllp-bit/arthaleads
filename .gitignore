@@ -21,3 +21,6 @@ yarn-debug.log*
 yarn-error.log*
 
 .vercel
+
+# Android release — keystore & binaries (keep private)
+android-release/
