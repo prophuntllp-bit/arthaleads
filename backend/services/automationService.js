@@ -194,7 +194,6 @@ const automationService = {
       redirect_uri: this.getFacebookRedirectUri(),
       state,
       response_type: "code",
-      auth_type: "rerequest",
       scope: [
         "pages_show_list",
         "pages_manage_metadata",
