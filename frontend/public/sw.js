@@ -1,6 +1,6 @@
 // PropCRM Service Worker — PWA + Web Push + Background Sync + Periodic Sync
-const CACHE_NAME = "propcrm-v9";
-const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
+const CACHE_NAME = "propcrm-v10";
+const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener("install", (e) => {
@@ -32,7 +32,14 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(async () => {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        // Navigation requests get the offline page as last resort
+        if (e.request.mode === "navigate") {
+          return caches.match("/offline.html");
+        }
+      })
   );
 });
 

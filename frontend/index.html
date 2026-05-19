@@ -68,6 +68,15 @@
     <!-- Sitemap autodiscovery -->
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
+    <!-- Service Worker — registered here so PWABuilder / crawlers can detect it -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

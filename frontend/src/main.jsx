@@ -2,36 +2,38 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import toast from "react-hot-toast";
 
-// ── Service Worker registration + messaging ───────────────────────────────────
+// ── Service Worker: periodic sync + message handling ─────────────────────────
+// SW is registered in index.html so PWABuilder/crawlers can detect it.
+// Here we set up periodic sync tags and listen for SW messages.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      // Wait for the SW registered in index.html to be ready
+      const registration = await navigator.serviceWorker.ready;
 
-      // ── Periodic Sync: refresh follow-ups + leads hourly ──────────────────
+      // ── Periodic Sync: refresh follow-ups hourly, leads every 2h ──────────
       if ("periodicSync" in registration) {
         try {
           const perm = await navigator.permissions.query({ name: "periodic-background-sync" });
           if (perm.state === "granted") {
             await registration.periodicSync.register("check-followups", {
-              minInterval: 60 * 60 * 1000, // 1 hour
+              minInterval: 60 * 60 * 1000,      // 1 hour
             });
             await registration.periodicSync.register("check-leads", {
-              minInterval: 2 * 60 * 60 * 1000, // 2 hours
+              minInterval: 2 * 60 * 60 * 1000,  // 2 hours
             });
           }
         } catch {
-          // periodic-background-sync not supported on this browser — silent fail
+          // Browser doesn't support periodic-background-sync — silent fail
         }
       }
 
-      // ── Background Sync: retry queued offline mutations ───────────────────
+      // ── Background Sync: pre-register so offline mutations get replayed ───
       if ("sync" in registration) {
-        // Pre-register the tag; the SW will replay as soon as the device is online
         registration.sync.register("sync-pending-requests").catch(() => {});
       }
     } catch {
-      // SW registration failed — app still works, just no offline support
+      // SW not ready — app still works fine
     }
   });
 
@@ -40,7 +42,6 @@ if ("serviceWorker" in navigator) {
     const { type, title, body, resource } = event.data || {};
 
     if (type === "PUSH_NOTIFICATION") {
-      // Push arrived while app is open → show toast instead of system notification
       toast(body || title, {
         duration: 6000,
         icon: "🔔",
@@ -49,7 +50,6 @@ if ("serviceWorker" in navigator) {
     }
 
     if (type === "PERIODIC_SYNC") {
-      // Periodic sync fired → silently ask React query/store to re-fetch
       window.dispatchEvent(new CustomEvent("propcrm:refresh", { detail: { resource } }));
     }
   });
