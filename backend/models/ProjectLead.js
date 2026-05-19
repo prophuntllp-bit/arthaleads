@@ -1,4 +1,4 @@
-// models/ProjectLead.js
+﻿// models/ProjectLead.js
 const mongoose = require("mongoose");
 
 const projectLeadSchema = new mongoose.Schema(
@@ -47,7 +47,7 @@ const projectLeadSchema = new mongoose.Schema(
       default: "",
     },
 
-    // Set to true when booking reaches Interested/Site Visit Booked — never unset
+    // Set to true when booking reaches Interested/Site Visit Booked - never unset
     isProspective: { type: Boolean, default: false, index: true },
 
     importedBy: {
@@ -56,7 +56,7 @@ const projectLeadSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Tenant isolation — mirrors the parent Project's orgId for direct queries
+    // Tenant isolation - mirrors the parent Project's orgId for direct queries
     orgId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",

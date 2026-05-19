@@ -1,4 +1,4 @@
-// pages/ProjectDetail.jsx
+﻿// pages/ProjectDetail.jsx
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +17,7 @@ import {
 function NameCell({ name, bold }) {
   const [expanded, setExpanded] = useState(false);
   const hasMore = name && name.trim().includes(" ");
-  const first = name?.split(" ")[0] || name || "—";
+  const first = name?.split(" ")[0] || name || "-";
   return (
     <button
       type="button"
@@ -44,7 +44,7 @@ function fmtPrice(n) {
 }
 
 function fmtDate(d) {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -190,7 +190,7 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                  label: "— None —",          color: "" },
+  { value: "",                  label: "- None -",          color: "" },
   { value: "Interested",        label: "Interested",         color: "text-blue-600" },
   { value: "Call Back",         label: "Call Back",          color: "text-amber-600" },
   { value: "Site Visit Booked", label: "Site Visit Booked",  color: "text-violet-600" },
@@ -277,7 +277,7 @@ function RemarkCell({ lead, projectId, onUpdated }) {
           className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${remarkClass}`}
           style={{ background: "var(--app-surface-low)" }}
         >
-          <option value="">— None —</option>
+          <option value="">- None -</option>
           <option value="Contacted">Contacted</option>
           <option value="Not Contacted">Not Contacted</option>
         </select>
@@ -344,7 +344,7 @@ export default function ProjectDetail() {
   const [leadsLimit, setLeadsLimit] = useState(10);
   const [bookingFilter, setBookingFilter] = useState("");
 
-  // Prospective entry statuses — used only for badge pre-fetch fallback
+  // Prospective entry statuses - used only for badge pre-fetch fallback
   const PROSP_ENTRY = "Interested,Site Visit Booked";
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
@@ -449,7 +449,7 @@ export default function ProjectDetail() {
         if (skippedInvalid > 0) parts.push(`${skippedInvalid} invalid row${skippedInvalid !== 1 ? "s" : ""} ignored`);
         toast.success(parts.join(" · "), { duration: 5000 });
       } else if (duplicates > 0) {
-        toast.error(`All ${duplicates} leads already exist in this project — nothing new added`, { duration: 5000 });
+        toast.error(`All ${duplicates} leads already exist in this project - nothing new added`, { duration: 5000 });
       } else {
         toast.error("No leads were imported");
       }
@@ -758,7 +758,7 @@ export default function ProjectDetail() {
               />
             ) : (
               <>
-                {/* Top scroll mirror — always-visible horizontal scrollbar above the table */}
+                {/* Top scroll mirror - always-visible horizontal scrollbar above the table */}
                 <div
                   ref={topScrollRef}
                   style={{
@@ -819,7 +819,7 @@ export default function ProjectDetail() {
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} /></td>
-                          <td className="text-sm text-app-soft">{lead.email || "—"}</td>
+                          <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>
                             <RemarkCell lead={lead} projectId={id} onUpdated={handleLeadUpdated} />
@@ -843,7 +843,7 @@ export default function ProjectDetail() {
                             <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleLeadUpdated} />
                           </td>
                           <td className="text-xs text-app-soft whitespace-nowrap">
-                            {lead.remarkUpdatedBy?.name || "—"}
+                            {lead.remarkUpdatedBy?.name || "-"}
                             {lead.remarkUpdatedAt && (
                               <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>
                             )}
@@ -864,7 +864,7 @@ export default function ProjectDetail() {
                                   ))}
                               </div>
                             ) : (
-                              <span className="text-app-soft">—</span>
+                              <span className="text-app-soft">-</span>
                             )}
                           </td>
                           <td>
@@ -970,7 +970,7 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Status filter pills — all scoped to isProspective leads only */}
+          {/* Status filter pills - all scoped to isProspective leads only */}
           <div className="flex flex-wrap items-center gap-2">
             {[
               { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",          text: "text-app-soft" },
@@ -1065,7 +1065,7 @@ export default function ProjectDetail() {
                     <tbody>
                       {prospLeads.map((lead, i) => {
                         const handleProspUpdate = (updated) => {
-                          // Lead always stays in Prospective once it enters — just update in place
+                          // Lead always stays in Prospective once it enters - just update in place
                           setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
                         };
                         return (
@@ -1101,7 +1101,7 @@ export default function ProjectDetail() {
                               <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline onSaved={handleProspUpdate} />
                             </td>
                             <td className="text-xs text-app-soft whitespace-nowrap">
-                              {lead.remarkUpdatedBy?.name || "—"}
+                              {lead.remarkUpdatedBy?.name || "-"}
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>

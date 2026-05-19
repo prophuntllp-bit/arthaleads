@@ -1,4 +1,4 @@
-// utils/backup.js — Daily MongoDB backup → gzip → email via Resend
+﻿// utils/backup.js - Daily MongoDB backup → gzip → email via Resend
 const zlib     = require("zlib");
 const mongoose = require("mongoose");
 const { Resend } = require("resend");
@@ -117,11 +117,11 @@ function buildEmail(date, stats, rawSize, gzipSize) {
 async function runBackup() {
   const BACKUP_EMAIL = process.env.BACKUP_EMAIL;
   if (!BACKUP_EMAIL) {
-    logger.warn("[backup] BACKUP_EMAIL not set — skipping backup");
+    logger.warn("[backup] BACKUP_EMAIL not set - skipping backup");
     return { skipped: true, reason: "BACKUP_EMAIL not configured" };
   }
   if (!process.env.RESEND_API_KEY) {
-    logger.warn("[backup] RESEND_API_KEY not set — skipping backup");
+    logger.warn("[backup] RESEND_API_KEY not set - skipping backup");
     return { skipped: true, reason: "RESEND_API_KEY not configured" };
   }
 
@@ -140,7 +140,7 @@ async function runBackup() {
       stats.push({ name, count: docs.length });
       logger.info(`[backup] ${name}: ${docs.length} docs`);
     } catch (err) {
-      // Collection may not exist yet — skip gracefully
+      // Collection may not exist yet - skip gracefully
       logger.warn(`[backup] skipping ${name}: ${err.message}`);
       stats.push({ name, count: 0 });
     }
@@ -161,7 +161,7 @@ async function runBackup() {
   const { error } = await resend.emails.send({
     from:    fromAddress,
     to:      BACKUP_EMAIL,
-    subject: `[Arthaleads Backup] ${date} — ${stats.reduce((s, c) => s + c.count, 0).toLocaleString()} total docs`,
+    subject: `[Arthaleads Backup] ${date} - ${stats.reduce((s, c) => s + c.count, 0).toLocaleString()} total docs`,
     html:    buildEmail(date, stats, rawSize, gzipSize),
     attachments: [
       {
@@ -177,7 +177,7 @@ async function runBackup() {
   }
 
   const totalDocs = stats.reduce((s, c) => s + c.count, 0);
-  logger.info(`[backup] ✅ backup sent to ${BACKUP_EMAIL} — ${totalDocs} docs, ${fmtBytes(gzipSize)}`);
+  logger.info(`[backup] ✅ backup sent to ${BACKUP_EMAIL} - ${totalDocs} docs, ${fmtBytes(gzipSize)}`);
 
   return { success: true, date, totalDocs, rawSize, gzipSize, stats };
 }

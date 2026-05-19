@@ -25,12 +25,12 @@ const crypto = require("crypto");
 const Automation = require("../models/Automation");
 
 function generateWebsiteToken() {
-  // 192 bits of entropy — URL-safe hex, no need for slice
+  // 192 bits of entropy - URL-safe hex, no need for slice
   return "AW-" + crypto.randomBytes(24).toString("hex");
 }
 
 const automationController = {
-  // GET /api/automations/website/connections — list all website automations (read-only)
+  // GET /api/automations/website/connections - list all website automations (read-only)
   async getWebsiteToken(req, res) {
     try {
       const automations = await Automation.find({
@@ -57,7 +57,7 @@ const automationController = {
     }
   },
 
-  // POST /api/automations/website/create — add a new website connection
+  // POST /api/automations/website/create - add a new website connection
   async createWebsiteConnection(req, res) {
     try {
       const { name } = req.body || {};
@@ -130,7 +130,7 @@ const automationController = {
   },
 
   async facebookConnect(req, res, next) {
-    // Must set COOP before redirect — helmet's default COOP: same-origin
+    // Must set COOP before redirect - helmet's default COOP: same-origin
     // nullifies window.opener on the very first popup page load
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     try {
@@ -138,7 +138,7 @@ const automationController = {
       // fall back to query param for backward compatibility
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
-      // Pass only userId — never embed the session token in the OAuth state (URL-visible)
+      // Pass only userId - never embed the session token in the OAuth state (URL-visible)
       const state = automationService.createFacebookState({ userId: user._id.toString() });
       const authUrl = automationService.getFacebookAuthUrl(state);
       res.redirect(authUrl);
@@ -160,7 +160,7 @@ const automationController = {
 
       console.log(`[facebookCallback] pages fetched: ${pages.length} | userId: ${statePayload.userId}`);
       pages.forEach(p => console.log(`  page: ${p.name} (${p.id}) | forms: ${p.forms?.length ?? 0} | ${JSON.stringify(p.forms?.map(f => f.name))}`));
-      if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned — user may not have approved pages_show_list or has no admin pages");
+      if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned - user may not have approved pages_show_list or has no admin pages");
 
       const sessionId = require("crypto").randomBytes(16).toString("hex");
       await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });

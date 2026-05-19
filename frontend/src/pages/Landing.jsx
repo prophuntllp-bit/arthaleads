@@ -1,4 +1,4 @@
-// pages/Landing.jsx — Arthaleads public marketing homepage
+﻿// pages/Landing.jsx - Arthaleads public marketing homepage
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -78,8 +78,8 @@ function Hero({ isDark }) {
           {/* Subheading */}
           <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10"
             style={{ color: bodyClr }}>
-            Arthaleads brings every property enquiry — Facebook ads, Google campaigns, WhatsApp chats,
-            and walk-ins — into one powerful workspace. Built for real estate developers and channel partners.
+            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
+            and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
           </p>
 
           {/* CTAs */}
@@ -112,7 +112,7 @@ function Hero({ isDark }) {
           </div>
         </div>
 
-        {/* Dashboard preview — MacBook mockup (frame is part of the PNG) */}
+        {/* Dashboard preview - MacBook mockup (frame is part of the PNG) */}
         <div className="mt-16 max-w-4xl mx-auto px-4">
           <link rel="preload" as="image" href="/dashboard-light.png" />
           <img
@@ -187,7 +187,7 @@ const FEATURES = [
     icon: Building2,
     color: "#22c55e",
     title: "Project Management",
-    desc: "Run multiple real estate projects simultaneously. Import thousands of leads per project, track their status, and assign telecallers — all in one workspace.",
+    desc: "Run multiple real estate projects simultaneously. Import thousands of leads per project, track their status, and assign telecallers - all in one workspace.",
   },
   {
     icon: PhoneCall,
@@ -205,7 +205,7 @@ const FEATURES = [
     icon: Users,
     color: "#f59e0b",
     title: "Team Management",
-    desc: "Assign roles — Admin, Manager, Agent — with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel.",
+    desc: "Assign roles - Admin, Manager, Agent - with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel.",
   },
   {
     icon: Bell,
@@ -217,13 +217,13 @@ const FEATURES = [
     icon: Filter,
     color: "#14b8a6",
     title: "Duplicate Prevention",
-    desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically — even across different formats. Every agent calls a unique lead.",
+    desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically - even across different formats. Every agent calls a unique lead.",
   },
   {
     icon: TrendingUp,
     color: "#ff6b00",
     title: "Lead Pipeline",
-    desc: "Kanban-style pipeline view lets you drag leads through stages — New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance.",
+    desc: "Kanban-style pipeline view lets you drag leads through stages - New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance.",
   },
   {
     icon: Shield,
@@ -256,7 +256,7 @@ function Features({ isDark }) {
             </span>
           </h2>
           <p className="text-lg max-w-2xl mx-auto" style={{ color: body }}>
-            Built specifically for the Indian real estate market — from small channel partner offices to large developer sales teams.
+            Built specifically for the Indian real estate market - from small channel partner offices to large developer sales teams.
           </p>
         </div>
 
@@ -364,8 +364,8 @@ function HowItWorks({ isDark }) {
 function About({ isDark }) {
   const points = [
     "Founded by real estate professionals who felt the pain of managing hundreds of leads across WhatsApp, email, and spreadsheets.",
-    "Designed for the Indian market — we understand the way property sales teams actually work in Pune, Mumbai, and across Maharashtra.",
-    "Built for scale — whether you're a 3-person channel partner office or a 100-seat developer sales team.",
+    "Designed for the Indian market - we understand the way property sales teams actually work in Pune, Mumbai, and across Maharashtra.",
+    "Built for scale - whether you're a 3-person channel partner office or a 100-seat developer sales team.",
     "Continuously improved based on direct feedback from our customers' daily workflows.",
   ];
 
@@ -381,7 +381,7 @@ function About({ isDark }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-          {/* Left — text */}
+          {/* Left - text */}
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
               <Building2 className="w-3.5 h-3.5 text-[#ff6b00]" />
@@ -397,7 +397,7 @@ function About({ isDark }) {
               Arthaleads was born out of frustration. We watched sales teams lose hot leads because they were scattered across six different WhatsApp groups, three spreadsheets, and someone's personal notebook.
             </p>
             <p className="text-base leading-relaxed mb-10" style={{ color: body }}>
-              We built the CRM we always wished we had — one that speaks the language of property sales, handles the volume of real estate campaigns, and makes every agent's job easier from day one.
+              We built the CRM we always wished we had - one that speaks the language of property sales, handles the volume of real estate campaigns, and makes every agent's job easier from day one.
             </p>
             <div className="space-y-3">
               {points.map((p) => (
@@ -411,7 +411,7 @@ function About({ isDark }) {
             </div>
           </div>
 
-          {/* Right — stat cards */}
+          {/* Right - stat cards */}
           <div className="grid grid-cols-2 gap-4">
             {[
               { val: "50+",     label: "Real Estate Teams",    sub: "actively using Arthaleads",  color: "#ff6b00" },
@@ -673,7 +673,7 @@ function Contact({ isDark }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
-          {/* Left — info */}
+          {/* Left - info */}
           <div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
               <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
@@ -719,7 +719,7 @@ function Contact({ isDark }) {
             </a>
           </div>
 
-          {/* Right — form */}
+          {/* Right - form */}
           <div className="p-7 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
             <ContactForm isDark={isDark} />
           </div>
@@ -835,7 +835,7 @@ function FinalCTA({ isDark }) {
         </h2>
         <p className="text-lg mb-10" style={{ color: body }}>
           Join 50+ real estate teams already closing more deals with Arthaleads.
-          Start your free trial today — no credit card needed.
+          Start your free trial today - no credit card needed.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link to="/signup"
@@ -861,7 +861,7 @@ export default function Landing() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = "Arthaleads — Real Estate CRM | Manage Every Property Lead";
+    document.title = "Arthaleads - Real Estate CRM | Manage Every Property Lead";
     let desc = document.querySelector('meta[name="description"]');
     if (!desc) { desc = document.createElement("meta"); desc.name = "description"; document.head.appendChild(desc); }
     desc.content = "Arthaleads is India's #1 real estate CRM. Capture Facebook, Google, WhatsApp & website leads automatically. Built for developers, brokers & channel partners.";

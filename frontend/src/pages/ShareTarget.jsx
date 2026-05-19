@@ -1,11 +1,11 @@
-// ShareTarget.jsx — handles data shared TO the app via Web Share Target API
+﻿// ShareTarget.jsx - handles data shared TO the app via Web Share Target API
 // When a user shares a contact / phone number / URL from another app,
 // Android routes it to /share-target?text=...&title=...&url=...
 // We parse it and redirect to /leads with the form pre-filled.
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-// Very small phone extractor — finds the first digit-sequence that looks like
+// Very small phone extractor - finds the first digit-sequence that looks like
 // a phone number (10+ digits, optionally prefixed with +91 or 0)
 function extractPhone(str = "") {
   const match = str.match(/(?:\+91[-\s]?|0)?[6-9]\d{9}/);

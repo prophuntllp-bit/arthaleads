@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
@@ -80,7 +80,7 @@ export default function Signup() {
     <div className="auth-shell min-h-screen flex items-center justify-center px-4 py-10">
       <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-2 lg:items-stretch">
 
-        {/* ── Left panel — desktop only ── */}
+        {/* ── Left panel - desktop only ── */}
         <div
           className="hidden rounded-[2rem] border p-8 lg:flex lg:flex-col"
           style={{
@@ -124,7 +124,7 @@ export default function Signup() {
           </div>
         </div>
 
-        {/* ── Right panel — form ── */}
+        {/* ── Right panel - form ── */}
         <div className="flex flex-col w-full">
           {/* Mobile logo header */}
           <div className="mb-6 flex flex-col items-center text-center lg:hidden">

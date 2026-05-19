@@ -1,8 +1,8 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const api = axios.create({
   baseURL:          import.meta.env.VITE_API_URL || "http://localhost:5000/api",
-  timeout:          45000,      // 45s — handles Railway cold-start (~20-30s)
+  timeout:          45000,      // 45s - handles Railway cold-start (~20-30s)
   withCredentials:  true,       // send httpOnly cookie on every request (XSS-safe auth)
 });
 

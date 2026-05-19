@@ -6,7 +6,7 @@ const { createAutomationSchema, updateAutomationSchema } = require("../validatio
 
 const router = express.Router();
 
-// Public OAuth endpoints (Facebook initiates/redirects here — no auth cookie possible)
+// Public OAuth endpoints (Facebook initiates/redirects here - no auth cookie possible)
 router.get("/facebook/connect", automationController.facebookConnect);
 router.get("/facebook/callback", automationController.facebookCallback);
 

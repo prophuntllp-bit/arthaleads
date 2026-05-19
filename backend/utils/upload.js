@@ -1,4 +1,4 @@
-// utils/upload.js — Cloudinary helpers for logo storage
+﻿// utils/upload.js - Cloudinary helpers for logo storage
 const { v2: cloudinary } = require("cloudinary");
 
 cloudinary.config({

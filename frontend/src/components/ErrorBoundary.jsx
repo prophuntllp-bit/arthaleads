@@ -1,9 +1,9 @@
-import { Component } from "react";
+﻿import { Component } from "react";
 import { TriangleAlert, RefreshCw } from "lucide-react";
 
 // ── ErrorBoundary ─────────────────────────────────────────────────────────────
 // Catches any unhandled React render errors (equivalent of a 500 page).
-// Must be a class component — React only supports componentDidCatch in classes.
+// Must be a class component - React only supports componentDidCatch in classes.
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -90,7 +90,7 @@ export default class ErrorBoundary extends Component {
           <h1 className="mb-3 text-2xl font-bold text-app">Something went wrong</h1>
           <p className="mb-8 text-sm leading-relaxed text-app-soft">
             An unexpected error occurred in the app. Our team has been notified.
-            Try reloading — if the problem persists, contact support.
+            Try reloading - if the problem persists, contact support.
           </p>
 
           {/* Dev-only error details */}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
@@ -35,14 +35,14 @@ function getGreeting() {
 }
 
 export default function Dashboard() {
-  useEffect(() => { document.title = "Dashboard — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [greeting, setGreeting] = useState(getGreeting());
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min — greeting only changes AM/PM
+    const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
     return () => clearInterval(timer);
   }, []);
   const navigate = useNavigate();

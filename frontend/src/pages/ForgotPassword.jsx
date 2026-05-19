@@ -1,4 +1,4 @@
-// pages/ForgotPassword.jsx
+﻿// pages/ForgotPassword.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -6,7 +6,7 @@ import { Spinner } from "../components/UI";
 import api from "../services/api";
 
 export default function ForgotPassword() {
-  useEffect(() => { document.title = "Forgot Password — Arthaleads"; }, []);
+  useEffect(() => { document.title = "Forgot Password - Arthaleads"; }, []);
 
   const [email, setEmail]   = useState("");
   const [loading, setLoading] = useState(false);

@@ -1,4 +1,4 @@
-const Lead = require("../models/Lead");
+﻿const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const mongoose = require("mongoose");
 
@@ -9,7 +9,7 @@ const followupService = {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Agent-scoped conditions for main leads only.
-    // Project leads are shared project resources — org is enforced via project lookup, no per-agent filter.
+    // Project leads are shared project resources - org is enforced via project lookup, no per-agent filter.
     const agentLeadCond = user.role === "agent"
       ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
       : [];
@@ -38,7 +38,7 @@ const followupService = {
           },
         ],
       };
-      // Check followUp OR followUp2 — either missed date qualifies; show all booking states in history
+      // Check followUp OR followUp2 - either missed date qualifies; show all booking states in history
       projFilter = {
         $or: [
           { followUp:  pastFilter },
@@ -92,7 +92,7 @@ const followupService = {
         pipeline: [
           { $match: projFilter },
           { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "_proj" } },
-          // Enforce org scope — only project leads belonging to this org's projects
+          // Enforce org scope - only project leads belonging to this org's projects
           { $match: { "_proj.0.orgId": orgIdObj } },
           { $addFields: {
             _type: "project",

@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function Settings() {
-  useEffect(() => { document.title = "Settings — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
   const { user, org, updateOrg, updateUserState, refreshUser } = useAuth();
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
@@ -215,7 +215,7 @@ export default function Settings() {
         </section>
       </div>
 
-      {/* Auto-assign toggle — admin + super_admin */}
+      {/* Auto-assign toggle - admin + super_admin */}
       {(user?.role === "admin" || user?.role === "super_admin") && (
         <section className="card p-6">
           <div className="flex items-start justify-between gap-6">
@@ -228,11 +228,11 @@ export default function Settings() {
                 <p className="font-semibold text-app">Auto Lead Assignment</p>
                 <p className="text-sm text-app-soft mt-1 max-w-lg">
                   When enabled, new leads (manual, imported, or from Facebook/website) are automatically
-                  assigned to agents in round-robin rotation — always to the agent with the fewest leads.
+                  assigned to agents in round-robin rotation - always to the agent with the fewest leads.
                   Turn off if you prefer to assign all leads manually.
                 </p>
                 <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
-                  {autoAssign ? "✅ Currently enabled — leads auto-assign on creation" : "⏸ Currently disabled — leads are unassigned until manually set"}
+                  {autoAssign ? "✅ Currently enabled - leads auto-assign on creation" : "⏸ Currently disabled - leads are unassigned until manually set"}
                 </p>
               </div>
             </div>

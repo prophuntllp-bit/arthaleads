@@ -1,4 +1,4 @@
-// models/Attendance.js
+﻿// models/Attendance.js
 const mongoose = require("mongoose");
 
 const attendanceSchema = new mongoose.Schema(
@@ -16,7 +16,7 @@ const attendanceSchema = new mongoose.Schema(
       index: true,
     },
     date: {
-      type: String, // "YYYY-MM-DD" — easy to query by day
+      type: String, // "YYYY-MM-DD" - easy to query by day
       required: true,
       index: true,
     },

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ArrowRight, Check } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -28,7 +28,7 @@ const stats = [
 ];
 
 const storyPoints = [
-  "Every lead source connected to one inbox — Facebook, Google, WhatsApp, forms, portals.",
+  "Every lead source connected to one inbox - Facebook, Google, WhatsApp, forms, portals.",
   "Duplicate prevention so your team never wastes a call.",
   "Role-based access so telecallers, managers, and admins each see exactly what they need.",
   "Real-time dashboards built for the pace of property sales campaigns.",
@@ -38,7 +38,7 @@ function AboutUsInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "About Arthaleads — Real Estate CRM Built for India",
+    title: "About Arthaleads - Real Estate CRM Built for India",
     description: "Arthaleads is India's leading real estate CRM platform built for developers, brokers, and channel partners. Learn our mission to simplify property lead management.",
     canonical: "https://www.arthaleads.com/about-us",
   });
@@ -85,8 +85,8 @@ function AboutUsInner() {
             <div>
               <h2 className="text-3xl font-bold mb-6" style={{ color: textColor }}>Our Story</h2>
               <p className="text-base leading-relaxed mb-5" style={{ color: softText }}>
-                Real estate sales teams in India work across multiple channels simultaneously — Facebook lead ads,
-                Google campaigns, WhatsApp enquiries, walk-ins, and housing portals — all at once. Before Arthaleads,
+                Real estate sales teams in India work across multiple channels simultaneously - Facebook lead ads,
+                Google campaigns, WhatsApp enquiries, walk-ins, and housing portals - all at once. Before Arthaleads,
                 managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet
                 that nobody trusted.
               </p>
@@ -96,7 +96,7 @@ function AboutUsInner() {
               </p>
               <p className="text-base leading-relaxed" style={{ color: softText }}>
                 We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned,
-                gets called, and gets tracked — from first contact to closed deal.
+                gets called, and gets tracked - from first contact to closed deal.
               </p>
             </div>
             <div className="space-y-4">
@@ -168,7 +168,7 @@ function AboutUsInner() {
             Ready to bring your team onto Arthaleads?
           </h2>
           <p className="text-base mb-8" style={{ color: softText }}>
-            Start your free trial — no credit card required. Your team can be up and running today.
+            Start your free trial - no credit card required. Your team can be up and running today.
           </p>
           <Link
             to="/signup"

@@ -1,4 +1,4 @@
-// PropCRM Service Worker — PWA + Web Push + Background Sync + Periodic Sync
+﻿// PropCRM Service Worker - PWA + Web Push + Background Sync + Periodic Sync
 const CACHE_NAME = "propcrm-v10";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
@@ -20,7 +20,7 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// ── Fetch — Network-first, fall back to cache ─────────────────────────────────
+// ── Fetch - Network-first, fall back to cache ─────────────────────────────────
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (e.request.url.includes("/api/")) return;
@@ -73,7 +73,7 @@ async function replayPendingRequests() {
           store.delete(item.id);
         }
       } catch {
-        // Still offline — leave in queue, will retry next sync
+        // Still offline - leave in queue, will retry next sync
       }
     }
     await tx.complete;
@@ -86,7 +86,7 @@ async function replayPendingRequests() {
 
 // ── Periodic Sync ─────────────────────────────────────────────────────────────
 // Fires hourly (when the OS permits) to let open tabs refresh follow-up data
-// and check for new leads — no server polling, just wakes the tab.
+// and check for new leads - no server polling, just wakes the tab.
 self.addEventListener("periodicsync", (e) => {
   if (e.tag === "check-followups") {
     e.waitUntil(notifyClientsToRefresh("followups"));

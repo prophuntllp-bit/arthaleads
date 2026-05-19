@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { Check, Download, ArrowRight, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import PublicNav from "../components/PublicNav";
@@ -27,7 +27,7 @@ const INSTALL_STEPS = [
   { n: 7,  text: <>Paste the token in the <strong>Arthaleads Account Token</strong> field.</> },
   { n: 8,  text: <>Enter your website name (shown as lead source in CRM).</> },
   { n: 9,  text: <>Toggle ON the contact forms you want to capture from.</> },
-  { n: 10, text: <>Click <strong>Save Settings</strong> — your forms are now connected!</> },
+  { n: 10, text: <>Click <strong>Save Settings</strong> - your forms are now connected!</> },
   { n: 11, text: <>Click <strong>Send Test Lead</strong> to verify the connection.</> },
 ];
 
@@ -87,7 +87,7 @@ function WordPressPluginInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "WordPress Plugin — Arthaleads CRM Integration",
+    title: "WordPress Plugin - Arthaleads CRM Integration",
     description: "Download the free Arthaleads WordPress plugin to automatically capture leads from your contact forms (CF7, WPForms, MetForm, Elementor & more) directly into your CRM.",
     canonical: "https://www.arthaleads.com/wordpress-plugin",
   });
@@ -158,7 +158,7 @@ function WordPressPluginInner() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>Supported Form Plugins</h2>
             <p className="text-base" style={{ color: softText }}>
-              Works with all major WordPress form builders — no extra configuration needed.
+              Works with all major WordPress form builders - no extra configuration needed.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -184,7 +184,7 @@ function WordPressPluginInner() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>How to Install the Plugin</h2>
             <p className="text-base" style={{ color: softText }}>
-              Be up and running in under 5 minutes — no developer needed.
+              Be up and running in under 5 minutes - no developer needed.
             </p>
           </div>
           <ol className="space-y-5">
@@ -237,7 +237,7 @@ function WordPressPluginInner() {
       <section className="py-20" style={{ background: bg }}>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-base mb-2" style={{ color: softText }}>Don't have an Arthaleads account yet?</p>
-          <h2 className="text-3xl font-bold mb-6" style={{ color: textColor }}>Start managing leads today — free.</h2>
+          <h2 className="text-3xl font-bold mb-6" style={{ color: textColor }}>Start managing leads today - free.</h2>
           <Link
             to="/signup"
             className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"

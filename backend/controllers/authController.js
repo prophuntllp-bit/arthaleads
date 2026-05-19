@@ -1,7 +1,7 @@
-const authService = require("../services/authService");
+﻿const authService = require("../services/authService");
 const { AppError } = require("../middlewares/errorHandler");
 
-// Shared cookie options — httpOnly prevents JS access (XSS protection)
+// Shared cookie options - httpOnly prevents JS access (XSS protection)
 // sameSite: "strict" blocks cross-origin requests (CSRF protection)
 const cookieOptions = () => ({
   httpOnly: true,

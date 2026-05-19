@@ -1,4 +1,4 @@
-// controllers/attendanceController.js
+﻿// controllers/attendanceController.js
 const Attendance = require("../models/Attendance");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
@@ -12,7 +12,7 @@ function todayStr() {
 }
 
 const attendanceController = {
-  // GET /api/attendance/status — today's record for the current user
+  // GET /api/attendance/status - today's record for the current user
   async status(req, res, next) {
     try {
       const record = await Attendance.findOne({
@@ -77,7 +77,7 @@ const attendanceController = {
     } catch (err) { next(err); }
   },
 
-  // GET /api/attendance — list records
+  // GET /api/attendance - list records
   // Admin/Manager: all team records; Agent: own only
   // Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&userId=xxx&page=1&limit=50
   async list(req, res, next) {
@@ -120,7 +120,7 @@ const attendanceController = {
     } catch (err) { next(err); }
   },
 
-  // GET /api/attendance/team-today — all members' status for today (admin/manager)
+  // GET /api/attendance/team-today - all members' status for today (admin/manager)
   async teamToday(req, res, next) {
     try {
       if (req.user.role === "agent") {

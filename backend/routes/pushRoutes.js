@@ -1,14 +1,14 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { protect } = require("../middlewares/auth");
 const PushSubscription = require("../models/PushSubscription");
 
-// GET /api/push/vapid-public-key — requires auth; VAPID key is fetched after login
+// GET /api/push/vapid-public-key - requires auth; VAPID key is fetched after login
 router.get("/vapid-public-key", protect, (req, res) => {
   res.json({ key: process.env.VAPID_PUBLIC_KEY || "" });
 });
 
-// POST /api/push/subscribe — save a browser push subscription
+// POST /api/push/subscribe - save a browser push subscription
 router.post("/subscribe", protect, async (req, res) => {
   try {
     const { endpoint, keys } = req.body;
@@ -26,7 +26,7 @@ router.post("/subscribe", protect, async (req, res) => {
   }
 });
 
-// DELETE /api/push/subscribe — remove a subscription (scoped to current user)
+// DELETE /api/push/subscribe - remove a subscription (scoped to current user)
 router.delete("/subscribe", protect, async (req, res) => {
   try {
     const { endpoint } = req.body;

@@ -1,5 +1,5 @@
-// server.js — Production-ready CRM entry point (v3)
-// ⚠️  Sentry MUST be the very first import — before express, mongoose, everything
+﻿// server.js - Production-ready CRM entry point (v3)
+// ⚠️  Sentry MUST be the very first import - before express, mongoose, everything
 require("./instrument");
 
 console.log("[BOOT] server.js starting, node:", process.version);
@@ -40,7 +40,7 @@ require("./utils/scheduler");
 console.log("[BOOT] Modules loaded, creating app...");
 const app = express();
 
-// Trust Railway/Vercel proxy — required for express-rate-limit behind a reverse proxy
+// Trust Railway/Vercel proxy - required for express-rate-limit behind a reverse proxy
 app.set("trust proxy", 1);
 
 // ── Connect Database ──────────────────────────────────────────────────────────
@@ -80,14 +80,14 @@ connectDB().then(async () => {
     }
   } catch (e) { console.error("[MIGRATION] orgId backfill failed:", e.message); }
 }).catch((e) => {
-  console.error("[BOOT] DB connection failed — cannot start:", e.message);
+  console.error("[BOOT] DB connection failed - cannot start:", e.message);
   process.exit(1);
 });
 
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
 
-// CORS — allow multiple frontend origins from env
+// CORS - allow multiple frontend origins from env
 const allowedOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
   .split(",").map((o) => o.trim());
 
@@ -115,7 +115,7 @@ const authLimiter = rateLimit({
   max: parseInt(process.env.RATE_LIMIT_AUTH) || 50,
   message: { success: false, message: "Too many login attempts, please wait." },
   skip: (req) => {
-    // Only skip rate limit for localhost — never bypass based on email
+    // Only skip rate limit for localhost - never bypass based on email
     const ip = req.ip || "";
     return ip === "::1" || ip === "127.0.0.1";
   },
@@ -154,7 +154,7 @@ app.use(express.urlencoded({ extended: true, limit: "8mb" }));
 app.use(cookieParser());
 
 // ── Global API hardening headers ──────────────────────────────────────────────
-// Applied to every /api/* and /webhook response — not the frontend.
+// Applied to every /api/* and /webhook response - not the frontend.
 app.use(["/api", "/webhook", "/health"], (req, res, next) => {
   res.setHeader("X-Robots-Tag", "noindex, nofollow");     // no search engine indexing
   res.setHeader("X-Content-Type-Options", "nosniff");     // no MIME sniffing
@@ -191,7 +191,7 @@ app.get("/health", (req, res) => {
 
 // ── Frontend Error Report (ErrorBoundary → Sentry) ───────────────────────────
 // Accepts render crashes from the React ErrorBoundary and forwards to Sentry.
-// No auth required — the boundary catches pre-auth crashes too.
+// No auth required - the boundary catches pre-auth crashes too.
 app.post("/api/error-report", express.json({ limit: "16kb" }), (req, res) => {
   const { message, stack, componentStack, url } = req.body || {};
   logger.error(`[frontend-error] ${message} | url: ${url}\n${stack}\n${componentStack}`);
@@ -232,16 +232,16 @@ const server = app.listen(PORT, () => {
 function shutdown(signal) {
   logger.info(`[${signal}] Graceful shutdown initiated…`);
   server.close(() => {
-    logger.info("HTTP server closed — all connections drained");
+    logger.info("HTTP server closed - all connections drained");
     const mongoose = require("mongoose");
     mongoose.disconnect().then(() => {
-      logger.info("MongoDB disconnected — process exiting");
+      logger.info("MongoDB disconnected - process exiting");
       process.exit(0);
     });
   });
   // Force-exit after 15 s if connections don't drain
   setTimeout(() => {
-    logger.error("Forced exit after 15 s — connections did not drain");
+    logger.error("Forced exit after 15 s - connections did not drain");
     process.exit(1);
   }, 15_000);
 }

@@ -1,4 +1,4 @@
-// utils/email.js — Email via Resend HTTP API (no SMTP, works on Railway)
+﻿// utils/email.js - Email via Resend HTTP API (no SMTP, works on Railway)
 const { Resend } = require("resend");
 
 function getResend() {
@@ -152,7 +152,7 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 
                     <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">Reset your password</h1>
                     <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-                      Hi <strong style="color:#d4d4d4;">${toName || "there"}</strong> — we received a request to reset your Arthaleads CRM password.
+                      Hi <strong style="color:#d4d4d4;">${toName || "there"}</strong> - we received a request to reset your Arthaleads CRM password.
                     </p>
                   </td>
                 </tr>
@@ -231,14 +231,14 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
     to:      toEmail,
     subject: "Reset your Arthaleads password",
     html,
-    text: `Hi ${toName || "there"},\n\nReset your Arthaleads password:\n${resetUrl}\n\nThis link expires in 1 hour.\n\n— Arthaleads Team`,
+    text: `Hi ${toName || "there"},\n\nReset your Arthaleads password:\n${resetUrl}\n\nThis link expires in 1 hour.\n\n- Arthaleads Team`,
   });
 
   if (error) throw new Error(error.message || "Resend API error");
   return data;
 }
 
-// ── Welcome email (new signup — email/password or Google) ─────────────────────
+// ── Welcome email (new signup - email/password or Google) ─────────────────────
 async function sendWelcomeEmail(toEmail, toName, orgName) {
   const resend = getResend();
   const firstName = toName?.split(" ")[0] || "there";
@@ -248,11 +248,11 @@ async function sendWelcomeEmail(toEmail, toName, orgName) {
     headerHtml: `
       <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">Welcome to Arthaleads!</h1>
       <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-        Hi <strong style="color:#d4d4d4;">${firstName}</strong> — your workspace <strong style="color:#ff8a3d;">${orgName}</strong> is all set up and ready to go.
+        Hi <strong style="color:#d4d4d4;">${firstName}</strong> - your workspace <strong style="color:#ff8a3d;">${orgName}</strong> is all set up and ready to go.
       </p>`,
     bodyHtml: `
       <p style="margin:0 0 24px;font-size:14px;color:#969696;line-height:1.75;">
-        You can now manage all your property leads, track your team's performance, and run automated follow-ups — all from one place.
+        You can now manage all your property leads, track your team's performance, and run automated follow-ups - all from one place.
       </p>
 
       <!-- Feature highlights -->
@@ -300,7 +300,7 @@ async function sendWelcomeEmail(toEmail, toName, orgName) {
     to:      toEmail,
     subject: `Welcome to Arthaleads, ${firstName}! Your workspace is ready 🎉`,
     html,
-    text: `Hi ${firstName},\n\nWelcome to Arthaleads! Your workspace "${orgName}" is ready.\n\nGo to your dashboard: ${DASHBOARD_URL}\n\nNeed help? Email us at contact@arthaleads.com\n\n— Arthaleads Team`,
+    text: `Hi ${firstName},\n\nWelcome to Arthaleads! Your workspace "${orgName}" is ready.\n\nGo to your dashboard: ${DASHBOARD_URL}\n\nNeed help? Email us at contact@arthaleads.com\n\n- Arthaleads Team`,
   });
 
   if (error) throw new Error(error.message || "Resend API error");
@@ -317,7 +317,7 @@ async function sendTeamInviteEmail(toEmail, toName, orgName, addedByName) {
     headerHtml: `
       <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">You've been added to a workspace</h1>
       <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-        Hi <strong style="color:#d4d4d4;">${firstName}</strong> — <strong style="color:#ff8a3d;">${addedByName || "An admin"}</strong> has added you to <strong style="color:#d4d4d4;">${orgName}</strong> on Arthaleads.
+        Hi <strong style="color:#d4d4d4;">${firstName}</strong> - <strong style="color:#ff8a3d;">${addedByName || "An admin"}</strong> has added you to <strong style="color:#d4d4d4;">${orgName}</strong> on Arthaleads.
       </p>`,
     bodyHtml: `
       <p style="margin:0 0 24px;font-size:14px;color:#969696;line-height:1.75;">
@@ -363,7 +363,7 @@ async function sendTeamInviteEmail(toEmail, toName, orgName, addedByName) {
     to:      toEmail,
     subject: `You've been added to ${orgName} on Arthaleads`,
     html,
-    text: `Hi ${firstName},\n\n${addedByName || "An admin"} has added you to "${orgName}" on Arthaleads.\n\nSign in at: ${LOGIN_URL}\nYour email: ${toEmail}\n\n— Arthaleads Team`,
+    text: `Hi ${firstName},\n\n${addedByName || "An admin"} has added you to "${orgName}" on Arthaleads.\n\nSign in at: ${LOGIN_URL}\nYour email: ${toEmail}\n\n- Arthaleads Team`,
   });
 
   if (error) throw new Error(error.message || "Resend API error");

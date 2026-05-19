@@ -1,4 +1,4 @@
-// controllers/superAdminController.js
+﻿// controllers/superAdminController.js
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
@@ -7,7 +7,7 @@ const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
 const { invalidateOrgCache } = require("../middlewares/auth");
 
-// Helper — compute effective trial status for a single org doc
+// Helper - compute effective trial status for a single org doc
 function trialStatus(org) {
   if (org.plan !== "trial") return null; // non-trial orgs don't have trial state
   if (!org.trialEndsAt) return "active";
@@ -15,7 +15,7 @@ function trialStatus(org) {
 }
 
 const superAdminController = {
-  // GET /api/super-admin/orgs — list all orgs with live stats (paginated)
+  // GET /api/super-admin/orgs - list all orgs with live stats (paginated)
   async listOrgs(req, res, next) {
     try {
       const page  = Math.max(1, parseInt(req.query.page)  || 1);
@@ -54,7 +54,7 @@ const superAdminController = {
     }
   },
 
-  // PATCH /api/super-admin/orgs/:id/logo — upload logo to Cloudinary, store URL (logo:"" removes it)
+  // PATCH /api/super-admin/orgs/:id/logo - upload logo to Cloudinary, store URL (logo:"" removes it)
   async updateLogo(req, res, next) {
     try {
       const { logo } = req.body;
@@ -71,16 +71,16 @@ const superAdminController = {
         }
 
         if (isBase64) {
-          // Upload to Cloudinary — org ID used as stable public_id so re-uploads overwrite
+          // Upload to Cloudinary - org ID used as stable public_id so re-uploads overwrite
           console.log(`[updateLogo] uploading logo to Cloudinary for org ${req.params.id}`);
           logoUrl = await uploadOrgLogo(logo, req.params.id);
           console.log(`[updateLogo] ✅ Cloudinary URL: ${logoUrl}`);
         } else {
-          // Already a hosted URL (e.g. re-submitting an existing Cloudinary URL) — store as-is
+          // Already a hosted URL (e.g. re-submitting an existing Cloudinary URL) - store as-is
           logoUrl = logo;
         }
       } else {
-        // Empty string = remove logo — clean up from Cloudinary too
+        // Empty string = remove logo - clean up from Cloudinary too
         deleteOrgLogo(req.params.id); // fire-and-forget, don't block response
       }
 
@@ -97,7 +97,7 @@ const superAdminController = {
     }
   },
 
-  // PATCH /api/super-admin/orgs/:id — update plan / isActive
+  // PATCH /api/super-admin/orgs/:id - update plan / isActive
   async updateOrg(req, res, next) {
     try {
       const allowed = ["plan", "isActive", "name", "brandColor"];
@@ -121,7 +121,7 @@ const superAdminController = {
     }
   },
 
-  // PATCH /api/super-admin/orgs/:id/extend-trial — extend an org's trial period
+  // PATCH /api/super-admin/orgs/:id/extend-trial - extend an org's trial period
   async extendTrial(req, res, next) {
     try {
       const { days } = req.body;
@@ -158,14 +158,14 @@ const superAdminController = {
           ...updated.toObject(),
           trialExpired: false,
         },
-        message: `Trial extended by ${days} day${days > 1 ? "s" : ""} — new expiry: ${newTrialEndsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`,
+        message: `Trial extended by ${days} day${days > 1 ? "s" : ""} - new expiry: ${newTrialEndsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`,
       });
     } catch (err) {
       next(err);
     }
   },
 
-  // POST /api/super-admin/backup — trigger a manual backup immediately
+  // POST /api/super-admin/backup - trigger a manual backup immediately
   async triggerBackup(req, res, next) {
     try {
       const result = await runBackup();

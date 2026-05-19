@@ -1,4 +1,4 @@
-// context/AuthContext.jsx
+﻿// context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 
@@ -6,7 +6,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   // Non-sensitive display data kept in localStorage for instant UI hydration.
-  // The actual auth token lives in an httpOnly cookie — JS cannot read or steal it.
+  // The actual auth token lives in an httpOnly cookie - JS cannot read or steal it.
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("crm_user") || "null"));
   const [org,  setOrg]  = useState(() => JSON.parse(localStorage.getItem("crm_org")  || "null"));
   const [loading, setLoading] = useState(true);
@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
     setOrg(null);
   }, []);
 
-  // Re-validate session on mount — cookie is sent automatically via withCredentials
+  // Re-validate session on mount - cookie is sent automatically via withCredentials
   useEffect(() => {
     api.get("/auth/me")
       .then((r) => persist(r.data.user, r.data.org))

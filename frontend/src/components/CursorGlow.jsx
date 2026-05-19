@@ -1,5 +1,5 @@
-/**
- * CursorGlow — custom cursor with orange neon glow border.
+﻿/**
+ * CursorGlow - custom cursor with orange neon glow border.
  * Replaces the OS cursor with a sleek arrow SVG + glowing outline.
  * Works on dark and light mode. Auto-disabled on touch/mobile.
  */
@@ -10,7 +10,7 @@ export default function CursorGlow() {
   const wrapRef = useRef(null);
 
   useEffect(() => {
-    // Skip on touch/mobile — no cursor to replace
+    // Skip on touch/mobile - no cursor to replace
     if (window.matchMedia("(pointer: coarse)").matches) return;
 
     const el = wrapRef.current;
@@ -48,7 +48,7 @@ export default function CursorGlow() {
     `;
     document.head.appendChild(styleTag);
 
-    // ── Track mouse exactly (no lag — cursor must feel instant) ────────────
+    // ── Track mouse exactly (no lag - cursor must feel instant) ────────────
     let visible = false;
 
     const onMove = (e) => {
@@ -87,12 +87,12 @@ export default function CursorGlow() {
         top:           0,
         left:          0,
         opacity:       0,
-        // No transform offset — SVG tip is at (0,0) matching the hotspot
+        // No transform offset - SVG tip is at (0,0) matching the hotspot
         transition:    "opacity 0.25s ease",
         willChange:    "left, top",
       }}
     >
-      {/* Outer ambient glow blob — lags slightly behind for depth */}
+      {/* Outer ambient glow blob - lags slightly behind for depth */}
       <div
         style={{
           position:     "absolute",
@@ -141,7 +141,7 @@ export default function CursorGlow() {
           filter="url(#cursor-glow)"
         />
 
-        {/* Solid cursor — fill set by JS based on dark/light mode */}
+        {/* Solid cursor - fill set by JS based on dark/light mode */}
         <path
           className="cursor-fill"
           d="M3.5 2L22.5 12L15.5 15L10.5 28Z"

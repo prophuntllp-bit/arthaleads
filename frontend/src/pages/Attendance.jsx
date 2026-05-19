@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner, EmptyState } from "../components/UI";
 import api from "../services/api";
@@ -11,19 +11,19 @@ import {
 function pad(n) { return String(n).padStart(2, "0"); }
 
 function fmtTime(d) {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 function fmtDate(str) {
-  if (!str) return "—";
+  if (!str) return "-";
   const [y, m, d] = str.split("-");
   const dt = new Date(y, m - 1, d);
   return dt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", weekday: "short" });
 }
 
 function fmtDuration(mins) {
-  if (mins == null) return "—";
+  if (mins == null) return "-";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h === 0) return `${m}m`;
@@ -35,7 +35,7 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Live elapsed timer — seeds correct elapsed time on mount/change (not just on first render)
+// Live elapsed timer - seeds correct elapsed time on mount/change (not just on first render)
 function LiveTimer({ since }) {
   const [secs, setSecs] = useState(0);
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function Attendance() {
   });
   const [to, setTo] = useState(todayStr);
   const [filterUser, setFilterUser] = useState(""); // admin: filter by member
-  const [tab, setTab] = useState("team"); // "team" | "records" — admin default is team
+  const [tab, setTab] = useState("team"); // "team" | "records" - admin default is team
 
   // Fetch today's own clock status
   const fetchStatus = useCallback(async () => {
@@ -204,7 +204,7 @@ export default function Attendance() {
             <div className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium"
               style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="text-app-soft">Done for today —</span>
+              <span className="text-app-soft">Done for today -</span>
               <span className="text-app font-semibold">{fmtDuration(status.totalMinutes)}</span>
             </div>
           ) : isClockedIn ? (
@@ -212,7 +212,7 @@ export default function Attendance() {
               <div className="flex items-center gap-2 px-3 py-2 rounded-2xl text-sm"
                 style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
                 <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-app-soft text-xs">Active —</span>
+                <span className="text-app-soft text-xs">Active -</span>
                 <span className="text-green-500 font-bold text-sm"><LiveTimer since={status.clockIn} /></span>
               </div>
               <button onClick={handleClockOut} disabled={clocking} className="btn-danger py-2 px-4 text-sm">
@@ -235,7 +235,7 @@ export default function Attendance() {
           {[
             { label: "Clock In",  value: fmtTime(status.clockIn),  color: "text-green-500" },
             { label: "Clock Out", value: fmtTime(status.clockOut), color: "text-red-400" },
-            { label: "Duration",  value: isClockedOut ? fmtDuration(status.totalMinutes) : isClockedIn ? "Active" : "—", color: "text-orange-500" },
+            { label: "Duration",  value: isClockedOut ? fmtDuration(status.totalMinutes) : isClockedIn ? "Active" : "-", color: "text-orange-500" },
             { label: "Date",      value: fmtDate(status.date), color: "text-app" },
           ].map(({ label, value, color }) => (
             <div key={label} className="card px-4 py-3">
@@ -305,16 +305,16 @@ export default function Attendance() {
                           <td className="px-5 py-3">
                             {a?.clockIn ? (
                               <span className="text-green-500 font-semibold">{fmtTime(a.clockIn)}</span>
-                            ) : <span className="text-app-soft">—</span>}
+                            ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3">
                             {a?.clockOut ? (
                               <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
-                            ) : <span className="text-app-soft">—</span>}
+                            ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
                             {isOut ? fmtDuration(a.totalMinutes) :
-                             isIn  ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span> : "—"}
+                             isIn  ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span> : "-"}
                           </td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
                         </tr>
@@ -414,7 +414,7 @@ export default function Attendance() {
                               ? <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
                               : isIn
                                 ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
-                                : <span className="text-app-soft">—</span>}
+                                : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
                           <td className="px-5 py-3"><StatusBadge a={rec} /></td>

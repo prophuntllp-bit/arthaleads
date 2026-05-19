@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../services/api";
 import { Clock, Calendar, ArrowLeft, Tag, BookOpen, Share2, ChevronRight } from "lucide-react";
@@ -14,7 +14,7 @@ function useSEO(post) {
     const desc  = post.metaDescription || post.excerpt;
     const url   = `https://www.arthaleads.com/blog/${post.slug}`;
 
-    document.title = `${title} — Arthaleads`;
+    document.title = `${title} - Arthaleads`;
     setMeta("description",       desc);
     setMeta("og:title",          title);
     setMeta("og:description",    desc);
@@ -51,7 +51,7 @@ function useSEO(post) {
     document.head.appendChild(script);
 
     return () => {
-      document.title = "Arthaleads — Real Estate CRM";
+      document.title = "Arthaleads - Real Estate CRM";
       const s = document.getElementById("blog-jsonld");
       if (s) s.remove();
     };
@@ -72,7 +72,7 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// ── HTML sanitizer — strips script tags, event handlers, and javascript: URIs ──
+// ── HTML sanitizer - strips script tags, event handlers, and javascript: URIs ──
 function sanitizeHtml(html) {
   return (html || "")
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")

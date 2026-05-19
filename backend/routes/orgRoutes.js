@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const Organization = require("../models/Organization");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
 
@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.use(protect);
 
-// GET /api/org/me — current org details
+// GET /api/org/me - current org details
 router.get("/me", async (req, res, next) => {
   try {
     const org = await Organization.findById(req.orgId);
@@ -15,7 +15,7 @@ router.get("/me", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PUT /api/org/me — update org name/industry (admin only)
+// PUT /api/org/me - update org name/industry (admin only)
 router.put("/me", authorize("admin"), async (req, res, next) => {
   try {
     const { name, industry } = req.body;
@@ -29,7 +29,7 @@ router.put("/me", authorize("admin"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/org/me/auto-assign — toggle round-robin auto-assignment (admin + super_admin)
+// PATCH /api/org/me/auto-assign - toggle round-robin auto-assignment (admin + super_admin)
 router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, res, next) => {
   try {
     const { autoAssign } = req.body;

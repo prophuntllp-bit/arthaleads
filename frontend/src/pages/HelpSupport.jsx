@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink, Headset, LifeBuoy, Mail, MessageSquareMore, PhoneCall, Shield, ShieldQuestion } from "lucide-react";
 
 const supportCards = [
@@ -117,7 +117,7 @@ function QuickActionItem({ title, body, action }) {
 const PRIVACY_SECTIONS = [
   ["What data we collect", "Account info (name, email, phone, password), lead data (names, phones, emails, property preferences from Facebook Ads, Google, WhatsApp, or manual entry), Facebook Page/Form IDs and access tokens, and login/activity logs for audit."],
   ["How we use it", "To manage your CRM account, receive and store leads from ad platforms, assign leads to agents, send follow-up reminders, generate analytics reports, and maintain security."],
-  ["Facebook data", "We connect to Meta's Graph API to retrieve lead submissions. We store Page Access Tokens securely. We do not sell or share Facebook lead data — it is used solely to operate the CRM for you. You can disconnect at any time from the Automation page."],
+  ["Facebook data", "We connect to Meta's Graph API to retrieve lead submissions. We store Page Access Tokens securely. We do not sell or share Facebook lead data - it is used solely to operate the CRM for you. You can disconnect at any time from the Automation page."],
   ["Data storage & security", "Data is stored on MongoDB Atlas (AWS). We use HTTPS/TLS encryption, bcrypt-hashed passwords, JWT authentication, and role-based access control."],
   ["Data sharing", "We do not sell or share your data with third parties except infrastructure providers (database hosting). Lead data is never used for advertising."],
   ["Your rights", "You can access, correct, or delete your data at any time. You can export leads as CSV or Excel from the Leads page. Contact us to close your account and remove all data."],

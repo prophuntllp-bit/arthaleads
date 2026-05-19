@@ -1,4 +1,4 @@
-// controllers/projectController.js
+﻿// controllers/projectController.js
 const projectService = require("../services/projectService");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -47,7 +47,7 @@ const projectController = {
       if (rows.length > 5000) {
         return next(new AppError("Maximum 5000 rows per import. Split your file and retry.", 400));
       }
-      // Basic field sanitization — strip any attempt to set isDeleted / orgId via import
+      // Basic field sanitization - strip any attempt to set isDeleted / orgId via import
       const sanitized = rows.map(({ isDeleted, orgId, _id, createdBy, ...rest }) => rest);
       const result = await projectService.importLeads(req.params.id, sanitized, req.user);
       res.status(201).json({ success: true, ...result });

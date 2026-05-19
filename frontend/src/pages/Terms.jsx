@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 
 export default function Terms() {
   useEffect(() => {
-    document.title = "Terms of Service — Arthaleads";
+    document.title = "Terms of Service - Arthaleads";
     // Tell search engines not to index this page
     let meta = document.querySelector('meta[name="robots"]');
     if (!meta) { meta = document.createElement("meta"); meta.name = "robots"; document.head.appendChild(meta); }
@@ -48,7 +48,7 @@ export default function Terms() {
         </ul>
         <p>
           Arthaleads is not liable for any loss or damage arising from your failure to keep your credentials
-          secure. Admin accounts carry elevated privileges — these must not be shared with unauthorised team
+          secure. Admin accounts carry elevated privileges - these must not be shared with unauthorised team
           members.
         </p>
       </Section>
@@ -68,7 +68,7 @@ export default function Terms() {
         <p>
           All lead data that you import into, create within, or generate through Arthaleads belongs to your
           organisation. Arthaleads does not claim ownership over your lead data. We act as a data processor
-          on your behalf — storing and presenting your lead data solely to provide the CRM service to you.
+          on your behalf - storing and presenting your lead data solely to provide the CRM service to you.
           You are responsible for ensuring that you have the necessary rights and consents to store and
           process the lead data you upload to the platform.
         </p>
@@ -110,8 +110,8 @@ export default function Terms() {
       <Section title="9. Limitation of Liability">
         <p>
           To the fullest extent permitted by applicable law, Arthaleads (Prophunt LLP) shall not be liable
-          for any indirect, incidental, special, consequential, or punitive damages — including but not
-          limited to loss of revenue, loss of data, loss of business opportunities, or reputational harm —
+          for any indirect, incidental, special, consequential, or punitive damages - including but not
+          limited to loss of revenue, loss of data, loss of business opportunities, or reputational harm -
           arising from your use of or inability to use the Service, even if Arthaleads has been advised of
           the possibility of such damages. Our total liability to you for any claim arising out of or
           relating to these terms or the Service shall not exceed the amount paid by you to Arthaleads in

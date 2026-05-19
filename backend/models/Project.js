@@ -1,4 +1,4 @@
-// models/Project.js
+﻿// models/Project.js
 const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema(
@@ -34,6 +34,6 @@ const projectSchema = new mongoose.Schema(
 
 projectSchema.index({ createdAt: -1 });
 projectSchema.index({ createdBy: 1 });
-// Note: orgId compound index is defined on the field itself (index: true) — no duplicate needed here
+// Note: orgId compound index is defined on the field itself (index: true) - no duplicate needed here
 
 module.exports = mongoose.model("Project", projectSchema);

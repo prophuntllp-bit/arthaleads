@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -71,7 +71,7 @@ function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "A
   );
 }
 
-// ── Datetime helpers — use browser local time, no manual timezone math ───────
+// ── Datetime helpers - use browser local time, no manual timezone math ───────
 const _pad = n => String(n).padStart(2, "0");
 // UTC string from DB → datetime-local input value in device local time
 function toLocalInput(utcStr) {
@@ -137,7 +137,7 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                   label: "— None —",           color: "" },
+  { value: "",                   label: "- None -",           color: "" },
   { value: "Interested",         label: "Interested",          color: "text-blue-600" },
   { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
   { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
@@ -214,7 +214,7 @@ function ProjInlineText({ value, leadId, projectId, field, placeholder = "Add no
   );
 }
 
-// ── Remark cell — click to edit inline, blur/Enter to save ──────────────────
+// ── Remark cell - click to edit inline, blur/Enter to save ──────────────────
 const REMARK_PREVIEW_LEN = 40;
 function RemarkPopupCell({ value, leadId, projectId, field, placeholder = "Add remark…", onSaved }) {
   const [editing, setEditing]   = useState(false);
@@ -308,7 +308,7 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
 }
 
 const PROJ_BOOKING_OPTIONS = [
-  { value: "", label: "— None —", color: "" },
+  { value: "", label: "- None -", color: "" },
   { value: "Interested", label: "Interested", color: "text-blue-600" },
   { value: "Call Back", label: "Call Back", color: "text-amber-600" },
   { value: "Site Visit Booked", label: "Site Visit Booked", color: "text-violet-600" },
@@ -371,7 +371,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
         className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${cls}`}
         style={{ background: "var(--app-surface-low)" }}
       >
-        <option value="">— None —</option>
+        <option value="">- None -</option>
         <option value="Contacted">Contacted</option>
         <option value="Not Contacted">Not Contacted</option>
       </select>
@@ -381,7 +381,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
 }
 
 export default function Leads() {
-  useEffect(() => { document.title = "Lead Management — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Lead Management - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -533,7 +533,7 @@ export default function Leads() {
         ? await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, updates)
         : await api.put(`/leads/${lead._id}`, updates);
       upsertLead({ ...lead, ...updates, ...(res.data.data || {}) });
-    } catch { /* silent — the call/chat still happened */ }
+    } catch { /* silent - the call/chat still happened */ }
   };
 
   const handleBulkDelete = async () => {
@@ -829,7 +829,7 @@ export default function Leads() {
       budget,
       followUpNote,
       remark: extras.join(" | "),
-      // remark1 and remark2 intentionally left empty — reserved for agent notes after calling
+      // remark1 and remark2 intentionally left empty - reserved for agent notes after calling
       status: "New",
       priority: "Medium",
     };
@@ -845,7 +845,7 @@ export default function Leads() {
       const isCsv = file.name.toLowerCase().endsWith(".csv");
       let rows;
       if (isCsv) {
-        // Parse CSV/TSV without xlsx — handles UTF-16 LE (Facebook export) and UTF-8
+        // Parse CSV/TSV without xlsx - handles UTF-16 LE (Facebook export) and UTF-8
         let text;
         if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
           text = new TextDecoder("utf-16le").decode(buffer.slice(2));
@@ -870,7 +870,7 @@ export default function Leads() {
         const questionCols = headers.filter((h) => !FB_META.has(h) && !FB_CONTACT.has(h));
         leadsToImport = rows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
         if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
-        toast(`Facebook format detected — ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
+        toast(`Facebook format detected - ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {
         // Standard CRM import format
         leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
@@ -979,7 +979,7 @@ export default function Leads() {
                 setProjSearch("");
               }}
             >
-              <option value="">— Select a project —</option>
+              <option value="">- Select a project -</option>
               {projects.map((p) => (
                 <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0} leads)</option>
               ))}
@@ -1048,7 +1048,7 @@ export default function Leads() {
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
                           <td><PhoneActions phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
                           <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
-                          <td className="text-sm text-app-soft">{lead.email || "—"}</td>
+                          <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
                           <td><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
@@ -1190,7 +1190,7 @@ export default function Leads() {
           />
         ) : (
           <>
-            {/* Top scroll mirror — always-visible horizontal scrollbar above the table */}
+            {/* Top scroll mirror - always-visible horizontal scrollbar above the table */}
             <div
               ref={topScrollRef}
               style={{
@@ -1262,26 +1262,26 @@ export default function Leads() {
                     <td>
                       {lead.projectName
                         ? <span className="text-[11px] font-semibold text-violet-600 truncate max-w-[130px] block" title={lead.projectName}>{lead.projectName}</span>
-                        : <span className="text-xs text-app-soft">—</span>}
+                        : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
                     <td className="min-w-[180px] max-w-[220px]">
                       {lead.requirements
                         ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={lead.requirements}>{lead.requirements}</p>
-                        : <span className="text-xs text-app-soft">—</span>}
+                        : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td className="whitespace-nowrap">
                       <span className="text-xs text-app">
                         {lead.budget?.min || lead.budget?.max
                           ? `${fmtBudget(lead.budget.min)}${lead.budget.max && lead.budget.max !== lead.budget.min ? ` - ${fmtBudget(lead.budget.max)}` : ""}`
-                          : <span className="text-app-soft">—</span>}
+                          : <span className="text-app-soft">-</span>}
                       </span>
                     </td>
                     <td className="whitespace-nowrap">
-                      <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">—</span>}</span>
+                      <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">-</span>}</span>
                     </td>
-                    {/* Remark (contact status) — same dropdown for all lead types */}
+                    {/* Remark (contact status) - same dropdown for all lead types */}
                     <td className="min-w-[140px]">
                       <ContactStatusCell
                         lead={lead}
@@ -1321,12 +1321,12 @@ export default function Leads() {
                         <p className="text-sm font-medium text-app">
                           {lead.propertyType || ""}{lead.bhk && lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}
                         </p>
-                      ) : <span className="text-xs text-app-soft">—</span>}
+                      ) : <span className="text-xs text-app-soft">-</span>}
                       {(lead.budget?.min || lead.budget?.max) && (
                         <p className="mt-0.5 text-xs text-orange-500">{fmtCurrency(lead.budget?.min)} – {fmtCurrency(lead.budget?.max)}</p>
                       )}
                     </td>
-                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "—"}</td>
+                    <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
                     <td>
                       <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
                         <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-white/5 hover:text-app" onClick={() => setDetailLead(lead)} title="View">
@@ -1486,7 +1486,7 @@ export default function Leads() {
         }}
       />
 
-      {/* Export dropdown — portal-rendered to escape overflow:hidden parents */}
+      {/* Export dropdown - portal-rendered to escape overflow:hidden parents */}
       {showExportMenu && createPortal(
         <>
           <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setShowExportMenu(false)} />

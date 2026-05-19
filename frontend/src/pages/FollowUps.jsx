@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
 import api from "../services/api";
@@ -12,7 +12,7 @@ const SECTIONS = [
 ];
 
 function fmtDate(d) {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -106,9 +106,9 @@ export default function FollowUps() {
         </div>
       </div>
 
-      {/* Controls row — sort toggle + future date filters */}
+      {/* Controls row - sort toggle + future date filters */}
       <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
-        {/* Sort toggle — always visible */}
+        {/* Sort toggle - always visible */}
         <div className="flex items-center gap-1 p-0.5 rounded-xl" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           <button
             onClick={() => { setSort("desc"); setPage(1); }}
@@ -217,7 +217,7 @@ export default function FollowUps() {
                       }}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "—"}</p>
+                        <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "-"}</p>
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <PhoneActions phone={lead.phone} />
@@ -226,11 +226,11 @@ export default function FollowUps() {
                         <WhatsAppLink phone={lead.phone} />
                       </td>
                       <td className="px-4 py-3">
-                        {lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">—</span>}
+                        {lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>}
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-app-soft truncate max-w-[120px] block">
-                          {lead.status || lead.remark || "—"}
+                          {lead.status || lead.remark || "-"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -238,7 +238,7 @@ export default function FollowUps() {
                       </td>
                       <td className="px-4 py-3">
                         {lead._type === "project" ? (
-                          <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "—"}</span>
+                          <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
                         ) : (
                           <span className="text-app-soft">Main Pipeline</span>
                         )}

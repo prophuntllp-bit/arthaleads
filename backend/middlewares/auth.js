@@ -1,4 +1,4 @@
-// middlewares/auth.js
+﻿// middlewares/auth.js
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Organization = require("../models/Organization");
@@ -29,7 +29,7 @@ const protect = async (req, res, next) => {
   try {
     let token;
 
-    // 1. Prefer httpOnly cookie (browser clients — XSS-safe)
+    // 1. Prefer httpOnly cookie (browser clients - XSS-safe)
     if (req.cookies?.crm_token) {
       token = req.cookies.crm_token;
     // 2. Fall back to Authorization header (API clients, mobile, Postman)
@@ -52,7 +52,7 @@ const protect = async (req, res, next) => {
     req.user  = user;
     req.orgId = user.orgId;
 
-    // ── Org-level access guard (skip for super_admin — platform-wide access) ──
+    // ── Org-level access guard (skip for super_admin - platform-wide access) ──
     if (user.role !== "super_admin" && user.orgId) {
       let org = _getCachedOrg(user.orgId);
       if (!org) {
@@ -62,7 +62,7 @@ const protect = async (req, res, next) => {
       if (!org || !org.isActive) {
         return next(new AppError("ORGANISATION_INACTIVE", 403));
       }
-      // Trial expiry check — only for orgs still on the trial plan
+      // Trial expiry check - only for orgs still on the trial plan
       if (org.plan === "trial" && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)) {
         return next(new AppError("TRIAL_EXPIRED", 403));
       }

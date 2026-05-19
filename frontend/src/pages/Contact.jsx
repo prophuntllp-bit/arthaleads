@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Mail, Phone, MapPin, MessageCircle, ArrowRight, Check } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -12,8 +12,8 @@ export default function Contact() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    document.title = "Contact Us — Arthaleads CRM | Get in Touch";
-    return () => { document.title = "Arthaleads — Real Estate CRM"; };
+    document.title = "Contact Us - Arthaleads CRM | Get in Touch";
+    return () => { document.title = "Arthaleads - Real Estate CRM"; };
   }, []);
 
   const handleSubmit = async (e) => {
@@ -77,7 +77,7 @@ export default function Contact() {
               </span>
             </h1>
             <p className="text-base leading-relaxed" style={{ color: body }}>
-              Whether you want a personalised demo, have questions about pricing, or need help getting started — our team is here for you.
+              Whether you want a personalised demo, have questions about pricing, or need help getting started - our team is here for you.
             </p>
           </div>
         </section>
@@ -86,7 +86,7 @@ export default function Contact() {
         <section className="py-10 px-4">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
 
-            {/* Left — info */}
+            {/* Left - info */}
             <div>
               <h2 className="text-2xl font-black mb-8" style={{ color: heading }}>Contact Information</h2>
 
@@ -123,7 +123,7 @@ export default function Contact() {
                 <div className="space-y-4">
                   {[
                     ["How quickly do you respond?", "We reply within 24 hours on weekdays, usually much sooner."],
-                    ["Can I get a free demo?", "Absolutely — just fill out the form and mention 'demo' in your message."],
+                    ["Can I get a free demo?", "Absolutely - just fill out the form and mention 'demo' in your message."],
                     ["Is there a free trial?", "Yes, new accounts get a 7-day free trial with full access."],
                   ].map(([q, a]) => (
                     <div key={q}>
@@ -135,7 +135,7 @@ export default function Contact() {
               </div>
             </div>
 
-            {/* Right — form */}
+            {/* Right - form */}
             <div className="p-8 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
               {sent ? (
                 <div className="flex flex-col items-center justify-center text-center py-16">

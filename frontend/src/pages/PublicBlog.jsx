@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import api from "../services/api";
 import { Clock, Tag, Search, ChevronLeft, ChevronRight, ArrowRight, BookOpen, Calendar } from "lucide-react";
@@ -9,13 +9,13 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 // ── SEO meta updater ───────────────────────────────────────────────────────────
 function useSEO({ title, description, url, image }) {
   useEffect(() => {
-    document.title = title || "Blog — Arthaleads Real Estate CRM";
+    document.title = title || "Blog - Arthaleads Real Estate CRM";
     setMeta("description", description || "Expert real estate insights, CRM tips and lead management strategies from Arthaleads.");
     setMeta("og:title", title);
     setMeta("og:description", description);
     setMeta("og:url", url || window.location.href);
     if (image) setMeta("og:image", image);
-    return () => { document.title = "Arthaleads — Real Estate CRM"; };
+    return () => { document.title = "Arthaleads - Real Estate CRM"; };
   }, [title, description, url, image]);
 }
 function setMeta(name, content) {
@@ -109,8 +109,8 @@ function BlogPageInner() {
   const [tagFilter,   setTagFilter]   = useState(searchParams.get("tag") || "");
 
   useSEO({
-    title: "Blog — Arthaleads | Real Estate CRM Insights",
-    description: "Expert tips on lead management, real estate sales, and CRM strategies from Arthaleads — India's modern real estate CRM platform.",
+    title: "Blog - Arthaleads | Real Estate CRM Insights",
+    description: "Expert tips on lead management, real estate sales, and CRM strategies from Arthaleads - India's modern real estate CRM platform.",
     url: "https://www.arthaleads.com/blog",
   });
 
@@ -330,7 +330,7 @@ function BlogPageInner() {
                 </div>
                 <h3 className="text-base font-bold text-white mb-2">Manage Leads Better</h3>
                 <p className="text-xs text-orange-100 mb-4 leading-relaxed">
-                  Try Arthaleads CRM — built for Indian real estate teams.
+                  Try Arthaleads CRM - built for Indian real estate teams.
                 </p>
                 <Link
                   to="/signup"

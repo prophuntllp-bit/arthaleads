@@ -160,7 +160,7 @@ const automationService = {
   },
 
   createFacebookState({ userId }) {
-    // Only embed userId — never the session JWT (which would leak via URL/browser history)
+    // Only embed userId - never the session JWT (which would leak via URL/browser history)
     return jwt.sign(
       { userId, type: "facebook_oauth" },
       process.env.JWT_SECRET,
@@ -268,7 +268,7 @@ const automationService = {
   },
 
   async fetchFacebookPages(accessToken) {
-    // 1️⃣ Try /me/accounts — works for pages managed directly by the user
+    // 1️⃣ Try /me/accounts - works for pages managed directly by the user
     const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
     const resp1 = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
     const json1 = await resp1.json();
@@ -284,7 +284,7 @@ const automationService = {
     if (directPages.length > 0) return directPages;
 
     // 2️⃣ Fallback: pages managed through Meta Business Manager
-    console.log("[fetchFacebookPages] No direct pages — trying Business Manager API...");
+    console.log("[fetchFacebookPages] No direct pages - trying Business Manager API...");
     try {
       const bizParams = new URLSearchParams({ access_token: accessToken, fields: "id,name", limit: "50" });
       const bizResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/businesses?${bizParams.toString()}`);
@@ -296,7 +296,7 @@ const automationService = {
       }
 
       const businesses = bizJson.data || [];
-      console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) — ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
+      console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) - ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
 
       if (businesses.length === 0) {
         console.warn("[fetchFacebookPages] No businesses found.");
@@ -314,7 +314,7 @@ const automationService = {
             continue;
           }
           const bizPages = pageJson.data || [];
-          console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${bizPages.length} page(s) — ${bizPages.map(p => `${p.name}(token:${!!p.access_token})`).join(", ")}`);
+          console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${bizPages.length} page(s) - ${bizPages.map(p => `${p.name}(token:${!!p.access_token})`).join(", ")}`);
           allPages.push(...bizPages);
         }
       }

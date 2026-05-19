@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Compass } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function NotFound() {
-  useEffect(() => { document.title = "404 — Page Not Found · Arthaleads"; }, []);
+  useEffect(() => { document.title = "404 - Page Not Found · Arthaleads"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
 

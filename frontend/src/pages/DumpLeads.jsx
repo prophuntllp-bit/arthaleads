@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -334,7 +334,7 @@ export default function DumpLeads() {
         <div className="flex flex-1 flex-col gap-2">
           <p className="stitch-kicker mb-1">Archive</p>
           <h1 className="text-3xl font-black tracking-tight text-app">Dump Leads</h1>
-          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted — {leads.length} total</p>
+          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted - {leads.length} total</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -400,7 +400,7 @@ export default function DumpLeads() {
           <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
         ) : (
           <>
-            {/* ── Top scrollbar mirror — always-visible horizontal bar ── */}
+            {/* ── Top scrollbar mirror - always-visible horizontal bar ── */}
             <div
               ref={topScrollRef}
               className="top-scroll-mirror"
@@ -467,7 +467,7 @@ export default function DumpLeads() {
                     <td>
                       {lead.projectName
                         ? <span className="text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
-                        : <span className="text-xs text-app-soft">—</span>}
+                        : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td>
@@ -475,16 +475,16 @@ export default function DumpLeads() {
                         <span className={`badge border ${BOOKING_COLOR[lead.booking] || "bg-gray-100 text-gray-600"}`}>
                           {lead.booking}
                         </span>
-                      ) : <span className="text-xs text-app-soft">—</span>}
+                      ) : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td>
                       {lead.isDeleted
                         ? <span className="badge bg-red-500/10 text-red-500 border border-red-500/20">Deleted</span>
                         : <span className="badge bg-gray-100/50 text-gray-500">Not Interested</span>}
                     </td>
-                    <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "—"}</td>
+                    <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "-"}</td>
                     <td className="text-xs text-app-soft max-w-[180px]">
-                      <p className="truncate">{lead.remark || lead.remark1 || "—"}</p>
+                      <p className="truncate">{lead.remark || lead.remark1 || "-"}</p>
                     </td>
                     <td className="text-xs text-app-soft whitespace-nowrap">{fmtDate(lead.createdAt)}</td>
                     {canDelete && (
@@ -564,7 +564,7 @@ export default function DumpLeads() {
         )}
       </section>
 
-      {/* Export dropdown — rendered via portal so it's never clipped by overflow:hidden */}
+      {/* Export dropdown - rendered via portal so it's never clipped by overflow:hidden */}
       {showExportMenu && createPortal(
         <div
           ref={exportDropdownRef}

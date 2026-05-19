@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers } from "lucide-react";
@@ -6,7 +6,7 @@ import api from "../services/api";
 import { PageLoader } from "../components/UI";
 
 export default function Performance() {
-  useEffect(() => { document.title = "Analytics & Reports — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Analytics & Reports - Arthaleads CRM"; }, []);
   const location = useLocation();
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -45,7 +45,7 @@ export default function Performance() {
             <p className="stitch-kicker mb-2">Performance Board</p>
             <h1 className="text-3xl font-black tracking-tight text-app">Team Performance</h1>
             <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              Track how each team member is handling leads across both the main pipeline and project pipelines — updated live.
+              Track how each team member is handling leads across both the main pipeline and project pipelines - updated live.
             </p>
           </div>
           <button

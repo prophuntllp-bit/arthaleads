@@ -1,4 +1,4 @@
-// App.jsx
+﻿// App.jsx
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -10,7 +10,7 @@ import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 
 // ── Page-level code splitting ─────────────────────────────────────────────────
-// Each page is loaded only when first visited — reduces initial bundle ~50%
+// Each page is loaded only when first visited - reduces initial bundle ~50%
 const PageFallback = () => (
   <div className="flex min-h-[60vh] items-center justify-center">
     <Spinner size="lg" />
@@ -64,7 +64,7 @@ function InstallBanner() {
   );
 
   useEffect(() => {
-    // Already installed as PWA — don't show banner
+    // Already installed as PWA - don't show banner
     if (isInStandaloneMode()) return;
 
     // iOS: no beforeinstallprompt, show manual instructions after a short delay
@@ -73,7 +73,7 @@ function InstallBanner() {
       return () => clearTimeout(t);
     }
 
-    // Android / Chrome — capture the native prompt
+    // Android / Chrome - capture the native prompt
     const handler = (e) => { e.preventDefault(); setPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -154,7 +154,7 @@ function InstallBanner() {
 
 // ── Notification Permission Banner ────────────────────────────────────────────
 // Shows a clear, clickable banner asking users to enable push notifications.
-// Must be user-gesture triggered — silent requestPermission() is blocked by browsers.
+// Must be user-gesture triggered - silent requestPermission() is blocked by browsers.
 function NotificationBanner() {
   const { user } = useAuth();
   const [status, setStatus] = useState(() => {
@@ -381,9 +381,9 @@ function RequireAuth() {
       <main className="flex-1 min-w-0 pt-16 lg:pt-0 overflow-y-auto">
         <Outlet />
       </main>
-      {/* Notification permission prompt — only shows if permission not yet granted */}
+      {/* Notification permission prompt - only shows if permission not yet granted */}
       <NotificationBanner />
-      {/* Blocking overlays — rendered on top of everything */}
+      {/* Blocking overlays - rendered on top of everything */}
       {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
       {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
     </div>
@@ -404,7 +404,7 @@ function RedirectIfAuth() {
   return <Outlet />;
 }
 
-// Always show the landing page at / — logged-in users can still visit the homepage
+// Always show the landing page at / - logged-in users can still visit the homepage
 function RootRoute() {
   const { loading } = useAuth();
   if (loading) return (
@@ -425,10 +425,10 @@ export default function App() {
       <InstallBanner />
       <Suspense fallback={<PageFallback />}>
       <Routes>
-        {/* Landing — guest sees homepage, logged-in user goes to dashboard */}
+        {/* Landing - guest sees homepage, logged-in user goes to dashboard */}
         <Route path="/" element={<RootRoute />} />
 
-        {/* Fully public — no auth needed */}
+        {/* Fully public - no auth needed */}
         <Route path="/privacy"              element={<Privacy />} />
         <Route path="/terms"                element={<Terms />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
@@ -444,7 +444,7 @@ export default function App() {
         <Route path="/contact"              element={<Contact />} />
         <Route path="/share-target"         element={<ShareTarget />} />
 
-        {/* Public routes — redirect to dashboard if already logged in */}
+        {/* Public routes - redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>
           <Route path="/login"  element={<Login />} />
           <Route path="/signup" element={<Signup />} />

@@ -1,4 +1,4 @@
-// models/OAuthSession.js — ephemeral store for Facebook OAuth results
+﻿// models/OAuthSession.js - ephemeral store for Facebook OAuth results
 // TTL index automatically deletes documents after `expiresAt`
 const mongoose = require("mongoose");
 

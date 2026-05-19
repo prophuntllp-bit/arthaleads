@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
@@ -15,7 +15,7 @@ const PLATFORM_PRESETS = {
     status: "draft",
     leadSourceLabel: "Facebook",
     webhookPath: "/webhook",
-    description: "Connect Meta Lead Ads. Leads flow in automatically — no setup required.",
+    description: "Connect Meta Lead Ads. Leads flow in automatically - no setup required.",
     icon: Webhook,
     tone: "bg-blue-500/10 text-blue-400",
   },
@@ -124,11 +124,11 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           const first = fetchedPages[0];
           setPageId(first.id || "");
           setFormId(first.forms?.[0]?.id || "");
-          setConnName((prev) => prev || `${first.name} — Lead Ads`);
+          setConnName((prev) => prev || `${first.name} - Lead Ads`);
           setNoPagesWarning(false);
           toast.success("Facebook connected! Choose your page and form.");
         } else {
-          // OAuth succeeded but no pages returned — token is stored, show warning
+          // OAuth succeeded but no pages returned - token is stored, show warning
           setNoPagesWarning(true);
           // Don't clear existing pageId/formId/connName if editing
           toast.error("No Facebook Pages found. Please check permissions and try again.");
@@ -140,14 +140,14 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       }
     };
 
-    // Primary: postMessage — fires synchronously before window.close()
+    // Primary: postMessage - fires synchronously before window.close()
     const onMessage = (e) => {
       const d = e.data;
       if (!d || typeof d.type !== "string" || !d.type.startsWith("facebook_oauth")) return;
       handleResult(d);
     };
 
-    // Fallback: storage event — for when window.opener is unavailable
+    // Fallback: storage event - for when window.opener is unavailable
     const onStorage = (e) => {
       if (e.key !== "fb_oauth_result" || !e.newValue) return;
       let result;
@@ -169,8 +169,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     setPageId(id);
     const pg = pages.find((p) => p.id === id);
     setFormId(pg?.forms?.[0]?.id || "");
-    if (!connName || connName.endsWith("— Lead Ads")) {
-      setConnName(pg ? `${pg.name} — Lead Ads` : "");
+    if (!connName || connName.endsWith("- Lead Ads")) {
+      setConnName(pg ? `${pg.name} - Lead Ads` : "");
     }
   };
 
@@ -192,7 +192,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     const selectedPageData = pages.find((p) => p.id === pageId);
     // Priority: page-specific access token > fresh user token from latest OAuth > existing stored token
     const accessToken = selectedPageData?.accessToken || freshToken || editingItem?.accessToken || "";
-    // Always save the fresh long-lived user token — used for silent page-token auto-refresh
+    // Always save the fresh long-lived user token - used for silent page-token auto-refresh
     const userToken = freshToken || editingItem?.userToken || "";
     const payload = {
       name: connName.trim(),
@@ -297,14 +297,14 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <p className="text-sm text-emerald-400 font-medium">
-                    Facebook connected — {pages.length} page{pages.length !== 1 ? "s" : ""} found
+                    Facebook connected - {pages.length} page{pages.length !== 1 ? "s" : ""} found
                   </p>
                 </div>
               ) : noPagesWarning && (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 space-y-2">
                   <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
                   <p className="text-xs text-app-soft leading-relaxed">
-                    This usually means Facebook didn't grant Pages permission. When the login window opens, make sure to click <strong>"Continue"</strong> on every permission screen — don't uncheck anything.
+                    This usually means Facebook didn't grant Pages permission. When the login window opens, make sure to click <strong>"Continue"</strong> on every permission screen - don't uncheck anything.
                   </p>
                   <button
                     type="button"
@@ -363,7 +363,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   className="input"
                   value={connName}
                   onChange={(e) => setConnName(e.target.value)}
-                  placeholder="e.g. Arthaleads — Treetopia Leads"
+                  placeholder="e.g. Arthaleads - Treetopia Leads"
                 />
               </div>
 
@@ -666,7 +666,7 @@ function WordPressWizard({ open, onClose }) {
     try {
       const { data } = await api.post("/automations/website/create", { name: `WordPress Site ${connections.length + 1}` });
       setConnections((prev) => [...prev, data.connection]);
-      toast.success("New site token created — copy it and paste it into the plugin on your new WordPress site.");
+      toast.success("New site token created - copy it and paste it into the plugin on your new WordPress site.");
     } catch {
       toast.error("Failed to create connection");
     } finally {
@@ -687,7 +687,7 @@ function WordPressWizard({ open, onClose }) {
           </div>
           <div>
             <h2 className="text-lg font-bold text-app">WordPress / Website Forms</h2>
-            <p className="text-xs text-app-soft">Connect multiple WordPress sites — each gets its own token</p>
+            <p className="text-xs text-app-soft">Connect multiple WordPress sites - each gets its own token</p>
           </div>
         </div>
 
@@ -909,7 +909,7 @@ export default function Automation() {
       <section>
         <p className="mb-3 text-sm font-semibold text-app-soft">Quick connect</p>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-          {/* Facebook tile — special styling */}
+          {/* Facebook tile - special styling */}
           <button
             type="button"
             className="card p-5 text-left transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
@@ -958,7 +958,7 @@ export default function Automation() {
         <section className="card">
           <EmptyState
             title="No connections yet"
-            desc="Connect Facebook Lead Ads in one click — no technical setup needed."
+            desc="Connect Facebook Lead Ads in one click - no technical setup needed."
             action={
               <button className="btn-primary" onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}>
                 <FacebookIcon2 /> Connect Facebook

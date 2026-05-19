@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -86,7 +86,7 @@ function parseMarkdown(text) {
       blocks.push({ id: genId(), type: "numberedList", content: "", items });
       continue;
     }
-    // Paragraph — collect until blank line or next special line
+    // Paragraph - collect until blank line or next special line
     const paraLines = [];
     while (i < lines.length) {
       const l = lines[i].trim();
@@ -210,14 +210,14 @@ function BlockPicker({ onSelect, onClose }) {
   );
 }
 
-// ── Image upload button (shared — used in Block + Featured Image) ─────────────
+// ── Image upload button (shared - used in Block + Featured Image) ─────────────
 function ImageUploadArea({ value, onChange, placeholder = "Upload image or paste URL" }) {
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
   const handleFile = async (file) => {
     if (!file || !file.type.startsWith("image/")) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image too large — max 5 MB"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image too large - max 5 MB"); return; }
     setUploading(true);
     try {
       const dataUri = await fileToBase64(file);
@@ -258,7 +258,7 @@ function ImageUploadArea({ value, onChange, placeholder = "Upload image or paste
             <Upload className="w-6 h-6 text-app-soft" />
           )}
           <span className="text-xs text-app-soft font-medium">{uploading ? "Uploading…" : placeholder}</span>
-          <span className="text-[10px] text-app-soft/60">PNG, JPG, WebP — max 5 MB</span>
+          <span className="text-[10px] text-app-soft/60">PNG, JPG, WebP - max 5 MB</span>
         </button>
       )}
       <input ref={fileRef} type="file" accept="image/*" className="hidden"
@@ -363,7 +363,7 @@ function Block({ block, onChange, onDelete, onAddAfter, onMoveUp, onMoveDown, is
         </div>
       )}
 
-      {/* Image — uses full upload component */}
+      {/* Image - uses full upload component */}
       {block.type === "image" && (
         <div className="space-y-2">
           <ImageUploadArea value={block.content} onChange={url => onChange({ ...block, content: url })} placeholder="Set image" />
@@ -488,7 +488,7 @@ function ImportModal({ onImport, onClose }) {
           </div>
           <div>
             <h2 className="text-sm font-bold text-app">Paste & Import Content</h2>
-            <p className="text-xs text-app-soft">Supports Markdown — headings, lists, quotes and dividers are auto-detected</p>
+            <p className="text-xs text-app-soft">Supports Markdown - headings, lists, quotes and dividers are auto-detected</p>
           </div>
           <button onClick={onClose} className="ml-auto p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-app-soft">
             <X className="w-4 h-4" />
@@ -527,7 +527,7 @@ function ImportModal({ onImport, onClose }) {
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-t" style={{ borderColor: "var(--app-border)" }}>
           <p className="text-xs text-app-soft">
-            {text.trim().split("\n").filter(Boolean).length} lines — will create approx.{" "}
+            {text.trim().split("\n").filter(Boolean).length} lines - will create approx.{" "}
             <strong>{Math.max(1, text.trim().split(/\n\n+/).filter(Boolean).length)}</strong> blocks
           </p>
           <div className="flex gap-2">
@@ -826,7 +826,7 @@ export default function BlogEditor() {
           </div>
         </div>
 
-        {/* ── Right sidebar — WordPress style ── */}
+        {/* ── Right sidebar - WordPress style ── */}
         <div className="w-72 flex-shrink-0 border-l flex flex-col"
           style={{ borderColor: "var(--app-border)", background: "var(--app-surface)" }}>
 
@@ -884,7 +884,7 @@ export default function BlogEditor() {
                   </div>
                 </div>
 
-                {/* Featured image — WordPress button style */}
+                {/* Featured image - WordPress button style */}
                 <div className="px-4 py-4 space-y-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-app-soft">Featured Image</p>
                   <ImageUploadArea

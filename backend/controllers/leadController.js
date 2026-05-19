@@ -1,4 +1,4 @@
-const leadService = require("../services/leadService");
+﻿const leadService = require("../services/leadService");
 const { sendPushToAll } = require("../utils/push");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -7,7 +7,7 @@ const leadController = {
     try {
       const lead = await leadService.create(req.body, req.user);
       res.status(201).json({ success: true, data: lead });
-      // Send push notification for new manual lead — scoped to this org
+      // Send push notification for new manual lead - scoped to this org
       sendPushToAll({
         type: "new_lead",
         title: `New Lead: ${lead.name}`,
@@ -91,7 +91,7 @@ const leadController = {
         message: `${imported.length} lead(s) imported successfully`,
         data: imported,
       });
-      // Single notification for bulk import — scoped to this org
+      // Single notification for bulk import - scoped to this org
       if (imported.length > 0) {
         sendPushToAll({
           type: "bulk_import",

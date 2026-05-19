@@ -1,4 +1,4 @@
-// routes/superAdminRoutes.js — only accessible by super_admin role
+﻿// routes/superAdminRoutes.js - only accessible by super_admin role
 const express = require("express");
 const router  = express.Router();
 const { protect, authorize } = require("../middlewares/auth");

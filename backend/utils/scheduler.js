@@ -1,4 +1,4 @@
-const cron = require("node-cron");
+﻿const cron = require("node-cron");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const logger = require("../config/logger");
@@ -25,18 +25,18 @@ async function notifyLeads(leads, labelFn) {
     };
 
     // Priority for project leads:
-    //   1. followUpSetBy  — person who explicitly set this follow-up date
-    //   2. project.assignedTo[] — agents assigned to work this project
-    //   3. (importedBy is intentionally skipped — that's an admin action, not work)
+    //   1. followUpSetBy  - person who explicitly set this follow-up date
+    //   2. project.assignedTo[] - agents assigned to work this project
+    //   3. (importedBy is intentionally skipped - that's an admin action, not work)
     //
     // Priority for main pipeline leads:
     //   1. followUpSetBy → assignedTo
 
     if (lead.followUpSetBy) {
-      // Someone explicitly set this follow-up — notify only them
+      // Someone explicitly set this follow-up - notify only them
       await sendPushToUser(lead.followUpSetBy, payload);
     } else if (lead.project?.assignedTo?.length) {
-      // Project lead with no explicit setter — notify all agents assigned to that project
+      // Project lead with no explicit setter - notify all agents assigned to that project
       for (const userId of lead.project.assignedTo) {
         await sendPushToUser(userId, payload);
       }
@@ -58,7 +58,7 @@ async function runDailyReminder() {
     isDeleted: { $ne: true },
   }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
 
-  // Check both followUp and followUp2 — deduplicate by _id so a lead with both
+  // Check both followUp and followUp2 - deduplicate by _id so a lead with both
   // dates today only fires one notification
   const projLeads = await ProjectLead.find({
     $or: [

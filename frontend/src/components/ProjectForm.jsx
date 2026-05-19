@@ -1,4 +1,4 @@
-// components/ProjectForm.jsx
+﻿// components/ProjectForm.jsx
 import { useEffect, useRef, useState } from "react";
 import { Modal, Spinner } from "./UI";
 import { ChevronDown, ImageOff, Plus, Search, Upload, X } from "lucide-react";
@@ -93,7 +93,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   useEffect(() => {
     api.get("/auth/agents")
       .then((r) => setAllAgents(r.data.agents || []))
-      .catch(() => {}); // silently fail — not critical
+      .catch(() => {}); // silently fail - not critical
   }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -322,7 +322,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          {/* Amenities — dropdown + custom */}
+          {/* Amenities - dropdown + custom */}
           <div>
             <label className="label">Amenities</label>
             <div className="flex gap-2">
@@ -468,7 +468,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-400/30">
               <span className="text-red-500 text-sm">⚠</span>
               <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                No agents assigned — agents won't see this project and notifications won't be sent.
+                No agents assigned - agents won't see this project and notifications won't be sent.
               </p>
             </div>
           )}

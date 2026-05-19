@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -8,8 +8,8 @@ import { useSEO } from "../utils/useSEO";
 const updates = [
   {
     date: "May 2026",
-    title: "WordPress Plugin v1.0.2 — 8 Form Builders Supported",
-    desc: "The Arthaleads WordPress plugin now captures leads from MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms. All custom form fields are captured automatically — name, phone, project interest, and any field you add.",
+    title: "WordPress Plugin v1.0.2 - 8 Form Builders Supported",
+    desc: "The Arthaleads WordPress plugin now captures leads from MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms. All custom form fields are captured automatically - name, phone, project interest, and any field you add.",
     tags: ["WordPress", "Integrations"],
   },
   {
@@ -21,18 +21,18 @@ const updates = [
   {
     date: "April 2026",
     title: "Not Reachable Lead Status",
-    desc: "A dedicated pipeline stage for leads that couldn't be contacted — number not reachable, switched off, or out of coverage. Telecallers can now accurately track this state separately from other non-contact outcomes, giving managers clearer pipeline data.",
+    desc: "A dedicated pipeline stage for leads that couldn't be contacted - number not reachable, switched off, or out of coverage. Telecallers can now accurately track this state separately from other non-contact outcomes, giving managers clearer pipeline data.",
     tags: ["Pipeline", "Improvement"],
   },
   {
     date: "March 2026",
-    title: "Paste-and-Import — Instant Lead List Import",
+    title: "Paste-and-Import - Instant Lead List Import",
     desc: "Import lead lists by pasting markdown or CSV data directly into the CRM. No file upload required. The system parses the content, extracts fields, detects duplicates, and loads the leads into your project in seconds.",
     tags: ["Imports", "New Feature"],
   },
   {
     date: "March 2026",
-    title: "Facebook Leads Integration — Auto Pull from Meta Campaigns",
+    title: "Facebook Leads Integration - Auto Pull from Meta Campaigns",
     desc: "Connect your Facebook Ad account and Arthaleads will automatically pull new leads from your Meta campaigns in real time. No manual export from Meta's Leads Centre. Leads arrive in your CRM within seconds of a form submission.",
     tags: ["Facebook", "Integrations"],
   },
@@ -48,7 +48,7 @@ function ProductUpdatesInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "Product Updates — Arthaleads CRM Latest Features & Improvements",
+    title: "Product Updates - Arthaleads CRM Latest Features & Improvements",
     description: "See the latest features, improvements, and updates to Arthaleads CRM. Stay up to date with India's top real estate lead management platform.",
     canonical: "https://www.arthaleads.com/product-updates",
   });

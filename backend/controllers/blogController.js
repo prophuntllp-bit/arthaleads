@@ -1,4 +1,4 @@
-const BlogPost     = require("../models/BlogPost");
+﻿const BlogPost     = require("../models/BlogPost");
 const BlogCategory = require("../models/BlogCategory");
 const BlogTag      = require("../models/BlogTag");
 const { AppError } = require("../middlewares/errorHandler");
@@ -206,7 +206,7 @@ ${allEntries
         category, tags, status, metaTitle, metaDescription, focusKeyword,
       } = req.body;
 
-      // Slug change — check uniqueness
+      // Slug change - check uniqueness
       if (slug !== undefined && slug.trim() !== "" && slugify(slug) !== post.slug) {
         const newSlug = slugify(slug.trim());
         const dup = await BlogPost.findOne({ slug: newSlug, _id: { $ne: post._id } });
@@ -251,9 +251,9 @@ ${allEntries
       if (!dataUri || !dataUri.startsWith("data:image/")) {
         return next(new AppError("Invalid image data", 400));
       }
-      // 5 MB limit (base64 is ~1.33× raw — so 5 MB base64 ≈ 3.7 MB raw)
+      // 5 MB limit (base64 is ~1.33× raw - so 5 MB base64 ≈ 3.7 MB raw)
       if (dataUri.length > 7 * 1024 * 1024) {
-        return next(new AppError("Image too large — max 5 MB", 400));
+        return next(new AppError("Image too large - max 5 MB", 400));
       }
       const url = await uploadBlogImage(dataUri);
       res.json({ success: true, url });
@@ -282,7 +282,7 @@ ${allEntries
   async deleteCategory(req, res, next) {
     try {
       const inUse = await BlogPost.findOne({ category: req.params.id });
-      if (inUse) return next(new AppError("Category is used by one or more posts — reassign them first", 400));
+      if (inUse) return next(new AppError("Category is used by one or more posts - reassign them first", 400));
       await BlogCategory.findByIdAndDelete(req.params.id);
       res.json({ success: true, message: "Category deleted" });
     } catch (err) { next(err); }

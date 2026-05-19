@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { ArrowLeftRight, CheckCircle2, Clock3, MapPinned, PhoneCall, Trophy, XCircle } from "lucide-react";
 import api from "../services/api";
@@ -62,7 +62,7 @@ function fmtDate(d) {
 }
 
 export default function LeadPipeline() {
-  useEffect(() => { document.title = "Sales Pipeline — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Sales Pipeline - Arthaleads CRM"; }, []);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -190,7 +190,7 @@ export default function LeadPipeline() {
                       </div>
                       <div>
                         <p className="text-app-soft">Priority</p>
-                        <p className="mt-0.5 text-app font-medium">{lead.priority || "—"}</p>
+                        <p className="mt-0.5 text-app font-medium">{lead.priority || "-"}</p>
                       </div>
                       {lead.projectName && (
                         <div className="col-span-2">

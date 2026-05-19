@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Calendar, Clock } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -83,7 +83,7 @@ function CaseStudiesInner() {
   const [empty, setEmpty]     = useState(false);
 
   useSEO({
-    title: "Case Studies — How Real Estate Teams Win with Arthaleads CRM",
+    title: "Case Studies - How Real Estate Teams Win with Arthaleads CRM",
     description: "Discover how real estate developers, builders, and brokers across India use Arthaleads CRM to capture more leads, track site visits, and close more property deals faster.",
     canonical: "https://www.arthaleads.com/case-studies",
   });

@@ -1,4 +1,4 @@
-// pages/Projects.jsx
+﻿// pages/Projects.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -16,7 +16,7 @@ function fmtPrice(n) {
 }
 
 export default function Projects() {
-  useEffect(() => { document.title = "Property Inventory — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Property Inventory - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
   const canManage = ["admin", "manager", "super_admin"].includes(user?.role);

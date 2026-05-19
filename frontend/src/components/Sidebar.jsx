@@ -1,4 +1,4 @@
-// components/Sidebar.jsx
+﻿// components/Sidebar.jsx
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
@@ -38,7 +38,7 @@ const navItems = [
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
 
-// Live elapsed clock timer — recalculates correctly when `since` arrives async
+// Live elapsed clock timer - recalculates correctly when `since` arrives async
 function useLiveClock(since) {
   const [secs, setSecs] = useState(0);
   useEffect(() => {
@@ -105,7 +105,7 @@ export default function Sidebar() {
 
   // Prevent background page scroll while sidebar is open.
   // Strategy: block touchmove on document UNLESS the touch originates inside
-  // the sidebar panel — that lets the nav scroll freely on iOS/Android.
+  // the sidebar panel - that lets the nav scroll freely on iOS/Android.
   // Also block wheel events on the body for desktop.
   useEffect(() => {
     if (!open) return;
@@ -237,7 +237,7 @@ export default function Sidebar() {
     <div className="flex flex-col h-full">
       {/* ── Sidebar header: org logo if set, else default ArthaLeads branding ── */}
       {org?.logo ? (
-        /* Custom org logo — org takes center stage, ArthaLeads branding below */
+        /* Custom org logo - org takes center stage, ArthaLeads branding below */
         <div className="px-4 pt-5 pb-4 flex flex-col items-center text-center">
           {/* Org logo - prominent center */}
           <div className="w-24 h-20 flex items-center justify-center mb-2 rounded-2xl overflow-hidden p-1"
@@ -250,7 +250,7 @@ export default function Sidebar() {
           </div>
           <p className="text-sm font-bold text-app leading-tight truncate w-full mb-2.5">{org.name}</p>
           {/* Powered by ArthaLeads */}
-          <p className="text-[9px] font-medium text-app-soft mb-1 tracking-wide">Powered By —</p>
+          <p className="text-[9px] font-medium text-app-soft mb-1 tracking-wide">Powered By -</p>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <img src="/logo.png" alt="ArthaLeads" className="w-5 h-5 rounded-md object-cover flex-shrink-0" />
@@ -375,7 +375,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* ── Trial countdown — compact single-line strip ── */}
+      {/* ── Trial countdown - compact single-line strip ── */}
       {org && org.plan === "trial" && org.trialEndsAt && user?.role !== "super_admin" && (() => {
         const msLeft = new Date(org.trialEndsAt) - Date.now();
         const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
@@ -470,10 +470,10 @@ export default function Sidebar() {
     </div>
   );
 
-  // Single portal-rendered alerts dropdown — escapes backdrop-filter stacking context
+  // Single portal-rendered alerts dropdown - escapes backdrop-filter stacking context
   const AlertsPortal = alertOpen ? createPortal(
     <>
-      {/* Scrim — closes on outside click, keeps popup visually separated */}
+      {/* Scrim - closes on outside click, keeps popup visually separated */}
       <div
         style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.18)" }}
         onClick={() => setAlertOpen(false)}

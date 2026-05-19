@@ -1,4 +1,4 @@
-// routes/projectRoutes.js
+﻿// routes/projectRoutes.js
 const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/projectController");
@@ -13,7 +13,7 @@ router.get("/:id", projectController.getById);
 router.put("/:id", authorize("admin", "manager"), projectController.update);
 router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 
-// Project leads — specific paths before :leadId
+// Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);
 router.patch("/:id/leads/:leadId/remark", projectController.updateRemark);

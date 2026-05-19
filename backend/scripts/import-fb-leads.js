@@ -1,4 +1,4 @@
-/**
+﻿/**
  * One-time script to import the 5 Facebook leads from the Joyville campaign
  * that came in 2026-04-15 to 2026-04-17 but were not captured due to token issue.
  *
@@ -132,7 +132,7 @@ async function run() {
     created++;
   }
 
-  console.log(`\nDone — ${created} created, ${skipped} skipped.`);
+  console.log(`\nDone - ${created} created, ${skipped} skipped.`);
   await mongoose.disconnect();
 }
 

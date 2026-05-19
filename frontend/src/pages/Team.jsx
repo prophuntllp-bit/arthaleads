@@ -16,7 +16,7 @@ const emptyMember = {
 };
 
 export default function Team() {
-  useEffect(() => { document.title = "Team Management — Arthaleads CRM"; }, []);
+  useEffect(() => { document.title = "Team Management - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
   const [users, setUsers] = useState([]);

@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 
 export default function Privacy() {
   useEffect(() => {
-    document.title = "Privacy Policy — Arthaleads";
+    document.title = "Privacy Policy - Arthaleads";
     // Tell search engines not to index this page
     let meta = document.querySelector('meta[name="robots"]');
     if (!meta) { meta = document.createElement("meta"); meta.name = "robots"; document.head.appendChild(meta); }
@@ -33,7 +33,7 @@ export default function Privacy() {
           <li>
             <strong style={{ color: "var(--app-text)" }}>Lead data:</strong>{" "}
             Names, phone numbers, email addresses, and property preferences of prospective real estate
-            customers — collected via Facebook Lead Ads, Google Ads landing pages, WhatsApp enquiries,
+            customers - collected via Facebook Lead Ads, Google Ads landing pages, WhatsApp enquiries,
             or manual entry.
           </li>
           <li>

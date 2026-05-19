@@ -1,4 +1,4 @@
-// services/projectService.js
+﻿// services/projectService.js
 const Project = require("../models/Project");
 const ProjectLead = require("../models/ProjectLead");
 const Lead = require("../models/Lead");
@@ -135,7 +135,7 @@ const projectService = {
       const result = await ProjectLead.insertMany(docs, { ordered: false });
       insertedCount = result.length;
     } catch (bulkErr) {
-      // BulkWriteError — some docs succeeded, some failed validation/uniqueness
+      // BulkWriteError - some docs succeeded, some failed validation/uniqueness
       insertedCount = bulkErr.insertedDocs?.length ?? 0;
       writeErrors   = bulkErr.writeErrors?.length  ?? 0;
     }
@@ -256,10 +256,10 @@ const projectService = {
     }
 
     if (user.role === "super_admin") {
-      // Permanent hard delete — no dump record
+      // Permanent hard delete - no dump record
       await lead.deleteOne();
     } else {
-      // Soft delete — convert to Lead with isDeleted so it appears in Dump Leads
+      // Soft delete - convert to Lead with isDeleted so it appears in Dump Leads
       const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
       const mappedSource = validSources.includes(lead.source) ? lead.source : "Other";
       await Lead.create({
@@ -287,12 +287,12 @@ const projectService = {
     }
 
     if (user.role === "super_admin") {
-      // Permanent hard delete — no dump records
+      // Permanent hard delete - no dump records
       const result = await ProjectLead.deleteMany({ _id: { $in: ids }, project: projectId });
       return result.deletedCount;
     }
 
-    // Soft delete — convert each to a Lead with isDeleted so they appear in Dump Leads
+    // Soft delete - convert each to a Lead with isDeleted so they appear in Dump Leads
     const projectLeads = await ProjectLead.find({ _id: { $in: ids }, project: projectId });
     const validSources = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
     const now = new Date();

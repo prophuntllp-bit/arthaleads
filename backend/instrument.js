@@ -1,9 +1,9 @@
-// instrument.js — Sentry must be initialised before anything else loads
+﻿// instrument.js - Sentry must be initialised before anything else loads
 // This file is require()'d as the very first line of server.js
 const Sentry = require("@sentry/node");
 
 if (!process.env.SENTRY_DSN) {
-  console.warn("[sentry] SENTRY_DSN not set — error monitoring disabled");
+  console.warn("[sentry] SENTRY_DSN not set - error monitoring disabled");
 } else {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
@@ -11,7 +11,7 @@ if (!process.env.SENTRY_DSN) {
     // Capture 100% of errors in production, 0% in dev (no noise while coding)
     enabled: process.env.NODE_ENV === "production",
 
-    // Performance tracing — 10% of requests sampled (enough for insights)
+    // Performance tracing - 10% of requests sampled (enough for insights)
     tracesSampleRate: 0.1,
 
     // Don't send boring/expected errors to Sentry

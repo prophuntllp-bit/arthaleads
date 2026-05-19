@@ -1,4 +1,4 @@
-// components/UI.jsx — Shared reusable components
+﻿// components/UI.jsx - Shared reusable components
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { X, Loader2, Phone, MessageCircle, ChevronDown } from "lucide-react";
@@ -128,9 +128,9 @@ export function toWaNumber(phone = "") {
   return digits;
 }
 
-// Orange call icon + phone number — tap to dial
+// Orange call icon + phone number - tap to dial
 export function PhoneActions({ phone, onContact }) {
-  if (!phone) return <span className="text-xs text-app-soft">—</span>;
+  if (!phone) return <span className="text-xs text-app-soft">-</span>;
   return (
     <a
       href={`tel:${phone}`}
@@ -156,7 +156,7 @@ function getPlatform() {
 function openWAPersonal(waNumber) {
   const platform = getPlatform();
   if (platform === "android") {
-    // Android intent URL — targets com.whatsapp package only (personal WA)
+    // Android intent URL - targets com.whatsapp package only (personal WA)
     // fallback_url is wa.me so if only WA Business is installed it still works via browser
     const fallback = encodeURIComponent(`https://wa.me/${waNumber}`);
     window.location.href =
@@ -164,10 +164,10 @@ function openWAPersonal(waNumber) {
       `#Intent;package=com.whatsapp;scheme=whatsapp;` +
       `S.browser_fallback_url=${fallback};end`;
   } else if (platform === "ios") {
-    // iOS — both WA and WA Business share the whatsapp:// scheme
+    // iOS - both WA and WA Business share the whatsapp:// scheme
     window.location.href = `whatsapp://send?phone=${waNumber}`;
   } else {
-    // Desktop — open WhatsApp Web
+    // Desktop - open WhatsApp Web
     window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
   }
 }
@@ -193,21 +193,21 @@ function openWABusiness(waNumber, onNotInstalled) {
 
     window.location.href = intentUrl;
 
-    // After 2 s — if we never went hidden, the app is not installed
+    // After 2 s - if we never went hidden, the app is not installed
     setTimeout(() => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (!launched) onNotInstalled?.();
     }, 2000);
   } else if (platform === "ios") {
-    // iOS has no separate WA Business deep-link scheme — try wa.me with a note
+    // iOS has no separate WA Business deep-link scheme - try wa.me with a note
     window.location.href = `whatsapp://send?phone=${waNumber}`;
   } else {
-    // Desktop — open WhatsApp Web (no Business-specific web client)
+    // Desktop - open WhatsApp Web (no Business-specific web client)
     window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
   }
 }
 
-// Green "Chat on WhatsApp" button — shows a dropdown to choose WhatsApp or WhatsApp Business
+// Green "Chat on WhatsApp" button - shows a dropdown to choose WhatsApp or WhatsApp Business
 export function WhatsAppLink({ phone, onContact }) {
   const [open, setOpen] = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
@@ -223,7 +223,7 @@ export function WhatsAppLink({ phone, onContact }) {
   // Reset "not installed" hint whenever dropdown closes
   useEffect(() => { if (!open) setWabNotInstalled(false); }, [open]);
 
-  if (!phone) return <span className="text-xs text-app-soft">—</span>;
+  if (!phone) return <span className="text-xs text-app-soft">-</span>;
 
   const waNumber = toWaNumber(phone);
 
@@ -265,7 +265,7 @@ export function WhatsAppLink({ phone, onContact }) {
             boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
           }}
         >
-          {/* WhatsApp Personal — targets com.whatsapp only */}
+          {/* WhatsApp Personal - targets com.whatsapp only */}
           <button
             type="button"
             onClick={handlePersonal}
@@ -282,7 +282,7 @@ export function WhatsAppLink({ phone, onContact }) {
 
           <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
 
-          {/* WhatsApp Business — targets com.whatsapp.w4b only */}
+          {/* WhatsApp Business - targets com.whatsapp.w4b only */}
           <button
             type="button"
             onClick={handleBusiness}

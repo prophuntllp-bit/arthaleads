@@ -1,4 +1,4 @@
-// pages/ResetPassword.jsx
+﻿// pages/ResetPassword.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Eye, EyeOff, KeyRound, CheckCircle2, XCircle } from "lucide-react";
@@ -8,7 +8,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 
 export default function ResetPassword() {
-  useEffect(() => { document.title = "Reset Password — Arthaleads"; }, []);
+  useEffect(() => { document.title = "Reset Password - Arthaleads"; }, []);
 
   const { token }      = useParams();
   const navigate       = useNavigate();
@@ -133,7 +133,7 @@ export default function ResetPassword() {
                   </div>
                 </div>
 
-                {/* Strength checklist — only shows once user starts typing */}
+                {/* Strength checklist - only shows once user starts typing */}
                 {password && (
                   <ul className="space-y-1.5 px-1">
                     {rules.map((r) => (

@@ -1,4 +1,4 @@
-// services/authService.js
+﻿// services/authService.js
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -35,7 +35,7 @@ const authService = {
     const user = await User.create({ ...data, orgId: org._id, role: "admin" });
     const token = signToken(user._id);
 
-    // Fire-and-forget welcome email — don't block the signup response
+    // Fire-and-forget welcome email - don't block the signup response
     sendWelcomeEmail(user.email, user.name, org.name)
       .then(() => console.log(`[signup] ✅ welcome email sent to ${user.email}`))
       .catch((err) => console.error(`[signup] ❌ welcome email failed:`, err.message));
@@ -51,7 +51,7 @@ const authService = {
     // ── Brute-force lockout check ─────────────────────────────────────────────
     if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
       const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
-      logger.warn(`[login] locked account attempt — email: ${email}, ip: ${ip}`);
+      logger.warn(`[login] locked account attempt - email: ${email}, ip: ${ip}`);
       throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
     }
 
@@ -59,14 +59,14 @@ const authService = {
 
     if (!user || !validPassword) {
       // Log and increment attempt counter
-      logger.warn(`[login] failed attempt — email: ${email}, ip: ${ip}`);
+      logger.warn(`[login] failed attempt - email: ${email}, ip: ${ip}`);
       if (user) {
         user.loginAttempts = (user.loginAttempts || 0) + 1;
         if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
           user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
           user.loginAttempts = 0;
           await user.save({ validateBeforeSave: false });
-          logger.warn(`[login] account locked — email: ${email}, ip: ${ip}, locked for 15 min`);
+          logger.warn(`[login] account locked - email: ${email}, ip: ${ip}, locked for 15 min`);
           throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
         }
         await user.save({ validateBeforeSave: false });
@@ -76,7 +76,7 @@ const authService = {
 
     if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
 
-    // ── Successful login — reset lockout fields ───────────────────────────────
+    // ── Successful login - reset lockout fields ───────────────────────────────
     user.loginAttempts = 0;
     user.lockoutUntil  = null;
     user.lastLogin     = new Date();
@@ -91,7 +91,7 @@ const authService = {
 
   async googleAuth(credential) {
     // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
-    // Verify it by calling Google's userinfo endpoint — no client-secret needed.
+    // Verify it by calling Google's userinfo endpoint - no client-secret needed.
     const response = await fetch(
       `https://www.googleapis.com/oauth2/v3/userinfo`,
       { headers: { Authorization: `Bearer ${credential}` } }
@@ -119,7 +119,7 @@ const authService = {
       }
       if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
     } else {
-      // New Google user — create their own org and make them admin
+      // New Google user - create their own org and make them admin
       const orgName = `${name}'s Workspace`;
       let slug = Organization.generateSlug(orgName);
       const slugExists = await Organization.findOne({ slug });
@@ -271,7 +271,7 @@ const authService = {
     return user;
   },
 
-  // ── Forgot password — generate token + send email ─────────────────────────
+  // ── Forgot password - generate token + send email ─────────────────────────
   async forgotPassword(email) {
     const user = await User.findOne({ email: email.toLowerCase().trim() })
       .select("+passwordResetToken +passwordResetExpires");
@@ -279,7 +279,7 @@ const authService = {
     // Always respond with success to prevent email enumeration attacks
     if (!user) return;
 
-    // Google-only accounts have no password — block reset
+    // Google-only accounts have no password - block reset
     const hasPassword = await User.findById(user._id).select("+password");
     if (!hasPassword?.password) {
       throw new AppError(
@@ -299,14 +299,14 @@ const authService = {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
 
-    // Fire-and-forget — respond immediately, email sends in background
+    // Fire-and-forget - respond immediately, email sends in background
     sendPasswordResetEmail(user.email, user.name, resetUrl)
       .then(() => console.log(`[forgotPassword] ✅ email sent to ${user.email}`))
       .catch((err) => console.error(`[forgotPassword] ❌ email failed for ${user.email}:`, err.message, err.code));
-    // Return immediately — user sees success, email delivers in background
+    // Return immediately - user sees success, email delivers in background
   },
 
-  // ── Reset password — verify token + set new password ─────────────────────
+  // ── Reset password - verify token + set new password ─────────────────────
   async resetPassword(rawToken, newPassword) {
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
 
@@ -360,10 +360,10 @@ const authService = {
     const pl_visits     = mapFrom(pipelineFacet?.siteVisits, "count");
     const pl_new        = mapFrom(pipelineFacet?.newLeads,   "count");
 
-    // ── Project pipeline — keyed by Project.assignedTo ───────────────────────
+    // ── Project pipeline - keyed by Project.assignedTo ───────────────────────
     // The project's assignedTo array tells us which agents are responsible for
     // working those leads. We $lookup the parent project, $unwind assignedTo,
-    // then group by the assigned user — regardless of who imported the leads.
+    // then group by the assigned user - regardless of who imported the leads.
     const [projectFacet] = await ProjectLead.aggregate([
       { $match: { orgId } },
       { $lookup: {

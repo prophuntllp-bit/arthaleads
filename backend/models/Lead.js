@@ -1,4 +1,4 @@
-// models/Lead.js - Full Real Estate CRM Lead Schema
+﻿// models/Lead.js - Full Real Estate CRM Lead Schema
 const mongoose = require("mongoose");
 
 // ── Sub-schemas ────────────────────────────────────────────────────────────────
@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const noteSchema = new mongoose.Schema(
   {
     text: { type: String, required: true, trim: true },
-    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // optional — system/webhook notes have no user
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // optional - system/webhook notes have no user
     addedByName: { type: String, default: "" },
   },
   { timestamps: true }
@@ -109,7 +109,7 @@ const leadSchema = new mongoose.Schema(
     },
 
     // ── Ownership & Assignment ────────────────────────────────────────────────
-    // required removed — external webhook leads (Facebook, Website) have no CRM creator
+    // required removed - external webhook leads (Facebook, Website) have no CRM creator
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedToName: { type: String, default: "" }, // denormalized
@@ -143,7 +143,7 @@ const leadSchema = new mongoose.Schema(
     },
 
     // ── Lead Source Metadata ───────────────────────────────────────────────────
-    leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP — Lead Ads", "prophuntllp.com"
+    leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP - Lead Ads", "prophuntllp.com"
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
     requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
 
@@ -162,7 +162,7 @@ const leadSchema = new mongoose.Schema(
 leadSchema.index({ followUpDate: 1 });
 leadSchema.index({ createdAt: -1 });
 
-// Compound indexes — these cover the most common multi-field queries:
+// Compound indexes - these cover the most common multi-field queries:
 // "all active leads for this org sorted by date" (dashboard, leads list)
 leadSchema.index({ orgId: 1, isArchived: 1, createdAt: -1 });
 // "leads by status for this org" (pipeline, analytics)

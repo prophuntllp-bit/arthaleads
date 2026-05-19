@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ArrowRight, Mail } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -7,7 +7,7 @@ import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
 const steps = [
-  { num: "01", title: "Create your account",  desc: "Sign up at arthaleads.com/signup. Your account and organisation are set up instantly — no waiting, no approval process." },
+  { num: "01", title: "Create your account",  desc: "Sign up at arthaleads.com/signup. Your account and organisation are set up instantly - no waiting, no approval process." },
   { num: "02", title: "Add your team",         desc: "Go to Team settings and invite your telecallers, managers, and admins. Each member gets their own login with role-based access." },
   { num: "03", title: "Connect your forms",    desc: "In Automations, connect Facebook Leads, or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
   { num: "04", title: "Import existing leads", desc: "Upload a CSV or paste a lead list directly into a project. The system detects duplicates and normalises phone numbers automatically." },
@@ -21,7 +21,7 @@ const faqs = [
   },
   {
     q: "How do I connect my WordPress contact forms?",
-    a: "Install the Arthaleads WordPress plugin from the WordPress plugin directory (search 'Arthaleads'). In the plugin settings, enter your Arthaleads API token — found in your Settings → Integrations page. The plugin supports MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.",
+    a: "Install the Arthaleads WordPress plugin from the WordPress plugin directory (search 'Arthaleads'). In the plugin settings, enter your Arthaleads API token - found in your Settings → Integrations page. The plugin supports MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.",
   },
   {
     q: "Can multiple team members use the same account?",
@@ -45,7 +45,7 @@ const faqs = [
   },
   {
     q: "Is there a mobile app?",
-    a: "Arthaleads is a Progressive Web App (PWA). Open arthaleads.com in Chrome or Safari on any phone, log in, and tap 'Add to Home Screen' when prompted. It works like a native app — offline-capable, with push notifications.",
+    a: "Arthaleads is a Progressive Web App (PWA). Open arthaleads.com in Chrome or Safari on any phone, log in, and tap 'Add to Home Screen' when prompted. It works like a native app - offline-capable, with push notifications.",
   },
 ];
 
@@ -81,7 +81,7 @@ function HelpGuideInner() {
   const { isDark } = usePublicTheme();
 
   useSEO({
-    title: "Help Guide — Getting Started with Arthaleads CRM",
+    title: "Help Guide - Getting Started with Arthaleads CRM",
     description: "Learn how to use Arthaleads CRM with step-by-step guides and FAQs. Set up leads, automate workflows, track site visits, and close deals faster.",
     canonical: "https://www.arthaleads.com/help-guide",
   });

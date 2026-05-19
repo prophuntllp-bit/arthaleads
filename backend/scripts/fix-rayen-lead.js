@@ -1,4 +1,4 @@
-/**
+﻿/**
  * One-time fix: update the misclassified "Test Lead (Facebook)" for Rayen Neell
  * Run: node backend/scripts/fix-rayen-lead.js
  */
@@ -10,14 +10,14 @@ async function run() {
   await mongoose.connect(process.env.MONGO_URI);
   console.log("Connected to MongoDB");
 
-  // Find the test lead — most recent Facebook test lead
+  // Find the test lead - most recent Facebook test lead
   const lead = await Lead.findOne({
     name: "Test Lead (Facebook)",
     source: "Facebook",
   }).sort({ createdAt: -1 });
 
   if (!lead) {
-    console.log("No test lead found — may already be fixed.");
+    console.log("No test lead found - may already be fixed.");
     process.exit(0);
   }
 
@@ -26,7 +26,7 @@ async function run() {
   lead.name        = "Rayen Neell";
   lead.phone       = "+919422522199";
   lead.email       = "rayenneell@rediffmail.com";
-  lead.leadSourceLabel = lead.leadSourceLabel?.replace(" — Test", "") || "Facebook Lead Ads";
+  lead.leadSourceLabel = lead.leadSourceLabel?.replace(" - Test", "") || "Facebook Lead Ads";
 
   // Update the note
   if (lead.notes?.length > 0) {

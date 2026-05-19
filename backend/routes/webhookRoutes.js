@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const crypto  = require("crypto");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
@@ -17,7 +17,7 @@ const router = express.Router();
 function verifyFbSignature(req, res, buf) {
   const sig = req.headers["x-hub-signature-256"];
   if (!process.env.FB_APP_SECRET) {
-    logger.warn("Facebook webhook: FB_APP_SECRET not configured — webhook signature verification disabled");
+    logger.warn("Facebook webhook: FB_APP_SECRET not configured - webhook signature verification disabled");
     return; // allow in dev; configure FB_APP_SECRET in prod
   }
   if (!sig) {
@@ -33,7 +33,7 @@ function verifyFbSignature(req, res, buf) {
   const sigBuf = Buffer.from(sig);
   const expBuf = Buffer.from(expected);
   if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-    logger.warn("Facebook webhook: invalid X-Hub-Signature-256 — request rejected");
+    logger.warn("Facebook webhook: invalid X-Hub-Signature-256 - request rejected");
     const err = new Error("Invalid Facebook webhook signature");
     err.status = 403;
     throw err;
@@ -90,7 +90,7 @@ async function findFacebookAutomationByPayload(leadData) {
     if (pageMatch) return pageMatch;
   }
 
-  // Priority 3 (wildcard catch-all) intentionally removed — it could capture
+  // Priority 3 (wildcard catch-all) intentionally removed - it could capture
   // leads from other orgs when a pageId is absent (e.g. test payloads).
   logger.warn(`Facebook webhook: no matching automation found for page_id="${leadData.page_id || ""}" form_id="${leadData.form_id || ""}"`);
   return null;
@@ -108,7 +108,7 @@ async function autoRefreshPageToken(auto) {
     const json = await resp.json();
     if (json.access_token) {
       await Automation.findByIdAndUpdate(auto._id, { accessToken: json.access_token });
-      logger.info(`Facebook webhook: silently refreshed page token for automation "${auto.name}" — no reconnection needed`);
+      logger.info(`Facebook webhook: silently refreshed page token for automation "${auto.name}" - no reconnection needed`);
       return json.access_token;
     }
     logger.warn(`Facebook webhook: auto-refresh for "${auto.name}" returned no token: ${JSON.stringify(json)}`);
@@ -120,7 +120,7 @@ async function autoRefreshPageToken(auto) {
 
 // Try all active Facebook tokens until one successfully fetches the lead.
 // If all page tokens fail with auth errors, auto-refresh them using stored userToken
-// before giving up — this makes the system self-healing without manual reconnection.
+// before giving up - this makes the system self-healing without manual reconnection.
 async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
   const primaryAutomationId = primaryAutomation?._id;
 
@@ -189,19 +189,19 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     }
   }
 
-  // 5️⃣ All tokens exhausted — check if it's just a test lead
+  // 5️⃣ All tokens exhausted - check if it's just a test lead
   const hasNoLeadErrors = errors.some(e => e.message?.includes("No lead with leadgen id"));
   if (hasNoLeadErrors && errors.every(e => e.message?.includes("No lead with leadgen id"))) {
     return {
       leadDetails: null,
       isAuthError: false,
       isTestLead: true,
-      fetchError: "No lead with leadgen id — appears to be a test/simulated ID",
+      fetchError: "No lead with leadgen id - appears to be a test/simulated ID",
     };
   }
 
   const errorSummary = errors.map(e => `${e.automation}: ${e.message}`).join("; ");
-  logger.warn(`Facebook webhook: all tokens failed for lead ${leadgenId} — errors: ${errorSummary}`);
+  logger.warn(`Facebook webhook: all tokens failed for lead ${leadgenId} - errors: ${errorSummary}`);
 
   return {
     leadDetails: null,
@@ -238,7 +238,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 
         const leadData = change.value || {};
         // findFacebookAutomationByPayload already scopes by page_id / form_id.
-        // Removed the cross-org catch-all fallback — it could route leads to the
+        // Removed the cross-org catch-all fallback - it could route leads to the
         // wrong tenant's pipeline when page_id is absent (e.g. test payloads).
         const automation = await findFacebookAutomationByPayload(leadData);
 
@@ -265,7 +265,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           const fetchResult = await fetchLeadWithFallback(leadData.leadgen_id, accessToken, automation, automation.orgId);
           if (fetchResult.leadDetails) {
             leadDetails = fetchResult.leadDetails;
-            logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} — fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
+            logger.info(`Facebook webhook: fetched lead fields for ${leadData.leadgen_id} - fields: ${(leadDetails.field_data || []).map(f => f.name).join(", ")}`);
           } else {
             isTestLead  = fetchResult.isTestLead;
             isAuthError = fetchResult.isAuthError;
@@ -291,9 +291,9 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
              "Facebook Lead");
 
         const noteText = isTestLead
-          ? `⚠️ Facebook Test Lead — Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\nLead ID: ${leadData.leadgen_id || "unknown"}`
+          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\nLead ID: ${leadData.leadgen_id || "unknown"}`
           : isAuthError
-          ? `⚠️ Facebook lead received but field data could not be fetched — the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
+          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
           : `Imported from Meta Lead Ads.\nLead ID: ${leadData.leadgen_id || "unknown"}${
               Object.keys(fieldMap).length > 0
                 ? `\nFields: ${Object.entries(fieldMap).map(([k, v]) => `${k}: ${v}`).join(", ")}`
@@ -319,16 +319,16 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         let assignee = null;
         if (ruleMatch) {
           assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
-          logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched — assigning "${name}" to ${assignee.name}`);
+          logger.info(`Facebook webhook: rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
         } else {
           const fbOrg = await Organization.findById(orgId).select("autoAssign").lean();
           if (fbOrg?.autoAssign !== false) {
             try {
               assignee = await getNextAssignee(orgId);
-              logger.info(`Facebook webhook: no rule matched — round-robin assigning "${name}" to ${assignee.name}`);
+              logger.info(`Facebook webhook: no rule matched - round-robin assigning "${name}" to ${assignee.name}`);
             } catch { /* no active agents */ }
           } else {
-            logger.info(`Facebook webhook: auto-assignment disabled — "${name}" left unassigned`);
+            logger.info(`Facebook webhook: auto-assignment disabled - "${name}" left unassigned`);
           }
         }
 
@@ -344,7 +344,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           assignedTo: assignee?._id || null,
           assignedToName: assignee?.name || "",
           leadSourceLabel: isTestLead
-            ? `${automation?.name || "Facebook Lead Ads"} — Test`
+            ? `${automation?.name || "Facebook Lead Ads"} - Test`
             : (automation?.name || "Facebook Lead Ads"),
           notes: [
             {
@@ -357,8 +357,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
             {
               type: "created",
               description: assignee
-                ? `Lead received from Meta Lead Ads webhook — auto-assigned to ${assignee.name}`
-                : "Lead received from Meta Lead Ads webhook — unassigned (auto-assignment disabled)",
+                ? `Lead received from Meta Lead Ads webhook - auto-assigned to ${assignee.name}`
+                : "Lead received from Meta Lead Ads webhook - unassigned (auto-assignment disabled)",
               performedBy: assignee?._id || null,
               performedByName: assignee?.name || "",
               meta: {
@@ -454,8 +454,8 @@ router.post("/website", express.json(), async (req, res) => {
         {
           type: "created",
           description: assignee
-            ? `Lead received from website contact form — auto-assigned to ${assignee.name}`
-            : "Lead received from website contact form — unassigned (auto-assignment disabled)",
+            ? `Lead received from website contact form - auto-assigned to ${assignee.name}`
+            : "Lead received from website contact form - unassigned (auto-assignment disabled)",
           performedBy: assignee?._id || null,
           performedByName: assignee?.name || "",
           meta: { formPlugin: form_plugin || "", pageUrl: page_url || "", automationId: automation._id?.toString() },

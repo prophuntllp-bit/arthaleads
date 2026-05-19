@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -9,7 +9,7 @@ import {
 import { Spinner, EmptyState } from "../components/UI";
 
 function fmtDate(d) {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -186,7 +186,7 @@ export default function BlogManager() {
                             <Tag className="w-2.5 h-2.5" /> {post.category.name}
                           </span>
                         ) : (
-                          <span className="text-app-soft">—</span>
+                          <span className="text-app-soft">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={post.status} /></td>

@@ -1,4 +1,4 @@
-// pages/SuperAdmin.jsx — Saurabh's platform-level dashboard
+﻿// pages/SuperAdmin.jsx - Saurabh's platform-level dashboard
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
@@ -55,7 +55,7 @@ function extractDominantColor(dataUri) {
     const img = new Image();
     img.onload = () => {
       try {
-        // Downsample to 40×40 for speed — enough colour resolution
+        // Downsample to 40×40 for speed - enough colour resolution
         const SIZE = 40;
         const canvas = document.createElement("canvas");
         canvas.width = SIZE; canvas.height = SIZE;
@@ -120,7 +120,7 @@ function LogoUploader({ org, onUpdated }) {
       setLoading(true);
       try {
         // Compress + convert to JPEG (handles WebP, PNG, GIF, etc.)
-        // compressImage resolves null if the image can't be loaded — fall back to raw
+        // compressImage resolves null if the image can't be loaded - fall back to raw
         const compressed = await compressImage(rawDataUri);
         const dataUri = compressed || rawDataUri;
         setPreview(dataUri);
@@ -136,7 +136,7 @@ function LogoUploader({ org, onUpdated }) {
             onUpdated(colorData.org);
             toast.success(`Logo uploaded · Brand colour auto-set to ${dominant}`);
           } catch {
-            // Colour update failed — still show logo success
+            // Colour update failed - still show logo success
             onUpdated(data.org);
             toast.success(`Logo updated for ${org.name}`);
           }
@@ -240,12 +240,12 @@ function BrandColorPicker({ org, onUpdated }) {
     }
   };
 
-  // Swatch colour — what to show in the circle preview
+  // Swatch colour - what to show in the circle preview
   const swatchColor = isValidHex(hex) ? hex : (isValidHex(original) ? original : "#ff6b00");
 
   return (
     <div className="flex items-center gap-2.5">
-      {/* Colour swatch — clicking opens the native OS colour picker */}
+      {/* Colour swatch - clicking opens the native OS colour picker */}
       <label className="relative flex-shrink-0 cursor-pointer" title="Click to open colour picker">
         <input
           type="color"
@@ -380,7 +380,7 @@ function TrialExtender({ org, onUpdated }) {
   const minDate    = new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
   const expiryLabel = org.trialEndsAt
     ? new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
-    : "—";
+    : "-";
 
   return (
     <>
@@ -461,7 +461,7 @@ function TrialExtender({ org, onUpdated }) {
 }
 
 export default function SuperAdmin() {
-  useEffect(() => { document.title = "Super Admin — Arthaleads"; }, []);
+  useEffect(() => { document.title = "Super Admin - Arthaleads"; }, []);
   const { user } = useAuth();
 
   const [orgs, setOrgs]       = useState([]);
@@ -642,7 +642,7 @@ export default function SuperAdmin() {
                       {org.plan === "trial" ? (
                         <TrialExtender org={org} onUpdated={handleOrgUpdated} />
                       ) : (
-                        <span className="text-xs text-app-soft">—</span>
+                        <span className="text-xs text-app-soft">-</span>
                       )}
                     </td>
                   </tr>

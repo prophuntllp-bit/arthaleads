@@ -1,4 +1,4 @@
-// services/leadService.js
+﻿// services/leadService.js
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const Project = require("../models/Project");
@@ -102,12 +102,12 @@ const leadService = {
     let assignedToName = "";
 
     if (data.assignedTo) {
-      // Explicit assignment — validate the agent belongs to this org
+      // Explicit assignment - validate the agent belongs to this org
       const agent = await User.findOne({ _id: data.assignedTo, orgId: user.orgId });
       if (!agent) throw new AppError("Assigned agent not found", 404);
       assignedToName = agent.name;
     } else {
-      // No agent specified — auto-assign via round-robin if org has it enabled
+      // No agent specified - auto-assign via round-robin if org has it enabled
       try {
         const org = await Organization.findById(user.orgId).select("autoAssign").lean();
         if (org?.autoAssign !== false) {
@@ -116,7 +116,7 @@ const leadService = {
           assignedToName = assignee.name;
         }
       } catch {
-        // No active agents available — leave unassigned
+        // No active agents available - leave unassigned
       }
     }
 
@@ -259,12 +259,12 @@ const leadService = {
           sendPushToUser(agent._id, {
             type: "lead_assigned",
             title: "New Lead Assigned",
-            body: `${user.name} has assigned a lead to you — ${lead.name}`,
+            body: `${user.name} has assigned a lead to you - ${lead.name}`,
             data: { leadId: lead._id },
           }).catch(() => {});
         }
       } else {
-        // Unassign — clear the name too
+        // Unassign - clear the name too
         updates.assignedTo = null;
         updates.assignedToName = "";
         logActivity(lead, "assigned", "Unassigned", user, {});
@@ -370,7 +370,7 @@ const leadService = {
     sendPushToUser(agent._id, {
       type: "lead_assigned",
       title: "New Lead Assigned",
-      body: `${user.name} has assigned a lead to you — ${lead.name}`,
+      body: `${user.name} has assigned a lead to you - ${lead.name}`,
       data: { leadId: lead._id },
     }).catch(() => {});
 
@@ -469,7 +469,7 @@ const leadService = {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Project leads are accessible via their own project pages — excluded here
+    // Project leads are accessible via their own project pages - excluded here
     // so that manually-imported bulk project leads don't bury fresh pipeline leads.
     const [result] = await Lead.aggregate([
       { $match: leadFilter },
@@ -487,7 +487,7 @@ const leadService = {
   },
 
   async getAnalytics(user, query = {}) {
-    // ── Base match (NO date filter — applied per-facet below) ─────────────────
+    // ── Base match (NO date filter - applied per-facet below) ─────────────────
     // Analytics only covers pipeline leads (Lead model).
     // Project leads (ProjectLead) are manually-imported bulk contacts and
     // should not inflate dashboard counts / source charts.
@@ -496,7 +496,7 @@ const leadService = {
       baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
     }
 
-    // Date range stage — spread into facets that respect the selected period.
+    // Date range stage - spread into facets that respect the selected period.
     // Follow-up counts intentionally skip this (they cover ALL scheduled follow-ups).
     const createdAtFilter = getDateRangeFilter(query.dateRange, query.from, query.to);
     const dateStage = createdAtFilter ? [{ $match: { createdAt: createdAtFilter } }] : [];
@@ -504,7 +504,7 @@ const leadService = {
     const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
-    // ── Single $facet aggregation — 1 round-trip instead of 8 ────────────────
+    // ── Single $facet aggregation - 1 round-trip instead of 8 ────────────────
     const [result] = await Lead.aggregate([
       { $match: baseMatch },
       {
@@ -515,7 +515,7 @@ const leadService = {
             { $count: "count" },
           ],
 
-          // Pipeline breakdown — date-range filtered
+          // Pipeline breakdown - date-range filtered
           byStatus: [
             ...dateStage,
             { $group: { _id: "$status",   count: { $sum: 1 } } },
@@ -529,7 +529,7 @@ const leadService = {
             { $group: { _id: "$priority", count: { $sum: 1 } } },
           ],
 
-          // Top agents — date-range filtered, joined with users to skip deactivated agents
+          // Top agents - date-range filtered, joined with users to skip deactivated agents
           byAgent: [
             ...dateStage,
             { $match: { assignedTo: { $ne: null } } },
@@ -541,7 +541,7 @@ const leadService = {
             { $project: { _id: 1, name: 1, count: 1 } },
           ],
 
-          // 5 most recent leads — date-range filtered
+          // 5 most recent leads - date-range filtered
           recentLeads: [
             ...dateStage,
             { $sort: { createdAt: -1 } },
@@ -549,7 +549,7 @@ const leadService = {
             { $project: { name: 1, source: 1, status: 1, priority: 1, createdAt: 1, assignedToName: 1 } },
           ],
 
-          // Follow-ups intentionally ignore the date-range filter —
+          // Follow-ups intentionally ignore the date-range filter -
           // agents need to see ALL scheduled follow-ups, not just ones
           // created in the last 30 days.
           todayFollowUps: [
@@ -564,7 +564,7 @@ const leadService = {
       },
     ]);
 
-    // ── Shape the response (identical to the old shape — no frontend changes) ─
+    // ── Shape the response (identical to the old shape - no frontend changes) ─
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
     const sourceMap = toMap(result.bySource);
 
@@ -601,7 +601,7 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
   },
 
-  // ── Automation Alerts — recent leads from all sources ────────────────────
+  // ── Automation Alerts - recent leads from all sources ────────────────────
   async getAlerts(user) {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const filter = { orgId: user.orgId, isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };

@@ -1,4 +1,4 @@
-// utils/pushNotifications.js — Web Push subscription helpers
+﻿// utils/pushNotifications.js - Web Push subscription helpers
 import api from "../services/api";
 
 function urlBase64ToUint8Array(base64String) {

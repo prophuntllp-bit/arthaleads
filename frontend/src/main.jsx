@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
 import toast from "react-hot-toast";
 
@@ -24,7 +24,7 @@ if ("serviceWorker" in navigator) {
             });
           }
         } catch {
-          // Browser doesn't support periodic-background-sync — silent fail
+          // Browser doesn't support periodic-background-sync - silent fail
         }
       }
 
@@ -33,7 +33,7 @@ if ("serviceWorker" in navigator) {
         registration.sync.register("sync-pending-requests").catch(() => {});
       }
     } catch {
-      // SW not ready — app still works fine
+      // SW not ready - app still works fine
     }
   });
 

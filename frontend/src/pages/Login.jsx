@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Login() {
-  useEffect(() => { document.title = "Sign In — Arthaleads Real Estate CRM"; }, []);
+  useEffect(() => { document.title = "Sign In - Arthaleads Real Estate CRM"; }, []);
   const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
@@ -18,7 +18,7 @@ export default function Login() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // useGoogleLogin gives a callable function — no hidden-button hack needed
+  // useGoogleLogin gives a callable function - no hidden-button hack needed
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
@@ -121,7 +121,7 @@ export default function Login() {
         </div>
 
         <div className="w-full max-w-md lg:ml-auto lg:max-w-none min-w-0 flex flex-col">
-          {/* Mobile logo/heading — shown only on small screens */}
+          {/* Mobile logo/heading - shown only on small screens */}
           <div className="mb-8 text-center lg:hidden">
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl overflow-hidden shadow-lg">
               <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />

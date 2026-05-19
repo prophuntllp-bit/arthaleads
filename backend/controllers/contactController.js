@@ -1,4 +1,4 @@
-const { Resend } = require("resend");
+﻿const { Resend } = require("resend");
 const logger = require("../config/logger");
 
 function getResend() {
@@ -133,7 +133,7 @@ async function sendContactForm(req, res) {
       from:     FROM_ADDRESS,
       to:       CONTACT_EMAIL,
       replyTo:  email,
-      subject:  `New enquiry from ${name}${company ? ` — ${company}` : ""}`,
+      subject:  `New enquiry from ${name}${company ? ` - ${company}` : ""}`,
       html,
       text: `New contact form submission\n\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${company ? `\nCompany: ${company}` : ""}${message ? `\n\nMessage:\n${message}` : ""}`,
     });
