@@ -1,5 +1,5 @@
 // PropCRM Service Worker — PWA + Web Push notifications
-const CACHE_NAME = "propcrm-v7";
+const CACHE_NAME = "propcrm-v8";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
