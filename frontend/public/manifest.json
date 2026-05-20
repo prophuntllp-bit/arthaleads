@@ -3,7 +3,7 @@
   "name": "Arthaleads - Real Estate CRM",
   "short_name": "Arthaleads",
   "description": "Premium real estate CRM for managing property leads, team performance, and deal pipelines. Built for Pune developers and channel partners.",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

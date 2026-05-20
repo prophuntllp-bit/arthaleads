@@ -14,6 +14,17 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 
+// Strip raw Elementor/form field-ID lines like "Field 9b10818: 8007678625"
+// These appear when a form plugin sends fields with hex IDs instead of labels.
+const cleanRequirements = (text) => {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .filter(line => !/^Field\s+[a-f0-9]{5,}\s*:/i.test(line.trim()))
+    .join("\n")
+    .trim();
+};
+
 // Compact budget formatter: 8000000 → "80L", 10000000 → "1Cr"
 const fmtBudget = (val) => {
   if (!val || val === 0) return "";
@@ -1267,8 +1278,8 @@ export default function Leads() {
                     <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
                     <td className="min-w-[180px] max-w-[220px]">
-                      {lead.requirements
-                        ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={lead.requirements}>{lead.requirements}</p>
+                      {cleanRequirements(lead.requirements)
+                        ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={cleanRequirements(lead.requirements)}>{cleanRequirements(lead.requirements)}</p>
                         : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td className="whitespace-nowrap">

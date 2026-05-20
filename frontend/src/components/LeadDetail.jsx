@@ -4,6 +4,12 @@ import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
 import { fmtCurrency, fmtDate, STATUS_OPTIONS } from "../utils/constants";
 
+// Strip raw Elementor field-ID lines e.g. "Field 9b10818: 8007678625"
+const cleanRequirements = (text) => {
+  if (!text) return "";
+  return text.split("\n").filter(l => !/^Field\s+[a-f0-9]{5,}\s*:/i.test(l.trim())).join("\n").trim();
+};
+
 function Info({ label, value }) {
   return (
     <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
