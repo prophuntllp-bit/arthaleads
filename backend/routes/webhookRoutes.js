@@ -413,18 +413,19 @@ router.post("/website", express.json(), async (req, res) => {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
-    // Use the actual form name if the plugin sent it (e.g. "Vanaha Verdant Contact Form")
-    // Fall back to "siteName via PluginName" if no form name available
+    // Always use the automation connection name as the primary source label
+    // (this is the name the admin gave when creating the connection, e.g. "Shapoorjipallonji.com")
+    // form_name is kept in notes for context but should not override the website identity
     const pluginLabels = {
       metform: "MetForm", elementor_form: "Elementor Pro Forms", cf7: "Contact Form 7",
       wpforms: "WPForms", gravity_form: "Gravity Forms", ninja_form: "Ninja Forms",
       forminator_form: "Forminator", fluent_form: "Fluent Forms", manual_test: "Test Lead",
     };
-    const siteName = source_name || automation.siteName || automation.name || "Website";
     const pluginLabel = pluginLabels[form_plugin] || form_plugin || "";
-    const sourceLabel = form_name
-      ? form_name
-      : pluginLabel ? `${siteName} via ${pluginLabel}` : siteName;
+    // Priority: automation.name (user-defined connection name) > source_name > automation.siteName
+    const siteName = automation.name || source_name || automation.siteName || "Website";
+    // Always show the connection/website name — form_name goes into notes only
+    const sourceLabel = siteName;
 
     const lead = await Lead.create({
       name: name || "Website Lead",
@@ -443,7 +444,8 @@ router.post("/website", express.json(), async (req, res) => {
         {
           text: [
             message ? `Message: ${message}` : null,
-            form_plugin ? `Form plugin: ${form_plugin}` : null,
+            form_name ? `Form: ${form_name}` : null,
+            form_plugin ? `Form plugin: ${pluginLabel || form_plugin}` : null,
             page_url ? `Page: ${page_url}` : null,
           ].filter(Boolean).join("\n") || "Lead received from website contact form",
           addedBy: assignee?._id || null,
