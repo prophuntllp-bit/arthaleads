@@ -2,11 +2,14 @@
 const { AppError } = require("../middlewares/errorHandler");
 
 // Shared cookie options - httpOnly prevents JS access (XSS protection)
-// sameSite: "strict" blocks cross-origin requests (CSRF protection)
+// sameSite: "lax" allows cookie to be sent on same-site navigations and
+// cross-subdomain requests (www → api), which "strict" can block on
+// some mobile browsers (iOS Safari ITP treats subdomains differently).
 const cookieOptions = () => ({
   httpOnly: true,
   secure:   process.env.NODE_ENV === "production",
-  sameSite: "strict",
+  sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
+  domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
   maxAge:   30 * 24 * 60 * 60 * 1000, // 30 days in ms
 });
 

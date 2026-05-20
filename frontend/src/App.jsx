@@ -404,15 +404,18 @@ function RedirectIfAuth() {
   return <Outlet />;
 }
 
-// Always show the landing page at / - logged-in users can still visit the homepage
+// / route: logged-in users → dashboard, guests → login
+// This prevents mobile PWA users from seeing the marketing landing page
+// when their session expires (old start_url was "/")
 function RootRoute() {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Spinner size="lg" />
     </div>
   );
-  return <Landing />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
