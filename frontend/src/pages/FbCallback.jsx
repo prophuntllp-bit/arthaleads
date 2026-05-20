@@ -10,7 +10,7 @@ export default function FbCallback() {
     const send = (payload) => {
       // postMessage is reliable (synchronous delivery before close)
       if (window.opener) {
-        window.opener.postMessage(payload, "*");
+        window.opener.postMessage(payload, window.location.origin);
       } else {
         // Fallback: popup was opened as a tab without opener reference
         localStorage.setItem("fb_oauth_result", JSON.stringify(payload));

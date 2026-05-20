@@ -128,7 +128,7 @@ ${allEntries
       const { page = 1, limit = 20, status, search } = req.query;
       const filter = {};
       if (status && status !== "all") filter.status = status;
-      if (search) filter.title = { $regex: search, $options: "i" };
+      if (search) filter.title = { $regex: escapeRegex(search), $options: "i" };
 
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [posts, total] = await Promise.all([

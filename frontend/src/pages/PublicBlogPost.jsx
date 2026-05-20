@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import DOMPurify from "dompurify";
 import api from "../services/api";
 import { Clock, Calendar, ArrowLeft, Tag, BookOpen, Share2, ChevronRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -72,13 +73,14 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// ── HTML sanitizer - strips script tags, event handlers, and javascript: URIs ──
+// ── HTML sanitizer - uses DOMPurify for robust XSS protection ─────────────────
 function sanitizeHtml(html) {
-  return (html || "")
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
-    .replace(/\son\w+\s*=\s*[^\s>]*/gi, "")
-    .replace(/javascript:/gi, "");
+  if (!html) return "";
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "s", "a", "br", "span", "code", "mark"],
+    ALLOWED_ATTR: ["href", "target", "rel", "class", "style"],
+    FORCE_BODY: false,
+  });
 }
 
 // ── Block renderer ─────────────────────────────────────────────────────────────
