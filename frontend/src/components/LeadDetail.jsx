@@ -141,8 +141,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
             <div className="space-y-3">
               {(lead.notes || []).length === 0 && <p className="text-sm text-app-soft">No notes yet.</p>}
               {(lead.notes || []).slice().reverse().map((item) => (
-                <div key={item._id || `${item.text}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted">
-                  <p className="text-sm text-app">{item.text}</p>
+                <div key={item._id || `${item.text}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
+                  <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
                   <p className="mt-2 text-xs text-app-soft">
                     {item.addedByName || item.addedBy?.name || "Unknown"} | {fmtDate(item.createdAt)}
                   </p>
@@ -156,8 +156,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
           <div className="space-y-3">
             {(lead.activities || []).length === 0 && <p className="text-sm text-app-soft">No activity yet.</p>}
             {(lead.activities || []).slice().reverse().map((item) => (
-              <div key={item._id || `${item.type}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted">
-                <p className="text-sm font-semibold text-app">{item.description}</p>
+              <div key={item._id || `${item.type}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
+                <p className="text-sm font-semibold text-app break-words">{item.description}</p>
                 <p className="mt-1 text-xs text-app-soft">
                   {item.performedByName || item.performedBy?.name || "System"} | {fmtDate(item.createdAt)}
                 </p>

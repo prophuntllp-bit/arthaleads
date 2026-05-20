@@ -49,7 +49,15 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
          onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className={`relative rounded-[1.75rem] w-full ${widths[size]} max-h-[90vh] overflow-y-auto modal-glass`}>
-        <div className="flex items-center justify-between p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <div
+          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 rounded-t-[1.75rem]"
+          style={{
+            borderBottom: "1px solid var(--app-border)",
+            background: "var(--app-surface)",
+            backdropFilter: "var(--glass-blur-heavy)",
+            WebkitBackdropFilter: "var(--glass-blur-heavy)",
+          }}
+        >
           <h2 className="text-lg font-semibold text-app">{title}</h2>
           <button onClick={onClose} className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
             <X className="w-5 h-5 text-app-soft" />
