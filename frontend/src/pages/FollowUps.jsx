@@ -22,6 +22,22 @@ function SectionBadge({ section }) {
   return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.badge}`}>{s.label}</span>;
 }
 
+const BOOKING_COLORS = {
+  "Interested":        "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
+  "Site Visit Booked": "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400",
+  "Site Visit Done":   "bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400",
+  "Booked":            "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400",
+  "Not Interested":    "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400",
+  "Call Back":         "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400",
+  "Not Reachable":     "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400",
+};
+
+function BookingBadge({ value }) {
+  if (!value) return <span className="text-app-soft">-</span>;
+  const cls = BOOKING_COLORS[value] || "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400";
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${cls}`}>{value}</span>;
+}
+
 export default function FollowUps() {
   const navigate = useNavigate();
   const [section, setSection] = useState("present");
@@ -180,7 +196,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[780px]">
+              <table className="w-full text-xs min-w-[1200px]">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Name</th>
@@ -188,6 +204,9 @@ export default function FollowUps() {
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">WhatsApp</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Source</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status / Remark</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Booking</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 1</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 2</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">
                       <button
                         onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
@@ -198,6 +217,7 @@ export default function FollowUps() {
                         {sort === "desc" ? <ArrowDown className="w-3 h-3 text-orange-500" /> : <ArrowUp className="w-3 h-3 text-orange-500" />}
                       </button>
                     </th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Follow Up 2</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Project</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Type</th>
                   </tr>
@@ -234,7 +254,19 @@ export default function FollowUps() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
+                        <BookingBadge value={lead.booking} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-app-soft truncate max-w-[120px] block">{lead.remark1 || "-"}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-app-soft truncate max-w-[120px] block">{lead.remark2 || "-"}</span>
+                      </td>
+                      <td className="px-4 py-3">
                         <span className="text-app-soft whitespace-nowrap">{fmtDate(lead.followUpDate || lead.followUp)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-app-soft whitespace-nowrap">{fmtDate(lead.followUp2)}</span>
                       </td>
                       <td className="px-4 py-3">
                         {lead._type === "project" ? (

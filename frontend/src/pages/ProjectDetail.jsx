@@ -190,24 +190,26 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                  label: "- None -",          color: "" },
-  { value: "Interested",        label: "Interested",         color: "text-blue-600" },
-  { value: "Call Back",         label: "Call Back",          color: "text-amber-600" },
-  { value: "Site Visit Booked", label: "Site Visit Booked",  color: "text-violet-600" },
-  { value: "Booked",            label: "Booked",             color: "text-green-600" },
-  { value: "Not Interested",    label: "Not Interested",     color: "text-red-500" },
-  { value: "Not Reachable",     label: "Not Reachable",      color: "text-gray-500" },
+  { value: "",                   label: "- None -",           color: "" },
+  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
+  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "text-teal-600" },
+  { value: "Booked",             label: "Booked",              color: "text-green-600" },
+  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
+  { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
 ];
 
 // Filter pills shown above the leads table (same values minus the empty one)
 const STATUS_FILTERS = [
-  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",            text: "text-app-soft" },
-  { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",          text: "text-blue-600 dark:text-blue-400" },
-  { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",        text: "text-amber-600 dark:text-amber-400" },
-  { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",      text: "text-violet-600 dark:text-violet-400" },
-  { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",        text: "text-green-600 dark:text-green-400" },
-  { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",            text: "text-red-500 dark:text-red-400" },
-  { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",             text: "text-gray-500 dark:text-gray-400" },
+  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",             text: "text-app-soft" },
+  { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",           text: "text-blue-600 dark:text-blue-400" },
+  { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",         text: "text-amber-600 dark:text-amber-400" },
+  { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",       text: "text-violet-600 dark:text-violet-400" },
+  { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",           text: "text-teal-600 dark:text-teal-400" },
+  { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",         text: "text-green-600 dark:text-green-400" },
+  { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",             text: "text-red-500 dark:text-red-400" },
+  { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",              text: "text-gray-500 dark:text-gray-400" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -345,7 +347,7 @@ export default function ProjectDetail() {
   const [bookingFilter, setBookingFilter] = useState("");
 
   // Prospective entry statuses - used only for badge pre-fetch fallback
-  const PROSP_ENTRY = "Interested,Site Visit Booked";
+  const PROSP_ENTRY = "Interested,Site Visit Booked,Site Visit Done";
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
@@ -973,13 +975,14 @@ export default function ProjectDetail() {
           {/* Status filter pills - all scoped to isProspective leads only */}
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",          text: "text-app-soft" },
-              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",        text: "text-blue-600 dark:text-blue-400" },
-              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",    text: "text-violet-600 dark:text-violet-400" },
-              { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",      text: "text-amber-600 dark:text-amber-400" },
-              { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",      text: "text-green-600 dark:text-green-400" },
-              { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",          text: "text-red-500 dark:text-red-400" },
-              { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",           text: "text-gray-500 dark:text-gray-400" },
+              { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",           text: "text-app-soft" },
+              { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",         text: "text-blue-600 dark:text-blue-400" },
+              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",     text: "text-violet-600 dark:text-violet-400" },
+              { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",         text: "text-teal-600 dark:text-teal-400" },
+              { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",       text: "text-amber-600 dark:text-amber-400" },
+              { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",       text: "text-green-600 dark:text-green-400" },
+              { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",           text: "text-red-500 dark:text-red-400" },
+              { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",            text: "text-gray-500 dark:text-gray-400" },
             ].map((f) => {
               const active = prospBookingFilter === f.value;
               return (

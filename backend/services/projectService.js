@@ -160,8 +160,8 @@ const projectService = {
     }
 
     if (isProspective === "true" || isProspective === true) {
-      // Prospective scope: flag set OR (for existing data) originally Interested/Site Visit Booked
-      const prospScope = { $or: [{ isProspective: true }, { booking: { $in: ["Interested", "Site Visit Booked"] } }] };
+      // Prospective scope: flag set OR booking is any interest/visit state
+      const prospScope = { $or: [{ isProspective: true }, { booking: { $in: ["Interested", "Site Visit Booked", "Site Visit Done"] } }] };
       if (bookingIn) {
         // Further narrow by specific status within Prospective
         filter.$and = [prospScope, { booking: { $in: bookingIn.split(",").map((v) => v.trim()) } }];
@@ -232,8 +232,8 @@ const projectService = {
     const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking"];
     allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
 
-    // One-way flag: once Interested or Site Visit Booked, always Prospective
-    if (data.booking === "Interested" || data.booking === "Site Visit Booked") {
+    // One-way flag: once Interested, Site Visit Booked, or Site Visit Done → always Prospective
+    if (["Interested", "Site Visit Booked", "Site Visit Done"].includes(data.booking)) {
       lead.isProspective = true;
     }
 
