@@ -1,5 +1,5 @@
 ﻿// PropCRM Service Worker - PWA + Web Push + Background Sync + Periodic Sync
-const CACHE_NAME = "propcrm-v10";
+const CACHE_NAME = "propcrm-v11";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // ── Install ───────────────────────────────────────────────────────────────────
