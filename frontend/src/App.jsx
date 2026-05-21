@@ -404,9 +404,7 @@ function RedirectIfAuth() {
   return <Outlet />;
 }
 
-// / route: logged-in users → dashboard, guests → login
-// This prevents mobile PWA users from seeing the marketing landing page
-// when their session expires (old start_url was "/")
+// / route: logged-in users → dashboard, guests → Landing marketing page
 function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -415,7 +413,7 @@ function RootRoute() {
     </div>
   );
   if (user) return <Navigate to="/dashboard" replace />;
-  return <Navigate to="/login" replace />;
+  return <Landing />;
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
