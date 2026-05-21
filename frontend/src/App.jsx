@@ -21,21 +21,15 @@ function PhonePromptModal() {
   const [visible, setVisible]     = useState(false);
   const [error, setError]         = useState("");
 
-  // Show after a 2-second grace period — but only once per session
+  // Show after a 2-second grace period to any user without a phone number
   useEffect(() => {
     if (!user) return;
     if (user.phone) return; // already has phone — never show
-    if (sessionStorage.getItem("phone_prompt_dismissed") === "1") return;
     const t = setTimeout(() => setVisible(true), 2000);
     return () => clearTimeout(t);
   }, [user]);
 
   if (!visible) return null;
-
-  const dismiss = () => {
-    sessionStorage.setItem("phone_prompt_dismissed", "1");
-    setVisible(false);
-  };
 
   const handleSave = async () => {
     if (!phone || phone.replace(/\D/g, "").length < 10) {
@@ -97,12 +91,6 @@ function PhonePromptModal() {
             {saving ? "Saving…" : "Save Number"}
           </button>
 
-          <button
-            onClick={dismiss}
-            className="w-full text-center text-xs text-app-soft hover:text-app transition py-1"
-          >
-            Remind me later
-          </button>
         </div>
       </div>
     </div>
