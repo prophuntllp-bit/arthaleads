@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
     "@react-oauth/google": "^0.13.4",
     "axios": "^1.8.4",
     "dompurify": "^3.4.5",

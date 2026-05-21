@@ -13,8 +13,10 @@ export default {
         }
       },
       fontFamily: {
-        // HARDCODED - Inter is the only font for this app. Do not change.
-        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
+        // HARDCODED - Inter Variable is self-hosted via @fontsource-variable/inter.
+        // "Inter Variable" is the font-family name registered by the package.
+        // Do NOT change or remove this.
+        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
       }
     }
   },

@@ -60,6 +60,9 @@ import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
+// Self-hosted Inter variable font (served from Vercel, NOT Google Fonts CDN)
+// This guarantees Inter loads on ALL browsers/networks including Edge with strict privacy
+import "@fontsource-variable/inter";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
