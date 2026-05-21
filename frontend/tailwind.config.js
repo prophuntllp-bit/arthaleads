@@ -16,7 +16,7 @@ export default {
         // HARDCODED - Inter Variable is self-hosted via @fontsource-variable/inter.
         // "Inter Variable" is the font-family name registered by the package.
         // Do NOT change or remove this.
-        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
       }
     }
   },
