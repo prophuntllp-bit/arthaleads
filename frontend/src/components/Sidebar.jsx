@@ -221,7 +221,7 @@ export default function Sidebar() {
 
   const handleLogout = async () => {
     await logout();
-    window.location.href = "/login";
+    navigate("/login", { replace: true });
   };
 
   const filtered = navItems.filter(

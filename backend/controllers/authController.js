@@ -51,7 +51,15 @@ const authController = {
   },
 
   async logout(req, res) {
-    res.clearCookie("crm_token", cookieOptions());
+    // Must NOT pass maxAge - Express would recalculate expires and renew the cookie.
+    // Use expires: epoch (Jan 1 1970) to force the browser to delete it immediately.
+    res.clearCookie("crm_token", {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
+      expires:  new Date(0),
+    });
     res.json({ success: true, message: "Logged out" });
   },
 

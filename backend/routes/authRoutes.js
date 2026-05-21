@@ -19,9 +19,11 @@ router.post("/google",         authController.googleAuth);
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password/:token", authController.resetPassword);
 
+// Logout must be public - cookie must clear even if JWT is expired/invalid
+router.post("/logout",        authController.logout);
+
 // Protected routes
 router.use(protect);
-router.post("/logout",        authController.logout);
 router.get("/me",             authController.getMe);
 router.put("/me",             validate(updateProfileSchema), authController.updateProfile);
 router.get("/agents",         authController.getAgents);

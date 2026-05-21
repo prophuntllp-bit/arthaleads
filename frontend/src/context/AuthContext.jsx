@@ -71,13 +71,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    // Clear local session FIRST so UI shows logged-out immediately.
+    // navigate("/login") happens while the API call is in-flight.
+    clearSession();
     try {
-      // Ask backend to clear the httpOnly cookie
       await api.post("/auth/logout");
     } catch {
-      // Proceed even if request fails (e.g. offline)
-    } finally {
-      clearSession();
+      // Proceed even if request fails (offline)
     }
   }, [clearSession]);
 
