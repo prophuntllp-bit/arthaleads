@@ -13,7 +13,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]
+        // HARDCODED - Inter is the only font for this app. Do not change.
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
       }
     }
   },

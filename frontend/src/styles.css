@@ -46,7 +46,9 @@
   html.dark { color-scheme: dark; }
 
   body {
-    @apply font-sans antialiased;
+    /* HARDCODED font - Inter must be the only font, never change this */
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply antialiased;
     color: var(--app-text);
     min-height: 100vh;
     /* Light mode: warm cream with subtle orange tint */
