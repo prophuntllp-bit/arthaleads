@@ -10,6 +10,7 @@ router.get("/orgs",                    ctrl.listOrgs);
 router.patch("/orgs/:id",             ctrl.updateOrg);
 router.patch("/orgs/:id/logo",        ctrl.updateLogo);
 router.patch("/orgs/:id/extend-trial", ctrl.extendTrial);
+router.get("/users",                  ctrl.listUsers);
 router.post("/backup",                ctrl.triggerBackup);
 
 module.exports = router;

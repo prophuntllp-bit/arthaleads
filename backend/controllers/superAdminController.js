@@ -165,6 +165,37 @@ const superAdminController = {
     }
   },
 
+  // GET /api/super-admin/users - list all users across all orgs
+  async listUsers(req, res, next) {
+    try {
+      const page   = Math.max(1, parseInt(req.query.page)  || 1);
+      const limit  = Math.min(200, parseInt(req.query.limit) || 100);
+      const skip   = (page - 1) * limit;
+      const search = req.query.search || "";
+
+      const filter = { role: { $ne: "super_admin" } }; // hide super_admin accounts
+      if (search) {
+        const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+        filter.$or = [{ name: re }, { email: re }, { phone: re }];
+      }
+
+      const [users, total] = await Promise.all([
+        User.find(filter)
+          .populate("orgId", "name slug")
+          .select("name email phone role isActive lastLogin createdAt orgId")
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        User.countDocuments(filter),
+      ]);
+
+      res.json({ success: true, total, page, pages: Math.ceil(total / limit), users });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // POST /api/super-admin/backup - trigger a manual backup immediately
   async triggerBackup(req, res, next) {
     try {
