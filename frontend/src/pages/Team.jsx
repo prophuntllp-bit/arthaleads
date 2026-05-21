@@ -249,8 +249,19 @@ export default function Team() {
             <input className="input" type="email" value={form.email} onChange={handleChange("email")} required />
           </div>
           <div>
-            <label className="label">Phone</label>
-            <input className="input" value={form.phone} onChange={handleChange("phone")} />
+            <label className="label">Mobile Number</label>
+            <input
+              className="input"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange("phone")}
+              placeholder="10-digit mobile number"
+              required={!editingUser}
+              minLength={10}
+            />
+            {!editingUser && (
+              <p className="mt-1 text-[11px] text-app-soft">Required — used for follow-up alerts and team contact.</p>
+            )}
           </div>
           <div>
             <label className="label">Role</label>

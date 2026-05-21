@@ -190,9 +190,7 @@ export default function Signup() {
               </div>
 
               <div>
-                <label className="label">
-                  Phone <span className="text-app-soft font-normal">(optional)</span>
-                </label>
+                <label className="label">Mobile Number</label>
                 <input
                   className="input"
                   type="tel"
@@ -200,6 +198,8 @@ export default function Signup() {
                   onChange={set("phone")}
                   placeholder="10-digit mobile number"
                   autoComplete="tel"
+                  required
+                  minLength={10}
                 />
               </div>
 
