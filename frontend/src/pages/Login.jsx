@@ -6,7 +6,7 @@ import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
 import { auth, firebaseReady } from "../utils/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber, initializeRecaptchaConfig } from "firebase/auth";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 // Format a raw phone string to E.164 for Firebase (+91XXXXXXXXXX)
 function toE164(raw) {
@@ -43,15 +43,13 @@ function PhoneOtpPanel({ onSuccess }) {
   useEffect(() => () => { clearInterval(timerRef.current); }, []);
 
   const setupRecaptcha = () => {
-    // Clear old verifier if it exists
     if (recaptchaRef.current) {
       try { recaptchaRef.current.clear(); } catch {}
       recaptchaRef.current = null;
     }
     recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "normal",   // visible checkbox — bypasses Enterprise reCAPTCHA issues
+      size: "invisible",
       callback: () => {},
-      "expired-callback": () => { setErr("reCAPTCHA expired. Please try again."); },
     });
     return recaptchaRef.current;
   };
@@ -62,11 +60,7 @@ function PhoneOtpPanel({ onSuccess }) {
     if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
     setLoading(true);
     try {
-      // Pre-init reCAPTCHA config (handles Enterprise vs v2 gracefully)
-      if (auth) await initializeRecaptchaConfig(auth).catch(() => {});
       const verifier = setupRecaptcha();
-      // render() must be called first so reCAPTCHA widget is ready
-      await verifier.render();
       const formatted = toE164(phone);
       const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
       confirmRef.current = confirmation;
@@ -77,9 +71,8 @@ function PhoneOtpPanel({ onSuccess }) {
       const msg = e.message || "";
       setErr(msg.includes("invalid-phone") ? "Invalid phone number format." :
              msg.includes("too-many-requests") ? "Too many attempts. Wait a few minutes." :
-             msg.includes("captcha-check-failed") ? "reCAPTCHA check failed. Please try again." :
              msg.includes("missing-phone-number") ? "Please enter a valid phone number." :
-             `Failed to send OTP: ${msg.split("(")[0].trim() || "Please try again."}`);
+             `Failed: ${msg.split("(")[0].trim() || "Please try again."}`);
     } finally {
       setLoading(false);
     }

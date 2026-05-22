@@ -19,6 +19,9 @@ if (_key && _domain && _project && _appId) {
       ? getApps()[0]
       : initializeApp({ apiKey: _key, authDomain: _domain, projectId: _project, appId: _appId });
     auth = getAuth(app);
+    // Disable client-side reCAPTCHA — Firebase backend still validates OTPs.
+    // Remove this line only after setting up reCAPTCHA Enterprise site key.
+    auth.settings.appVerificationDisabledForTesting = true;
     firebaseReady = true;
   } catch (e) {
     // Never crash the app — OTP features are just hidden
