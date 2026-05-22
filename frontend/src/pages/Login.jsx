@@ -42,15 +42,17 @@ function PhoneOtpPanel({ onSuccess }) {
 
   useEffect(() => () => { clearInterval(timerRef.current); }, []);
 
-  const setupRecaptcha = () => {
-    if (recaptchaRef.current) {
-      try { recaptchaRef.current.clear(); } catch {}
-      recaptchaRef.current = null;
+  const getRecaptchaVerifier = () => {
+    // Reuse existing verifier to avoid re-initializing reCAPTCHA on every attempt
+    if (!recaptchaRef.current) {
+      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
+        size: "invisible",
+        callback: () => {},
+        "expired-callback": () => {
+          recaptchaRef.current = null;
+        },
+      });
     }
-    recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-      size: "invisible",
-      callback: () => {},
-    });
     return recaptchaRef.current;
   };
 
@@ -60,7 +62,7 @@ function PhoneOtpPanel({ onSuccess }) {
     if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
     setLoading(true);
     try {
-      const verifier = setupRecaptcha();
+      const verifier = getRecaptchaVerifier();
       const formatted = toE164(phone);
       const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
       confirmRef.current = confirmation;
