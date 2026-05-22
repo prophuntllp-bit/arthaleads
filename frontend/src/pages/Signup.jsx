@@ -5,7 +5,7 @@ import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall, CheckCircl
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 import { useGoogleLogin } from "@react-oauth/google";
-import { auth } from "../utils/firebase";
+import { auth, firebaseReady } from "../utils/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 function toE164(raw) {
@@ -115,7 +115,8 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!phoneVerified) { setError("Please verify your mobile number before creating the account."); return; }
+    // OTP verification only required when Firebase is configured
+    if (firebaseReady && !phoneVerified) { setError("Please verify your mobile number before creating the account."); return; }
     if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
@@ -227,20 +228,83 @@ export default function Signup() {
                 <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="your@email.com" autoComplete="username" required />
               </div>
 
-              {/* Phone with OTP verification */}
+              {/* Phone — OTP verification when Firebase is configured, plain field otherwise */}
               <div>
                 <label className="label flex items-center gap-2">
                   Mobile Number
-                  {phoneVerified && (
+                  {firebaseReady && phoneVerified && (
                     <span className="inline-flex items-center gap-1 text-green-500 text-[10px] font-semibold">
                       <CheckCircle2 className="w-3 h-3" /> Verified
                     </span>
                   )}
                 </label>
 
-                <div className="flex gap-2">
+                {firebaseReady ? (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        className={`input flex-1 ${phoneVerified ? "border-green-500/50 bg-green-500/5" : ""}`}
+                        type="tel"
+                        value={form.phone}
+                        onChange={set("phone")}
+                        placeholder="10-digit mobile number"
+                        autoComplete="tel"
+                        required
+                        minLength={10}
+                        disabled={phoneVerified}
+                      />
+                      {!phoneVerified && (
+                        <button
+                          type="button"
+                          onClick={sendOtp}
+                          disabled={otpLoading || form.phone.replace(/\D/g, "").length < 10 || (otpSent && resendTimer > 0)}
+                          className="btn-secondary rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap flex-shrink-0 disabled:opacity-40"
+                        >
+                          {otpLoading ? <Spinner size="sm" /> : otpSent ? (resendTimer > 0 ? `${resendTimer}s` : "Resend") : "Get OTP"}
+                        </button>
+                      )}
+                      {phoneVerified && (
+                        <button
+                          type="button"
+                          onClick={() => { setPhoneVerified(false); setOtp(""); setOtpSent(false); }}
+                          className="btn-secondary rounded-xl px-3 py-2 text-xs flex-shrink-0"
+                        >
+                          Change
+                        </button>
+                      )}
+                    </div>
+                    {otpSent && !phoneVerified && (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            className="input flex-1 text-center text-lg tracking-[0.3em] font-bold"
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={otp}
+                            onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setOtpErr(""); }}
+                            placeholder="------"
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={verifyOtp}
+                            disabled={otpLoading || otp.length < 6}
+                            className="btn-primary rounded-xl px-4 text-sm disabled:opacity-40 flex-shrink-0"
+                          >
+                            {otpLoading ? <Spinner size="sm" /> : "Verify"}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-app-soft">OTP sent to {toE164(form.phone)}</p>
+                        {otpErr && <p className="text-xs text-red-400">{otpErr}</p>}
+                      </div>
+                    )}
+                    {!otpSent && !phoneVerified && otpErr && <p className="mt-1 text-xs text-red-400">{otpErr}</p>}
+                  </>
+                ) : (
+                  /* Firebase not configured — plain phone field, no OTP required */
                   <input
-                    className={`input flex-1 ${phoneVerified ? "border-green-500/50 bg-green-500/5" : ""}`}
+                    className="input"
                     type="tel"
                     value={form.phone}
                     onChange={set("phone")}
@@ -248,58 +312,7 @@ export default function Signup() {
                     autoComplete="tel"
                     required
                     minLength={10}
-                    disabled={phoneVerified}
                   />
-                  {!phoneVerified && (
-                    <button
-                      type="button"
-                      onClick={sendOtp}
-                      disabled={otpLoading || form.phone.replace(/\D/g, "").length < 10 || (otpSent && resendTimer > 0)}
-                      className="btn-secondary rounded-xl px-3 py-2 text-xs font-semibold whitespace-nowrap flex-shrink-0 disabled:opacity-40"
-                    >
-                      {otpLoading ? <Spinner size="sm" /> : otpSent ? (resendTimer > 0 ? `${resendTimer}s` : "Resend") : "Get OTP"}
-                    </button>
-                  )}
-                  {phoneVerified && (
-                    <button
-                      type="button"
-                      onClick={() => { setPhoneVerified(false); setOtp(""); setOtpSent(false); }}
-                      className="btn-secondary rounded-xl px-3 py-2 text-xs flex-shrink-0"
-                    >
-                      Change
-                    </button>
-                  )}
-                </div>
-
-                {/* OTP input - shows after SMS sent */}
-                {otpSent && !phoneVerified && (
-                  <div className="mt-2 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        className="input flex-1 text-center text-lg tracking-[0.3em] font-bold"
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        value={otp}
-                        onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setOtpErr(""); }}
-                        placeholder="------"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={verifyOtp}
-                        disabled={otpLoading || otp.length < 6}
-                        className="btn-primary rounded-xl px-4 text-sm disabled:opacity-40 flex-shrink-0"
-                      >
-                        {otpLoading ? <Spinner size="sm" /> : "Verify"}
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-app-soft">OTP sent to {toE164(form.phone)}</p>
-                    {otpErr && <p className="text-xs text-red-400">{otpErr}</p>}
-                  </div>
-                )}
-                {!otpSent && !phoneVerified && otpErr && (
-                  <p className="mt-1 text-xs text-red-400">{otpErr}</p>
                 )}
               </div>
 
@@ -335,8 +348,8 @@ export default function Signup() {
               <button
                 type="submit"
                 className="btn-primary w-full justify-center py-3 mt-2 disabled:opacity-50"
-                disabled={loading || !phoneVerified}
-                title={!phoneVerified ? "Verify your mobile number first" : ""}
+                disabled={loading || (firebaseReady && !phoneVerified)}
+                title={firebaseReady && !phoneVerified ? "Verify your mobile number first" : ""}
               >
                 {loading ? (
                   <><Spinner size="sm" /><span>Creating account…</span></>
@@ -345,7 +358,7 @@ export default function Signup() {
                 )}
               </button>
 
-              {!phoneVerified && (
+              {firebaseReady && !phoneVerified && (
                 <p className="text-center text-xs text-app-soft">Verify your mobile number to enable account creation.</p>
               )}
             </form>

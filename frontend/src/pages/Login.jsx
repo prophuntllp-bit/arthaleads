@@ -5,7 +5,7 @@ import { Eye, EyeOff, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
-import { auth } from "../utils/firebase";
+import { auth, firebaseReady } from "../utils/firebase";
 import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 // Format a raw phone string to E.164 for Firebase (+91XXXXXXXXXX)
@@ -330,25 +330,27 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Tab switcher */}
-            <div className="flex gap-1 p-1 rounded-2xl mb-5" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <button
-                onClick={() => { setTab("email"); setErr(""); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  tab === "email" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" /> Email
-              </button>
-              <button
-                onClick={() => { setTab("phone"); setErr(""); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  tab === "phone" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" /> Phone OTP
-              </button>
-            </div>
+            {/* Tab switcher — Phone OTP only shown when Firebase env vars are configured */}
+            {firebaseReady && (
+              <div className="flex gap-1 p-1 rounded-2xl mb-5" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                <button
+                  onClick={() => { setTab("email"); setErr(""); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
+                    tab === "email" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" /> Email
+                </button>
+                <button
+                  onClick={() => { setTab("phone"); setErr(""); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
+                    tab === "phone" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
+                  }`}
+                >
+                  <Phone className="w-3.5 h-3.5" /> Phone OTP
+                </button>
+              </div>
+            )}
 
             {/* Email/Password form */}
             {tab === "email" && (
@@ -409,8 +411,8 @@ export default function Login() {
               </form>
             )}
 
-            {/* Phone OTP form */}
-            {tab === "phone" && (
+            {/* Phone OTP form — only renders when firebaseReady */}
+            {tab === "phone" && firebaseReady && (
               <PhoneOtpPanel onSuccess={handlePhoneSuccess} />
             )}
 
