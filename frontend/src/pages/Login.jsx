@@ -68,11 +68,13 @@ function PhoneOtpPanel({ onSuccess }) {
       startCountdown();
       toast.success("OTP sent to " + formatted);
     } catch (e) {
-      const msg = e.message || "";
-      setErr(msg.includes("invalid-phone") ? "Invalid phone number format." :
-             msg.includes("too-many-requests") ? "Too many attempts. Wait a few minutes." :
-             msg.includes("missing-phone-number") ? "Please enter a valid phone number." :
-             `Failed: ${msg.split("(")[0].trim() || "Please try again."}`);
+      console.error("[OTP] sendOtp error:", e.code, e.message);
+      const code = e.code || "";
+      const msg  = e.message || "";
+      setErr(code.includes("invalid-phone") || msg.includes("invalid-phone") ? "Invalid phone number format." :
+             code.includes("too-many-requests") || msg.includes("too-many-requests") ? "Too many attempts. Wait a few minutes." :
+             code.includes("missing-phone") ? "Please enter a valid phone number." :
+             `Error [${code || "unknown"}]: ${msg.split("(")[0].trim() || "Please try again."}`);
     } finally {
       setLoading(false);
     }
