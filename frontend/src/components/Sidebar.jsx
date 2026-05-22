@@ -412,8 +412,26 @@ export default function Sidebar() {
 
         <div className="rounded-[1.35rem] px-4 py-4 shell-panel">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0"
-              style={{ background: "rgba(var(--app-primary-rgb), 0.10)", color: "var(--app-primary)" }}>
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-10 h-10 rounded-full object-cover flex-shrink-0 border"
+                style={{ borderColor: "var(--app-border)" }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.nextSibling.style.display = "flex";
+                }}
+              />
+            ) : null}
+            <div
+              className="w-10 h-10 rounded-full items-center justify-center font-bold text-sm flex-shrink-0"
+              style={{
+                background: "rgba(var(--app-primary-rgb), 0.10)",
+                color: "var(--app-primary)",
+                display: user?.avatar ? "none" : "flex",
+              }}
+            >
               {user?.name?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">

@@ -182,7 +182,7 @@ const superAdminController = {
       const [users, total] = await Promise.all([
         User.find(filter)
           .populate("orgId", "name slug")
-          .select("name email phone role isActive lastLogin createdAt orgId")
+          .select("name email phone role isActive lastLogin createdAt orgId avatar")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)

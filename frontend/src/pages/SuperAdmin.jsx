@@ -565,8 +565,26 @@ function UsersPanel() {
                 <tr key={u._id}>
                   <td>
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: "linear-gradient(135deg, #a04100, #ff6b00)" }}>
+                      {u.avatar ? (
+                        <img
+                          src={u.avatar}
+                          alt={u.name}
+                          className="w-8 h-8 rounded-xl object-cover border flex-shrink-0"
+                          style={{ borderColor: "var(--app-border)" }}
+                          onError={(e) => {
+                            // If image fails to load, swap to letter initial
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.nextSibling.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="w-8 h-8 rounded-xl items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{
+                          background: "linear-gradient(135deg, #a04100, #ff6b00)",
+                          display: u.avatar ? "none" : "flex",
+                        }}
+                      >
                         {u.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <span className="font-semibold text-app text-sm">{u.name}</span>
