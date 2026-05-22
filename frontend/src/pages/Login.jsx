@@ -236,7 +236,7 @@ export default function Login() {
         }
         setErr(
           e.response?.data?.message ||
-          (isNetworkErr ? "Could not reach the server. Check your connection and try again." : "Login failed. Please check your credentials.")
+          (isNetworkErr ? "Could not reach the server. Check your connection and try again." : "Login failed. Please check your email/phone and password.")
         );
         break;
       }
@@ -356,17 +356,22 @@ export default function Login() {
             {tab === "email" && (
               <form onSubmit={submit} className="space-y-4" autoComplete="off">
                 <div>
-                  <label className="label">Email</label>
+                  <label className="label">Email or Phone</label>
                   <input
                     className="input"
-                    type="email"
+                    type="text"
+                    inputMode="email"
                     value={form.email}
-                    onChange={set("email")}
-                    placeholder="you@company.com"
+                    onChange={(e) => {
+                      // Switch inputMode to numeric when user types digits only
+                      set("email")(e);
+                    }}
+                    placeholder="you@company.com or 9876543210"
                     required
                     autoComplete="username"
                     name="email"
                   />
+                  <p className="mt-1 text-[11px] text-app-soft">Enter your email address or registered mobile number.</p>
                 </div>
                 <div>
                   <label className="label">Password</label>

@@ -15,7 +15,11 @@ const signupSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  // Accept either an email address or a phone number (10-digit or +91 format)
+  email: Joi.alternatives().try(
+    Joi.string().email(),
+    Joi.string().pattern(/^\+?[0-9]{7,15}$/)
+  ).required().label("Email or Phone"),
   password: Joi.string().required(),
 });
 

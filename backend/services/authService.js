@@ -43,15 +43,27 @@ const authService = {
     return { token, user, org };
   },
 
-  async login(email, password, ip = "unknown") {
+  async login(identifier, password, ip = "unknown") {
+    // Support login with either email OR phone number
+    const isPhone = /^\+?[0-9]{7,15}$/.test((identifier || "").replace(/\s/g, ""));
+    let userQuery;
+    if (isPhone) {
+      // Normalise: strip country code prefix so we match any stored format
+      const raw  = identifier.replace(/\s/g, "");
+      const norm = raw.replace(/^\+?91/, "").replace(/^0/, "").slice(-10);
+      userQuery = { phone: { $in: [norm, `+91${norm}`, `91${norm}`, `0${norm}`, raw] } };
+    } else {
+      userQuery = { email: identifier.toLowerCase().trim() };
+    }
+
     // Select lockout fields alongside password
-    const user = await User.findOne({ email })
+    const user = await User.findOne(userQuery)
       .select("+password +loginAttempts +lockoutUntil");
 
     // ── Brute-force lockout check ─────────────────────────────────────────────
     if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
       const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
-      logger.warn(`[login] locked account attempt - email: ${email}, ip: ${ip}`);
+      logger.warn(`[login] locked account attempt - identifier: ${identifier}, ip: ${ip}`);
       throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
     }
 
@@ -59,19 +71,19 @@ const authService = {
 
     if (!user || !validPassword) {
       // Log and increment attempt counter
-      logger.warn(`[login] failed attempt - email: ${email}, ip: ${ip}`);
+      logger.warn(`[login] failed attempt - identifier: ${identifier}, ip: ${ip}`);
       if (user) {
         user.loginAttempts = (user.loginAttempts || 0) + 1;
         if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
           user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
           user.loginAttempts = 0;
           await user.save({ validateBeforeSave: false });
-          logger.warn(`[login] account locked - email: ${email}, ip: ${ip}, locked for 15 min`);
+          logger.warn(`[login] account locked - identifier: ${identifier}, ip: ${ip}, locked for 15 min`);
           throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
         }
         await user.save({ validateBeforeSave: false });
       }
-      throw new AppError("Invalid email or password", 401);
+      throw new AppError("Invalid email/phone or password", 401);
     }
 
     if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
