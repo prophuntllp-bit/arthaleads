@@ -329,6 +329,50 @@ const authService = {
     return { token, user, org };
   },
 
+  // ── Phone OTP login via Firebase ─────────────────────────────────────────────
+  // Frontend verifies the OTP with Firebase, then sends the Firebase idToken here.
+  // We verify it server-side, extract the phone number, find the matching CRM user,
+  // and issue our own JWT cookie — same as email/password login.
+  async phoneLogin(idToken) {
+    const { getAdmin } = require("../utils/firebaseAdmin");
+    const fbAdmin = getAdmin();
+
+    let decoded;
+    try {
+      decoded = await fbAdmin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      throw new AppError("Invalid or expired OTP session. Please try again.", 401);
+    }
+
+    const firebasePhone = decoded.phone_number;
+    if (!firebasePhone) throw new AppError("Phone number not found in token", 400);
+
+    // Normalise: strip +91 or leading 0 so we can match whatever the user stored
+    const normalise = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1");
+    const norm = normalise(firebasePhone);
+
+    // Build a list of all common formats that might be stored in the DB
+    const variants = [norm, `+91${norm}`, `91${norm}`, `0${norm}`, firebasePhone];
+
+    const user = await User.findOne({ phone: { $in: variants } });
+    if (!user) {
+      throw new AppError(
+        "No account found with this phone number. Please sign up first or ask your admin to add your number.",
+        404
+      );
+    }
+    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      : null;
+    return { token, user, org };
+  },
+
   async getPerformance(actor) {
     const memberMatch = actor.role === "manager"
       ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }

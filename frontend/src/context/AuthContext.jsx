@@ -55,6 +55,12 @@ export function AuthProvider({ children }) {
     return data;
   }, [persist]);
 
+  const phoneLogin = useCallback(async (idToken) => {
+    const { data } = await api.post("/auth/phone-login", { idToken });
+    persist(data.user, data.org);
+    return data;
+  }, [persist]);
+
   const refreshUser = useCallback(async () => {
     const { data } = await api.get("/auth/me");
     persist(data.user, data.org);
@@ -82,7 +88,7 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, logout, refreshUser, updateUserState, updateOrg }}>
+    <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, phoneLogin, logout, refreshUser, updateUserState, updateOrg }}>
       {children}
     </AuthContext.Provider>
   );
