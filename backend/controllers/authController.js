@@ -162,17 +162,6 @@ const authController = {
     }
   },
 
-  async phoneLogin(req, res, next) {
-    try {
-      const { idToken } = req.body;
-      if (!idToken) return next(new AppError("Firebase ID token is required", 400));
-      const data = await authService.phoneLogin(idToken);
-      sendAuthResponse(res, 200, data);
-    } catch (err) {
-      next(err);
-    }
-  },
-
   // ── MSG91 OTP ────────────────────────────────────────────────────────────────
   async sendOtp(req, res, next) {
     try {

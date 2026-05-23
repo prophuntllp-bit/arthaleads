@@ -16,7 +16,6 @@ const {
 router.post("/signup",         validate(signupSchema), authController.signup);
 router.post("/login",          validate(loginSchema),  authController.login);
 router.post("/google",         authController.googleAuth);
-router.post("/phone-login",    authController.phoneLogin);   // legacy Firebase flow
 router.post("/otp/send",       authController.sendOtp);      // MSG91 OTP send
 router.post("/otp/verify",     authController.verifyOtp);    // MSG91 OTP verify + login
 router.post("/forgot-password", authController.forgotPassword);
