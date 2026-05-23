@@ -388,7 +388,7 @@ function OrgInactiveScreen({ onLogout }) {
         </p>
         <p className="text-sm font-semibold mb-6" style={{ color: '#FF6B00' }}>{SUPPORT_EMAIL}</p>
         <button
-          onClick={() => { window.location.href = ; }}
+          onClick={() => { window.location.href = "mailto:" + SUPPORT_EMAIL + "?subject=Account%20Deactivated%20-%20Restore%20Access"; }}
           className="block w-full py-3 rounded-2xl font-semibold text-sm mb-3 transition hover:opacity-90"
           style={{ background: '#FF6B00', color: '#ffffff' }}>
           Contact Support
