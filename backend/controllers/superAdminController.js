@@ -23,7 +23,10 @@ const superAdminController = {
       const skip  = (page - 1) * limit;
 
       const [orgs, total] = await Promise.all([
-        Organization.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Organization.find()
+          .sort({ createdAt: -1 }).skip(skip).limit(limit)
+          .select("-__v") // exclude internal mongoose field; logo is included but now all logos are Cloudinary URLs (small strings)
+          .lean(),
         Organization.countDocuments(),
       ]);
 

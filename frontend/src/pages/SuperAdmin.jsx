@@ -829,8 +829,9 @@ export default function SuperAdmin() {
             key={key}
             onClick={() => setTab(key)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              tab === key ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
+              tab === key ? "text-white shadow-sm" : "text-app-soft hover:text-app"
             }`}
+            style={tab === key ? { background: "var(--app-primary)" } : {}}
           >
             <Icon className="w-3.5 h-3.5" />
             {label}
@@ -861,7 +862,7 @@ export default function SuperAdmin() {
                   <th className="text-center">Leads</th>
                   <th>Logo</th>
                   <th>Brand Colour</th>
-                  <th>Plan</th>
+                  <th>Change Plan</th>
                   <th className="text-center">Status</th>
                   <th>Extend Trial</th>
                 </tr>
