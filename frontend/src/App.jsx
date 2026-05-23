@@ -372,25 +372,30 @@ const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
+  const SUPPORT_EMAIL = 'contact@arthaleads.com';
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="max-w-sm w-full rounded-3xl p-8 text-center shadow-2xl"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-5">
-          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      {/* Always white card so text is guaranteed readable in both dark and light mode */}
+      <div className="max-w-sm w-full rounded-3xl p-8 text-center shadow-2xl" style={{ background: '#ffffff' }}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: 'rgba(239,68,68,0.1)' }}>
+          <svg className="w-8 h-8" style={{ color: '#ef4444' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 115.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
         </div>
-        <h2 className="text-xl font-black text-app mb-2">Account Deactivated</h2>
-        <p className="text-sm text-app-soft leading-relaxed mb-6">
-          Your organisation's account has been deactivated by an administrator. Please contact Arthaleads support to restore access.
+        <h2 className="text-xl font-black mb-2" style={{ color: '#111827' }}>Account Deactivated</h2>
+        <p className="text-sm leading-relaxed mb-2" style={{ color: '#6b7280' }}>
+          Your organisation's account has been deactivated. Please contact Arthaleads support to restore access.
         </p>
-        <a href="mailto:contact@arthaleads.com"
-          className="block w-full py-3 rounded-2xl bg-[#FF6B00] text-white font-semibold text-sm mb-3 hover:bg-[#e05f00] transition">
+        <p className="text-sm font-semibold mb-6" style={{ color: '#FF6B00' }}>{SUPPORT_EMAIL}</p>
+        <button
+          onClick={() => { window.location.href = ; }}
+          className="block w-full py-3 rounded-2xl font-semibold text-sm mb-3 transition hover:opacity-90"
+          style={{ background: '#FF6B00', color: '#ffffff' }}>
           Contact Support
-        </a>
+        </button>
         <button onClick={onLogout}
-          className="block w-full py-2.5 rounded-2xl text-app-soft text-sm hover:text-app transition">
+          className="block w-full py-2.5 rounded-2xl text-sm transition hover:underline"
+          style={{ color: '#6b7280' }}>
           Sign Out
         </button>
       </div>

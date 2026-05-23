@@ -780,7 +780,7 @@ export default function SuperAdmin() {
   if (loading) return <PageLoader />;
 
   return (
-    <div className="stitch-page max-w-6xl mx-auto">
+    <div className="stitch-page">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-1">
