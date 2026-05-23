@@ -814,7 +814,7 @@ export default function Sidebar() {
         <div
           onMouseEnter={() => { if (!pinned) setHovered(true);  }}
           onMouseLeave={() => { if (!pinned) setHovered(false); }}
-          className="sidebar-glass flex flex-col h-full overflow-hidden"
+          className="sidebar-glass flex flex-col h-full"
           style={{
             /* Pinned: stay in normal flow (same width as aside, no overlay)   */
             /* Hover:  absolute so it overlays content without shifting layout */
@@ -823,6 +823,8 @@ export default function Sidebar() {
             top:   0,
             bottom:0,
             width:      expanded ? 240 : 64,
+            overflowX:  "hidden",   // clip labels horizontally when collapsed
+            overflowY:  "visible",  // never clip vertically — nav scrolls itself
             transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
             zIndex:     30,
           }}
