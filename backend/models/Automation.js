@@ -79,6 +79,16 @@ const automationSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    // When the userToken expires (long-lived tokens last 60 days; we refresh every 15)
+    userTokenExpiresAt: {
+      type: Date,
+      default: null,
+    },
+    // Last time the token was auto-refreshed by the cron job
+    tokenRefreshedAt: {
+      type: Date,
+      default: null,
+    },
     mappingNotes: {
       type: String,
       trim: true,

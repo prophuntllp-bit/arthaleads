@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle,
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
@@ -809,6 +809,22 @@ export default function Automation() {
   const [deleting, setDeleting] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Facebook token refresh
+  const [refreshingTokens, setRefreshingTokens] = useState(false);
+
+  const handleRefreshFbTokens = async () => {
+    setRefreshingTokens(true);
+    try {
+      const { data } = await api.post("/automations/facebook/refresh-tokens");
+      toast.success(data.message || "Facebook tokens refreshed");
+      await loadItems(); // reload to show updated expiry dates
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Token refresh failed. Try reconnecting Facebook.");
+    } finally {
+      setRefreshingTokens(false);
+    }
+  };
+
   const apiBase = useMemo(() => api.defaults.baseURL || "http://localhost:5000/api", []);
 
   const loadItems = async () => {
@@ -1012,18 +1028,56 @@ export default function Automation() {
                     </span>
                   </div>
 
-                  {isFb ? (
-                    <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
-                      <div>
-                        <p className="text-xs text-app-soft">Page ID</p>
-                        <p className="mt-0.5 font-medium text-app truncate">{item.pageId || "All pages"}</p>
+                  {isFb ? (() => {
+                    // Token health calculation
+                    const expiresAt = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
+                    const daysLeft  = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                    const tokenOk   = daysLeft === null || daysLeft > 20;
+                    const tokenWarn = daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
+                    const tokenBad  = daysLeft !== null && daysLeft <= 5;
+                    return (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
+                          <div>
+                            <p className="text-xs text-app-soft">Page ID</p>
+                            <p className="mt-0.5 font-medium text-app truncate">{item.pageId || "All pages"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-app-soft">Form</p>
+                            <p className="mt-0.5 font-medium text-app truncate">{item.formId || "All forms"}</p>
+                          </div>
+                        </div>
+                        {/* Token health row */}
+                        <div className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs ${tokenBad ? "bg-red-500/10 border border-red-500/30" : tokenWarn ? "bg-amber-500/10 border border-amber-400/30" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
+                          <div className="flex items-center gap-1.5">
+                            {tokenBad ? <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> : tokenWarn ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
+                            <span className={tokenBad ? "text-red-400 font-semibold" : tokenWarn ? "text-amber-400 font-semibold" : "text-emerald-400"}>
+                              {daysLeft === null
+                                ? "Token health unknown — click Refresh"
+                                : tokenBad
+                                  ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
+                                  : tokenWarn
+                                    ? `Token expires in ${daysLeft} days — refresh soon`
+                                    : `Token valid for ${daysLeft} days`}
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleRefreshFbTokens}
+                            disabled={refreshingTokens}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 ${tokenBad ? "bg-red-500 text-white" : tokenWarn ? "bg-amber-500 text-white" : "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"}`}
+                          >
+                            <RefreshCw className={`w-3 h-3 ${refreshingTokens ? "animate-spin" : ""}`} />
+                            {refreshingTokens ? "Refreshing…" : "Refresh"}
+                          </button>
+                        </div>
+                        {item.tokenRefreshedAt && (
+                          <p className="text-[10px] text-app-soft px-1">
+                            Last refreshed: {new Date(item.tokenRefreshedAt).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-xs text-app-soft">Form</p>
-                        <p className="mt-0.5 font-medium text-app truncate">{item.formId || "All forms"}</p>
-                      </div>
-                    </div>
-                  ) : item.platform === "Website Form" ? (
+                    );
+                  })() : item.platform === "Website Form" ? (
                     <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
                       {item.siteName || item.siteUrl ? (
                         <div>

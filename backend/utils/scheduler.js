@@ -1,9 +1,12 @@
 ﻿const cron = require("node-cron");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
+const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
+
+const META_GRAPH_VERSION = "v23.0";
 
 function getTodayRange() {
   const start = new Date();
@@ -133,6 +136,88 @@ async function runUpcomingReminder() {
   await notifyLeads(allLeads, (lead) => `Follow-up in 10 minutes: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
+// ── Facebook token refresh ────────────────────────────────────────────────────
+// Facebook long-lived user tokens expire after 60 days.
+// We refresh any token expiring within 20 days so it never actually expires.
+// Runs daily at 10 AM IST (UTC 04:30) — low traffic window.
+async function refreshFacebookTokens() {
+  if (!process.env.FB_APP_ID || !process.env.FB_APP_SECRET) {
+    logger.warn("[fb-token-refresh] FB_APP_ID or FB_APP_SECRET not set — skipping");
+    return;
+  }
+
+  // Find automations whose userToken expires within 20 days (or has no expiry recorded yet)
+  const threshold = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000);
+  const automations = await Automation.find({
+    platform: "Facebook",
+    isActive: true,
+    userToken: { $exists: true, $ne: "" },
+    $or: [
+      { userTokenExpiresAt: { $lte: threshold } },
+      { userTokenExpiresAt: null },
+    ],
+  });
+
+  if (!automations.length) {
+    logger.info("[fb-token-refresh] All Facebook tokens are fresh — nothing to refresh");
+    return;
+  }
+
+  logger.info(`[fb-token-refresh] Refreshing ${automations.length} Facebook token(s)`);
+  let refreshed = 0, failed = 0;
+
+  for (const auto of automations) {
+    try {
+      // Exchange current long-lived user token for a new 60-day token
+      const params = new URLSearchParams({
+        grant_type:       "fb_exchange_token",
+        client_id:        process.env.FB_APP_ID,
+        client_secret:    process.env.FB_APP_SECRET,
+        fb_exchange_token: auto.userToken,
+      });
+      const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token?${params.toString()}`);
+      const json = await resp.json();
+
+      if (!json.access_token) {
+        logger.warn(`[fb-token-refresh] "${auto.name}" (${auto._id}): token exchange failed — ${JSON.stringify(json.error || json)}`);
+        failed++;
+        continue;
+      }
+
+      const freshUserToken = json.access_token;
+      const updates = {
+        userToken:           freshUserToken,
+        userTokenExpiresAt:  new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        tokenRefreshedAt:    new Date(),
+      };
+
+      // Also refresh the page access token from the new user token
+      if (auto.pageId) {
+        try {
+          const pageParams = new URLSearchParams({ access_token: freshUserToken, fields: "access_token" });
+          const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${auto.pageId}?${pageParams.toString()}`);
+          const pageJson = await pageResp.json();
+          if (pageJson.access_token) {
+            updates.accessToken = pageJson.access_token;
+            logger.info(`[fb-token-refresh] "${auto.name}": page token also refreshed`);
+          }
+        } catch (pe) {
+          logger.warn(`[fb-token-refresh] "${auto.name}": page token refresh failed — ${pe.message}`);
+        }
+      }
+
+      await Automation.findByIdAndUpdate(auto._id, updates);
+      logger.info(`[fb-token-refresh] "${auto.name}" (${auto._id}): user token refreshed — expires ${updates.userTokenExpiresAt.toDateString()}`);
+      refreshed++;
+    } catch (err) {
+      logger.error(`[fb-token-refresh] "${auto.name}" (${auto._id}): unexpected error — ${err.message}`);
+      failed++;
+    }
+  }
+
+  logger.info(`[fb-token-refresh] Done — ${refreshed} refreshed, ${failed} failed`);
+}
+
 // ── Daily 9 AM IST (UTC 03:30): follow-up reminders ─────────────────────────
 cron.schedule("30 3 * * *", () => {
   runDailyReminder().catch((err) => logger.error(`Daily reminder error: ${err.message}`));
@@ -148,4 +233,9 @@ cron.schedule("30 20 * * *", () => {
   runBackup().catch((err) => logger.error(`[backup] cron failed: ${err.message}`));
 });
 
-module.exports = { runDailyReminder, runUpcomingReminder, runBackup };
+// ── Daily 10 AM IST (UTC 04:30): Facebook token proactive refresh ─────────────
+cron.schedule("30 4 * * *", () => {
+  refreshFacebookTokens().catch((err) => logger.error(`[fb-token-refresh] cron failed: ${err.message}`));
+});
+
+module.exports = { runDailyReminder, runUpcomingReminder, runBackup, refreshFacebookTokens };

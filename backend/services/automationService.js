@@ -118,6 +118,12 @@ const automationService = {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
 
+    // When a fresh userToken is saved, record when it will expire (60 days from now)
+    if (payload.userToken && payload.userToken !== automation.userToken) {
+      automation.userTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+      automation.tokenRefreshedAt   = new Date();
+    }
+
     automation.updatedBy = actor._id;
     await automation.save();
 
