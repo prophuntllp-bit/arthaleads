@@ -5,55 +5,27 @@ import { Eye, EyeOff, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
-import { auth, firebaseReady } from "../utils/firebase";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import axios from "axios";
 
-// Format a raw phone string to E.164 for Firebase (+91XXXXXXXXXX)
-function toE164(raw) {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 10) return `+91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
-  if (digits.startsWith("+")) return raw.replace(/[^\d+]/g, "");
-  return `+${digits}`;
-}
+const API = import.meta.env.VITE_API_URL || "https://api.arthaleads.com";
 
-// ── Phone OTP panel ───────────────────────────────────────────────────────────
-function PhoneOtpPanel({ onSuccess }) {
-  const [phone, setPhone]         = useState("");
-  const [otp, setOtp]             = useState("");
-  const [step, setStep]           = useState("phone"); // "phone" | "otp"
-  const [loading, setLoading]     = useState(false);
-  const [resendTimer, setTimer]   = useState(0);
-  const [err, setErr]             = useState("");
-  const confirmRef                = useRef(null);
-  const recaptchaRef              = useRef(null);
-  const timerRef                  = useRef(null);
+// ── Phone OTP panel — uses our backend + MSG91 (no Firebase / no reCAPTCHA) ──
+function PhoneOtpPanel({ onLoginSuccess }) {
+  const [phone, setPhone]       = useState("");
+  const [otp, setOtp]           = useState("");
+  const [step, setStep]         = useState("phone"); // "phone" | "otp"
+  const [loading, setLoading]   = useState(false);
+  const [resendTimer, setTimer] = useState(0);
+  const [err, setErr]           = useState("");
+  const timerRef                = useRef(null);
 
-  // Countdown after sending OTP
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
   const startCountdown = () => {
     setTimer(30);
     timerRef.current = setInterval(() => {
-      setTimer((t) => {
-        if (t <= 1) { clearInterval(timerRef.current); return 0; }
-        return t - 1;
-      });
+      setTimer((t) => { if (t <= 1) { clearInterval(timerRef.current); return 0; } return t - 1; });
     }, 1000);
-  };
-
-  useEffect(() => () => { clearInterval(timerRef.current); }, []);
-
-  const getRecaptchaVerifier = () => {
-    // Reuse existing verifier to avoid re-initializing reCAPTCHA on every attempt
-    if (!recaptchaRef.current) {
-      recaptchaRef.current = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible",
-        callback: () => {},
-        "expired-callback": () => {
-          recaptchaRef.current = null;
-        },
-      });
-    }
-    return recaptchaRef.current;
   };
 
   const sendOtp = async () => {
@@ -62,21 +34,12 @@ function PhoneOtpPanel({ onSuccess }) {
     if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
     setLoading(true);
     try {
-      const verifier = getRecaptchaVerifier();
-      const formatted = toE164(phone);
-      const confirmation = await signInWithPhoneNumber(auth, formatted, verifier);
-      confirmRef.current = confirmation;
+      await axios.post(`${API}/api/auth/otp/send`, { phone: digits });
       setStep("otp");
       startCountdown();
-      toast.success("OTP sent to " + formatted);
+      toast.success("OTP sent!");
     } catch (e) {
-      console.error("[OTP] sendOtp error:", e.code, e.message);
-      const code = e.code || "";
-      const msg  = e.message || "";
-      setErr(code.includes("invalid-phone") || msg.includes("invalid-phone") ? "Invalid phone number format." :
-             code.includes("too-many-requests") || msg.includes("too-many-requests") ? "Too many attempts. Wait a few minutes." :
-             code.includes("missing-phone") ? "Please enter a valid phone number." :
-             `Error [${code || "unknown"}]: ${msg.split("(")[0].trim() || "Please try again."}`);
+      setErr(e.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -87,13 +50,10 @@ function PhoneOtpPanel({ onSuccess }) {
     if (otp.length !== 6) { setErr("Enter the 6-digit OTP."); return; }
     setLoading(true);
     try {
-      const result = await confirmRef.current.confirm(otp);
-      const idToken = await result.user.getIdToken();
-      await onSuccess(idToken);
+      const { data } = await axios.post(`${API}/api/auth/otp/verify`, { phone, otp }, { withCredentials: true });
+      onLoginSuccess(data);
     } catch (e) {
-      setErr(e.message?.includes("invalid-verification-code") ? "Wrong OTP. Please check and try again." :
-             e.message?.includes("code-expired") ? "OTP expired. Please request a new one." :
-             "Verification failed. Please try again.");
+      setErr(e.response?.data?.message || "Invalid or expired OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -101,9 +61,6 @@ function PhoneOtpPanel({ onSuccess }) {
 
   return (
     <div className="space-y-4">
-      {/* Hidden reCAPTCHA anchor — Firebase uses this div */}
-      <div id="recaptcha-container" />
-
       {step === "phone" && (
         <>
           <div>
@@ -134,9 +91,8 @@ function PhoneOtpPanel({ onSuccess }) {
       {step === "otp" && (
         <>
           <div className="rounded-2xl bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-500 text-center">
-            OTP sent to <span className="font-bold">{toE164(phone)}</span>
+            OTP sent to <span className="font-bold">+91 {phone.replace(/\D/g, "").slice(-10)}</span>
           </div>
-
           <div>
             <label className="label">Enter 6-digit OTP</label>
             <input
@@ -151,9 +107,7 @@ function PhoneOtpPanel({ onSuccess }) {
               placeholder="------"
             />
           </div>
-
           {err && <p className="text-sm text-red-400 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5">{err}</p>}
-
           <button
             onClick={verifyOtp}
             disabled={loading || otp.length < 6}
@@ -161,10 +115,9 @@ function PhoneOtpPanel({ onSuccess }) {
           >
             {loading ? <><Spinner size="sm" /> Verifying…</> : "Verify & Sign In"}
           </button>
-
           <div className="flex items-center justify-between text-xs">
             <button
-              onClick={() => { setStep("phone"); setOtp(""); setErr(""); }}
+              onClick={() => { setStep("phone"); setOtp(""); setErr(""); clearInterval(timerRef.current); setTimer(0); }}
               className="text-app-soft hover:text-app transition"
             >
               ← Change number
@@ -172,11 +125,7 @@ function PhoneOtpPanel({ onSuccess }) {
             {resendTimer > 0 ? (
               <span className="text-app-soft">Resend in {resendTimer}s</span>
             ) : (
-              <button
-                onClick={sendOtp}
-                disabled={loading}
-                className="text-orange-500 hover:underline font-semibold disabled:opacity-50"
-              >
+              <button onClick={sendOtp} disabled={loading} className="text-orange-500 hover:underline font-semibold disabled:opacity-50">
                 Resend OTP
               </button>
             )}
@@ -190,7 +139,7 @@ function PhoneOtpPanel({ onSuccess }) {
 // ── Main Login page ───────────────────────────────────────────────────────────
 export default function Login() {
   useEffect(() => { document.title = "Sign In - Arthaleads Real Estate CRM"; }, []);
-  const { login, googleLogin, phoneLogin } = useAuth();
+  const { login, googleLogin, persistAuth } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab]         = useState("email"); // "email" | "phone"
   const [form, setForm]       = useState({ email: "", password: "" });
@@ -249,14 +198,11 @@ export default function Login() {
     setLoading(false);
   };
 
-  const handlePhoneSuccess = async (idToken) => {
-    try {
-      await phoneLogin(idToken);
-      toast.success("Welcome back!");
-      navigate("/dashboard");
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Sign-in failed. Please try again.");
-    }
+  // Called by PhoneOtpPanel after backend verifies OTP + returns auth data
+  const handlePhoneSuccess = (data) => {
+    persistAuth(data);  // stores user+org in context & localStorage
+    toast.success("Welcome back!");
+    navigate("/dashboard");
   };
 
   return (
@@ -423,7 +369,7 @@ export default function Login() {
 
             {/* Phone OTP form — only renders when firebaseReady */}
             {tab === "phone" && firebaseReady && (
-              <PhoneOtpPanel onSuccess={handlePhoneSuccess} />
+              <PhoneOtpPanel onLoginSuccess={handlePhoneSuccess} />
             )}
 
             <div className="my-5 flex items-center gap-3">

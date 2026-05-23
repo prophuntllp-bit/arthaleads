@@ -61,6 +61,11 @@ export function AuthProvider({ children }) {
     return data;
   }, [persist]);
 
+  // Used after backend-verified OTP — data already contains user + org
+  const persistAuth = useCallback((data) => {
+    persist(data.user, data.org);
+  }, [persist]);
+
   const refreshUser = useCallback(async () => {
     const { data } = await api.get("/auth/me");
     persist(data.user, data.org);
@@ -88,7 +93,7 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, phoneLogin, logout, refreshUser, updateUserState, updateOrg }}>
+    <AuthContext.Provider value={{ user, org, loading, login, signup, googleLogin, phoneLogin, persistAuth, logout, refreshUser, updateUserState, updateOrg }}>
       {children}
     </AuthContext.Provider>
   );

@@ -385,6 +385,32 @@ const authService = {
     return { token, user, org };
   },
 
+  // ── MSG91 OTP login (no Firebase) ────────────────────────────────────────────
+  // Called after MSG91 has already verified the OTP. We just look up the user.
+  async loginByPhone(phone) {
+    const normalise = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1");
+    const norm = normalise(phone);
+    const variants = [norm, `+91${norm}`, `91${norm}`, `0${norm}`];
+
+    const user = await User.findOne({ phone: { $in: variants } });
+    if (!user) {
+      throw new AppError(
+        "No account found with this phone number. Please sign up first or ask your admin to add your number.",
+        404
+      );
+    }
+    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      : null;
+    return { token, user, org };
+  },
+
   async getPerformance(actor) {
     const memberMatch = actor.role === "manager"
       ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
