@@ -802,7 +802,7 @@ export default function Sidebar() {
            HOVER   → outer aside is 64 px wide   → inner panel overlays content
            Both states show the full expanded panel (icons + labels)            */}
       <aside
-        className="hidden lg:block h-screen sticky top-0 flex-shrink-0"
+        className="hidden lg:block h-full flex-shrink-0"
         style={{
           width:    pinned ? 240 : 64,
           minWidth: pinned ? 240 : 64,

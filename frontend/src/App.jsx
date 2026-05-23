@@ -469,7 +469,7 @@ function RequireAuth() {
     && new Date() > new Date(org.trialEndsAt);
 
   return (
-    <div className="flex min-h-screen text-app" style={{ background: "transparent" }}>
+    <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <Sidebar />
       <main className="flex-1 min-w-0 pt-16 lg:pt-0 overflow-y-auto">
         <Outlet />
