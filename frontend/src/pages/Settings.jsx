@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle } from "lucide-react";
+import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle, Bell } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
@@ -11,6 +11,8 @@ export default function Settings() {
   const [showNewPwd, setShowNewPwd]         = useState(false);
   const [autoAssign, setAutoAssign]         = useState(org?.autoAssign ?? true);
   const [togglingAA, setTogglingAA]         = useState(false);
+  const [alertLeadDays, setAlertLeadDays]   = useState(org?.alertLeadDays ?? 0);
+  const [savingLead, setSavingLead]         = useState(false);
 
   // Sync toggle state whenever org data loads/changes (e.g. after auth/me refresh)
   useEffect(() => {
@@ -18,6 +20,12 @@ export default function Settings() {
       setAutoAssign(org.autoAssign);
     }
   }, [org?.autoAssign]);
+
+  useEffect(() => {
+    if (org && typeof org.alertLeadDays === "number") {
+      setAlertLeadDays(org.alertLeadDays);
+    }
+  }, [org?.alertLeadDays]);
 
   const [form, setForm] = useState({
     name: "",
@@ -78,6 +86,21 @@ export default function Settings() {
       toast.error(err.response?.data?.message || "Failed to update setting");
     } finally {
       setTogglingAA(false);
+    }
+  };
+
+  const handleAlertLeadDays = async (days) => {
+    const val = Number(days);
+    setSavingLead(true);
+    try {
+      await api.patch("/org/me/alert-lead-days", { alertLeadDays: val });
+      setAlertLeadDays(val);
+      updateOrg({ ...org, alertLeadDays: val });
+      toast.success(val === 0 ? "Alerts set to same-day" : `Alerts set to ${val} day${val > 1 ? "s" : ""} before follow-up`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update alert setting");
+    } finally {
+      setSavingLead(false);
     }
   };
 
@@ -249,6 +272,60 @@ export default function Settings() {
                 style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }}
               />
             </button>
+          </div>
+        </section>
+      )}
+
+      {/* Alert lead time - admin + super_admin */}
+      {(user?.role === "admin" || user?.role === "super_admin") && (
+        <section className="card p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+              <Bell className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-app">Follow-up Alert Lead Time</p>
+              <p className="text-sm text-app-soft mt-1 max-w-lg">
+                The daily 9 AM reminder will fire this many days <strong>before</strong> the follow-up date.
+                Set to <em>Same day (0)</em> to notify on the actual date; set to <em>1 day</em> to get
+                warned a day in advance, and so on.
+              </p>
+              <p className="text-xs mt-2 font-medium" style={{ color: "var(--app-primary)" }}>
+                {alertLeadDays === 0
+                  ? "⏰ Currently alerting on the day of the follow-up"
+                  : alertLeadDays === 1
+                    ? "⏰ Currently alerting 1 day before the follow-up"
+                    : `⏰ Currently alerting ${alertLeadDays} days before the follow-up`}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  { label: "Same day (0)", value: 0 },
+                  { label: "1 day before", value: 1 },
+                  { label: "2 days before", value: 2 },
+                  { label: "3 days before", value: 3 },
+                  { label: "5 days before", value: 5 },
+                  { label: "7 days before", value: 7 },
+                ].map(({ label, value }) => (
+                  <button
+                    key={value}
+                    disabled={savingLead}
+                    onClick={() => handleAlertLeadDays(value)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all disabled:opacity-50 ${
+                      alertLeadDays === value
+                        ? "text-white border-transparent"
+                        : "text-app-soft hover:text-app"
+                    }`}
+                    style={alertLeadDays === value
+                      ? { background: "var(--app-primary)", borderColor: "var(--app-primary)" }
+                      : { borderColor: "var(--app-border)" }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       )}

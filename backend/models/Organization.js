@@ -29,7 +29,8 @@ const orgSchema = new mongoose.Schema(
     industry: { type: String, default: "Real Estate" },
     logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
-    autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
+    autoAssign:    { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
+    alertLeadDays: { type: Number,  default: 0, min: 0, max: 30 }, // days before follow-up date to send daily alert
   },
   { timestamps: true }
 );
