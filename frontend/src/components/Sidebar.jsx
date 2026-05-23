@@ -7,6 +7,7 @@ import {
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
+  PanelLeftClose, PanelLeft,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -63,8 +64,19 @@ export default function Sidebar() {
 
   // Mobile drawer
   const [open, setOpen] = useState(false);
-  // Desktop: hover to expand
-  const [expanded, setExpanded] = useState(false);
+  // Desktop: hover to expand (overlay mode) or pinned (pushes content)
+  const [hovered, setHovered]   = useState(false);
+  const [pinned,  setPinned]    = useState(() => {
+    try { return localStorage.getItem("crm_sidebar_pinned") === "true"; }
+    catch { return false; }
+  });
+  const expanded = pinned || hovered; // visible as wide sidebar either way
+
+  const togglePin = () => {
+    const next = !pinned;
+    setPinned(next);
+    try { localStorage.setItem("crm_sidebar_pinned", String(next)); } catch {}
+  };
   // Posts sub-group
   const [postsOpen, setPostsOpen] = useState(location.pathname.startsWith("/super-admin/blog"));
   // Alerts panel
@@ -264,7 +276,7 @@ export default function Sidebar() {
   // SHARED NAV CONTENT (rendered inside both mobile drawer and desktop sidebar)
   // `isExpanded` controls whether labels are visible
   // ──────────────────────────────────────────────────────────────────────────
-  const NavContent = ({ isExpanded }) => {
+  const NavContent = ({ isExpanded, showPin = false }) => {
     // Label fade style — fade in/out when sidebar expands/collapses
     const labelStyle = {
       opacity:    isExpanded ? 1 : 0,
@@ -296,7 +308,7 @@ export default function Sidebar() {
                   onError={(e) => { e.currentTarget.style.display = "none"; }}
                 />
               </div>
-              <div className="ml-3 overflow-hidden" style={labelStyle}>
+              <div className="ml-3 overflow-hidden flex-1" style={labelStyle}>
                 <p className="text-sm font-bold text-app">{org.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <img src="/logo.png" alt="AL" className="w-3 h-3 rounded object-cover opacity-50" />
@@ -311,13 +323,33 @@ export default function Sidebar() {
               <div className="w-10 h-10 flex-shrink-0 rounded-2xl overflow-hidden shadow-md">
                 <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
               </div>
-              <div className="ml-3 overflow-hidden" style={labelStyle}>
+              <div className="ml-3 overflow-hidden flex-1" style={labelStyle}>
                 <p className="font-black text-base leading-none tracking-tight">
                   <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
                 </p>
                 <p className="text-[8px] text-app-soft tracking-widest mt-0.5">CRM PLATFORM</p>
               </div>
             </>
+          )}
+
+          {/* ── Pin / Unpin toggle (desktop only, visible when expanded) ── */}
+          {showPin && (
+            <button
+              onClick={togglePin}
+              title={pinned ? "Collapse sidebar" : "Pin sidebar open"}
+              className="flex-shrink-0 p-1.5 rounded-xl text-app-soft hover:text-app hover:bg-black/8 dark:hover:bg-white/8 transition-all"
+              style={{
+                opacity:    isExpanded ? 1 : 0,
+                pointerEvents: isExpanded ? "auto" : "none",
+                transition: "opacity 150ms",
+                marginLeft: 4,
+              }}
+            >
+              {pinned
+                ? <PanelLeftClose style={{ width: 16, height: 16 }} />
+                : <PanelLeft      style={{ width: 16, height: 16 }} />
+              }
+            </button>
           )}
         </div>
 
@@ -765,28 +797,37 @@ export default function Sidebar() {
         <NavContent isExpanded={true} />
       </div>
 
-      {/* ── Desktop sidebar (collapsible via hover, overlays content) ──────── */}
-      {/* Outer aside: always 64px wide — reserves space in flex layout        */}
-      {/* Inner panel: expands to 240px on hover, overlays content via z-index */}
+      {/* ── Desktop sidebar ──────────────────────────────────────────────────
+           PINNED  → outer aside is 240 px wide  → pushes main content
+           HOVER   → outer aside is 64 px wide   → inner panel overlays content
+           Both states show the full expanded panel (icons + labels)            */}
       <aside
         className="hidden lg:block h-screen sticky top-0 flex-shrink-0"
-        style={{ width: 64, minWidth: 64, position: "relative", zIndex: 30 }}
+        style={{
+          width:    pinned ? 240 : 64,
+          minWidth: pinned ? 240 : 64,
+          position: "relative",
+          zIndex:   30,
+          transition: "width 220ms cubic-bezier(0.4,0,0.2,1), min-width 220ms cubic-bezier(0.4,0,0.2,1)",
+        }}
       >
         <div
-          onMouseEnter={() => setExpanded(true)}
-          onMouseLeave={() => setExpanded(false)}
+          onMouseEnter={() => { if (!pinned) setHovered(true);  }}
+          onMouseLeave={() => { if (!pinned) setHovered(false); }}
           className="sidebar-glass flex flex-col h-full overflow-hidden"
           style={{
-            position:   "absolute",
-            left:       0,
-            top:        0,
-            bottom:     0,
+            /* Pinned: stay in normal flow (same width as aside, no overlay)   */
+            /* Hover:  absolute so it overlays content without shifting layout */
+            position:   pinned ? "relative" : "absolute",
+            left:  0,
+            top:   0,
+            bottom:0,
             width:      expanded ? 240 : 64,
             transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
             zIndex:     30,
           }}
         >
-          <NavContent isExpanded={expanded} />
+          <NavContent isExpanded={expanded} showPin={true} />
         </div>
       </aside>
     </>
