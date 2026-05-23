@@ -702,13 +702,25 @@ function WordPressWizard({ open, onClose }) {
       <div className="relative w-full max-w-lg rounded-[1.75rem] shell-panel overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
             <WordPressIcon />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-app">WordPress / Website Forms</h2>
             <p className="text-xs text-app-soft">Connect multiple WordPress sites - each gets its own token</p>
           </div>
+          <a
+            href="/arthaleads-integration.zip"
+            download
+            title="Download WordPress Plugin"
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: "#21759b1a", color: "#21759b", border: "1px solid #21759b33" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#21759b"; e.currentTarget.style.color = "#fff"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#21759b1a"; e.currentTarget.style.color = "#21759b"; }}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download Plugin
+          </a>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
