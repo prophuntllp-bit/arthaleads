@@ -642,53 +642,61 @@ export default function Leads() {
     try {
       const date = new Date().toISOString().slice(0, 10);
 
-      // Fetch all leads from backend (up to 5000), then filter by selected IDs if needed
+      // Respect current filters AND the current page + row-count setting.
+      // If specific IDs are selected, fetch just enough to cover them.
       const params = new URLSearchParams();
       if (filters.status)    params.set("status",    filters.status);
       if (filters.source)    params.set("source",    filters.source);
       if (filters.priority)  params.set("priority",  filters.priority);
       if (filters.search)    params.set("search",    filters.search);
       if (filters.dateRange) params.set("dateRange", filters.dateRange);
-      params.set("limit", "5000");
-      params.set("page", "1");
+      // Use the current page + limit so export matches exactly what the user sees
+      params.set("limit", String(limit));
+      params.set("page",  String(page));
 
       const { data: res } = await api.get(`/leads/unified?${params.toString()}`);
       let source = res.leads || [];
 
-      // If specific IDs selected, filter to only those
+      // If specific IDs selected, narrow to those
       if (selectedIdsOverride && selectedIdsOverride.size > 0) {
         source = source.filter((l) => selectedIdsOverride.has(String(l._id)));
       }
 
+      // Helper: force a value to a plain string so xlsx/Excel never coerces
+      // phone numbers into scientific notation or strips leading zeros
+      const str = (v) => (v == null || v === "" ? "" : String(v));
+
       const rows = source.map((lead) => ({
-        Name:          lead.name || "",
-        Phone:         lead.phone || "",
-        Email:         lead.email || "",
-        Source:        lead.source || "",
-        LeadSource:    lead.leadSourceLabel || "",
-        Status:        lead.status || "",
-        Priority:      lead.priority || "",
-        PropertyType:  lead.propertyType || "",
-        BHK:           lead.bhk || "",
-        Purpose:       lead.purpose || "",
-        BudgetMin:     lead.budget?.min || "",
-        BudgetMax:     lead.budget?.max || "",
-        FollowUpDate:  lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
-        FollowUpNote:  lead.followUpNote || "",
-        Remark1:       lead.remark1 || "",
-        Remark2:       lead.remark2 || "",
-        ContactStatus: lead.remark || "",
-        Booking:       lead.booking || "",
-        AssignedTo:    lead.assignedToName || "",
-        Project:       lead.projectName || "",
+        Name:          str(lead.name),
+        Phone:         str(lead.phone),           // kept as string — no numeric coercion
+        Email:         str(lead.email),
+        Source:        str(lead.source),
+        LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label
+        Status:        str(lead.status),
+        Priority:      str(lead.priority),
+        PropertyType:  str(lead.propertyType),
+        BHK:           str(lead.bhk),
+        Purpose:       str(lead.purpose),
+        BudgetMin:     lead.budget?.min ?? "",
+        BudgetMax:     lead.budget?.max ?? "",
+        FollowUpDate:  lead.followUpDate  ? new Date(lead.followUpDate).toISOString().slice(0, 10)  : "",
+        FollowUpDate2: lead.followUp2     ? new Date(lead.followUp2).toISOString().slice(0, 10)     : "",
+        FollowUpNote:  str(lead.followUpNote),
+        Remark:        str(lead.remark),
+        Remark1:       str(lead.remark1),
+        Remark2:       str(lead.remark2),
+        Booking:       str(lead.booking),
+        AssignedTo:    str(lead.assignedToName),
+        Project:       str(lead.projectName),
         CreatedAt:     lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
       }));
 
       toast.dismiss(tid);
-
       if (rows.length === 0) { toast.error("No leads to export"); return; }
 
-      const label = selectedIdsOverride?.size > 0 ? `${selectedIdsOverride.size}-selected` : "all";
+      const label = selectedIdsOverride?.size > 0
+        ? `${selectedIdsOverride.size}-selected`
+        : `page${page}-of${limit}`;
 
       if (type === "json") {
         const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
@@ -698,14 +706,32 @@ export default function Leads() {
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       } else {
+        // Build the sheet manually so we can force the Phone column to type "s" (string).
+        // json_to_sheet would detect numeric-looking strings and coerce them to numbers,
+        // which causes Excel to show scientific notation for long phone numbers.
         const ws = xlsxUtils.json_to_sheet(rows);
+
+        // Walk every cell in the Phone column (column B, index 1) and stamp type="s"
+        const colKeys = Object.keys(rows[0] || {});
+        const phoneColIdx = colKeys.indexOf("Phone");
+        if (phoneColIdx >= 0) {
+          const phoneColLetter = xlsxUtils.encode_col(phoneColIdx);
+          for (let r = 1; r <= rows.length; r++) {
+            const cellAddr = `${phoneColLetter}${r + 1}`; // +1 for header row
+            if (ws[cellAddr]) {
+              ws[cellAddr].t = "s"; // force string
+              ws[cellAddr].z = "@"; // Excel "Text" number format
+            }
+          }
+        }
+
         const wb = xlsxUtils.book_new();
         xlsxUtils.book_append_sheet(wb, ws, "Leads");
         const ext = type === "excel" ? "xlsx" : "csv";
         xlsxWriteFile(wb, `leads-${label}-${date}.${ext}`, { bookType: ext });
       }
 
-      toast.success(`Exported ${rows.length} leads`);
+      toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
     } catch (e) {
       toast.dismiss(tid);
       toast.error("Export failed: " + (e.response?.data?.message || e.message));
