@@ -1,23 +1,17 @@
 ﻿const cron = require("node-cron");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
-const Organization = require("../models/Organization");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
 
-function getDateRange(offsetDays = 0) {
-  const target = new Date();
-  target.setDate(target.getDate() + offsetDays);
-  const start = new Date(target);
+function getTodayRange() {
+  const start = new Date();
   start.setHours(0, 0, 0, 0);
-  const end = new Date(target);
+  const end = new Date();
   end.setHours(23, 59, 59, 999);
   return { start, end };
 }
-
-// Keep backward-compatible alias used nowhere internally but exported for tests
-function getTodayRange() { return getDateRange(0); }
 
 
 async function notifyLeads(leads, labelFn) {
@@ -54,73 +48,48 @@ async function notifyLeads(leads, labelFn) {
   }
 }
 
-// ── Daily 9 AM: morning summary, respecting each org's alertLeadDays ─────────
+// ── Daily 9 AM: morning summary of all follow-ups today ─────────────────────
 async function runDailyReminder() {
-  // Fetch every org's lead-time setting
-  const orgs = await Organization.find({}).select("_id alertLeadDays").lean();
-  if (!orgs.length) { logger.info("Daily reminder: no orgs found"); return; }
+  const { start, end } = getTodayRange();
 
-  // Group org IDs by their alertLeadDays value so we do one DB query per unique offset
-  const byOffset = {}; // { "0": [orgId,...], "2": [orgId,...], ... }
-  for (const org of orgs) {
-    const days = org.alertLeadDays ?? 0;
-    if (!byOffset[days]) byOffset[days] = [];
-    byOffset[days].push(org._id);
+  const leads = await Lead.find({
+    followUpDate: { $gte: start, $lte: end },
+    isArchived: false,
+    isDeleted: { $ne: true },
+  }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
+
+  // Check both followUp and followUp2 - deduplicate by _id so a lead with both
+  // dates today only fires one notification
+  const projLeads = await ProjectLead.find({
+    $or: [
+      { followUp:  { $gte: start, $lte: end } },
+      { followUp2: { $gte: start, $lte: end } },
+    ],
+  }).populate("project", "orgId assignedTo").select("name phone followUp followUp2 project orgId followUpSetBy").lean();
+
+  // Deduplicate project leads (same _id might match both followUp and followUp2)
+  const seen = new Set();
+  const uniqueProjLeads = projLeads.filter((l) => {
+    const key = String(l._id);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const normalizedProjLeads = uniqueProjLeads.map((l) => ({
+    ...l,
+    orgId: l.orgId || l.project?.orgId,
+  }));
+
+  const allLeads = [...leads, ...normalizedProjLeads];
+
+  if (!allLeads.length) {
+    logger.info("Daily reminder: no follow-ups today");
+    return;
   }
 
-  let totalNotified = 0;
-
-  for (const [daysStr, orgIds] of Object.entries(byOffset)) {
-    const days = Number(daysStr);
-    const { start, end } = getDateRange(days);
-
-    // Build a human-readable label for the push body
-    const labelFn = days === 0
-      ? (lead) => `Follow-up due today: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`
-      : days === 1
-        ? (lead) => `Follow-up due tomorrow: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`
-        : (lead) => `Follow-up in ${days} days: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`;
-
-    // Main pipeline leads
-    const leads = await Lead.find({
-      orgId: { $in: orgIds },
-      followUpDate: { $gte: start, $lte: end },
-      isArchived: false,
-      isDeleted: { $ne: true },
-    }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
-
-    // Project leads — check both followUp and followUp2
-    const projLeads = await ProjectLead.find({
-      orgId: { $in: orgIds },
-      $or: [
-        { followUp:  { $gte: start, $lte: end } },
-        { followUp2: { $gte: start, $lte: end } },
-      ],
-    }).populate("project", "orgId assignedTo").select("name phone followUp followUp2 project orgId followUpSetBy").lean();
-
-    // Deduplicate project leads (same _id might match both followUp and followUp2)
-    const seen = new Set();
-    const uniqueProjLeads = projLeads.filter((l) => {
-      const key = String(l._id);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    const normalizedProjLeads = uniqueProjLeads.map((l) => ({
-      ...l,
-      orgId: l.orgId || l.project?.orgId,
-    }));
-
-    const allLeads = [...leads, ...normalizedProjLeads];
-    if (!allLeads.length) continue;
-
-    logger.info(`Daily reminder (lead=${days}d): ${allLeads.length} follow-up(s) for ${orgIds.length} org(s)`);
-    await notifyLeads(allLeads, labelFn);
-    totalNotified += allLeads.length;
-  }
-
-  if (!totalNotified) logger.info("Daily reminder: no follow-ups to notify");
+  logger.info(`Daily reminder: ${allLeads.length} follow-up(s) today`);
+  await notifyLeads(allLeads, (lead) => `Follow-up due today: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
 // ── Every minute: 10-minute-before alert ────────────────────────────────────

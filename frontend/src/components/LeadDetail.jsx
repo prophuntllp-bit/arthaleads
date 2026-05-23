@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
-import { fmtCurrency, fmtDate, STATUS_OPTIONS } from "../utils/constants";
+import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 
 // Strip raw Elementor field-ID lines e.g. "Field 9b10818: 8007678625"
 const cleanRequirements = (text) => {
@@ -114,7 +114,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
             <Info label="Budget" value={`${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`} />
             <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
             <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
-            <Info label="Created On" value={fmtDate(lead.createdAt)} />
+            <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
             <div className="md:col-span-2">
               <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
             </div>

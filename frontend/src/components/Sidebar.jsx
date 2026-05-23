@@ -9,7 +9,7 @@ import {
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
-import { fmtDate } from "../utils/constants";
+import { fmtDate, fmtDateTime } from "../utils/constants";
 import toast from "react-hot-toast";
 // subscribeToPush is now handled by NotificationBanner in App.jsx (requires user gesture)
 
@@ -534,7 +534,7 @@ export default function Sidebar() {
             <div className="min-w-0">
               <p className="text-xs font-semibold text-app truncate">{lead.name}</p>
               <p className="text-[11px] text-app-soft">{lead.phone} · <span style={{ color: "var(--app-primary)" }}>{lead.source}</span></p>
-              <p className="text-[10px] text-app-soft mt-0.5">{fmtDate(lead.createdAt)}</p>
+              <p className="text-[10px] text-app-soft mt-0.5">{fmtDateTime(lead.createdAt)}</p>
             </div>
           </button>
         ))}

@@ -51,28 +51,4 @@ router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, r
   } catch (err) { next(err); }
 });
 
-// PATCH /api/org/me/alert-lead-days - set how many days before follow-up to fire daily alert (admin+)
-router.patch("/me/alert-lead-days", authorize("admin", "super_admin"), async (req, res, next) => {
-  try {
-    const days = Number(req.body.alertLeadDays);
-    if (!Number.isInteger(days) || days < 0 || days > 30) {
-      return res.status(400).json({ success: false, message: "alertLeadDays must be an integer between 0 and 30" });
-    }
-    const org = await Organization.findByIdAndUpdate(
-      req.orgId,
-      { alertLeadDays: days },
-      { new: true }
-    );
-    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
-    invalidateOrgCache(req.orgId);
-    res.json({
-      success: true,
-      alertLeadDays: org.alertLeadDays,
-      message: days === 0
-        ? "Alerts will fire on the day of the follow-up"
-        : `Alerts will fire ${days} day(s) before the follow-up`,
-    });
-  } catch (err) { next(err); }
-});
-
 module.exports = router;
