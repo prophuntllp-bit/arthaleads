@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { RefreshCw } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
+
+const FB_ERROR_PATTERN = "Facebook lead received but field data could not be fetched";
 
 // Strip raw Elementor field-ID lines e.g. "Field 9b10818: 8007678625"
 const cleanRequirements = (text) => {
@@ -24,6 +27,20 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(lead?.status || "New");
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetryFacebook = async () => {
+    setRetrying(true);
+    try {
+      const { data } = await api.post(`/leads/${lead._id}/retry-facebook`);
+      toast.success("Lead data fetched! Name, phone and email updated.");
+      onUpdated?.(data.lead);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Retry failed. Token may still be expired.");
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   useEffect(() => {
     setTab("info");
@@ -146,14 +163,35 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
             </div>
             <div className="space-y-3">
               {(lead.notes || []).length === 0 && <p className="text-sm text-app-soft">No notes yet.</p>}
-              {(lead.notes || []).slice().reverse().map((item) => (
-                <div key={item._id || `${item.text}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
-                  <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
-                  <p className="mt-2 text-xs text-app-soft">
-                    {item.addedByName || item.addedBy?.name || "Unknown"} | {fmtDate(item.createdAt)}
-                  </p>
-                </div>
-              ))}
+              {(lead.notes || []).slice().reverse().map((item) => {
+                const isFbError = item.text?.includes(FB_ERROR_PATTERN);
+                return (
+                  <div
+                    key={item._id || `${item.text}-${item.createdAt}`}
+                    className={`rounded-[1.25rem] p-4 overflow-hidden ${isFbError ? "border border-amber-400/30 bg-amber-50 dark:bg-amber-500/10" : "stitch-surface-muted"}`}
+                  >
+                    <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
+                    <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+                      <p className="text-xs text-app-soft">
+                        {item.addedByName || item.addedBy?.name || "Unknown"} | {fmtDate(item.createdAt)}
+                      </p>
+                      {isFbError && (
+                        <button
+                          onClick={handleRetryFacebook}
+                          disabled={retrying}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
+                          style={{ background: "var(--app-primary)" }}
+                        >
+                          {retrying
+                            ? <><Spinner size="sm" /> Fetching…</>
+                            : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>
+                          }
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
