@@ -158,7 +158,7 @@ const automationService = {
 
     const user = await User.findById(decoded.id);
     if (!user) throw new AppError("User not found", 404);
-    if (!["admin", "manager"].includes(user.role)) {
+    if (!["admin", "manager", "super_admin"].includes(user.role)) {
       throw new AppError("Not authorized to manage automations", 403);
     }
 
