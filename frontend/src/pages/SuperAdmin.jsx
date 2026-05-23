@@ -5,7 +5,11 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon, RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, Shield } from "lucide-react";
+import {
+  Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
+  RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
+  Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
+} from "lucide-react";
 
 function PlanBadge({ plan }) {
   const cls = {
@@ -698,6 +702,382 @@ function UsersPanel() {
   );
 }
 
+// ── Tickets Panel ────────────────────────────────────────────────────────────
+
+const TICKET_STATUSES = [
+  { value: "all",         label: "All",         cls: "" },
+  { value: "open",        label: "Open",        cls: "bg-blue-500/10 text-blue-600 border-blue-500/25" },
+  { value: "in-progress", label: "In Progress", cls: "bg-yellow-500/10 text-yellow-600 border-yellow-500/25" },
+  { value: "resolved",    label: "Resolved",    cls: "bg-green-500/10 text-green-600 border-green-500/25" },
+  { value: "closed",      label: "Closed",      cls: "bg-gray-500/10 text-gray-500 border-gray-500/25" },
+];
+
+const TICKET_PRIORITY_COLORS = {
+  low:    "bg-gray-500/10 text-gray-500",
+  medium: "bg-blue-500/10 text-blue-600",
+  high:   "bg-orange-500/10 text-orange-600",
+  urgent: "bg-red-500/10 text-red-600",
+};
+
+function TicketStatusBadge({ status }) {
+  const s = TICKET_STATUSES.find(t => t.value === status) || TICKET_STATUSES[1];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${s.cls || "bg-gray-500/10 text-gray-500 border-gray-500/25"}`}>
+      {s.label}
+    </span>
+  );
+}
+
+// ── Ticket Detail Modal ───────────────────────────────────────────────────────
+function TicketDetailModal({ ticket, onClose, onUpdated }) {
+  const [status,     setStatus]     = useState(ticket.status);
+  const [priority,   setPriority]   = useState(ticket.priority);
+  const [adminNotes, setAdminNotes] = useState(ticket.adminNotes || "");
+  const [saving,     setSaving]     = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/super-admin/tickets/${ticket._id}`, {
+        status, priority, adminNotes,
+      });
+      onUpdated(data.ticket);
+      toast.success("Ticket updated");
+      onClose();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update ticket");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtFull = (iso) => iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
+      <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
+          style={{ borderColor: "var(--app-border)" }}>
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl flex-shrink-0"
+              style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
+              <TicketIcon className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-sm font-black" style={{ color: "var(--app-primary)" }}>
+                  {ticket.ticketNumber}
+                </span>
+                <TicketStatusBadge status={ticket.status} />
+              </div>
+              <p className="text-base font-bold text-app mt-0.5 truncate">{ticket.subject}</p>
+            </div>
+          </div>
+          <button onClick={onClose}
+            className="p-2 rounded-xl text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 transition flex-shrink-0 ml-3">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-5">
+          {/* Metadata row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: "Organization", value: ticket.orgName },
+              { label: "Submitted By", value: ticket.userName },
+              { label: "Email", value: ticket.userEmail },
+              { label: "Raised On", value: fmtFull(ticket.createdAt) },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-2xl px-4 py-3" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                <p className="text-[10px] font-bold text-app-soft uppercase tracking-wide mb-1">{label}</p>
+                <p className="text-xs font-semibold text-app">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Category + Priority badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="stitch-kicker">Category:</span>
+            <span className="text-xs font-semibold text-app capitalize">{ticket.category?.replace("-", " ")}</span>
+            <span className="stitch-kicker ml-2">Priority:</span>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${TICKET_PRIORITY_COLORS[ticket.priority] || "bg-gray-100 text-gray-500"}`}>
+              {ticket.priority}
+            </span>
+          </div>
+
+          {/* Description */}
+          <div>
+            <p className="text-xs font-bold text-app-soft uppercase tracking-wide mb-2">Description</p>
+            <div className="rounded-2xl px-5 py-4 text-sm text-app leading-relaxed whitespace-pre-wrap"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              {ticket.description}
+            </div>
+          </div>
+
+          {/* Admin Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Status */}
+            <div>
+              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Update Status</label>
+              <select className="input w-full" value={status} onChange={e => setStatus(e.target.value)}>
+                {TICKET_STATUSES.filter(s => s.value !== "all").map(s => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            {/* Priority */}
+            <div>
+              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Update Priority</label>
+              <select className="input w-full" value={priority} onChange={e => setPriority(e.target.value)}>
+                {["low", "medium", "high", "urgent"].map(p => (
+                  <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Admin Notes */}
+          <div>
+            <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">
+              Internal Notes <span className="normal-case font-normal">(only visible to super admins)</span>
+            </label>
+            <textarea
+              className="input w-full resize-none"
+              rows={3}
+              placeholder="Add internal notes, resolution steps, or follow-up actions…"
+              value={adminNotes}
+              maxLength={2000}
+              onChange={e => setAdminNotes(e.target.value)}
+            />
+            <p className="text-[10px] text-app-soft text-right mt-0.5">{adminNotes.length}/2000</p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t flex-shrink-0"
+          style={{ borderColor: "var(--app-border)" }}>
+          <button onClick={onClose}
+            className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-app-soft transition hover:bg-black/5 dark:hover:bg-white/5"
+            style={{ border: "1px solid var(--app-border)" }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+            style={{ background: "var(--app-primary)" }}>
+            {saving ? <><Spinner size="sm" /> Saving…</> : <><Save className="h-4 w-4" /> Save Changes</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── TicketsPanel ──────────────────────────────────────────────────────────────
+function TicketsPanel() {
+  const [tickets,      setTickets]      = useState([]);
+  const [total,        setTotal]        = useState(0);
+  const [pages,        setPages]        = useState(1);
+  const [page,         setPage]         = useState(1);
+  const [loading,      setLoading]      = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search,       setSearch]       = useState("");
+  const [inputVal,     setInputVal]     = useState("");
+  const [counts,       setCounts]       = useState({});
+  const [selected,     setSelected]     = useState(null);
+
+  const load = useCallback(async (p = page) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: p, limit: 50 });
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+      if (search) params.set("search", search);
+      const { data } = await api.get(`/super-admin/tickets?${params}`);
+      setTickets(data.tickets || []);
+      setTotal(data.total || 0);
+      setPages(data.pages || 1);
+      if (data.statusCounts) setCounts(data.statusCounts);
+    } catch {
+      toast.error("Failed to load tickets");
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter, search]);
+
+  useEffect(() => { load(1); setPage(1); }, [statusFilter, search]);
+  useEffect(() => { load(page); }, [page]);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(inputVal), 400);
+    return () => clearTimeout(t);
+  }, [inputVal]);
+
+  const handleUpdated = (updated) => {
+    setTickets(prev => prev.map(t => t._id === updated._id ? { ...t, ...updated } : t));
+    setCounts(c => {
+      const nc = { ...c };
+      const old = tickets.find(t => t._id === updated._id);
+      if (old && old.status !== updated.status) {
+        nc[old.status]     = Math.max(0, (nc[old.status] || 0) - 1);
+        nc[updated.status] = (nc[updated.status] || 0) + 1;
+      }
+      return nc;
+    });
+  };
+
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+  return (
+    <div className="space-y-4">
+      {selected && (
+        <TicketDetailModal
+          ticket={selected}
+          onClose={() => setSelected(null)}
+          onUpdated={(t) => { handleUpdated(t); setSelected(null); }}
+        />
+      )}
+
+      {/* Status filter tabs */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {TICKET_STATUSES.map(({ value, label }) => {
+          const count = value === "all" ? total : (counts[value] || 0);
+          const active = statusFilter === value;
+          return (
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                active ? "text-white border-transparent shadow-sm" : "text-app-soft border-transparent hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+              }`}
+              style={active ? { background: "var(--app-primary)" } : {}}
+            >
+              {label}
+              <span className={`inline-flex items-center justify-center rounded-full min-w-[18px] h-[18px] px-1 text-[10px] font-black ${
+                active ? "bg-white/20 text-white" : "bg-black/8 dark:bg-white/10 text-app-soft"
+              }`}>{count}</span>
+            </button>
+          );
+        })}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            className="input text-xs px-3 py-2 w-52"
+            placeholder="Search tickets…"
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+          />
+          <button onClick={() => load(page)} className="btn-secondary gap-1.5 text-xs px-3 py-2" title="Refresh">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+        ) : tickets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Inbox className="h-12 w-12 text-app-soft/30 mb-3" />
+            <p className="text-sm font-semibold text-app-soft">No tickets found</p>
+            <p className="text-xs text-app-soft/60 mt-1">
+              {statusFilter !== "all" ? `No ${statusFilter} tickets at the moment` : "No support tickets have been raised yet"}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="stitch-table min-w-[860px]">
+                <thead>
+                  <tr>
+                    <th>Ticket #</th>
+                    <th>Organization</th>
+                    <th>Raised By</th>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Raised On</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((t) => (
+                    <tr key={t._id} className="cursor-pointer" onClick={() => setSelected(t)}>
+                      <td>
+                        <span className="font-mono text-xs font-black" style={{ color: "var(--app-primary)" }}>
+                          {t.ticketNumber}
+                        </span>
+                      </td>
+                      <td>
+                        <p className="text-xs font-semibold text-app">{t.orgName}</p>
+                      </td>
+                      <td>
+                        <div>
+                          <p className="text-xs font-semibold text-app">{t.userName}</p>
+                          <p className="text-[10px] text-app-soft">{t.userEmail}</p>
+                        </div>
+                      </td>
+                      <td>
+                        <p className="text-xs font-semibold text-app max-w-[180px] truncate">{t.subject}</p>
+                        {t.adminNotes && (
+                          <p className="text-[10px] text-app-soft truncate max-w-[180px] italic">Note: {t.adminNotes}</p>
+                        )}
+                      </td>
+                      <td>
+                        <span className="text-xs text-app-soft capitalize">{t.category?.replace("-", " ")}</span>
+                      </td>
+                      <td>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${TICKET_PRIORITY_COLORS[t.priority] || "bg-gray-100 text-gray-500"}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td><TicketStatusBadge status={t.status} /></td>
+                      <td>
+                        <span className="text-xs text-app-soft">{fmtDate(t.createdAt)}</span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelected(t); }}
+                          className="text-xs font-semibold transition hover:underline"
+                          style={{ color: "var(--app-primary)" }}
+                        >
+                          View →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination */}
+            {pages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+                <p className="text-xs text-app-soft">Page {page} of {pages} · {total} tickets total</p>
+                <div className="flex items-center gap-2">
+                  <button className="p-1.5 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+                    <ChevronLeft className="w-4 h-4 text-app" />
+                  </button>
+                  <span className="text-xs font-semibold text-app px-2">{page}</span>
+                  <button className="p-1.5 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                    disabled={page >= pages} onClick={() => setPage(p => Math.min(pages, p + 1))}>
+                    <ChevronRight className="w-4 h-4 text-app" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── MigrateLogosButton ────────────────────────────────────────────────────────
 // One-time action: uploads all base64 logos to Cloudinary so they persist
 // across refreshes without bloating localStorage.
@@ -733,7 +1113,7 @@ export default function SuperAdmin() {
   useEffect(() => { document.title = "Super Admin - Arthaleads"; }, []);
   const { user } = useAuth();
 
-  const [tab, setTab]         = useState("orgs"); // "orgs" | "users"
+  const [tab, setTab]         = useState("orgs"); // "orgs" | "users" | "tickets"
   const [orgs, setOrgs]       = useState([]);
   const [total, setTotal]     = useState(0);
   const [loading, setLoading] = useState(true);
@@ -822,8 +1202,9 @@ export default function SuperAdmin() {
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         {[
-          { key: "orgs",  label: "Organizations", icon: Building2 },
-          { key: "users", label: "Users",          icon: Users },
+          { key: "orgs",    label: "Organizations", icon: Building2 },
+          { key: "users",   label: "Users",          icon: Users },
+          { key: "tickets", label: "Tickets",        icon: TicketIcon },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -954,6 +1335,9 @@ export default function SuperAdmin() {
 
       {/* ── Users tab ── */}
       {tab === "users" && <UsersPanel />}
+
+      {/* ── Tickets tab ── */}
+      {tab === "tickets" && <TicketsPanel />}
     </div>
   );
 }

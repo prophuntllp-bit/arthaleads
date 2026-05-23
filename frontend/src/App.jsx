@@ -387,12 +387,12 @@ function OrgInactiveScreen({ onLogout }) {
           Your organisation's account has been deactivated. Please contact Arthaleads support to restore access.
         </p>
         <p className="text-sm font-semibold mb-6" style={{ color: '#FF6B00' }}>{SUPPORT_EMAIL}</p>
-        <button
-          onClick={() => { window.location.href = "mailto:" + SUPPORT_EMAIL + "?subject=Account%20Deactivated%20-%20Restore%20Access"; }}
-          className="block w-full py-3 rounded-2xl font-semibold text-sm mb-3 transition hover:opacity-90"
+        <a
+          href={"mailto:" + SUPPORT_EMAIL + "?subject=Account%20Deactivated%20-%20Restore%20Access&body=Hello%20Arthaleads%20Support%2C%0A%0AMy%20organization%20account%20has%20been%20deactivated.%20Please%20help%20restore%20access.%0A%0AOrganization%3A%20%0AContact%20Name%3A%20"}
+          className="block w-full py-3 rounded-2xl font-semibold text-sm mb-3 transition hover:opacity-90 text-center"
           style={{ background: '#FF6B00', color: '#ffffff' }}>
           Contact Support
-        </button>
+        </a>
         <button onClick={onLogout}
           className="block w-full py-2.5 rounded-2xl text-sm transition hover:underline"
           style={{ color: '#6b7280' }}>

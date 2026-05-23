@@ -18,4 +18,8 @@ router.post("/backup",                ctrl.triggerBackup);
 // Safe to call multiple times — skips orgs that already have Cloudinary URLs.
 router.post("/migrate-logos", ctrl.migrateLogos);
 
+// ── Ticket management (super admin sees all tickets) ──────────────────────────
+router.get("/tickets",         ctrl.listTickets);
+router.patch("/tickets/:id",   ctrl.updateTicket);
+
 module.exports = router;

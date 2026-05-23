@@ -2,6 +2,7 @@
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const Lead = require("../models/Lead");
+const Ticket = require("../models/Ticket");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
@@ -213,6 +214,80 @@ const superAdminController = {
         size:    result.gzipSize,
         docs:    result.totalDocs,
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/super-admin/tickets - list all support tickets across orgs
+  async listTickets(req, res, next) {
+    try {
+      const page   = Math.max(1, parseInt(req.query.page)   || 1);
+      const limit  = Math.min(100, parseInt(req.query.limit) || 50);
+      const skip   = (page - 1) * limit;
+      const status = req.query.status; // optional: "open" | "in-progress" | "resolved" | "closed"
+      const search = req.query.search || "";
+
+      const filter = {};
+      if (status && status !== "all") filter.status = status;
+      if (search) {
+        const re = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+        filter.$or = [
+          { ticketNumber: re },
+          { subject: re },
+          { orgName: re },
+          { userName: re },
+          { userEmail: re },
+        ];
+      }
+
+      const [tickets, total] = await Promise.all([
+        Ticket.find(filter)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Ticket.countDocuments(filter),
+      ]);
+
+      // Summary counts for status badges
+      const [statusCounts] = await Ticket.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]).then(rows => [Object.fromEntries(rows.map(r => [r._id, r.count]))]);
+
+      res.json({
+        success: true,
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+        tickets,
+        statusCounts: {
+          open:        statusCounts.open        || 0,
+          "in-progress": statusCounts["in-progress"] || 0,
+          resolved:    statusCounts.resolved    || 0,
+          closed:      statusCounts.closed      || 0,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // PATCH /api/super-admin/tickets/:id - update status / admin notes / priority
+  async updateTicket(req, res, next) {
+    try {
+      const allowed = ["status", "adminNotes", "priority"];
+      const update  = {};
+      allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+
+      if (!Object.keys(update).length) {
+        return next(new AppError("No valid fields to update", 400));
+      }
+
+      const ticket = await Ticket.findByIdAndUpdate(req.params.id, update, { new: true });
+      if (!ticket) return next(new AppError("Ticket not found", 404));
+
+      res.json({ success: true, ticket });
     } catch (err) {
       next(err);
     }
