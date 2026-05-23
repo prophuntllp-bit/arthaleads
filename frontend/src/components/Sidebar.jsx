@@ -377,7 +377,7 @@ export default function Sidebar() {
         </div>
 
         {/* ── Nav items ── */}
-        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
           {filtered.map((item) => {
             if (item.children) {
               const isGroupActive = item.children.some(
@@ -791,7 +791,7 @@ export default function Sidebar() {
       {/* ── Mobile drawer ───────────────────────────────────────────────────── */}
       <div
         ref={mobileSidebarRef}
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`lg:hidden fixed top-0 left-0 bottom-0 z-40 w-72 transform transition-transform duration-200 sidebar-glass flex flex-col overflow-hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
         style={{ overscrollBehavior: "contain" }}
       >
         <NavContent isExpanded={true} />
@@ -814,7 +814,7 @@ export default function Sidebar() {
         <div
           onMouseEnter={() => { if (!pinned) setHovered(true);  }}
           onMouseLeave={() => { if (!pinned) setHovered(false); }}
-          className="sidebar-glass flex flex-col h-full"
+          className="sidebar-glass flex flex-col h-full overflow-hidden"
           style={{
             /* Pinned: stay in normal flow (same width as aside, no overlay)   */
             /* Hover:  absolute so it overlays content without shifting layout */
@@ -823,8 +823,6 @@ export default function Sidebar() {
             top:   0,
             bottom:0,
             width:      expanded ? 240 : 64,
-            overflowX:  "hidden",   // clip labels horizontally when collapsed
-            overflowY:  "visible",  // never clip vertically — nav scrolls itself
             transition: "width 220ms cubic-bezier(0.4,0,0.2,1)",
             zIndex:     30,
           }}
