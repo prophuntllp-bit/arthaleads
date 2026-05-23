@@ -246,7 +246,10 @@ export default function FollowUps() {
                         <WhatsAppLink phone={lead.phone} />
                       </td>
                       <td className="px-4 py-3">
-                        {lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>}
+                        {lead._type === "project"
+                          ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">Project</span>
+                          : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>
+                        }
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-app-soft truncate max-w-[120px] block">
