@@ -21,6 +21,52 @@ function PlanBadge({ plan }) {
   );
 }
 
+// ── PlanSwitcher ───────────────────────────────────────────────────────────────
+// Lets super admin toggle an org's plan between trial / pro / enterprise inline.
+function PlanSwitcher({ org, onUpdated }) {
+  const PLANS = ["trial", "pro", "enterprise"];
+  const [saving, setSaving] = useState(false);
+
+  const switchPlan = async (newPlan) => {
+    if (newPlan === org.plan) return;
+    if (!window.confirm(`Switch "${org.name}" from ${org.plan.toUpperCase()} → ${newPlan.toUpperCase()}?`)) return;
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { plan: newPlan });
+      onUpdated(data.org);
+      toast.success(`Plan switched to ${newPlan}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to switch plan");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      {saving ? (
+        <span className="text-[10px] text-app-soft animate-pulse">Saving…</span>
+      ) : (
+        PLANS.map((p) => {
+          const active = p === org.plan;
+          const cls = {
+            trial:      active ? "bg-yellow-500 text-white border-yellow-500" : "text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/10",
+            pro:        active ? "bg-violet-600 text-white border-violet-600" : "text-violet-600 border-violet-500/30 hover:bg-violet-500/10",
+            enterprise: active ? "bg-orange-500 text-white border-orange-500" : "text-orange-600 border-orange-500/30 hover:bg-orange-500/10",
+          }[p];
+          return (
+            <button
+              key={p}
+              onClick={() => switchPlan(p)}
+              className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide transition ${cls}`}
+            >{p === "enterprise" ? "Ent." : p}</button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ── Compress + normalise any image format to a compact JPEG data-URI ─────────
 // Resizes to max 400px on the longest side, exports as JPEG quality 0.88.
 // This converts WebP / HEIC-alike / PNG / GIF → JPEG before upload,
@@ -781,6 +827,7 @@ export default function SuperAdmin() {
                   <th className="text-center">Leads</th>
                   <th>Logo</th>
                   <th>Brand Colour</th>
+                  <th>Plan</th>
                   <th className="text-center">Status</th>
                   <th>Extend Trial</th>
                 </tr>
@@ -818,6 +865,9 @@ export default function SuperAdmin() {
                       </td>
                       <td>
                         <BrandColorPicker org={org} onUpdated={handleOrgUpdated} />
+                      </td>
+                      <td>
+                        <PlanSwitcher org={org} onUpdated={handleOrgUpdated} />
                       </td>
                       <td className="text-center">
                         {/* Trial Expired takes priority over Active/Inactive */}

@@ -243,10 +243,13 @@ export default function Sidebar() {
           <div className="w-24 h-20 flex items-center justify-center mb-2 rounded-2xl overflow-hidden p-1"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <img
+              key={org.logo}
               src={org.logo}
               alt={org.name}
               className="max-w-full max-h-full object-contain"
+              onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = "flex"); }}
             />
+            <span style={{ display: "none" }} className="text-xs font-bold text-app-soft text-center">{org.name?.slice(0, 2).toUpperCase()}</span>
           </div>
           <p className="text-sm font-bold text-app leading-tight truncate w-full mb-2.5">{org.name}</p>
           {/* Powered by ArthaLeads */}
@@ -562,7 +565,8 @@ export default function Sidebar() {
           {org?.logo ? (
             <>
               <div className="h-8 max-w-[80px] flex items-center flex-shrink-0">
-                <img src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 6 }} />
+                <img key={org.logo} src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 6 }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
               </div>
               <span className="font-bold text-sm text-app truncate max-w-[100px]">{org.name}</span>
               {/* Tiny ArthaLeads badge */}

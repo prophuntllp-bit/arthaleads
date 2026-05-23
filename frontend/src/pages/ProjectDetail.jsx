@@ -607,9 +607,10 @@ export default function ProjectDetail() {
               tab === key
                 ? key === "prospective"
                   ? "bg-green-600 text-white shadow-sm"
-                  : "bg-orange-500 text-white shadow-sm"
+                  : "text-white shadow-sm"
                 : "text-app-soft hover:text-app"
             }`}
+            style={tab === key && key !== "prospective" ? { background: "var(--app-primary)" } : {}}
           >
             {label}
           </button>

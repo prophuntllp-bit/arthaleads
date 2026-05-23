@@ -17,8 +17,10 @@ const emptyMember = {
 
 export default function Team() {
   useEffect(() => { document.title = "Team Management - Arthaleads CRM"; }, []);
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
+  const isTrial = org?.plan === "trial";
+  const TRIAL_LIMIT = 5;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -174,9 +176,17 @@ export default function Team() {
             </p>
           </div>
           {isAdmin && (
-            <button className="btn-primary rounded-xl" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Add Team Member
-            </button>
+            <div className="flex items-center gap-2">
+              {isTrial && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
+                  style={{ background: users.length >= TRIAL_LIMIT ? "rgba(239,68,68,0.1)" : "rgba(var(--app-primary-rgb),0.08)", color: users.length >= TRIAL_LIMIT ? "#ef4444" : "var(--app-primary)", borderColor: users.length >= TRIAL_LIMIT ? "rgba(239,68,68,0.3)" : "rgba(var(--app-primary-rgb),0.2)" }}>
+                  {users.length}/{TRIAL_LIMIT} members · Trial
+                </span>
+              )}
+              <button className="btn-primary rounded-xl" onClick={openCreate} disabled={isTrial && users.length >= TRIAL_LIMIT}>
+                <Plus className="h-4 w-4" /> Add Team Member
+              </button>
+            </div>
           )}
         </div>
       </section>

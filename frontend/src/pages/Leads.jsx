@@ -1125,7 +1125,8 @@ export default function Leads() {
                       <span>Show rows:</span>
                       {[10, 30, 50, 100, 200, 500].map((n) => (
                         <button key={n} onClick={() => { setProjLimit(n); setProjPage(1); }}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${projLimit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${projLimit === n ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                          style={projLimit === n ? { background: "var(--app-primary)" } : {}}
                         >{n}</button>
                       ))}
                     </div>
@@ -1400,7 +1401,8 @@ export default function Leads() {
               <button
                 key={n}
                 onClick={() => changeLimit(n)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${limit === n ? "bg-orange-500/15 text-orange-500" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${limit === n ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
+                style={limit === n ? { background: "var(--app-primary)" } : {}}
               >{n}</button>
             ))}
           </div>

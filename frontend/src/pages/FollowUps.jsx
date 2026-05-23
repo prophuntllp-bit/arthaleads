@@ -129,10 +129,9 @@ export default function FollowUps() {
           <button
             onClick={() => { setSort("desc"); setPage(1); }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
-              sort === "desc"
-                ? "bg-orange-500 text-white shadow-sm"
-                : "text-app-soft hover:text-app"
+              sort === "desc" ? "text-white shadow-sm" : "text-app-soft hover:text-app"
             }`}
+            style={sort === "desc" ? { background: "var(--app-primary)" } : {}}
           >
             <ArrowDown className="w-3 h-3" />
             Latest First
@@ -140,10 +139,9 @@ export default function FollowUps() {
           <button
             onClick={() => { setSort("asc"); setPage(1); }}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-semibold transition-all ${
-              sort === "asc"
-                ? "bg-orange-500 text-white shadow-sm"
-                : "text-app-soft hover:text-app"
+              sort === "asc" ? "text-white shadow-sm" : "text-app-soft hover:text-app"
             }`}
+            style={sort === "asc" ? { background: "var(--app-primary)" } : {}}
           >
             <ArrowUp className="w-3 h-3" />
             Earliest First

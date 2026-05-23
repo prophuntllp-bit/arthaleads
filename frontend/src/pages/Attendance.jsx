@@ -251,12 +251,14 @@ export default function Attendance() {
         <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {isAdmin && (
             <button onClick={() => setTab("team")}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "team" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"}`}>
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "team" ? "text-white shadow-sm" : "text-app-soft hover:text-app"}`}
+              style={tab === "team" ? { background: "var(--app-primary)" } : {}}>
               <Users className="w-3.5 h-3.5" /> Team Today
             </button>
           )}
           <button onClick={() => setTab("records")}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "records" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"}`}>
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${tab === "records" ? "text-white shadow-sm" : "text-app-soft hover:text-app"}`}
+            style={tab === "records" ? { background: "var(--app-primary)" } : {}}>
             <CalendarDays className="w-3.5 h-3.5" /> {isAdmin ? "All Records" : "My Records"}
           </button>
         </div>

@@ -546,8 +546,9 @@ export default function DumpLeads() {
                           key={p}
                           onClick={() => setPage(p)}
                           className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                            p === safePage ? "bg-orange-500 text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                            p === safePage ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
                           }`}
+                          style={p === safePage ? { background: "var(--app-primary)" } : {}}
                         >{p}</button>
                       )
                     )}
