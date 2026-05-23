@@ -214,6 +214,40 @@ const superAdminController = {
       next(err);
     }
   },
+
+  // POST /api/super-admin/migrate-logos
+  // Uploads every base64 org logo to Cloudinary and replaces it with an HTTPS URL.
+  async migrateLogos(req, res, next) {
+    try {
+      const orgs = await Organization.find({
+        logo: { $regex: "^data:image/", $options: "i" },
+      }).select("_id name logo");
+
+      if (!orgs.length) {
+        return res.json({ success: true, message: "No base64 logos found — nothing to migrate.", results: [] });
+      }
+
+      const results = [];
+      for (const org of orgs) {
+        try {
+          const url = await uploadOrgLogo(org.logo, org._id.toString());
+          await Organization.findByIdAndUpdate(org._id, { logo: url });
+          results.push({ org: org.name, status: "ok", url });
+        } catch (err) {
+          results.push({ org: org.name, status: "failed", reason: err.message });
+        }
+      }
+
+      const allOk = results.every((r) => r.status === "ok");
+      res.json({
+        success: allOk,
+        message: `${results.filter(r => r.status === "ok").length}/${results.length} logo(s) migrated to Cloudinary.`,
+        results,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = superAdminController;

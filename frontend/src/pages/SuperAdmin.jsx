@@ -698,6 +698,37 @@ function UsersPanel() {
   );
 }
 
+// ── MigrateLogosButton ────────────────────────────────────────────────────────
+// One-time action: uploads all base64 logos to Cloudinary so they persist
+// across refreshes without bloating localStorage.
+function MigrateLogosButton() {
+  const [running, setRunning] = useState(false);
+
+  const run = async () => {
+    if (!window.confirm("Migrate all base64 org logos to Cloudinary? This is safe to run multiple times.")) return;
+    setRunning(true);
+    try {
+      const { data } = await api.post("/super-admin/migrate-logos");
+      toast.success(data.message);
+      if (data.results?.length) {
+        data.results.forEach((r) => {
+          if (r.status === "failed") toast.error(`${r.org}: ${r.reason}`);
+        });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Migration failed");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <button onClick={run} disabled={running} className="btn-secondary gap-1.5 text-xs px-3 py-2 disabled:opacity-50">
+      {running ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Migrating…</> : <><Upload className="w-3.5 h-3.5" /> Migrate Logos</>}
+    </button>
+  );
+}
+
 export default function SuperAdmin() {
   useEffect(() => { document.title = "Super Admin - Arthaleads"; }, []);
   const { user } = useAuth();
@@ -761,9 +792,12 @@ export default function SuperAdmin() {
             <h1 className="text-xl font-black text-app">Super Admin</h1>
             <p className="text-xs text-app-soft">Platform-level management · Logged in as <span className="font-semibold text-orange-500">{user?.name}</span></p>
           </div>
-          <button onClick={load} className="ml-auto btn-secondary gap-1.5 text-xs px-3 py-2">
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <MigrateLogosButton />
+            <button onClick={load} className="btn-secondary gap-1.5 text-xs px-3 py-2">
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </button>
+          </div>
         </div>
       </div>
 
