@@ -48,6 +48,9 @@ const userSchema = new mongoose.Schema(
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     passwordResetToken:   { type: String, select: false },
     passwordResetExpires: { type: Date,   select: false },
+    // Phone OTP (sent via email)
+    otpCode:      { type: String, select: false },
+    otpExpiresAt: { type: Date,   select: false },
     // Brute-force lockout
     loginAttempts: { type: Number, default: 0,    select: false },
     lockoutUntil:  { type: Date,   default: null,  select: false },

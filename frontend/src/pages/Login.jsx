@@ -9,15 +9,16 @@ import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "https://api.arthaleads.com";
 
-// ── Phone OTP panel — uses our backend + MSG91 (no Firebase / no reCAPTCHA) ──
+// ── Phone OTP panel — OTP sent to registered email (no SMS/reCAPTCHA needed) ──
 function PhoneOtpPanel({ onLoginSuccess }) {
-  const [phone, setPhone]       = useState("");
-  const [otp, setOtp]           = useState("");
-  const [step, setStep]         = useState("phone"); // "phone" | "otp"
-  const [loading, setLoading]   = useState(false);
-  const [resendTimer, setTimer] = useState(0);
-  const [err, setErr]           = useState("");
-  const timerRef                = useRef(null);
+  const [phone, setPhone]         = useState("");
+  const [otp, setOtp]             = useState("");
+  const [step, setStep]           = useState("phone"); // "phone" | "otp"
+  const [loading, setLoading]     = useState(false);
+  const [resendTimer, setTimer]   = useState(0);
+  const [err, setErr]             = useState("");
+  const [maskedEmail, setMasked]  = useState("");
+  const timerRef                  = useRef(null);
 
   useEffect(() => () => clearInterval(timerRef.current), []);
 
@@ -34,10 +35,11 @@ function PhoneOtpPanel({ onLoginSuccess }) {
     if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/otp/send`, { phone: digits });
+      const { data } = await axios.post(`${API}/api/auth/otp/send`, { phone: digits });
+      setMasked(data.email || "");
       setStep("otp");
       startCountdown();
-      toast.success("OTP sent!");
+      toast.success("OTP sent to your registered email!");
     } catch (e) {
       setErr(e.response?.data?.message || "Failed to send OTP. Please try again.");
     } finally {
@@ -75,7 +77,7 @@ function PhoneOtpPanel({ onLoginSuccess }) {
               autoFocus
               maxLength={15}
             />
-            <p className="mt-1 text-[11px] text-app-soft">We'll send a 6-digit OTP via SMS.</p>
+            <p className="mt-1 text-[11px] text-app-soft">We'll send a 6-digit OTP to your registered email address.</p>
           </div>
           {err && <p className="text-sm text-red-400 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5">{err}</p>}
           <button
@@ -90,8 +92,9 @@ function PhoneOtpPanel({ onLoginSuccess }) {
 
       {step === "otp" && (
         <>
-          <div className="rounded-2xl bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-500 text-center">
-            OTP sent to <span className="font-bold">+91 {phone.replace(/\D/g, "").slice(-10)}</span>
+          <div className="rounded-2xl bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-600 text-center">
+            OTP sent to your email <span className="font-bold">{maskedEmail}</span>
+            <p className="text-xs text-green-500/80 mt-1">Check your inbox (and spam folder)</p>
           </div>
           <div>
             <label className="label">Enter 6-digit OTP</label>

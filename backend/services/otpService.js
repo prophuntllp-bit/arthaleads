@@ -1,67 +1,117 @@
 // services/otpService.js
-// MSG91 OTP — send and verify via their v5 API.
-// Docs: https://docs.msg91.com/reference/send-otp
-const axios = require("axios");
+// Email OTP — generates a 6-digit code, stores it in MongoDB with a 5-min TTL,
+// sends it to the user's registered email, and verifies on submission.
+// No SMS, no DLT registration, no reCAPTCHA required.
 
-const AUTH_KEY   = process.env.MSG91_AUTH_KEY;
-const TEMPLATE   = process.env.MSG91_TEMPLATE_ID || "";  // optional — needed for DLT
+const crypto = require("crypto");
+const User   = require("../models/User");
+const { Resend } = require("resend");
 
-// Normalise any Indian phone input → "91XXXXXXXXXX" (no +)
-function toMsg91Mobile(raw) {
-  const digits = String(raw).replace(/\D/g, "");
-  if (digits.length === 10) return `91${digits}`;
-  if (digits.length === 12 && digits.startsWith("91")) return digits;
-  if (digits.length === 13 && digits.startsWith("091")) return digits.slice(1);
-  return digits; // pass through for non-Indian numbers
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
+  return new Resend(process.env.RESEND_API_KEY);
 }
 
+// Normalise phone to bare 10-digit string for DB lookup
+function normalisePhone(raw) {
+  return String(raw).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
+}
+
+function buildVariants(norm) {
+  return [norm, `+91${norm}`, `91${norm}`, `0${norm}`];
+}
+
+// Generate a cryptographically random 6-digit OTP
+function generateOtp() {
+  return String(crypto.randomInt(100000, 999999));
+}
+
+// Send OTP to the email linked to the phone number.
+// Returns { email } (masked) so the frontend can show "OTP sent to r***@gmail.com"
 async function sendOtp(phone) {
-  if (!AUTH_KEY) throw new Error("MSG91_AUTH_KEY not configured");
+  const norm = normalisePhone(phone);
+  const user = await User.findOne({ phone: { $in: buildVariants(norm) } }).select("email name otpCode otpExpiresAt");
 
-  const mobile = toMsg91Mobile(phone);
-
-  const params = {
-    authkey:    AUTH_KEY,
-    mobile,
-    otp_length: 6,
-    otp_expiry: 5,   // minutes
-  };
-  if (TEMPLATE) params.template_id = TEMPLATE;
-
-  const { data } = await axios.post(
-    "https://api.msg91.com/api/v5/otp",
-    null,
-    { params, timeout: 10_000 }
-  );
-
-  // MSG91 returns { type: "success", message: "... sent successfully." }
-  if (data?.type !== "success") {
-    throw new Error(data?.message || "Failed to send OTP");
+  if (!user) {
+    throw new Error("No account found with this phone number. Please sign up first or ask your admin to add your number.");
   }
 
-  return { mobile };
+  const otp     = generateOtp();
+  const expires = new Date(Date.now() + OTP_TTL_MS);
+
+  // Persist hashed OTP — never store plain text
+  user.otpCode      = crypto.createHash("sha256").update(otp).digest("hex");
+  user.otpExpiresAt = expires;
+  await user.save({ validateBeforeSave: false });
+
+  // Send email via Resend
+  const resend = getResend();
+  const from   = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
+
+  await resend.emails.send({
+    from,
+    to:      user.email,
+    subject: `${otp} — Your Arthaleads login OTP`,
+    html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;">
+        <tr><td align="center" style="padding-bottom:24px;">
+          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
+            style="display:inline-block;border-radius:14px;" />
+        </td></tr>
+        <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">One-Time Password</p>
+          <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#fff;">Your login OTP</h1>
+          <p style="margin:0 0 28px;font-size:15px;color:#a8a29e;line-height:1.6;">
+            Hi ${user.name || "there"}, use the code below to sign in to Arthaleads. It expires in <strong style="color:#fff;">5 minutes</strong>.
+          </p>
+          <div style="background:#292524;border:1px solid #3d3835;border-radius:14px;padding:24px;text-align:center;margin-bottom:28px;">
+            <span style="font-size:40px;font-weight:900;letter-spacing:.25em;color:#f97316;">${otp}</span>
+          </div>
+          <p style="margin:0;font-size:13px;color:#78716c;">Never share this OTP with anyone. Arthaleads will never ask for your OTP.</p>
+        </td></tr>
+        <tr><td style="padding:20px 0;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+
+  // Return masked email for frontend display
+  const [localPart, domain] = user.email.split("@");
+  const masked = localPart.length <= 2
+    ? `${localPart[0]}***@${domain}`
+    : `${localPart[0]}${localPart[1]}***@${domain}`;
+
+  return { email: masked };
 }
 
+// Verify OTP submitted by user. Throws on failure.
 async function verifyOtp(phone, otp) {
-  if (!AUTH_KEY) throw new Error("MSG91_AUTH_KEY not configured");
+  const norm = normalisePhone(phone);
+  const user = await User.findOne({ phone: { $in: buildVariants(norm) } }).select("otpCode otpExpiresAt");
 
-  const mobile = toMsg91Mobile(phone);
+  if (!user || !user.otpCode) throw new Error("OTP not found. Please request a new one.");
+  if (Date.now() > new Date(user.otpExpiresAt).getTime()) throw new Error("OTP has expired. Please request a new one.");
 
-  const { data } = await axios.get(
-    "https://api.msg91.com/api/v5/otp/verify",
-    {
-      params: { authkey: AUTH_KEY, mobile, otp: String(otp) },
-      timeout: 10_000,
-    }
-  );
+  const hash = crypto.createHash("sha256").update(String(otp)).digest("hex");
+  if (hash !== user.otpCode) throw new Error("Invalid OTP. Please check and try again.");
 
-  // MSG91 returns { type: "success", message: "OTP verified successfully" }
-  //           or  { type: "error",   message: "OTP not matched" }
-  if (data?.type !== "success") {
-    throw new Error(data?.message || "OTP verification failed");
-  }
+  // Clear OTP after successful verification
+  user.otpCode      = undefined;
+  user.otpExpiresAt = undefined;
+  await user.save({ validateBeforeSave: false });
 
   return true;
 }
 
-module.exports = { sendOtp, verifyOtp, toMsg91Mobile };
+module.exports = { sendOtp, verifyOtp };
