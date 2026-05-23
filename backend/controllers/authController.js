@@ -1,6 +1,15 @@
-﻿const authService = require("../services/authService");
+﻿const crypto      = require("crypto");
+const jwt         = require("jsonwebtoken");
+const authService = require("../services/authService");
 const otpService  = require("../services/otpService");
+const SignupOtp   = require("../models/SignupOtp");
+const User        = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+
+// Normalise phone to bare 10-digit string
+function normPhone(raw) {
+  return String(raw).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
+}
 
 // Shared cookie options - httpOnly prevents JS access (XSS protection)
 // sameSite: "lax" allows cookie to be sent on same-site navigations and
@@ -159,6 +168,111 @@ const authController = {
       res.json({ success: true, message: "If that email exists, a reset link has been sent." });
     } catch (err) {
       next(err);
+    }
+  },
+
+  // ── Signup phone verification ─────────────────────────────────────────────
+  async signupSendOtp(req, res, next) {
+    try {
+      const { phone, email } = req.body;
+      if (!phone || !email) return next(new AppError("Phone and email are required", 400));
+
+      const norm = normPhone(phone);
+      if (norm.length !== 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));
+
+      // Reject if phone is already used by an existing account
+      const taken = await User.findOne({ phone: { $in: [norm, `+91${norm}`, `91${norm}`, `0${norm}`] } });
+      if (taken) return next(new AppError("This phone number is already registered. Please use a different number or log in.", 409));
+
+      const otp     = String(crypto.randomInt(100000, 999999));
+      const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+      // Upsert: one record per phone (replace any previous attempt)
+      await SignupOtp.findOneAndUpdate(
+        { phone: norm },
+        { phone: norm, email: email.toLowerCase().trim(), otpHash, expiresAt },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      // Send OTP to the email the user typed in the signup form
+      const { Resend } = require("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from   = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
+
+      await resend.emails.send({
+        from,
+        to:      email.toLowerCase().trim(),
+        subject: `${otp} — Verify your phone number on Arthaleads`,
+        html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;">
+        <tr><td align="center" style="padding-bottom:24px;">
+          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
+            style="display:inline-block;border-radius:14px;" />
+        </td></tr>
+        <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Phone Verification</p>
+          <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#fff;">Verify your mobile number</h1>
+          <p style="margin:0 0 28px;font-size:15px;color:#a8a29e;line-height:1.6;">
+            Use the code below to verify your mobile number during signup. It expires in <strong style="color:#fff;">5 minutes</strong>.
+          </p>
+          <div style="background:#292524;border:1px solid #3d3835;border-radius:14px;padding:24px;text-align:center;margin-bottom:28px;">
+            <span style="font-size:40px;font-weight:900;letter-spacing:.25em;color:#f97316;">${otp}</span>
+          </div>
+          <p style="margin:0;font-size:13px;color:#78716c;">Never share this OTP with anyone. Arthaleads will never ask for your OTP.</p>
+        </td></tr>
+        <tr><td style="padding:20px 0;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+      });
+
+      // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
+      const [local, domain] = email.split("@");
+      const masked = local.length <= 2 ? `${local[0]}***@${domain}` : `${local[0]}${local[1]}***@${domain}`;
+      res.json({ success: true, maskedEmail: masked });
+    } catch (err) {
+      next(new AppError(err.message || "Failed to send OTP", 500));
+    }
+  },
+
+  async signupVerifyOtp(req, res, next) {
+    try {
+      const { phone, otp } = req.body;
+      if (!phone || !otp) return next(new AppError("Phone and OTP are required", 400));
+      if (String(otp).length !== 6) return next(new AppError("OTP must be 6 digits", 400));
+
+      const norm   = normPhone(phone);
+      const record = await SignupOtp.findOne({ phone: norm });
+
+      if (!record)                                    return next(new AppError("OTP not found. Please request a new one.", 400));
+      if (Date.now() > new Date(record.expiresAt).getTime()) return next(new AppError("OTP has expired. Please request a new one.", 400));
+
+      const hash = crypto.createHash("sha256").update(String(otp)).digest("hex");
+      if (hash !== record.otpHash) return next(new AppError("Invalid OTP. Please check and try again.", 400));
+
+      // Issue a short-lived phone-verified token (15 min) — included in signup body
+      const phoneToken = jwt.sign(
+        { phone: norm, email: record.email, type: "phone_verify" },
+        process.env.JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      // Delete the used OTP record
+      await SignupOtp.deleteOne({ phone: norm });
+
+      res.json({ success: true, phoneToken });
+    } catch (err) {
+      next(new AppError(err.message || "OTP verification failed", 500));
     }
   },
 

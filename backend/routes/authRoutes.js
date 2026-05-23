@@ -16,8 +16,10 @@ const {
 router.post("/signup",         validate(signupSchema), authController.signup);
 router.post("/login",          validate(loginSchema),  authController.login);
 router.post("/google",         authController.googleAuth);
-router.post("/otp/send",       authController.sendOtp);      // MSG91 OTP send
-router.post("/otp/verify",     authController.verifyOtp);    // MSG91 OTP verify + login
+router.post("/otp/send",           authController.sendOtp);          // login: email OTP send
+router.post("/otp/verify",         authController.verifyOtp);         // login: email OTP verify + login
+router.post("/signup/send-otp",    authController.signupSendOtp);     // signup: phone verify OTP send
+router.post("/signup/verify-otp",  authController.signupVerifyOtp);   // signup: phone verify OTP confirm
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password/:token", authController.resetPassword);
 

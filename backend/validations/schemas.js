@@ -7,11 +7,12 @@ const avatarSchema = Joi.string()
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const signupSchema = Joi.object({
-  orgName: Joi.string().min(2).max(100).required(),
-  name: Joi.string().min(2).max(80).required(),
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  phone: Joi.string().allow("").optional(),
+  orgName:    Joi.string().min(2).max(100).required(),
+  name:       Joi.string().min(2).max(80).required(),
+  email:      Joi.string().email().required(),
+  password:   Joi.string().min(6).required(),
+  phone:      Joi.string().min(10).max(15).required(),
+  phoneToken: Joi.string().required(), // short-lived JWT issued after OTP verification
 });
 
 const loginSchema = Joi.object({
