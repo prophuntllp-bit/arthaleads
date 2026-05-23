@@ -247,9 +247,9 @@ export default function Sidebar() {
               src={org.logo}
               alt={org.name}
               className="max-w-full max-h-full object-contain"
-              onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling && (e.currentTarget.nextSibling.style.display = "flex"); }}
+              style={{ display: org.logo ? "block" : "none" }}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
-            <span style={{ display: "none" }} className="text-xs font-bold text-app-soft text-center">{org.name?.slice(0, 2).toUpperCase()}</span>
           </div>
           <p className="text-sm font-bold text-app leading-tight truncate w-full mb-2.5">{org.name}</p>
           {/* Powered by ArthaLeads */}

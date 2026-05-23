@@ -12,10 +12,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const persist = useCallback((nextUser, nextOrg) => {
+    // Never store base64 logos in localStorage — they're several MB and silently get
+    // truncated or throw QuotaExceededError, causing broken images on refresh.
+    // We only persist a Cloudinary/HTTPS URL (small string); base64 stays in-memory only.
+    const orgForStorage = nextOrg
+      ? { ...nextOrg, logo: nextOrg.logo?.startsWith("data:") ? "" : (nextOrg.logo || "") }
+      : null;
     localStorage.setItem("crm_user", JSON.stringify(nextUser));
-    localStorage.setItem("crm_org",  JSON.stringify(nextOrg || null));
+    localStorage.setItem("crm_org",  JSON.stringify(orgForStorage));
     setUser(nextUser);
-    setOrg(nextOrg || null);
+    setOrg(nextOrg || null);  // in-memory state keeps the full logo
   }, []);
 
   const clearSession = useCallback(() => {
