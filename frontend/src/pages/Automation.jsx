@@ -809,19 +809,19 @@ export default function Automation() {
   const [deleting, setDeleting] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Facebook token refresh
-  const [refreshingTokens, setRefreshingTokens] = useState(false);
+  // Facebook token refresh (per-card)
+  const [refreshingId, setRefreshingId] = useState(null);
 
-  const handleRefreshFbTokens = async () => {
-    setRefreshingTokens(true);
+  const handleRefreshFbTokens = async (automationId, orgId) => {
+    setRefreshingId(automationId);
     try {
-      const { data } = await api.post("/automations/facebook/refresh-tokens");
-      toast.success(data.message || "Facebook tokens refreshed");
+      const { data } = await api.post("/automations/facebook/refresh-tokens", { automationId, orgId });
+      toast.success(data.message || "Facebook token refreshed");
       await loadItems(); // reload to show updated expiry dates
     } catch (err) {
       toast.error(err.response?.data?.message || "Token refresh failed. Try reconnecting Facebook.");
     } finally {
-      setRefreshingTokens(false);
+      setRefreshingId(null);
     }
   };
 
@@ -1062,12 +1062,12 @@ export default function Automation() {
                             </span>
                           </div>
                           <button
-                            onClick={handleRefreshFbTokens}
-                            disabled={refreshingTokens}
+                            onClick={() => handleRefreshFbTokens(item._id, item.orgId)}
+                            disabled={refreshingId === item._id}
                             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 ${tokenBad ? "bg-red-500 text-white" : tokenWarn ? "bg-amber-500 text-white" : "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"}`}
                           >
-                            <RefreshCw className={`w-3 h-3 ${refreshingTokens ? "animate-spin" : ""}`} />
-                            {refreshingTokens ? "Refreshing…" : "Refresh"}
+                            <RefreshCw className={`w-3 h-3 ${refreshingId === item._id ? "animate-spin" : ""}`} />
+                            {refreshingId === item._id ? "Refreshing…" : "Refresh"}
                           </button>
                         </div>
                         {item.tokenRefreshedAt && (

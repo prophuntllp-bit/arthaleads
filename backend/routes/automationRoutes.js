@@ -31,19 +31,23 @@ router.route("/:id")
 // POST /api/automations/facebook/refresh-tokens
 // Manually trigger the Facebook token refresh for all automations in this org.
 // Returns which automations were refreshed and their new expiry dates.
-router.post("/facebook/refresh-tokens", protect, authorize("admin", "super_admin"), async (req, res, next) => {
+router.post("/facebook/refresh-tokens", protect, authorize("admin", "manager", "super_admin"), async (req, res, next) => {
   try {
     if (!process.env.FB_APP_ID || !process.env.FB_APP_SECRET) {
       return res.status(500).json({ success: false, message: "Facebook app credentials not configured on the server." });
     }
 
     const META_GRAPH_VERSION = "v23.0";
-    const automations = await Automation.find({
-      orgId: req.user.orgId,
-      platform: "Facebook",
-      isActive: true,
-      userToken: { $exists: true, $ne: "" },
-    });
+    const { automationId } = req.body;
+
+    // If a specific automation ID is provided (per-card refresh), look up by _id only.
+    // This works for super_admin viewing other orgs' automations.
+    // Otherwise fall back to all active Facebook automations for the caller's org.
+    const query = automationId
+      ? { _id: automationId, platform: "Facebook", isActive: true, userToken: { $exists: true, $ne: "" } }
+      : { orgId: req.user.orgId, platform: "Facebook", isActive: true, userToken: { $exists: true, $ne: "" } };
+
+    const automations = await Automation.find(query);
 
     if (!automations.length) {
       return res.status(400).json({ success: false, message: "No connected Facebook automations found for this organization." });
