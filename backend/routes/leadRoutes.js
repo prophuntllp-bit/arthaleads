@@ -5,6 +5,8 @@ const leadController = require("../controllers/leadController");
 const { protect, authorize } = require("../middlewares/auth");
 const validate = require("../middlewares/validate");
 const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, importLeadsSchema } = require("../validations/schemas");
+const Lead = require("../models/Lead");
+const Automation = require("../models/Automation");
 
 // All lead routes require authentication
 router.use(protect);
