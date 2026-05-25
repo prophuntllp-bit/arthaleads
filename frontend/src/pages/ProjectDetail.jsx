@@ -351,6 +351,15 @@ export default function ProjectDetail() {
   const [prospLeads, setProspLeads]   = useState([]);
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
+
+  // Site Visit Done tab state
+  const [svdLeads, setSvdLeads]     = useState([]);
+  const [svdTotal, setSvdTotal]     = useState(0);
+  const [svdPage, setSvdPage]       = useState(1);
+  const [svdPages, setSvdPages]     = useState(1);
+  const [svdLoading, setSvdLoading] = useState(false);
+  const [svdSearch, setSvdSearch]   = useState("");
+  const SVD_LIMIT = 50;
   const [prospPages, setProspPages]   = useState(1);
   const [prospLoading, setProspLoading] = useState(false);
   const [prospSearch, setProspSearch] = useState("");
@@ -369,11 +378,13 @@ export default function ProjectDetail() {
   // Pre-fetch lead counts so tab badges are correct on first render
   useEffect(() => {
     api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1 } })
-      .then((r) => setLeadsTotal(r.data.total))
-      .catch(() => {});
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
-      .then((r) => setProspTotal(r.data.total))
-      .catch(() => {});
+      .then((r) => setLeadsTotal(r.data.total)).catch(() => {});
+    // Prospective excludes Site Visit Done (they live in their own tab)
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
+      .then((r) => setProspTotal(r.data.total)).catch(() => {});
+    // Site Visit Done count
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
+      .then((r) => setSvdTotal(r.data.total)).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -396,6 +407,8 @@ export default function ProjectDetail() {
     };
     // Filter pills narrow within the prospective scope
     if (prospBookingFilter) params.bookingIn = prospBookingFilter;
+    // When showing All Prospective, exclude Site Visit Done (they live in their own tab)
+    if (!prospBookingFilter) params.bookingNotIn = "Site Visit Done";
     // Date range
     if (prospDateFrom) params.followUpFrom = prospDateFrom;
     if (prospDateTo)   params.followUpTo   = prospDateTo;
@@ -404,6 +417,18 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
   }, [id, tab, prospPage, prospSearch, prospBookingFilter, prospDateFrom, prospDateTo, refreshKey]);
+
+  // Site Visit Done tab fetch
+  useEffect(() => {
+    if (tab !== "sitevisitdone") return;
+    setSvdLoading(true);
+    api.get(`/projects/${id}/leads`, {
+      params: { page: svdPage, limit: SVD_LIMIT, search: svdSearch, isProspective: true, bookingIn: "Site Visit Done" },
+    })
+      .then((r) => { setSvdLeads(r.data.leads); setSvdTotal(r.data.total); setSvdPages(r.data.pages); })
+      .catch(() => toast.error("Failed to load site visit done leads"))
+      .finally(() => setSvdLoading(false));
+  }, [id, tab, svdPage, svdSearch, refreshKey]);
 
   // Sync top scrollbar ↔ table scrollbar with dynamic width via ResizeObserver
   useEffect(() => {
@@ -484,15 +509,25 @@ export default function ProjectDetail() {
 
   const handleLeadUpdated = (updated) => {
     setLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-    // Refresh prospective badge count
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
+    // Refresh prospective badge count (excludes SVD)
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
       .then((r) => setProspTotal(r.data.total)).catch(() => {});
+    // Refresh SVD badge count
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
+      .then((r) => setSvdTotal(r.data.total)).catch(() => {});
     // If currently on prospective tab, also refresh the list
     if (tab === "prospective") {
       const params = { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, isProspective: true };
       if (prospBookingFilter) params.bookingIn = prospBookingFilter;
+      if (!prospBookingFilter) params.bookingNotIn = "Site Visit Done";
       api.get(`/projects/${id}/leads`, { params })
         .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
+        .catch(() => {});
+    }
+    // If currently on SVD tab, also refresh the list
+    if (tab === "sitevisitdone") {
+      api.get(`/projects/${id}/leads`, { params: { page: svdPage, limit: SVD_LIMIT, search: svdSearch, isProspective: true, bookingIn: "Site Visit Done" } })
+        .then((r) => { setSvdLeads(r.data.leads); setSvdTotal(r.data.total); setSvdPages(r.data.pages); })
         .catch(() => {});
     }
   };
@@ -596,21 +631,20 @@ export default function ProjectDetail() {
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl p-1 w-fit stitch-surface-muted">
         {[
-          { key: "info",        label: "Info" },
-          { key: "leads",       label: `Leads (${leadsTotal})` },
-          { key: "prospective", label: `Prospective${prospTotal > 0 ? ` (${prospTotal})` : ""}` },
-        ].map(({ key, label }) => (
+          { key: "info",          label: "Info",                                                                    activeClass: "",                     activeBg: "var(--app-primary)" },
+          { key: "leads",         label: `Leads (${leadsTotal})`,                                                  activeClass: "",                     activeBg: "var(--app-primary)" },
+          { key: "prospective",   label: `Prospective${prospTotal > 0 ? ` (${prospTotal})` : ""}`,                activeClass: "bg-green-600",         activeBg: "" },
+          { key: "sitevisitdone", label: `Site Visit Done${svdTotal > 0 ? ` (${svdTotal})` : ""}`,               activeClass: "bg-teal-600",          activeBg: "" },
+        ].map(({ key, label, activeClass, activeBg }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
             className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
               tab === key
-                ? key === "prospective"
-                  ? "bg-green-600 text-white shadow-sm"
-                  : "text-white shadow-sm"
+                ? activeClass ? `${activeClass} text-white shadow-sm` : "text-white shadow-sm"
                 : "text-app-soft hover:text-app"
             }`}
-            style={tab === key && key !== "prospective" ? { background: "var(--app-primary)" } : {}}
+            style={tab === key && activeBg ? { background: activeBg } : {}}
           >
             {label}
           </button>
@@ -979,7 +1013,6 @@ export default function ProjectDetail() {
               { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",           text: "text-app-soft" },
               { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",         text: "text-blue-600 dark:text-blue-400" },
               { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",     text: "text-violet-600 dark:text-violet-400" },
-              { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",         text: "text-teal-600 dark:text-teal-400" },
               { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",       text: "text-amber-600 dark:text-amber-400" },
               { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",       text: "text-green-600 dark:text-green-400" },
               { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",           text: "text-red-500 dark:text-red-400" },
@@ -1163,6 +1196,145 @@ export default function ProjectDetail() {
                       <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
                         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
                         disabled={prospPage === prospPages} onClick={() => setProspPage((p) => p + 1)} title="Next page">
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── SITE VISIT DONE TAB ── */}
+      {tab === "sitevisitdone" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "rgba(20,184,166,0.15)" }}>
+                <Users className="h-4 w-4 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-app">Site Visit Done</p>
+                <p className="text-xs text-app-soft">Leads who have completed a site visit</p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+              <input
+                className="input pl-9 py-2 text-sm w-56"
+                placeholder="Search name or phone…"
+                value={svdSearch}
+                onChange={(e) => { setSvdSearch(e.target.value); setSvdPage(1); }}
+              />
+            </div>
+          </div>
+
+          <div className="card overflow-hidden">
+            {svdLoading ? (
+              <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+            ) : svdLeads.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No site visit done leads yet"
+                desc="Leads marked as 'Site Visit Done' will appear here automatically."
+              />
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="stitch-table min-w-[1600px]">
+                    <thead>
+                      <tr>
+                        <th className="w-6 px-1 text-center">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
+                        <th>Phone</th>
+                        <th>WhatsApp</th>
+                        <th>Status</th>
+                        <th>Follow Up</th>
+                        <th>Follow Up 2</th>
+                        <th>Remark 1</th>
+                        <th>Remark 2</th>
+                        <th>Remark 3</th>
+                        <th>Remark 4</th>
+                        <th>Note</th>
+                        <th>Updated By</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {svdLeads.map((lead, i) => {
+                        const handleSvdUpdate = (updated) => {
+                          setSvdLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
+                          // Refresh counts when booking changes
+                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
+                            .then((r) => setProspTotal(r.data.total)).catch(() => {});
+                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
+                            .then((r) => setSvdTotal(r.data.total)).catch(() => {});
+                        };
+                        return (
+                          <tr key={lead._id} className="group">
+                            <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
+                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
+                              <NameCell name={lead.name} bold />
+                            </td>
+                            <td><PhoneActions phone={lead.phone} /></td>
+                            <td><WhatsAppLink phone={lead.phone} /></td>
+                            <td>
+                              <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark3} leadId={lead._id} projectId={id} field="remark3" placeholder="Remark 3…" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remark4} leadId={lead._id} projectId={id} field="remark4" placeholder="Remark 4…" onSaved={handleSvdUpdate} />
+                            </td>
+                            <td>
+                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline onSaved={handleSvdUpdate} />
+                            </td>
+                            <td className="text-xs text-app-soft whitespace-nowrap">
+                              {lead.remarkUpdatedBy?.name || "-"}
+                              {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
+                            </td>
+                            <td>
+                              <button
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-orange-500/10 hover:text-orange-500"
+                                onClick={() => setTransferTarget(lead)}
+                                title="Transfer lead"
+                              >
+                                <ArrowRightLeft className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {svdPages > 1 && (
+                  <div className="flex items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
+                    <span className="text-xs text-app-soft">{`${(svdPage - 1) * SVD_LIMIT + 1} – ${Math.min(svdPage * SVD_LIMIT, svdTotal)} of ${svdTotal}`}</span>
+                    <div className="flex items-center gap-2">
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={svdPage === 1} onClick={() => setSvdPage((p) => p - 1)}>
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
+                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+                        disabled={svdPage === svdPages} onClick={() => setSvdPage((p) => p + 1)}>
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>

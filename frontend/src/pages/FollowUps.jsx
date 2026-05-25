@@ -3,7 +3,138 @@ import { useNavigate } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2 } from "lucide-react";
+
+// ── Route patch to correct API based on lead type ─────────────────────────────
+async function patchLead(lead, data) {
+  if (lead._type === "project") {
+    const r = await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, data);
+    return r.data.data;
+  } else {
+    // Map project-lead field names → main-lead field names
+    const mapped = {};
+    if ("followUp"   in data) mapped.followUpDate = data.followUp;
+    if ("followUp2"  in data) mapped.followUp2    = data.followUp2;
+    if ("remark1"    in data) mapped.remark1       = data.remark1;
+    if ("remark2"    in data) mapped.remark2       = data.remark2;
+    if ("remarkNote" in data) mapped.remarkNote    = data.remarkNote;
+    if ("booking"    in data) mapped.booking       = data.booking;
+    const r = await api.patch(`/leads/${lead._id}`, mapped);
+    return r.data.data;
+  }
+}
+
+// ── Time helpers ──────────────────────────────────────────────────────────────
+const _pad = (n) => String(n).padStart(2, "0");
+function toLocalInput(utcStr) {
+  if (!utcStr) return "";
+  const d = new Date(utcStr);
+  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
+}
+function fromLocalInput(s) { return s ? new Date(s).toISOString() : null; }
+function nowLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
+}
+function fmtLocalTime(utcStr) {
+  if (!utcStr) return "";
+  return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+// ── Inline text ───────────────────────────────────────────────────────────────
+function FUText({ lead, field, placeholder = "Add…", onUpdate }) {
+  const value = lead[field] || "";
+  const [editing, setEditing] = useState(false);
+  const [val, setVal]         = useState(value);
+  const [saving, setSaving]   = useState(false);
+  const save = async () => {
+    setEditing(false);
+    if (val === value) return;
+    setSaving(true);
+    try { const updated = await patchLead(lead, { [field]: val }); onUpdate(updated); }
+    catch { toast.error("Save failed"); setVal(value); }
+    finally { setSaving(false); }
+  };
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  if (editing) return (
+    <input autoFocus
+      className="w-full min-w-[120px] rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+      value={val} onChange={(e) => setVal(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+    />
+  );
+  return (
+    <span onClick={() => { setVal(value); setEditing(true); }}
+      className="block cursor-pointer rounded px-1 py-0.5 text-xs transition hover:bg-orange-500/10 min-w-[80px] truncate max-w-[140px]"
+      title={value || placeholder}>
+      {value || <span className="text-app-soft italic">{placeholder}</span>}
+    </span>
+  );
+}
+
+// ── Inline date ───────────────────────────────────────────────────────────────
+function FUDate({ lead, field, onUpdate }) {
+  // For main leads followUp maps to followUpDate; project leads use field as-is
+  const rawValue = lead._type === "lead" && field === "followUp"
+    ? (lead.followUpDate || lead.followUp || null)
+    : (lead[field] || null);
+  const [saving, setSaving] = useState(false);
+  const save = async (localStr) => {
+    setSaving(true);
+    try { const updated = await patchLead(lead, { [field]: fromLocalInput(localStr) }); onUpdate(updated); }
+    catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1">
+        <input type="datetime-local"
+          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
+          value={toLocalInput(rawValue)} onChange={(e) => save(e.target.value)}
+        />
+        <button type="button" title="Set to now" onClick={() => save(nowLocal())}
+          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
+      </div>
+      {rawValue && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(rawValue)}</span>}
+    </div>
+  );
+}
+
+// ── Inline booking ────────────────────────────────────────────────────────────
+const FU_BOOKING_OPTIONS = [
+  { value: "",                   label: "- None -",          color: "" },
+  { value: "Interested",         label: "Interested",         color: "text-blue-600" },
+  { value: "Call Back",          label: "Call Back",          color: "text-amber-600" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",  color: "text-violet-600" },
+  { value: "Site Visit Done",    label: "Site Visit Done",    color: "text-teal-600" },
+  { value: "Booked",             label: "Booked",             color: "text-green-600" },
+  { value: "Not Interested",     label: "Not Interested",     color: "text-red-500" },
+  { value: "Not Reachable",      label: "Not Reachable",      color: "text-gray-500" },
+];
+function FUBooking({ lead, onUpdate }) {
+  const [saving, setSaving] = useState(false);
+  const save = async (v) => {
+    setSaving(true);
+    try { const updated = await patchLead(lead, { booking: v }); onUpdate(updated); }
+    catch { toast.error("Save failed"); }
+    finally { setSaving(false); }
+  };
+  const opt = FU_BOOKING_OPTIONS.find((o) => o.value === (lead.booking || "")) || FU_BOOKING_OPTIONS[0];
+  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
+  return (
+    <select
+      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 130 }}
+      value={lead.booking || ""} onChange={(e) => save(e.target.value)}>
+      {FU_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
 
 const SECTIONS = [
   { key: "past",    label: "Past Events",    icon: Clock,         color: "text-red-500",   bg: "bg-red-500/10",   activeBg: "bg-red-500",    badge: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400" },
@@ -194,23 +325,20 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[1200px]">
+              <table className="w-full text-xs min-w-[1500px]">
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Name</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Phone</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">WhatsApp</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Source</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status / Remark</th>
+                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Booking</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 1</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 2</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">
-                      <button
-                        onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
-                        className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors"
-                        title="Toggle sort order"
-                      >
+                      <button onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
+                        className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors" title="Toggle sort order">
                         Follow-up Date
                         {sort === "desc" ? <ArrowDown className="w-3 h-3 text-orange-500" /> : <ArrowUp className="w-3 h-3 text-orange-500" />}
                       </button>
@@ -218,75 +346,88 @@ export default function FollowUps() {
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Follow Up 2</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Project</th>
                     <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Type</th>
+                    <th className="px-4 py-3 text-center font-semibold text-app-soft uppercase tracking-wide text-[10px]">Done</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead, i) => (
-                    <tr
-                      key={lead._id}
-                      className="border-b transition-colors hover:bg-orange-500/5 cursor-pointer"
-                      style={{ borderColor: "var(--app-border)" }}
-                      onClick={() => {
-                        if (lead._type === "project" && lead.projectId) {
-                          navigate(`/projects/${lead.projectId}`);
-                        } else {
-                          navigate("/leads", { state: { openLeadId: lead._id } });
-                        }
-                      }}
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "-"}</p>
-                      </td>
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <PhoneActions phone={lead.phone} />
-                      </td>
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <WhatsAppLink phone={lead.phone} />
-                      </td>
-                      <td className="px-4 py-3">
-                        {lead._type === "project"
-                          ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">Project</span>
-                          : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>
-                        }
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-app-soft truncate max-w-[120px] block">
-                          {lead.status || lead.remark || "-"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <BookingBadge value={lead.booking} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-app-soft truncate max-w-[120px] block">{lead.remark1 || "-"}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-app-soft truncate max-w-[120px] block">{lead.remark2 || "-"}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-app-soft whitespace-nowrap">{fmtDate(lead.followUpDate || lead.followUp)}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-app-soft whitespace-nowrap">{fmtDate(lead.followUp2)}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {lead._type === "project" ? (
-                          <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
-                        ) : (
-                          <span className="text-app-soft">Main Pipeline</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
-                          lead._type === "project"
-                            ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
-                        }`}>
-                          {lead._type === "project" ? "Project" : "Pipeline"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {leads.map((lead) => {
+                    const handleUpdate = (updated) => {
+                      setLeads((prev) => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
+                    };
+                    const handleMarkDone = async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await patchLead(lead, { followUp: null, followUp2: null });
+                        setLeads((prev) => prev.filter((l) => l._id !== lead._id));
+                        setTotal((t) => t - 1);
+                        toast.success("Follow-up marked as done ✓");
+                      } catch { toast.error("Failed to mark done"); }
+                    };
+                    return (
+                      <tr key={lead._id} className="group border-b transition-colors hover:bg-orange-500/5 cursor-pointer"
+                        style={{ borderColor: "var(--app-border)" }}
+                        onClick={() => {
+                          if (lead._type === "project" && lead.projectId) navigate(`/projects/${lead.projectId}`);
+                          else navigate("/leads", { state: { openLeadId: lead._id } });
+                        }}>
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "-"}</p>
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <PhoneActions phone={lead.phone} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <WhatsAppLink phone={lead.phone} />
+                        </td>
+                        <td className="px-4 py-3">
+                          {lead._type === "project"
+                            ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">Project</span>
+                            : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-app-soft truncate max-w-[120px] block">{lead.status || lead.remark || "-"}</span>
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUBooking lead={lead} onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUText lead={lead} field="remark1" placeholder="Remark 1…" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUText lead={lead} field="remark2" placeholder="Remark 2…" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUDate lead={lead} field="followUp" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUDate lead={lead} field="followUp2" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3">
+                          {lead._type === "project"
+                            ? <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
+                            : <span className="text-app-soft">Main Pipeline</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
+                            lead._type === "project"
+                              ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400"
+                          }`}>
+                            {lead._type === "project" ? "Project" : "Pipeline"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={handleMarkDone}
+                            title="Mark follow-up as done — removes from list"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-0 group-hover:opacity-100">
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

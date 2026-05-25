@@ -142,7 +142,7 @@ const projectService = {
     return { inserted: insertedCount, skipped: invalid + writeErrors, duplicates };
   },
 
-  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null, followUpFrom = null, followUpTo = null, isProspective = false }, user) {
+  async getLeads(projectId, { page = 1, limit = 50, search = "", bookingIn = null, bookingNotIn = null, followUpFrom = null, followUpTo = null, isProspective = false }, user) {
     // Verify the project belongs to the requesting user's org
     const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
@@ -162,12 +162,10 @@ const projectService = {
     if (isProspective === "true" || isProspective === true) {
       // Prospective scope: flag set OR booking is any interest/visit state
       const prospScope = { $or: [{ isProspective: true }, { booking: { $in: ["Interested", "Site Visit Booked", "Site Visit Done"] } }] };
-      if (bookingIn) {
-        // Further narrow by specific status within Prospective
-        filter.$and = [prospScope, { booking: { $in: bookingIn.split(",").map((v) => v.trim()) } }];
-      } else {
-        filter.$and = [prospScope];
-      }
+      const constraints = [prospScope];
+      if (bookingIn)    constraints.push({ booking: { $in:  bookingIn.split(",").map((v) => v.trim()) } });
+      if (bookingNotIn) constraints.push({ booking: { $nin: bookingNotIn.split(",").map((v) => v.trim()) } });
+      filter.$and = constraints;
     } else if (bookingIn) {
       filter.booking = { $in: bookingIn.split(",").map((v) => v.trim()) };
     }

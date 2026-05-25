@@ -28,6 +28,23 @@ router.route("/:id")
   .put(validate(updateLeadSchema), leadController.update)
   .delete(leadController.delete);
 
+// PATCH /api/leads/:id — partial field update for follow-up editing
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const ALLOWED = ["followUpDate", "remark1", "remark2", "booking", "remarkNote", "followUp2"];
+    const update = {};
+    ALLOWED.forEach((f) => { if (f in req.body) update[f] = req.body[f] ?? null; });
+    if (!Object.keys(update).length) return res.status(400).json({ success: false, message: "No updatable fields" });
+    const lead = await Lead.findOneAndUpdate(
+      { _id: req.params.id, orgId: req.user.orgId },
+      { $set: update },
+      { new: true }
+    );
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+    res.json({ success: true, data: lead });
+  } catch (err) { next(err); }
+});
+
 router.patch("/:id/restore", authorize("admin", "manager"), leadController.restore);
 router.delete("/:id/permanent", authorize("admin", "manager"), leadController.permanentDelete);
 router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
