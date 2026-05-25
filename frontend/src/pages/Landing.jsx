@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  ChevronRight, Check, ArrowRight,
+  ChevronRight, ChevronLeft, Check, ArrowRight,
   BarChart3, Users, Zap, Building2, PhoneCall,
   Bell, Target, TrendingUp, Shield, Star,
   Facebook, MessageCircle, Mail, Phone, MapPin,
@@ -43,7 +43,7 @@ function Hero({ isDark }) {
   const scrollChevr = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden"
+    <section id="hero" className="relative overflow-hidden"
       style={{ background: heroBg }}>
       {/* Background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -55,7 +55,7 @@ function Hero({ isDark }) {
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20 lg:pt-36 lg:pb-28">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-36 lg:pb-8">
         <div className="text-center max-w-4xl mx-auto">
 
           {/* Badge */}
@@ -123,13 +123,6 @@ function Hero({ isDark }) {
           />
         </div>
 
-        {/* Scroll indicator */}
-        <div className="mt-12 flex justify-center">
-          <button onClick={() => scrollTo("features")} className="animate-bounce transition-colors"
-            style={{ color: scrollChevr }}>
-            <ChevronDown className="w-6 h-6" />
-          </button>
-        </div>
       </div>
     </section>
   );
@@ -242,7 +235,7 @@ function Features({ isDark }) {
   const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
 
   return (
-    <section id="features" className="py-24 lg:py-32" style={{ background: bg }}>
+    <section id="features" className="py-16 lg:py-20" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
@@ -279,82 +272,221 @@ function Features({ isDark }) {
   );
 }
 
-// ── How it works ──────────────────────────────────────────────────────────────
-function HowItWorks({ isDark }) {
-  const steps = [
-    {
-      num: "01",
-      icon: FileSpreadsheet,
-      title: "Import or Capture Leads",
-      desc: "Connect your Facebook Ad account for auto-import, paste a CSV, or add leads manually. Our system normalises phone numbers and removes duplicates instantly.",
-    },
-    {
-      num: "02",
-      icon: UserCheck,
-      title: "Assign to Your Team",
-      desc: "Distribute leads to your telecallers and agents based on projects or geography. Agents receive instant push notifications for new assignments.",
-    },
-    {
-      num: "03",
-      icon: PhoneCall,
-      title: "Call, Remark & Follow Up",
-      desc: "Agents log call outcomes, schedule follow-ups, and set booking status. Managers see live progress dashboards at every stage.",
-    },
-    {
-      num: "04",
-      icon: TrendingUp,
-      title: "Track & Convert",
-      desc: "Move hot leads from Site Visit Booked to Booked. Analytics show your conversion rate, top sources, and team performance over any time period.",
-    },
-  ];
+// ── How it works — interactive step-through UI ───────────────────────────────
+const HOW_STEPS = [
+  {
+    num: 1,
+    icon: FileSpreadsheet,
+    label: "Import",
+    color: "#ff6b00",
+    title: "Import or Capture Leads",
+    desc: "Connect your Facebook Ad account for auto-import, paste a CSV, or add leads manually. Our system normalises phone numbers and removes duplicates instantly.",
+    highlight: "Zero duplicate calls guaranteed",
+  },
+  {
+    num: 2,
+    icon: UserCheck,
+    label: "Assign",
+    color: "#3b82f6",
+    title: "Assign to Your Team",
+    desc: "Distribute leads to your telecallers and agents based on projects or geography. Agents receive instant push notifications for new assignments.",
+    highlight: "Round-robin auto-assignment built in",
+  },
+  {
+    num: 3,
+    icon: PhoneCall,
+    label: "Call & Follow Up",
+    color: "#22c55e",
+    title: "Call, Remark & Follow Up",
+    desc: "Agents log call outcomes, schedule follow-ups, and set booking status. Managers see live progress dashboards at every stage.",
+    highlight: "Never miss a follow-up again",
+  },
+  {
+    num: 4,
+    icon: TrendingUp,
+    label: "Track & Convert",
+    color: "#a855f7",
+    title: "Track & Convert",
+    desc: "Move hot leads from Site Visit Booked to Booked. Analytics show your conversion rate, top sources, and team performance over any time period.",
+    highlight: "3× conversion improvement reported",
+  },
+];
 
-  const bg      = isDark ? "#080810" : "#f9fafb";
-  const heading = isDark ? "#ffffff" : "#111827";
-  const body    = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const stepBd  = isDark ? "rgba(255,255,255,0.45)" : "#374151";
-  const badgeBg = isDark ? "#0d0d1a" : "#ffffff";
+function HowItWorks({ isDark }) {
+  const [active, setActive] = useState(0);
+  const intervalRef = useRef(null);
+
+  const startTimer = () => {
+    clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setActive((a) => (a + 1) % HOW_STEPS.length);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    startTimer();
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  const goTo = (i) => { setActive(i); startTimer(); };
+  const step = HOW_STEPS[active];
+
+  const bg             = isDark ? "#080810" : "#f9fafb";
+  const heading        = isDark ? "#ffffff"  : "#111827";
+  const body           = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const cardBg         = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const cardBdr        = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const tabInactive    = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)";
+  const tabText        = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+  const connInactive   = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
+  const navDisabled    = isDark ? "rgba(255,255,255,0.12)" : "#d1d5db";
 
   return (
-    <section className="py-24 lg:py-32" style={{ background: bg }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+    <section id="how-it-works" className="py-16 lg:py-20 overflow-hidden" style={{ background: bg }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Activity className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">How It Works</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3" style={{ color: heading }}>
             Up and running in{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              minutes
-            </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">minutes</span>
           </h2>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: body }}>
+          <p className="text-base max-w-xl mx-auto" style={{ color: body }}>
             No complex onboarding. Your team can start managing leads the same day.
           </p>
         </div>
 
-        <div className="relative">
-          {/* Connecting line */}
-          <div className="hidden lg:block absolute top-16 left-1/2 -translate-x-1/2 w-[calc(100%-12rem)] h-px bg-gradient-to-r from-transparent via-[#ff6b00]/30 to-transparent" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map(({ num, icon: Icon, title, desc }) => (
-              <div key={num} className="text-center">
-                <div className="relative inline-flex mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff6b00] to-[#a04100] flex items-center justify-center shadow-xl shadow-orange-500/20">
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <span className="absolute -top-2 -right-2 text-[10px] font-black text-[#ff6b00] border border-[#ff6b00]/30 rounded-full w-6 h-6 flex items-center justify-center"
-                    style={{ background: badgeBg }}>
-                    {num.slice(1)}
-                  </span>
+        {/* Step tab row */}
+        <div className="flex items-center justify-center mb-8">
+          {HOW_STEPS.map((s, i) => (
+            <div key={s.num} className="flex items-center">
+              <button onClick={() => goTo(i)} className="flex flex-col items-center gap-2 px-2 sm:px-4 group">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300"
+                  style={{
+                    background:  i === active ? s.color : tabInactive,
+                    boxShadow:   i === active ? `0 6px 18px ${s.color}45` : "none",
+                    transform:   i === active ? "scale(1.18)" : "scale(1)",
+                  }}
+                >
+                  <s.icon className="w-5 h-5 transition-colors" style={{ color: i === active ? "#fff" : tabText }} />
                 </div>
-                <h3 className="font-bold text-base mb-2" style={{ color: heading }}>{title}</h3>
-                <p className="text-sm leading-relaxed" style={{ color: body }}>{desc}</p>
+                <span
+                  className="text-[11px] font-semibold hidden sm:block transition-colors whitespace-nowrap"
+                  style={{ color: i === active ? s.color : tabText }}
+                >
+                  {s.label}
+                </span>
+              </button>
+              {/* Connector between steps */}
+              {i < HOW_STEPS.length - 1 && (
+                <div
+                  className="h-0.5 w-10 sm:w-16 lg:w-20 transition-all duration-500 mb-5"
+                  style={{ background: i < active ? HOW_STEPS[i].color : connInactive }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Content card — key causes remount on step change for CSS entry animation */}
+        <div
+          key={active}
+          className="rounded-3xl p-7 lg:p-10 relative overflow-hidden"
+          style={{
+            background:  cardBg,
+            border:      `1px solid ${cardBdr}`,
+            boxShadow:   isDark ? `0 0 80px ${step.color}08` : `0 4px 40px rgba(0,0,0,0.07)`,
+            animation:   "howStep 0.35s ease",
+          }}
+        >
+          {/* Ghost number watermark */}
+          <div
+            className="absolute right-6 top-2 text-[7rem] font-black leading-none select-none pointer-events-none"
+            style={{ color: `${step.color}0d`, letterSpacing: "-0.04em" }}
+          >
+            0{step.num}
+          </div>
+
+          <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
+            <div>
+              {/* Icon */}
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
+                style={{ background: `${step.color}15` }}
+              >
+                <step.icon className="w-7 h-7" style={{ color: step.color }} />
               </div>
+              {/* Text */}
+              <h3 className="text-2xl lg:text-3xl font-black mb-3" style={{ color: heading }}>{step.title}</h3>
+              <p className="text-base leading-relaxed mb-6" style={{ color: body }}>{step.desc}</p>
+              {/* Highlight pill */}
+              <span
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: `${step.color}12`, border: `1px solid ${step.color}28`, color: step.color }}
+              >
+                <Check className="w-4 h-4" />
+                {step.highlight}
+              </span>
+            </div>
+
+            {/* Step badge — desktop only */}
+            <div
+              className="w-20 h-20 rounded-3xl items-center justify-center flex-shrink-0 hidden lg:flex"
+              style={{ background: step.color, boxShadow: `0 8px 28px ${step.color}45` }}
+            >
+              <span className="text-3xl font-black text-white">0{step.num}</span>
+            </div>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="flex gap-2 mt-8">
+            {HOW_STEPS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                className="h-1.5 rounded-full transition-all duration-400"
+                style={{
+                  flex:       i === active ? 4 : 1,
+                  background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb"),
+                }}
+              />
             ))}
           </div>
+
+          {/* Prev / Next */}
+          <div className="flex items-center justify-between mt-4">
+            <button
+              onClick={() => goTo((active - 1 + HOW_STEPS.length) % HOW_STEPS.length)}
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors"
+              style={{ color: active === 0 ? navDisabled : body }}
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+            <span className="text-xs font-bold tracking-widest" style={{ color: isDark ? "rgba(255,255,255,0.20)" : "#d1d5db" }}>
+              {active + 1} / {HOW_STEPS.length}
+            </span>
+            <button
+              onClick={() => goTo((active + 1) % HOW_STEPS.length)}
+              className="flex items-center gap-1.5 text-sm font-medium transition-colors"
+              style={{ color: body }}
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
+
+        {/* Keyframe injected inline — no extra CSS file needed */}
+        <style>{`
+          @keyframes howStep {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0);    }
+          }
+        `}</style>
       </div>
     </section>
   );
@@ -377,7 +509,7 @@ function About({ isDark }) {
   const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
 
   return (
-    <section id="about" className="py-24 lg:py-32" style={{ background: bg }}>
+    <section id="about" className="py-16 lg:py-20" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
@@ -464,7 +596,7 @@ function Testimonials({ isDark }) {
   const roleClr = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
 
   return (
-    <section className="py-24 lg:py-32" style={{ background: bg }}>
+    <section className="py-16 lg:py-20" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
@@ -568,7 +700,7 @@ function Pricing({ isDark }) {
   const noteClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
 
   return (
-    <section id="pricing" className="py-24 lg:py-32" style={{ background: bg }}>
+    <section id="pricing" className="py-16 lg:py-20" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
@@ -669,7 +801,7 @@ function Contact({ isDark }) {
   const waSub     = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
 
   return (
-    <section id="contact" className="py-24 lg:py-32" style={{ background: bg }}>
+    <section id="contact" className="py-16 lg:py-20" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
