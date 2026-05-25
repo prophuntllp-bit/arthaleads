@@ -274,7 +274,7 @@ const automationService = {
   },
 
   async fetchFacebookPages(accessToken) {
-    // 1️⃣ Try /me/accounts - works for pages managed directly by the user
+    // 1️⃣ Direct pages — managed personally by the user (/me/accounts)
     const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
     const resp1 = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
     const json1 = await resp1.json();
@@ -285,62 +285,59 @@ const automationService = {
     }
 
     const directPages = json1.data || [];
-    console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} page(s)`);
+    console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} direct page(s)`);
 
-    if (directPages.length > 0) return directPages;
-
-    // 2️⃣ Fallback: pages managed through Meta Business Manager
-    console.log("[fetchFacebookPages] No direct pages - trying Business Manager API...");
+    // 2️⃣ Business Manager pages — always query even when direct pages exist,
+    //    because users often have a mix of personally-managed and BM-managed pages.
+    //    The old code short-circuited here if directPages.length > 0 which caused
+    //    BM-only pages to go missing from the dropdown.
+    const bmPages = [];
     try {
       const bizParams = new URLSearchParams({ access_token: accessToken, fields: "id,name", limit: "50" });
       const bizResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/businesses?${bizParams.toString()}`);
       const bizJson = await bizResp.json();
 
-      if (!bizResp.ok || bizJson.error) {
-        console.warn("[fetchFacebookPages] /me/businesses failed:", JSON.stringify(bizJson.error || bizJson));
-        return [];
-      }
+      if (bizResp.ok && !bizJson.error) {
+        const businesses = bizJson.data || [];
+        console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) - ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
 
-      const businesses = bizJson.data || [];
-      console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) - ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
-
-      if (businesses.length === 0) {
-        console.warn("[fetchFacebookPages] No businesses found.");
-        return [];
-      }
-
-      const allPages = [];
-      for (const biz of businesses) {
-        for (const endpoint of ["owned_pages", "client_pages"]) {
-          const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
-          const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/${endpoint}?${pageParams.toString()}`);
-          const pageJson = await pageResp.json();
-          if (pageJson.error) {
-            console.warn(`[fetchFacebookPages] ${endpoint} for biz ${biz.id} error:`, JSON.stringify(pageJson.error));
-            continue;
+        for (const biz of businesses) {
+          for (const endpoint of ["owned_pages", "client_pages"]) {
+            const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
+            const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/${endpoint}?${pageParams.toString()}`);
+            const pageJson = await pageResp.json();
+            if (pageJson.error) {
+              console.warn(`[fetchFacebookPages] ${endpoint} for biz "${biz.name}" error:`, JSON.stringify(pageJson.error));
+              continue;
+            }
+            const batch = pageJson.data || [];
+            console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${batch.length} page(s)`);
+            bmPages.push(...batch);
           }
-          const bizPages = pageJson.data || [];
-          console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${bizPages.length} page(s) - ${bizPages.map(p => `${p.name}(token:${!!p.access_token})`).join(", ")}`);
-          allPages.push(...bizPages);
         }
+      } else {
+        console.warn("[fetchFacebookPages] /me/businesses failed or returned error:", JSON.stringify(bizJson.error || bizJson));
       }
-
-      // For pages that don't have access_token in the response, fetch it explicitly
-      const enriched = await Promise.all(
-        allPages.map(async (page) => {
-          if (page.access_token) return page;
-          const pageToken = await this.fetchPageToken(page.id, accessToken);
-          return { ...page, access_token: pageToken };
-        })
-      );
-
-      // Deduplicate by page ID
-      const seen = new Set();
-      return enriched.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
     } catch (bizErr) {
-      console.warn("[fetchFacebookPages] Business Manager fallback exception:", bizErr.message);
-      return [];
+      console.warn("[fetchFacebookPages] Business Manager lookup exception:", bizErr.message);
     }
+
+    // 3️⃣ Merge both sources; fetch missing page tokens; deduplicate by page ID
+    const combined = [...directPages, ...bmPages];
+
+    const enriched = await Promise.all(
+      combined.map(async (page) => {
+        if (page.access_token) return page;
+        const pageToken = await this.fetchPageToken(page.id, accessToken);
+        return { ...page, access_token: pageToken };
+      })
+    );
+
+    const seen = new Set();
+    const deduped = enriched.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+
+    console.log(`[fetchFacebookPages] Total unique pages: ${deduped.length} (${directPages.length} direct + ${bmPages.length} via BM, after dedup)`);
+    return deduped;
   },
 
   async fetchFacebookForms(pageId, pageAccessToken) {
