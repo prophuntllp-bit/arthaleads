@@ -601,6 +601,47 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
   },
 
+  // ── Follow-ups due: overdue + today, user-scoped ─────────────────────────
+  // Used by the dashboard alert panel. Returns pipeline leads only (no project
+  // leads) since those are handled separately in the Follow-ups page.
+  // Agents see only their assigned/created leads; admins/managers see all org.
+  async getFollowUpsDue(user) {
+    const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
+    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+
+    const filter = {
+      orgId:      user.orgId,
+      isArchived: false,
+      isDeleted:  { $ne: true },
+      status:     { $nin: ["Closed Won", "Closed Lost"] },
+      followUpDate: { $ne: null, $lte: todayEnd },
+    };
+
+    if (user.role === "agent") {
+      filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+    }
+
+    const leads = await Lead.find(filter)
+      .sort({ followUpDate: 1 })
+      .limit(25)
+      .select("name phone source status followUpDate assignedToName")
+      .lean();
+
+    return leads.map((l) => ({
+      _id:            l._id,
+      name:           l.name,
+      phone:          l.phone,
+      source:         l.source,
+      status:         l.status,
+      followUpDate:   l.followUpDate,
+      assignedToName: l.assignedToName,
+      urgency:        l.followUpDate < todayStart ? "overdue" : "today",
+      daysOverdue:    l.followUpDate < todayStart
+        ? Math.ceil((todayStart - new Date(l.followUpDate)) / (1000 * 60 * 60 * 24))
+        : 0,
+    }));
+  },
+
   // ── Automation Alerts - recent leads from all sources ────────────────────
   async getAlerts(user) {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

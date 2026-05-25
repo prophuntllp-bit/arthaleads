@@ -14,6 +14,7 @@ router.use(protect);
 router.get("/analytics", leadController.getAnalytics);
 router.get("/dump", leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
+router.get("/followups-due", leadController.getFollowUpsDue);
 router.get("/unified", leadController.getAllUnified);
 router.get("/export", leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);

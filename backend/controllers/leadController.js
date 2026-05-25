@@ -169,6 +169,15 @@ const leadController = {
     }
   },
 
+  async getFollowUpsDue(req, res, next) {
+    try {
+      const data = await leadService.getFollowUpsDue(req.user);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async transferLead(req, res, next) {
     try {
       const { toProjectId } = req.body;

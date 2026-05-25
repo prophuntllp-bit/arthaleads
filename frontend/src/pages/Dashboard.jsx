@@ -2,14 +2,17 @@
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   CheckCircle,
   Clock3,
   MessageCircle,
   MoonStar,
+  Phone,
   Search,
   SunMedium,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
@@ -112,6 +115,8 @@ export default function Dashboard() {
           <DateRangePicker value={dateRange} onChange={setDateRange} />
         </div>
       </header>
+
+      <FollowUpDuePanel user={user} navigate={navigate} />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <TopLeadSourceCard
@@ -333,6 +338,178 @@ export default function Dashboard() {
         </section>
       </div>
     </div>
+  );
+}
+
+// ── Follow-up Due Alert Panel ─────────────────────────────────────────────────
+function FollowUpDuePanel({ user, navigate }) {
+  const [leads, setLeads] = useState([]);
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem("fup_panel_dismissed") === "1"
+  );
+
+  useEffect(() => {
+    if (dismissed) return;
+    api.get("/leads/followups-due")
+      .then((r) => setLeads(r.data.data || []))
+      .catch(() => {});
+  }, [dismissed]);
+
+  if (dismissed || !leads.length) return null;
+
+  const overdue = leads.filter((l) => l.urgency === "overdue");
+  const today   = leads.filter((l) => l.urgency === "today");
+
+  const dismiss = () => {
+    sessionStorage.setItem("fup_panel_dismissed", "1");
+    setDismissed(true);
+  };
+
+  const toWa = (phone = "") => {
+    const d = phone.replace(/\D/g, "");
+    if (d.length === 10) return `91${d}`;
+    if (d.length === 11 && d.startsWith("0")) return `91${d.slice(1)}`;
+    return d;
+  };
+
+  return (
+    <section
+      className="card overflow-hidden"
+      style={{ borderColor: overdue.length ? "rgba(239,68,68,0.3)" : "rgba(245,158,11,0.3)" }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-5 py-4"
+        style={{
+          background: overdue.length
+            ? "linear-gradient(to right, rgba(239,68,68,0.08), transparent)"
+            : "linear-gradient(to right, rgba(245,158,11,0.08), transparent)",
+          borderBottom: "1px solid var(--app-border)",
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-xl"
+            style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}
+          >
+            <AlertTriangle
+              className="h-4 w-4"
+              style={{ color: overdue.length ? "#ef4444" : "#f59e0b" }}
+            />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-app">
+              {overdue.length > 0 && today.length > 0
+                ? `${overdue.length} overdue · ${today.length} due today`
+                : overdue.length > 0
+                ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
+                : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
+            </p>
+            <p className="text-xs text-app-soft">
+              {user?.role === "agent" ? "Your action list for today" : "Across your team"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/followups")}
+            className="stitch-pill text-xs"
+          >
+            View all follow-ups
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            title="Dismiss for this session"
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
+        </div>
+      </div>
+
+      {/* Lead rows */}
+      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {leads.slice(0, 10).map((lead) => (
+          <div
+            key={lead._id}
+            className="flex items-center gap-3 px-5 py-3 transition hover:bg-black/2 dark:hover:bg-white/2"
+          >
+            {/* Urgency badge */}
+            <span
+              className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+              style={
+                lead.urgency === "overdue"
+                  ? { background: "rgba(239,68,68,0.12)", color: "#ef4444" }
+                  : { background: "rgba(245,158,11,0.12)", color: "#f59e0b" }
+              }
+            >
+              {lead.urgency === "overdue"
+                ? lead.daysOverdue === 1 ? "1 day overdue" : `${lead.daysOverdue}d overdue`
+                : "Due today"}
+            </span>
+
+            {/* Name + source + agent */}
+            <div className="min-w-0 flex-1">
+              <button
+                type="button"
+                className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block text-left"
+                onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+              >
+                {lead.name}
+              </button>
+              <p className="text-xs text-app-soft truncate">
+                {[lead.source, lead.status, lead.assignedToName && user?.role !== "agent" ? `→ ${lead.assignedToName}` : null]
+                  .filter(Boolean).join(" · ")}
+              </p>
+            </div>
+
+            {/* Actions */}
+            {lead.phone && (
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`tel:${lead.phone}`}
+                  title={`Call ${lead.phone}`}
+                  className="flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition whitespace-nowrap"
+                  style={{ borderColor: "rgba(249,115,22,0.25)", color: "var(--app-primary)", background: "rgba(249,115,22,0.06)" }}
+                >
+                  <Phone className="h-3 w-3" />
+                  {lead.phone}
+                </a>
+                <a
+                  href={`https://wa.me/${toWa(lead.phone)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open WhatsApp"
+                  className="flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition whitespace-nowrap"
+                  style={{ borderColor: "rgba(34,197,94,0.25)", color: "#16a34a", background: "rgba(34,197,94,0.06)" }}
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  WA
+                </a>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer — show if there are more than 10 */}
+      {leads.length > 10 && (
+        <div
+          className="px-5 py-3 text-center"
+          style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}
+        >
+          <button
+            type="button"
+            className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
+            onClick={() => navigate("/followups")}
+          >
+            +{leads.length - 10} more — view all in Follow-ups
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
