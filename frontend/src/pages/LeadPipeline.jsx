@@ -176,7 +176,7 @@ export default function LeadPipeline() {
                           <span className="text-xs text-app-soft">· {lead.source}</span>
                         </div>
                         <div className="mt-1.5">
-                          <WhatsAppLink phone={lead.phone} onContact={() => handleContact(lead)} />
+                          <WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} />
                         </div>
                       </div>
                       <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />

@@ -1121,7 +1121,7 @@ export default function Leads() {
                           <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
                           <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
                           <td><PhoneActions phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
-                          <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
+                          <td><WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
@@ -1352,7 +1352,7 @@ export default function Leads() {
                       </div>
                     </td>
                     <td><PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} /></td>
-                    <td><WhatsAppLink phone={lead.phone} onContact={() => handleContact(lead)} /></td>
+                    <td><WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} /></td>
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} />

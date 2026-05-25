@@ -161,65 +161,73 @@ function getPlatform() {
 }
 
 // Open WhatsApp Personal specifically (package=com.whatsapp on Android)
-function openWAPersonal(waNumber) {
+function openWAPersonal(waNumber, text = "") {
   const platform = getPlatform();
+  const encodedText = text ? encodeURIComponent(text) : "";
   if (platform === "android") {
-    // Android intent URL - targets com.whatsapp package only (personal WA)
-    // fallback_url is wa.me so if only WA Business is installed it still works via browser
-    const fallback = encodeURIComponent(`https://wa.me/${waNumber}`);
+    const fallback = encodeURIComponent(`https://wa.me/${waNumber}${encodedText ? `?text=${encodedText}` : ""}`);
     window.location.href =
-      `intent://send?phone=${waNumber}` +
+      `intent://send?phone=${waNumber}${encodedText ? `&text=${encodedText}` : ""}` +
       `#Intent;package=com.whatsapp;scheme=whatsapp;` +
       `S.browser_fallback_url=${fallback};end`;
   } else if (platform === "ios") {
-    // iOS - both WA and WA Business share the whatsapp:// scheme
-    window.location.href = `whatsapp://send?phone=${waNumber}`;
+    window.location.href = `whatsapp://send?phone=${waNumber}${encodedText ? `&text=${encodedText}` : ""}`;
   } else {
-    // Desktop - open WhatsApp Web
-    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${waNumber}${encodedText ? `?text=${encodedText}` : ""}`, "_blank", "noopener,noreferrer");
   }
 }
 
 // Open WhatsApp Business specifically (package=com.whatsapp.w4b on Android)
-// Returns true if app launch was attempted (false = not on Android)
-function openWABusiness(waNumber, onNotInstalled) {
+function openWABusiness(waNumber, text = "", onNotInstalled) {
   const platform = getPlatform();
+  const encodedText = text ? encodeURIComponent(text) : "";
   if (platform === "android") {
-    // Use about:blank as fallback so Play Store never opens.
-    // We detect "not installed" by watching if the page regains focus.
     const intentUrl =
-      `intent://send?phone=${waNumber}` +
+      `intent://send?phone=${waNumber}${encodedText ? `&text=${encodedText}` : ""}` +
       `#Intent;package=com.whatsapp.w4b;scheme=whatsapp;` +
       `S.browser_fallback_url=${encodeURIComponent("about:blank")};end`;
 
     let launched = false;
-    const onVisibilityChange = () => {
-      // If the document becomes hidden, the app opened successfully
-      if (document.hidden) { launched = true; }
-    };
+    const onVisibilityChange = () => { if (document.hidden) { launched = true; } };
     document.addEventListener("visibilitychange", onVisibilityChange);
-
     window.location.href = intentUrl;
-
-    // After 2 s - if we never went hidden, the app is not installed
     setTimeout(() => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (!launched) onNotInstalled?.();
     }, 2000);
   } else if (platform === "ios") {
-    // iOS has no separate WA Business deep-link scheme - try wa.me with a note
-    window.location.href = `whatsapp://send?phone=${waNumber}`;
+    window.location.href = `whatsapp://send?phone=${waNumber}${encodedText ? `&text=${encodedText}` : ""}`;
   } else {
-    // Desktop - open WhatsApp Web (no Business-specific web client)
-    window.open(`https://wa.me/${waNumber}`, "_blank", "noopener,noreferrer");
+    window.open(`https://wa.me/${waNumber}${encodedText ? `?text=${encodedText}` : ""}`, "_blank", "noopener,noreferrer");
   }
 }
 
-// Green "Chat on WhatsApp" button - shows a dropdown to choose WhatsApp or WhatsApp Business
-export function WhatsAppLink({ phone, onContact }) {
+// Build the default pre-filled message from lead name + logged-in agent name
+function buildWAMessage(leadName) {
+  try {
+    const user = JSON.parse(localStorage.getItem("crm_user") || "{}");
+    const agentName = user.name || "";
+    const firstName = (leadName || "").split(" ")[0].trim();
+    const greeting = firstName ? `Hi ${firstName}! 👋` : "Hi! 👋";
+    const from = agentName ? ` I'm ${agentName} from PropHunt.` : " I'm from PropHunt.";
+    return `${greeting}${from} I'm following up on your property enquiry. Are you still looking? 🏠`;
+  } catch {
+    return "";
+  }
+}
+
+// Green "Chat on WhatsApp" button - pre-filled message + editable before send
+export function WhatsAppLink({ phone, name, onContact }) {
   const [open, setOpen] = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
+  const [msgText, setMsgText] = useState("");
   const ref = useRef(null);
+
+  // Build default message each time the dropdown opens
+  useEffect(() => {
+    if (open) setMsgText(buildWAMessage(name));
+    else setWabNotInstalled(false);
+  }, [open, name]);
 
   useEffect(() => {
     if (!open) return;
@@ -227,9 +235,6 @@ export function WhatsAppLink({ phone, onContact }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
-
-  // Reset "not installed" hint whenever dropdown closes
-  useEffect(() => { if (!open) setWabNotInstalled(false); }, [open]);
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
 
@@ -239,14 +244,13 @@ export function WhatsAppLink({ phone, onContact }) {
     e.preventDefault();
     setOpen(false);
     onContact?.();
-    openWAPersonal(waNumber);
+    openWAPersonal(waNumber, msgText);
   };
 
   const handleBusiness = (e) => {
     e.preventDefault();
     onContact?.();
-    openWABusiness(waNumber, () => setWabNotInstalled(true));
-    // Keep dropdown open on Android so the "Download" hint can appear
+    openWABusiness(waNumber, msgText, () => setWabNotInstalled(true));
     if (getPlatform() !== "android") setOpen(false);
   };
 
@@ -254,11 +258,7 @@ export function WhatsAppLink({ phone, onContact }) {
 
   return (
     <div className="relative inline-block" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={btnCls}
-      >
+      <button type="button" onClick={() => setOpen((v) => !v)} className={btnCls}>
         <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
         WhatsApp
         <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -266,59 +266,75 @@ export function WhatsAppLink({ phone, onContact }) {
 
       {open && (
         <div
-          className="absolute left-0 top-full z-50 mt-1 min-w-[200px] rounded-xl border py-1 shadow-2xl"
+          className="absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border shadow-2xl overflow-hidden"
           style={{
-            background: "var(--wa-dropdown-bg, #ffffff)",
+            background: "var(--app-surface)",
             borderColor: "var(--app-border)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
           }}
         >
-          {/* WhatsApp Personal - targets com.whatsapp only */}
+          {/* Pre-filled message editor */}
+          <div className="px-3 pt-3 pb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft mb-1.5">
+              Message Preview — edit before sending
+            </p>
+            <textarea
+              value={msgText}
+              onChange={(e) => setMsgText(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border px-2.5 py-2 text-xs resize-none focus:outline-none focus:border-green-400 leading-relaxed"
+              style={{
+                borderColor: "var(--app-border)",
+                background: "var(--app-surface-low)",
+                color: "var(--app-text)",
+              }}
+              placeholder="Type a message…"
+            />
+          </div>
+
+          <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+
+          {/* WhatsApp Personal */}
           <button
             type="button"
             onClick={handlePersonal}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/15 flex-shrink-0">
               <MessageCircle className="h-3.5 w-3.5 text-green-600" />
             </span>
             <div className="text-left">
-              <p className="font-semibold">WhatsApp</p>
+              <p className="font-semibold">Send via WhatsApp</p>
               <p className="text-[10px] text-app-soft">Personal account</p>
             </div>
           </button>
 
-          <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
-
-          {/* WhatsApp Business - targets com.whatsapp.w4b only */}
+          {/* WhatsApp Business */}
           <button
             type="button"
             onClick={handleBusiness}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition"
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-600/15 flex-shrink-0">
               <MessageCircle className="h-3.5 w-3.5 text-green-700" />
             </span>
             <div className="text-left">
-              <p className="font-semibold">WhatsApp Business</p>
+              <p className="font-semibold">Send via WhatsApp Business</p>
               <p className="text-[10px] text-app-soft">Business account</p>
             </div>
           </button>
 
-          {/* Show download link if WA Business wasn't detected on Android */}
           {wabNotInstalled && (
             <>
               <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
               <a
                 href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b"
-                target="_blank"
-                rel="noopener noreferrer"
+                target="_blank" rel="noopener noreferrer"
                 onClick={() => setOpen(false)}
                 className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-orange-500/8 transition"
                 style={{ color: "var(--app-primary)" }}
               >
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0"
-                      style={{ background: "rgba(255,107,0,0.12)" }}>
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
                   <MessageCircle className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
                 </span>
                 <div className="text-left">
@@ -328,6 +344,12 @@ export function WhatsAppLink({ phone, onContact }) {
               </a>
             </>
           )}
+
+          <div className="px-3 pb-2.5 pt-1">
+            <p className="text-[9px] text-app-soft text-center leading-relaxed">
+              Message opens in WhatsApp — you send it manually
+            </p>
+          </div>
         </div>
       )}
     </div>

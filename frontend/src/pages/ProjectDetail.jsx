@@ -856,7 +856,7 @@ export default function ProjectDetail() {
                             <NameCell name={lead.name} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
-                          <td><WhatsAppLink phone={lead.phone} /></td>
+                          <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>
@@ -1113,7 +1113,7 @@ export default function ProjectDetail() {
                               <NameCell name={lead.name} bold />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
-                            <td><WhatsAppLink phone={lead.phone} /></td>
+                            <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
                             <td>
                               <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleProspUpdate} />
                             </td>
@@ -1280,7 +1280,7 @@ export default function ProjectDetail() {
                               <NameCell name={lead.name} bold />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
-                            <td><WhatsAppLink phone={lead.phone} /></td>
+                            <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
                             <td>
                               <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleSvdUpdate} />
                             </td>
