@@ -1,5 +1,5 @@
 ﻿const leadService = require("../services/leadService");
-const { sendPushToAll } = require("../utils/push");
+const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { AppError } = require("../middlewares/errorHandler");
 
 const leadController = {
@@ -77,6 +77,15 @@ const leadController = {
     try {
       const lead = await leadService.assign(req.params.id, req.body.agentId, req.user);
       res.json({ success: true, data: lead });
+      // Notify the newly assigned agent
+      if (lead.assignedTo) {
+        sendPushToUser(lead.assignedTo, {
+          type: "lead_assigned",
+          title: `Lead Assigned: ${lead.name}`,
+          body: [lead.phone, lead.source].filter(Boolean).join(" · "),
+          data: { url: "/leads" },
+        }).catch(() => {});
+      }
     } catch (err) {
       next(err);
     }

@@ -4,7 +4,7 @@ const Lead = require("../models/Lead");
 const User = require("../models/User");
 const Automation = require("../models/Automation");
 const logger = require("../config/logger");
-const { sendPushToAll } = require("../utils/push");
+const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule     = require("../models/RoutingRule");
 const Organization    = require("../models/Organization");
@@ -376,13 +376,23 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           await automation.save();
         }
 
-        // Send push notification to all subscribed users in this org
-        sendPushToAll({
-          type: "new_lead",
-          title: "New Facebook Lead 🏠",
-          body: `${name} just submitted a lead from Facebook`,
-          data: { leadName: name, source: "Facebook" },
-        }, orgId).catch((e) => logger.warn("Push notification failed:", e.message));
+        // Send push notification — targeted to assignee if assigned, broadcast otherwise
+        if (assignee?._id) {
+          const phone = fieldMap.phone_number || fieldMap.phone || "";
+          sendPushToUser(assignee._id, {
+            type: "lead_assigned",
+            title: `New Facebook Lead: ${name}`,
+            body: [phone, "Facebook"].filter(Boolean).join(" · "),
+            data: { url: "/leads" },
+          }).catch((e) => logger.warn("Push notification failed:", e.message));
+        } else {
+          sendPushToAll({
+            type: "new_lead",
+            title: "New Facebook Lead 🏠",
+            body: `${name} just submitted a lead from Facebook`,
+            data: { url: "/leads", leadName: name, source: "Facebook" },
+          }, orgId).catch((e) => logger.warn("Push notification failed:", e.message));
+        }
       }
     }
 
@@ -469,12 +479,22 @@ router.post("/website", express.json(), async (req, res) => {
     automation.lastSyncAt = new Date();
     await automation.save();
 
-    sendPushToAll({
-      type: "new_lead",
-      title: "New Website Lead 🌐",
-      body: `${lead.name} submitted a form on your website`,
-      data: { leadName: lead.name, source: "Website" },
-    }, orgId).catch(() => {});
+    // Send push notification — targeted to assignee if assigned, broadcast otherwise
+    if (assignee?._id) {
+      sendPushToUser(assignee._id, {
+        type: "lead_assigned",
+        title: `New Website Lead: ${lead.name}`,
+        body: [phone, sourceLabel].filter(Boolean).join(" · "),
+        data: { url: "/leads" },
+      }).catch(() => {});
+    } else {
+      sendPushToAll({
+        type: "new_lead",
+        title: "New Website Lead 🌐",
+        body: `${lead.name} submitted a form on your website`,
+        data: { url: "/leads", leadName: lead.name, source: "Website" },
+      }, orgId).catch(() => {});
+    }
 
     logger.info(`[website webhook] lead created: ${lead.name} | ${phone} | plugin: ${form_plugin}`);
     res.status(200).json({ success: true, message: "Lead received" });
