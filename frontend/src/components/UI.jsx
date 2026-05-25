@@ -1,6 +1,7 @@
 ﻿// components/UI.jsx - Shared reusable components
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2, Phone, MessageCircle, ChevronDown } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -216,24 +217,54 @@ function buildWAMessage(leadName) {
   }
 }
 
-// Green "Chat on WhatsApp" button - pre-filled message + editable before send
+// Green "Chat on WhatsApp" button — pre-filled message + editable before send.
+// Dropdown is portal-rendered at document.body with position:fixed so it
+// always floats above tables regardless of overflow:hidden or z-index stacking.
 export function WhatsAppLink({ phone, name, onContact }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]               = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
-  const [msgText, setMsgText] = useState("");
-  const ref = useRef(null);
+  const [msgText, setMsgText]         = useState("");
+  const [dropPos, setDropPos]         = useState({ top: 0, left: 0 });
+  const btnRef  = useRef(null);
+  const dropRef = useRef(null);
 
-  // Build default message each time the dropdown opens
-  useEffect(() => {
-    if (open) setMsgText(buildWAMessage(name));
-    else setWabNotInstalled(false);
-  }, [open, name]);
+  // Build default message and compute dropdown position each time it opens
+  const handleToggle = () => {
+    if (!open) {
+      const rect = btnRef.current?.getBoundingClientRect();
+      if (rect) {
+        // Flip left if not enough space on right
+        const dropW = 288;
+        const left = rect.left + dropW > window.innerWidth - 8
+          ? Math.max(8, rect.right - dropW)
+          : rect.left;
+        setDropPos({ top: rect.bottom + 4, left });
+      }
+      setMsgText(buildWAMessage(name));
+    } else {
+      setWabNotInstalled(false);
+    }
+    setOpen((v) => !v);
+  };
 
+  // Close on outside click (checks both button and portal dropdown)
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => {
+      if (btnRef.current?.contains(e.target)) return;
+      if (dropRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Close on scroll so dropdown doesn't detach from button
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => setOpen(false);
+    window.addEventListener("scroll", handler, true);
+    return () => window.removeEventListener("scroll", handler, true);
   }, [open]);
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
@@ -256,102 +287,98 @@ export function WhatsAppLink({ phone, name, onContact }) {
 
   const btnCls = "inline-flex items-center gap-1.5 rounded-lg border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-500/15 hover:border-green-500/40 transition whitespace-nowrap dark:text-green-400";
 
+  const dropdown = (
+    <div
+      ref={dropRef}
+      style={{
+        position: "fixed",
+        top: dropPos.top,
+        left: dropPos.left,
+        width: 288,
+        zIndex: 99999,
+        background: "var(--app-surface)",
+        border: "1px solid var(--app-border)",
+        borderRadius: 12,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Pre-filled message editor */}
+      <div className="px-3 pt-3 pb-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft mb-1.5">
+          Message — edit before sending
+        </p>
+        <textarea
+          value={msgText}
+          onChange={(e) => setMsgText(e.target.value)}
+          rows={3}
+          className="w-full rounded-lg border px-2.5 py-2 text-xs resize-none focus:outline-none focus:border-green-400 leading-relaxed"
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+          placeholder="Type a message…"
+        />
+      </div>
+
+      <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+
+      {/* WhatsApp Personal */}
+      <button type="button" onClick={handlePersonal}
+        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition">
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/15 flex-shrink-0">
+          <MessageCircle className="h-3.5 w-3.5 text-green-600" />
+        </span>
+        <div className="text-left">
+          <p className="font-semibold">Send via WhatsApp</p>
+          <p className="text-[10px] text-app-soft">Personal account</p>
+        </div>
+      </button>
+
+      {/* WhatsApp Business */}
+      <button type="button" onClick={handleBusiness}
+        className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition">
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-600/15 flex-shrink-0">
+          <MessageCircle className="h-3.5 w-3.5 text-green-700" />
+        </span>
+        <div className="text-left">
+          <p className="font-semibold">Send via WhatsApp Business</p>
+          <p className="text-[10px] text-app-soft">Business account</p>
+        </div>
+      </button>
+
+      {wabNotInstalled && (
+        <>
+          <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
+          <a href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b"
+            target="_blank" rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-orange-500/8 transition"
+            style={{ color: "var(--app-primary)" }}>
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
+              <MessageCircle className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+            </span>
+            <div className="text-left">
+              <p className="font-semibold">Download WA Business</p>
+              <p className="text-[10px] text-app-soft">App not found on device</p>
+            </div>
+          </a>
+        </>
+      )}
+
+      <div className="px-3 pb-2.5 pt-1">
+        <p className="text-[9px] text-app-soft text-center">
+          Message opens in WhatsApp — you send it manually
+        </p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="relative inline-block" ref={ref}>
-      <button type="button" onClick={() => setOpen((v) => !v)} className={btnCls}>
+    <div className="inline-block">
+      <button ref={btnRef} type="button" onClick={handleToggle} className={btnCls}>
         <MessageCircle className="h-3.5 w-3.5 flex-shrink-0" />
         WhatsApp
         <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
-
-      {open && (
-        <div
-          className="absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border shadow-2xl overflow-hidden"
-          style={{
-            background: "var(--app-surface)",
-            borderColor: "var(--app-border)",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
-          }}
-        >
-          {/* Pre-filled message editor */}
-          <div className="px-3 pt-3 pb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft mb-1.5">
-              Message Preview — edit before sending
-            </p>
-            <textarea
-              value={msgText}
-              onChange={(e) => setMsgText(e.target.value)}
-              rows={3}
-              className="w-full rounded-lg border px-2.5 py-2 text-xs resize-none focus:outline-none focus:border-green-400 leading-relaxed"
-              style={{
-                borderColor: "var(--app-border)",
-                background: "var(--app-surface-low)",
-                color: "var(--app-text)",
-              }}
-              placeholder="Type a message…"
-            />
-          </div>
-
-          <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
-
-          {/* WhatsApp Personal */}
-          <button
-            type="button"
-            onClick={handlePersonal}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition"
-          >
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-500/15 flex-shrink-0">
-              <MessageCircle className="h-3.5 w-3.5 text-green-600" />
-            </span>
-            <div className="text-left">
-              <p className="font-semibold">Send via WhatsApp</p>
-              <p className="text-[10px] text-app-soft">Personal account</p>
-            </div>
-          </button>
-
-          {/* WhatsApp Business */}
-          <button
-            type="button"
-            onClick={handleBusiness}
-            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-green-500/8 transition"
-          >
-            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-600/15 flex-shrink-0">
-              <MessageCircle className="h-3.5 w-3.5 text-green-700" />
-            </span>
-            <div className="text-left">
-              <p className="font-semibold">Send via WhatsApp Business</p>
-              <p className="text-[10px] text-app-soft">Business account</p>
-            </div>
-          </button>
-
-          {wabNotInstalled && (
-            <>
-              <div className="mx-3 my-0.5 border-t" style={{ borderColor: "var(--app-border)" }} />
-              <a
-                href="https://play.google.com/store/apps/details?id=com.whatsapp.w4b"
-                target="_blank" rel="noopener noreferrer"
-                onClick={() => setOpen(false)}
-                className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-orange-500/8 transition"
-                style={{ color: "var(--app-primary)" }}
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
-                  <MessageCircle className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
-                </span>
-                <div className="text-left">
-                  <p className="font-semibold">Download WA Business</p>
-                  <p className="text-[10px] text-app-soft">App not found on device</p>
-                </div>
-              </a>
-            </>
-          )}
-
-          <div className="px-3 pb-2.5 pt-1">
-            <p className="text-[9px] text-app-soft text-center leading-relaxed">
-              Message opens in WhatsApp — you send it manually
-            </p>
-          </div>
-        </div>
-      )}
+      {open && createPortal(dropdown, document.body)}
     </div>
   );
 }
