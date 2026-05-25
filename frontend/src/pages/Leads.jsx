@@ -32,7 +32,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Clock, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
@@ -106,7 +106,7 @@ function fmtLocalTime(utcStr) {
   return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
-// ── Inline date cell ──────────────────────────────────────────────────────────
+// ── Inline date cell (compact single-line) ────────────────────────────────────
 function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
 
@@ -122,26 +122,23 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
   };
 
   const dateVal = toLocalInput(value);
+  const displayTime = value ? fmtLocalTime(value) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1">
-        <input
-          type="datetime-local"
-          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
-          value={dateVal}
-          onChange={(e) => save(e.target.value)}
-        />
-        <button
-          type="button"
-          title="Set to current time"
-          onClick={() => save(nowLocal())}
-          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-        >Now</button>
-      </div>
-      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(value)}</span>}
+    <div className="flex items-center gap-1">
+      <input
+        type="datetime-local"
+        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
+        value={dateVal}
+        title={displayTime || "Set date & time"}
+        onChange={(e) => save(e.target.value)}
+      />
+      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
+        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+        <Clock className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -303,19 +300,21 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
     finally { setSaving(false); }
   };
   const dateVal = toLocalInput(value);
+  const displayTime = value ? fmtLocalTime(value) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1">
-        <input type="datetime-local"
-          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
-          value={dateVal} onChange={(e) => save(e.target.value)} />
-        <button type="button" title="Set to current time" onClick={() => save(nowLocal())}
-          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
-      </div>
-      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(value)}</span>}
+    <div className="flex items-center gap-1">
+      <input type="datetime-local"
+        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
+        value={dateVal}
+        title={displayTime || "Set date & time"}
+        onChange={(e) => save(e.target.value)} />
+      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
+        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+        <Clock className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -349,6 +348,33 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
       {PROJ_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
   );
+}
+
+// ── Column resize hook ────────────────────────────────────────────────────────
+// Drag the right edge of any <th> to resize that column. Works by tracking
+// mouse movement delta from the drag start position.
+function useColumnResize(defaults) {
+  const [widths, setWidths] = useState({ ...defaults });
+  const startResize = (col, e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = widths[col] ?? defaults[col] ?? 100;
+    const onMove = (mv) => {
+      const nw = Math.max(48, startW + mv.clientX - startX);
+      setWidths((prev) => ({ ...prev, [col]: nw }));
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+  return [widths, startResize];
 }
 
 // ── Unified contact status cell (works for both regular & project leads) ─────
@@ -447,6 +473,15 @@ export default function Leads() {
   const [showProjBulkConfirm, setShowProjBulkConfirm] = useState(false);
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
   const [projLimit, setProjLimit] = useState(10);
+
+  // ── Column widths for main leads table (resizable via drag) ──────────────
+  const [colW, startResize] = useColumnResize({
+    lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
+    status: 88, priority: 82, requirements: 175, budget: 88, purpose: 72,
+    remark: 128, remark1: 118, remark2: 118,
+    followup: 162, followup2: 162, booking: 138,
+    property: 148, assigned: 98, actions: 108,
+  });
 
   // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
@@ -1243,23 +1278,48 @@ export default function Leads() {
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} className="overflow-x-auto">
-            <table className="stitch-table min-w-[2100px] text-sm">
+            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
+              <colgroup>
+                {canDelete && <col style={{ width: 40 }} />}
+                {Object.keys(colW).map((k) => <col key={k} style={{ width: colW[k] }} />)}
+              </colgroup>
               <thead>
                 <tr>
                   {canDelete && (
-                    <th className="w-10 px-3">
+                    <th className="px-2.5" style={{ width: 40, position: "relative" }}>
                       <input
                         type="checkbox"
                         checked={allSelected}
                         ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
                         onChange={toggleAll}
-                        className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                        className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
                         title="Select all"
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Status", "Priority", "Requirements", "Budget", "Purpose", "Remark", "Remark 1", "Remark 2", "Follow Up", "Follow Up 2", "Booking", "Property", "Assigned", "Actions"].map((h) => (
-                    <th key={h}>{h}</th>
+                  {[
+                    ["lead", "Lead"], ["phone", "Phone"], ["whatsapp", "WhatsApp"],
+                    ["source", "Source"], ["project", "Project"], ["status", "Status"],
+                    ["priority", "Priority"], ["requirements", "Requirements"],
+                    ["budget", "Budget"], ["purpose", "Purpose"],
+                    ["remark", "Remark"], ["remark1", "Remark 1"], ["remark2", "Remark 2"],
+                    ["followup", "Follow Up"], ["followup2", "Follow Up 2"],
+                    ["booking", "Booking"], ["property", "Property"],
+                    ["assigned", "Assigned"], ["actions", "Actions"],
+                  ].map(([key, label]) => (
+                    <th key={key} style={{ width: colW[key], position: "relative", overflow: "hidden" }}>
+                      <span className="truncate block pr-2">{label}</span>
+                      {/* Resize handle - drag right edge to resize column */}
+                      <div
+                        onMouseDown={(e) => startResize(key, e)}
+                        title="Drag to resize column"
+                        style={{
+                          position: "absolute", right: 0, top: 0, bottom: 0,
+                          width: 5, cursor: "col-resize", zIndex: 2,
+                        }}
+                        className="hover:bg-orange-400/40 transition-colors"
+                      />
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -1267,12 +1327,12 @@ export default function Leads() {
                 {leads.map((lead, index) => (
                   <tr key={lead._id} className={`${index % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} group ${selectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
                     {canDelete && (
-                      <td className="w-10 px-3">
+                      <td className="px-2.5" style={{ width: 40 }}>
                         <input
                           type="checkbox"
                           checked={selectedIds.has(lead._id)}
                           onChange={() => toggleOne(lead._id)}
-                          className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                          className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500"
                         />
                       </td>
                     )}

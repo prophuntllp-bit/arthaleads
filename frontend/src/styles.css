@@ -264,6 +264,12 @@
     border-top: 1px solid color-mix(in srgb, var(--app-border) 90%, transparent);
   }
 
+  /* Fixed-layout table cells: clip content to column width */
+  .stitch-table-fixed tbody td {
+    overflow: hidden;
+    max-width: 0;
+  }
+
   .stitch-table tbody tr { transition: background-color 160ms ease; }
 
   .stitch-table tbody tr:hover {
