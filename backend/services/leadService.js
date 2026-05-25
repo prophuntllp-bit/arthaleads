@@ -152,9 +152,9 @@ const leadService = {
     const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     const andConditions = [];
 
-    // Agents can only see their own leads
+    // Agents only see leads explicitly assigned to them
     if (user.role === "agent") {
-      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
+      andConditions.push({ assignedTo: user._id });
     }
 
     if (status) filter.status = status;
@@ -231,8 +231,7 @@ const leadService = {
     // Agents can only modify leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString() &&
-      lead.createdBy?.toString() !== user._id.toString()
+      lead.assignedTo?.toString() !== user._id.toString()
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -299,8 +298,7 @@ const leadService = {
     // Agents can only delete leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString() &&
-      lead.createdBy?.toString() !== user._id.toString()
+      lead.assignedTo?.toString() !== user._id.toString()
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -316,9 +314,9 @@ const leadService = {
   // ── Bulk Delete ───────────────────────────────────────────────────────────
   // super_admin → permanent hard delete; everyone else → soft delete (dump)
   async bulkDelete(ids, user) {
-    // Agents can only delete leads assigned to or created by them
+    // Agents can only delete leads assigned to them
     const ownerFilter = user.role === "agent"
-      ? { $or: [{ assignedTo: user._id }, { createdBy: user._id }] }
+      ? { assignedTo: user._id }
       : {};
 
     if (user.role === "super_admin") {
@@ -354,8 +352,7 @@ const leadService = {
     // Agents can only add notes to leads assigned to or created by them
     if (
       user.role === "agent" &&
-      lead.assignedTo?.toString() !== user._id.toString() &&
-      lead.createdBy?.toString() !== user._id.toString()
+      lead.assignedTo?.toString() !== user._id.toString()
     ) {
       throw new AppError("Access denied", 403);
     }
@@ -454,7 +451,7 @@ const leadService = {
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
-    if (user.role === "agent") leadFilter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+    if (user.role === "agent") leadFilter.assignedTo = user._id;
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
@@ -511,7 +508,7 @@ const leadService = {
     // should not inflate dashboard counts / source charts.
     const baseMatch = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") {
-      baseMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+      baseMatch.assignedTo = user._id;
     }
 
     // Date range stage - spread into facets that respect the selected period.
@@ -636,7 +633,7 @@ const leadService = {
     };
 
     if (user.role === "agent") {
-      filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+      filter.assignedTo = user._id;
     }
 
     const leads = await Lead.find(filter)
@@ -665,7 +662,7 @@ const leadService = {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const filter = { orgId: user.orgId, isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };
     if (user.role === "agent") {
-      filter.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+      filter.assignedTo = user._id;
     }
     return Lead.find(filter)
       .sort({ createdAt: -1 })
@@ -717,7 +714,7 @@ const leadService = {
       ],
     };
     if (user.role === "agent") {
-      leadFilter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
+      leadFilter.assignedTo = user._id;
     }
 
     const projFilter = { booking: "Not Interested", orgId: user.orgId };
