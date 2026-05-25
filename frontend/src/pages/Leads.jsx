@@ -1309,15 +1309,19 @@ export default function Leads() {
                   ].map(([key, label]) => (
                     <th key={key} style={{ width: colW[key], position: "relative", overflow: "hidden" }}>
                       <span className="truncate block pr-2">{label}</span>
-                      {/* Resize handle - drag right edge to resize column */}
+                      {/* Resize handle - visible line on right edge, drag to resize */}
                       <div
                         onMouseDown={(e) => startResize(key, e)}
                         title="Drag to resize column"
                         style={{
-                          position: "absolute", right: 0, top: 0, bottom: 0,
-                          width: 5, cursor: "col-resize", zIndex: 2,
+                          position: "absolute", right: 0, top: "20%", bottom: "20%",
+                          width: 3, cursor: "col-resize", zIndex: 2,
+                          borderRadius: 2,
+                          background: "var(--app-border)",
+                          transition: "background 150ms, width 150ms",
                         }}
-                        className="hover:bg-orange-400/40 transition-colors"
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-primary)"; e.currentTarget.style.width = "3px"; e.currentTarget.style.top = "0%"; e.currentTarget.style.bottom = "0%"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--app-border)"; e.currentTarget.style.top = "20%"; e.currentTarget.style.bottom = "20%"; }}
                       />
                     </th>
                   ))}
