@@ -147,6 +147,9 @@ const leadSchema = new mongoose.Schema(
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
     requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
 
+    // ── Response Time Tracking ────────────────────────────────────────────────
+    firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"
+
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },

@@ -456,6 +456,8 @@ export default function Leads() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkAssignAgentId, setBulkAssignAgentId] = useState("");
+  const [bulkAssigning, setBulkAssigning] = useState(false);
 
   // ── Project-wise leads ────────────────────────────────────────────────────
   const [projRefreshKey, setProjRefreshKey] = useState(0);
@@ -597,6 +599,30 @@ export default function Leads() {
     } finally {
       setBulkDeleting(false);
       setShowBulkConfirm(false);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (!bulkAssignAgentId) { toast.error("Please select an agent"); return; }
+    setBulkAssigning(true);
+    try {
+      const ids = [...selectedIds];
+      const r = await api.post("/leads/bulk-assign", { ids, agentId: bulkAssignAgentId });
+      toast.success(r.data.message || `${ids.length} lead(s) assigned`);
+      // Update leads in table: set assignedTo + assignedToName
+      const agent = agents.find((a) => a._id === bulkAssignAgentId);
+      if (agent) {
+        ids.forEach((id) => {
+          const lead = leads.find((l) => l._id === id);
+          if (lead) upsertLead({ ...lead, assignedTo: agent._id, assignedToName: agent.name }, false);
+        });
+      }
+      setSelectedIds(new Set());
+      setBulkAssignAgentId("");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk assign failed");
+    } finally {
+      setBulkAssigning(false);
     }
   };
 
@@ -1002,15 +1028,6 @@ export default function Leads() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            {selectedIds.size > 0 && canDelete && (
-              <button
-                className="btn-danger rounded-xl"
-                onClick={() => setShowBulkConfirm(true)}
-              >
-                <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
-              </button>
-            )}
-
             <label className="btn-secondary cursor-pointer rounded-xl">
               <Upload className="h-4 w-4" /> {importing ? "Importing..." : "Import"}
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
@@ -1590,6 +1607,63 @@ export default function Leads() {
           }
         }}
       />
+
+      {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
+      {selectedIds.size > 0 && createPortal(
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl"
+          style={{ background: "var(--app-card)", border: "1px solid var(--app-border)", minWidth: 340 }}
+        >
+          {/* Count badge */}
+          <span className="shrink-0 flex items-center justify-center rounded-xl bg-orange-500/15 px-3 py-1.5 text-xs font-bold text-orange-400">
+            {selectedIds.size} selected
+          </span>
+
+          {/* Agent assign (admin/manager only) */}
+          {user?.role !== "agent" && agents.length > 0 && (
+            <>
+              <select
+                value={bulkAssignAgentId}
+                onChange={(e) => setBulkAssignAgentId(e.target.value)}
+                className="flex-1 min-w-0 rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none focus:border-orange-400 appearance-none"
+                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+              >
+                <option value="">Assign to agent…</option>
+                {agents.map((a) => (
+                  <option key={a._id} value={a._id}>{a.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleBulkAssign}
+                disabled={bulkAssigning || !bulkAssignAgentId}
+                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
+              >
+                <Users className="h-3.5 w-3.5" />
+                {bulkAssigning ? "Assigning…" : "Assign"}
+              </button>
+            </>
+          )}
+
+          {/* Delete */}
+          <button
+            onClick={() => setShowBulkConfirm(true)}
+            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+
+          {/* Clear */}
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="shrink-0 rounded-xl border px-2.5 py-1.5 text-xs text-app-soft transition hover:text-app"
+            style={{ borderColor: "var(--app-border)" }}
+          >
+            ✕
+          </button>
+        </div>,
+        document.body
+      )}
 
       {/* Export dropdown - portal-rendered to escape overflow:hidden parents */}
       {showExportMenu && createPortal(

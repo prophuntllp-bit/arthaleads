@@ -246,6 +246,10 @@ const leadService = {
         user,
         { from: lead.status, to: updates.status }
       );
+      // Record first time the lead is contacted (for response time tracking)
+      if (updates.status === "Contacted" && !lead.firstContactedAt) {
+        updates.firstContactedAt = new Date();
+      }
     }
 
     // Handle assignment change
@@ -326,6 +330,20 @@ const leadService = {
       { $set: { isDeleted: true, deletedAt: new Date() } }
     );
     return result.modifiedCount;
+  },
+
+  // ── Bulk Assign ───────────────────────────────────────────────────────────
+  // Assign multiple leads to a single agent in one operation
+  async bulkAssign(ids, agentId, user) {
+    // Validate agent belongs to same org
+    const agent = await User.findOne({ _id: agentId, orgId: user.orgId });
+    if (!agent) throw new AppError("Agent not found", 404);
+
+    const result = await Lead.updateMany(
+      { _id: { $in: ids }, orgId: user.orgId },
+      { $set: { assignedTo: agent._id, assignedToName: agent.name } }
+    );
+    return { modifiedCount: result.modifiedCount, agent };
   },
 
   // ── Add Note ───────────────────────────────────────────────────────────────

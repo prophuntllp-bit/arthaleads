@@ -18,6 +18,7 @@ router.get("/followups-due", leadController.getFollowUpsDue);
 router.get("/unified", leadController.getAllUnified);
 router.get("/export", leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
+router.post("/bulk-assign", authorize("admin", "manager"), leadController.bulkAssign);
 router.delete("/bulk", leadController.bulkDelete);
 
 router.route("/")

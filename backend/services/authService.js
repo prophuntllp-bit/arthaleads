@@ -432,13 +432,22 @@ const authService = {
         closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
         siteVisits: [{ $match: { status: "Site Visit"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
         newLeads:   [{ $match: { status: "New"         } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        // avgResponseTime: avg ms between lead creation and first "Contacted" status
+        responseTime: [
+          { $match: { firstContactedAt: { $ne: null } } },
+          { $group: {
+            _id: "$assignedTo",
+            avgMs: { $avg: { $subtract: ["$firstContactedAt", "$createdAt"] } },
+          }},
+        ],
       }},
     ]);
 
-    const pl_assigned   = mapFrom(pipelineFacet?.assigned,   "count");
-    const pl_won        = mapFrom(pipelineFacet?.closedWon,  "count");
-    const pl_visits     = mapFrom(pipelineFacet?.siteVisits, "count");
-    const pl_new        = mapFrom(pipelineFacet?.newLeads,   "count");
+    const pl_assigned   = mapFrom(pipelineFacet?.assigned,     "count");
+    const pl_won        = mapFrom(pipelineFacet?.closedWon,   "count");
+    const pl_visits     = mapFrom(pipelineFacet?.siteVisits,  "count");
+    const pl_new        = mapFrom(pipelineFacet?.newLeads,    "count");
+    const pl_respTime   = mapFrom(pipelineFacet?.responseTime,"avgMs");
 
     // ── Project pipeline - keyed by Project.assignedTo ───────────────────────
     // The project's assignedTo array tells us which agents are responsible for
@@ -480,11 +489,24 @@ const authService = {
       const id = user._id.toString();
 
       // Pipeline stats
+      const rawAvgMs = pl_respTime[id] || null;
+      // Convert ms → human-readable: < 60min → "Xm", < 24h → "Xh Ym", else "Xd Yh"
+      let avgResponseTime = null;
+      if (rawAvgMs != null) {
+        const mins  = Math.round(rawAvgMs / 60000);
+        const hours = Math.floor(mins / 60);
+        const days  = Math.floor(hours / 24);
+        if (days > 0)        avgResponseTime = `${days}d ${hours % 24}h`;
+        else if (hours > 0)  avgResponseTime = `${hours}h ${mins % 60}m`;
+        else                 avgResponseTime = `${mins}m`;
+      }
+
       const pipeline = {
-        totalAssigned:  pl_assigned[id] || 0,
-        newLeads:       pl_new[id]       || 0,
-        siteVisits:     pl_visits[id]    || 0,
-        closedWon:      pl_won[id]       || 0,
+        totalAssigned:   pl_assigned[id] || 0,
+        newLeads:        pl_new[id]       || 0,
+        siteVisits:      pl_visits[id]    || 0,
+        closedWon:       pl_won[id]       || 0,
+        avgResponseTime,
       };
       pipeline.conversionRate = pipeline.totalAssigned
         ? Number(((pipeline.closedWon / pipeline.totalAssigned) * 100).toFixed(1)) : 0;

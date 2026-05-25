@@ -114,6 +114,29 @@ const leadController = {
     }
   },
 
+  async bulkAssign(req, res, next) {
+    try {
+      const { ids, agentId } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      if (!agentId) {
+        return res.status(400).json({ success: false, message: "agentId is required" });
+      }
+      const { modifiedCount, agent } = await leadService.bulkAssign(ids, agentId, req.user);
+      res.json({ success: true, message: `${modifiedCount} lead(s) assigned to ${agent.name}` });
+      // Notify the agent they've been assigned new leads
+      sendPushToUser(agent._id, {
+        type: "lead_assigned",
+        title: `${modifiedCount} Lead${modifiedCount !== 1 ? "s" : ""} Assigned to You`,
+        body: `${req.user.name} assigned ${modifiedCount} lead${modifiedCount !== 1 ? "s" : ""} to you`,
+        data: { url: "/leads" },
+      }).catch(() => {});
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async bulkDelete(req, res, next) {
     try {
       const { ids } = req.body;

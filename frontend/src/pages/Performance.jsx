@@ -111,11 +111,12 @@ export default function Performance() {
                   <span className="text-xs font-semibold text-app">Main Pipeline</span>
                   <span className="ml-auto text-xs text-app-soft">{pipeline.totalAssigned || 0} leads</span>
                 </div>
-                <div className="p-3 grid grid-cols-4 gap-2">
-                  <SmallTile label="Assigned"  value={pipeline.totalAssigned || 0} />
-                  <SmallTile label="New"        value={pipeline.newLeads      || 0} />
-                  <SmallTile label="Site Visit" value={pipeline.siteVisits    || 0} />
-                  <SmallTile label="Closed Won" value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} />
+                <div className="p-3 grid grid-cols-5 gap-2">
+                  <SmallTile label="Assigned"     value={pipeline.totalAssigned || 0} />
+                  <SmallTile label="New"           value={pipeline.newLeads      || 0} />
+                  <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} />
+                  <SmallTile label="Closed Won"    value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} />
+                  <SmallTile label="Avg Response"  value={pipeline.avgResponseTime || "—"} valueClass="text-blue-400" />
                 </div>
                 {hasPipeline && (
                   <div className="px-3 pb-3">
@@ -193,12 +194,13 @@ function MetricCard({ icon: Icon, label, value, note }) {
   );
 }
 
-function SmallTile({ label, value, highlight = false }) {
+function SmallTile({ label, value, highlight = false, valueClass = "" }) {
+  const isNum = typeof value === "number";
   return (
     <div className="rounded-xl p-3 stitch-surface-muted">
       <p className="text-[10px] text-app-soft leading-none">{label}</p>
-      <p className={`mt-1.5 text-base font-bold ${highlight && value > 0 ? "text-green-500" : "text-app"}`}>
-        {value.toLocaleString()}
+      <p className={`mt-1.5 text-base font-bold truncate ${valueClass || (highlight && value > 0 ? "text-green-500" : "text-app")}`}>
+        {isNum ? value.toLocaleString() : value}
       </p>
     </div>
   );
