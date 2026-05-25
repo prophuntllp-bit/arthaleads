@@ -74,7 +74,7 @@ function FUText({ lead, field, placeholder = "Add…", onUpdate }) {
   );
 }
 
-// ── Inline date ───────────────────────────────────────────────────────────────
+// ── Inline date (compact single-line) ────────────────────────────────────────
 function FUDate({ lead, field, onUpdate }) {
   // For main leads followUp maps to followUpDate; project leads use field as-is
   const rawValue = lead._type === "lead" && field === "followUp"
@@ -87,20 +87,22 @@ function FUDate({ lead, field, onUpdate }) {
     catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
+  const displayTime = rawValue ? fmtLocalTime(rawValue) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1">
-        <input type="datetime-local"
-          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
-          value={toLocalInput(rawValue)} onChange={(e) => save(e.target.value)}
-        />
-        <button type="button" title="Set to now" onClick={() => save(nowLocal())}
-          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
-      </div>
-      {rawValue && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(rawValue)}</span>}
+    <div className="flex items-center gap-1">
+      <input type="datetime-local"
+        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
+        value={toLocalInput(rawValue)}
+        title={displayTime || "Set date & time"}
+        onChange={(e) => save(e.target.value)}
+      />
+      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
+        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+        <Clock className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -129,7 +131,7 @@ function FUBooking({ lead, onUpdate }) {
   return (
     <select
       className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 130 }}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 120, maxWidth: 145 }}
       value={lead.booking || ""} onChange={(e) => save(e.target.value)}>
       {FU_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
     </select>
@@ -325,28 +327,28 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[1500px]">
+              <table className="w-full text-xs min-w-[1440px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Name</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Phone</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">WhatsApp</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Source</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Status</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Booking</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 1</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Remark 2</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Phone</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Source</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>Status</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 150, minWidth: 150 }}>Booking</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 1</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 2</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>
                       <button onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
                         className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors" title="Toggle sort order">
                         Follow-up Date
                         {sort === "desc" ? <ArrowDown className="w-3 h-3 text-orange-500" /> : <ArrowUp className="w-3 h-3 text-orange-500" />}
                       </button>
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Follow Up 2</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Project</th>
-                    <th className="px-4 py-3 text-left font-semibold text-app-soft uppercase tracking-wide text-[10px]">Type</th>
-                    <th className="px-4 py-3 text-center font-semibold text-app-soft uppercase tracking-wide text-[10px]">Done</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Project</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Type</th>
+                    <th className="px-2.5 py-2 text-center font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 50, minWidth: 50 }}>Done</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -370,7 +372,7 @@ export default function FollowUps() {
                           if (lead._type === "project" && lead.projectId) navigate(`/projects/${lead.projectId}`);
                           else navigate("/leads", { state: { openLeadId: lead._id } });
                         }}>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "-"}</p>
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -379,13 +381,13 @@ export default function FollowUps() {
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <WhatsAppLink phone={lead.phone} />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           {lead._type === "project"
                             ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">Project</span>
                             : lead.source ? <SourceBadge source={lead.source} /> : <span className="text-app-soft">-</span>
                           }
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           <span className="text-app-soft truncate max-w-[120px] block">{lead.status || lead.remark || "-"}</span>
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -403,13 +405,13 @@ export default function FollowUps() {
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <FUDate lead={lead} field="followUp2" onUpdate={handleUpdate} />
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           {lead._type === "project"
                             ? <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
                             : <span className="text-app-soft">Main Pipeline</span>
                           }
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-2.5 py-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
                             lead._type === "project"
                               ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"

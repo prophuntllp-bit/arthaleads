@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronLeft, ChevronRight,
-  ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
+  Clock, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -154,7 +154,7 @@ function fmtLocalTime(utcStr) {
   return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
-// ── Inline date cell ──────────────────────────────────────────────────────────
+// ── Inline date cell (compact single-line) ────────────────────────────────────
 function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
 
@@ -168,22 +168,23 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
   };
 
   const dateVal = toLocalInput(value);
+  const displayTime = value ? fmtLocalTime(value) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1">
-        <input
-          type="datetime-local"
-          className="rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", minWidth: 145 }}
-          value={dateVal}
-          onChange={(e) => save(e.target.value)}
-        />
-        <button type="button" title="Set to current time" onClick={() => save(nowLocal())}
-          className="shrink-0 rounded-md border px-1.5 py-1 text-[10px] font-semibold text-orange-500 hover:bg-orange-500/10 transition"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>Now</button>
-      </div>
-      {value && <span className="text-[10px] text-app-soft pl-0.5">{fmtLocalTime(value)}</span>}
+    <div className="flex items-center gap-1">
+      <input
+        type="datetime-local"
+        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
+        value={dateVal}
+        title={displayTime || "Set date & time"}
+        onChange={(e) => save(e.target.value)}
+      />
+      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
+        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
+        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+        <Clock className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -230,7 +231,7 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   return (
     <select
       className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 130 }}
+      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 120, maxWidth: 145 }}
       value={value || ""}
       onChange={(e) => save(e.target.value)}
     >
@@ -808,10 +809,10 @@ export default function ProjectDetail() {
                   <div ref={topSpacerRef} style={{ height: 1 }} />
                 </div>
                 <div ref={tableScrollRef} className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1400px]">
+                  <table className="stitch-table min-w-[1500px]">
                     <thead>
                       <tr>
-                        <th className="w-6 px-1">
+                        <th style={{ width: 28, minWidth: 28 }} className="px-1">
                           <input
                             type="checkbox"
                             checked={allSelected}
@@ -821,22 +822,22 @@ export default function ProjectDetail() {
                             title="Select all"
                           />
                         </th>
-                        <th className="w-6 px-1 text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
-                        <th>Phone</th>
-                        <th>WhatsApp</th>
-                        <th>Email</th>
-                        <th>Source</th>
-                        <th>Contact Status</th>
-                        <th>Remark 1</th>
-                        <th>Remark 2</th>
-                        <th>Follow Up</th>
-                        <th>Follow Up 2</th>
-                        <th>Remark</th>
-                        <th>Status</th>
-                        <th>Updated By</th>
-                        <th>Assigned To</th>
-                        <th></th>
+                        <th style={{ width: 28, minWidth: 28 }} className="text-center px-1">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
+                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Email</th>
+                        <th style={{ width: 80, minWidth: 80 }}>Source</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Contact Status</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 140, minWidth: 140 }}>Remark</th>
+                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
+                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
+                        <th style={{ width: 110, minWidth: 110 }}>Assigned To</th>
+                        <th style={{ width: 72, minWidth: 72 }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1080,23 +1081,23 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1600px]">
+                  <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
-                        <th className="w-6 px-1 text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
-                        <th>Phone</th>
-                        <th>WhatsApp</th>
-                        <th>Status</th>
-                        <th>Follow Up</th>
-                        <th>Follow Up 2</th>
-                        <th>Remark 1</th>
-                        <th>Remark 2</th>
-                        <th>Remark 3</th>
-                        <th>Remark 4</th>
-                        <th>Note</th>
-                        <th>Updated By</th>
-                        <th></th>
+                        <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
+                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
+                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 4</th>
+                        <th style={{ width: 140, minWidth: 140 }}>Note</th>
+                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
+                        <th style={{ width: 44, minWidth: 44 }}></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1243,23 +1244,23 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1600px]">
+                  <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
-                        <th className="w-6 px-1 text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)] w-[90px] min-w-[90px] max-w-[90px]" style={{ background: "var(--app-surface)" }}>Name</th>
-                        <th>Phone</th>
-                        <th>WhatsApp</th>
-                        <th>Status</th>
-                        <th>Follow Up</th>
-                        <th>Follow Up 2</th>
-                        <th>Remark 1</th>
-                        <th>Remark 2</th>
-                        <th>Remark 3</th>
-                        <th>Remark 4</th>
-                        <th>Note</th>
-                        <th>Updated By</th>
-                        <th></th>
+                        <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
+                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
+                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
+                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
+                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
+                        <th style={{ width: 130, minWidth: 130 }}>Remark 4</th>
+                        <th style={{ width: 140, minWidth: 140 }}>Note</th>
+                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
+                        <th style={{ width: 44, minWidth: 44 }}></th>
                       </tr>
                     </thead>
                     <tbody>

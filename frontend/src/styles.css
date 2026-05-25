@@ -251,15 +251,16 @@
   .stitch-table { width: 100%; border-collapse: collapse; }
 
   .stitch-table thead th {
-    @apply px-5 py-4 text-left text-[11px] font-bold uppercase tracking-[0.18em];
+    @apply px-2.5 py-2 text-left text-[10px] font-bold uppercase tracking-[0.14em];
     color: var(--app-text-soft);
     background: var(--app-surface-low);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    white-space: nowrap;
   }
 
   .stitch-table tbody td {
-    @apply px-5 py-4 align-middle;
+    @apply px-2.5 py-2 align-middle;
     border-top: 1px solid color-mix(in srgb, var(--app-border) 90%, transparent);
   }
 
