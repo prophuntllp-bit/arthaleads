@@ -1,9 +1,11 @@
-﻿import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
-import { ArrowLeftRight, CheckCircle2, Clock3, MapPinned, PhoneCall, Trophy, XCircle } from "lucide-react";
+import { ArrowLeftRight, CheckCircle2, Clock3, MapPinned, PhoneCall, RefreshCw, Trophy, XCircle } from "lucide-react";
 import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
+
+const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 const STAGE_META = {
   "New": {
@@ -65,6 +67,9 @@ export default function LeadPipeline() {
   useEffect(() => { document.title = "Sales Pipeline - Arthaleads CRM"; }, []);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const timerRef = useRef(null);
 
   const handleContact = async (lead) => {
     const updates = { remark: "Contacted" };
@@ -85,19 +90,26 @@ export default function LeadPipeline() {
     }
   };
 
-  const fetchLeads = async () => {
-    setLoading(true);
+  const fetchLeads = useCallback(async (silent = false) => {
+    if (silent) setRefreshing(true); else setLoading(true);
     try {
       const { data } = await api.get("/leads/unified", { params: { limit: 500, page: 1 } });
       setLeads(data.leads || []);
+      setLastUpdated(new Date());
     } catch {
-      toast.error("Failed to load pipeline leads");
+      if (!silent) toast.error("Failed to load pipeline leads");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchLeads(); }, []);
+  // Initial load + live auto-refresh every 30s
+  useEffect(() => {
+    fetchLeads(false);
+    timerRef.current = setInterval(() => fetchLeads(true), REFRESH_INTERVAL);
+    return () => clearInterval(timerRef.current);
+  }, [fetchLeads]);
 
   const grouped = useMemo(() => {
     return STATUS_OPTIONS.reduce((acc, status) => {
@@ -129,11 +141,32 @@ export default function LeadPipeline() {
   return (
     <div className="stitch-page space-y-6">
       <section className="card p-6">
-        <p className="stitch-kicker mb-2">Pipeline View</p>
-        <h1 className="text-3xl font-black tracking-tight text-app">Lead Pipeline</h1>
-        <p className="mt-2 max-w-2xl text-sm text-app-soft">
-          Each stage is color-coded so your team can instantly understand what needs outreach, visits, negotiation, or closure.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="stitch-kicker mb-2">Pipeline View</p>
+            <h1 className="text-3xl font-black tracking-tight text-app">Lead Pipeline</h1>
+            <p className="mt-2 max-w-2xl text-sm text-app-soft">
+              Each stage is color-coded so your team can instantly understand what needs outreach, visits, negotiation, or closure.
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <button
+              onClick={() => fetchLeads(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
+              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+            {lastUpdated && (
+              <span className="flex items-center gap-1 text-[10px] text-app-soft">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                Live · updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+              </span>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
