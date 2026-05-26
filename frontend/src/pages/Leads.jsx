@@ -1611,11 +1611,11 @@ export default function Leads() {
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl"
-          style={{ background: "var(--app-card)", border: "1px solid var(--app-border)", minWidth: 340 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-sm"
+          style={{ background: "var(--app-card-solid, #1e1e1e)", border: "1.5px solid var(--app-border)", minWidth: 340, boxShadow: "0 8px 32px rgba(0,0,0,0.35)" }}
         >
           {/* Count badge */}
-          <span className="shrink-0 flex items-center justify-center rounded-xl bg-orange-500/15 px-3 py-1.5 text-xs font-bold text-orange-400">
+          <span className="shrink-0 flex items-center justify-center rounded-xl bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-400 border border-orange-500/30">
             {selectedIds.size} selected
           </span>
 
@@ -1636,7 +1636,7 @@ export default function Leads() {
               <button
                 onClick={handleBulkAssign}
                 disabled={bulkAssigning || !bulkAssignAgentId}
-                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-50"
+                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-orange-600 disabled:opacity-40"
               >
                 <Users className="h-3.5 w-3.5" />
                 {bulkAssigning ? "Assigning…" : "Assign"}
@@ -1647,7 +1647,7 @@ export default function Leads() {
           {/* Delete */}
           <button
             onClick={() => setShowBulkConfirm(true)}
-            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-red-600"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete
@@ -1656,8 +1656,8 @@ export default function Leads() {
           {/* Clear */}
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="shrink-0 rounded-xl border px-2.5 py-1.5 text-xs text-app-soft transition hover:text-app"
-            style={{ borderColor: "var(--app-border)" }}
+            className="shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/10"
+            style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
           >
             ✕
           </button>
