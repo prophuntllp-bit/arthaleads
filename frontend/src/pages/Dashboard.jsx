@@ -373,121 +373,110 @@ function FollowUpDuePanel({ user, navigate }) {
     return d;
   };
 
+  const accentColor = overdue.length ? "#ef4444" : "#f59e0b";
+  const accentBg    = overdue.length ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)";
+  const accentBorder= overdue.length ? "rgba(239,68,68,0.3)"  : "rgba(245,158,11,0.3)";
+
   return (
-    <section
-      className="card overflow-hidden"
-      style={{ borderColor: overdue.length ? "rgba(239,68,68,0.3)" : "rgba(245,158,11,0.3)" }}
-    >
-      {/* Header */}
+    <section className="card overflow-hidden" style={{ borderColor: accentBorder }}>
+
+      {/* ── Header ── */}
       <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{
-          background: overdue.length
-            ? "linear-gradient(to right, rgba(239,68,68,0.08), transparent)"
-            : "linear-gradient(to right, rgba(245,158,11,0.08), transparent)",
-          borderBottom: "1px solid var(--app-border)",
-        }}
+        className="flex items-center gap-3 px-4 py-3"
+        style={{ background: `linear-gradient(to right, ${accentBg}, transparent)`, borderBottom: "1px solid var(--app-border)" }}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl"
-            style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}
-          >
-            <AlertTriangle
-              className="h-4 w-4"
-              style={{ color: overdue.length ? "#ef4444" : "#f59e0b" }}
-            />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-app">
-              {overdue.length > 0 && today.length > 0
-                ? `${overdue.length} overdue · ${today.length} due today`
-                : overdue.length > 0
-                ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
-                : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
-            </p>
-            <p className="text-xs text-app-soft">
-              {user?.role === "agent" ? "Your action list for today" : "Across your team"}
-            </p>
-          </div>
+        {/* Icon */}
+        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
+          <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/followups")}
-            className="stitch-pill text-xs"
-          >
-            View all follow-ups
-          </button>
-          <button
-            type="button"
-            onClick={dismiss}
-            title="Dismiss for this session"
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-          >
-            <X className="h-3.5 w-3.5 text-app-soft" />
-          </button>
+
+        {/* Title — takes remaining space */}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-app leading-tight">
+            {overdue.length > 0 && today.length > 0
+              ? `${overdue.length} overdue · ${today.length} due today`
+              : overdue.length > 0
+              ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
+              : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
+          </p>
+          <p className="text-[11px] text-app-soft">
+            {user?.role === "agent" ? "Your action list" : "Across your team"}
+          </p>
         </div>
+
+        {/* Actions — compact on mobile */}
+        <button
+          type="button"
+          onClick={() => navigate("/followups")}
+          className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
+        >
+          View all
+        </button>
+        <button
+          type="button"
+          onClick={dismiss}
+          title="Dismiss"
+          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+        >
+          <X className="h-3.5 w-3.5 text-app-soft" />
+        </button>
       </div>
 
-      {/* Lead rows */}
+      {/* ── Lead rows ── */}
       <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
         {leads.slice(0, 10).map((lead) => (
-          <div
-            key={lead._id}
-            className="flex items-center gap-3 px-5 py-3 transition hover:bg-black/2 dark:hover:bg-white/2"
-          >
-            {/* Urgency badge */}
+          <div key={lead._id} className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
+
+            {/* Urgency badge — compact on mobile */}
             <span
-              className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider whitespace-nowrap"
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap"
               style={
                 lead.urgency === "overdue"
                   ? { background: "rgba(239,68,68,0.12)", color: "#ef4444" }
                   : { background: "rgba(245,158,11,0.12)", color: "#f59e0b" }
               }
             >
-              {lead.urgency === "overdue"
-                ? lead.daysOverdue === 1 ? "1 day overdue" : `${lead.daysOverdue}d overdue`
-                : "Due today"}
+              {lead.urgency === "overdue" ? `${lead.daysOverdue}d` : "Today"}
             </span>
 
-            {/* Name + source + agent */}
+            {/* Name + meta */}
             <div className="min-w-0 flex-1">
               <button
                 type="button"
-                className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block text-left"
+                className="w-full text-left text-sm font-semibold text-app hover:text-orange-500 transition truncate block leading-tight"
                 onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
               >
                 {lead.name}
               </button>
-              <p className="text-xs text-app-soft truncate">
-                {[lead.source, lead.status, lead.assignedToName && user?.role !== "agent" ? `→ ${lead.assignedToName}` : null]
+              <p className="text-[11px] text-app-soft truncate leading-tight mt-0.5">
+                {[lead.source, lead.status, lead.assignedToName && user?.role !== "agent" ? lead.assignedToName : null]
                   .filter(Boolean).join(" · ")}
               </p>
             </div>
 
-            {/* Actions */}
+            {/* Call + WA — icon-only on mobile, label on sm+ */}
             {lead.phone && (
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <a
                   href={`tel:${lead.phone}`}
-                  title={`Call ${lead.phone}`}
-                  className="flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition whitespace-nowrap"
+                  title={lead.phone}
+                  className="flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition"
                   style={{ borderColor: "rgba(249,115,22,0.25)", color: "var(--app-primary)", background: "rgba(249,115,22,0.06)" }}
                 >
-                  <Phone className="h-3 w-3" />
-                  {lead.phone}
+                  <Phone className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{lead.phone}</span>
                 </a>
                 <a
                   href={`https://wa.me/${toWa(lead.phone)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Open WhatsApp"
-                  className="flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition whitespace-nowrap"
+                  title="WhatsApp"
+                  className="flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition"
                   style={{ borderColor: "rgba(34,197,94,0.25)", color: "#16a34a", background: "rgba(34,197,94,0.06)" }}
                 >
-                  <MessageCircle className="h-3 w-3" />
-                  WA
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span className="hidden xs:inline">WA</span>
                 </a>
               </div>
             )}
@@ -495,17 +484,10 @@ function FollowUpDuePanel({ user, navigate }) {
         ))}
       </div>
 
-      {/* Footer — show if there are more than 10 */}
+      {/* Footer */}
       {leads.length > 10 && (
-        <div
-          className="px-5 py-3 text-center"
-          style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}
-        >
-          <button
-            type="button"
-            className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
-            onClick={() => navigate("/followups")}
-          >
+        <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+          <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium" onClick={() => navigate("/followups")}>
             +{leads.length - 10} more — view all in Follow-ups
           </button>
         </div>
