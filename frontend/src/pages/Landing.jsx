@@ -360,42 +360,72 @@ function Features({ isDark }) {
   const bg       = isDark ? "#0d0d1a" : "#ffffff";
   const heading  = isDark ? "#ffffff" : "#111827";
   const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const cardBg   = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)" : "#ffffff";
-  const cardBdr  = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const cardBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
   const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+
+  const Card = ({ icon: Icon, color, title, desc, idx }) => (
+    <div className="group relative flex-shrink-0 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+      style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
+      {/* Colored top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 transition-all duration-300"
+        style={{ background: `linear-gradient(to right, ${color}, transparent)` }} />
+      {/* Ghost number watermark */}
+      <div className="absolute right-3 top-1 text-6xl font-black select-none pointer-events-none leading-none"
+        style={{ color: `${color}12` }}>
+        {String(idx + 1).padStart(2, "0")}
+      </div>
+      <div className="p-5">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110"
+          style={{ background: `${color}15` }}>
+          <Icon className="w-5 h-5" style={{ color }} />
+        </div>
+        <h3 className="font-bold text-base mb-1.5" style={{ color: heading }}>{title}</h3>
+        <p className="text-sm leading-relaxed" style={{ color: cardText }}>{desc}</p>
+      </div>
+    </div>
+  );
 
   return (
     <section id="features" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Zap className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Powerful Features</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3" style={{ color: heading }}>
             Everything your team needs to{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               close more deals
             </span>
           </h2>
-          <p className="text-lg max-w-2xl mx-auto" style={{ color: body }}>
-            Built specifically for the Indian real estate market - from small channel partner offices to large developer sales teams.
+          <p className="text-base max-w-2xl mx-auto" style={{ color: body }}>
+            Built for the Indian real estate market - from small channel partner offices to large developer sales teams.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FEATURES.map(({ icon: Icon, color, title, desc }) => (
-            <div key={title}
-              className="group p-6 rounded-2xl transition-all duration-300 hover:-translate-y-1"
-              style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-transform duration-200 group-hover:scale-110"
-                style={{ background: `${color}18` }}>
-                <Icon className="w-6 h-6" style={{ color }} />
+        {/* Mobile: horizontal swipe carousel */}
+        <div className="lg:hidden -mx-4 px-4">
+          <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory"
+            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+            {FEATURES.map((f, i) => (
+              <div key={f.title} className="snap-start flex-shrink-0" style={{ width: "72vw", maxWidth: 300 }}>
+                <Card {...f} idx={i} />
               </div>
-              <h3 className="font-bold text-lg mb-2" style={{ color: heading }}>{title}</h3>
-              <p className="text-sm leading-relaxed" style={{ color: cardText }}>{desc}</p>
-            </div>
-          ))}
+            ))}
+            {/* Trailing spacer so last card isn't flush to edge */}
+            <div className="flex-shrink-0 w-4" />
+          </div>
+          {/* Swipe hint */}
+          <p className="text-center text-xs mt-2" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#d1d5db" }}>
+            swipe to see more
+          </p>
+        </div>
+
+        {/* Desktop: 3-column grid */}
+        <div className="hidden lg:grid grid-cols-3 gap-5">
+          {FEATURES.map((f, i) => <Card key={f.title} {...f} idx={i} />)}
         </div>
       </div>
     </section>
