@@ -19,77 +19,102 @@ function scrollTo(id) {
 }
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
+const ORBIT_ICONS = [
+  { Icon: Facebook,      color: "#1877F2", label: "Facebook",  delay: "0s" },
+  { Icon: MessageCircle, color: "#25D366", label: "WhatsApp",  delay: "-2.4s" },
+  { Icon: Target,        color: "#EA4335", label: "Google",    delay: "-4.8s" },
+  { Icon: Layers,        color: "#e63946", label: "99acres",   delay: "-7.2s" },
+  { Icon: Building2,     color: "#ff6b00", label: "Walk-ins",  delay: "-9.6s" },
+];
+
+const TICKER_LEADS = [
+  { name: "Raj Patil",      src: "Facebook", srcClr: "#1877F2", action: "New Lead",          city: "Pune" },
+  { name: "Priya Sharma",   src: "WhatsApp", srcClr: "#25D366", action: "Site Visit Booked", city: "Mumbai" },
+  { name: "Amit Deshmukh",  src: "Google",   srcClr: "#EA4335", action: "Contacted",          city: "Nagpur" },
+  { name: "Sneha Kulkarni", src: "Facebook", srcClr: "#1877F2", action: "Proposal Sent",      city: "Pune" },
+  { name: "Vikram Patil",   src: "99acres",  srcClr: "#e63946", action: "New Lead",           city: "Nashik" },
+  { name: "Neha Joshi",     src: "WhatsApp", srcClr: "#25D366", action: "Booked ✓",           city: "Pune" },
+  { name: "Rahul Mehta",    src: "Google",   srcClr: "#EA4335", action: "Follow-up Due",      city: "Thane" },
+  { name: "Kavya Nair",     src: "Facebook", srcClr: "#1877F2", action: "Site Visit Done",    city: "Pune" },
+];
+
 function Hero({ isDark }) {
+  const mockupRef  = useRef(null);
+  const mousePos   = useRef({ x: 0, y: 0 });
+  const currentRot = useRef({ x: 0, y: 0 });
+  const rafRef     = useRef(null);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      mousePos.current = {
+        x: (e.clientX / window.innerWidth  - 0.5) * 2,
+        y: (e.clientY / window.innerHeight - 0.5) * 2,
+      };
+    };
+    const tick = () => {
+      currentRot.current.x += (mousePos.current.y * -6 - currentRot.current.x) * 0.05;
+      currentRot.current.y += (mousePos.current.x *  9 - currentRot.current.y) * 0.05;
+      if (mockupRef.current) {
+        mockupRef.current.style.transform =
+          `perspective(1400px) rotateX(${currentRot.current.x}deg) rotateY(${currentRot.current.y}deg)`;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    window.addEventListener("mousemove", onMove);
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
   const heroBg     = isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)";
   const headingClr = isDark ? "#ffffff" : "#111827";
   const bodyClr    = isDark ? "rgba(255,255,255,0.6)" : "#6b7280";
   const softClr    = isDark ? "rgba(255,255,255,0.4)" : "#9ca3af";
   const btnBorder  = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
   const btnText    = isDark ? "rgba(255,255,255,0.70)" : "#374151";
-  const cardBg     = isDark
-    ? "linear-gradient(135deg, rgba(255,107,0,0.05) 0%, rgba(13,13,26,0.9) 50%)"
-    : "linear-gradient(135deg, rgba(255,107,0,0.04) 0%, rgba(249,250,251,0.95) 50%)";
-  const cardBorder = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
-  const statCardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const statCardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const statLabel   = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
-  const statVal     = isDark ? "#ffffff" : "#111827";
   const gridOpacity = isDark ? "0.03" : "0.04";
-  const urlBarBg    = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)";
-  const urlText     = isDark ? "rgba(255,255,255,0.20)" : "rgba(0,0,0,0.25)";
-  const barTrack    = isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)";
-  const srcText     = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
-  const srcVal      = isDark ? "#ffffff" : "#111827";
-  const scrollChevr = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const chipBg     = isDark ? "rgba(255,255,255,0.06)" : "#ffffff";
+  const chipBdr    = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const chipText   = isDark ? "rgba(255,255,255,0.85)" : "#111827";
+  const tickerBg   = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
+  const tickerBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
 
   return (
-    <section id="hero" className="relative overflow-hidden"
-      style={{ background: heroBg }}>
+    <section id="hero" className="relative overflow-hidden" style={{ background: heroBg }}>
       {/* Background glow blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ff6b00]/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-900/10 rounded-full blur-3xl" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6b00]/5 rounded-full blur-3xl" />
-        {/* Grid pattern */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#ff6b00]/10 rounded-full blur-3xl" style={{ animation: "blobDrift1 8s ease-in-out infinite" }} />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-900/10 rounded-full blur-3xl" style={{ animation: "blobDrift2 10s ease-in-out infinite" }} />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff6b00]/5 rounded-full blur-3xl" style={{ animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
         <div className="absolute inset-0"
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-36 lg:pb-8">
         <div className="text-center max-w-4xl mx-auto">
-
-          {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6"
-            style={{ color: headingClr }}>
+          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6" style={{ color: headingClr }}>
             Manage Every Lead.{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               Close More Deals.
             </span>
           </h1>
-
-          {/* Subheading */}
-          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10"
-            style={{ color: bodyClr }}>
-            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
-            and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
+          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10" style={{ color: bodyClr }}>
+            Arthaleads brings every property enquiry — Facebook ads, Google campaigns, WhatsApp chats,
+            and walk-ins — into one powerful workspace. Built for real estate developers and channel partners.
           </p>
-
-          {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link to="/signup"
               className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
-              Start Free Trial
-              <ArrowRight className="w-5 h-5" />
+              Start Free Trial <ArrowRight className="w-5 h-5" />
             </Link>
             <button onClick={() => scrollTo("features")}
               className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
               style={{ color: btnText, borderColor: btnBorder }}>
-              <PlayCircle className="w-5 h-5" />
-              See How It Works
+              <PlayCircle className="w-5 h-5" /> See How It Works
             </button>
           </div>
-
-          {/* Social proof numbers */}
           <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto">
             {[
               { num: "10,000+", label: "Leads Managed" },
@@ -104,57 +129,133 @@ function Hero({ isDark }) {
           </div>
         </div>
 
-        {/* Dashboard preview - animated mockup */}
-        <div className="mt-12 max-w-4xl mx-auto px-4 relative">
-          {/* Glow ring behind mockup */}
-          <div className="absolute inset-x-16 top-8 bottom-0 rounded-3xl pointer-events-none"
-            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,107,0,0.18) 0%, transparent 70%)", filter: "blur(24px)" }} />
+        {/* ── Mockup area ── */}
+        <div className="mt-12 relative" style={{ maxWidth: 900, margin: "3rem auto 0" }}>
 
-          {/* Floating badge — top left */}
-          <div className="absolute -left-2 sm:left-4 top-10 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
-            style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#ffffff", border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #e5e7eb", animation: "heroFloat1 4s ease-in-out infinite", backdropFilter: "blur(12px)" }}>
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs font-semibold" style={{ color: isDark ? "#fff" : "#111827" }}>+14 New Leads Today</span>
+          {/* Deep glow behind mockup */}
+          <div className="absolute pointer-events-none"
+            style={{ inset: "-20px 60px", background: "radial-gradient(ellipse at 50% 55%, rgba(255,107,0,0.22) 0%, transparent 68%)", filter: "blur(48px)" }} />
+
+          {/* ── Orbiting platform icons (desktop only) ── */}
+          <div className="absolute pointer-events-none hidden lg:block"
+            style={{ left: "50%", top: "42%", width: 0, height: 0 }}>
+            {/* Dashed orbit path */}
+            <svg style={{ position: "absolute", top: -240, left: -240, width: 480, height: 480, opacity: 0.18 }}>
+              <circle cx={240} cy={240} r={234} fill="none" stroke="#ff6b00" strokeWidth={1.5} strokeDasharray="4 10" />
+            </svg>
+            {ORBIT_ICONS.map(({ Icon, color, label, delay }) => (
+              <div key={label} style={{ position: "absolute", top: -18, left: -18, animation: `heroOrbit 12s linear infinite`, animationDelay: delay }}>
+                <div style={{
+                  background: isDark ? "rgba(20,20,30,0.85)" : "rgba(255,255,255,0.92)",
+                  border: `1.5px solid ${color}50`,
+                  boxShadow: `0 4px 20px ${color}30`,
+                  borderRadius: 12, padding: "5px 10px",
+                  display: "flex", alignItems: "center", gap: 6,
+                  backdropFilter: "blur(8px)",
+                }}>
+                  <Icon style={{ width: 13, height: 13, color }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#fff" : "#1f2937", whiteSpace: "nowrap" }}>{label}</span>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Floating badge — top right */}
-          <div className="absolute -right-2 sm:right-4 top-20 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
-            style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#ffffff", border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #e5e7eb", animation: "heroFloat2 4.5s ease-in-out infinite", backdropFilter: "blur(12px)" }}>
-            <span className="text-base">📞</span>
-            <span className="text-xs font-semibold" style={{ color: isDark ? "#fff" : "#111827" }}>Follow-up Scheduled</span>
+          {/* ── Floating stat badges ── */}
+          <div className="absolute -left-4 sm:left-0 top-12 z-20 hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-2xl"
+            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 4s ease-in-out infinite" }}>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
+            <div>
+              <div className="text-xs font-bold" style={{ color: chipText }}>+14 New Leads</div>
+              <div className="text-[10px]" style={{ color: softClr }}>Today · Live</div>
+            </div>
           </div>
 
-          {/* Floating badge — bottom right */}
-          <div className="absolute -right-2 sm:right-8 bottom-24 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
-            style={{ background: "linear-gradient(135deg,#ff6b00,#ffaa00)", animation: "heroFloat3 5s ease-in-out infinite" }}>
-            <span className="text-base">🏠</span>
-            <span className="text-xs font-bold text-white">Site Visit Booked!</span>
+          <div className="absolute -right-4 sm:right-0 top-16 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
+            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatB 5s ease-in-out infinite" }}>
+            <span className="text-xl leading-none">📞</span>
+            <div>
+              <div className="text-xs font-bold" style={{ color: chipText }}>Follow-up</div>
+              <div className="text-[10px]" style={{ color: softClr }}>Scheduled · 2:30 PM</div>
+            </div>
           </div>
 
-          {/* Mockup with float */}
-          <div style={{ animation: "heroFloat1 6s ease-in-out infinite" }}>
+          <div className="absolute sm:right-4 bottom-20 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
+            style={{ background: "linear-gradient(135deg,#ff6b00,#ffaa00)", animation: "floatC 4.5s ease-in-out infinite" }}>
+            <span className="text-xl leading-none">🏠</span>
+            <div>
+              <div className="text-xs font-bold text-white">Site Visit Booked!</div>
+              <div className="text-[10px] text-white/70">Raj Patil · Pune</div>
+            </div>
+          </div>
+
+          <div className="absolute left-4 bottom-24 z-20 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl shadow-xl"
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", backdropFilter: "blur(10px)", animation: "floatA 6s ease-in-out infinite 1s" }}>
+            <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+            <span className="text-xs font-bold" style={{ color: isDark ? "#86efac" : "#15803d" }}>Deal Closed ✓</span>
+          </div>
+
+          {/* ── Mockup image with mouse parallax ── */}
+          <div ref={mockupRef} style={{ willChange: "transform", transformStyle: "preserve-3d" }}>
             <link rel="preload" as="image" href="/dashboard-light.png" />
             <img
               src="/dashboard-light.png"
               alt="Arthaleads CRM Dashboard"
               className="w-full relative z-0"
-              style={{ display: "block", filter: "drop-shadow(0 32px 64px rgba(0,0,0,0.18))" }}
+              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))" }}
             />
           </div>
         </div>
 
+        {/* ── Live lead ticker ── */}
+        <div className="mt-8 relative overflow-hidden"
+          style={{ maskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)", WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)" }}>
+          <div style={{ display: "flex", gap: 10, animation: "tickerScroll 30s linear infinite", width: "max-content" }}>
+            {[...TICKER_LEADS, ...TICKER_LEADS].map(({ name, src, srcClr, action, city }, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 7,
+                padding: "6px 14px", borderRadius: 999, flexShrink: 0,
+                background: tickerBg, border: `1px solid ${tickerBdr}`,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: srcClr, display: "inline-block", flexShrink: 0 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: chipText }}>{name}</span>
+                <span style={{ fontSize: 11, color: softClr }}>·</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: srcClr }}>{src}</span>
+                <span style={{ fontSize: 11, color: softClr }}>·</span>
+                <span style={{ fontSize: 11, color: isDark ? "rgba(255,255,255,0.55)" : "#6b7280" }}>{action}</span>
+                <span style={{ fontSize: 10, color: softClr, marginLeft: 2 }}>{city}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <style>{`
-          @keyframes heroFloat1 {
-            0%,100% { transform: translateY(0px); }
-            50%      { transform: translateY(-10px); }
+          @keyframes heroOrbit {
+            from { transform: rotate(0deg)   translateX(240px) rotate(0deg); }
+            to   { transform: rotate(360deg) translateX(240px) rotate(-360deg); }
           }
-          @keyframes heroFloat2 {
-            0%,100% { transform: translateY(0px); }
-            50%      { transform: translateY(-14px); }
+          @keyframes tickerScroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
           }
-          @keyframes heroFloat3 {
+          @keyframes blobDrift1 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(30px,-20px) scale(1.1); }
+          }
+          @keyframes blobDrift2 {
+            0%,100% { transform: translate(0,0) scale(1); }
+            50%     { transform: translate(-25px,15px) scale(0.95); }
+          }
+          @keyframes floatA {
             0%,100% { transform: translateY(0px); }
-            50%      { transform: translateY(-8px); }
+            50%     { transform: translateY(-10px); }
+          }
+          @keyframes floatB {
+            0%,100% { transform: translateY(0px); }
+            50%     { transform: translateY(-14px); }
+          }
+          @keyframes floatC {
+            0%,100% { transform: translateY(0px); }
+            50%     { transform: translateY(-8px); }
           }
         `}</style>
       </div>
