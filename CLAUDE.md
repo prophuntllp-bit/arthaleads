@@ -1,3 +1,7 @@
+## Git Workflow
+
+Always commit and push directly to the `main` branch. Do not use feature branches unless the user explicitly asks for one.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
