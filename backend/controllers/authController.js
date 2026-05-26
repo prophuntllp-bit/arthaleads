@@ -49,6 +49,18 @@ const authController = {
     }
   },
 
+  async adminLogin(req, res, next) {
+    try {
+      const ip   = req.ip || req.headers["x-forwarded-for"] || "unknown";
+      const { email, password } = req.body;
+      if (!email || !password) return next(new AppError("Email and password are required", 400));
+      const data = await authService.adminLogin(email, password, ip);
+      sendAuthResponse(res, 200, data);
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async googleAuth(req, res, next) {
     try {
       const { credential } = req.body;

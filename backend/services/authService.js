@@ -121,6 +121,49 @@ const authService = {
     return { token, user, org };
   },
 
+  // Super-admin only login — rejects any non-super_admin credential
+  async adminLogin(email, password, ip = "unknown") {
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select("+password +loginAttempts +lockoutUntil");
+
+    if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
+      const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
+      throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
+    }
+
+    const validPassword = user && await user.comparePassword(password);
+    if (!user || !validPassword) {
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
+          user.loginAttempts = 0;
+          await user.save({ validateBeforeSave: false });
+          throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
+        }
+        await user.save({ validateBeforeSave: false });
+      }
+      // Generic message - don't reveal whether email exists
+      throw new AppError("Invalid credentials", 401);
+    }
+
+    // Only super_admin can use this endpoint
+    if (user.role !== "super_admin") {
+      logger.warn(`[admin-login] non-super_admin attempt - email: ${email}, ip: ${ip}`);
+      throw new AppError("Access denied. This login is for platform administrators only.", 403);
+    }
+
+    if (!user.isActive) throw new AppError("Account deactivated.", 403);
+
+    user.loginAttempts = 0;
+    user.lockoutUntil  = null;
+    user.lastLogin     = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    return { token, user, org: null };
+  },
+
   async googleAuth(credential) {
     // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
     // Verify it by calling Google's userinfo endpoint - no client-secret needed.

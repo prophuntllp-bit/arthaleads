@@ -370,6 +370,7 @@ const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
+const AdminLogin      = lazy(() => import("./pages/AdminLogin"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -489,6 +490,8 @@ function RequireAuth() {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  // Super admin has no org — send to their own panel
+  if (user.role === "super_admin") return <Navigate to="/super-admin" replace />;
 
   // Check if org is set to inactive by super admin (also caught by API interceptor above)
   const isInactive = orgInactive || (org && org.isActive === false);
@@ -526,8 +529,56 @@ function RequireRole({ roles }) {
 function RedirectIfAuth() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
   return <Outlet />;
+}
+
+// ── Admin Layout ─────────────────────────────────────────────────────────────
+// Clean layout for the super admin panel - no org sidebar
+function AdminLayout() {
+  const { logout } = useAuth();
+  const handleLogout = () => { logout(); window.location.href = "/admin-login"; };
+  return (
+    <div className="min-h-screen" style={{ background: "var(--app-bg)" }}>
+      {/* Minimal top bar */}
+      <header className="sticky top-0 z-40 flex items-center justify-between px-6 py-3 border-b"
+        style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #a04100, #ff6b00)" }}>
+            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <span className="text-sm font-bold text-app">Arthaleads Admin</span>
+          <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00" }}>
+            Super Admin
+          </span>
+        </div>
+        <button onClick={handleLogout} className="text-xs font-medium cursor-pointer transition hover:opacity-70"
+          style={{ color: "var(--app-text-soft)" }}>
+          Sign Out
+        </button>
+      </header>
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+// Guards super admin routes — must be logged in AND be super_admin
+function RequireAdmin() {
+  const { user, loading } = useAuth();
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spinner size="lg" />
+    </div>
+  );
+  if (!user) return <Navigate to="/admin-login" replace />;
+  if (user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
+  return <AdminLayout />;
 }
 
 // / route: logged-in users → dashboard, guests → Landing marketing page
@@ -538,7 +589,7 @@ function RootRoute() {
       <Spinner size="lg" />
     </div>
   );
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
   return <Landing />;
 }
 
@@ -577,6 +628,9 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
         </Route>
 
+        {/* Admin login - always public (separate from org login) */}
+        <Route path="/admin-login" element={<AdminLogin />} />
+
         {/* Protected routes */}
         <Route element={<RequireAuth />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -602,15 +656,16 @@ export default function App() {
             <Route path="/dump-leads"  element={<DumpLeads />} />
           </Route>
 
-          {/* Super Admin only */}
-          <Route element={<RequireRole roles={["super_admin"]} />}>
-            <Route path="/super-admin"                    element={<SuperAdmin />} />
-            <Route path="/super-admin/blog"               element={<BlogManager />} />
-            <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
-            <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
-            <Route path="/super-admin/blog/tags"          element={<BlogTags />} />
-            <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
-          </Route>
+        </Route>
+
+        {/* Super Admin routes — own layout, no org sidebar */}
+        <Route element={<RequireAdmin />}>
+          <Route path="/super-admin"                    element={<SuperAdmin />} />
+          <Route path="/super-admin/blog"               element={<BlogManager />} />
+          <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
+          <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
+          <Route path="/super-admin/blog/tags"          element={<BlogTags />} />
+          <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
         </Route>
 
         {/* Catch-all */}
