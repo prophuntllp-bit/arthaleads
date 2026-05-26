@@ -15,25 +15,35 @@ function PlanBadge({ plan }) {
   const cls = {
     trial:      "bg-yellow-500/10 text-yellow-600 border-yellow-500/25",
     starter:    "bg-blue-500/10 text-blue-600 border-blue-500/25",
+    growth:     "bg-violet-500/10 text-violet-600 border-violet-500/25",
     pro:        "bg-violet-500/10 text-violet-600 border-violet-500/25",
     enterprise: "bg-orange-500/10 text-orange-600 border-orange-500/25",
   }[plan] || "bg-gray-500/10 text-gray-500 border-gray-500/25";
+  const label = plan === "pro" ? "growth" : plan;
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${cls}`}>
-      {plan}
+      {label}
     </span>
   );
 }
 
 // ── PlanSwitcher ───────────────────────────────────────────────────────────────
-// Lets super admin toggle an org's plan between trial / pro / enterprise inline.
+// Lets super admin toggle an org's plan between trial / starter / growth / enterprise.
 function PlanSwitcher({ org, onUpdated }) {
-  const PLANS = ["trial", "pro", "enterprise"];
+  const PLANS = [
+    { id: "trial",      label: "Trial",   activeClr: "bg-yellow-500 text-white border-yellow-500",   inactiveClr: "text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/10" },
+    { id: "starter",    label: "Starter", activeClr: "bg-blue-500 text-white border-blue-500",        inactiveClr: "text-blue-600 border-blue-500/30 hover:bg-blue-500/10" },
+    { id: "growth",     label: "Growth",  activeClr: "bg-violet-600 text-white border-violet-600",    inactiveClr: "text-violet-600 border-violet-500/30 hover:bg-violet-500/10" },
+    { id: "enterprise", label: "Ent.",    activeClr: "bg-orange-500 text-white border-orange-500",    inactiveClr: "text-orange-600 border-orange-500/30 hover:bg-orange-500/10" },
+  ];
   const [saving, setSaving] = useState(false);
 
+  // treat legacy "pro" as "growth" for active highlight
+  const currentPlan = org.plan === "pro" ? "growth" : org.plan;
+
   const switchPlan = async (newPlan) => {
-    if (newPlan === org.plan) return;
-    if (!window.confirm(`Switch "${org.name}" from ${org.plan.toUpperCase()} → ${newPlan.toUpperCase()}?`)) return;
+    if (newPlan === currentPlan) return;
+    if (!window.confirm(`Switch "${org.name}" → ${newPlan.toUpperCase()}?`)) return;
     setSaving(true);
     try {
       const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { plan: newPlan });
@@ -47,23 +57,18 @@ function PlanSwitcher({ org, onUpdated }) {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1 flex-wrap">
       {saving ? (
         <span className="text-[10px] text-app-soft animate-pulse">Saving…</span>
       ) : (
-        PLANS.map((p) => {
-          const active = p === org.plan;
-          const cls = {
-            trial:      active ? "bg-yellow-500 text-white border-yellow-500" : "text-yellow-600 border-yellow-500/30 hover:bg-yellow-500/10",
-            pro:        active ? "bg-violet-600 text-white border-violet-600" : "text-violet-600 border-violet-500/30 hover:bg-violet-500/10",
-            enterprise: active ? "bg-orange-500 text-white border-orange-500" : "text-orange-600 border-orange-500/30 hover:bg-orange-500/10",
-          }[p];
+        PLANS.map(({ id, label, activeClr, inactiveClr }) => {
+          const active = id === currentPlan;
           return (
             <button
-              key={p}
-              onClick={() => switchPlan(p)}
-              className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide transition ${cls}`}
-            >{p === "enterprise" ? "Ent." : p}</button>
+              key={id}
+              onClick={() => switchPlan(id)}
+              className={`px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide transition cursor-pointer ${active ? activeClr : inactiveClr}`}
+            >{label}</button>
           );
         })
       )}
@@ -231,10 +236,14 @@ function LogoUploader({ org, onUpdated }) {
         {loading ? (
           <Spinner size="sm" />
         ) : preview ? (
-          <img src={preview} alt="logo" className="max-w-full max-h-full object-contain p-1" />
-        ) : (
-          <ImageIcon className="w-5 h-5 text-app-soft" />
-        )}
+          <img
+            src={preview}
+            alt=""
+            className="max-w-full max-h-full object-contain p-1"
+            onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }}
+          />
+        ) : null}
+        <ImageIcon className="w-5 h-5 text-app-soft" style={{ display: preview ? "none" : "block" }} />
       </div>
 
       <div className="flex flex-col gap-1">
