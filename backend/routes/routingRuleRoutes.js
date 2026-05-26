@@ -2,10 +2,11 @@ const express = require("express");
 const RoutingRule = require("../models/RoutingRule");
 const User = require("../models/User");
 const { protect, authorize } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 
 const router = express.Router();
 
-router.use(protect, authorize("admin", "manager"));
+router.use(protect, planGate("growth"), authorize("admin", "manager"));
 
 // GET /api/routing-rules
 router.get("/", async (req, res) => {

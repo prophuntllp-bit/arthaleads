@@ -2,9 +2,10 @@
 const express = require("express");
 const router = express.Router();
 const { protect } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const ctrl = require("../controllers/attendanceController");
 
-router.use(protect);
+router.use(protect, planGate("growth"));
 
 router.get  ("/status",     ctrl.status);
 router.get  ("/team-today", ctrl.teamToday);

@@ -13,6 +13,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
+import { canAccess } from "../utils/plan";
 import toast from "react-hot-toast";
 
 const navItems = [
@@ -31,11 +32,11 @@ const navItems = [
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
-  { to: "/attendance",  label: "Attendance",   icon: Clock },
-  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive, roles: ["admin", "manager", "super_admin"] },
+  { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
+  { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
   { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "super_admin"] },
-  { to: "/automation",  label: "Automation",   icon: Workflow, roles: ["admin", "manager", "super_admin"] },
-  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"] },
+  { to: "/automation",  label: "Automation",   icon: Workflow,  roles: ["admin", "manager", "super_admin"] },
+  { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"], minPlan: "growth" },
   { to: "/settings",    label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
@@ -100,10 +101,12 @@ export default function Sidebar() {
     clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null
   );
 
+  const attendanceEnabled = canAccess(org, "growth");
+
   const fetchClockStatus = useCallback(() => {
-    if (!user) return;
+    if (!user || !attendanceEnabled) return;
     api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
-  }, [user]);
+  }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
 
   const handleClockIn = async () => {
@@ -432,7 +435,8 @@ export default function Sidebar() {
               );
             }
 
-            const { to, label, icon: Icon, end: endMatch } = item;
+            const { to, label, icon: Icon, end: endMatch, minPlan } = item;
+            const locked = minPlan && !canAccess(org, minPlan) && user?.role !== "super_admin";
             return (
               <NavLink
                 key={to}
@@ -449,6 +453,7 @@ export default function Sidebar() {
                 }
                 style={({ isActive }) => ({
                   paddingLeft: 14,
+                  opacity: locked ? 0.5 : 1,
                   ...(isActive ? {
                     color: "var(--app-primary)",
                     background: "rgba(var(--app-primary-rgb), 0.10)",
@@ -457,7 +462,13 @@ export default function Sidebar() {
                 })}
               >
                 <Icon className="flex-shrink-0" style={{ width: 18, height: 18 }} />
-                <span className="ml-3" style={labelStyle}>{label}</span>
+                <span className="ml-3 flex-1" style={labelStyle}>{label}</span>
+                {locked && isExpanded && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide flex-shrink-0"
+                    style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00" }}>
+                    PRO
+                  </span>
+                )}
               </NavLink>
             );
           })}
@@ -507,8 +518,8 @@ export default function Sidebar() {
                 </div>
               </div>
 
-              {/* Clock in/out */}
-              <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
+              {/* Clock in/out — Growth+ only */}
+              {attendanceEnabled && <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
                 {isClockedOut ? (
                   <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl" style={{ background: "var(--app-surface-low)" }}>
                     <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
@@ -528,7 +539,7 @@ export default function Sidebar() {
                     Clock In
                   </button>
                 )}
-              </div>
+              </div>}
 
               {/* Actions */}
               <div className="px-2 py-1.5">

@@ -243,22 +243,19 @@ const authService = {
     const existing = await User.findOne({ email: payload.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    // Enforce trial-plan team limit: max 5 members total (1 admin + 4 others)
+    // Enforce per-plan team member limits
+    // starter: 3  |  trial/growth/pro: 20  |  enterprise: unlimited
     const org = await Organization.findById(orgId).select("plan").lean();
-    if (org && org.plan === "trial") {
-      const currentCount = await User.countDocuments({ orgId, isActive: true });
-      if (currentCount >= 5) {
-        throw new AppError(
-          "Trial plan is limited to 5 team members (1 admin + 4 others). Upgrade to Pro for unlimited members.",
-          403
-        );
-      }
-      // If adding an admin role, ensure there isn't already an admin
-      if (payload.role === "admin") {
-        const adminCount = await User.countDocuments({ orgId, isActive: true, role: "admin" });
-        if (adminCount >= 1) {
+    if (org && org.plan !== "enterprise") {
+      const LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+      const limit = LIMITS[org.plan];
+      if (limit !== undefined) {
+        const currentCount = await User.countDocuments({ orgId, isActive: true });
+        if (currentCount >= limit) {
+          const planLabel = org.plan === "starter" ? "Starter" : "Growth";
+          const next = org.plan === "starter" ? "Growth" : "Enterprise";
           throw new AppError(
-            "Trial plan allows only 1 admin. Upgrade to Pro to add more admins.",
+            `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
             403
           );
         }

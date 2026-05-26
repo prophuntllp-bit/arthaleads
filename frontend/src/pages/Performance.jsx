@@ -4,9 +4,13 @@ import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers } from "lucide-react";
 import api from "../services/api";
 import { PageLoader } from "../components/UI";
+import { useAuth } from "../context/AuthContext";
+import UpgradeWall from "../components/UpgradeWall";
+import { canAccess } from "../utils/plan";
 
 export default function Performance() {
   useEffect(() => { document.title = "Analytics & Reports - Arthaleads CRM"; }, []);
+  const { org } = useAuth();
   const location = useLocation();
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -33,6 +37,10 @@ export default function Performance() {
     acc.siteVisits    += m.siteVisits    || 0;
     return acc;
   }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [members]);
+
+  if (!canAccess(org, "growth")) {
+    return <UpgradeWall org={org} feature="Analytics & Reports" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;
+  }
 
   if (loading) return <PageLoader />;
 

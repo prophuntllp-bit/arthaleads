@@ -18,7 +18,7 @@ const orgSchema = new mongoose.Schema(
     },
     plan: {
       type: String,
-      enum: ["trial", "starter", "pro", "enterprise"],
+      enum: ["trial", "starter", "growth", "pro", "enterprise"],
       default: "trial",
     },
     trialEndsAt: {

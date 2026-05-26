@@ -2,6 +2,7 @@
 import toast from "react-hot-toast";
 import { Eye, EyeOff, ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
 
@@ -19,8 +20,10 @@ export default function Team() {
   useEffect(() => { document.title = "Team Management - Arthaleads CRM"; }, []);
   const { user, org } = useAuth();
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
-  const isTrial = org?.plan === "trial";
-  const TRIAL_LIMIT = 5;
+  // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
+  const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+  const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
+  const atLimit = users.length >= memberLimit;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -177,13 +180,14 @@ export default function Team() {
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
-              {isTrial && (
+              {memberLimit < Infinity && (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
-                  style={{ background: users.length >= TRIAL_LIMIT ? "rgba(239,68,68,0.1)" : "rgba(var(--app-primary-rgb),0.08)", color: users.length >= TRIAL_LIMIT ? "#ef4444" : "var(--app-primary)", borderColor: users.length >= TRIAL_LIMIT ? "rgba(239,68,68,0.3)" : "rgba(var(--app-primary-rgb),0.2)" }}>
-                  {users.length}/{TRIAL_LIMIT} members · Trial
+                  style={{ background: atLimit ? "rgba(239,68,68,0.1)" : "rgba(var(--app-primary-rgb),0.08)", color: atLimit ? "#ef4444" : "var(--app-primary)", borderColor: atLimit ? "rgba(239,68,68,0.3)" : "rgba(var(--app-primary-rgb),0.2)" }}>
+                  {users.length}/{memberLimit} members · {planLabel(org?.plan)}
                 </span>
               )}
-              <button className="btn-primary rounded-xl" onClick={openCreate} disabled={isTrial && users.length >= TRIAL_LIMIT}>
+              <button className="btn-primary rounded-xl" onClick={openCreate} disabled={atLimit}
+                title={atLimit ? `${planLabel(org?.plan)} plan limit reached. Upgrade to add more members.` : undefined}>
                 <Plus className="h-4 w-4" /> Add Team Member
               </button>
             </div>

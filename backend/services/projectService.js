@@ -10,8 +10,24 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const Organization = require("../models/Organization");
+const { levelOf } = require("../middlewares/planGate");
+
 const projectService = {
   async create(data, user) {
+    // Starter plan: limit to 1 project
+    if (user.role !== "super_admin") {
+      const org = await Organization.findById(user.orgId).select("plan").lean();
+      if (org && levelOf(org.plan) === 1) {
+        const count = await Project.countDocuments({ orgId: user.orgId, isArchived: false });
+        if (count >= 1) {
+          throw new AppError(
+            "Starter plan is limited to 1 project. Upgrade to Growth to create multiple projects.",
+            403
+          );
+        }
+      }
+    }
     const project = await Project.create({ ...data, createdBy: user._id, orgId: user.orgId });
     return project;
   },

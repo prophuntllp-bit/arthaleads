@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner, EmptyState } from "../components/UI";
+import UpgradeWall from "../components/UpgradeWall";
+import { canAccess } from "../utils/plan";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -48,7 +50,10 @@ function LiveTimer({ since }) {
 }
 
 export default function Attendance() {
-  const { user } = useAuth();
+  const { user, org } = useAuth();
+  if (!canAccess(org, "growth")) {
+    return <UpgradeWall org={org} feature="Attendance Tracking" description="Track your team's clock-in/out times, view daily summaries, and monitor attendance history." />;
+  }
   const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   // Today's own status
