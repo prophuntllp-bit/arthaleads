@@ -1,5 +1,5 @@
 ﻿// pages/Landing.jsx - Arthaleads public marketing homepage
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight,
@@ -712,10 +712,10 @@ function About({ isDark }) {
 
 // ── Testimonials ──────────────────────────────────────────────────────────────
 function Testimonials({ isDark }) {
-  const [active, setActive] = React.useState(0);
-  const [hovered, setHovered] = React.useState(null);
-  const [isPaused, setIsPaused] = React.useState(false);
-  const timerRef = React.useRef(null);
+  const [active, setActive] = useState(0);
+  const [hovered, setHovered] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const timerRef = useRef(null);
 
   const reviews = [
     {
@@ -780,14 +780,14 @@ function Testimonials({ isDark }) {
     },
   ];
 
-  const startTimer = React.useCallback(() => {
+  const startTimer = useCallback(() => {
     clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       if (!isPaused) setActive(a => (a + 1) % reviews.length);
     }, 4500);
   }, [isPaused, reviews.length]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     startTimer();
     return () => clearInterval(timerRef.current);
   }, [startTimer]);
