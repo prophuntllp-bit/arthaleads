@@ -446,26 +446,31 @@ const leadService = {
 
   async getAllUnified(query, user) {
     const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to, followUpToday } = query;
+    const limitInt = parseInt(limit);
+    const pageInt  = parseInt(page);
+    const skip     = (pageInt - 1) * limitInt;
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
+    const createdAtFilter = getDateRangeFilter(dateRange, from, to);
+
+    // ── Lead filter ────────────────────────────────────────────────────────────
     const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
     if (user.role === "agent") leadFilter.assignedTo = user._id;
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
+    if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
     }
-    const createdAtFilter = getDateRangeFilter(dateRange, from, to);
-    if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (search) {
       const rx = { $regex: escapeRegex(search), $options: "i" };
       leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
     }
 
-    // Project leads: pre-$addFields filter (fields that exist in the raw doc)
+    // ── ProjectLead filter (native DB fields only) ─────────────────────────────
     const projFilter = { booking: { $ne: "Not Interested" }, orgId: user.orgId };
     if (source) projFilter.source = source;
     if (createdAtFilter) projFilter.createdAt = createdAtFilter;
@@ -478,71 +483,56 @@ const leadService = {
     }
     if (user.role === "agent") projFilter.importedBy = user._id;
 
-    // Post-$addFields filter: status/priority need defaults applied first
-    const projPostFilter = {};
-    if (status)   projPostFilter.status   = status;
-    if (priority) projPostFilter.priority = priority;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // Derive pipeline status from ProjectLead.booking for leads without an explicit status
-    const bookingToStatus = {
-      $cond: [
-        { $gt: [{ $ifNull: ["$status", ""] }, ""] },
-        "$status",
-        {
-          $switch: {
-            branches: [
-              { case: { $in: ["$booking", ["Site Visit Booked", "Site Visit Done"]] }, then: "Site Visit" },
-              { case: { $eq: ["$booking", "Booked"] }, then: "Closed Won" },
-              { case: { $in: ["$booking", ["Interested", "Call Back"]] }, then: "Contacted" },
-              { case: { $eq: ["$remark", "Contacted"] }, then: "Contacted" },
-            ],
-            default: "New",
-          },
-        },
-      ],
+    // Derive pipeline status from booking for ProjectLeads that have no explicit status
+    const deriveStatus = (pl) => {
+      if (pl.status) return pl.status;
+      const b = pl.booking || "";
+      if (b === "Site Visit Booked" || b === "Site Visit Done") return "Site Visit";
+      if (b === "Booked") return "Closed Won";
+      if (b === "Interested" || b === "Call Back") return "Contacted";
+      if (pl.remark === "Contacted") return "Contacted";
+      return "New";
     };
 
-    const projUnionPipeline = [
-      { $match: projFilter },
-      {
-        $lookup: {
-          from: "projects",
-          localField: "project",
-          foreignField: "_id",
-          as: "_proj",
-        },
-      },
-      {
-        $addFields: {
-          _type: "project",
-          projectId: "$project",
-          projectName: { $arrayElemAt: ["$_proj.name", 0] },
-          status: bookingToStatus,
-          priority: "Medium",
-          assignedToName: { $ifNull: ["$assignedToName", ""] },
-          followUpDate: "$followUp",
-        },
-      },
-      { $project: { _proj: 0 } },
-      ...(Object.keys(projPostFilter).length ? [{ $match: projPostFilter }] : []),
-    ];
+    // Fetch more than needed when status/priority must be applied in JS (no native field)
+    const projFetchLimit = (status || priority) ? Math.max(limitInt * pageInt * 5, 2000) : limitInt * pageInt;
 
-    const [result] = await Lead.aggregate([
-      { $match: leadFilter },
-      { $addFields: { _type: "lead" } },
-      { $unionWith: { coll: "projectleads", pipeline: projUnionPipeline } },
-      { $sort: { createdAt: -1 } },
-      { $facet: {
-        data: [{ $skip: skip }, { $limit: parseInt(limit) }],
-        count: [{ $count: "total" }],
-      }},
+    const [leads, projLeadsRaw, leadTotal, projTotal] = await Promise.all([
+      Lead.find(leadFilter).sort({ createdAt: -1 }).lean(),
+      ProjectLead.find(projFilter).sort({ createdAt: -1 }).limit(projFetchLimit)
+        .populate("project", "name _id").lean(),
+      Lead.countDocuments(leadFilter),
+      ProjectLead.countDocuments(projFilter),
     ]);
 
-    const leads = result?.data || [];
-    const total = result?.count?.[0]?.total || 0;
-    return { leads, total, page: parseInt(page), pages: Math.ceil(total / parseInt(limit)) };
+    // Shape ProjectLeads and apply JS-only filters (status, priority)
+    const projLeads = projLeadsRaw
+      .map((pl) => ({
+        ...pl,
+        _type: "project",
+        projectId: pl.project?._id ?? pl.project,
+        projectName: pl.project?.name ?? "",
+        status: deriveStatus(pl),
+        priority: "Medium",
+        assignedToName: pl.assignedToName || "",
+        followUpDate: pl.followUp || null,
+      }))
+      .filter((pl) => {
+        if (status   && pl.status   !== status)   return false;
+        if (priority && pl.priority !== priority) return false;
+        return true;
+      });
+
+    // Combine, sort newest first, paginate
+    const combined = [
+      ...leads.map((l) => ({ ...l, _type: "lead" })),
+      ...projLeads,
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const total    = leadTotal + (status || priority ? projLeads.length : projTotal);
+    const paginated = combined.slice(skip, skip + limitInt);
+
+    return { leads: paginated, total, page: pageInt, pages: Math.ceil(total / limitInt) };
   },
 
   async getAnalytics(user, query = {}) {
