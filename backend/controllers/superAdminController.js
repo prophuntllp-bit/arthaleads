@@ -326,6 +326,80 @@ const superAdminController = {
       next(err);
     }
   },
+
+  // POST /api/super-admin/broadcast — send email to all org admins (or filtered by plan)
+  async broadcast(req, res, next) {
+    try {
+      const { subject, message, targetPlan } = req.body;
+      if (!subject?.trim() || !message?.trim()) {
+        return next(new AppError("Subject and message are required", 400));
+      }
+
+      // Find matching orgs
+      const orgFilter = (targetPlan && targetPlan !== "all")
+        ? { plan: targetPlan }
+        : {};
+      const orgs = await Organization.find(orgFilter).select("_id").lean();
+      const orgIds = orgs.map(o => o._id);
+
+      // Get one admin per org
+      const admins = await User.find({
+        role: "admin",
+        isActive: true,
+        orgId: { $in: orgIds },
+      }).select("email name").lean();
+
+      if (admins.length === 0) {
+        return res.json({ success: true, sent: 0, failed: 0, total: 0 });
+      }
+
+      const { Resend } = require("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from   = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
+
+      const emailHtml = (name, body) => `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:500px;">
+        <tr><td align="center" style="padding-bottom:24px;">
+          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
+            style="display:inline-block;border-radius:14px;" />
+        </td></tr>
+        <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Message from Arthaleads</p>
+          <p style="margin:0 0 20px;font-size:15px;color:#a8a29e;">Hi ${name},</p>
+          <div style="font-size:15px;color:#e7e5e4;line-height:1.7;white-space:pre-wrap;">${body}</div>
+          <p style="margin:24px 0 0;font-size:13px;color:#78716c;">— Team Arthaleads</p>
+        </td></tr>
+        <tr><td style="padding:20px 0;text-align:center;">
+          <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+      const sendResults = await Promise.allSettled(
+        admins.map(admin =>
+          resend.emails.send({
+            from,
+            to:      admin.email,
+            subject: subject.trim(),
+            html:    emailHtml(admin.name, message.trim()),
+          })
+        )
+      );
+
+      const sent   = sendResults.filter(r => r.status === "fulfilled").length;
+      const failed = sendResults.filter(r => r.status === "rejected").length;
+
+      res.json({ success: true, sent, failed, total: admins.length });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = superAdminController;

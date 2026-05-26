@@ -629,7 +629,7 @@ function fmtDateTime(d) {
 }
 
 // ── Users panel ───────────────────────────────────────────────────────────────
-function UsersPanel() {
+export function UsersPanel() {
   const [users, setUsers]     = useState([]);
   const [total, setTotal]     = useState(0);
   const [pages, setPages]     = useState(1);
@@ -964,7 +964,7 @@ function TicketDetailModal({ ticket, onClose, onUpdated }) {
 }
 
 // ── TicketsPanel ──────────────────────────────────────────────────────────────
-function TicketsPanel() {
+export function TicketsPanel() {
   const [tickets,      setTickets]      = useState([]);
   const [total,        setTotal]        = useState(0);
   const [pages,        setPages]        = useState(1);
@@ -1196,10 +1196,8 @@ function MigrateLogosButton() {
 }
 
 export default function SuperAdmin() {
-  useEffect(() => { document.title = "Super Admin - Arthaleads"; }, []);
-  const { user } = useAuth();
+  useEffect(() => { document.title = "Organizations · Arthaleads Admin"; }, []);
 
-  const [tab, setTab]         = useState("orgs"); // "orgs" | "users" | "tickets"
   const [orgs, setOrgs]       = useState([]);
   const [total, setTotal]     = useState(0);
   const [loading, setLoading] = useState(true);
@@ -1238,25 +1236,16 @@ export default function SuperAdmin() {
     !search || o.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalUsers = orgs.reduce((s, o) => s + (o.userCount || 0), 0);
-  const totalLeads = orgs.reduce((s, o) => s + (o.leadCount || 0), 0);
-  // Active = isActive AND not trial-expired
-  const activeOrgs = orgs.filter((o) => o.isActive && !o.trialExpired).length;
-
   if (loading) return <PageLoader />;
 
   return (
     <div className="stitch-page">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: "linear-gradient(135deg, #a04100, #ff6b00)" }}>
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
+      <div className="mb-5">
+        <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-black text-app">Super Admin</h1>
-            <p className="text-xs text-app-soft">Platform-level management · Logged in as <span className="font-semibold text-orange-500">{user?.name}</span></p>
+            <h1 className="text-xl font-black text-app">Organizations</h1>
+            <p className="text-xs text-app-soft mt-0.5">{total} organisation{total !== 1 ? "s" : ""} on the platform</p>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <MigrateLogosButton />
@@ -1267,47 +1256,8 @@ export default function SuperAdmin() {
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: "Total Organizations", value: total,      icon: Building2,  color: "text-orange-500" },
-          { label: "Active Orgs",          value: activeOrgs, icon: CheckCircle2, color: "text-green-500" },
-          { label: "Total Users",          value: totalUsers, icon: Users,      color: "text-blue-500" },
-          { label: "Total Leads",          value: totalLeads, icon: BarChart3,  color: "text-violet-500" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="card p-5">
-            <p className="stitch-kicker mb-1">{label}</p>
-            <div className="flex items-end justify-between">
-              <p className={`text-3xl font-black ${color}`}>{value}</p>
-              <Icon className={`w-6 h-6 opacity-30 ${color}`} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Tab switcher */}
-      <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-        {[
-          { key: "orgs",    label: "Organizations", icon: Building2 },
-          { key: "users",   label: "Users",          icon: Users },
-          { key: "tickets", label: "Tickets",        icon: TicketIcon },
-        ].map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-              tab === key ? "text-white shadow-sm" : "text-app-soft hover:text-app"
-            }`}
-            style={tab === key ? { background: "var(--app-primary)" } : {}}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Orgs tab ── */}
-      {tab === "orgs" && (
+      {/* ── Orgs table ── */}
+      {(
         <div className="card overflow-hidden">
           <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: "var(--app-border)" }}>
             <h2 className="font-bold text-app flex-1">Organizations</h2>
@@ -1408,11 +1358,6 @@ export default function SuperAdmin() {
         </div>
       )}
 
-      {/* ── Users tab ── */}
-      {tab === "users" && <UsersPanel />}
-
-      {/* ── Tickets tab ── */}
-      {tab === "tickets" && <TicketsPanel />}
     </div>
   );
 }

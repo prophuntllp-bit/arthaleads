@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
+import AdminSidebar from "./components/AdminSidebar";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Download, X, Bell, Share } from "lucide-react";
@@ -370,7 +371,12 @@ const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
-const AdminLogin      = lazy(() => import("./pages/AdminLogin"));
+const AdminLogin          = lazy(() => import("./pages/AdminLogin"));
+const SuperAdminHome      = lazy(() => import("./pages/SuperAdminHome"));
+const SuperAdminUsers     = lazy(() => import("./pages/SuperAdminUsers"));
+const SuperAdminTickets   = lazy(() => import("./pages/SuperAdminTickets"));
+const SuperAdminAnalytics = lazy(() => import("./pages/SuperAdminAnalytics"));
+const SuperAdminBroadcast = lazy(() => import("./pages/SuperAdminBroadcast"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -534,29 +540,12 @@ function RedirectIfAuth() {
 }
 
 // ── Admin Layout ─────────────────────────────────────────────────────────────
-// Clean layout for the super admin panel - no org sidebar
+// Clean layout for the super admin panel — sidebar + scrollable main
 function AdminLayout() {
-  const { logout } = useAuth();
-  const handleLogout = () => { logout(); window.location.href = "/admin-login"; };
   return (
-    <div className="min-h-screen" style={{ background: "var(--app-bg)" }}>
-      {/* Minimal top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between px-6 py-3 border-b"
-        style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}>
-        <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Arthaleads" className="w-7 h-7 rounded-lg object-cover" />
-          <span className="text-sm font-bold text-app">Arthaleads Admin</span>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00" }}>
-            Super Admin
-          </span>
-        </div>
-        <button onClick={handleLogout} className="text-xs font-medium cursor-pointer transition hover:opacity-70"
-          style={{ color: "var(--app-text-soft)" }}>
-          Sign Out
-        </button>
-      </header>
-      <main>
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--app-bg)" }}>
+      <AdminSidebar />
+      <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />
       </main>
     </div>
@@ -653,9 +642,14 @@ export default function App() {
 
         </Route>
 
-        {/* Super Admin routes — own layout, no org sidebar */}
+        {/* Super Admin routes — own layout with AdminSidebar */}
         <Route element={<RequireAdmin />}>
-          <Route path="/super-admin"                    element={<SuperAdmin />} />
+          <Route path="/super-admin"                    element={<SuperAdminHome />} />
+          <Route path="/super-admin/orgs"               element={<SuperAdmin />} />
+          <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
+          <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
+          <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
+          <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
           <Route path="/super-admin/blog"               element={<BlogManager />} />
           <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
           <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
