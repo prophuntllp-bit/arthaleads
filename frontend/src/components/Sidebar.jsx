@@ -242,7 +242,7 @@ export default function Sidebar() {
     }
   };
 
-  const openProfileMenu = () => setProfileOpen(v => !v);
+  const openProfileMenu = (e) => { e?.stopPropagation(); setProfileOpen(v => !v); };
 
   // ── Derived clock state ───────────────────────────────────────────────────
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
