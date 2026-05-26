@@ -1006,148 +1006,300 @@ function Testimonials({ isDark }) {
 
 // ── Pricing ───────────────────────────────────────────────────────────────────
 function Pricing({ isDark }) {
+  const [hoveredPlan, setHoveredPlan] = useState(null);
+
   const plans = [
     {
+      id: "starter",
       name: "Starter",
-      tagline: "Perfect for small teams and channel partners",
+      tagline: "For solo brokers and small channel partner teams",
       color: "#3b82f6",
-      features: [
-        "Up to 5 team members",
-        "Unlimited lead imports",
-        "Facebook & WhatsApp integration",
-        "Basic analytics dashboard",
-        "Lead pipeline & follow-ups",
-        "Email support",
+      userLimit: "Up to 3 members",
+      groups: [
+        {
+          label: "Lead Management",
+          items: [
+            "Unlimited lead imports (CSV / Excel)",
+            "Lead pipeline - Kanban (6 stages)",
+            "Follow-up scheduling & reminders",
+            "Lead source tracking",
+            "Push notifications & new lead alerts",
+          ],
+        },
+        {
+          label: "Integrations",
+          items: [
+            "Facebook Lead Ads auto-import",
+            "WhatsApp capture",
+            "Website / WordPress plugin",
+          ],
+        },
+        {
+          label: "Support",
+          items: ["Email support"],
+        },
       ],
       cta: "Get Started",
+      ctaAction: "contact",
     },
     {
+      id: "growth",
       name: "Growth",
-      tagline: "For growing real estate teams",
+      tagline: "For active real estate teams that need automation and insights",
       color: "#ff6b00",
       popular: true,
-      features: [
-        "Up to 25 team members",
-        "Multiple projects & campaigns",
-        "All lead sources connected",
-        "Advanced analytics & reports",
-        "Team performance dashboard",
-        "Duplicate lead prevention",
-        "Attendance tracking",
-        "Priority support",
+      trial: true,
+      userLimit: "Up to 20 members",
+      groups: [
+        {
+          label: "Everything in Starter, plus",
+          items: [
+            "Multiple project pipelines",
+            "Duplicate lead detection",
+            "Auto round-robin lead assignment",
+            "Bulk lead export",
+            "Campaign routing rules",
+          ],
+        },
+        {
+          label: "Team & Roles",
+          items: [
+            "Role-based access (Admin / Manager / Agent)",
+            "Attendance tracking",
+            "Team performance dashboard",
+          ],
+        },
+        {
+          label: "Analytics",
+          items: [
+            "Advanced analytics & conversion reports",
+            "Booking rate & call-back metrics",
+            "Individual agent response tracking",
+          ],
+        },
+        {
+          label: "Support",
+          items: ["Priority support"],
+        },
       ],
       cta: "Start Free Trial",
+      ctaAction: "signup",
     },
     {
+      id: "enterprise",
       name: "Enterprise",
-      tagline: "For large developers and franchise networks",
+      tagline: "For large developers, franchise networks and multi-branch orgs",
       color: "#a855f7",
-      features: [
-        "Unlimited team members",
-        "Custom branding & white-label",
-        "Dedicated account manager",
-        "API access & integrations",
-        "Multi-org management",
-        "Custom reporting",
-        "SLA-backed uptime",
-        "On-site training",
+      userLimit: "Unlimited members",
+      groups: [
+        {
+          label: "Everything in Growth, plus",
+          items: [
+            "Google Ads integration",
+            "Custom webhook & API access",
+            "Multi-org management",
+            "Advanced automation management",
+          ],
+        },
+        {
+          label: "Customisation",
+          items: [
+            "Custom branding & white-label",
+            "Custom reporting",
+            "On-site onboarding & training",
+          ],
+        },
+        {
+          label: "Account",
+          items: [
+            "Dedicated account manager",
+            "SLA-backed uptime",
+          ],
+        },
       ],
       cta: "Contact Sales",
+      ctaAction: "contact",
     },
   ];
 
-  const bg         = isDark ? "#0d0d1a" : "#ffffff";
+  const bg         = isDark ? "#0d0d1a" : "#f9fafb";
   const heading    = isDark ? "#ffffff" : "#111827";
   const body       = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const cardBg     = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBg     = isDark ? "rgba(255,255,255,0.025)" : "#ffffff";
   const cardBdr    = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const popBg      = isDark ? "linear-gradient(135deg, rgba(255,107,0,0.07), rgba(13,13,26,0.95))" : "linear-gradient(135deg, #fff7f0, #fff)";
-  const taglineClr = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+  const popBg      = isDark ? "rgba(255,107,0,0.05)" : "#fffbf7";
+  const taglineClr = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
   const divBdr     = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const priceClr   = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const chevClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
-  const featClr    = isDark ? "rgba(255,255,255,0.65)" : "#374151";
+  const grpLabel   = isDark ? "rgba(255,255,255,0.28)" : "#9ca3af";
+  const featClr    = isDark ? "rgba(255,255,255,0.72)" : "#374151";
   const altBtnClr  = isDark ? "rgba(255,255,255,0.70)" : "#374151";
   const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
-  const noteClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const noteClr    = isDark ? "rgba(255,255,255,0.28)" : "#9ca3af";
+  const trialBg    = isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4";
+  const trialBdr   = isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0";
 
   return (
     <section id="pricing" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
+
+        {/* Header */}
+        <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Pricing Plans</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
             Plans for every{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              team size
-            </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
           </h2>
-          <p className="text-lg max-w-xl mx-auto" style={{ color: body }}>
-            Transparent, flexible pricing with no hidden fees. Start free, scale as you grow.
-            Contact us for exact pricing tailored to your team.
+          <p className="text-base max-w-lg mx-auto mb-6" style={{ color: body }}>
+            No hidden fees. Pricing tailored to your team - contact us for exact numbers.
           </p>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-          {plans.map(({ name, tagline, color, popular, features, cta }) => (
-            <div key={name}
-              className={`relative p-7 rounded-2xl transition-all duration-300 ${popular ? "shadow-2xl shadow-orange-500/10 scale-105" : ""}`}
-              style={{
-                background: popular ? popBg : cardBg,
-                border: popular ? "1px solid rgba(255,107,0,0.40)" : `1px solid ${cardBdr}`,
-              }}>
-              {popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 rounded-full bg-[#ff6b00] text-white text-xs font-bold shadow-lg">
-                    Most Popular
-                  </span>
-                </div>
-              )}
-              <div className="mb-6">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}20` }}>
-                    <Zap className="w-4 h-4" style={{ color }} />
-                  </div>
-                  <h3 className="font-black text-xl" style={{ color: heading }}>{name}</h3>
-                </div>
-                <p className="text-sm" style={{ color: taglineClr }}>{tagline}</p>
-              </div>
-
-              <div className="mb-6 pb-6" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm" style={{ color: priceClr }}>Pricing available on request</span>
-                  <ChevronRight className="w-3.5 h-3.5" style={{ color: chevClr }} />
-                </div>
-              </div>
-
-              <ul className="space-y-3 mb-8">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: `${color}20` }}>
-                      <Check className="w-2.5 h-2.5" style={{ color }} />
-                    </div>
-                    <span className="text-sm" style={{ color: featClr }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button onClick={() => scrollTo("contact")}
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                  popular ? "bg-[#ff6b00] hover:bg-[#e05f00] text-white shadow-lg shadow-orange-500/20" : ""
-                }`}
-                style={popular ? {} : { border: `1px solid ${altBtnBdr}`, color: altBtnClr }}>
-                {cta}
-              </button>
+          {/* Free trial banner */}
+          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl border"
+            style={{ background: trialBg, borderColor: trialBdr }}>
+            <div className="w-7 h-7 rounded-full bg-[#22c55e] flex items-center justify-center flex-shrink-0">
+              <Check className="w-3.5 h-3.5 text-white" />
             </div>
-          ))}
+            <div className="text-left">
+              <p className="text-sm font-bold" style={{ color: isDark ? "#4ade80" : "#15803d" }}>
+                14-day free trial - includes all Growth features
+              </p>
+              <p className="text-xs" style={{ color: isDark ? "rgba(74,222,128,0.6)" : "#16a34a" }}>
+                No credit card required. Upgrade or cancel anytime.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Bottom note */}
-        <p className="text-center text-sm mt-10" style={{ color: noteClr }}>
-          All plans include a 14-day free trial. No credit card required to get started.
+        {/* Plan cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+          {plans.map((plan) => {
+            const isHovered = hoveredPlan === plan.id;
+            const isPopular = plan.popular;
+            return (
+              <div key={plan.id}
+                className="relative flex flex-col rounded-2xl transition-all duration-300 cursor-default overflow-hidden"
+                style={{
+                  background: isPopular ? popBg : cardBg,
+                  border: isPopular
+                    ? "1.5px solid rgba(255,107,0,0.4)"
+                    : `1px solid ${isHovered ? plan.color + "60" : cardBdr}`,
+                  boxShadow: isPopular
+                    ? "0 20px 60px rgba(255,107,0,0.12)"
+                    : isHovered ? `0 8px 30px ${plan.color}18` : "none",
+                  transform: isPopular ? "translateY(-6px)" : isHovered ? "translateY(-3px)" : "none",
+                }}
+                onMouseEnter={() => setHoveredPlan(plan.id)}
+                onMouseLeave={() => setHoveredPlan(null)}>
+
+                {/* Top color bar */}
+                <div className="h-1 w-full rounded-t-2xl" style={{ background: `linear-gradient(90deg, ${plan.color}, ${plan.color}88)` }} />
+
+                {/* Popular badge */}
+                {isPopular && (
+                  <div className="absolute top-4 right-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#ff6b00] text-white text-[10px] font-bold uppercase tracking-wide shadow">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-6 flex flex-col flex-1">
+                  {/* Plan header */}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ background: `${plan.color}18` }}>
+                        <Zap className="w-4 h-4" style={{ color: plan.color }} />
+                      </div>
+                      <h3 className="font-black text-xl" style={{ color: heading }}>{plan.name}</h3>
+                    </div>
+                    <p className="text-xs leading-relaxed mt-1" style={{ color: taglineClr }}>{plan.tagline}</p>
+                  </div>
+
+                  {/* User limit pill */}
+                  <div className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-lg mb-5"
+                    style={{ background: `${plan.color}12`, border: `1px solid ${plan.color}25` }}>
+                    <Users className="w-3 h-3" style={{ color: plan.color }} />
+                    <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
+                  </div>
+
+                  {/* Pricing */}
+                  <div className="flex items-center gap-2 mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
+                    <span className="text-sm" style={{ color: body }}>Pricing on request</span>
+                    <ChevronRight className="w-3.5 h-3.5" style={{ color: body }} />
+                  </div>
+
+                  {/* Feature groups */}
+                  <div className="flex flex-col gap-4 flex-1 mb-6">
+                    {plan.groups.map((group) => (
+                      <div key={group.label}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mb-2" style={{ color: grpLabel }}>
+                          {group.label}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {group.items.map((item) => (
+                            <li key={item} className="flex items-start gap-2">
+                              <div className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center mt-0.5"
+                                style={{ background: `${plan.color}18` }}>
+                                <Check className="w-2.5 h-2.5" style={{ color: plan.color }} />
+                              </div>
+                              <span className="text-xs leading-relaxed" style={{ color: featClr }}>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => plan.ctaAction === "signup" ? window.location.href = "/signup" : scrollTo("contact")}
+                    className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer"
+                    style={isPopular
+                      ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
+                      : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }
+                    }
+                    onMouseEnter={e => { if (!isPopular) { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; } }}
+                    onMouseLeave={e => { if (!isPopular) { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; } }}>
+                    {plan.cta}
+                    {isPopular && <span className="ml-2">-&gt;</span>}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Shared features row */}
+        <div className="mt-10 p-5 rounded-2xl" style={{ background: cardBg, border: `1px solid ${divBdr}` }}>
+          <p className="text-center text-xs font-bold uppercase tracking-widest mb-4" style={{ color: grpLabel }}>
+            Included in all plans
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              ["Mobile-friendly access", Shield],
+              ["Facebook Lead Ads", Facebook],
+              ["WhatsApp capture", MessageCircle],
+              ["Kanban pipeline", Layers],
+              ["Push notifications", Bell],
+              ["WordPress plugin", Zap],
+            ].map(([label, Icon]) => (
+              <div key={label} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: isDark ? "rgba(255,107,0,0.1)" : "#fff7ed" }}>
+                  <Icon className="w-3.5 h-3.5 text-[#ff6b00]" />
+                </div>
+                <span className="text-xs" style={{ color: featClr }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-center text-xs mt-6" style={{ color: noteClr }}>
+          Need a custom plan for your network? <button onClick={() => scrollTo("contact")} className="text-[#ff6b00] font-semibold cursor-pointer hover:underline">Talk to us</button>
         </p>
       </div>
     </section>
