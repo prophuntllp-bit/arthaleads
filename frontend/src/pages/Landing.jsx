@@ -714,7 +714,7 @@ function About({ isDark }) {
 function Testimonials({ isDark }) {
   const [active, setActive] = useState(0);
   const [hovered, setHovered] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
   const timerRef = useRef(null);
 
   const reviews = [
@@ -780,21 +780,18 @@ function Testimonials({ isDark }) {
     },
   ];
 
-  const startTimer = useCallback(() => {
-    clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      if (!isPaused) setActive(a => (a + 1) % reviews.length);
-    }, 4500);
-  }, [isPaused, reviews.length]);
+  const TOTAL = reviews.length;
 
   useEffect(() => {
-    startTimer();
+    timerRef.current = setInterval(() => {
+      if (!isPausedRef.current) setActive(a => (a + 1) % TOTAL);
+    }, 4000);
     return () => clearInterval(timerRef.current);
-  }, [startTimer]);
+  }, [TOTAL]);
 
-  const goTo = (i) => { setActive(i); startTimer(); };
-  const prev = () => goTo((active - 1 + reviews.length) % reviews.length);
-  const next = () => goTo((active + 1) % reviews.length);
+  const goTo = (i) => setActive(i);
+  const prev = () => setActive(a => (a - 1 + TOTAL) % TOTAL);
+  const next = () => setActive(a => (a + 1) % TOTAL);
 
   const bg       = isDark ? "#080810" : "#f9fafb";
   const heading  = isDark ? "#ffffff" : "#111827";
@@ -851,13 +848,13 @@ function Testimonials({ isDark }) {
 
         {/* Desktop: 3-card window */}
         <div className="hidden md:grid grid-cols-3 gap-5 mb-8"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => { setIsPaused(false); startTimer(); }}>
+          onMouseEnter={() => { isPausedRef.current = true; }}
+          onMouseLeave={() => { isPausedRef.current = false; }}>
           {visible.map((ri, col) => {
             const r = reviews[ri];
             const isCenter = col === 1;
             return (
-              <div key={ri} className="t-card p-6 rounded-2xl flex flex-col gap-4 cursor-pointer"
+              <div key={`${col}-${ri}`} className="t-card p-6 rounded-2xl flex flex-col gap-4 cursor-pointer"
                 style={{
                   background: isCenter
                     ? isDark ? "linear-gradient(145deg,rgba(255,107,0,0.08),rgba(255,107,0,0.03))" : "#fff"
