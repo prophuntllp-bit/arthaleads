@@ -202,7 +202,6 @@ export default function Sidebar() {
   useEffect(() => {
     const handler = (e) => {
       if (profileBtnRef.current?.contains(e.target)) return;
-      if (profileDropRef.current?.contains(e.target)) return;
       setProfileOpen(false);
     };
     document.addEventListener("mousedown", handler);
@@ -483,21 +482,8 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* ── Bottom: theme toggle + profile ── */}
-        <div className="mt-auto px-2 pb-3 flex-shrink-0 space-y-0.5">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            title={!isExpanded ? (isDark ? "Dark Mode" : "Light Mode") : undefined}
-            className="w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-            style={{ paddingLeft: 14 }}
-          >
-            {isDark
-              ? <MoonStar className="flex-shrink-0" style={{ width: 18, height: 18, color: "var(--app-primary)" }} />
-              : <SunMedium className="flex-shrink-0" style={{ width: 18, height: 18, color: "var(--app-primary)" }} />
-            }
-            <span className="ml-3" style={labelStyle}>{isDark ? "Dark Mode" : "Light Mode"}</span>
-          </button>
+        {/* ── Bottom: profile ── */}
+        <div className="mt-auto px-2 pb-3 flex-shrink-0 space-y-0.5 border-t" style={{ borderColor: "var(--app-border)", paddingTop: 6 }}>
 
           {/* ── Inline profile menu (expands upward, works on all devices) ── */}
           {profileOpen && isExpanded && (
