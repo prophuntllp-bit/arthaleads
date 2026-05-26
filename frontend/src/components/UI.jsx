@@ -233,12 +233,21 @@ export function WhatsAppLink({ phone, name, onContact }) {
     if (!open) {
       const rect = btnRef.current?.getBoundingClientRect();
       if (rect) {
-        // Flip left if not enough space on right
         const dropW = 288;
+        const estimatedDropH = 260; // message box + 2 buttons + footer ≈ 260px
+
+        // Horizontal: flush right edge if overflows
         const left = rect.left + dropW > window.innerWidth - 8
           ? Math.max(8, rect.right - dropW)
           : rect.left;
-        setDropPos({ top: rect.bottom + 4, left });
+
+        // Vertical: flip ABOVE the button if not enough space below
+        const spaceBelow = window.innerHeight - rect.bottom - 8;
+        const top = spaceBelow < estimatedDropH
+          ? Math.max(8, rect.top - estimatedDropH - 4)
+          : rect.bottom + 4;
+
+        setDropPos({ top, left, flipped: spaceBelow < estimatedDropH });
       }
       setMsgText(buildWAMessage(name));
     } else {
@@ -299,8 +308,10 @@ export function WhatsAppLink({ phone, name, onContact }) {
         background: "var(--app-surface)",
         border: "1px solid var(--app-border)",
         borderRadius: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.12)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14)",
         overflow: "hidden",
+        maxHeight: "min(320px, 90dvh)",
+        overflowY: "auto",
       }}
     >
       {/* Pre-filled message editor */}

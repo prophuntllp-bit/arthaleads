@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
+import LeadForm from "../components/LeadForm";
 import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -333,6 +334,9 @@ export default function ProjectDetail() {
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting]       = useState(false);
 
+  // Edit lead modal
+  const [editingLead, setEditingLead] = useState(null);
+
   // Transfer modal
   const [transferTarget, setTransferTarget] = useState(null); // lead object to transfer
   const [refreshKey, setRefreshKey] = useState(0);
@@ -506,6 +510,14 @@ export default function ProjectDetail() {
       if (next.has(lid)) next.delete(lid); else next.add(lid);
       return next;
     });
+  };
+
+  // Update lead across all three sections after edit
+  const handleEditLeadSaved = (updated) => {
+    setLeads((prev)       => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
+    setProspLeads((prev)  => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
+    setSvdLeads((prev)    => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
+    setEditingLead(null);
   };
 
   const handleLeadUpdated = (updated) => {
@@ -908,6 +920,13 @@ export default function ProjectDetail() {
                           <td>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
                               <button
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
+                                onClick={() => setEditingLead(lead)}
+                                title="Edit lead"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
                                 className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
                                 onClick={() => setTransferTarget(lead)}
                                 title="Transfer lead"
@@ -1143,13 +1162,22 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <button
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-orange-500/10 hover:text-orange-500"
-                                onClick={() => setTransferTarget(lead)}
-                                title="Transfer lead"
-                              >
-                                <ArrowRightLeft className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
+                                  onClick={() => setEditingLead(lead)}
+                                  title="Edit lead"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
+                                  onClick={() => setTransferTarget(lead)}
+                                  title="Transfer lead"
+                                >
+                                  <ArrowRightLeft className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1310,13 +1338,22 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <button
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft opacity-0 group-hover:opacity-100 transition hover:bg-orange-500/10 hover:text-orange-500"
-                                onClick={() => setTransferTarget(lead)}
-                                title="Transfer lead"
-                              >
-                                <ArrowRightLeft className="h-4 w-4" />
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
+                                  onClick={() => setEditingLead(lead)}
+                                  title="Edit lead"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
+                                  onClick={() => setTransferTarget(lead)}
+                                  title="Transfer lead"
+                                >
+                                  <ArrowRightLeft className="h-4 w-4" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1389,6 +1426,14 @@ export default function ProjectDetail() {
         loading={deletingProject}
         title="Delete Project"
         message={`Are you sure you want to delete "${project.name}"? All imported leads will remain but the project will be removed.`}
+      />
+
+      {/* Edit Lead modal — works across all three sections */}
+      <LeadForm
+        open={!!editingLead}
+        onClose={() => setEditingLead(null)}
+        onSaved={handleEditLeadSaved}
+        lead={editingLead}
       />
 
       <TransferModal
