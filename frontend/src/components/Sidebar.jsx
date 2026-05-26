@@ -217,8 +217,8 @@ export default function Sidebar() {
 
   const filtered = navItems.filter((n) => !n.roles || n.roles.includes(user?.role));
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout(); // clears httpOnly cookie on server, then local session
     window.location.href = "/login";
   };
 

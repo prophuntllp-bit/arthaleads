@@ -88,14 +88,15 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    // Clear local session FIRST so UI shows logged-out immediately.
-    // navigate("/login") happens while the API call is in-flight.
-    clearSession();
+    // Clear cookie first (httpOnly — only the server can remove it).
+    // clearSession() after so the re-render races don't matter —
+    // window.location.href in the caller tears down React before paint.
     try {
       await api.post("/auth/logout");
     } catch {
       // Proceed even if request fails (offline)
     }
+    clearSession();
   }, [clearSession]);
 
   return (
