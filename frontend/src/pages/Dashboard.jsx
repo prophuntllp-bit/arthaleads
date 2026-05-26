@@ -189,25 +189,25 @@ export default function Dashboard() {
           onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <section className="card p-6 xl:col-span-7">
-          <div className="mb-5 flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <section className="card p-4 xl:col-span-7">
+          <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="stitch-kicker mb-2">Performance</p>
-              <h3 className="text-lg font-bold text-app">Leads by Status</h3>
+              <p className="stitch-kicker mb-1">Performance</p>
+              <h3 className="text-base font-bold text-app">Leads by Status</h3>
             </div>
-            <div className="stitch-pill">Live pipeline</div>
+            <div className="stitch-pill text-xs">Live pipeline</div>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={180}>
             <BarChart
               data={statusChartData}
               layout="vertical"
-              barCategoryGap="28%"
-              margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+              barCategoryGap="22%"
+              margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
             >
               <XAxis
                 type="number"
-                tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
+                tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -215,25 +215,25 @@ export default function Dashboard() {
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fontSize: 12, fill: "var(--app-text-soft)" }}
+                tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
                 axisLine={false}
                 tickLine={false}
-                width={84}
+                width={78}
               />
               <Tooltip
                 contentStyle={{
-                  borderRadius: 14,
+                  borderRadius: 12,
                   border: "1px solid var(--app-border)",
                   background: "var(--app-bg)",
                   color: "var(--app-text)",
                   boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  fontSize: 13,
+                  fontSize: 12,
                 }}
                 itemStyle={{ color: "var(--app-text)" }}
                 labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
                 cursor={{ fill: "rgba(255,255,255,0.04)" }}
               />
-              <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+              <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                 {statusChartData.map((_, index) => (
                   <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
                 ))}
@@ -242,49 +242,64 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </section>
 
-        <section className="card p-6 xl:col-span-5">
-          <div className="mb-5">
-            <p className="stitch-kicker mb-2">Acquisition Mix</p>
-            <h3 className="text-lg font-bold text-app">Leads by Source</h3>
+        <section className="card p-4 xl:col-span-5">
+          <div className="mb-3">
+            <p className="stitch-kicker mb-1">Acquisition Mix</p>
+            <h3 className="text-base font-bold text-app">Leads by Source</h3>
           </div>
           {sourceChartData.length === 0 ? (
-            <p className="py-20 text-center text-sm text-app-soft">No data yet</p>
+            <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
           ) : (
-            <div className="flex flex-col gap-4">
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={sourceChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={82}
-                    dataKey="value"
-                    labelLine={false}
-                  >
-                    {sourceChartData.map((_, index) => (
-                      <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 14,
-                      border: "1px solid var(--app-border)",
-                      background: "var(--app-bg)",
-                      color: "var(--app-text)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                      fontSize: 13,
-                    }}
-                    itemStyle={{ color: "var(--app-text)" }}
-                    labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div className="flex flex-col gap-3">
+              {/* 3-D tilt wrapper — perspective gives the coin-on-table illusion */}
+              <div style={{ perspective: "500px" }}>
+                <div style={{ transform: "rotateX(20deg)", transformOrigin: "50% 60%", transformStyle: "preserve-3d" }}>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie
+                        data={sourceChartData}
+                        cx="50%"
+                        cy="55%"
+                        innerRadius={40}
+                        outerRadius={68}
+                        dataKey="value"
+                        labelLine={false}
+                        strokeWidth={2}
+                        stroke="var(--app-bg)"
+                      >
+                        {sourceChartData.map((_, index) => (
+                          <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: 12,
+                          border: "1px solid var(--app-border)",
+                          background: "var(--app-bg)",
+                          color: "var(--app-text)",
+                          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                          fontSize: 12,
+                        }}
+                        itemStyle={{ color: "var(--app-text)" }}
+                        labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Bottom ellipse shadow — completes the 3-D cylinder illusion */}
+                <div style={{
+                  height: 12,
+                  margin: "-6px 20% 0",
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.18)",
+                  filter: "blur(6px)",
+                }} />
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
                 {sourceChartData.map(({ name, value }, index) => (
-                  <div key={name} className="flex items-center gap-2 min-w-0">
+                  <div key={name} className="flex items-center gap-1.5 min-w-0">
                     <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      className="h-2 w-2 shrink-0 rounded-full"
                       style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
                     />
                     <span className="truncate text-xs text-app-soft">{name}</span>
