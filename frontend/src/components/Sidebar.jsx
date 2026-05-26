@@ -302,7 +302,7 @@ export default function Sidebar() {
               <div className="ml-3 overflow-hidden flex-1" style={labelStyle}>
                 <p className="text-sm font-bold text-app">{org.name}</p>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <img src="/logo.png" alt="AL" className="w-3 h-3 rounded object-cover opacity-50" />
+                  <img src="/logo.png" alt="AL" className="w-3 h-3 rounded object-cover" />
                   <span className="text-[9px] text-app-soft">
                     <span style={{ color: "#FF6B00" }}>Artha</span>Leads
                   </span>
@@ -713,7 +713,7 @@ export default function Sidebar() {
                   onError={(e) => { e.currentTarget.style.display = "none"; }} />
               </div>
               <span className="font-bold text-sm text-app truncate max-w-[100px]">{org.name}</span>
-              <div className="flex items-center gap-1 opacity-50 flex-shrink-0">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover" />
               </div>
             </>
