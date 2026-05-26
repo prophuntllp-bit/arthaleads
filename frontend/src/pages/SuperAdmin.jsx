@@ -526,7 +526,7 @@ function RoleBadge({ role }) {
 }
 
 function fmtDate(d) {
-  if (!d) return <span className="text-app-soft">—</span>;
+  if (!d) return <span className="text-app-soft">-</span>;
   return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -652,7 +652,7 @@ function UsersPanel() {
                         <Phone className="w-3 h-3 text-app-soft flex-shrink-0" />
                         {u.phone}
                       </a>
-                    ) : <span className="text-app-soft text-xs">—</span>}
+                    ) : <span className="text-app-soft text-xs">-</span>}
                   </td>
                   <td><RoleBadge role={u.role} /></td>
                   <td>
@@ -661,7 +661,7 @@ function UsersPanel() {
                         <p className="text-xs font-semibold text-app">{u.orgId.name}</p>
                         <p className="text-[10px] text-app-soft">{u.orgId.slug}</p>
                       </div>
-                    ) : <span className="text-app-soft text-xs">—</span>}
+                    ) : <span className="text-app-soft text-xs">-</span>}
                   </td>
                   <td className="text-xs">{fmtDateTime(u.lastLogin)}</td>
                   <td className="text-xs text-app-soft">{fmtDate(u.createdAt)}</td>
@@ -751,7 +751,7 @@ function TicketDetailModal({ ticket, onClose, onUpdated }) {
     }
   };
 
-  const fmtFull = (iso) => iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  const fmtFull = (iso) => iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
 
   return (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
@@ -930,7 +930,7 @@ function TicketsPanel() {
     });
   };
 
-  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "-";
 
   return (
     <div className="space-y-4">

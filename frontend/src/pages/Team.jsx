@@ -270,7 +270,7 @@ export default function Team() {
               minLength={10}
             />
             {!editingUser && (
-              <p className="mt-1 text-[11px] text-app-soft">Required — used for follow-up alerts and team contact.</p>
+              <p className="mt-1 text-[11px] text-app-soft">Required - used for follow-up alerts and team contact.</p>
             )}
           </div>
           <div>

@@ -217,7 +217,7 @@ function buildWAMessage(leadName) {
   }
 }
 
-// Green "Chat on WhatsApp" button — pre-filled message + editable before send.
+// Green "Chat on WhatsApp" button - pre-filled message + editable before send.
 // Dropdown is portal-rendered at document.body with position:fixed so it
 // always floats above tables regardless of overflow:hidden or z-index stacking.
 export function WhatsAppLink({ phone, name, onContact }) {
@@ -317,7 +317,7 @@ export function WhatsAppLink({ phone, name, onContact }) {
       {/* Pre-filled message editor */}
       <div className="px-3 pt-3 pb-2">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft mb-1.5">
-          Message — edit before sending
+          Message - edit before sending
         </p>
         <textarea
           value={msgText}
@@ -376,7 +376,7 @@ export function WhatsAppLink({ phone, name, onContact }) {
 
       <div className="px-3 pb-2.5 pt-1">
         <p className="text-[9px] text-app-soft text-center">
-          Message opens in WhatsApp — you send it manually
+          Message opens in WhatsApp - you send it manually
         </p>
       </div>
     </div>

@@ -1428,7 +1428,7 @@ export default function ProjectDetail() {
         message={`Are you sure you want to delete "${project.name}"? All imported leads will remain but the project will be removed.`}
       />
 
-      {/* Edit Lead modal — works across all three sections */}
+      {/* Edit Lead modal - works across all three sections */}
       <LeadForm
         open={!!editingLead}
         onClose={() => setEditingLead(null)}

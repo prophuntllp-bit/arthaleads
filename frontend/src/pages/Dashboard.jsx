@@ -26,7 +26,7 @@ import DateRangePicker from "../components/DateRangePicker";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
-// Config for each platform — drives both header pills and source cards
+// Config for each platform - drives both header pills and source cards
 const PLATFORM_CONFIG = {
   "Facebook":     { label: "Facebook Leads",  note: "Meta Lead Ads",        shortLabel: "FB",    sourceKey: "Facebook",  icon: TrendingUp,   tone: "from-blue-500/20 via-blue-500/10 to-transparent",   iconTone: "bg-blue-500/15 text-blue-400",   dot: "bg-blue-500",   pillTone: "bg-blue-500/10 text-blue-400 border-blue-500/20",   presetSource: "Facebook"  },
   "Google":       { label: "Google Leads",    note: "Ads and landing forms", shortLabel: "GGL",   sourceKey: "Google",    icon: Users,        tone: "from-red-500/20 via-red-500/10 to-transparent",     iconTone: "bg-red-500/15 text-red-400",     dot: "bg-red-500",    pillTone: "bg-red-500/10 text-red-400 border-red-500/20",     presetSource: "Google"    },
@@ -431,7 +431,7 @@ function FollowUpDuePanel({ user, navigate }) {
           <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
         </div>
 
-        {/* Title — takes remaining space */}
+        {/* Title - takes remaining space */}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-app leading-tight">
             {overdue.length > 0 && today.length > 0
@@ -445,7 +445,7 @@ function FollowUpDuePanel({ user, navigate }) {
           </p>
         </div>
 
-        {/* Actions — compact on mobile */}
+        {/* Actions - compact on mobile */}
         <button
           type="button"
           onClick={() => navigate("/followups")}
@@ -469,7 +469,7 @@ function FollowUpDuePanel({ user, navigate }) {
         {leads.slice(0, 10).map((lead) => (
           <div key={lead._id} className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
 
-            {/* Urgency badge — compact on mobile */}
+            {/* Urgency badge - compact on mobile */}
             <span
               className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide whitespace-nowrap"
               style={
@@ -496,7 +496,7 @@ function FollowUpDuePanel({ user, navigate }) {
               </p>
             </div>
 
-            {/* Call + WA — icon-only on mobile, label on sm+ */}
+            {/* Call + WA - icon-only on mobile, label on sm+ */}
             {lead.phone && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <a
@@ -529,7 +529,7 @@ function FollowUpDuePanel({ user, navigate }) {
       {leads.length > 10 && (
         <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
           <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium" onClick={() => navigate("/followups")}>
-            +{leads.length - 10} more — view all in Follow-ups
+            +{leads.length - 10} more - view all in Follow-ups
           </button>
         </div>
       )}

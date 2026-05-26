@@ -123,8 +123,8 @@ function Hero({ isDark }) {
             </span>
           </h1>
           <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10" style={{ color: bodyClr }}>
-            Arthaleads brings every property enquiry — Facebook ads, Google campaigns, WhatsApp chats,
-            and walk-ins — into one powerful workspace. Built for real estate developers and channel partners.
+            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
+            and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link to="/signup"
@@ -402,7 +402,7 @@ function Features({ isDark }) {
   );
 }
 
-// ── How it works — interactive step-through UI ───────────────────────────────
+// ── How it works - interactive step-through UI ───────────────────────────────
 const HOW_STEPS = [
   {
     num: 1,
@@ -523,7 +523,7 @@ function HowItWorks({ isDark }) {
           ))}
         </div>
 
-        {/* Content card — key causes remount on step change for CSS entry animation */}
+        {/* Content card - key causes remount on step change for CSS entry animation */}
         <div
           key={active}
           className="rounded-3xl p-7 lg:p-10 relative overflow-hidden"
@@ -564,7 +564,7 @@ function HowItWorks({ isDark }) {
               </span>
             </div>
 
-            {/* Step badge — desktop only */}
+            {/* Step badge - desktop only */}
             <div
               className="w-20 h-20 rounded-3xl items-center justify-center flex-shrink-0 hidden lg:flex"
               style={{ background: step.color, boxShadow: `0 8px 28px ${step.color}45` }}
@@ -610,7 +610,7 @@ function HowItWorks({ isDark }) {
           </div>
         </div>
 
-        {/* Keyframe injected inline — no extra CSS file needed */}
+        {/* Keyframe injected inline - no extra CSS file needed */}
         <style>{`
           @keyframes howStep {
             from { opacity: 0; transform: translateY(10px); }

@@ -116,7 +116,7 @@ export default function Performance() {
                   <SmallTile label="New"           value={pipeline.newLeads      || 0} />
                   <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} />
                   <SmallTile label="Closed Won"    value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} />
-                  <SmallTile label="Avg Response"  value={pipeline.avgResponseTime || "—"} valueClass="text-blue-400" />
+                  <SmallTile label="Avg Response"  value={pipeline.avgResponseTime || "-"} valueClass="text-blue-400" />
                 </div>
                 {hasPipeline && (
                   <div className="px-3 pb-3">

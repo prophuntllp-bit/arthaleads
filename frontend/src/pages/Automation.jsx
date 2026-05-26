@@ -196,7 +196,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       return;
     }
 
-    // Poll every 600ms — if the popup closes WITHOUT sending a result,
+    // Poll every 600ms - if the popup closes WITHOUT sending a result,
     // reset the button so the user can retry instead of being stuck forever.
     clearInterval(popupTimerRef.current);
     popupTimerRef.current = setInterval(() => {
@@ -306,7 +306,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 </ul>
               </div>
 
-              {/* Facebook login button — icon contained, text centered, chevron right */}
+              {/* Facebook login button - icon contained, text centered, chevron right */}
               <button
                 type="button"
                 onClick={openOAuth}
@@ -321,7 +321,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   </>
                 ) : (
                   <>
-                    {/* Icon in a fixed-size shrink-0 wrapper — never overflows button */}
+                    {/* Icon in a fixed-size shrink-0 wrapper - never overflows button */}
                     <span className="shrink-0 flex items-center justify-center w-5 h-5">
                       <FacebookIcon />
                     </span>
@@ -340,12 +340,12 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           {/* ── STEP 2: Select page + form ── */}
           {step === "select" && (
             <div className="space-y-4">
-              {/* Success banner — fresh connect OR editing existing */}
+              {/* Success banner - fresh connect OR editing existing */}
               {pages.length > 0 && !editingItem && (
                 <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <p className="text-sm text-emerald-400 font-medium">
-                    Facebook connected — {pages.length} page{pages.length !== 1 ? "s" : ""} found
+                    Facebook connected - {pages.length} page{pages.length !== 1 ? "s" : ""} found
                   </p>
                 </div>
               )}
@@ -366,7 +366,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
                   <p className="text-xs text-app-soft leading-relaxed">
                     This usually means Facebook didn't grant Pages permission. When the login window opens,
-                    make sure to click <strong>"Continue"</strong> on every permission screen — don't uncheck anything.
+                    make sure to click <strong>"Continue"</strong> on every permission screen - don't uncheck anything.
                   </p>
                   <button
                     type="button"
@@ -1123,11 +1123,11 @@ export default function Automation() {
                             {tokenBad ? <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> : tokenWarn ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
                             <span className={tokenBad ? "text-red-400 font-semibold" : tokenWarn ? "text-amber-400 font-semibold" : "text-emerald-400"}>
                               {daysLeft === null
-                                ? "Token health unknown — click Refresh"
+                                ? "Token health unknown - click Refresh"
                                 : tokenBad
-                                  ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
+                                  ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} - refresh now!`
                                   : tokenWarn
-                                    ? `Token expires in ${daysLeft} days — refresh soon`
+                                    ? `Token expires in ${daysLeft} days - refresh soon`
                                     : `Token valid for ${daysLeft} days`}
                             </span>
                           </div>

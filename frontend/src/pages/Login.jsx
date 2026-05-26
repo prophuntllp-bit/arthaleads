@@ -9,7 +9,7 @@ import axios from "axios";
 
 const API = import.meta.env.VITE_API_URL || "https://api.arthaleads.com";
 
-// ── Phone OTP panel — OTP sent to registered email (no SMS/reCAPTCHA needed) ──
+// ── Phone OTP panel - OTP sent to registered email (no SMS/reCAPTCHA needed) ──
 function PhoneOtpPanel({ onLoginSuccess }) {
   const [phone, setPhone]         = useState("");
   const [otp, setOtp]             = useState("");

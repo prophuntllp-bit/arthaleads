@@ -265,7 +265,7 @@ export default function Sidebar() {
   // `isExpanded` controls whether labels are visible
   // ──────────────────────────────────────────────────────────────────────────
   const NavContent = ({ isExpanded, showPin = false }) => {
-    // Label fade style — fade in/out when sidebar expands/collapses
+    // Label fade style - fade in/out when sidebar expands/collapses
     const labelStyle = {
       opacity:    isExpanded ? 1 : 0,
       maxWidth:   isExpanded ? 200 : 0,

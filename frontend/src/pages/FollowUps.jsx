@@ -13,7 +13,7 @@ async function patchLead(lead, data) {
     return r.data.data;
   } else {
     // Map project-lead field names → main-lead field names
-    // remark3 / remark4 are only on project leads — ignored for pipeline leads
+    // remark3 / remark4 are only on project leads - ignored for pipeline leads
     const mapped = {};
     if ("followUp"   in data) mapped.followUpDate = data.followUp;
     if ("followUp2"  in data) mapped.followUp2    = data.followUp2;
@@ -436,7 +436,7 @@ export default function FollowUps() {
                         </td>
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <button onClick={handleMarkDone}
-                            title="Mark follow-up as done — removes from list"
+                            title="Mark follow-up as done - removes from list"
                             className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-0 group-hover:opacity-100">
                             <CheckCircle2 className="w-4 h-4" />
                           </button>

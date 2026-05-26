@@ -729,7 +729,7 @@ export default function Leads() {
 
       const rows = source.map((lead) => ({
         Name:          str(lead.name),
-        Phone:         str(lead.phone),           // kept as string — no numeric coercion
+        Phone:         str(lead.phone),           // kept as string - no numeric coercion
         Email:         str(lead.email),
         Source:        str(lead.source),
         LeadSource:    str(lead.leadSourceLabel),  // sub-source / campaign label

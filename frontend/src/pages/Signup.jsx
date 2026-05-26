@@ -60,7 +60,7 @@ export default function Signup() {
     onError: () => setError("Google sign-up failed. Please try again."),
   });
 
-  // Step 1 — send OTP to the email the user typed
+  // Step 1 - send OTP to the email the user typed
   const handleSendOtp = async () => {
     setOtpError("");
     const phone = form.phone.trim();
@@ -80,7 +80,7 @@ export default function Signup() {
     }
   };
 
-  // Step 2 — verify the OTP the user entered
+  // Step 2 - verify the OTP the user entered
   const handleVerifyOtp = async () => {
     setOtpError("");
     if (otp.length !== 6) { setOtpError("Enter the 6-digit code from your email."); return; }
@@ -262,7 +262,7 @@ export default function Signup() {
                   )}
                 </div>
 
-                {/* OTP input — shown while in SENT or VERIFYING state */}
+                {/* OTP input - shown while in SENT or VERIFYING state */}
                 {(phoneStep === SENT || phoneStep === VERIFYING) && (
                   <div className="mt-2 rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <p className="text-xs text-app-soft">

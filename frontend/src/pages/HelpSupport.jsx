@@ -107,7 +107,7 @@ function priorityBadge(priority) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
