@@ -277,12 +277,17 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 
         const fieldMap = Object.fromEntries((leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
 
-        // Extract custom form answers as requirements (exclude standard contact fields)
-        const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone"]);
-        const requirements = Object.entries(fieldMap)
-          .filter(([k]) => !STANDARD_FIELDS.has(k) && fieldMap[k])
-          .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
-          .join(" · ");
+        // Extract custom form answers (exclude standard contact fields)
+        const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone", "name"]);
+        const customFields = (leadDetails.field_data || []).filter((f) => !STANDARD_FIELDS.has(f.name) && f.values?.[0]);
+        const requirements = customFields.map((f) => `${f.name.replace(/_/g, " ")}: ${f.values?.[0]}`).join(" · ");
+
+        // Build formResponses for Info tab "Form Questions" section
+        const formResponses = customFields.map((f) => ({
+          fieldKey: f.name,
+          label:    f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          value:    f.values?.[0] || "",
+        }));
 
         const name = isTestLead
           ? "Test Lead (Facebook)"
@@ -290,15 +295,23 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
              [fieldMap.first_name, fieldMap.last_name].filter(Boolean).join(" ").trim() ||
              "Facebook Lead");
 
+        // Build success note with all form answers clearly listed
+        const customLines = customFields.map((f) =>
+          `${f.name.replace(/_/g," ").replace(/\b\w/g,(c)=>c.toUpperCase())}: ${f.values?.[0]}`
+        ).join("\n");
+
         const noteText = isTestLead
           ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\nLead ID: ${leadData.leadgen_id || "unknown"}`
           : isAuthError
           ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
-          : `Imported from Meta Lead Ads.\nLead ID: ${leadData.leadgen_id || "unknown"}${
-              Object.keys(fieldMap).length > 0
-                ? `\nFields: ${Object.entries(fieldMap).map(([k, v]) => `${k}: ${v}`).join(", ")}`
-                : ""
-            }`;
+          : [
+              `✅ Facebook lead imported from Meta Lead Ads.`,
+              `Name: ${name || "-"}`,
+              `Phone: ${fieldMap.phone_number || fieldMap.phone || "N/A"}`,
+              `Email: ${fieldMap.email || "-"}`,
+              customLines ? `\nForm Answers:\n${customLines}` : "",
+              `Lead ID: ${leadData.leadgen_id || "unknown"}`,
+            ].filter(Boolean).join("\n");
 
         // Check campaign routing rules first (form_id, campaign_id, adset_id, ad_id)
         const orgId = automation.orgId;
@@ -339,6 +352,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           source: "Facebook",
           status: "New",
           requirements: isTestLead ? "" : requirements,
+          formResponses: isTestLead ? [] : formResponses,
           orgId,
           createdBy: assignee?._id || null,
           assignedTo: assignee?._id || null,

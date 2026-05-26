@@ -7,6 +7,7 @@ const validate = require("../middlewares/validate");
 const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, importLeadsSchema } = require("../validations/schemas");
 const Lead = require("../models/Lead");
 const Automation = require("../models/Automation");
+const logger = require("../config/logger");
 
 // All lead routes require authentication
 router.use(protect);
@@ -141,9 +142,32 @@ router.post("/:id/retry-facebook", async (req, res, next) => {
     if (fetchedPhone) lead.phone = fetchedPhone;
     if (fetchedEmail) lead.email = fetchedEmail;
 
-    // Replace the error note text with a success message
+    // Save custom form Q&A into formResponses (shown in Info tab "Form Questions")
+    const STANDARD_FIELDS = new Set(["full_name","first_name","last_name","email","phone_number","phone","name"]);
+    const customFields = fieldData.filter((f) => !STANDARD_FIELDS.has(f.name) && f.values?.[0]);
+    if (customFields.length) {
+      lead.formResponses = customFields.map((f) => ({
+        fieldKey: f.name,
+        label:    f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        value:    f.values?.[0] || "",
+      }));
+      // Also save as requirements string
+      lead.requirements = customFields.map((f) => `${f.name.replace(/_/g," ")}: ${f.values?.[0]}`).join(" · ");
+    }
+
+    // Build success note with all fields including custom ones
+    const customLines = customFields.map((f) => `${f.name.replace(/_/g," ").replace(/\b\w/g,(c)=>c.toUpperCase())}: ${f.values?.[0]}`).join("\n");
+    const successText = [
+      `✅ Facebook lead data fetched successfully (retry).`,
+      `Name: ${fetchedName || "-"}`,
+      `Phone: ${fetchedPhone || "-"}`,
+      `Email: ${fetchedEmail || "-"}`,
+      customLines ? `\nForm Answers:\n${customLines}` : "",
+      `Lead ID: ${leadgenId}`,
+    ].filter(Boolean).join("\n");
+
+    // Replace the error note with the success note
     const noteIdx = lead.notes.findIndex((n) => n._id?.toString() === errorNote._id?.toString());
-    const successText = `✅ Facebook lead data fetched successfully (retry).\nName: ${fetchedName || "-"}\nPhone: ${fetchedPhone || "-"}\nEmail: ${fetchedEmail || "-"}\nLead ID: ${leadgenId}`;
     if (noteIdx >= 0) {
       lead.notes[noteIdx].text = successText;
       lead.notes[noteIdx].addedByName = req.user.name || "System";
