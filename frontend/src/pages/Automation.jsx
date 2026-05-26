@@ -90,6 +90,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   const selectedPage = pages.find((p) => p.id === pageId);
   const formOptions = selectedPage?.forms || [];
 
+  const popupTimerRef = useRef(null);
+
   // Pre-fill when editing
   useEffect(() => {
     if (!open) return;
@@ -114,7 +116,10 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   // Listen for OAuth popup result via postMessage (primary) + storage event (fallback)
   useEffect(() => {
     const handleResult = (result) => {
+      // Clear the popup-close watchdog immediately so it can't race with this result
+      clearInterval(popupTimerRef.current);
       setConnecting(false);
+
       if (result.type === "facebook_oauth_success") {
         const fetchedPages = result.pages || [];
         setPages(fetchedPages);
@@ -130,7 +135,6 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
         } else {
           // OAuth succeeded but no pages returned - token is stored, show warning
           setNoPagesWarning(true);
-          // Don't clear existing pageId/formId/connName if editing
           toast.error("No Facebook Pages found. Please check permissions and try again.");
         }
         setStep("select");
@@ -174,8 +178,6 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     }
   };
 
-  const popupTimerRef = useRef(null);
-
   // Clean up the popup monitor on unmount
   useEffect(() => () => clearInterval(popupTimerRef.current), []);
 
@@ -190,13 +192,13 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       return;
     }
 
-    // Poll every 600ms — if the popup closes without sending a result,
+    // Poll every 600ms — if the popup closes WITHOUT sending a result,
     // reset the button so the user can retry instead of being stuck forever.
     clearInterval(popupTimerRef.current);
     popupTimerRef.current = setInterval(() => {
       if (popup.closed) {
         clearInterval(popupTimerRef.current);
-        // Only reset if we haven't already received a result (which sets connecting=false)
+        // Only reset if we haven't already received a result (handleResult sets connecting=false)
         setConnecting((prev) => {
           if (prev) toast("Facebook window closed. Click 'Continue with Facebook' to try again.", { icon: "ℹ️" });
           return false;
@@ -249,28 +251,37 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-[1.75rem] shell-panel overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1877F2]">
+    /* Outer: fixed full-screen, flex centering, safe bottom padding for mobile */
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      {/* Backdrop: fixed inset-0 (not absolute) so it fully covers viewport incl. iOS status bar */}
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+      {/* Panel: sheet-style on mobile (slides from bottom), dialog on sm+ */}
+      <div className="relative w-full sm:max-w-md sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel flex flex-col"
+        style={{ maxHeight: "92dvh" }}>
+
+        {/* ── Header ── */}
+        <div className="flex items-center gap-3 px-6 py-5 flex-shrink-0"
+          style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1877F2] overflow-hidden">
             <FacebookIcon />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-app">Facebook Lead Ads</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold text-app leading-tight">Facebook Lead Ads</h2>
             <p className="text-xs text-app-soft">Connect your ad account in seconds</p>
           </div>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 px-6 pt-5 pb-1">
+        {/* ── Step indicator ── */}
+        <div className="flex items-center gap-2 px-6 pt-5 pb-1 flex-shrink-0">
           <StepDot n={1} label="Connect" active={step === "connect"} done={step === "select"} />
-          <div className="flex-1 h-px bg-white/10" />
+          <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
           <StepDot n={2} label="Choose Page & Form" active={step === "select"} done={false} />
         </div>
 
-        <div className="p-6 space-y-5">
+        {/* ── Scrollable body ── */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
           {/* ── STEP 1: Connect ── */}
           {step === "connect" && (
             <div className="space-y-5">
@@ -290,17 +301,28 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 </ul>
               </div>
 
+              {/* Facebook login button — icon contained, text centered, chevron right */}
               <button
                 type="button"
                 onClick={openOAuth}
                 disabled={connecting}
-                className="w-full flex items-center justify-center gap-3 rounded-2xl py-3.5 text-sm font-semibold text-white transition"
+                className="w-full flex items-center gap-3 px-4 rounded-2xl py-3.5 text-sm font-semibold text-white transition disabled:opacity-70"
                 style={{ background: "#1877F2" }}
               >
                 {connecting ? (
-                  <><Spinner size="sm" /><span className="text-white">Waiting for Facebook...</span></>
+                  <>
+                    <Spinner size="sm" />
+                    <span className="flex-1 text-center text-white">Waiting for Facebook…</span>
+                  </>
                 ) : (
-                  <><FacebookIcon /><span>Continue with Facebook</span><ChevronRight className="h-4 w-4 ml-auto" /></>
+                  <>
+                    {/* Icon in a fixed-size shrink-0 wrapper — never overflows button */}
+                    <span className="shrink-0 flex items-center justify-center w-5 h-5">
+                      <FacebookIcon />
+                    </span>
+                    <span className="flex-1 text-center">Continue with Facebook</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />
+                  </>
                 )}
               </button>
 
@@ -317,14 +339,15 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <p className="text-sm text-emerald-400 font-medium">
-                    Facebook connected - {pages.length} page{pages.length !== 1 ? "s" : ""} found
+                    Facebook connected — {pages.length} page{pages.length !== 1 ? "s" : ""} found
                   </p>
                 </div>
-              ) : noPagesWarning && (
+              ) : noPagesWarning ? (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 space-y-2">
                   <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
                   <p className="text-xs text-app-soft leading-relaxed">
-                    This usually means Facebook didn't grant Pages permission. When the login window opens, make sure to click <strong>"Continue"</strong> on every permission screen - don't uncheck anything.
+                    This usually means Facebook didn't grant Pages permission. When the login window opens,
+                    make sure to click <strong>"Continue"</strong> on every permission screen — don't uncheck anything.
                   </p>
                   <button
                     type="button"
@@ -334,7 +357,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                     → Try connecting again
                   </button>
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-1">
                 <label className="label">Facebook Page</label>
@@ -372,9 +395,18 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                     placeholder="Form ID (optional)"
                   />
                 )}
-                <p className="text-xs text-app-soft mt-1">
-                  Leave as "All forms" to capture leads from every form on this page.
-                </p>
+                {/* Show hint when no specific forms are available */}
+                {pages.length > 0 && formOptions.length === 0 ? (
+                  <p className="text-xs text-amber-400 mt-1">
+                    No published lead forms found for this page. "All forms" will capture all future leads automatically — or
+                    {" "}<a href="https://www.facebook.com/ads/leadads/" target="_blank" rel="noreferrer" className="underline">create a lead form on Facebook</a>{" "}
+                    first, then reconnect.
+                  </p>
+                ) : (
+                  <p className="text-xs text-app-soft mt-1">
+                    Leave as "All forms" to capture leads from every form on this page.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -383,7 +415,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   className="input"
                   value={connName}
                   onChange={(e) => setConnName(e.target.value)}
-                  placeholder="e.g. Arthaleads - Treetopia Leads"
+                  placeholder="e.g. PropHunt LLP - Lead Ads"
                 />
               </div>
 
@@ -399,8 +431,9 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-3 px-6 pb-6">
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-between gap-3 px-6 py-4 flex-shrink-0"
+          style={{ borderTop: "1px solid var(--app-border)" }}>
           <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Cancel</button>
           {step === "select" && (
             <button
@@ -697,9 +730,9 @@ function WordPressWizard({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-[1.75rem] shell-panel overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
