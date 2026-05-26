@@ -1161,7 +1161,7 @@ function Pricing({ isDark }) {
 function Contact({ isDark }) {
   const info = [
     { icon: Mail,    label: "Email Us",  val: "contact@arthaleads.com",    href: "mailto:contact@arthaleads.com" },
-    { icon: Phone,   label: "Call Us",   val: "+91 98765 43210",           href: "tel:+919876543210" },
+    { icon: Phone,   label: "Call Us",   val: "+91 80801 97945",           href: "tel:+918080197945" },
     { icon: MapPin,  label: "Based In",  val: "Pune, Maharashtra, India",  href: null },
   ];
 
@@ -1215,7 +1215,7 @@ function Contact({ isDark }) {
             </div>
 
             {/* WhatsApp CTA */}
-            <a href="https://wa.me/919876543210?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20Arthaleads"
+            <a href="https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20Arthaleads"
               target="_blank" rel="noopener noreferrer"
               className="mt-10 inline-flex items-center gap-3 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-colors px-5 py-3 rounded-xl">
               <MessageCircle className="w-5 h-5 text-[#25D366]" />
