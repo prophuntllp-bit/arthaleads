@@ -494,11 +494,13 @@ const leadService = {
       return "New";
     };
 
-    // Always fetch enough project leads to fill the requested page after JS filtering.
-    // For status/priority filters (applied in JS) we over-fetch; otherwise fetch the page's worth.
-    const projFetchLimit = (status || priority)
-      ? Math.max(limitInt * pageInt * 5, 2000)
-      : Math.max(limitInt * pageInt, 2000);
+    // For large limit (pipeline/kanban view) fetch all project leads with no cap.
+    // For normal paginated views, over-fetch enough to fill the requested page.
+    const projFetchLimit = limitInt >= 2000
+      ? 0  // 0 = no limit in Mongoose
+      : (status || priority)
+        ? Math.max(limitInt * pageInt * 5, 2000)
+        : Math.max(limitInt * pageInt, 2000);
 
     const [leads, projLeadsRaw, leadTotal, projTotal] = await Promise.all([
       Lead.find(leadFilter).sort({ createdAt: -1 }).lean(),
