@@ -47,6 +47,12 @@ const projectLeadSchema = new mongoose.Schema(
       default: "",
     },
 
+    status: {
+      type: String,
+      enum: ["", "New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"],
+      default: "",
+    },
+
     // Set to true when booking reaches Interested/Site Visit Booked - never unset
     isProspective: { type: Boolean, default: false, index: true },
 

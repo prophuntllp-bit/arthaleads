@@ -227,7 +227,7 @@ const projectService = {
     }
 
     // Only update fields that exist in the ProjectLead schema
-    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking"];
+    const allowed = ["name", "phone", "email", "source", "remark", "remarkNote", "remark1", "remark2", "remark3", "remark4", "followUp", "followUp2", "booking", "status"];
     allowed.forEach((f) => { if (f in data) lead[f] = data[f]; });
 
     // One-way flag: once Interested, Site Visit Booked, or Site Visit Done → always Prospective

@@ -468,6 +468,7 @@ const leadService = {
     // Project leads: pre-$addFields filter (fields that exist in the raw doc)
     const projFilter = { booking: { $ne: "Not Interested" }, orgId: user.orgId };
     if (source) projFilter.source = source;
+    if (createdAtFilter) projFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
     }
@@ -484,11 +485,54 @@ const leadService = {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Project leads are accessible via their own project pages - excluded here
-    // so that manually-imported bulk project leads don't bury fresh pipeline leads.
+    // Derive pipeline status from ProjectLead.booking for leads without an explicit status
+    const bookingToStatus = {
+      $cond: [
+        { $gt: [{ $ifNull: ["$status", ""] }, ""] },
+        "$status",
+        {
+          $switch: {
+            branches: [
+              { case: { $in: ["$booking", ["Site Visit Booked", "Site Visit Done"]] }, then: "Site Visit" },
+              { case: { $eq: ["$booking", "Booked"] }, then: "Closed Won" },
+              { case: { $in: ["$booking", ["Interested", "Call Back"]] }, then: "Contacted" },
+              { case: { $eq: ["$remark", "Contacted"] }, then: "Contacted" },
+            ],
+            default: "New",
+          },
+        },
+      ],
+    };
+
+    const projUnionPipeline = [
+      { $match: projFilter },
+      {
+        $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "_proj",
+        },
+      },
+      {
+        $addFields: {
+          _type: "project",
+          projectId: "$project",
+          projectName: { $arrayElemAt: ["$_proj.name", 0] },
+          status: bookingToStatus,
+          priority: "Medium",
+          assignedToName: { $ifNull: ["$assignedToName", ""] },
+          followUpDate: "$followUp",
+        },
+      },
+      { $project: { _proj: 0 } },
+      ...(Object.keys(projPostFilter).length ? [{ $match: projPostFilter }] : []),
+    ];
+
     const [result] = await Lead.aggregate([
       { $match: leadFilter },
       { $addFields: { _type: "lead" } },
+      { $unionWith: { coll: "projectleads", pipeline: projUnionPipeline } },
       { $sort: { createdAt: -1 } },
       { $facet: {
         data: [{ $skip: skip }, { $limit: parseInt(limit) }],
