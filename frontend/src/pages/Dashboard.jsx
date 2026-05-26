@@ -198,11 +198,11 @@ export default function Dashboard() {
             </div>
             <div className="stitch-pill text-xs">Live pipeline</div>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
+          <ResponsiveContainer width="100%" height={Math.max(80, statusChartData.length * 44)}>
             <BarChart
               data={statusChartData}
               layout="vertical"
-              barCategoryGap="22%"
+              barCategoryGap="18%"
               margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
             >
               <XAxis
@@ -251,16 +251,20 @@ export default function Dashboard() {
             <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
           ) : (
             <div className="flex flex-col gap-3">
-              {/* 3-D tilt wrapper — perspective gives the coin-on-table illusion */}
-              <div style={{ perspective: "500px" }}>
-                <div style={{ transform: "rotateX(20deg)", transformOrigin: "50% 60%", transformStyle: "preserve-3d" }}>
+              {/* scaleY squish = reliable cross-browser 3D coin illusion */}
+              <div className="relative" style={{ paddingBottom: 10 }}>
+                <div style={{
+                  transform: "scaleY(0.65)",
+                  transformOrigin: "50% 80%",
+                  filter: "drop-shadow(0 14px 18px rgba(0,0,0,0.32))",
+                }}>
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
                       <Pie
                         data={sourceChartData}
                         cx="50%"
-                        cy="55%"
-                        innerRadius={40}
+                        cy="52%"
+                        innerRadius={36}
                         outerRadius={68}
                         dataKey="value"
                         labelLine={false}
@@ -286,13 +290,14 @@ export default function Dashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                {/* Bottom ellipse shadow — completes the 3-D cylinder illusion */}
+                {/* Cylinder base — bottom rim shadow */}
                 <div style={{
-                  height: 12,
-                  margin: "-6px 20% 0",
+                  position: "absolute", bottom: 0, left: "50%",
+                  transform: "translateX(-50%)",
+                  width: "55%", height: 10,
                   borderRadius: "50%",
-                  background: "rgba(0,0,0,0.18)",
-                  filter: "blur(6px)",
+                  background: "rgba(0,0,0,0.22)",
+                  filter: "blur(5px)",
                 }} />
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
