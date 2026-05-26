@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Shield } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
@@ -43,10 +43,7 @@ export default function AdminLogin() {
       <div className="relative w-full max-w-md">
         {/* Logo + title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4"
-            style={{ background: "linear-gradient(135deg, #a04100, #ff6b00)" }}>
-            <Shield className="w-8 h-8 text-white" />
-          </div>
+          <img src="/logo.png" alt="Arthaleads" className="w-16 h-16 rounded-2xl mx-auto mb-4 object-cover shadow-lg" />
           <h1 className="text-2xl font-black text-white mb-1">Platform Administration</h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
             Arthaleads · Super Admin Portal
