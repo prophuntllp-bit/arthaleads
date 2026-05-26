@@ -24,3 +24,8 @@ yarn-error.log*
 
 # Android release — keystore & binaries (keep private)
 android-release/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
