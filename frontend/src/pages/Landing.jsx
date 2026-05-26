@@ -478,32 +478,24 @@ function HowItWorks({ isDark }) {
 
   const startTimer = () => {
     clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setActive((a) => (a + 1) % HOW_STEPS.length);
-    }, 4000);
+    intervalRef.current = setInterval(() => setActive((a) => (a + 1) % HOW_STEPS.length), 4500);
   };
-
-  useEffect(() => {
-    startTimer();
-    return () => clearInterval(intervalRef.current);
-  }, []);
-
+  useEffect(() => { startTimer(); return () => clearInterval(intervalRef.current); }, []);
   const goTo = (i) => { setActive(i); startTimer(); };
   const step = HOW_STEPS[active];
 
-  const bg             = isDark ? "#080810" : "#f9fafb";
-  const heading        = isDark ? "#ffffff"  : "#111827";
-  const body           = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const cardBg         = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBdr        = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const tabInactive    = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)";
-  const tabText        = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
-  const connInactive   = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
-  const navDisabled    = isDark ? "rgba(255,255,255,0.12)" : "#d1d5db";
+  const bg       = isDark ? "#080810" : "#f9fafb";
+  const heading  = isDark ? "#ffffff"  : "#111827";
+  const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const cardBdr  = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
+  const listBg   = isDark ? "rgba(255,255,255,0.02)" : "#f3f4f6";
+  const mutedTxt = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
+  const navDisab = isDark ? "rgba(255,255,255,0.15)" : "#d1d5db";
 
   return (
     <section id="how-it-works" className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
         <div className="text-center mb-10">
@@ -520,131 +512,125 @@ function HowItWorks({ isDark }) {
           </p>
         </div>
 
-        {/* Step tab row */}
-        <div className="flex items-center justify-center mb-8">
+        {/* Mobile: horizontal step tabs */}
+        <div className="lg:hidden flex gap-2 overflow-x-auto pb-3 mb-4 snap-x" style={{ scrollbarWidth: "none" }}>
           {HOW_STEPS.map((s, i) => (
-            <div key={s.num} className="flex items-center">
-              <button onClick={() => goTo(i)} className="flex flex-col items-center gap-2 px-2 sm:px-4 group">
-                <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300"
-                  style={{
-                    background:  i === active ? s.color : tabInactive,
-                    boxShadow:   i === active ? `0 6px 18px ${s.color}45` : "none",
-                    transform:   i === active ? "scale(1.18)" : "scale(1)",
-                  }}
-                >
-                  <s.icon className="w-5 h-5 transition-colors" style={{ color: i === active ? "#fff" : tabText }} />
-                </div>
-                <span
-                  className="text-[11px] font-semibold hidden sm:block transition-colors whitespace-nowrap"
-                  style={{ color: i === active ? s.color : tabText }}
-                >
-                  {s.label}
-                </span>
-              </button>
-              {/* Connector between steps */}
-              {i < HOW_STEPS.length - 1 && (
-                <div
-                  className="h-0.5 w-10 sm:w-16 lg:w-20 transition-all duration-500 mb-5"
-                  style={{ background: i < active ? HOW_STEPS[i].color : connInactive }}
-                />
-              )}
-            </div>
+            <button key={i} onClick={() => goTo(i)} className="snap-start flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer"
+              style={{ background: i === active ? `${s.color}15` : listBg, border: `1px solid ${i === active ? s.color + "40" : "transparent"}` }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: i === active ? s.color : (isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb") }}>
+                <s.icon className="w-3.5 h-3.5" style={{ color: i === active ? "#fff" : mutedTxt }} />
+              </div>
+              <span className="text-xs font-bold whitespace-nowrap" style={{ color: i === active ? s.color : mutedTxt }}>{s.label}</span>
+            </button>
           ))}
         </div>
 
-        {/* Content card - key causes remount on step change for CSS entry animation */}
-        <div
-          key={active}
-          className="rounded-3xl p-7 lg:p-10 relative overflow-hidden"
-          style={{
-            background:  cardBg,
-            border:      `1px solid ${cardBdr}`,
-            boxShadow:   isDark ? `0 0 80px ${step.color}08` : `0 4px 40px rgba(0,0,0,0.07)`,
-            animation:   "howStep 0.35s ease",
-          }}
-        >
-          {/* Ghost number watermark */}
-          <div
-            className="absolute right-6 top-2 text-[7rem] font-black leading-none select-none pointer-events-none"
-            style={{ color: `${step.color}0d`, letterSpacing: "-0.04em" }}
-          >
-            0{step.num}
-          </div>
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
 
-          <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-center">
-            <div>
-              {/* Icon */}
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-                style={{ background: `${step.color}15` }}
-              >
-                <step.icon className="w-7 h-7" style={{ color: step.color }} />
-              </div>
-              {/* Text */}
-              <h3 className="text-2xl lg:text-3xl font-black mb-3" style={{ color: heading }}>{step.title}</h3>
-              <p className="text-base leading-relaxed mb-6" style={{ color: body }}>{step.desc}</p>
-              {/* Highlight pill */}
-              <span
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: `${step.color}12`, border: `1px solid ${step.color}28`, color: step.color }}
-              >
-                <Check className="w-4 h-4" />
-                {step.highlight}
-              </span>
-            </div>
-
-            {/* Step badge - desktop only */}
-            <div
-              className="w-20 h-20 rounded-3xl items-center justify-center flex-shrink-0 hidden lg:flex"
-              style={{ background: step.color, boxShadow: `0 8px 28px ${step.color}45` }}
-            >
-              <span className="text-3xl font-black text-white">0{step.num}</span>
-            </div>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="flex gap-2 mt-8">
-            {HOW_STEPS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goTo(i)}
-                className="h-1.5 rounded-full transition-all duration-400"
-                style={{
-                  flex:       i === active ? 4 : 1,
-                  background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb"),
-                }}
-              />
+          {/* Left: Step list (desktop only) */}
+          <div className="hidden lg:flex flex-col gap-2">
+            {HOW_STEPS.map((s, i) => (
+              <button key={i} onClick={() => goTo(i)} className="text-left w-full rounded-2xl transition-all duration-250 cursor-pointer group"
+                style={{ padding: "14px 16px", background: i === active ? `${s.color}10` : "transparent", border: `1px solid ${i === active ? s.color + "35" : "transparent"}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-200"
+                    style={{ background: i === active ? s.color : (isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6"), boxShadow: i === active ? `0 4px 12px ${s.color}45` : "none" }}>
+                    <s.icon className="w-4 h-4" style={{ color: i === active ? "#fff" : mutedTxt }} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold leading-tight" style={{ color: i === active ? heading : mutedTxt }}>{s.label}</div>
+                    <div className="text-xs mt-0.5 truncate" style={{ color: i === active ? body : "transparent" }}>{s.title}</div>
+                  </div>
+                  {i === active && (
+                    <div className="ml-auto w-1.5 h-6 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                  )}
+                </div>
+                {/* Timer bar for active step */}
+                {i === active && (
+                  <div className="mt-3 h-0.5 rounded-full overflow-hidden" style={{ background: `${s.color}20` }}>
+                    <div className="h-full rounded-full" style={{ background: s.color, animation: "stepTimer 4.5s linear infinite", transformOrigin: "left" }} />
+                  </div>
+                )}
+              </button>
             ))}
           </div>
 
-          {/* Prev / Next */}
-          <div className="flex items-center justify-between mt-4">
-            <button
-              onClick={() => goTo((active - 1 + HOW_STEPS.length) % HOW_STEPS.length)}
-              className="flex items-center gap-1.5 text-sm font-medium transition-colors"
-              style={{ color: active === 0 ? navDisabled : body }}
-            >
-              <ChevronLeft className="w-4 h-4" /> Prev
-            </button>
-            <span className="text-xs font-bold tracking-widest" style={{ color: isDark ? "rgba(255,255,255,0.20)" : "#d1d5db" }}>
-              {active + 1} / {HOW_STEPS.length}
-            </span>
-            <button
-              onClick={() => goTo((active + 1) % HOW_STEPS.length)}
-              className="flex items-center gap-1.5 text-sm font-medium transition-colors"
-              style={{ color: body }}
-            >
-              Next <ChevronRight className="w-4 h-4" />
-            </button>
+          {/* Right: Detail panel */}
+          <div key={active} className="rounded-3xl overflow-hidden relative"
+            style={{ background: cardBg, border: `1px solid ${cardBdr}`, boxShadow: isDark ? `0 0 60px ${step.color}06` : "0 8px 48px rgba(0,0,0,0.08)", animation: "howFade 0.3s ease" }}>
+
+            {/* Color top strip */}
+            <div className="h-1 w-full" style={{ background: `linear-gradient(to right, ${step.color}, ${step.color}50, transparent)` }} />
+
+            <div className="p-6 lg:p-8">
+              {/* Step label */}
+              <div className="flex items-center gap-3 mb-6">
+                <span className="text-xs font-black px-3 py-1 rounded-full tracking-widest"
+                  style={{ background: `${step.color}15`, color: step.color }}>
+                  STEP {String(step.num).padStart(2, "0")} / {String(HOW_STEPS.length).padStart(2, "0")}
+                </span>
+                <div className="flex-1 h-px" style={{ background: `${step.color}20` }} />
+                {/* Ghost large number */}
+                <span className="text-4xl font-black leading-none select-none" style={{ color: `${step.color}18` }}>
+                  {String(step.num).padStart(2, "0")}
+                </span>
+              </div>
+
+              {/* Icon + Title + Desc */}
+              <div className="flex gap-5 mb-6">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${step.color}12`, border: `1px solid ${step.color}25` }}>
+                  <step.icon className="w-7 h-7" style={{ color: step.color }} />
+                </div>
+                <div>
+                  <h3 className="text-xl lg:text-2xl font-black mb-2" style={{ color: heading }}>{step.title}</h3>
+                  <p className="text-sm lg:text-base leading-relaxed" style={{ color: body }}>{step.desc}</p>
+                </div>
+              </div>
+
+              {/* Highlight */}
+              <div className="flex items-center gap-2.5 rounded-xl px-4 py-3"
+                style={{ background: `${step.color}08`, border: `1px solid ${step.color}20` }}>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: `${step.color}20` }}>
+                  <Check className="w-3 h-3" style={{ color: step.color }} />
+                </div>
+                <span className="text-sm font-semibold" style={{ color: step.color }}>{step.highlight}</span>
+              </div>
+
+              {/* Nav */}
+              <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${cardBdr}` }}>
+                <button onClick={() => goTo((active - 1 + HOW_STEPS.length) % HOW_STEPS.length)}
+                  className="flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer"
+                  style={{ color: active === 0 ? navDisab : body }}>
+                  <ChevronLeft className="w-4 h-4" /> Prev
+                </button>
+                <div className="flex gap-1.5 items-center">
+                  {HOW_STEPS.map((s, i) => (
+                    <button key={i} onClick={() => goTo(i)} className="rounded-full transition-all duration-300 cursor-pointer"
+                      style={{ width: i === active ? 20 : 6, height: 6, background: i === active ? step.color : (isDark ? "rgba(255,255,255,0.15)" : "#e5e7eb") }} />
+                  ))}
+                </div>
+                <button onClick={() => goTo((active + 1) % HOW_STEPS.length)}
+                  className="flex items-center gap-1.5 text-sm font-medium transition-colors cursor-pointer"
+                  style={{ color: body }}>
+                  Next <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Keyframe injected inline - no extra CSS file needed */}
         <style>{`
-          @keyframes howStep {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0);    }
+          @keyframes howFade {
+            from { opacity: 0; transform: translateX(8px); }
+            to   { opacity: 1; transform: translateX(0); }
+          }
+          @keyframes stepTimer {
+            from { transform: scaleX(0); }
+            to   { transform: scaleX(1); }
           }
         `}</style>
       </div>
