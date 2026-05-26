@@ -8,10 +8,12 @@ import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, Calenda
 // ── Route patch to correct API based on lead type ─────────────────────────────
 async function patchLead(lead, data) {
   if (lead._type === "project") {
+    // Project leads support all 4 remarks + note directly
     const r = await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, data);
     return r.data.data;
   } else {
     // Map project-lead field names → main-lead field names
+    // remark3 / remark4 are only on project leads — ignored for pipeline leads
     const mapped = {};
     if ("followUp"   in data) mapped.followUpDate = data.followUp;
     if ("followUp2"  in data) mapped.followUp2    = data.followUp2;
@@ -327,7 +329,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[1440px]" style={{ borderCollapse: "collapse" }}>
+              <table className="w-full text-xs min-w-[1830px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>
@@ -338,6 +340,9 @@ export default function FollowUps() {
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 150, minWidth: 150 }}>Booking</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 1</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 2</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 3</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 4</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 140, minWidth: 140 }}>Note</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>
                       <button onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
                         className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors" title="Toggle sort order">
@@ -398,6 +403,15 @@ export default function FollowUps() {
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <FUText lead={lead} field="remark2" placeholder="Remark 2…" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUText lead={lead} field="remark3" placeholder="Remark 3…" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUText lead={lead} field="remark4" placeholder="Remark 4…" onUpdate={handleUpdate} />
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <FUText lead={lead} field="remarkNote" placeholder="Note…" onUpdate={handleUpdate} />
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <FUDate lead={lead} field="followUp" onUpdate={handleUpdate} />
