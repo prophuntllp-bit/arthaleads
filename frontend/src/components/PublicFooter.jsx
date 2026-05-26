@@ -58,7 +58,7 @@ export default function PublicFooter() {
         </div>
 
         <div style={{ borderTop: `1px solid ${border}`, paddingTop: "1.5rem" }} className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads (Prophunt LLP). All rights reserved.</p>
+          <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads. All rights reserved.</p>
           <p style={{ color: text }} className="text-xs">Built for Indian real estate.</p>
         </div>
       </div>

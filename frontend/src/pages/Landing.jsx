@@ -58,14 +58,6 @@ function Hero({ isDark }) {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-36 lg:pb-8">
         <div className="text-center max-w-4xl mx-auto">
 
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
-            <span className="w-2 h-2 rounded-full bg-[#ff6b00] animate-pulse" />
-            <span className="text-[#ff6b00] text-xs font-semibold tracking-wide uppercase">
-              #1 Real Estate CRM in Pune
-            </span>
-          </div>
-
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6"
             style={{ color: headingClr }}>
@@ -112,17 +104,59 @@ function Hero({ isDark }) {
           </div>
         </div>
 
-        {/* Dashboard preview - MacBook mockup (frame is part of the PNG) */}
-        <div className="mt-16 max-w-4xl mx-auto px-4">
-          <link rel="preload" as="image" href="/dashboard-light.png" />
-          <img
-            src="/dashboard-light.png"
-            alt="Arthaleads CRM Dashboard"
-            className="w-full"
-            style={{ display: "block" }}
-          />
+        {/* Dashboard preview - animated mockup */}
+        <div className="mt-12 max-w-4xl mx-auto px-4 relative">
+          {/* Glow ring behind mockup */}
+          <div className="absolute inset-x-16 top-8 bottom-0 rounded-3xl pointer-events-none"
+            style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(255,107,0,0.18) 0%, transparent 70%)", filter: "blur(24px)" }} />
+
+          {/* Floating badge — top left */}
+          <div className="absolute -left-2 sm:left-4 top-10 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
+            style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#ffffff", border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #e5e7eb", animation: "heroFloat1 4s ease-in-out infinite", backdropFilter: "blur(12px)" }}>
+            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs font-semibold" style={{ color: isDark ? "#fff" : "#111827" }}>+14 New Leads Today</span>
+          </div>
+
+          {/* Floating badge — top right */}
+          <div className="absolute -right-2 sm:right-4 top-20 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
+            style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#ffffff", border: isDark ? "1px solid rgba(255,255,255,0.12)" : "1px solid #e5e7eb", animation: "heroFloat2 4.5s ease-in-out infinite", backdropFilter: "blur(12px)" }}>
+            <span className="text-base">📞</span>
+            <span className="text-xs font-semibold" style={{ color: isDark ? "#fff" : "#111827" }}>Follow-up Scheduled</span>
+          </div>
+
+          {/* Floating badge — bottom right */}
+          <div className="absolute -right-2 sm:right-8 bottom-24 z-10 hidden sm:flex items-center gap-2 px-3 py-2 rounded-2xl shadow-xl"
+            style={{ background: "linear-gradient(135deg,#ff6b00,#ffaa00)", animation: "heroFloat3 5s ease-in-out infinite" }}>
+            <span className="text-base">🏠</span>
+            <span className="text-xs font-bold text-white">Site Visit Booked!</span>
+          </div>
+
+          {/* Mockup with float */}
+          <div style={{ animation: "heroFloat1 6s ease-in-out infinite" }}>
+            <link rel="preload" as="image" href="/dashboard-light.png" />
+            <img
+              src="/dashboard-light.png"
+              alt="Arthaleads CRM Dashboard"
+              className="w-full relative z-0"
+              style={{ display: "block", filter: "drop-shadow(0 32px 64px rgba(0,0,0,0.18))" }}
+            />
+          </div>
         </div>
 
+        <style>{`
+          @keyframes heroFloat1 {
+            0%,100% { transform: translateY(0px); }
+            50%      { transform: translateY(-10px); }
+          }
+          @keyframes heroFloat2 {
+            0%,100% { transform: translateY(0px); }
+            50%      { transform: translateY(-14px); }
+          }
+          @keyframes heroFloat3 {
+            0%,100% { transform: translateY(0px); }
+            50%      { transform: translateY(-8px); }
+          }
+        `}</style>
       </div>
     </section>
   );
@@ -235,9 +269,9 @@ function Features({ isDark }) {
   const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
 
   return (
-    <section id="features" className="py-16 lg:py-20" style={{ background: bg }}>
+    <section id="features" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Zap className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Powerful Features</span>
@@ -342,7 +376,7 @@ function HowItWorks({ isDark }) {
   const navDisabled    = isDark ? "rgba(255,255,255,0.12)" : "#d1d5db";
 
   return (
-    <section id="how-it-works" className="py-16 lg:py-20 overflow-hidden" style={{ background: bg }}>
+    <section id="how-it-works" className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
@@ -509,7 +543,7 @@ function About({ isDark }) {
   const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
 
   return (
-    <section id="about" className="py-16 lg:py-20" style={{ background: bg }}>
+    <section id="about" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
@@ -596,9 +630,9 @@ function Testimonials({ isDark }) {
   const roleClr = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
 
   return (
-    <section className="py-16 lg:py-20" style={{ background: bg }}>
+    <section className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Star className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Customer Stories</span>
@@ -700,9 +734,9 @@ function Pricing({ isDark }) {
   const noteClr    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
 
   return (
-    <section id="pricing" className="py-16 lg:py-20" style={{ background: bg }}>
+    <section id="pricing" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
             <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
             <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Pricing Plans</span>
@@ -801,7 +835,7 @@ function Contact({ isDark }) {
   const waSub     = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
 
   return (
-    <section id="contact" className="py-16 lg:py-20" style={{ background: bg }}>
+    <section id="contact" className="py-10 lg:py-14" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
 
@@ -953,7 +987,7 @@ function FinalCTA({ isDark }) {
   const btnText = isDark ? "rgba(255,255,255,0.70)" : "#374151";
 
   return (
-    <section className="py-20 relative overflow-hidden" style={{ background: bg }}>
+    <section className="py-12 relative overflow-hidden" style={{ background: bg }}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-[0.06]"
           style={{ backgroundImage: "radial-gradient(circle at 50% 50%, #ff6b00 0%, transparent 70%)" }} />
