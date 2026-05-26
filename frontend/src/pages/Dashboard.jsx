@@ -100,9 +100,9 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <p className="stitch-kicker mb-2">Overview</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
-            <p className="mt-1 max-w-2xl text-sm text-app-soft">
+            <p className="stitch-kicker mb-1 sm:mb-2">Overview</p>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
+            <p className="mt-1 max-w-2xl text-sm text-app-soft hidden sm:block">
               Track source performance, team momentum, and recent lead movement across all your active channels in real time.
             </p>
           </div>
@@ -119,7 +119,7 @@ export default function Dashboard() {
 
       <FollowUpDuePanel user={user} navigate={navigate} />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <TopLeadSourceCard
           label="Facebook Leads"
           value={data?.sourceHighlights?.facebook || 0}
@@ -149,7 +149,7 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total Leads" value={data?.totalLeads || 0} icon={Users} color="text-orange-500"
           onClick={() => navigate("/leads")} />
         <StatCard label="New" value={data?.byStatus?.New || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
@@ -501,17 +501,17 @@ function TopLeadSourceCard({ label, value, icon: Icon, note, tone, iconTone, onC
     <button
       type="button"
       onClick={onClick}
-      className={`card relative w-full overflow-hidden p-6 bg-gradient-to-br text-left transition hover:-translate-y-1 hover:border-orange-500/30 ${tone}`}
+      className={`card relative w-full overflow-hidden p-3 sm:p-6 bg-gradient-to-br text-left transition hover:-translate-y-1 hover:border-orange-500/30 ${tone}`}
     >
       <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/5 to-transparent dark:from-white/[0.04]" />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="stitch-kicker mb-2">{label}</p>
-          <p className="text-4xl font-black tracking-tight text-app">{value}</p>
-          <p className="mt-2 text-xs text-app-soft">{note}</p>
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="stitch-kicker mb-1 sm:mb-2 text-[8px] sm:text-[11px] truncate">{label}</p>
+          <p className="text-2xl sm:text-4xl font-black tracking-tight text-app">{value}</p>
+          <p className="mt-1 sm:mt-2 text-[9px] sm:text-xs text-app-soft hidden sm:block">{note}</p>
         </div>
-        <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconTone}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`shrink-0 flex h-8 w-8 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl ${iconTone}`}>
+          <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
         </div>
       </div>
     </button>

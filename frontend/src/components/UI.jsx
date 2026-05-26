@@ -85,18 +85,18 @@ export function StatCard({ label, value, sub, color = "text-brand-600", icon: Ic
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
-      className={`card p-6 text-left w-full ${onClick ? "hover:-translate-y-1 hover:border-orange-500/30 transition-all cursor-pointer" : ""}`}
+      className={`card p-4 sm:p-6 text-left w-full ${onClick ? "hover:-translate-y-1 hover:border-orange-500/30 transition-all cursor-pointer" : ""}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="stitch-kicker mb-2">{label}</p>
-          <p className={`text-3xl font-bold ${color}`}>{value}</p>
-          {sub && <p className="text-xs text-app-soft mt-2">{sub}</p>}
+        <div className="min-w-0 flex-1">
+          <p className="stitch-kicker mb-1 sm:mb-2 text-[9px] sm:text-[11px]">{label}</p>
+          <p className={`text-2xl sm:text-3xl font-bold ${color}`}>{value}</p>
+          {sub && <p className="text-[10px] sm:text-xs text-app-soft mt-1 sm:mt-2 truncate">{sub}</p>}
         </div>
         {Icon && (
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--app-primary) 10%, transparent)" }}>
-            <Icon className="w-5 h-5 text-orange-500" />
+          <div className="w-9 h-9 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center ml-2" style={{ background: "color-mix(in srgb, var(--app-primary) 10%, transparent)" }}>
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
           </div>
         )}
       </div>
