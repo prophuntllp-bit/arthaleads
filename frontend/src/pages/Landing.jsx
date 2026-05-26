@@ -178,11 +178,11 @@ function Hero({ isDark }) {
           </div>
 
           <div className="absolute sm:right-4 bottom-20 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
-            style={{ background: "linear-gradient(135deg,#ff6b00,#ffaa00)", animation: "floatC 4.5s ease-in-out infinite" }}>
+            style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatC 4.5s ease-in-out infinite" }}>
             <span className="text-xl leading-none">🏠</span>
             <div>
-              <div className="text-xs font-bold text-white">Site Visit Booked!</div>
-              <div className="text-[10px] text-white/70">Raj Patil · Pune</div>
+              <div className="text-xs font-bold" style={{ color: chipText }}>Site Visit Booked!</div>
+              <div className="text-[10px]" style={{ color: softClr }}>Raj Patil · Pune</div>
             </div>
           </div>
 
