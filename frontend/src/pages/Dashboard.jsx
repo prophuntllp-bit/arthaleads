@@ -250,61 +250,53 @@ export default function Dashboard() {
           {sourceChartData.length === 0 ? (
             <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
           ) : (
-            <div className="flex flex-col gap-3">
-              {/* scaleY squish = reliable cross-browser 3D coin illusion */}
-              <div className="relative" style={{ paddingBottom: 10 }}>
-                <div style={{
-                  transform: "scaleY(0.65)",
-                  transformOrigin: "50% 80%",
-                  filter: "drop-shadow(0 14px 18px rgba(0,0,0,0.32))",
-                }}>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <PieChart>
-                      <Pie
-                        data={sourceChartData}
-                        cx="50%"
-                        cy="52%"
-                        innerRadius={36}
-                        outerRadius={68}
-                        dataKey="value"
-                        labelLine={false}
-                        strokeWidth={2}
-                        stroke="var(--app-bg)"
-                      >
-                        {sourceChartData.map((_, index) => (
-                          <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: 12,
-                          border: "1px solid var(--app-border)",
-                          background: "var(--app-bg)",
-                          color: "var(--app-text)",
-                          boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                          fontSize: 12,
-                        }}
-                        itemStyle={{ color: "var(--app-text)" }}
-                        labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+            <div className="flex flex-col gap-4">
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={sourceChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={58}
+                      outerRadius={85}
+                      dataKey="value"
+                      labelLine={false}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {sourceChartData.map((_, index) => (
+                        <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: 10,
+                        border: "1px solid var(--app-border)",
+                        background: "var(--app-card)",
+                        color: "var(--app-text)",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                        fontSize: 12,
+                        padding: "6px 12px",
+                      }}
+                      itemStyle={{ color: "var(--app-text)" }}
+                      labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center label */}
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-app">
+                    {sourceChartData.reduce((s, d) => s + d.value, 0)}
+                  </span>
+                  <span className="text-xs text-app-soft">Total</span>
                 </div>
-                {/* Cylinder base — bottom rim shadow */}
-                <div style={{
-                  position: "absolute", bottom: 0, left: "50%",
-                  transform: "translateX(-50%)",
-                  width: "55%", height: 10,
-                  borderRadius: "50%",
-                  background: "rgba(0,0,0,0.22)",
-                  filter: "blur(5px)",
-                }} />
               </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                 {sourceChartData.map(({ name, value }, index) => (
-                  <div key={name} className="flex items-center gap-1.5 min-w-0">
+                  <div key={name} className="flex items-center gap-2 min-w-0">
                     <span
-                      className="h-2 w-2 shrink-0 rounded-full"
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
                       style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
                     />
                     <span className="truncate text-xs text-app-soft">{name}</span>
