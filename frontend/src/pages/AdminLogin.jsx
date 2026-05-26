@@ -2,9 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Shield } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "https://api.arthaleads.com";
+import api from "../services/api";
 
 export default function AdminLogin() {
   const navigate         = useNavigate();
@@ -21,7 +19,7 @@ export default function AdminLogin() {
     if (!email || !password) { setError("Email and password are required."); return; }
     setLoading(true);
     try {
-      await axios.post(`${API}/api/auth/admin-login`, { email, password }, { withCredentials: true });
+      await api.post("/auth/admin-login", { email, password });
       await refreshUser();
       navigate("/super-admin", { replace: true });
     } catch (err) {
