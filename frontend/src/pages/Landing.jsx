@@ -18,13 +18,42 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+// ── Inline brand logos (no external CDN) ─────────────────────────────────────
+const FbLogo = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#1877F2">
+    <path d="M22.676 0H1.324C.593 0 0 .593 0 1.324v21.352C0 23.408.593 24 1.324 24h11.494v-9.294H9.689v-3.621h3.129V8.41c0-3.099 1.894-4.785 4.659-4.785 1.325 0 2.464.097 2.796.141v3.24h-1.921c-1.5 0-1.792.721-1.792 1.771v2.311h3.584l-.465 3.63H16.56V24h6.115c.733 0 1.325-.592 1.325-1.324V1.324C24 .593 23.408 0 22.676 0" />
+  </svg>
+);
+const WaLogo = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#25D366">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
+const GoogleLogo = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+  </svg>
+);
+const AcresLogo = ({ size = 16 }) => (
+  <span style={{ width: size, height: size, background: "linear-gradient(135deg,#f97316,#ea580c)", borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.42, fontWeight: 900, color: "#fff", lineHeight: 1, flexShrink: 0 }}>99</span>
+);
+const HousingLogo = ({ size = 16 }) => (
+  <span style={{ width: size, height: size, background: "linear-gradient(135deg,#2563eb,#1d4ed8)", borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.52, fontWeight: 900, color: "#fff", lineHeight: 1, flexShrink: 0 }}>H</span>
+);
+const MagicBricksLogo = ({ size = 16 }) => (
+  <span style={{ width: size, height: size, background: "linear-gradient(135deg,#dc2626,#b91c1c)", borderRadius: 4, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 900, color: "#fff", lineHeight: 1, flexShrink: 0 }}>MB</span>
+);
+
 // ── Hero ──────────────────────────────────────────────────────────────────────
 const ORBIT_ICONS = [
-  { Icon: Facebook,      color: "#1877F2", label: "Facebook",  delay: "0s" },
-  { Icon: MessageCircle, color: "#25D366", label: "WhatsApp",  delay: "-2.4s" },
-  { Icon: Target,        color: "#EA4335", label: "Google",    delay: "-4.8s" },
-  { Icon: Layers,        color: "#e63946", label: "99acres",   delay: "-7.2s" },
-  { Icon: Building2,     color: "#ff6b00", label: "Walk-ins",  delay: "-9.6s" },
+  { Logo: FbLogo,     color: "#1877F2", label: "Facebook",  delay: "0s" },
+  { Logo: WaLogo,     color: "#25D366", label: "WhatsApp",  delay: "-2.4s" },
+  { Logo: GoogleLogo, color: "#4285F4", label: "Google",    delay: "-4.8s" },
+  { Logo: AcresLogo,  color: "#f97316", label: "99acres",   delay: "-7.2s" },
+  { Logo: HousingLogo,color: "#2563eb", label: "Housing",   delay: "-9.6s" },
 ];
 
 const TICKER_LEADS = [
@@ -136,30 +165,6 @@ function Hero({ isDark }) {
           <div className="absolute pointer-events-none"
             style={{ inset: "-20px 60px", background: "radial-gradient(ellipse at 50% 55%, rgba(255,107,0,0.22) 0%, transparent 68%)", filter: "blur(48px)" }} />
 
-          {/* ── Orbiting platform icons (desktop only) ── */}
-          <div className="absolute pointer-events-none hidden lg:block"
-            style={{ left: "50%", top: "42%", width: 0, height: 0 }}>
-            {/* Dashed orbit path */}
-            <svg style={{ position: "absolute", top: -240, left: -240, width: 480, height: 480, opacity: 0.18 }}>
-              <circle cx={240} cy={240} r={234} fill="none" stroke="#ff6b00" strokeWidth={1.5} strokeDasharray="4 10" />
-            </svg>
-            {ORBIT_ICONS.map(({ Icon, color, label, delay }) => (
-              <div key={label} style={{ position: "absolute", top: -18, left: -18, animation: `heroOrbit 12s linear infinite`, animationDelay: delay }}>
-                <div style={{
-                  background: isDark ? "rgba(20,20,30,0.85)" : "rgba(255,255,255,0.92)",
-                  border: `1.5px solid ${color}50`,
-                  boxShadow: `0 4px 20px ${color}30`,
-                  borderRadius: 12, padding: "5px 10px",
-                  display: "flex", alignItems: "center", gap: 6,
-                  backdropFilter: "blur(8px)",
-                }}>
-                  <Icon style={{ width: 13, height: 13, color }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#fff" : "#1f2937", whiteSpace: "nowrap" }}>{label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
           {/* ── Floating stat badges ── */}
           <div className="absolute -left-4 sm:left-0 top-12 z-20 hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-2xl"
             style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 4s ease-in-out infinite" }}>
@@ -188,21 +193,44 @@ function Hero({ isDark }) {
             </div>
           </div>
 
-          <div className="absolute left-4 bottom-24 z-20 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl shadow-xl"
-            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.25)", backdropFilter: "blur(10px)", animation: "floatA 6s ease-in-out infinite 1s" }}>
-            <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+          <div className="absolute left-4 bottom-24 z-30 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-xl shadow-2xl"
+            style={{ background: isDark ? "rgba(20,30,20,0.92)" : "#ffffff", border: "1.5px solid #22c55e", backdropFilter: "blur(12px)", animation: "floatA 6s ease-in-out infinite 1s" }}>
+            <span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0 animate-pulse" />
             <span className="text-xs font-bold" style={{ color: isDark ? "#86efac" : "#15803d" }}>Deal Closed ✓</span>
           </div>
 
           {/* ── Mockup image with mouse parallax ── */}
-          <div ref={mockupRef} style={{ willChange: "transform", transformStyle: "preserve-3d" }}>
+          <div ref={mockupRef} style={{ willChange: "transform", transformStyle: "preserve-3d", position: "relative", zIndex: 1 }}>
             <link rel="preload" as="image" href="/dashboard-light.png" />
             <img
               src="/dashboard-light.png"
               alt="Arthaleads CRM Dashboard"
-              className="w-full relative z-0"
+              className="w-full"
               style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))" }}
             />
+          </div>
+
+          {/* ── Orbiting platform icons — rendered AFTER mockup so they sit on top ── */}
+          <div className="absolute pointer-events-none hidden lg:block"
+            style={{ left: "50%", top: "42%", width: 0, height: 0, zIndex: 30 }}>
+            <svg style={{ position: "absolute", top: -240, left: -240, width: 480, height: 480, opacity: 0.2 }}>
+              <circle cx={240} cy={240} r={234} fill="none" stroke="#ff6b00" strokeWidth={1.5} strokeDasharray="4 10" />
+            </svg>
+            {ORBIT_ICONS.map(({ Logo, color, label, delay }) => (
+              <div key={label} style={{ position: "absolute", top: -18, left: -18, animation: "heroOrbit 12s linear infinite", animationDelay: delay }}>
+                <div style={{
+                  background: isDark ? "rgba(15,15,25,0.88)" : "rgba(255,255,255,0.95)",
+                  border: `1.5px solid ${color}60`,
+                  boxShadow: `0 4px 24px ${color}40, 0 1px 4px rgba(0,0,0,0.08)`,
+                  borderRadius: 12, padding: "5px 10px",
+                  display: "flex", alignItems: "center", gap: 7,
+                  backdropFilter: "blur(10px)",
+                }}>
+                  <Logo size={15} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#fff" : "#1f2937", whiteSpace: "nowrap" }}>{label}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -273,14 +301,14 @@ function SourcesStrip({ isDark }) {
   const chipText = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
 
   const sources = [
-    { name: "Facebook Ads",  icon: Facebook,       color: "#1877F2" },
-    { name: "WhatsApp",      icon: MessageCircle,  color: "#25D366" },
-    { name: "Google Ads",    icon: Target,         color: "#EA4335" },
-    { name: "Walk-ins",      icon: Building2,      color: "#ff6b00" },
-    { name: "99acres",       icon: Layers,         color: "#e63946" },
-    { name: "Housing.com",   icon: Building2,      color: "#1e90ff" },
-    { name: "MagicBricks",   icon: Layers,         color: "#c0392b" },
-    { name: "Email & Forms", icon: Mail,           color: "#6366f1" },
+    { name: "Facebook Ads",  Logo: FbLogo },
+    { name: "WhatsApp",      Logo: WaLogo },
+    { name: "Google Ads",    Logo: GoogleLogo },
+    { name: "Walk-ins",      Logo: ({ size }) => <Building2 style={{ width: size, height: size, color: "#ff6b00" }} /> },
+    { name: "99acres",       Logo: AcresLogo },
+    { name: "Housing.com",   Logo: HousingLogo },
+    { name: "MagicBricks",   Logo: MagicBricksLogo },
+    { name: "Email & Forms", Logo: ({ size }) => <Mail style={{ width: size, height: size, color: "#6366f1" }} /> },
   ];
 
   return (
@@ -290,10 +318,10 @@ function SourcesStrip({ isDark }) {
           Capture leads from every source
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          {sources.map(({ name, icon: Icon, color }) => (
+          {sources.map(({ name, Logo }) => (
             <div key={name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-colors"
               style={{ background: chipBg, border: `1px solid ${chipBdr}` }}>
-              <Icon className="w-4 h-4" style={{ color }} />
+              <Logo size={16} />
               <span className="text-sm font-medium" style={{ color: chipText }}>{name}</span>
             </div>
           ))}
