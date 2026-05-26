@@ -199,13 +199,15 @@ export default function Sidebar() {
   }, []);
 
   // ── Close profile dropdown on outside click ───────────────────────────────
+  // Use "click" (not "mousedown") so any button inside the menu fires its
+  // onClick FIRST before this handler removes the menu from the DOM.
   useEffect(() => {
     const handler = (e) => {
       if (profileBtnRef.current?.contains(e.target)) return;
       setProfileOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
   }, []);
 
   // ── Auto-expand Posts group on blog routes ────────────────────────────────

@@ -47,6 +47,12 @@ const automationSchema = new mongoose.Schema(
       maxlength: 120,
       default: "",
     },
+    pageName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: "",
+    },
     formId: {
       type: String,
       trim: true,

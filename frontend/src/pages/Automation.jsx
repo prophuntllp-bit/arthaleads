@@ -97,7 +97,11 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     if (!open) return;
     if (editingItem) {
       setStep("select");
-      setPages([]);
+      // Build a synthetic pages entry so dropdowns render properly without re-auth
+      const syntheticPages = editingItem.pageId
+        ? [{ id: editingItem.pageId, name: editingItem.pageName || editingItem.pageId, forms: [] }]
+        : [];
+      setPages(syntheticPages);
       setPageId(editingItem.pageId || "");
       setFormId(editingItem.formId || "");
       setConnName(editingItem.name || "");
@@ -224,6 +228,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       leadSourceLabel: "Facebook",
       webhookPath: "/webhook",
       pageId,
+      pageName: selectedPageData?.name || editingItem?.pageName || "",
       formId,
       accessToken,
       userToken,
@@ -335,14 +340,28 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           {/* ── STEP 2: Select page + form ── */}
           {step === "select" && (
             <div className="space-y-4">
-              {pages.length > 0 ? (
+              {/* Success banner — fresh connect OR editing existing */}
+              {pages.length > 0 && !editingItem && (
                 <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                   <p className="text-sm text-emerald-400 font-medium">
                     Facebook connected — {pages.length} page{pages.length !== 1 ? "s" : ""} found
                   </p>
                 </div>
-              ) : noPagesWarning ? (
+              )}
+              {/* Edit mode banner */}
+              {editingItem && !freshToken && (
+                <div className="flex items-start gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-blue-400 font-medium">Editing existing connection</p>
+                    <p className="text-xs text-app-soft mt-0.5">
+                      Reconnect below to switch to a different Facebook account or refresh your page list.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {noPagesWarning && (
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 space-y-2">
                   <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
                   <p className="text-xs text-app-soft leading-relaxed">
@@ -357,7 +376,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                     → Try connecting again
                   </button>
                 </div>
-              ) : null}
+              )}
 
               <div className="space-y-1">
                 <label className="label">Facebook Page</label>
@@ -392,16 +411,22 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                     className="input"
                     value={formId}
                     onChange={(e) => setFormId(e.target.value)}
-                    placeholder="Form ID (optional)"
+                    placeholder="All forms on this page"
                   />
                 )}
-                {/* Show hint when no specific forms are available */}
+                {/* Hint below form dropdown */}
                 {pages.length > 0 && formOptions.length === 0 ? (
-                  <p className="text-xs text-amber-400 mt-1">
-                    No published lead forms found for this page. "All forms" will capture all future leads automatically — or
-                    {" "}<a href="https://www.facebook.com/ads/leadads/" target="_blank" rel="noreferrer" className="underline">create a lead form on Facebook</a>{" "}
-                    first, then reconnect.
-                  </p>
+                  <div className="mt-1.5 rounded-lg px-3 py-2 text-xs leading-relaxed"
+                    style={{ background: "rgba(var(--app-primary-rgb),0.07)", color: "var(--app-soft)", border: "1px solid rgba(var(--app-primary-rgb),0.15)" }}>
+                    No published lead forms found for this page.{" "}
+                    <span className="font-semibold text-app">"All forms"</span> will automatically capture every lead that comes in.
+                    To target a specific form, first{" "}
+                    <a href="https://www.facebook.com/ads/leadads/" target="_blank" rel="noreferrer"
+                      style={{ color: "var(--app-primary)" }} className="underline font-medium">
+                      create a Lead Ad form on Facebook
+                    </a>
+                    , then reconnect here.
+                  </div>
                 ) : (
                   <p className="text-xs text-app-soft mt-1">
                     Leave as "All forms" to capture leads from every form on this page.
