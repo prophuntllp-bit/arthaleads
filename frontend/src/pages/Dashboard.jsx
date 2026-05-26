@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+﻿// Dashboard - v2
+import { useEffect, useState } from "react";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
