@@ -217,9 +217,9 @@ export default function Sidebar() {
 
   const filtered = navItems.filter((n) => !n.roles || n.roles.includes(user?.role));
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login", { replace: true });
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/login";
   };
 
   const openAlerts = (e) => {

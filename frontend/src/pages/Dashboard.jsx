@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock3,
+  Globe,
   MessageCircle,
   MoonStar,
   Phone,
@@ -14,6 +15,7 @@ import {
   TrendingUp,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
@@ -24,11 +26,14 @@ import DateRangePicker from "../components/DateRangePicker";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
-const SOURCE_COUNTERS = [
-  { key: "facebook", label: "FB", tone: "bg-blue-500/10 text-blue-400 border-blue-500/20", dot: "bg-blue-500" },
-  { key: "google", label: "GGL", tone: "bg-red-500/10 text-red-400 border-red-500/20", dot: "bg-red-500" },
-  { key: "whatsapp", label: "WA", tone: "bg-green-500/10 text-green-400 border-green-500/20", dot: "bg-green-500" },
-];
+// Config for each platform — drives both header pills and source cards
+const PLATFORM_CONFIG = {
+  "Facebook":     { label: "Facebook Leads",  note: "Meta Lead Ads",        shortLabel: "FB",    sourceKey: "Facebook",  icon: TrendingUp,   tone: "from-blue-500/20 via-blue-500/10 to-transparent",   iconTone: "bg-blue-500/15 text-blue-400",   dot: "bg-blue-500",   pillTone: "bg-blue-500/10 text-blue-400 border-blue-500/20",   presetSource: "Facebook"  },
+  "Google":       { label: "Google Leads",    note: "Ads and landing forms", shortLabel: "GGL",   sourceKey: "Google",    icon: Users,        tone: "from-red-500/20 via-red-500/10 to-transparent",     iconTone: "bg-red-500/15 text-red-400",     dot: "bg-red-500",    pillTone: "bg-red-500/10 text-red-400 border-red-500/20",     presetSource: "Google"    },
+  "WhatsApp":     { label: "WhatsApp Leads",  note: "Chats and inquiries",   shortLabel: "WA",    sourceKey: "WhatsApp",  icon: MessageCircle, tone: "from-green-500/20 via-green-500/10 to-transparent",  iconTone: "bg-green-500/15 text-green-400", dot: "bg-green-500",  pillTone: "bg-green-500/10 text-green-400 border-green-500/20", presetSource: "WhatsApp"  },
+  "Website Form": { label: "Website Leads",   note: "Landing page forms",    shortLabel: "WEB",   sourceKey: "Website",   icon: Globe,        tone: "from-violet-500/20 via-violet-500/10 to-transparent", iconTone: "bg-violet-500/15 text-violet-400", dot: "bg-violet-500", pillTone: "bg-violet-500/10 text-violet-400 border-violet-500/20", presetSource: "Website" },
+  "Custom":       { label: "Custom Leads",    note: "Other integrations",    shortLabel: "OTHER", sourceKey: "Other",     icon: Zap,          tone: "from-amber-500/20 via-amber-500/10 to-transparent",  iconTone: "bg-amber-500/15 text-amber-400", dot: "bg-amber-500",  pillTone: "bg-amber-500/10 text-amber-400 border-amber-500/20", presetSource: "Other"    },
+};
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -53,6 +58,7 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("last30days");
+  const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
 
   useEffect(() => {
     setLoading(true);
@@ -62,12 +68,36 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [dateRange]);
 
+  // Fetch connected automations to drive dynamic source cards
+  useEffect(() => {
+    api.get("/automations")
+      .then((res) => {
+        const list = res.data.automations || [];
+        const active = list.filter((a) => a.status === "connected" && a.isActive !== false);
+        // Deduplicate by platform (multiple Facebook automations = one card)
+        const seen = new Set();
+        const unique = [];
+        for (const a of active) {
+          if (!seen.has(a.platform)) { seen.add(a.platform); unique.push(a.platform); }
+        }
+        setConnectedPlatforms(unique);
+      })
+      .catch(() => setConnectedPlatforms([])); // agents/errors → fall back to bySource
+  }, []);
+
   if (loading) return <PageLoader />;
 
   const statusChartData = Object.entries(data?.byStatus || {}).map(([name, value]) => ({ name, value }));
   const sourceChartData = Object.entries(data?.bySource || {})
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({ name, value }));
+
+  // Which platforms to show: connected automations first; fallback to platforms with lead data
+  const activePlatforms = (connectedPlatforms && connectedPlatforms.length > 0)
+    ? connectedPlatforms
+    : Object.keys(PLATFORM_CONFIG).filter(
+        (p) => (data?.bySource?.[PLATFORM_CONFIG[p].sourceKey] || 0) > 0
+      );
 
   return (
     <div className="stitch-page space-y-6">
@@ -90,12 +120,17 @@ export default function Dashboard() {
             </div>
             <div className="hidden h-4 w-px lg:block" style={{ background: "var(--app-border)" }} />
             <div className="flex flex-wrap items-center gap-2">
-              {SOURCE_COUNTERS.map((item) => (
-                <div key={item.key} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${item.tone}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${item.dot}`} />
-                  {item.label}: {data?.sourceHighlights?.[item.key] || 0}
-                </div>
-              ))}
+              {activePlatforms.map((platform) => {
+                const cfg = PLATFORM_CONFIG[platform];
+                if (!cfg) return null;
+                const count = data?.bySource?.[cfg.sourceKey] || 0;
+                return (
+                  <div key={platform} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                    {cfg.shortLabel}: {count}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -119,35 +154,29 @@ export default function Dashboard() {
 
       <FollowUpDuePanel user={user} navigate={navigate} />
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <TopLeadSourceCard
-          label="Facebook Leads"
-          value={data?.sourceHighlights?.facebook || 0}
-          icon={TrendingUp}
-          note="Meta campaigns"
-          tone="from-blue-500/20 via-blue-500/10 to-transparent"
-          iconTone="bg-blue-500/15 text-blue-400"
-          onClick={() => navigate("/leads", { state: { presetSource: "Facebook" } })}
-        />
-        <TopLeadSourceCard
-          label="Google Leads"
-          value={data?.sourceHighlights?.google || 0}
-          icon={Users}
-          note="Ads and landing forms"
-          tone="from-red-500/20 via-red-500/10 to-transparent"
-          iconTone="bg-red-500/15 text-red-400"
-          onClick={() => navigate("/leads", { state: { presetSource: "Google" } })}
-        />
-        <TopLeadSourceCard
-          label="WhatsApp Leads"
-          value={data?.sourceHighlights?.whatsapp || 0}
-          icon={MessageCircle}
-          note="Chats and shared inquiries"
-          tone="from-green-500/20 via-green-500/10 to-transparent"
-          iconTone="bg-green-500/15 text-green-400"
-          onClick={() => navigate("/leads", { state: { presetSource: "WhatsApp" } })}
-        />
-      </div>
+      {activePlatforms.length > 0 && (
+        <div
+          className="grid gap-2 sm:gap-4"
+          style={{ gridTemplateColumns: `repeat(${Math.min(activePlatforms.length, 4)}, minmax(0, 1fr))` }}
+        >
+          {activePlatforms.map((platform) => {
+            const cfg = PLATFORM_CONFIG[platform];
+            if (!cfg) return null;
+            return (
+              <TopLeadSourceCard
+                key={platform}
+                label={cfg.label}
+                value={data?.bySource?.[cfg.sourceKey] || 0}
+                icon={cfg.icon}
+                note={cfg.note}
+                tone={cfg.tone}
+                iconTone={cfg.iconTone}
+                onClick={() => navigate("/leads", { state: { presetSource: cfg.presetSource } })}
+              />
+            );
+          })}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total Leads" value={data?.totalLeads || 0} icon={Users} color="text-orange-500"
