@@ -494,8 +494,11 @@ const leadService = {
       return "New";
     };
 
-    // Fetch more than needed when status/priority must be applied in JS (no native field)
-    const projFetchLimit = (status || priority) ? Math.max(limitInt * pageInt * 5, 2000) : limitInt * pageInt;
+    // Always fetch enough project leads to fill the requested page after JS filtering.
+    // For status/priority filters (applied in JS) we over-fetch; otherwise fetch the page's worth.
+    const projFetchLimit = (status || priority)
+      ? Math.max(limitInt * pageInt * 5, 2000)
+      : Math.max(limitInt * pageInt, 2000);
 
     const [leads, projLeadsRaw, leadTotal, projTotal] = await Promise.all([
       Lead.find(leadFilter).sort({ createdAt: -1 }).lean(),
