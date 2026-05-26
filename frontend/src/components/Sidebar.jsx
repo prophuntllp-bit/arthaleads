@@ -84,15 +84,13 @@ export default function Sidebar() {
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
   const [alertDropPos, setAlertDropPos] = useState({ top: 80, left: 268 });
-  // Profile dropdown
+  // Profile dropdown (inline, no portal)
   const [profileOpen, setProfileOpen] = useState(false);
-  const [profileDropPos, setProfileDropPos] = useState({ bottom: 80, left: 0, width: 220 });
 
   const alertRef        = useRef(null);
   const mobileBellRef   = useRef(null);
   const mobileSidebarRef = useRef(null);
   const profileBtnRef   = useRef(null);
-  const profileDropRef  = useRef(null);
   const lastSeenRef     = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
 
   // ── Clock In / Out ────────────────────────────────────────────────────────
@@ -243,18 +241,7 @@ export default function Sidebar() {
     }
   };
 
-  const openProfileMenu = () => {
-    if (profileBtnRef.current) {
-      const rect = profileBtnRef.current.getBoundingClientRect();
-      const dropWidth = 228;
-      setProfileDropPos({
-        bottom: window.innerHeight - rect.top + 6,
-        left: Math.max(8, rect.left),
-        width: dropWidth,
-      });
-    }
-    setProfileOpen(v => !v);
-  };
+  const openProfileMenu = () => setProfileOpen(v => !v);
 
   // ── Derived clock state ───────────────────────────────────────────────────
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
@@ -512,6 +499,76 @@ export default function Sidebar() {
             <span className="ml-3" style={labelStyle}>{isDark ? "Dark Mode" : "Light Mode"}</span>
           </button>
 
+          {/* ── Inline profile menu (expands upward, works on all devices) ── */}
+          {profileOpen && isExpanded && (
+            <div
+              className="mx-2 mb-1 rounded-2xl overflow-hidden"
+              style={{ border: "1px solid var(--app-border)", background: isDark ? "rgb(30,29,32)" : "#fff" }}
+            >
+              {/* User info */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
+                <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm overflow-hidden"
+                  style={{ background: "rgba(var(--app-primary-rgb), 0.12)", color: "var(--app-primary)" }}>
+                  {user?.avatar
+                    ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    : user?.name?.[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-app truncate">{user?.name}</p>
+                  <p className="text-xs text-app-soft capitalize">{user?.role?.replace("_", " ")}</p>
+                </div>
+              </div>
+
+              {/* Clock in/out */}
+              <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
+                {isClockedOut ? (
+                  <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl" style={{ background: "var(--app-surface-low)" }}>
+                    <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
+                    Done for today
+                  </div>
+                ) : isClockedIn ? (
+                  <button onClick={() => { handleClockOut(); setProfileOpen(false); }} disabled={clocking}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 disabled:opacity-60 font-semibold">
+                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
+                  </button>
+                ) : (
+                  <button onClick={() => { handleClockIn(); setProfileOpen(false); }} disabled={clocking}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-green-600 hover:bg-green-500/10 disabled:opacity-60 font-semibold">
+                    <LogInIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                    Clock In
+                  </button>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="px-2 py-1.5">
+                <button onClick={() => { navigate("/settings"); setProfileOpen(false); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  <Settings style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  Account Settings
+                </button>
+                <button onClick={() => { toggleTheme(); setProfileOpen(false); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  {isDark
+                    ? <MoonStar style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
+                    : <SunMedium style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />}
+                  {isDark ? "Dark Mode" : "Light Mode"}
+                </button>
+              </div>
+
+              {/* Sign out */}
+              <div className="px-2 pb-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+                <button onClick={() => { handleLogout(); setProfileOpen(false); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left mt-1">
+                  <LogOut style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Profile button */}
           <button
             ref={profileBtnRef}
@@ -523,39 +580,25 @@ export default function Sidebar() {
             {/* Avatar */}
             <div className="flex-shrink-0 relative" style={{ width: 36, height: 36 }}>
               {user?.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-full h-full rounded-full object-cover border"
+                <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border"
                   style={{ borderColor: "var(--app-border)" }}
-                  onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }}
-                />
+                  onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }} />
               ) : null}
-              <div
-                className="w-full h-full rounded-full items-center justify-center font-bold text-sm"
-                style={{
-                  background: "rgba(var(--app-primary-rgb), 0.12)",
-                  color: "var(--app-primary)",
-                  display: user?.avatar ? "none" : "flex",
-                  position: user?.avatar ? "absolute" : "relative",
-                  top: 0, left: 0,
-                }}
-              >
+              <div className="w-full h-full rounded-full items-center justify-center font-bold text-sm"
+                style={{ background: "rgba(var(--app-primary-rgb), 0.12)", color: "var(--app-primary)",
+                  display: user?.avatar ? "none" : "flex", position: user?.avatar ? "absolute" : "relative", top: 0, left: 0 }}>
                 {user?.name?.[0]?.toUpperCase()}
               </div>
             </div>
-
             {/* Name + role */}
             <div className="ml-3 flex-1 min-w-0 text-left overflow-hidden" style={labelStyle}>
               <p className="text-sm font-semibold text-app truncate leading-tight">{user?.name}</p>
               <p className="text-xs text-app-soft capitalize leading-tight">{user?.role?.replace("_", " ")}</p>
             </div>
-
             {/* Chevron */}
-            <ChevronUp
-              className="flex-shrink-0 text-app-soft"
-              style={{ width: 14, height: 14, opacity: isExpanded ? 0.6 : 0, transition: "opacity 150ms", transform: profileOpen ? "rotate(180deg)" : "rotate(0deg)" }}
-            />
+            <ChevronUp className="flex-shrink-0 text-app-soft"
+              style={{ width: 14, height: 14, opacity: isExpanded ? 0.6 : 0, transition: "opacity 150ms",
+                transform: profileOpen ? "rotate(0deg)" : "rotate(180deg)" }} />
           </button>
         </div>
       </div>
@@ -626,116 +669,12 @@ export default function Sidebar() {
     document.body
   ) : null;
 
-  // ── Profile dropdown portal ───────────────────────────────────────────────
-  const ProfilePortal = profileOpen ? createPortal(
-    <>
-      <div
-        style={{ position: "fixed", inset: 0, zIndex: 9996 }}
-        onClick={() => setProfileOpen(false)}
-      />
-      <div
-        ref={profileDropRef}
-        style={{
-          position: "fixed",
-          bottom: profileDropPos.bottom,
-          left: profileDropPos.left,
-          width: profileDropPos.width,
-          zIndex: 9997,
-          background: isDark ? "rgb(30,29,32)" : "#fff",
-          border: "1px solid var(--app-border)",
-          borderRadius: 16,
-          boxShadow: "0 16px 48px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.12)",
-          overflow: "hidden",
-        }}
-      >
-        {/* User info */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-          <div
-            className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm"
-            style={{ background: "rgba(var(--app-primary-rgb), 0.12)", color: "var(--app-primary)" }}
-          >
-            {user?.avatar
-              ? <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
-              : user?.name?.[0]?.toUpperCase()
-            }
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-app truncate">{user?.name}</p>
-            <p className="text-xs text-app-soft capitalize">{user?.role?.replace("_", " ")}</p>
-          </div>
-        </div>
-
-        {/* Clock in/out */}
-        <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
-          {isClockedOut ? (
-            <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl"
-              style={{ background: "var(--app-surface-low)" }}>
-              <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
-              Done for today
-            </div>
-          ) : isClockedIn ? (
-            <button
-              onClick={() => { handleClockOut(); setProfileOpen(false); }}
-              disabled={clocking}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 disabled:opacity-60 font-semibold"
-            >
-              <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-              <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => { handleClockIn(); setProfileOpen(false); }}
-              disabled={clocking}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-green-600 hover:bg-green-500/10 disabled:opacity-60 font-semibold"
-            >
-              <LogInIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-              Clock In
-            </button>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="px-2 py-1.5">
-          <button
-            onClick={() => { navigate("/settings"); setProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left"
-          >
-            <Settings style={{ width: 15, height: 15, flexShrink: 0 }} />
-            Account Settings
-          </button>
-          <button
-            onClick={() => { toggleTheme(); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left"
-          >
-            {isDark
-              ? <MoonStar style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
-              : <SunMedium style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
-            }
-            {isDark ? "Dark Mode" : "Light Mode"}
-          </button>
-        </div>
-
-        {/* Sign out */}
-        <div className="px-2 pb-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
-          <button
-            onClick={() => { handleLogout(); setProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left mt-1"
-          >
-            <LogOut style={{ width: 15, height: 15, flexShrink: 0 }} />
-            Sign Out
-          </button>
-        </div>
-      </div>
-    </>,
-    document.body
-  ) : null;
+  // Profile menu is now rendered inline inside NavContent (mobile-safe)
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       {AlertsPortal}
-      {ProfilePortal}
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
