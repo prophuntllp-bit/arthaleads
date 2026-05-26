@@ -76,6 +76,83 @@ function PlanSwitcher({ org, onUpdated }) {
   );
 }
 
+// ── OrgNameEditor ─────────────────────────────────────────────────────────────
+function OrgNameEditor({ org, onUpdated, isTrialExpired }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName]       = useState(org.name);
+  const [saving, setSaving]   = useState(false);
+  const inputRef              = useRef(null);
+
+  const open = () => { setName(org.name); setEditing(true); setTimeout(() => inputRef.current?.select(), 30); };
+  const cancel = () => { setEditing(false); setName(org.name); };
+
+  const save = async () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === org.name) { cancel(); return; }
+    setSaving(true);
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { name: trimmed });
+      onUpdated(data.org);
+      toast.success("Organisation name updated");
+      setEditing(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update name");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="min-w-[160px]">
+      {editing ? (
+        <div className="flex flex-col gap-1">
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
+            className="text-sm font-semibold text-app bg-transparent border-b-2 border-[#ff6b00] outline-none w-full pb-0.5"
+            disabled={saving}
+            autoFocus
+          />
+          <div className="flex items-center gap-2 mt-0.5">
+            <button onClick={save} disabled={saving}
+              className="text-[10px] font-bold text-[#ff6b00] hover:text-[#e05f00] transition disabled:opacity-50 cursor-pointer">
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button onClick={cancel} disabled={saving}
+              className="text-[10px] text-app-soft hover:text-app transition cursor-pointer">
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="group flex items-start gap-1">
+          <div>
+            <p className="font-semibold text-sm text-app leading-snug">{org.name}</p>
+            <p className="text-[10px] text-app-soft">{org.slug}</p>
+            <p className="text-[10px] text-app-soft">{new Date(org.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+            {org.plan === "trial" && org.trialEndsAt && (
+              <p className={`text-[10px] mt-0.5 font-semibold ${isTrialExpired ? "text-red-500" : "text-amber-500"}`}>
+                {isTrialExpired
+                  ? `Expired ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+                  : `Trial ends ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+              </p>
+            )}
+          </div>
+          <button onClick={open}
+            className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer flex-shrink-0"
+            title="Edit organisation name">
+            <Save className="w-3 h-3 text-app-soft" style={{ display: "none" }} />
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-app-soft">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Compress + normalise any image format to a compact JPEG data-URI ─────────
 // Resizes to max 400px on the longest side, exports as JPEG quality 0.88.
 // This converts WebP / HEIC-alike / PNG / GIF → JPEG before upload,
@@ -1269,18 +1346,7 @@ export default function SuperAdmin() {
                   return (
                     <tr key={org._id}>
                       <td>
-                        <div>
-                          <p className="font-semibold text-sm text-app">{org.name}</p>
-                          <p className="text-[10px] text-app-soft">{org.slug}</p>
-                          <p className="text-[10px] text-app-soft">{new Date(org.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
-                          {org.plan === "trial" && org.trialEndsAt && (
-                            <p className={`text-[10px] mt-0.5 font-semibold ${isTrialExpired ? "text-red-500" : "text-amber-500"}`}>
-                              {isTrialExpired
-                                ? `Expired ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
-                                : `Trial ends ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
-                            </p>
-                          )}
-                        </div>
+                        <OrgNameEditor org={org} onUpdated={handleOrgUpdated} isTrialExpired={isTrialExpired} />
                       </td>
                       <td><PlanBadge plan={org.plan} /></td>
                       <td className="text-center font-bold text-app">{org.userCount}</td>
