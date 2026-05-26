@@ -369,6 +369,7 @@ const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
+const Plans           = lazy(() => import("./pages/Plans"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -557,6 +558,7 @@ export default function App() {
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
           <Route path="/attendance"    element={<Attendance />} />
+          <Route path="/plans"         element={<Plans />} />
 
           {/* Admin only */}
           <Route element={<RequireRole roles={["admin"]} />}>

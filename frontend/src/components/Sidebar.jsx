@@ -7,13 +7,13 @@ import {
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
-  PanelLeftClose, PanelLeft,
+  PanelLeftClose, PanelLeft, Zap,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
-import { canAccess } from "../utils/plan";
+import { canAccess, upgradeTarget } from "../utils/plan";
 import toast from "react-hot-toast";
 
 const navItems = [
@@ -473,6 +473,31 @@ export default function Sidebar() {
             );
           })}
         </nav>
+
+        {/* ── Upgrade button (hidden for enterprise & super_admin) ── */}
+        {user?.role !== "super_admin" && upgradeTarget(org?.plan) && (
+          <div className="px-2 mb-1 flex-shrink-0">
+            <NavLink to="/plans"
+              className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all w-full"
+              style={({ isActive }) => ({
+                background: isActive
+                  ? "rgba(255,107,0,0.15)"
+                  : org?.plan === "starter" || org?.plan === "trial"
+                    ? "linear-gradient(135deg,rgba(255,107,0,0.12),rgba(255,170,0,0.08))"
+                    : "rgba(255,107,0,0.06)",
+                border: `1px solid ${isActive ? "rgba(255,107,0,0.4)" : "rgba(255,107,0,0.2)"}`,
+                color: "#ff6b00",
+              })}>
+              <Zap className="flex-shrink-0" style={{ width: 16, height: 16 }} />
+              <span style={labelStyle}>Upgrade Plan</span>
+              {isExpanded && (
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#ff6b00] text-white flex-shrink-0 ml-auto">
+                  {upgradeTarget(org?.plan)}
+                </span>
+              )}
+            </NavLink>
+          </div>
+        )}
 
         {/* ── Trial bar (visible only when expanded) ── */}
         {trialInfo && (
