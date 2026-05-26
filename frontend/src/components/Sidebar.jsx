@@ -256,7 +256,7 @@ export default function Sidebar() {
   const trialInfo = showTrial ? (() => {
     const msLeft   = new Date(org.trialEndsAt) - Date.now();
     const daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
-    const pct      = Math.min(100, Math.round((daysLeft / 7) * 100));
+    const pct      = Math.min(100, Math.round((daysLeft / 14) * 100));
     const expired  = daysLeft === 0;
     const urgent   = daysLeft <= 2 && !expired;
     const color    = expired ? "#ef4444" : urgent ? "#f59e0b" : "#22c55e";
