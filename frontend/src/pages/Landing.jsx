@@ -48,13 +48,6 @@ const MagicBricksLogo = ({ size = 16 }) => (
 );
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
-const ORBIT_ICONS = [
-  { Logo: FbLogo,     color: "#1877F2", label: "Facebook",  delay: "0s" },
-  { Logo: WaLogo,     color: "#25D366", label: "WhatsApp",  delay: "-2.4s" },
-  { Logo: GoogleLogo, color: "#4285F4", label: "Google",    delay: "-4.8s" },
-  { Logo: AcresLogo,  color: "#f97316", label: "99acres",   delay: "-7.2s" },
-  { Logo: HousingLogo,color: "#2563eb", label: "Housing",   delay: "-9.6s" },
-];
 
 const TICKER_LEADS = [
   { name: "Raj Patil",      src: "Facebook", srcClr: "#1877F2", action: "New Lead",          city: "Pune" },
@@ -210,28 +203,6 @@ function Hero({ isDark }) {
             />
           </div>
 
-          {/* ── Orbiting platform icons — rendered AFTER mockup so they sit on top ── */}
-          <div className="absolute pointer-events-none hidden lg:block"
-            style={{ left: "50%", top: "42%", width: 0, height: 0, zIndex: 30 }}>
-            <svg style={{ position: "absolute", top: -240, left: -240, width: 480, height: 480, opacity: 0.2 }}>
-              <circle cx={240} cy={240} r={234} fill="none" stroke="#ff6b00" strokeWidth={1.5} strokeDasharray="4 10" />
-            </svg>
-            {ORBIT_ICONS.map(({ Logo, color, label, delay }) => (
-              <div key={label} style={{ position: "absolute", top: -18, left: -18, animation: "heroOrbit 12s linear infinite", animationDelay: delay }}>
-                <div style={{
-                  background: isDark ? "rgba(15,15,25,0.88)" : "rgba(255,255,255,0.95)",
-                  border: `1.5px solid ${color}60`,
-                  boxShadow: `0 4px 24px ${color}40, 0 1px 4px rgba(0,0,0,0.08)`,
-                  borderRadius: 12, padding: "5px 10px",
-                  display: "flex", alignItems: "center", gap: 7,
-                  backdropFilter: "blur(10px)",
-                }}>
-                  <Logo size={15} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: isDark ? "#fff" : "#1f2937", whiteSpace: "nowrap" }}>{label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* ── Live lead ticker ── */}
@@ -257,10 +228,6 @@ function Hero({ isDark }) {
         </div>
 
         <style>{`
-          @keyframes heroOrbit {
-            from { transform: rotate(0deg)   translateX(240px) rotate(0deg); }
-            to   { transform: rotate(360deg) translateX(240px) rotate(-360deg); }
-          }
           @keyframes tickerScroll {
             from { transform: translateX(0); }
             to   { transform: translateX(-50%); }
