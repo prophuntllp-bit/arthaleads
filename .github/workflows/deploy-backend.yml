@@ -19,6 +19,6 @@ jobs:
 
       - name: Deploy to Railway
         working-directory: backend
-        run: railway up --detach
+        run: railway up --detach --service Arthaleads
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
