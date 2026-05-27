@@ -1,5 +1,6 @@
 ﻿// Dashboard - v2
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
@@ -64,7 +65,10 @@ export default function Dashboard() {
     setLoading(true);
     api.get("/leads/analytics", { params: { dateRange } })
       .then((response) => setData(response.data.data))
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to load dashboard data. Please refresh.");
+      })
       .finally(() => setLoading(false));
   }, [dateRange]);
 

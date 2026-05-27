@@ -12,13 +12,14 @@ function normPhone(raw) {
 }
 
 // Shared cookie options - httpOnly prevents JS access (XSS protection)
-// sameSite: "lax" allows cookie to be sent on same-site navigations and
-// cross-subdomain requests (www → api), which "strict" can block on
-// some mobile browsers (iOS Safari ITP treats subdomains differently).
+// sameSite: "none" + secure: true allows the cookie to be sent on all
+// cross-site XHR requests (www.arthaleads.com → api.arthaleads.com).
+// Mobile browsers (Android Chrome, iOS Safari) are stricter than desktop
+// and require SameSite=None for reliable cross-subdomain cookie delivery.
 const cookieOptions = () => ({
   httpOnly: true,
   secure:   process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
   maxAge:   30 * 24 * 60 * 60 * 1000, // 30 days in ms
 });
@@ -73,19 +74,20 @@ const authController = {
   },
 
   async logout(req, res) {
-    // Clear cookie with domain (.arthaleads.com) - matches how it was SET in production
+    const isProd = process.env.NODE_ENV === "production";
+    // Clear cookie matching exactly how it was SET (domain + sameSite must match)
     res.clearCookie("crm_token", {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
+      secure:   isProd,
+      sameSite: isProd ? "none" : "lax",
+      domain:   isProd ? ".arthaleads.com" : undefined,
       expires:  new Date(0),
     });
     // Safety net: also clear without domain in case browser stored it on the exact host
     res.clearCookie("crm_token", {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure:   isProd,
+      sameSite: isProd ? "none" : "lax",
       expires:  new Date(0),
     });
     res.json({ success: true, message: "Logged out" });

@@ -5,9 +5,7 @@ import { Eye, EyeOff, ShieldCheck, Phone, Mail } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "https://api.arthaleads.com";
+import api from "../services/api";
 
 // ── Phone OTP panel - OTP sent to registered email (no SMS/reCAPTCHA needed) ──
 function PhoneOtpPanel({ onLoginSuccess }) {
@@ -35,7 +33,7 @@ function PhoneOtpPanel({ onLoginSuccess }) {
     if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
     setLoading(true);
     try {
-      const { data } = await axios.post(`${API}/api/auth/otp/send`, { phone: digits });
+      const { data } = await api.post("/auth/otp/send", { phone: digits });
       setMasked(data.email || "");
       setStep("otp");
       startCountdown();
@@ -52,7 +50,7 @@ function PhoneOtpPanel({ onLoginSuccess }) {
     if (otp.length !== 6) { setErr("Enter the 6-digit OTP."); return; }
     setLoading(true);
     try {
-      const { data } = await axios.post(`${API}/api/auth/otp/verify`, { phone, otp }, { withCredentials: true });
+      const { data } = await api.post("/auth/otp/verify", { phone, otp });
       onLoginSuccess(data);
     } catch (e) {
       setErr(e.response?.data?.message || "Invalid or expired OTP. Please try again.");
