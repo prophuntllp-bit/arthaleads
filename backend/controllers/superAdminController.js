@@ -1,12 +1,29 @@
 ﻿// controllers/superAdminController.js
+const mongoose    = require("mongoose");
+const jwt         = require("jsonwebtoken");
 const Organization = require("../models/Organization");
-const User = require("../models/User");
-const Lead = require("../models/Lead");
-const Ticket = require("../models/Ticket");
+const User        = require("../models/User");
+const Lead        = require("../models/Lead");
+const Project     = require("../models/Project");
+const Automation  = require("../models/Automation");
+const Ticket      = require("../models/Ticket");
+const AuditLog    = require("../models/AuditLog");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
 const { invalidateOrgCache } = require("../middlewares/auth");
+
+async function logAudit(action, req, opts = {}) {
+  try {
+    await AuditLog.create({
+      action,
+      performedBy:     req.user._id,
+      performedByName: req.user.name,
+      ip:              req.ip,
+      ...opts,
+    });
+  } catch { /* non-blocking — never fail the main request */ }
+}
 
 // Helper - compute effective trial status for a single org doc
 function trialStatus(org) {
@@ -115,10 +132,22 @@ const superAdminController = {
         }
       }
 
+      const before = await Organization.findById(req.params.id).select("plan isActive name").lean();
       const org = await Organization.findByIdAndUpdate(req.params.id, update, { new: true });
       if (!org) return next(new AppError("Organization not found", 404));
 
       invalidateOrgCache(req.params.id);
+
+      // Audit log meaningful changes
+      if (update.plan && before?.plan !== update.plan)
+        logAudit("plan_change", req, { targetOrg: org._id, targetOrgName: org.name, details: { from: before.plan, to: update.plan } });
+      if (update.isActive !== undefined && before?.isActive !== update.isActive)
+        logAudit(update.isActive ? "org_activated" : "org_deactivated", req, { targetOrg: org._id, targetOrgName: org.name });
+      if (update.name && before?.name !== update.name)
+        logAudit("org_name_changed", req, { targetOrg: org._id, targetOrgName: update.name, details: { from: before.name, to: update.name } });
+      if (update.brandColor !== undefined)
+        logAudit("brand_color_changed", req, { targetOrg: org._id, targetOrgName: org.name, details: { color: update.brandColor } });
+
       res.json({ success: true, org });
     } catch (err) {
       next(err);
@@ -155,6 +184,7 @@ const superAdminController = {
       );
 
       invalidateOrgCache(req.params.id);
+      logAudit("trial_extended", req, { targetOrg: org._id, targetOrgName: org.name, details: { days, newTrialEndsAt } });
 
       res.json({
         success: true,
@@ -396,6 +426,101 @@ const superAdminController = {
       const failed = sendResults.filter(r => r.status === "rejected").length;
 
       res.json({ success: true, sent, failed, total: admins.length });
+      if (sent > 0) logAudit("broadcast_sent", req, { details: { subject: subject.trim(), targetPlan, sent, failed } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/super-admin/orgs/:id — full org detail with users, lead stats, projects, automations
+  async getOrgDetail(req, res, next) {
+    try {
+      const orgId = new mongoose.Types.ObjectId(req.params.id);
+
+      const [org, users, leadStats, projectCount, automations] = await Promise.all([
+        Organization.findById(orgId).lean(),
+        User.find({ orgId }).select("name email role phone isActive lastLogin createdAt avatar").lean(),
+        Lead.aggregate([
+          { $match: { orgId, isDeleted: { $ne: true } } },
+          { $group: { _id: "$status", count: { $sum: 1 } } },
+        ]),
+        Project.countDocuments({ orgId }),
+        Automation.find({ orgId }).select("platform status pageId pageName createdAt updatedAt").lean(),
+      ]);
+
+      if (!org) return next(new AppError("Organisation not found", 404));
+
+      const totalLeads  = leadStats.reduce((s, g) => s + g.count, 0);
+      const leadByStatus = leadStats.reduce((acc, s) => { acc[s._id] = s.count; return acc; }, {});
+
+      // compute trial status
+      const tStatus = trialStatus(org);
+
+      res.json({
+        success: true,
+        org: { ...org, trialStatus: tStatus },
+        users,
+        leadByStatus,
+        totalLeads,
+        projectCount,
+        automations,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/super-admin/orgs/:id/impersonate — issue a 2-hour JWT for the org's admin
+  async impersonate(req, res, next) {
+    try {
+      const org = await Organization.findById(req.params.id).select("name isActive").lean();
+      if (!org)           return next(new AppError("Organisation not found", 404));
+      if (!org.isActive)  return next(new AppError("Cannot impersonate an inactive organisation", 400));
+
+      const admin = await User.findOne({ orgId: req.params.id, role: "admin", isActive: true })
+        .select("_id name email");
+      if (!admin) return next(new AppError("No active admin found for this organisation", 404));
+
+      await logAudit("impersonate", req, {
+        targetOrg:      org._id || req.params.id,
+        targetOrgName:  org.name,
+        targetUser:     admin._id,
+        targetUserName: admin.name,
+        details:        { adminEmail: admin.email },
+      });
+
+      const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+
+      res.cookie("crm_token", token, {
+        httpOnly: true,
+        secure:   process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        domain:   process.env.NODE_ENV === "production" ? ".arthaleads.com" : undefined,
+        maxAge:   2 * 60 * 60 * 1000,
+      });
+
+      res.json({ success: true, orgName: org.name, adminName: admin.name, adminEmail: admin.email });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // GET /api/super-admin/audit — paginated audit log
+  async listAudit(req, res, next) {
+    try {
+      const page  = Math.max(1, parseInt(req.query.page)  || 1);
+      const limit = Math.min(100, parseInt(req.query.limit) || 50);
+      const skip  = (page - 1) * limit;
+      const filter = {};
+      if (req.query.action) filter.action = req.query.action;
+      if (req.query.orgId)  filter.targetOrg = req.query.orgId;
+
+      const [logs, total] = await Promise.all([
+        AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        AuditLog.countDocuments(filter),
+      ]);
+
+      res.json({ success: true, logs, total, pages: Math.ceil(total / limit) });
     } catch (err) {
       next(err);
     }

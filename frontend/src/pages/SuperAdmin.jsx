@@ -1,5 +1,6 @@
 ﻿// pages/SuperAdmin.jsx - Saurabh's platform-level dashboard
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner } from "../components/UI";
@@ -1296,7 +1297,14 @@ export default function SuperAdmin() {
                   return (
                     <tr key={org._id}>
                       <td>
-                        <OrgNameEditor org={org} onUpdated={handleOrgUpdated} isTrialExpired={isTrialExpired} />
+                        <div className="space-y-1">
+                          <OrgNameEditor org={org} onUpdated={handleOrgUpdated} isTrialExpired={isTrialExpired} />
+                          <Link to={`/super-admin/orgs/${org._id}`}
+                            className="text-[10px] font-semibold hover:underline"
+                            style={{ color: "var(--app-primary)" }}>
+                            View details →
+                          </Link>
+                        </div>
                       </td>
                       <td><PlanBadge plan={org.plan} /></td>
                       <td className="text-center font-bold text-app">{org.userCount}</td>

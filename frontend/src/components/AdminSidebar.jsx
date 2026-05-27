@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Building2, Users, TicketIcon, BarChart3,
   Megaphone, FileText, ChevronLeft, ChevronRight, LogOut,
+  TrendingUp, ShieldCheck,
 } from "lucide-react";
 
 const NAV = [
@@ -12,7 +13,9 @@ const NAV = [
   { to: "/super-admin/users",     label: "Users",         icon: Users },
   { to: "/super-admin/tickets",   label: "Tickets",       icon: TicketIcon },
   { to: "/super-admin/analytics", label: "Analytics",     icon: BarChart3 },
+  { to: "/super-admin/revenue",   label: "Revenue",       icon: TrendingUp },
   { to: "/super-admin/broadcast", label: "Broadcast",     icon: Megaphone },
+  { to: "/super-admin/audit",     label: "Audit Log",     icon: ShieldCheck },
   { to: "/super-admin/blog",      label: "Blog",          icon: FileText },
 ];
 

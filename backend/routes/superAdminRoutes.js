@@ -6,10 +6,13 @@ const ctrl = require("../controllers/superAdminController");
 
 router.use(protect, authorize("super_admin"));
 
-router.get("/orgs",                    ctrl.listOrgs);
+router.get("/orgs",                     ctrl.listOrgs);
+router.get("/orgs/:id",               ctrl.getOrgDetail);
 router.patch("/orgs/:id",             ctrl.updateOrg);
 router.patch("/orgs/:id/logo",        ctrl.updateLogo);
 router.patch("/orgs/:id/extend-trial", ctrl.extendTrial);
+router.post("/orgs/:id/impersonate",  ctrl.impersonate);
+router.get("/audit",                  ctrl.listAudit);
 router.get("/users",                  ctrl.listUsers);
 router.post("/backup",                ctrl.triggerBackup);
 

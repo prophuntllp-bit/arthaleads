@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
+import ImpersonationBanner from "./components/ImpersonationBanner";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Download, X, Bell, Share } from "lucide-react";
@@ -371,12 +372,15 @@ const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
-const AdminLogin          = lazy(() => import("./pages/AdminLogin"));
-const SuperAdminHome      = lazy(() => import("./pages/SuperAdminHome"));
-const SuperAdminUsers     = lazy(() => import("./pages/SuperAdminUsers"));
-const SuperAdminTickets   = lazy(() => import("./pages/SuperAdminTickets"));
-const SuperAdminAnalytics = lazy(() => import("./pages/SuperAdminAnalytics"));
-const SuperAdminBroadcast = lazy(() => import("./pages/SuperAdminBroadcast"));
+const AdminLogin            = lazy(() => import("./pages/AdminLogin"));
+const SuperAdminHome        = lazy(() => import("./pages/SuperAdminHome"));
+const SuperAdminUsers       = lazy(() => import("./pages/SuperAdminUsers"));
+const SuperAdminTickets     = lazy(() => import("./pages/SuperAdminTickets"));
+const SuperAdminAnalytics   = lazy(() => import("./pages/SuperAdminAnalytics"));
+const SuperAdminBroadcast   = lazy(() => import("./pages/SuperAdminBroadcast"));
+const SuperAdminOrgDetail   = lazy(() => import("./pages/SuperAdminOrgDetail"));
+const SuperAdminAudit       = lazy(() => import("./pages/SuperAdminAudit"));
+const SuperAdminRevenue     = lazy(() => import("./pages/SuperAdminRevenue"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -510,6 +514,7 @@ function RequireAuth() {
 
   return (
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
+      <ImpersonationBanner />
       <Sidebar />
       <main className="flex-1 min-w-0 pt-16 lg:pt-0 overflow-y-auto">
         <Outlet />
@@ -649,7 +654,10 @@ export default function App() {
           <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
           <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
           <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
+          <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
           <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
+          <Route path="/super-admin/audit"              element={<SuperAdminAudit />} />
+          <Route path="/super-admin/orgs/:id"           element={<SuperAdminOrgDetail />} />
           <Route path="/super-admin/blog"               element={<BlogManager />} />
           <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
           <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
