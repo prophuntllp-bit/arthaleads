@@ -11,7 +11,7 @@ export function AuthProvider({ children }) {
   const [org,  setOrg]  = useState(() => JSON.parse(localStorage.getItem("crm_org")  || "null"));
   const [loading, setLoading] = useState(true);
 
-  const persist = useCallback((nextUser, nextOrg) => {
+  const persist = useCallback((nextUser, nextOrg, token) => {
     // Never store base64 logos in localStorage — they're several MB and silently get
     // truncated or throw QuotaExceededError, causing broken images on refresh.
     // We only persist a Cloudinary/HTTPS URL (small string); base64 stays in-memory only.
@@ -20,6 +20,9 @@ export function AuthProvider({ children }) {
       : null;
     localStorage.setItem("crm_user", JSON.stringify(nextUser));
     localStorage.setItem("crm_org",  JSON.stringify(orgForStorage));
+    // Bearer token fallback for cross-domain environments where the httpOnly cookie
+    // is rejected by the browser (backend on railway.app, frontend on arthaleads.com).
+    if (token) localStorage.setItem("_at", token);
     setUser(nextUser);
     setOrg(nextOrg || null);  // in-memory state keeps the full logo
   }, []);
@@ -27,6 +30,7 @@ export function AuthProvider({ children }) {
   const clearSession = useCallback(() => {
     localStorage.removeItem("crm_user");
     localStorage.removeItem("crm_org");
+    localStorage.removeItem("_at");
     setUser(null);
     setOrg(null);
   }, []);
@@ -55,32 +59,33 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
-    // Backend sets httpOnly cookie; we only store display-safe fields locally
-    persist(data.user, data.org);
+    // Backend sets httpOnly cookie; we only store display-safe fields locally.
+    // Token also saved as fallback for cross-domain envs where cookie is rejected.
+    persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const signup = useCallback(async (payload) => {
     const { data } = await api.post("/auth/signup", payload);
-    persist(data.user, data.org);
+    persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const googleLogin = useCallback(async (credential) => {
     const { data } = await api.post("/auth/google", { credential });
-    persist(data.user, data.org);
+    persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const phoneLogin = useCallback(async (idToken) => {
     const { data } = await api.post("/auth/phone-login", { idToken });
-    persist(data.user, data.org);
+    persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
-  // Used after backend-verified OTP — data already contains user + org
+  // Used after backend-verified OTP — data already contains user + org + token
   const persistAuth = useCallback((data) => {
-    persist(data.user, data.org);
+    persist(data.user, data.org, data.token);
   }, [persist]);
 
   const refreshUser = useCallback(async () => {
@@ -107,6 +112,7 @@ export function AuthProvider({ children }) {
     } catch {
       // Proceed even if request fails (offline)
     }
+    localStorage.removeItem("_at");
     clearSession();
   }, [clearSession]);
 
