@@ -6,12 +6,14 @@ const api = axios.create({
   withCredentials:  true,       // send httpOnly cookie on every request (XSS-safe auth)
 });
 
-// Propagate org-inactive 403 as a recognisable error the UI can handle
+// Propagate blocking org-level 403s as window events so overlays can react
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 403 && err.response?.data?.message === "ORGANISATION_INACTIVE") {
-      window.dispatchEvent(new CustomEvent("org:inactive"));
+    if (err.response?.status === 403) {
+      const msg = err.response?.data?.message;
+      if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
+      if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
     }
     return Promise.reject(err);
   }

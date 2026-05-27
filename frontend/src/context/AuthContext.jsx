@@ -36,8 +36,19 @@ export function AuthProvider({ children }) {
     api.get("/auth/me")
       .then((r) => persist(r.data.user, r.data.org))
       .catch((err) => {
-        // 401 = cookie expired/missing; 403 = org inactive or trial expired
-        if (err.response?.status === 401 || err.response?.status === 403) clearSession();
+        const status = err.response?.status;
+        const msg    = err.response?.data?.message;
+        if (status === 401) {
+          // Token genuinely invalid/missing — full logout
+          clearSession();
+        } else if (status === 403) {
+          // Org-level restrictions (trial expired, org inactive) — keep session
+          // so RequireAuth can show the correct blocking overlay instead of
+          // silently logging the user out. The api.js interceptor dispatches
+          // the matching window events that the overlay listeners pick up.
+          if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
+          if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
+        }
       })
       .finally(() => setLoading(false));
   }, [persist, clearSession]);

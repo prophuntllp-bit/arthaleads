@@ -478,16 +478,22 @@ function TrialExpiredScreen({ onLogout }) {
 
 function RequireAuth() {
   const { user, org, loading, logout } = useAuth();
-  const [orgInactive, setOrgInactive] = useState(false);
+  const [orgInactive,      setOrgInactive]      = useState(false);
+  const [trialExpiredFlag, setTrialExpiredFlag] = useState(false);
 
   // Apply (or clear) the org's custom brand colour whenever it changes
   useEffect(() => { applyBrandColor(org?.brandColor); }, [org?.brandColor]);
 
-  // Listen for org-inactive event fired by the API interceptor
+  // Listen for blocking 403 events fired by the API interceptor / AuthContext
   useEffect(() => {
-    const handler = () => setOrgInactive(true);
-    window.addEventListener("org:inactive", handler);
-    return () => window.removeEventListener("org:inactive", handler);
+    const onInactive = () => setOrgInactive(true);
+    const onTrial    = () => setTrialExpiredFlag(true);
+    window.addEventListener("org:inactive",  onInactive);
+    window.addEventListener("trial:expired", onTrial);
+    return () => {
+      window.removeEventListener("org:inactive",  onInactive);
+      window.removeEventListener("trial:expired", onTrial);
+    };
   }, []);
 
   const handleLogout = () => { logout(); window.location.href = "/login"; };
@@ -506,11 +512,12 @@ function RequireAuth() {
   // Check if org is set to inactive by super admin (also caught by API interceptor above)
   const isInactive = orgInactive || (org && org.isActive === false);
 
-  // Check trial expiry (only for non-super_admin, on trial plan)
-  const trialExpired = user.role !== "super_admin"
-    && org?.plan === "trial"
-    && org?.trialEndsAt
-    && new Date() > new Date(org.trialEndsAt);
+  // Check trial expiry — client-side (cached org data) OR server-confirmed via event
+  const trialExpired = trialExpiredFlag
+    || (user.role !== "super_admin"
+        && org?.plan === "trial"
+        && org?.trialEndsAt
+        && new Date() > new Date(org.trialEndsAt));
 
   return (
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
