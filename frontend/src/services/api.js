@@ -1,4 +1,5 @@
 ﻿import axios from "axios";
+import toast from "react-hot-toast";
 
 const api = axios.create({
   baseURL:          import.meta.env.VITE_API_URL || "http://localhost:5000/api",
@@ -23,11 +24,15 @@ api.interceptors.response.use(
     const msg    = err.response?.data?.message;
 
     if (status === 401) {
-      // Token expired or invalid — clear session and send to login
+      // Token expired or invalid — clear session, show one friendly toast, and redirect.
+      // Return a never-resolving promise so component .catch() blocks never fire —
+      // prevents misleading "Failed to load X" toasts when the real issue is an expired session.
       localStorage.removeItem("crm_user");
       localStorage.removeItem("crm_org");
       localStorage.removeItem("_at");
+      toast.error("Your session has expired. Please log in again.", { id: "session-expired" });
       window.dispatchEvent(new CustomEvent("auth:expired"));
+      return new Promise(() => {});
     }
 
     if (status === 403) {

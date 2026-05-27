@@ -53,9 +53,11 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, [persist, clearSession]);
 
-  // Global 401 handler — any API call with an expired/invalid token fires this
+  // Global 401 handler — any API call with an expired/invalid token fires this.
+  // Also calls setLoading(false) so RequireAuth can redirect to login even when
+  // the never-resolving promise in api.js swallows /auth/me's .finally() call.
   useEffect(() => {
-    const onExpired = () => clearSession();
+    const onExpired = () => { clearSession(); setLoading(false); };
     window.addEventListener("auth:expired", onExpired);
     return () => window.removeEventListener("auth:expired", onExpired);
   }, [clearSession]);
