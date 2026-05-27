@@ -182,6 +182,17 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Agent with no leads assigned yet */}
+      {!loading && data && user?.role === "agent" && data.allTimeTotal === 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">No leads assigned to you yet</p>
+            <p className="text-xs text-app-soft mt-0.5">Ask your manager to assign leads so they appear here.</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
           onClick={() => navigate("/leads")} />
