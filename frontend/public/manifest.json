@@ -1,11 +1,13 @@
-﻿{
+{
   "id": "/",
   "name": "Arthaleads - Real Estate CRM",
   "short_name": "Arthaleads",
   "description": "Premium real estate CRM for managing property leads, team performance, and deal pipelines. Built for Pune developers and channel partners.",
+  "lang": "en",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#0f1117",
   "theme_color": "#f97316",
@@ -90,6 +92,20 @@
     }
   ],
   "screenshots": [
+    {
+      "src": "/dashboard-light.png",
+      "sizes": "1448x1086",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Arthaleads CRM - Dashboard (Light)"
+    },
+    {
+      "src": "/dashboard-dark.png",
+      "sizes": "1448x1086",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Arthaleads CRM - Dashboard (Dark)"
+    },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
