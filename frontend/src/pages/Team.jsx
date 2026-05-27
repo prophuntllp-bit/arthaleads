@@ -19,11 +19,6 @@ const emptyMember = {
 export default function Team() {
   useEffect(() => { document.title = "Team Management - Arthaleads CRM"; }, []);
   const { user, org } = useAuth();
-  const isAdmin = ["admin", "super_admin"].includes(user?.role);
-  // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
-  const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
-  const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
-  const atLimit = users.length >= memberLimit;
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -33,6 +28,11 @@ export default function Team() {
   const [showPwd, setShowPwd] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
+  const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+  const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
+  const atLimit = users.length >= memberLimit;
 
   const loadUsers = async () => {
     setLoading(true);
