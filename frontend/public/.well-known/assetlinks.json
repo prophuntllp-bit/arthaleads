@@ -5,7 +5,8 @@
       "namespace": "android_app",
       "package_name": "com.arthaleads.www.twa",
       "sha256_cert_fingerprints": [
-        "A4:35:FB:86:C7:D5:34:48:35:6F:E5:07:86:98:2F:53:23:8B:D6:3F:BA:4A:94:87:C3:F4:D6:DC:D9:AF:A2:B7"
+        "A4:35:FB:86:C7:D5:34:48:35:6F:E5:07:86:98:2F:53:23:8B:D6:3F:BA:4A:94:87:C3:F4:D6:DC:D9:AF:A2:B7",
+        "DC:7D:6C:58:0A:6C:C3:D1:A9:7C:39:1F:62:03:4A:D9:A1:94:60:26:EA:00:1C:93:72:CE:49:48:79:61:1E:E0"
       ]
     }
   }
