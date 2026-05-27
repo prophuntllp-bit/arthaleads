@@ -10,8 +10,8 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import {
-  ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronLeft, ChevronRight,
-  Clock, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
+  ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
+  Clock, Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -372,6 +372,9 @@ export default function ProjectDetail() {
   const [prospDateFrom, setProspDateFrom] = useState("");
   const [prospDateTo, setProspDateTo]     = useState("");
   const PROSP_LIMIT = 50;
+  const [exportingProsp, setExportingProsp] = useState(false);
+  const [exportDropOpen, setExportDropOpen] = useState(false);
+  const exportDropRef = useRef(null);
 
   useEffect(() => {
     api.get(`/projects/${id}`)
@@ -434,6 +437,72 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load site visit done leads"))
       .finally(() => setSvdLoading(false));
   }, [id, tab, svdPage, svdSearch, refreshKey]);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    if (!exportDropOpen) return;
+    const handler = (e) => { if (!exportDropRef.current?.contains(e.target)) setExportDropOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [exportDropOpen]);
+
+  const exportProspective = async (format) => {
+    setExportDropOpen(false);
+    setExportingProsp(true);
+    try {
+      const params = {
+        page: 1,
+        limit: 9999,
+        isProspective: true,
+        ...(prospSearch        && { search: prospSearch }),
+        ...(prospBookingFilter ? { bookingIn: prospBookingFilter } : { bookingNotIn: "Site Visit Done" }),
+        ...(prospDateFrom      && { followUpFrom: prospDateFrom }),
+        ...(prospDateTo        && { followUpTo: prospDateTo }),
+      };
+      const { data } = await api.get(`/projects/${id}/leads`, { params });
+      const rows = (data.leads || []).map((lead, i) => ({
+        "#":             i + 1,
+        "Name":          lead.name || "",
+        "Phone":         lead.phone || "",
+        "WhatsApp":      lead.whatsapp || "",
+        "Email":         lead.email || "",
+        "Source":        lead.source || "",
+        "Status":        lead.booking || "",
+        "Follow Up":     lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
+        "Follow Up 2":   lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
+        "Remark 1":      lead.remark1 || "",
+        "Remark 2":      lead.remark2 || "",
+        "Remark 3":      lead.remark3 || "",
+        "Remark 4":      lead.remark4 || "",
+        "Note":          lead.remarkNote || "",
+        "Updated By":    lead.remarkUpdatedBy?.name || "",
+        "Updated At":    lead.remarkUpdatedAt ? new Date(lead.remarkUpdatedAt).toLocaleDateString("en-IN") : "",
+      }));
+      if (!rows.length) { toast.error("No prospective leads to export"); return; }
+      const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
+      const filterLabel = prospBookingFilter ? `_${prospBookingFilter.replace(/ /g, "_")}` : "";
+      const filename = `Prospective_${projectName}${filterLabel}`;
+      if (format === "csv") {
+        const ws = xlsxUtils.json_to_sheet(rows);
+        const csv = xlsxUtils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = `${filename}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const ws = xlsxUtils.json_to_sheet(rows);
+        const wb = xlsxUtils.book_new();
+        xlsxUtils.book_append_sheet(wb, ws, "Prospective");
+        xlsxWriteFile(wb, `${filename}.xlsx`);
+      }
+      toast.success(`Exported ${rows.length} lead${rows.length !== 1 ? "s" : ""}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Export failed");
+    } finally {
+      setExportingProsp(false);
+    }
+  };
 
   // Sync top scrollbar ↔ table scrollbar with dynamic width via ResizeObserver
   useEffect(() => {
@@ -1016,14 +1085,53 @@ export default function ProjectDetail() {
                 <p className="text-xs text-app-soft">Marked as Interested or Site Visit Booked</p>
               </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-              <input
-                className="input pl-9 py-2 text-sm w-56"
-                placeholder="Search name or phone…"
-                value={prospSearch}
-                onChange={(e) => { setProspSearch(e.target.value); setProspPage(1); }}
-              />
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                <input
+                  className="input pl-9 py-2 text-sm w-56"
+                  placeholder="Search name or phone…"
+                  value={prospSearch}
+                  onChange={(e) => { setProspSearch(e.target.value); setProspPage(1); }}
+                />
+              </div>
+              {/* Export dropdown */}
+              <div className="relative" ref={exportDropRef}>
+                <button
+                  onClick={() => setExportDropOpen((v) => !v)}
+                  disabled={exportingProsp}
+                  className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-50 cursor-pointer"
+                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                  title="Export prospective leads"
+                >
+                  {exportingProsp ? <Spinner size="sm" /> : <Download className="h-3.5 w-3.5" />}
+                  Export
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </button>
+                {exportDropOpen && (
+                  <div
+                    className="absolute right-0 top-full z-50 mt-1.5 w-44 rounded-2xl border shadow-xl overflow-hidden"
+                    style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
+                  >
+                    <button
+                      onClick={() => exportProspective("xlsx")}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                      style={{ color: "var(--app-text)" }}
+                    >
+                      <FileSpreadsheet className="h-4 w-4 text-green-500" />
+                      Excel (.xlsx)
+                    </button>
+                    <button
+                      onClick={() => exportProspective("csv")}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
+                      style={{ color: "var(--app-text)" }}
+                    >
+                      <FileText className="h-4 w-4 text-blue-500" />
+                      CSV (.csv)
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
