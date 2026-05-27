@@ -329,10 +329,18 @@ export default function ProjectDetail() {
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);
 
-  // Bulk select
+  // Bulk select – Leads tab
   const [selectedIds, setSelectedIds]       = useState(new Set());
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting]       = useState(false);
+
+  // Bulk select – Prospective tab
+  const [prospSelectedIds, setProspSelectedIds]   = useState(new Set());
+  const [showProspBulkConfirm, setShowProspBulkConfirm] = useState(false);
+
+  // Bulk select – Site Visit Done tab
+  const [svdSelectedIds, setSvdSelectedIds]     = useState(new Set());
+  const [showSvdBulkConfirm, setShowSvdBulkConfirm] = useState(false);
 
   // Edit lead modal
   const [editingLead, setEditingLead] = useState(null);
@@ -564,6 +572,8 @@ export default function ProjectDetail() {
 
   // Clear selection when page/search changes
   useEffect(() => { setSelectedIds(new Set()); }, [leadsPage, search]);
+  useEffect(() => { setProspSelectedIds(new Set()); }, [prospPage, prospSearch, prospBookingFilter]);
+  useEffect(() => { setSvdSelectedIds(new Set()); }, [svdPage, svdSearch]);
 
   const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l._id));
   const someSelected = leads.some((l) => selectedIds.has(l._id));
@@ -579,6 +589,26 @@ export default function ProjectDetail() {
       if (next.has(lid)) next.delete(lid); else next.add(lid);
       return next;
     });
+  };
+
+  const allProspSelected  = prospLeads.length > 0 && prospLeads.every((l) => prospSelectedIds.has(l._id));
+  const someProspSelected = prospLeads.some((l) => prospSelectedIds.has(l._id));
+  const toggleAllProsp = () => {
+    if (allProspSelected) setProspSelectedIds(new Set());
+    else setProspSelectedIds(new Set(prospLeads.map((l) => l._id)));
+  };
+  const toggleOneProsp = (lid) => {
+    setProspSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
+  };
+
+  const allSvdSelected  = svdLeads.length > 0 && svdLeads.every((l) => svdSelectedIds.has(l._id));
+  const someSvdSelected = svdLeads.some((l) => svdSelectedIds.has(l._id));
+  const toggleAllSvd = () => {
+    if (allSvdSelected) setSvdSelectedIds(new Set());
+    else setSvdSelectedIds(new Set(svdLeads.map((l) => l._id)));
+  };
+  const toggleOneSvd = (lid) => {
+    setSvdSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
   };
 
   // Update lead across all three sections after edit
@@ -628,6 +658,40 @@ export default function ProjectDetail() {
     } finally {
       setBulkDeleting(false);
       setShowBulkConfirm(false);
+    }
+  };
+
+  const handleProspBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const ids = [...prospSelectedIds];
+      await api.delete(`/projects/${id}/leads/bulk`, { data: { ids } });
+      setProspLeads((prev) => prev.filter((l) => !prospSelectedIds.has(l._id)));
+      setProspTotal((t) => t - ids.length);
+      setProspSelectedIds(new Set());
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+      setShowProspBulkConfirm(false);
+    }
+  };
+
+  const handleSvdBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const ids = [...svdSelectedIds];
+      await api.delete(`/projects/${id}/leads/bulk`, { data: { ids } });
+      setSvdLeads((prev) => prev.filter((l) => !svdSelectedIds.has(l._id)));
+      setSvdTotal((t) => t - ids.length);
+      setSvdSelectedIds(new Set());
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+      setShowSvdBulkConfirm(false);
     }
   };
 
@@ -1086,6 +1150,11 @@ export default function ProjectDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {prospSelectedIds.size > 0 && canManage && (
+                <button className="btn-danger" onClick={() => setShowProspBulkConfirm(true)}>
+                  <Trash2 className="h-4 w-4" /> Delete {prospSelectedIds.size} selected
+                </button>
+              )}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
                 <input
@@ -1211,6 +1280,11 @@ export default function ProjectDetail() {
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
+                        {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
+                          <input type="checkbox" checked={allProspSelected}
+                            ref={(el) => { if (el) el.indeterminate = someProspSelected && !allProspSelected; }}
+                            onChange={toggleAllProsp} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
+                        </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
                         <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
                         <th style={{ width: 130, minWidth: 130 }}>Phone</th>
@@ -1234,7 +1308,11 @@ export default function ProjectDetail() {
                           setProspLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
                         };
                         return (
-                          <tr key={lead._id} className="group">
+                          <tr key={lead._id} className={`group ${prospSelectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                            {canManage && <td className="w-6 px-1">
+                              <input type="checkbox" checked={prospSelectedIds.has(lead._id)} onChange={() => toggleOneProsp(lead._id)}
+                                className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" />
+                            </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
                               <NameCell name={lead.name} bold />
@@ -1357,14 +1435,21 @@ export default function ProjectDetail() {
                 <p className="text-xs text-app-soft">Leads who have completed a site visit</p>
               </div>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-              <input
-                className="input pl-9 py-2 text-sm w-56"
-                placeholder="Search name or phone…"
-                value={svdSearch}
-                onChange={(e) => { setSvdSearch(e.target.value); setSvdPage(1); }}
-              />
+            <div className="flex items-center gap-2">
+              {svdSelectedIds.size > 0 && canManage && (
+                <button className="btn-danger" onClick={() => setShowSvdBulkConfirm(true)}>
+                  <Trash2 className="h-4 w-4" /> Delete {svdSelectedIds.size} selected
+                </button>
+              )}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                <input
+                  className="input pl-9 py-2 text-sm w-56"
+                  placeholder="Search name or phone…"
+                  value={svdSearch}
+                  onChange={(e) => { setSvdSearch(e.target.value); setSvdPage(1); }}
+                />
+              </div>
             </div>
           </div>
 
@@ -1383,6 +1468,11 @@ export default function ProjectDetail() {
                   <table className="stitch-table min-w-[1400px]">
                     <thead>
                       <tr>
+                        {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
+                          <input type="checkbox" checked={allSvdSelected}
+                            ref={(el) => { if (el) el.indeterminate = someSvdSelected && !allSvdSelected; }}
+                            onChange={toggleAllSvd} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
+                        </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
                         <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
                         <th style={{ width: 130, minWidth: 130 }}>Phone</th>
@@ -1410,7 +1500,11 @@ export default function ProjectDetail() {
                             .then((r) => setSvdTotal(r.data.total)).catch(() => {});
                         };
                         return (
-                          <tr key={lead._id} className="group">
+                          <tr key={lead._id} className={`group ${svdSelectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
+                            {canManage && <td className="w-6 px-1">
+                              <input type="checkbox" checked={svdSelectedIds.has(lead._id)} onChange={() => toggleOneSvd(lead._id)}
+                                className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" />
+                            </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
                               <NameCell name={lead.name} bold />
@@ -1524,6 +1618,32 @@ export default function ProjectDetail() {
           user?.role === "super_admin"
             ? `Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
             : `Are you sure you want to delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? They will be moved to Dump Leads.`
+        }
+      />
+
+      <ConfirmDialog
+        open={showProspBulkConfirm}
+        onClose={() => setShowProspBulkConfirm(false)}
+        onConfirm={handleProspBulkDelete}
+        loading={bulkDeleting}
+        title={`Delete ${prospSelectedIds.size} Lead${prospSelectedIds.size !== 1 ? "s" : ""}`}
+        message={
+          user?.role === "super_admin"
+            ? `Are you sure you want to permanently delete ${prospSelectedIds.size} selected lead${prospSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
+            : `Are you sure you want to delete ${prospSelectedIds.size} selected lead${prospSelectedIds.size !== 1 ? "s" : ""}? They will be moved to Dump Leads.`
+        }
+      />
+
+      <ConfirmDialog
+        open={showSvdBulkConfirm}
+        onClose={() => setShowSvdBulkConfirm(false)}
+        onConfirm={handleSvdBulkDelete}
+        loading={bulkDeleting}
+        title={`Delete ${svdSelectedIds.size} Lead${svdSelectedIds.size !== 1 ? "s" : ""}`}
+        message={
+          user?.role === "super_admin"
+            ? `Are you sure you want to permanently delete ${svdSelectedIds.size} selected lead${svdSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
+            : `Are you sure you want to delete ${svdSelectedIds.size} selected lead${svdSelectedIds.size !== 1 ? "s" : ""}? They will be moved to Dump Leads.`
         }
       />
 

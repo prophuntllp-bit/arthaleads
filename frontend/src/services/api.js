@@ -27,10 +27,15 @@ api.interceptors.response.use(
       // Token expired or invalid — clear session, show one friendly toast, and redirect.
       // Return a never-resolving promise so component .catch() blocks never fire —
       // prevents misleading "Failed to load X" toasts when the real issue is an expired session.
+      // Only show the toast when a session was previously stored — avoids showing "session
+      // expired" on a fresh page load (e.g. user has never logged in or just logged out).
+      const hadSession = !!localStorage.getItem("crm_user");
       localStorage.removeItem("crm_user");
       localStorage.removeItem("crm_org");
       localStorage.removeItem("_at");
-      toast.error("Your session has expired. Please log in again.", { id: "session-expired" });
+      if (hadSession) {
+        toast.error("Your session has expired. Please log in again.", { id: "session-expired" });
+      }
       window.dispatchEvent(new CustomEvent("auth:expired"));
       return new Promise(() => {});
     }

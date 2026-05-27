@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle,
+  ChevronDown,
   Clock3,
   Globe,
   MessageCircle,
@@ -404,6 +405,7 @@ function FollowUpDuePanel({ user, navigate }) {
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("fup_panel_dismissed") === "1"
   );
+  const [minimized, setMinimized] = useState(false);
 
   useEffect(() => {
     if (dismissed) return;
@@ -471,6 +473,14 @@ function FollowUpDuePanel({ user, navigate }) {
         </button>
         <button
           type="button"
+          onClick={() => setMinimized((v) => !v)}
+          title={minimized ? "Expand" : "Minimize"}
+          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+        </button>
+        <button
+          type="button"
           onClick={dismiss}
           title="Dismiss"
           className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
@@ -480,7 +490,7 @@ function FollowUpDuePanel({ user, navigate }) {
       </div>
 
       {/* ── Lead rows ── */}
-      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
         {leads.slice(0, 10).map((lead) => (
           <div key={lead._id} className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
 
@@ -538,10 +548,10 @@ function FollowUpDuePanel({ user, navigate }) {
             )}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Footer */}
-      {leads.length > 10 && (
+      {!minimized && leads.length > 10 && (
         <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
           <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium" onClick={() => navigate("/followups")}>
             +{leads.length - 10} more - view all in Follow-ups
