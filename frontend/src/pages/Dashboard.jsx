@@ -183,11 +183,11 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Total Leads" value={data?.totalLeads || 0} icon={Users} color="text-orange-500"
+        <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
           onClick={() => navigate("/leads")} />
-        <StatCard label="New" value={data?.byStatus?.New || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
+        <StatCard label="New" value={data?.allTimeNew || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
           onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
-        <StatCard label="Closed Won" value={data?.byStatus?.["Closed Won"] || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
+        <StatCard label="Closed Won" value={data?.allTimeClosedWon || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
           onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
         <StatCard label="Follow-ups Today" value={data?.todayFollowUps || 0} icon={Clock3} color="text-amber-400" sub={`${data?.totalFollowUps || 0} total scheduled`}
           onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />

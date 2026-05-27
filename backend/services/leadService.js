@@ -563,7 +563,15 @@ const leadService = {
       { $match: baseMatch },
       {
         $facet: {
-          // Total lead count for the selected date range
+          // All-time totals — never date-filtered, always shows full pipeline
+          allTimeTotal: [
+            { $count: "count" },
+          ],
+          allTimeByStatus: [
+            { $group: { _id: "$status", count: { $sum: 1 } } },
+          ],
+
+          // Period totals for the selected date range (trend/chart data)
           totalLeads: [
             ...dateStage,
             { $count: "count" },
@@ -618,11 +626,17 @@ const leadService = {
       },
     ]);
 
-    // ── Shape the response (identical to the old shape - no frontend changes) ─
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
-    const sourceMap = toMap(result.bySource);
+    const sourceMap   = toMap(result.bySource);
+    const allTimeStatus = toMap(result.allTimeByStatus);
 
     return {
+      // All-time counts — used for the top stat cards so orgs with older leads don't see 0
+      allTimeTotal:       result.allTimeTotal[0]?.count || 0,
+      allTimeClosedWon:   allTimeStatus["Closed Won"]   || 0,
+      allTimeNew:         allTimeStatus["New"]           || 0,
+
+      // Period counts (date-range filtered) — kept for trend charts / source breakdown
       totalLeads:     result.totalLeads[0]?.count  || 0,
       byStatus:       toMap(result.byStatus),
       bySource:       sourceMap,
