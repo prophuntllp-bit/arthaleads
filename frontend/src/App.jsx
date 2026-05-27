@@ -251,8 +251,9 @@ function NotificationBanner() {
     if (!("Notification" in window)) return "unsupported";
     return Notification.permission; // "default" | "granted" | "denied"
   });
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem("notif_dismissed") === "1"
+  const [dismissed, setDismissed] = useState(() =>
+    localStorage.getItem("notif_dismissed") === "1" ||
+    sessionStorage.getItem("notif_shown") === "1"
   );
   const [enabling, setEnabling] = useState(false);
 
@@ -263,8 +264,16 @@ function NotificationBanner() {
     }
   }, [status, user]);
 
+  // Mark this session so banner doesn't reappear on every refresh.
+  // User gets one prompt per session; permanent dismiss stores in localStorage.
+  useEffect(() => {
+    if (user && status === "default" && !dismissed) {
+      sessionStorage.setItem("notif_shown", "1");
+    }
+  }, [user, status, dismissed]);
+
   if (!user) return null;
-  if (status === "unsupported" || status === "granted" || dismissed) return null;
+  if (status === "unsupported" || status === "granted" || status === "denied" || dismissed) return null;
 
   const handleEnable = async () => {
     setEnabling(true);
