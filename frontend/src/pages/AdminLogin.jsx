@@ -5,8 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 export default function AdminLogin() {
-  const navigate         = useNavigate();
-  const { refreshUser }  = useAuth();
+  const navigate              = useNavigate();
+  const { persistAuth }       = useAuth();
   const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]     = useState(false);
@@ -19,8 +19,8 @@ export default function AdminLogin() {
     if (!email || !password) { setError("Email and password are required."); return; }
     setLoading(true);
     try {
-      await api.post("/auth/admin-login", { email, password });
-      await refreshUser();
+      const { data } = await api.post("/auth/admin-login", { email, password });
+      persistAuth(data);
       navigate("/super-admin", { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed. Please try again.";
