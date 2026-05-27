@@ -29,6 +29,7 @@ export default function Team() {
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const isAdmin = ["admin", "super_admin"].includes(user?.role);
   // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
   const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
   const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
