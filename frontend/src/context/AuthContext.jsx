@@ -42,20 +42,23 @@ export function AuthProvider({ children }) {
       .catch((err) => {
         const status = err.response?.status;
         const msg    = err.response?.data?.message;
-        if (status === 401) {
-          // Token genuinely invalid/missing — full logout
-          clearSession();
-        } else if (status === 403) {
-          // Org-level restrictions (trial expired, org inactive) — keep session
-          // so RequireAuth can show the correct blocking overlay instead of
-          // silently logging the user out. The api.js interceptor dispatches
-          // the matching window events that the overlay listeners pick up.
+        // 401 is already handled by the api.js interceptor (dispatches auth:expired
+        // which is caught below). Handle 403 org-level blocks here so the correct
+        // overlay is shown rather than silently logging the user out.
+        if (status === 403) {
           if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
           if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
         }
       })
       .finally(() => setLoading(false));
   }, [persist, clearSession]);
+
+  // Global 401 handler — any API call with an expired/invalid token fires this
+  useEffect(() => {
+    const onExpired = () => clearSession();
+    window.addEventListener("auth:expired", onExpired);
+    return () => window.removeEventListener("auth:expired", onExpired);
+  }, [clearSession]);
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });

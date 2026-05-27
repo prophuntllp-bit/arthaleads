@@ -15,15 +15,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Propagate blocking org-level 403s as window events so overlays can react
+// Propagate auth failures and org-level blocks as window events
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 403) {
-      const msg = err.response?.data?.message;
+    const status = err.response?.status;
+    const msg    = err.response?.data?.message;
+
+    if (status === 401) {
+      // Token expired or invalid — clear session and send to login
+      localStorage.removeItem("crm_user");
+      localStorage.removeItem("crm_org");
+      localStorage.removeItem("_at");
+      window.dispatchEvent(new CustomEvent("auth:expired"));
+    }
+
+    if (status === 403) {
       if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
       if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
     }
+
     return Promise.reject(err);
   }
 );
