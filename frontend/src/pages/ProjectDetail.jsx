@@ -200,6 +200,7 @@ const BOOKING_OPTIONS = [
   { value: "Booked",             label: "Booked",              color: "text-green-600" },
   { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
   { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
+  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
 ];
 
 // Filter pills shown above the leads table (same values minus the empty one)
@@ -212,6 +213,7 @@ const STATUS_FILTERS = [
   { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",         text: "text-green-600 dark:text-green-400" },
   { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",             text: "text-red-500 dark:text-red-400" },
   { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",              text: "text-gray-500 dark:text-gray-400" },
+  { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",           text: "text-pink-600 dark:text-pink-400" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -1214,6 +1216,7 @@ export default function ProjectDetail() {
               { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",       text: "text-green-600 dark:text-green-400" },
               { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",           text: "text-red-500 dark:text-red-400" },
               { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",            text: "text-gray-500 dark:text-gray-400" },
+              { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",         text: "text-pink-600 dark:text-pink-400" },
             ].map((f) => {
               const active = prospBookingFilter === f.value;
               return (

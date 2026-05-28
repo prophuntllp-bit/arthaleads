@@ -28,6 +28,7 @@ const LEAD_STATUS_COLORS = {
   "Not Interested":"#ef4444",
   "Not Reachable":"#78716c",
   "Call Back":    "#eab308",
+  "Low Budget":   "#ec4899",
 };
 
 const ACTION_LABELS = {

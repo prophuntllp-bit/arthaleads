@@ -153,6 +153,7 @@ const BOOKING_OPTIONS = [
   { value: "Booked",             label: "Booked",              color: "text-green-600" },
   { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
   { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
+  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -326,6 +327,7 @@ const PROJ_BOOKING_OPTIONS = [
   { value: "Site Visit Booked", label: "Site Visit Booked", color: "text-violet-600" },
   { value: "Booked", label: "Booked", color: "text-green-600" },
   { value: "Not Interested", label: "Not Interested", color: "text-red-500" },
+  { value: "Low Budget",    label: "Low Budget",     color: "text-pink-600" },
 ];
 
 function ProjInlineBooking({ value, leadId, projectId, onSaved }) {

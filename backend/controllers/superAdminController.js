@@ -395,13 +395,15 @@ const superAdminController = {
       <table width="100%" style="max-width:500px;">
         <tr><td align="center" style="padding-bottom:24px;">
           <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
-            style="display:inline-block;border-radius:14px;" />
+            style="display:inline-block;border-radius:14px;border:0;" />
+          <br/>
+          <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha<span style="color:#ff6b00;">leads</span></span>
         </td></tr>
-        <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Message from Arthaleads</p>
-          <p style="margin:0 0 20px;font-size:15px;color:#a8a29e;">Hi ${name},</p>
-          <div style="font-size:15px;color:#e7e5e4;line-height:1.7;white-space:pre-wrap;">${body}</div>
-          <p style="margin:24px 0 0;font-size:13px;color:#78716c;">— Team Arthaleads</p>
+        <tr><td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 0 0 1px rgba(255,107,0,0.06),0 20px 60px rgba(0,0,0,0.22);overflow:hidden;padding:40px 36px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ff6b00;letter-spacing:.08em;text-transform:uppercase;">Message from Arthaleads</p>
+          <p style="margin:0 0 20px;font-size:15px;color:#969696;">Hi ${name},</p>
+          <div style="font-size:15px;color:#ededed;line-height:1.7;white-space:pre-wrap;">${body}</div>
+          <p style="margin:24px 0 0;font-size:13px;color:#555;">— Team Arthaleads</p>
         </td></tr>
         <tr><td style="padding:20px 0;text-align:center;">
           <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
