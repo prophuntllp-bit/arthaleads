@@ -1,5 +1,5 @@
-﻿// PropCRM Service Worker - PWA + Web Push + Background Sync + Periodic Sync
-const CACHE_NAME = "propcrm-v14";
+﻿// Arthaleads Service Worker - PWA + Web Push + Background Sync + Periodic Sync
+const CACHE_NAME = "arthaleads-v1";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // ── Install ───────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ self.addEventListener("fetch", (e) => {
 // ── Background Sync ───────────────────────────────────────────────────────────
 // Retries queued API mutations (lead updates, remarks, follow-ups) that
 // failed while the device was offline.
-const SYNC_STORE = "propcrm-pending-sync";
+const SYNC_STORE = "arthaleads-pending-sync";
 
 self.addEventListener("sync", (e) => {
   if (e.tag === "sync-pending-requests") {
@@ -108,7 +108,7 @@ self.addEventListener("push", (e) => {
   let data = {};
   try { data = e.data?.json() || {}; } catch { data = {}; }
 
-  const title     = data.title || "PropCRM";
+  const title     = data.title || "Arthaleads";
   const body      = data.body  || "You have a new notification";
   const notifData = { url: "/leads", ...(data.data || {}) };
 
@@ -117,7 +117,7 @@ self.addEventListener("push", (e) => {
     icon:    "/icons/icon-192x192.png",
     badge:   "/icons/icon-192x192.png",
     vibrate: [200, 100, 200],
-    tag:     `propcrm-${Date.now()}`,
+    tag:     `arthaleads-${Date.now()}`,
     silent:  false,
     data:    notifData,
   });
@@ -150,7 +150,7 @@ self.addEventListener("notificationclick", (e) => {
 // ── IndexedDB helpers (no idb lib dependency) ─────────────────────────────────
 function openSyncDB() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("propcrm-sync", 1);
+    const req = indexedDB.open("arthaleads-sync", 1);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains(SYNC_STORE)) {

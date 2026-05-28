@@ -50,7 +50,7 @@ if ("serviceWorker" in navigator) {
     }
 
     if (type === "PERIODIC_SYNC") {
-      window.dispatchEvent(new CustomEvent("propcrm:refresh", { detail: { resource } }));
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource } }));
     }
   });
 }
