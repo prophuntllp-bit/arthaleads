@@ -1,18 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, ChevronDown, Sun, Moon } from "lucide-react";
+import {
+  Menu, X, ChevronDown, Sun, Moon,
+  BookOpen, BarChart2, Zap, HelpCircle,
+  Building2, Briefcase,
+} from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 const resourcesLinks = {
   knowledgeHub: [
-    { label: "Blog",            href: "/blog",            desc: "CRM insights & real estate tips" },
-    { label: "Case Studies",    href: "/case-studies",    desc: "Real results from real teams" },
-    { label: "Product Updates", href: "/product-updates", desc: "What's new in Arthaleads" },
-    { label: "Help Guide",      href: "/help-guide",      desc: "Tutorials & FAQs" },
+    { label: "Blog",            href: "/blog",            desc: "CRM insights & real estate tips", icon: BookOpen },
+    { label: "Case Studies",    href: "/case-studies",    desc: "Real results from real teams",    icon: BarChart2 },
+    { label: "Product Updates", href: "/product-updates", desc: "What's new in Arthaleads",        icon: Zap },
+    { label: "Help Guide",      href: "/help-guide",      desc: "Tutorials & FAQs",               icon: HelpCircle },
   ],
   company: [
-    { label: "About Us", href: "/about-us", desc: "Our mission & story" },
-    { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team" },
+    { label: "About Us", href: "/about-us", desc: "Our mission & story",      icon: Building2 },
+    { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team", icon: Briefcase, badge: "Hiring" },
   ],
 };
 
@@ -179,69 +183,126 @@ function NavInner({ onScrollTo }) {
 
               {resOpen && (
                 <div
-                  className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-80 rounded-2xl overflow-hidden"
+                  className="absolute top-full mt-3 rounded-2xl overflow-hidden"
                   style={{
                     background: dropdownBg,
                     border: `1px solid ${dropdownBorder}`,
                     boxShadow: dropdownShadow,
+                    width: 520,
+                    left: "50%",
+                    transform: "translateX(-50%)",
                   }}
                 >
-                  <div className="p-5">
-                    <div className="grid grid-cols-2 gap-x-6">
-                      {/* Knowledge Hub column */}
-                      <div>
-                        <p
-                          className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-                          style={{ color: catLabel }}
-                        >
-                          Knowledge Hub
-                        </p>
-                        <ul className="space-y-0.5">
-                          {resourcesLinks.knowledgeHub.map((l) => (
-                            <li key={l.href}>
-                              <Link
-                                to={l.href}
-                                onClick={() => setResOpen(false)}
-                                className="block px-2.5 py-2 rounded-xl transition-colors group"
-                                style={{ color: itemText }}
-                                onMouseEnter={e => (e.currentTarget.style.background = itemHoverBg)}
-                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                              >
-                                <div className="text-sm font-medium leading-none mb-0.5 group-hover:text-[#ff6b00] transition-colors">{l.label}</div>
-                                <div className="text-[11px] leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                  <div style={{ display: "flex" }}>
 
-                      {/* Company column */}
-                      <div>
-                        <p
-                          className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-                          style={{ color: catLabel }}
-                        >
-                          Company
-                        </p>
-                        <ul className="space-y-0.5">
-                          {resourcesLinks.company.map((l) => (
+                    {/* Left — Knowledge Hub */}
+                    <div style={{ flex: "1 1 0", padding: "24px 20px 24px 24px" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: catLabel }}>
+                        Knowledge Hub
+                      </p>
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                        {resourcesLinks.knowledgeHub.map((l) => {
+                          const Icon = l.icon;
+                          return (
                             <li key={l.href}>
                               <Link
                                 to={l.href}
                                 onClick={() => setResOpen(false)}
-                                className="block px-2.5 py-2 rounded-xl transition-colors group"
-                                style={{ color: itemText }}
-                                onMouseEnter={e => (e.currentTarget.style.background = itemHoverBg)}
-                                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                                className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+                                style={{ textDecoration: "none", transition: "background 0.15s" }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.background = itemHoverBg;
+                                  e.currentTarget.querySelector(".nav-icon").style.color = "#ff6b00";
+                                  e.currentTarget.querySelector(".nav-icon").style.background = "rgba(255,107,0,0.12)";
+                                  e.currentTarget.querySelector(".nav-label").style.color = "#ff6b00";
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.background = "transparent";
+                                  e.currentTarget.querySelector(".nav-icon").style.color = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
+                                  e.currentTarget.querySelector(".nav-icon").style.background = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
+                                  e.currentTarget.querySelector(".nav-label").style.color = itemText;
+                                }}
                               >
-                                <div className="text-sm font-medium leading-none mb-0.5 group-hover:text-[#ff6b00] transition-colors">{l.label}</div>
-                                <div className="text-[11px] leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
+                                <div
+                                  className="nav-icon flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
+                                  style={{
+                                    background: isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
+                                    color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280",
+                                    transition: "background 0.15s, color 0.15s",
+                                  }}
+                                >
+                                  <Icon style={{ width: 15, height: 15 }} />
+                                </div>
+                                <div>
+                                  <div className="nav-label text-sm font-semibold leading-none mb-1" style={{ color: itemText, transition: "color 0.15s" }}>{l.label}</div>
+                                  <div className="text-xs leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
+                                </div>
                               </Link>
                             </li>
-                          ))}
-                        </ul>
-                      </div>
+                          );
+                        })}
+                      </ul>
                     </div>
+
+                    {/* Divider */}
+                    <div style={{ width: 1, background: isDark ? "rgba(255,255,255,0.07)" : "#f0f0f0", margin: "20px 0" }} />
+
+                    {/* Right — Company */}
+                    <div style={{ width: 200, padding: "24px 24px 24px 20px", flexShrink: 0 }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: catLabel }}>
+                        Company
+                      </p>
+                      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                        {resourcesLinks.company.map((l) => {
+                          const Icon = l.icon;
+                          return (
+                            <li key={l.href}>
+                              <Link
+                                to={l.href}
+                                onClick={() => setResOpen(false)}
+                                className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+                                style={{ textDecoration: "none", transition: "background 0.15s" }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.background = itemHoverBg;
+                                  e.currentTarget.querySelector(".nav-icon").style.color = "#ff6b00";
+                                  e.currentTarget.querySelector(".nav-icon").style.background = "rgba(255,107,0,0.12)";
+                                  e.currentTarget.querySelector(".nav-label").style.color = "#ff6b00";
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.background = "transparent";
+                                  e.currentTarget.querySelector(".nav-icon").style.color = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
+                                  e.currentTarget.querySelector(".nav-icon").style.background = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
+                                  e.currentTarget.querySelector(".nav-label").style.color = itemText;
+                                }}
+                              >
+                                <div
+                                  className="nav-icon flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
+                                  style={{
+                                    background: isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
+                                    color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280",
+                                    transition: "background 0.15s, color 0.15s",
+                                  }}
+                                >
+                                  <Icon style={{ width: 15, height: 15 }} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="nav-label text-sm font-semibold leading-none" style={{ color: itemText, transition: "color 0.15s" }}>{l.label}</span>
+                                    {l.badge && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00" }}>
+                                        {l.badge}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
+                                </div>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+
                   </div>
                 </div>
               )}
