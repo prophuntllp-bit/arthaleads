@@ -7,7 +7,7 @@ import {
   MapPin, Clock, Briefcase, ChevronDown, ChevronUp,
   TrendingUp, Users, Zap, Heart, ArrowRight, Mail,
   Target, Handshake, Megaphone, X, CheckCircle, Loader,
-  Paperclip, Upload,
+  Paperclip, Upload, Send,
 } from "lucide-react";
 
 const JOBS = [
@@ -926,7 +926,7 @@ export default function Careers() {
 
       {/* ── Culture Grid ── */}
       <section ref={cultureRef} style={{
-        background: isDark ? "#0d0d1a" : "#111827",
+        background: isDark ? "#0d0d1a" : "#f1f5f9",
         padding: "72px 24px",
       }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -935,7 +935,7 @@ export default function Careers() {
               fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
               color: "#ff6b00", marginBottom: 10,
             }}>Life at Arthaleads</div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: "#ffffff", marginBottom: 0 }}>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 0 }}>
               How we work
             </h2>
           </div>
@@ -946,8 +946,8 @@ export default function Careers() {
                 style={{
                   padding: "22px 20px",
                   borderRadius: 16,
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: sectionBg,
+                  border: `1px solid ${sectionBdr}`,
                   opacity: cultureVisible ? 1 : 0,
                   transform: cultureVisible ? "translateY(0)" : "translateY(24px)",
                   transition: `opacity 0.55s ease ${i * 0.08}s, transform 0.55s ease ${i * 0.08}s, background 0.2s, border 0.2s`,
@@ -958,13 +958,13 @@ export default function Careers() {
                   e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)";
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                  e.currentTarget.style.background = sectionBg;
+                  e.currentTarget.style.borderColor = sectionBdr;
                 }}
               >
                 <div style={{ fontSize: 28, marginBottom: 12 }}>{emoji}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>{title}</div>
-                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>{desc}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 13, color: body, lineHeight: 1.65 }}>{desc}</div>
               </div>
             ))}
           </div>
@@ -1007,52 +1007,72 @@ export default function Careers() {
 
       {/* ── Bottom CTA ── */}
       <section style={{ padding: "0 24px 80px" }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
           <div style={{
-            borderRadius: 28, padding: "52px 40px", textAlign: "center",
-            background: isDark ? "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)" : "linear-gradient(135deg, #fff7f0 0%, #fff0e6 100%)",
-            border: "1px solid rgba(255,107,0,0.25)",
-            boxShadow: "0 24px 60px rgba(255,107,0,0.10)",
-            position: "relative", overflow: "hidden",
+            borderRadius: 28, overflow: "hidden",
+            background: isDark ? "#161620" : "#ffffff",
+            border: `1px solid ${sectionBdr}`,
+            boxShadow: isDark ? "0 24px 60px rgba(0,0,0,0.3)" : "0 24px 60px rgba(0,0,0,0.07)",
+            display: "grid", gridTemplateColumns: "1fr auto",
+            position: "relative",
           }}>
-            <div style={{
-              position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
-              width: 400, height: 300,
-              background: "radial-gradient(ellipse, rgba(255,107,0,0.12) 0%, transparent 70%)",
-              pointerEvents: "none",
-            }} />
-            <div style={{
-              position: "relative",
-              width: 52, height: 52, borderRadius: 16,
-              background: "rgba(255,107,0,0.15)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 20px",
-            }}>
-              <Target style={{ width: 24, height: 24, color: "#ff6b00" }} />
+            {/* Orange left accent bar */}
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "linear-gradient(180deg, #ff6b00, #ffaa00)" }} />
+
+            {/* Left content */}
+            <div style={{ padding: "44px 48px 44px 52px" }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                padding: "4px 12px", borderRadius: 20, marginBottom: 18,
+                background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)",
+              }}>
+                <Send style={{ width: 11, height: 11, color: "#ff6b00" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>Open Application</span>
+              </div>
+              <h3 style={{ fontSize: "clamp(22px, 3vw, 30px)", fontWeight: 900, color: heading, marginBottom: 10, lineHeight: 1.2 }}>
+                Don't see the right role?
+              </h3>
+              <p style={{ fontSize: 14, color: body, lineHeight: 1.75, marginBottom: 28, maxWidth: 380 }}>
+                We're always open to hearing from talented people excited about real estate tech. Drop us a note — we review every message.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <a
+                  href="mailto:hr@arthaleads.com?subject=General Application — Arthaleads"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 8,
+                    background: "#ff6b00", color: "#fff",
+                    borderRadius: 12, padding: "12px 22px", fontSize: 14, fontWeight: 700,
+                    textDecoration: "none",
+                    boxShadow: "0 6px 24px rgba(255,107,0,0.35)",
+                    transition: "transform 0.18s, box-shadow 0.18s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(255,107,0,0.5)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,107,0,0.35)"; }}
+                >
+                  <Mail style={{ width: 14, height: 14 }} />
+                  Send us a note
+                </a>
+                <span style={{ fontSize: 13, color: body }}>or email <a href="mailto:hr@arthaleads.com" style={{ color: "#ff6b00", textDecoration: "none", fontWeight: 600 }}>hr@arthaleads.com</a></span>
+              </div>
             </div>
-            <h3 style={{ fontSize: 26, fontWeight: 900, color: heading, marginBottom: 10, position: "relative" }}>
-              Don't see the right role?
-            </h3>
-            <p style={{ fontSize: 14, color: body, lineHeight: 1.75, marginBottom: 28, maxWidth: 420, margin: "0 auto 28px", position: "relative" }}>
-              We're always open to hearing from talented people who are excited about real estate tech. Send us a note and we'll keep you in mind.
-            </p>
-            <a
-              href="mailto:hr@arthaleads.com?subject=General Application — Arthaleads"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "#ff6b00", color: "#fff",
-                borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 700,
-                textDecoration: "none",
-                boxShadow: "0 6px 24px rgba(255,107,0,0.4)",
-                transition: "transform 0.18s, box-shadow 0.18s",
-                position: "relative",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(255,107,0,0.5)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,107,0,0.4)"; }}
-            >
-              <Mail style={{ width: 15, height: 15 }} />
-              hr@arthaleads.com
-            </a>
+
+            {/* Right decorative panel */}
+            <div style={{
+              width: 220, background: "rgba(255,107,0,0.06)", borderLeft: `1px solid ${sectionBdr}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: "32px 24px", gap: 18,
+            }}>
+              {[
+                { val: "< 48h", label: "Response time" },
+                { val: "100%", label: "Read by founders" },
+                { val: "Remote", label: "Friendly" },
+              ].map(({ val, label }) => (
+                <div key={label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: "#ff6b00", lineHeight: 1 }}>{val}</div>
+                  <div style={{ fontSize: 11, color: body, marginTop: 3, fontWeight: 500 }}>{label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

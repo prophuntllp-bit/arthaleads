@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Check, Zap, Heart, Shield,
-  MapPin, Users, BarChart3, Layers,
+  MapPin, Users, BarChart3, Layers, Sparkles,
 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -379,40 +379,93 @@ export default function AboutUs() {
       {/* ── CTA ── */}
       <section style={{ padding: "80px 24px" }}>
         <div ref={ctaRef} style={{
-          maxWidth: 720, margin: "0 auto",
-          borderRadius: 28, padding: "56px 40px", textAlign: "center",
-          background: isDark ? "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)" : "linear-gradient(135deg, #fff7f0 0%, #fff0e6 100%)",
-          border: "1px solid rgba(255,107,0,0.25)",
-          boxShadow: "0 24px 60px rgba(255,107,0,0.10)",
-          position: "relative", overflow: "hidden",
+          maxWidth: 1000, margin: "0 auto",
+          borderRadius: 28, overflow: "hidden",
+          background: isDark ? "#161620" : "#ffffff",
+          border: `1px solid ${sectionBdr}`,
+          boxShadow: isDark ? "0 24px 60px rgba(0,0,0,0.3)" : "0 24px 60px rgba(0,0,0,0.07)",
+          display: "grid", gridTemplateColumns: "1fr 1fr",
+          position: "relative",
           opacity: ctaVisible ? 1 : 0,
           transform: ctaVisible ? "translateY(0)" : "translateY(28px)",
           transition: "opacity 0.7s ease, transform 0.7s ease",
         }}>
-          <div style={{ position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)", width: 500, height: 320, background: "radial-gradient(ellipse, rgba(255,107,0,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: heading, marginBottom: 14, position: "relative" }}>
-            Ready to bring your team onto Arthaleads?
-          </h2>
-          <p style={{ fontSize: 15, color: body, lineHeight: 1.7, marginBottom: 32, maxWidth: 440, margin: "0 auto 32px", position: "relative" }}>
-            Start your free trial — no credit card required. Your team can be up and running today.
-          </p>
-          <Link
-            to="/signup"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: "#ff6b00", color: "#fff",
-              borderRadius: 14, padding: "14px 28px", fontSize: 15, fontWeight: 700,
-              textDecoration: "none",
-              boxShadow: "0 8px 28px rgba(255,107,0,0.4)",
-              transition: "transform 0.18s, box-shadow 0.18s",
-              position: "relative",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 36px rgba(255,107,0,0.55)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.4)"; }}
-          >
-            Start Free Trial
-            <ArrowRight style={{ width: 18, height: 18 }} />
-          </Link>
+          {/* Orange top accent bar */}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #ff6b00, #ffaa00, #ff6b00)", backgroundSize: "200% 100%", animation: "shimmer 3s linear infinite" }} />
+
+          {/* Left — headline + CTA */}
+          <div style={{ padding: "52px 48px 52px 52px" }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              padding: "4px 12px", borderRadius: 20, marginBottom: 20,
+              background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)",
+            }}>
+              <Sparkles style={{ width: 11, height: 11, color: "#ff6b00" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>500+ Teams Trust Us</span>
+            </div>
+            <h2 style={{ fontSize: "clamp(24px, 3.5vw, 36px)", fontWeight: 900, color: heading, lineHeight: 1.2, marginBottom: 14 }}>
+              Start managing leads the smarter way
+            </h2>
+            <p style={{ fontSize: 15, color: body, lineHeight: 1.75, marginBottom: 32 }}>
+              No spreadsheets. No missed follow-ups. Your whole team working from one place — set up in under 5 minutes.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <Link
+                to="/signup"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  background: "#ff6b00", color: "#fff",
+                  borderRadius: 12, padding: "13px 24px", fontSize: 15, fontWeight: 700,
+                  textDecoration: "none",
+                  boxShadow: "0 8px 28px rgba(255,107,0,0.38)",
+                  transition: "transform 0.18s, box-shadow 0.18s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 36px rgba(255,107,0,0.55)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.38)"; }}
+              >
+                Start Free Trial
+                <ArrowRight style={{ width: 16, height: 16 }} />
+              </Link>
+              <Link
+                to="/#features"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  color: body, fontSize: 14, fontWeight: 600,
+                  textDecoration: "none", transition: "color 0.18s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "#ff6b00"}
+                onMouseLeave={e => e.currentTarget.style.color = body}
+              >
+                See all features →
+              </Link>
+            </div>
+          </div>
+
+          {/* Right — trust checklist */}
+          <div style={{
+            background: isDark ? "rgba(255,107,0,0.05)" : "#fff7f0",
+            borderLeft: `1px solid ${isDark ? "rgba(255,107,0,0.15)" : "rgba(255,107,0,0.12)"}`,
+            display: "flex", flexDirection: "column", justifyContent: "center",
+            padding: "52px 44px",
+            gap: 18,
+          }}>
+            {[
+              "Free 14-day trial — no credit card",
+              "Set up in under 5 minutes",
+              "All lead sources in one inbox",
+              "Built for Indian real estate teams",
+              "Cancel anytime, no lock-in",
+            ].map((item) => (
+              <div key={item} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flexShrink: 0, width: 22, height: 22, borderRadius: "50%", background: "rgba(255,107,0,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Check style={{ width: 12, height: 12, color: "#ff6b00" }} />
+                </div>
+                <span style={{ fontSize: 14, color: heading, fontWeight: 500 }}>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <style>{`@keyframes shimmer { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }`}</style>
         </div>
       </section>
 
