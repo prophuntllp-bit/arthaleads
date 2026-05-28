@@ -360,21 +360,20 @@ export default function AboutUs() {
                 >
                   {/* Dot */}
                   <div style={{ flexShrink: 0, zIndex: 1, marginLeft: -28 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: "50%",
-                      background: i === TIMELINE.length - 1 ? "#ff6b00" : sectionBg,
-                      border: "2px solid #ff6b00",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      transition: "background 0.2s, transform 0.2s, box-shadow 0.2s",
-                      boxShadow: i === TIMELINE.length - 1 ? "0 0 16px rgba(255,107,0,0.4)" : "none",
-                    }}
-                    id={`timeline-dot-${i}`}
+                    <div
+                      id={`timeline-dot-${i}`}
+                      style={{
+                        width: 40, height: 40, borderRadius: "50%",
+                        background: sectionBg,
+                        border: "2px solid #ff6b00",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        transition: "background 0.2s, box-shadow 0.2s",
+                      }}
                     >
-                      <span style={{
-                        fontSize: 10, fontWeight: 900,
-                        color: i === TIMELINE.length - 1 ? "#fff" : "#ff6b00",
-                        letterSpacing: "-0.5px",
-                      }}>{year.slice(2)}</span>
+                      <span
+                        id={`timeline-dot-label-${i}`}
+                        style={{ fontSize: 10, fontWeight: 900, color: "#ff6b00", letterSpacing: "-0.5px" }}
+                      >{year.slice(2)}</span>
                     </div>
                   </div>
 
@@ -396,14 +395,18 @@ export default function AboutUs() {
                       e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.1)";
                       e.currentTarget.style.transform = "translateY(-2px)";
                       const dot = document.getElementById(`timeline-dot-${i}`);
-                      if (dot) { dot.style.background = "#ff6b00"; dot.style.boxShadow = "0 0 16px rgba(255,107,0,0.4)"; }
+                      const lbl = document.getElementById(`timeline-dot-label-${i}`);
+                      if (dot) { dot.style.background = "#ff6b00"; dot.style.boxShadow = "0 0 14px rgba(255,107,0,0.45)"; }
+                      if (lbl) lbl.style.color = "#ffffff";
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.borderColor = sectionBdr;
                       e.currentTarget.style.boxShadow = "none";
                       e.currentTarget.style.transform = "translateY(0)";
                       const dot = document.getElementById(`timeline-dot-${i}`);
-                      if (dot && i !== TIMELINE.length - 1) { dot.style.background = sectionBg; dot.style.boxShadow = "none"; }
+                      const lbl = document.getElementById(`timeline-dot-label-${i}`);
+                      if (dot) { dot.style.background = sectionBg; dot.style.boxShadow = "none"; }
+                      if (lbl) lbl.style.color = "#ff6b00";
                     }}
                   >
                     {/* Left accent */}
