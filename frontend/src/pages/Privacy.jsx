@@ -17,7 +17,7 @@ export default function Privacy() {
       <Section title="1. Introduction">
         <p>
           Arthaleads ("we", "us", or "our") is a real estate customer relationship management (CRM) platform
-          operated by Arthaleads (Prophunt LLP). This Privacy Policy explains how we collect, use, store,
+          operated by Arthaleads. This Privacy Policy explains how we collect, use, store,
           and protect information when you use our platform, including when our application connects to Meta
           (Facebook) services to retrieve lead data.
         </p>
@@ -128,7 +128,7 @@ export default function Privacy() {
           If you have any questions or requests regarding this Privacy Policy or your data, please contact:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">

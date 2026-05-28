@@ -339,53 +339,80 @@ export default function AboutUs() {
             <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading }}>How we got here</h2>
           </div>
 
-          <div style={{ position: "relative" }}>
-            {/* Vertical line */}
-            <div style={{ position: "absolute", left: 19, top: 8, bottom: 8, width: 2, background: "rgba(255,107,0,0.2)", borderRadius: 2 }} />
+          <div style={{ position: "relative", paddingLeft: 28 }}>
+            {/* Vertical line — solid with gradient */}
+            <div style={{
+              position: "absolute", left: 19, top: 20, bottom: 20, width: 2,
+              background: "linear-gradient(180deg, #ff6b00 0%, rgba(255,107,0,0.3) 100%)",
+              borderRadius: 2,
+            }} />
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               {TIMELINE.map(({ year, title, desc }, i) => (
                 <div
                   key={year}
                   style={{
-                    display: "flex", gap: 28, paddingBottom: i < TIMELINE.length - 1 ? 36 : 0,
+                    display: "flex", gap: 24, alignItems: "flex-start",
                     opacity: timelineVisible ? 1 : 0,
                     transform: timelineVisible ? "translateX(0)" : "translateX(-30px)",
                     transition: `opacity 0.6s ease ${i * 0.15}s, transform 0.6s ease ${i * 0.15}s`,
                   }}
                 >
                   {/* Dot */}
-                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", zIndex: 1 }}>
+                  <div style={{ flexShrink: 0, zIndex: 1, marginLeft: -28 }}>
                     <div style={{
                       width: 40, height: 40, borderRadius: "50%",
-                      background: "rgba(255,107,0,0.15)",
-                      border: "2px solid rgba(255,107,0,0.5)",
+                      background: i === TIMELINE.length - 1 ? "#ff6b00" : sectionBg,
+                      border: "2px solid #ff6b00",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: "#ff6b00" }}>{year.slice(2)}</span>
+                      transition: "background 0.2s, transform 0.2s, box-shadow 0.2s",
+                      boxShadow: i === TIMELINE.length - 1 ? "0 0 16px rgba(255,107,0,0.4)" : "none",
+                    }}
+                    id={`timeline-dot-${i}`}
+                    >
+                      <span style={{
+                        fontSize: 10, fontWeight: 900,
+                        color: i === TIMELINE.length - 1 ? "#fff" : "#ff6b00",
+                        letterSpacing: "-0.5px",
+                      }}>{year.slice(2)}</span>
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div style={{
-                    flex: 1, paddingTop: 8, paddingBottom: i < TIMELINE.length - 1 ? 8 : 0,
-                    paddingLeft: 20, paddingRight: 20,
-                    background: sectionBg,
-                    borderRadius: 14,
-                    border: `1px solid ${sectionBdr}`,
-                    marginBottom: i < TIMELINE.length - 1 ? 0 : 0,
-                    padding: "14px 18px",
-                    transition: "background 0.2s, border 0.2s",
-                    cursor: "default",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,0,0.07)"; e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = sectionBg; e.currentTarget.style.borderColor = sectionBdr; }}
+                  {/* Content card */}
+                  <div
+                    style={{
+                      flex: 1,
+                      background: sectionBg,
+                      borderRadius: 16,
+                      border: `1px solid ${sectionBdr}`,
+                      padding: "18px 22px",
+                      transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
+                      cursor: "default",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = "rgba(255,107,0,0.35)";
+                      e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.1)";
+                      e.currentTarget.style.transform = "translateY(-2px)";
+                      const dot = document.getElementById(`timeline-dot-${i}`);
+                      if (dot) { dot.style.background = "#ff6b00"; dot.style.boxShadow = "0 0 16px rgba(255,107,0,0.4)"; }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = sectionBdr;
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.transform = "translateY(0)";
+                      const dot = document.getElementById(`timeline-dot-${i}`);
+                      if (dot && i !== TIMELINE.length - 1) { dot.style.background = sectionBg; dot.style.boxShadow = "none"; }
+                    }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", background: "rgba(255,107,0,0.12)", padding: "2px 8px", borderRadius: 20 }}>{year}</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: heading }}>{title}</span>
+                    {/* Left accent */}
+                    <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "#ff6b00", borderRadius: "16px 0 0 16px", opacity: 0.5 }} />
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: "#ff6b00", background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.2)", padding: "2px 10px", borderRadius: 20 }}>{year}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: heading }}>{title}</span>
                     </div>
-                    <p style={{ fontSize: 13, color: body, lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                    <p style={{ fontSize: 14, color: body, lineHeight: 1.7, margin: 0 }}>{desc}</p>
                   </div>
                 </div>
               ))}

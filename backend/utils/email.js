@@ -75,7 +75,7 @@ function cardEmail({ iconEmoji, headerHtml, bodyHtml, footerNote }) {
         <!-- Footer -->
         <tr>
           <td align="center" style="padding:26px 0 8px;">
-            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Prophunt LLP &nbsp;·&nbsp; Pune, India</p>
+            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Pune, India</p>
             <p style="margin:0;font-size:11px;color:#bbb;">${footerNote}</p>
           </td>
         </tr>
@@ -210,7 +210,7 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
           <tr>
             <td align="center" style="padding:26px 0 8px;">
               <p style="margin:0 0 4px;font-size:11.5px;color:#999;">
-                © ${new Date().getFullYear()} Arthaleads &nbsp;·&nbsp; Prophunt LLP &nbsp;·&nbsp; Pune, India
+                © ${new Date().getFullYear()} Arthaleads &nbsp;·&nbsp; Pune, India
               </p>
               <p style="margin:0;font-size:11px;color:#bbb;">
                 You're receiving this because a password reset was requested for your account.

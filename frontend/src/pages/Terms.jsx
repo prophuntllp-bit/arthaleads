@@ -19,7 +19,7 @@ export default function Terms() {
           By accessing or using Arthaleads CRM ("the Service"), you agree to be bound by these Terms of
           Service. If you do not agree to these terms, you must not use the Service. These terms apply to
           all users of the platform, including administrators, managers, and agents. Arthaleads is operated
-          by Arthaleads (Prophunt LLP).
+          by Arthaleads.
         </p>
       </Section>
 
@@ -109,7 +109,7 @@ export default function Terms() {
 
       <Section title="9. Limitation of Liability">
         <p>
-          To the fullest extent permitted by applicable law, Arthaleads (Prophunt LLP) shall not be liable
+          To the fullest extent permitted by applicable law, Arthaleads shall not be liable
           for any indirect, incidental, special, consequential, or punitive damages - including but not
           limited to loss of revenue, loss of data, loss of business opportunities, or reputational harm -
           arising from your use of or inability to use the Service, even if Arthaleads has been advised of
@@ -125,7 +125,7 @@ export default function Terms() {
           contact us:
         </p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">

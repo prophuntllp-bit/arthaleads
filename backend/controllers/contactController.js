@@ -118,7 +118,7 @@ async function sendContactForm(req, res) {
 
         <tr>
           <td align="center" style="padding:26px 0 8px;">
-            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Prophunt LLP &nbsp;·&nbsp; Pune, India</p>
+            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Pune, India</p>
             <p style="margin:0;font-size:11px;color:#bbb;">This message was sent via the contact form on arthaleads.com</p>
           </td>
         </tr>
