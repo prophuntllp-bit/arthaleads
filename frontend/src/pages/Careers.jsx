@@ -473,140 +473,183 @@ function ApplyModal({ job, isDark, onClose }) {
   );
 }
 
+// ── Animated counter (reusable) ───────────────────────────────────────────────
+function AnimCounter({ to, suffix = "", dur = 1400 }) {
+  const ref = useRef(null);
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      obs.disconnect();
+      const fps = 60, steps = (dur / 1000) * fps;
+      let s = 0;
+      const id = setInterval(() => {
+        s++;
+        const p = 1 - Math.pow(1 - s / steps, 3);
+        setVal(Math.round(p * to));
+        if (s >= steps) clearInterval(id);
+      }, 1000 / fps);
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [to, dur]);
+  return <span ref={ref}>{val}{suffix}</span>;
+}
+
 // ── Job Card ──────────────────────────────────────────────────────────────────
 function JobCard({ job, isDark, index, onApply }) {
   const [open, setOpen] = useState(false);
-  const [cardRef, cardVisible] = useVisible(0.1);
+  const [hovered, setHovered] = useState(false);
+  const [cardRef, cardVisible] = useVisible(0.08);
   const Icon = job.icon;
 
   const cardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
   const heading = isDark ? "#ffffff" : "#111827";
   const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const divider = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
+  const divider = isDark ? "rgba(255,255,255,0.07)" : "#f3f4f6";
 
   return (
     <div
       ref={cardRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
+        position: "relative",
         background: cardBg,
-        border: `1px solid ${open ? job.color + "55" : cardBdr}`,
-        boxShadow: open ? `0 12px 40px ${job.color}18` : "none",
+        border: `1px solid ${open || hovered ? job.color + "55" : cardBdr}`,
+        boxShadow: open ? `0 20px 60px ${job.color}20` : hovered ? `0 8px 28px ${job.color}14` : "none",
         borderRadius: 20,
         opacity: cardVisible ? 1 : 0,
-        transform: cardVisible ? "translateY(0)" : "translateY(28px)",
-        transition: `opacity 0.6s ease ${index * 0.15}s, transform 0.6s ease ${index * 0.15}s, border 0.25s, box-shadow 0.25s`,
+        transform: cardVisible ? "translateY(0)" : "translateY(32px)",
+        transition: `opacity 0.65s ease ${index * 0.18}s, transform 0.65s ease ${index * 0.18}s, border 0.22s, box-shadow 0.22s`,
         overflow: "hidden",
       }}
     >
+      {/* Colored top accent bar */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+        background: `linear-gradient(90deg, ${job.color}, ${job.color}44)`,
+        opacity: open || hovered ? 1 : 0,
+        transition: "opacity 0.22s",
+      }} />
+
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full text-left p-6 sm:p-8"
-        style={{ cursor: "pointer" }}
+        className="w-full text-left"
+        style={{ padding: "28px 28px 24px", cursor: "pointer" }}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div
-              className="flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: job.color + "18" }}
-            >
-              <Icon className="w-6 h-6" style={{ color: job.color }} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+            {/* Icon with glow */}
+            <div style={{
+              flexShrink: 0, width: 52, height: 52, borderRadius: 16,
+              background: open || hovered ? job.color + "22" : job.color + "12",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: open || hovered ? `0 4px 20px ${job.color}35` : "none",
+              transition: "background 0.22s, box-shadow 0.22s",
+            }}>
+              <Icon style={{ width: 24, height: 24, color: job.color }} />
             </div>
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-xs font-semibold uppercase tracking-wide px-2.5 py-0.5 rounded-full"
-                  style={{ background: job.color + "18", color: job.color }}>
-                  {job.department}
-                </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full"
-                  style={{ background: isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6", color: body }}>
-                  {job.type}
-                </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em",
+                  padding: "3px 10px", borderRadius: 20,
+                  background: job.color + "18", color: job.color,
+                }}>{job.department}</span>
+                <span style={{
+                  fontSize: 11, padding: "3px 10px", borderRadius: 20,
+                  background: isDark ? "rgba(255,255,255,0.07)" : "#f3f4f6", color: body,
+                }}>{job.type}</span>
               </div>
-              <h3 className="text-xl font-bold mb-1" style={{ color: heading }}>{job.title}</h3>
-              <p className="text-sm" style={{ color: body }}>{job.tagline}</p>
-              <div className="flex flex-wrap gap-4 mt-3">
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: body }}>
-                  <MapPin className="w-3.5 h-3.5" />{job.location}
-                </span>
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: body }}>
-                  <Clock className="w-3.5 h-3.5" />{job.experience} experience
-                </span>
-                <span className="flex items-center gap-1.5 text-xs" style={{ color: body }}>
-                  <Briefcase className="w-3.5 h-3.5" />{job.type}
-                </span>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: heading, marginBottom: 4, lineHeight: 1.2 }}>{job.title}</h3>
+              <p style={{ fontSize: 13, color: body, marginBottom: 10 }}>{job.tagline}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                {[
+                  [MapPin, job.location],
+                  [Clock, `${job.experience} exp.`],
+                  [Briefcase, job.type],
+                ].map(([Ic, txt]) => (
+                  <span key={txt} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: body }}>
+                    <Ic style={{ width: 13, height: 13 }} />{txt}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
-          <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-            style={{
-              background: open ? job.color + "18" : isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
-              transition: "background 0.2s",
-            }}>
-            {open
-              ? <ChevronUp className="w-4 h-4" style={{ color: job.color }} />
-              : <ChevronDown className="w-4 h-4" style={{ color: body }} />
-            }
+
+          {/* Expand toggle */}
+          <div style={{
+            flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+            background: open ? job.color + "18" : isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background 0.2s, transform 0.3s",
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}>
+            <ChevronDown style={{ width: 16, height: 16, color: open ? job.color : body }} />
           </div>
         </div>
       </button>
 
       {/* Expandable details */}
       <div style={{
-        maxHeight: open ? 1200 : 0,
+        maxHeight: open ? 1400 : 0,
         overflow: "hidden",
-        transition: "max-height 0.45s cubic-bezier(0.4,0,0.2,1)",
+        transition: "max-height 0.5s cubic-bezier(0.4,0,0.2,1)",
       }}>
-        <div style={{ borderTop: `1px solid ${divider}`, padding: "0 32px 32px" }}>
-          <p className="text-sm leading-relaxed mt-6 mb-6" style={{ color: body }}>{job.about}</p>
+        <div style={{ borderTop: `1px solid ${divider}`, padding: "24px 28px 32px" }}>
+          <p style={{ fontSize: 14, lineHeight: 1.75, color: body, marginBottom: 24 }}>{job.about}</p>
 
-          <div className="grid sm:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wide mb-3" style={{ color: job.color }}>
-                Responsibilities
-              </h4>
-              <ul className="space-y-2">
-                {job.responsibilities.map(r => (
-                  <li key={r} className="flex items-start gap-2.5 text-sm" style={{ color: body }}>
-                    <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full" style={{ background: job.color }} />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wide mb-3" style={{ color: job.color }}>
-                Requirements
-              </h4>
-              <ul className="space-y-2">
-                {job.requirements.map(r => (
-                  <li key={r} className="flex items-start gap-2.5 text-sm" style={{ color: body }}>
-                    <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full" style={{ background: job.color }} />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28 }}>
+            {[
+              { label: "Responsibilities", items: job.responsibilities },
+              { label: "Requirements",     items: job.requirements },
+            ].map(({ label, items }) => (
+              <div key={label}>
+                <div style={{
+                  fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em",
+                  color: job.color, marginBottom: 12,
+                  display: "flex", alignItems: "center", gap: 6,
+                }}>
+                  <span style={{ display: "inline-block", width: 16, height: 2, background: job.color, borderRadius: 2 }} />
+                  {label}
+                </div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {items.map(r => (
+                    <li key={r} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13, color: body, lineHeight: 1.6 }}>
+                      <span style={{
+                        flexShrink: 0, marginTop: 7, width: 6, height: 6, borderRadius: "50%",
+                        background: job.color + "88",
+                      }} />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-8">
+          <div style={{ marginTop: 28, display: "flex", alignItems: "center", gap: 12 }}>
             <button
               onClick={() => onApply(job)}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold"
               style={{
-                background: job.color,
-                color: "#ffffff",
-                border: "none",
-                cursor: "pointer",
-                transition: "opacity 0.2s",
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: job.color, color: "#fff", border: "none",
+                borderRadius: 12, padding: "11px 22px", fontSize: 14, fontWeight: 700,
+                cursor: "pointer", transition: "transform 0.18s, box-shadow 0.18s",
+                boxShadow: `0 4px 20px ${job.color}44`,
               }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 8px 28px ${job.color}55`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = `0 4px 20px ${job.color}44`; }}
             >
-              <Mail className="w-4 h-4" />
+              <Mail style={{ width: 15, height: 15 }} />
               Apply Now
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight style={{ width: 15, height: 15 }} />
             </button>
+            <span style={{ fontSize: 12, color: body }}>Takes ~5 minutes</span>
           </div>
         </div>
       </div>
@@ -615,115 +658,346 @@ function JobCard({ job, isDark, index, onApply }) {
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+const STATS = [
+  { label: "Open Positions",  to: 2,  suffix: "",   color: "#ff6b00" },
+  { label: "Minutes to Apply",to: 5,  suffix: " min",color: "#f59e0b" },
+  { label: "Response Time",   to: 48, suffix: "h",  color: "#22c55e" },
+  { label: "Team Size",       to: 10, suffix: "+",  color: "#3b82f6" },
+];
+
+const CULTURE = [
+  { emoji: "🚀", title: "Ship every week",         desc: "We don't wait for perfection. We ship, learn, and improve continuously." },
+  { emoji: "🎯", title: "Direct ownership",         desc: "You own your work end-to-end. No hand-offs, no waiting for approvals." },
+  { emoji: "💬", title: "Transparent by default",  desc: "All company metrics, decisions, and direction shared with the full team." },
+  { emoji: "🏗️", title: "Build from first principles", desc: "We question everything. If there's a better way, we do it that way." },
+  { emoji: "📈", title: "Grow with us",             desc: "Early team members have grown faster here than anywhere before." },
+  { emoji: "🤝", title: "Customer-obsessed",        desc: "Our best ideas come from spending time with real estate teams in Pune." },
+];
+
 export default function Careers() {
   const { isDark } = usePublicTheme();
-  const [heroRef, heroVisible] = useVisible(0.1);
-  const [perksRef, perksVisible] = useVisible(0.15);
   const [applyJob, setApplyJob] = useState(null);
+  const [statsRef, statsVisible] = useVisible(0.2);
+  const [cultureRef, cultureVisible] = useVisible(0.1);
+  const [perksRef, perksVisible] = useVisible(0.1);
+  const [jobsRef, jobsVisible] = useVisible(0.08);
+  const positionsRef = useRef(null);
 
-  const bg      = isDark ? "#0d0d1a" : "#f8f9fa";
-  const heading = isDark ? "#ffffff" : "#111827";
-  const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const perkBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const perkBdr = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
+  const pageBg    = isDark ? "#0d0d1a" : "#f8fafc";
+  const sectionBg = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
+  const sectionBdr= isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const heading   = isDark ? "#ffffff" : "#111827";
+  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
 
   useEffect(() => {
     document.title = "Careers — Arthaleads";
     return () => { document.title = "Arthaleads - Real Estate CRM"; };
   }, []);
 
+  function scrollToPositions() {
+    positionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <div style={{ background: bg, minHeight: "100vh" }}>
+    <div style={{ background: pageBg, minHeight: "100vh" }}>
       <PublicNav />
 
-      {/* Hero */}
-      <section className="pt-28 pb-16 px-4" ref={heroRef}>
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(-12px)",
-              transition: "opacity 0.6s ease, transform 0.6s ease",
-            }}>
-            <Briefcase className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">We're Hiring</span>
+      {/* ── Hero ── dark full-bleed with orbs */}
+      <section style={{
+        position: "relative", overflow: "hidden",
+        background: "#0d0d1a",
+        paddingTop: 112, paddingBottom: 96,
+      }}>
+        {/* Background blobs */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <div style={{
+            position: "absolute", top: "-20%", right: "-10%",
+            width: 600, height: 600, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(255,107,0,0.18) 0%, transparent 70%)",
+            filter: "blur(60px)", animation: "orbDrift1 8s ease-in-out infinite",
+          }} />
+          <div style={{
+            position: "absolute", bottom: "-30%", left: "-10%",
+            width: 500, height: 500, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)",
+            filter: "blur(70px)", animation: "orbDrift2 10s ease-in-out infinite",
+          }} />
+          {/* Dot grid */}
+          <div style={{
+            position: "absolute", inset: 0, opacity: 0.04,
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }} />
+        </div>
+
+        <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
+          {/* Badge */}
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            padding: "6px 16px", borderRadius: 40,
+            border: "1px solid rgba(255,107,0,0.35)",
+            background: "rgba(255,107,0,0.1)",
+            marginBottom: 28,
+            animation: "fadeUp 0.6s ease both",
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              We're Actively Hiring
+            </span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-5 leading-tight"
-            style={{
-              color: heading,
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(20px)",
-              transition: "opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s",
-            }}>
+          {/* Headline */}
+          <h1 style={{
+            fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1,
+            color: "#ffffff", marginBottom: 20,
+            animation: "fadeUp 0.7s ease 0.1s both",
+          }}>
             Build the future of{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+            <span style={{
+              background: "linear-gradient(135deg, #ff6b00, #ffaa00)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>
               real estate tech
             </span>
           </h1>
 
-          <p className="text-lg leading-relaxed mb-8 max-w-xl mx-auto"
-            style={{
-              color: body,
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(16px)",
-              transition: "opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s",
-            }}>
-            Arthaleads is a fast-growing real estate CRM used by teams across Maharashtra. We're a small, ambitious team that moves fast and ships every week. Come help us build something real.
+          {/* Sub */}
+          <p style={{
+            fontSize: 17, lineHeight: 1.75, color: "rgba(255,255,255,0.6)",
+            maxWidth: 560, margin: "0 auto 36px",
+            animation: "fadeUp 0.7s ease 0.2s both",
+          }}>
+            We're a small, fast-moving team building the CRM that powers property sales
+            across Maharashtra. Join us before we get big.
           </p>
 
-          <div className="flex items-center justify-center gap-3 flex-wrap"
-            style={{
-              opacity: heroVisible ? 1 : 0,
-              transform: heroVisible ? "translateY(0)" : "translateY(12px)",
-              transition: "opacity 0.6s ease 0.32s, transform 0.6s ease 0.32s",
-            }}>
-            <span className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full"
-              style={{ background: isDark ? "rgba(255,107,0,0.1)" : "#fff7ed", color: "#ff6b00", border: "1px solid rgba(255,107,0,0.2)" }}>
-              <MapPin className="w-3.5 h-3.5" /> Pune, Maharashtra
-            </span>
-            <span className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-full"
-              style={{ background: isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" }}>
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse inline-block" />
-              2 Open Positions
-            </span>
+          {/* CTA row */}
+          <div style={{
+            display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap",
+            marginBottom: 52,
+            animation: "fadeUp 0.6s ease 0.3s both",
+          }}>
+            <button
+              onClick={scrollToPositions}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "#ff6b00", color: "#fff", border: "none",
+                borderRadius: 12, padding: "13px 26px", fontSize: 15, fontWeight: 700,
+                cursor: "pointer", boxShadow: "0 8px 32px rgba(255,107,0,0.4)",
+                transition: "transform 0.18s, box-shadow 0.18s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(255,107,0,0.5)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(255,107,0,0.4)"; }}
+            >
+              View Open Positions
+              <ArrowRight style={{ width: 16, height: 16 }} />
+            </button>
+            <a
+              href="mailto:hr@arthaleads.com"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.8)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 12, padding: "13px 26px", fontSize: 15, fontWeight: 600,
+                textDecoration: "none", transition: "background 0.18s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.11)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+            >
+              <Mail style={{ width: 16, height: 16 }} />
+              Say Hello
+            </a>
           </div>
+
+          {/* Floating info chips */}
+          <div style={{
+            display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap",
+            animation: "fadeUp 0.6s ease 0.42s both",
+          }}>
+            {[
+              { icon: MapPin,   txt: "Pune, Maharashtra",  clr: "#ff6b00" },
+              { icon: Briefcase,txt: "2 Open Positions",   clr: "#22c55e", pulse: true },
+              { icon: Clock,    txt: "Full-time Roles",    clr: "#3b82f6" },
+            ].map(({ icon: Ic, txt, clr, pulse }) => (
+              <div key={txt} style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "7px 14px", borderRadius: 30,
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                backdropFilter: "blur(10px)",
+              }}>
+                {pulse && <span style={{ width: 6, height: 6, borderRadius: "50%", background: clr, animation: "pulse 2s infinite" }} />}
+                {!pulse && <Ic style={{ width: 12, height: 12, color: clr }} />}
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{txt}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes fadeUp    { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+          @keyframes orbDrift1 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-30px,20px); } }
+          @keyframes orbDrift2 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(20px,-25px); } }
+          @keyframes pulse     { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        `}</style>
+      </section>
+
+      {/* ── Animated Stats Strip ── */}
+      <section ref={statsRef} style={{
+        background: isDark ? "rgba(255,255,255,0.02)" : "#fff",
+        borderTop: `1px solid ${sectionBdr}`,
+        borderBottom: `1px solid ${sectionBdr}`,
+        padding: "32px 24px",
+      }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 0 }}>
+          {STATS.map(({ label, to, suffix, color }, i) => (
+            <div key={label} style={{
+              textAlign: "center", padding: "12px 20px",
+              borderRight: i < STATS.length - 1 ? `1px solid ${sectionBdr}` : "none",
+              opacity: statsVisible ? 1 : 0,
+              transform: statsVisible ? "translateY(0)" : "translateY(16px)",
+              transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s`,
+            }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color, lineHeight: 1, marginBottom: 6 }}>
+                <AnimCounter to={to} suffix={suffix} />
+              </div>
+              <div style={{ fontSize: 12, color: body, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Perks */}
-      <section className="pb-12 px-4" ref={perksRef}>
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Perks ── */}
+      <section ref={perksRef} style={{ padding: "72px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
+              color: "#ff6b00", marginBottom: 10,
+            }}>Why join us</div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>
+              Built for people who want to{" "}
+              <span style={{ color: "#ff6b00" }}>make an impact</span>
+            </h2>
+            <p style={{ fontSize: 15, color: body, maxWidth: 480, margin: "0 auto" }}>
+              Small team. Big real-estate market. Every person here shapes how the product works.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
             {PERKS.map(({ icon: Icon, title, desc, color }, i) => (
-              <div key={title} className="p-5 rounded-2xl"
+              <div key={title}
                 style={{
-                  background: perkBg,
-                  border: `1px solid ${perkBdr}`,
+                  padding: "24px 22px",
+                  borderRadius: 18,
+                  background: sectionBg,
+                  border: `1px solid ${sectionBdr}`,
                   opacity: perksVisible ? 1 : 0,
-                  transform: perksVisible ? "translateY(0)" : "translateY(20px)",
-                  transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s`,
+                  transform: perksVisible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
+                  transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s, box-shadow 0.22s, border 0.22s`,
+                  cursor: "default",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = `0 12px 36px ${color}22`;
+                  e.currentTarget.style.borderColor = color + "44";
+                  e.currentTarget.style.transform = "translateY(-4px) scale(1)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.borderColor = sectionBdr;
+                  e.currentTarget.style.transform = "translateY(0) scale(1)";
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  background: color + "18",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  marginBottom: 14,
                 }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: color + "18" }}>
-                  <Icon style={{ color, width: 18, height: 18 }} />
+                  <Icon style={{ width: 20, height: 20, color }} />
                 </div>
-                <div className="font-semibold text-sm mb-1" style={{ color: heading }}>{title}</div>
-                <div className="text-xs leading-relaxed" style={{ color: body }}>{desc}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 13, color: body, lineHeight: 1.65 }}>{desc}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Open Positions */}
-      <section className="pb-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="flex-1 h-px" style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb" }} />
-            <span className="text-xs font-bold uppercase tracking-widest px-4" style={{ color: body }}>Open Positions</span>
-            <div className="flex-1 h-px" style={{ background: isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb" }} />
+      {/* ── Culture Grid ── */}
+      <section ref={cultureRef} style={{
+        background: isDark ? "#0d0d1a" : "#111827",
+        padding: "72px 24px",
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 52 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
+              color: "#ff6b00", marginBottom: 10,
+            }}>Life at Arthaleads</div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: "#ffffff", marginBottom: 0 }}>
+              How we work
+            </h2>
           </div>
-          <div className="space-y-5">
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+            {CULTURE.map(({ emoji, title, desc }, i) => (
+              <div key={title}
+                style={{
+                  padding: "22px 20px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  opacity: cultureVisible ? 1 : 0,
+                  transform: cultureVisible ? "translateY(0)" : "translateY(24px)",
+                  transition: `opacity 0.55s ease ${i * 0.08}s, transform 0.55s ease ${i * 0.08}s, background 0.2s, border 0.2s`,
+                  cursor: "default",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "rgba(255,107,0,0.07)";
+                  e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
+                }}
+              >
+                <div style={{ fontSize: 28, marginBottom: 12 }}>{emoji}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.65 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Open Positions ── */}
+      <section ref={positionsRef} style={{ padding: "72px 24px" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <div ref={jobsRef} style={{ textAlign: "center", marginBottom: 48,
+            opacity: jobsVisible ? 1 : 0,
+            transform: jobsVisible ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "5px 14px", borderRadius: 30, marginBottom: 14,
+              background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                2 Positions Open
+              </span>
+            </div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 900, color: heading }}>
+              Open Positions
+            </h2>
+            <p style={{ fontSize: 15, color: body, marginTop: 8 }}>
+              Click a role to see the full details, then hit Apply Now.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {JOBS.map((job, i) => (
               <JobCard key={job.id} job={job} isDark={isDark} index={i} onApply={setApplyJob} />
             ))}
@@ -731,33 +1005,52 @@ export default function Careers() {
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="pb-20 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="rounded-3xl p-10"
-            style={{
-              background: isDark
-                ? "linear-gradient(135deg, rgba(255,107,0,0.12), rgba(255,170,0,0.06))"
-                : "linear-gradient(135deg, #fff7ed, #fffbeb)",
-              border: "1px solid rgba(255,107,0,0.2)",
+      {/* ── Bottom CTA ── */}
+      <section style={{ padding: "0 24px 80px" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <div style={{
+            borderRadius: 28, padding: "52px 40px", textAlign: "center",
+            background: "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)",
+            border: "1px solid rgba(255,107,0,0.25)",
+            boxShadow: "0 24px 60px rgba(255,107,0,0.12)",
+            position: "relative", overflow: "hidden",
+          }}>
+            <div style={{
+              position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
+              width: 400, height: 300,
+              background: "radial-gradient(ellipse, rgba(255,107,0,0.18) 0%, transparent 70%)",
+              pointerEvents: "none",
+            }} />
+            <div style={{
+              position: "relative",
+              width: 52, height: 52, borderRadius: 16,
+              background: "rgba(255,107,0,0.15)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 20px",
             }}>
-            <div className="w-12 h-12 rounded-2xl bg-[#ff6b00]/15 flex items-center justify-center mx-auto mb-4">
-              <Target className="w-6 h-6 text-[#ff6b00]" />
+              <Target style={{ width: 24, height: 24, color: "#ff6b00" }} />
             </div>
-            <h3 className="text-2xl font-black mb-3" style={{ color: heading }}>
-              Don't see a fit? Reach out anyway.
+            <h3 style={{ fontSize: 26, fontWeight: 900, color: "#ffffff", marginBottom: 10, position: "relative" }}>
+              Don't see the right role?
             </h3>
-            <p className="text-sm leading-relaxed mb-6" style={{ color: body }}>
-              We're always open to meeting talented people excited about real estate tech. Send us a note and we'll keep you in mind.
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.75, marginBottom: 28, maxWidth: 420, margin: "0 auto 28px", position: "relative" }}>
+              We're always open to hearing from talented people who are excited about real estate tech. Send us a note and we'll keep you in mind.
             </p>
             <a
               href="mailto:hr@arthaleads.com?subject=General Application — Arthaleads"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm"
-              style={{ background: "#ff6b00", color: "#ffffff", textDecoration: "none", transition: "opacity 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "#ff6b00", color: "#fff",
+                borderRadius: 12, padding: "12px 24px", fontSize: 14, fontWeight: 700,
+                textDecoration: "none",
+                boxShadow: "0 6px 24px rgba(255,107,0,0.4)",
+                transition: "transform 0.18s, box-shadow 0.18s",
+                position: "relative",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(255,107,0,0.5)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,107,0,0.4)"; }}
             >
-              <Mail className="w-4 h-4" />
+              <Mail style={{ width: 15, height: 15 }} />
               hr@arthaleads.com
             </a>
           </div>
@@ -766,7 +1059,6 @@ export default function Careers() {
 
       <PublicFooter />
 
-      {/* Apply Modal */}
       {applyJob && (
         <ApplyModal job={applyJob} isDark={isDark} onClose={() => setApplyJob(null)} />
       )}
