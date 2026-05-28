@@ -323,7 +323,7 @@ function BlogPostInner() {
             <Clock className="w-4 h-4" /> {post.readingTime || 1} min read
           </span>
           {post.views > 0 && (
-            <span className="text-xs">{post.views.toLocaleString()} views</span>
+            <span className="text-xs">{post.views.toLocaleString("en-IN")} views</span>
           )}
           <button
             onClick={share}

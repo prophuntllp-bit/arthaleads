@@ -193,7 +193,7 @@ export default function BlogManager() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 text-app-soft">
                           <BarChart3 className="w-3 h-3" />
-                          <span>{post.views?.toLocaleString() || 0}</span>
+                          <span>{post.views?.toLocaleString("en-IN") || 0}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-app-soft whitespace-nowrap">{fmtDate(post.publishedAt)}</td>

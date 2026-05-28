@@ -191,7 +191,7 @@ function MetricCard({ icon: Icon, label, value, note }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="stitch-kicker mb-2">{label}</p>
-          <p className="text-3xl font-black tracking-tight text-app">{value.toLocaleString()}</p>
+          <p className="text-3xl font-black tracking-tight text-app">{value.toLocaleString("en-IN")}</p>
           <p className="mt-2 text-xs text-app-soft">{note}</p>
         </div>
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-500">
@@ -208,7 +208,7 @@ function SmallTile({ label, value, highlight = false, valueClass = "" }) {
     <div className="rounded-xl p-3 stitch-surface-muted">
       <p className="text-[10px] text-app-soft leading-none">{label}</p>
       <p className={`mt-1.5 text-base font-bold truncate ${valueClass || (highlight && value > 0 ? "text-green-500" : "text-app")}`}>
-        {isNum ? value.toLocaleString() : value}
+        {isNum ? value.toLocaleString("en-IN") : value}
       </p>
     </div>
   );
