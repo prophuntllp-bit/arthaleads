@@ -1,40 +1,100 @@
-﻿import { Link } from "react-router-dom";
-import { ArrowRight, Check } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowRight, Check, Zap, Heart, Shield,
+  MapPin, Users, BarChart3, Layers,
+} from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
 
-const values = [
+// ── Data ──────────────────────────────────────────────────────────────────────
+const STATS = [
+  { num: 500,   suffix: "+",   label: "Real Estate Teams",  color: "#ff6b00" },
+  { num: 50000, suffix: "+",   label: "Leads Managed",      color: "#22c55e" },
+  { num: 8,     suffix: "",    label: "Form Integrations",  color: "#3b82f6" },
+  { num: 99,    suffix: ".9%", label: "Uptime",             color: "#a855f7" },
+];
+
+const VALUES = [
   {
+    icon: Zap,
+    color: "#ff6b00",
     title: "Speed",
     desc: "Every lead that comes in is captured instantly. Every follow-up reminder fires on time. We build for the urgency of property sales.",
   },
   {
+    icon: Heart,
+    color: "#ec4899",
     title: "Simplicity",
     desc: "Sales teams shouldn't need training to use their CRM. Arthaleads is intuitive enough for a telecaller on day one.",
   },
   {
+    icon: Shield,
+    color: "#22c55e",
     title: "Support",
     desc: "When your team is in the middle of a campaign and something goes wrong, we're there. Real support from people who understand real estate.",
   },
 ];
 
-const stats = [
-  { val: "500+",    label: "Real Estate Teams" },
-  { val: "50,000+", label: "Leads Managed" },
-  { val: "8",       label: "Form Integrations" },
-  { val: "99.9%",   label: "Uptime" },
+const STORY_POINTS = [
+  { icon: Layers,   text: "Every lead source connected to one inbox — Facebook, Google, WhatsApp, forms, portals." },
+  { icon: Users,    text: "Duplicate prevention so your team never wastes a call." },
+  { icon: Shield,   text: "Role-based access so telecallers, managers, and admins each see exactly what they need." },
+  { icon: BarChart3,text: "Real-time dashboards built for the pace of property sales campaigns." },
 ];
 
-const storyPoints = [
-  "Every lead source connected to one inbox - Facebook, Google, WhatsApp, forms, portals.",
-  "Duplicate prevention so your team never wastes a call.",
-  "Role-based access so telecallers, managers, and admins each see exactly what they need.",
-  "Real-time dashboards built for the pace of property sales campaigns.",
+const TIMELINE = [
+  { year: "2022", title: "The idea",         desc: "Watched real estate teams lose hot leads across WhatsApp groups and spreadsheets. Knew there had to be a better way." },
+  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. Immediate product-market fit — teams never looked back at Excel." },
+  { year: "2024", title: "Growing fast",     desc: "Expanded to 100+ teams across Maharashtra. Added Facebook Ads integration, pipeline view, and team analytics." },
+  { year: "2025", title: "Scaling up",       desc: "500+ teams, 50,000+ leads managed monthly. Launching WordPress plugin and deepening integrations with Indian property portals." },
 ];
 
-function AboutUsInner() {
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+function useVisible(threshold = 0.15) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { setVisible(true); obs.disconnect(); }
+    }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function AnimCounter({ to, suffix = "", dur = 1600 }) {
+  const ref = useRef(null);
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      obs.disconnect();
+      const fps = 60, steps = (dur / 1000) * fps;
+      let s = 0;
+      const id = setInterval(() => {
+        s++;
+        const p = 1 - Math.pow(1 - s / steps, 3);
+        setVal(Math.round(p * to));
+        if (s >= steps) clearInterval(id);
+      }, 1000 / fps);
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [to, dur]);
+  const display = to >= 1000 ? val.toLocaleString("en-IN") : val;
+  return <span ref={ref}>{display}{suffix}</span>;
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+export default function AboutUs() {
   const { isDark } = usePublicTheme();
 
   useSEO({
@@ -43,69 +103,273 @@ function AboutUsInner() {
     canonical: "https://www.arthaleads.com/about-us",
   });
 
-  const bg        = isDark ? "#0d0d1a" : "#ffffff";
-  const altBg     = isDark ? "#080810" : "#f9fafb";
-  const textColor = isDark ? "#ffffff" : "#111827";
-  const softText  = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
-  const cardBg    = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const checkBg   = isDark ? "rgba(255,107,0,0.15)" : "rgba(255,107,0,0.10)";
+  const [statsRef,    statsVisible]    = useVisible(0.2);
+  const [storyRef,    storyVisible]    = useVisible(0.12);
+  const [missionRef,  missionVisible]  = useVisible(0.2);
+  const [valuesRef,   valuesVisible]   = useVisible(0.1);
+  const [timelineRef, timelineVisible] = useVisible(0.1);
+  const [ctaRef,      ctaVisible]      = useVisible(0.2);
+
+  const pageBg    = isDark ? "#0d0d1a" : "#f8fafc";
+  const sectionBg = isDark ? "rgba(255,255,255,0.02)" : "#ffffff";
+  const sectionBdr= isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
+  const heading   = isDark ? "#ffffff" : "#111827";
+  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
 
   return (
-    <div className="min-h-screen" style={{ background: bg, color: textColor, fontFamily: "Inter, sans-serif" }}>
+    <div style={{ background: pageBg, minHeight: "100vh" }}>
       <PublicNav />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.08)" }} />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.08)" }} />
+      {/* ── Hero ── */}
+      <section style={{ position: "relative", overflow: "hidden", background: "#0d0d1a", paddingTop: 120, paddingBottom: 100 }}>
+        {/* Blobs */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", top: "-15%", right: "5%", width: 560, height: 560, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,107,0,0.2) 0%, transparent 70%)", filter: "blur(64px)", animation: "blobA 9s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "-20%", left: "0%",  width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)", filter: "blur(72px)", animation: "blobB 11s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-6" style={{ borderColor: "rgba(255,107,0,0.30)", background: "rgba(255,107,0,0.10)" }}>
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">About Arthaleads</span>
+
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
+          {/* Badge */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 16px", borderRadius: 40, border: "1px solid rgba(255,107,0,0.35)", background: "rgba(255,107,0,0.1)", marginBottom: 28, animation: "fadeUp 0.6s ease both" }}>
+            <MapPin style={{ width: 13, height: 13, color: "#ff6b00" }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pune, India</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.1] mb-6" style={{ color: textColor }}>
+
+          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1, color: "#ffffff", marginBottom: 20, animation: "fadeUp 0.7s ease 0.1s both" }}>
             Built for Real Estate.{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+            <span style={{ background: "linear-gradient(135deg, #ff6b00, #ffaa00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Built for India.
             </span>
           </h1>
-          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto" style={{ color: softText }}>
-            We set out to solve a problem every Indian real estate team knows: leads slipping through the cracks
-            across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
+
+          <p style={{ fontSize: 18, lineHeight: 1.75, color: "rgba(255,255,255,0.6)", maxWidth: 580, margin: "0 auto 44px", animation: "fadeUp 0.7s ease 0.2s both" }}>
+            We set out to solve a problem every Indian real estate team knows — leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
+          </p>
+
+          {/* Floating chips */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", animation: "fadeUp 0.6s ease 0.32s both" }}>
+            {["500+ Teams", "Pune · Mumbai · Maharashtra", "Founded 2022"].map(txt => (
+              <div key={txt} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 30, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{txt}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+          @keyframes blobA  { 0%,100% { transform:translate(0,0); }   50% { transform:translate(-28px, 18px); } }
+          @keyframes blobB  { 0%,100% { transform:translate(0,0); }   50% { transform:translate(22px,-22px); } }
+        `}</style>
+      </section>
+
+      {/* ── Stats strip ── */}
+      <section ref={statsRef} style={{ background: sectionBg, borderTop: `1px solid ${sectionBdr}`, borderBottom: `1px solid ${sectionBdr}`, padding: "36px 24px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+          {STATS.map(({ num, suffix, label, color }, i) => (
+            <div key={label} style={{
+              textAlign: "center", padding: "14px 20px",
+              borderRight: i < STATS.length - 1 ? `1px solid ${sectionBdr}` : "none",
+              opacity: statsVisible ? 1 : 0,
+              transform: statsVisible ? "translateY(0)" : "translateY(16px)",
+              transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s`,
+            }}>
+              <div style={{ fontSize: 38, fontWeight: 900, color, lineHeight: 1, marginBottom: 6 }}>
+                <AnimCounter to={num} suffix={suffix} />
+              </div>
+              <div style={{ fontSize: 12, color: body, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Our Story ── */}
+      <section style={{ padding: "88px 24px" }}>
+        <div ref={storyRef} style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 64, alignItems: "center" }}>
+          {/* Left */}
+          <div style={{ opacity: storyVisible ? 1 : 0, transform: storyVisible ? "translateX(0)" : "translateX(-40px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 12 }}>Our Story</div>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 900, color: heading, lineHeight: 1.15, marginBottom: 20 }}>
+              Why we built{" "}
+              <span style={{ color: "#ff6b00" }}>Arthaleads</span>
+            </h2>
+            <p style={{ fontSize: 15, lineHeight: 1.8, color: body, marginBottom: 16 }}>
+              Real estate sales teams in India work across multiple channels simultaneously — Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals — all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.
+            </p>
+            <p style={{ fontSize: 15, lineHeight: 1.8, color: body, marginBottom: 16 }}>
+              Hot leads would go cold because no one followed up in time. Telecallers would call the same number three times from different lists. Managers had no way to see what the team was actually doing.
+            </p>
+            <p style={{ fontSize: 15, lineHeight: 1.8, color: body }}>
+              We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked — from first contact to closed deal.
+            </p>
+          </div>
+
+          {/* Right — story points */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {STORY_POINTS.map(({ icon: Icon, text }, i) => (
+              <div
+                key={text}
+                style={{
+                  display: "flex", alignItems: "flex-start", gap: 14,
+                  padding: "16px 18px", borderRadius: 14,
+                  background: sectionBg,
+                  border: `1px solid ${sectionBdr}`,
+                  opacity: storyVisible ? 1 : 0,
+                  transform: storyVisible ? "translateX(0)" : "translateX(40px)",
+                  transition: `opacity 0.6s ease ${0.15 + i * 0.12}s, transform 0.6s ease ${0.15 + i * 0.12}s, border 0.2s, box-shadow 0.2s`,
+                  cursor: "default",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,107,0,0.35)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(255,107,0,0.1)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = sectionBdr; e.currentTarget.style.boxShadow = "none"; }}
+              >
+                <div style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 10, background: "rgba(255,107,0,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Icon style={{ width: 16, height: 16, color: "#ff6b00" }} />
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.65, color: body }}>{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Mission ── dark dramatic */}
+      <section ref={missionRef} style={{ background: "#0d0d1a", padding: "96px 24px", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 400, background: "radial-gradient(ellipse, rgba(255,107,0,0.15) 0%, transparent 70%)", filter: "blur(60px)" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        </div>
+        <div style={{ maxWidth: 760, margin: "0 auto", textAlign: "center", position: "relative" }}>
+          <div style={{
+            fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
+            color: "#ff6b00", marginBottom: 16,
+            opacity: missionVisible ? 1 : 0,
+            transform: missionVisible ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>Our Mission</div>
+          <h2 style={{
+            fontSize: "clamp(30px, 5vw, 52px)", fontWeight: 900, lineHeight: 1.15,
+            background: "linear-gradient(135deg, #ff6b00, #ffaa00, #ffffff)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            marginBottom: 24,
+            opacity: missionVisible ? 1 : 0,
+            transform: missionVisible ? "translateY(0)" : "translateY(16px)",
+            transition: "opacity 0.7s ease 0.12s, transform 0.7s ease 0.12s",
+          }}>
+            Turn every property enquiry into a closed deal.
+          </h2>
+          <p style={{
+            fontSize: 16, lineHeight: 1.8, color: "rgba(255,255,255,0.55)", maxWidth: 540, margin: "0 auto",
+            opacity: missionVisible ? 1 : 0,
+            transform: missionVisible ? "translateY(0)" : "translateY(12px)",
+            transition: "opacity 0.7s ease 0.22s, transform 0.7s ease 0.22s",
+          }}>
+            We believe the difference between a sale and a missed opportunity is usually just one thing: a timely, informed follow-up. Arthaleads exists to make sure that follow-up never gets missed.
           </p>
         </div>
       </section>
 
-      {/* Our Story */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <h2 className="text-3xl font-bold mb-6" style={{ color: textColor }}>Our Story</h2>
-              <p className="text-base leading-relaxed mb-5" style={{ color: softText }}>
-                Real estate sales teams in India work across multiple channels simultaneously - Facebook lead ads,
-                Google campaigns, WhatsApp enquiries, walk-ins, and housing portals - all at once. Before Arthaleads,
-                managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet
-                that nobody trusted.
-              </p>
-              <p className="text-base leading-relaxed mb-5" style={{ color: softText }}>
-                Hot leads would go cold because no one followed up in time. Telecallers would call the same number
-                three times from different lists. Managers had no way to see what the team was actually doing.
-              </p>
-              <p className="text-base leading-relaxed" style={{ color: softText }}>
-                We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned,
-                gets called, and gets tracked - from first contact to closed deal.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {storyPoints.map((point) => (
-                <div key={point} className="flex items-start gap-3 p-4 rounded-xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                  <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5" style={{ background: checkBg }}>
-                    <Check className="w-3 h-3 text-[#ff6b00]" />
+      {/* ── Values ── */}
+      <section style={{ padding: "88px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div ref={valuesRef} style={{
+            textAlign: "center", marginBottom: 52,
+            opacity: valuesVisible ? 1 : 0,
+            transform: valuesVisible ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>What We Stand For</div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>Three values we never compromise</h2>
+            <p style={{ fontSize: 15, color: body, maxWidth: 460, margin: "0 auto" }}>
+              Every decision, every feature, every customer interaction is shaped by these.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+            {VALUES.map(({ icon: Icon, color, title, desc }, i) => (
+              <div
+                key={title}
+                style={{
+                  padding: "28px 26px", borderRadius: 20,
+                  background: sectionBg,
+                  border: `1px solid ${sectionBdr}`,
+                  opacity: valuesVisible ? 1 : 0,
+                  transform: valuesVisible ? "translateY(0)" : "translateY(28px)",
+                  transition: `opacity 0.6s ease ${i * 0.15}s, transform 0.6s ease ${i * 0.15}s, border 0.22s, box-shadow 0.22s`,
+                  cursor: "default",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = color + "44"; e.currentTarget.style.boxShadow = `0 12px 36px ${color}1a`; e.currentTarget.style.transform = "translateY(-5px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = sectionBdr; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}
+              >
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                  <Icon style={{ width: 22, height: 22, color }} />
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 900, color, marginBottom: 10 }}>{title}</div>
+                <p style={{ fontSize: 14, lineHeight: 1.7, color: body }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Timeline ── */}
+      <section style={{ background: isDark ? "#0d0d1a" : "#111827", padding: "88px 24px" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <div ref={timelineRef} style={{ textAlign: "center", marginBottom: 56,
+            opacity: timelineVisible ? 1 : 0, transform: timelineVisible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>Our Journey</div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: "#ffffff" }}>How we got here</h2>
+          </div>
+
+          <div style={{ position: "relative" }}>
+            {/* Vertical line */}
+            <div style={{ position: "absolute", left: 19, top: 8, bottom: 8, width: 2, background: "rgba(255,107,0,0.2)", borderRadius: 2 }} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {TIMELINE.map(({ year, title, desc }, i) => (
+                <div
+                  key={year}
+                  style={{
+                    display: "flex", gap: 28, paddingBottom: i < TIMELINE.length - 1 ? 36 : 0,
+                    opacity: timelineVisible ? 1 : 0,
+                    transform: timelineVisible ? "translateX(0)" : "translateX(-30px)",
+                    transition: `opacity 0.6s ease ${i * 0.15}s, transform 0.6s ease ${i * 0.15}s`,
+                  }}
+                >
+                  {/* Dot */}
+                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", zIndex: 1 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: "50%",
+                      background: "rgba(255,107,0,0.15)",
+                      border: "2px solid rgba(255,107,0,0.5)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: "#ff6b00" }}>{year.slice(2)}</span>
+                    </div>
                   </div>
-                  <p className="text-sm leading-relaxed" style={{ color: softText }}>{point}</p>
+
+                  {/* Content */}
+                  <div style={{
+                    flex: 1, paddingTop: 8, paddingBottom: i < TIMELINE.length - 1 ? 8 : 0,
+                    paddingLeft: 20, paddingRight: 20,
+                    background: "rgba(255,255,255,0.03)",
+                    borderRadius: 14,
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    marginBottom: i < TIMELINE.length - 1 ? 0 : 0,
+                    padding: "14px 18px",
+                    transition: "background 0.2s, border 0.2s",
+                    cursor: "default",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,0,0.07)"; e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", background: "rgba(255,107,0,0.12)", padding: "2px 8px", borderRadius: 20 }}>{year}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff" }}>{title}</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -113,69 +377,42 @@ function AboutUsInner() {
         </div>
       </section>
 
-      {/* Mission */}
-      <section className="py-20" style={{ background: bg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4" style={{ color: textColor }}>Our Mission</h2>
-          <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00] leading-tight">
-            Turn every property enquiry into a closed deal.
-          </p>
-          <p className="text-base leading-relaxed mt-6 max-w-xl mx-auto" style={{ color: softText }}>
-            We believe the difference between a sale and a missed opportunity is usually just one thing: a timely,
-            informed follow-up. Arthaleads exists to make sure that follow-up never gets missed.
-          </p>
-        </div>
-      </section>
-
-      {/* Values */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold mb-3" style={{ color: textColor }}>What We Stand For</h2>
-            <p className="text-base max-w-xl mx-auto" style={{ color: softText }}>
-              Three values that shape every decision we make, every feature we ship, and every customer interaction.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {values.map(({ title, desc }) => (
-              <div key={title} className="p-7 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="text-[#ff6b00] font-black text-3xl mb-4">{title}</div>
-                <p className="text-sm leading-relaxed" style={{ color: softText }}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-20" style={{ background: bg }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map(({ val, label }) => (
-              <div key={label} className="text-center p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBorder}` }}>
-                <div className="text-4xl font-black text-[#ff6b00] mb-2">{val}</div>
-                <div className="text-sm font-medium" style={{ color: softText }}>{label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20" style={{ background: altBg }}>
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: textColor }}>
+      {/* ── CTA ── */}
+      <section style={{ padding: "80px 24px" }}>
+        <div ref={ctaRef} style={{
+          maxWidth: 720, margin: "0 auto",
+          borderRadius: 28, padding: "56px 40px", textAlign: "center",
+          background: "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)",
+          border: "1px solid rgba(255,107,0,0.25)",
+          boxShadow: "0 24px 60px rgba(255,107,0,0.12)",
+          position: "relative", overflow: "hidden",
+          opacity: ctaVisible ? 1 : 0,
+          transform: ctaVisible ? "translateY(0)" : "translateY(28px)",
+          transition: "opacity 0.7s ease, transform 0.7s ease",
+        }}>
+          <div style={{ position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)", width: 500, height: 320, background: "radial-gradient(ellipse, rgba(255,107,0,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: "#ffffff", marginBottom: 14, position: "relative" }}>
             Ready to bring your team onto Arthaleads?
           </h2>
-          <p className="text-base mb-8" style={{ color: softText }}>
-            Start your free trial - no credit card required. Your team can be up and running today.
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", lineHeight: 1.7, marginBottom: 32, maxWidth: 440, margin: "0 auto 32px", position: "relative" }}>
+            Start your free trial — no credit card required. Your team can be up and running today.
           </p>
           <Link
             to="/signup"
-            className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "#ff6b00", color: "#fff",
+              borderRadius: 14, padding: "14px 28px", fontSize: 15, fontWeight: 700,
+              textDecoration: "none",
+              boxShadow: "0 8px 28px rgba(255,107,0,0.4)",
+              transition: "transform 0.18s, box-shadow 0.18s",
+              position: "relative",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 36px rgba(255,107,0,0.55)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(255,107,0,0.4)"; }}
           >
             Start Free Trial
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight style={{ width: 18, height: 18 }} />
           </Link>
         </div>
       </section>
@@ -183,8 +420,4 @@ function AboutUsInner() {
       <PublicFooter />
     </div>
   );
-}
-
-export default function AboutUs() {
-  return <AboutUsInner />;
 }
