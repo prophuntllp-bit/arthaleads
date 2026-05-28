@@ -121,12 +121,12 @@ export default function AboutUs() {
       <PublicNav />
 
       {/* ── Hero ── */}
-      <section style={{ position: "relative", overflow: "hidden", background: "#0d0d1a", paddingTop: 120, paddingBottom: 100 }}>
+      <section style={{ position: "relative", overflow: "hidden", background: isDark ? "#0d0d1a" : "#f8fafc", paddingTop: 120, paddingBottom: 100 }}>
         {/* Blobs */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          <div style={{ position: "absolute", top: "-15%", right: "5%", width: 560, height: 560, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,107,0,0.2) 0%, transparent 70%)", filter: "blur(64px)", animation: "blobA 9s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", bottom: "-20%", left: "0%",  width: 480, height: 480, borderRadius: "50%", background: "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)", filter: "blur(72px)", animation: "blobB 11s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+          <div style={{ position: "absolute", top: "-15%", right: "5%", width: 560, height: 560, borderRadius: "50%", background: isDark ? "radial-gradient(circle, rgba(255,107,0,0.2) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,107,0,0.12) 0%, transparent 70%)", filter: "blur(64px)", animation: "blobA 9s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "-20%", left: "0%",  width: 480, height: 480, borderRadius: "50%", background: isDark ? "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)" : "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)", filter: "blur(72px)", animation: "blobB 11s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.04 : 0.025, backgroundImage: isDark ? "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)" : "radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
@@ -136,22 +136,22 @@ export default function AboutUs() {
             <span style={{ fontSize: 12, fontWeight: 700, color: "#ff6b00", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pune, India</span>
           </div>
 
-          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1, color: "#ffffff", marginBottom: 20, animation: "fadeUp 0.7s ease 0.1s both" }}>
+          <h1 style={{ fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1, color: heading, marginBottom: 20, animation: "fadeUp 0.7s ease 0.1s both" }}>
             Built for Real Estate.{" "}
             <span style={{ background: "linear-gradient(135deg, #ff6b00, #ffaa00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Built for India.
             </span>
           </h1>
 
-          <p style={{ fontSize: 18, lineHeight: 1.75, color: "rgba(255,255,255,0.6)", maxWidth: 580, margin: "0 auto 44px", animation: "fadeUp 0.7s ease 0.2s both" }}>
+          <p style={{ fontSize: 18, lineHeight: 1.75, color: body, maxWidth: 580, margin: "0 auto 44px", animation: "fadeUp 0.7s ease 0.2s both" }}>
             We set out to solve a problem every Indian real estate team knows — leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
           </p>
 
           {/* Floating chips */}
           <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap", animation: "fadeUp 0.6s ease 0.32s both" }}>
             {["500+ Teams", "Pune · Mumbai · Maharashtra", "Founded 2022"].map(txt => (
-              <div key={txt} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 30, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{txt}</span>
+              <div key={txt} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 30, background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)", border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}` }}>
+                <span style={{ fontSize: 12, color: body, fontWeight: 500 }}>{txt}</span>
               </div>
             ))}
           </div>

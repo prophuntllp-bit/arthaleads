@@ -702,10 +702,10 @@ export default function Careers() {
     <div style={{ background: pageBg, minHeight: "100vh" }}>
       <PublicNav />
 
-      {/* ── Hero ── dark full-bleed with orbs */}
+      {/* ── Hero ── */}
       <section style={{
         position: "relative", overflow: "hidden",
-        background: "#0d0d1a",
+        background: isDark ? "#0d0d1a" : "#f8fafc",
         paddingTop: 112, paddingBottom: 96,
       }}>
         {/* Background blobs */}
@@ -713,19 +713,19 @@ export default function Careers() {
           <div style={{
             position: "absolute", top: "-20%", right: "-10%",
             width: 600, height: 600, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(255,107,0,0.18) 0%, transparent 70%)",
+            background: isDark ? "radial-gradient(circle, rgba(255,107,0,0.18) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,107,0,0.1) 0%, transparent 70%)",
             filter: "blur(60px)", animation: "orbDrift1 8s ease-in-out infinite",
           }} />
           <div style={{
             position: "absolute", bottom: "-30%", left: "-10%",
             width: 500, height: 500, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)",
+            background: isDark ? "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)" : "radial-gradient(circle, rgba(59,130,246,0.07) 0%, transparent 70%)",
             filter: "blur(70px)", animation: "orbDrift2 10s ease-in-out infinite",
           }} />
           {/* Dot grid */}
           <div style={{
-            position: "absolute", inset: 0, opacity: 0.04,
-            backgroundImage: "radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)",
+            position: "absolute", inset: 0, opacity: isDark ? 0.04 : 0.025,
+            backgroundImage: isDark ? "radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)" : "radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px)",
             backgroundSize: "28px 28px",
           }} />
         </div>
@@ -749,7 +749,7 @@ export default function Careers() {
           {/* Headline */}
           <h1 style={{
             fontSize: "clamp(36px, 6vw, 64px)", fontWeight: 900, lineHeight: 1.1,
-            color: "#ffffff", marginBottom: 20,
+            color: heading, marginBottom: 20,
             animation: "fadeUp 0.7s ease 0.1s both",
           }}>
             Build the future of{" "}
@@ -763,7 +763,7 @@ export default function Careers() {
 
           {/* Sub */}
           <p style={{
-            fontSize: 17, lineHeight: 1.75, color: "rgba(255,255,255,0.6)",
+            fontSize: 17, lineHeight: 1.75, color: body,
             maxWidth: 560, margin: "0 auto 36px",
             animation: "fadeUp 0.7s ease 0.2s both",
           }}>
@@ -796,13 +796,14 @@ export default function Careers() {
               href="mailto:hr@arthaleads.com"
               style={{
                 display: "inline-flex", alignItems: "center", gap: 8,
-                background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.8)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)",
+                color: body,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.10)"}`,
                 borderRadius: 12, padding: "13px 26px", fontSize: 15, fontWeight: 600,
                 textDecoration: "none", transition: "background 0.18s",
               }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.11)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.07)"}
+              onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.11)" : "rgba(0,0,0,0.08)"}
+              onMouseLeave={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)"}
             >
               <Mail style={{ width: 16, height: 16 }} />
               Say Hello
@@ -822,13 +823,12 @@ export default function Careers() {
               <div key={txt} style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
                 padding: "7px 14px", borderRadius: 30,
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                backdropFilter: "blur(10px)",
+                background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.08)"}`,
               }}>
                 {pulse && <span style={{ width: 6, height: 6, borderRadius: "50%", background: clr, animation: "pulse 2s infinite" }} />}
                 {!pulse && <Ic style={{ width: 12, height: 12, color: clr }} />}
-                <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{txt}</span>
+                <span style={{ fontSize: 12, color: body, fontWeight: 500 }}>{txt}</span>
               </div>
             ))}
           </div>
