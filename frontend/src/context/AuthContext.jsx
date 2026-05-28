@@ -1,6 +1,7 @@
-﻿// context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+// context/AuthContext.jsx
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import api from "../services/api";
+import axios from "axios";
 
 const AuthContext = createContext(null);
 
@@ -10,6 +11,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("crm_user") || "null"));
   const [org,  setOrg]  = useState(() => JSON.parse(localStorage.getItem("crm_org")  || "null"));
   const [loading, setLoading] = useState(true);
+
+  // Holds the AbortController for the mount-time /auth/me session check.
+  // Every login/signup method aborts it before completing so that a slow
+  // /auth/me 401 (e.g. Railway cold-start) can never fire the session-expired
+  // handler after a successful login — the root cause of the "kicked out
+  // immediately after Welcome back!" race condition.
+  const authMeControllerRef = useRef(null);
 
   const persist = useCallback((nextUser, nextOrg, token) => {
     // Never store base64 logos in localStorage — they're several MB and silently get
@@ -35,22 +43,31 @@ export function AuthProvider({ children }) {
     setOrg(null);
   }, []);
 
-  // Re-validate session on mount - cookie is sent automatically via withCredentials
+  // Re-validate session on mount - cookie is sent automatically via withCredentials.
+  // We attach an AbortSignal so login/signup can cancel this request before it settles.
   useEffect(() => {
-    api.get("/auth/me")
+    const controller = new AbortController();
+    authMeControllerRef.current = controller;
+
+    api.get("/auth/me", { signal: controller.signal })
       .then((r) => persist(r.data.user, r.data.org))
       .catch((err) => {
+        // Request was aborted by a login/signup call — the user is now authenticated,
+        // so we simply ignore this error and let the login flow complete normally.
+        if (axios.isCancel(err)) return;
+
         const status = err.response?.status;
         const msg    = err.response?.data?.message;
-        // 401 is already handled by the api.js interceptor (dispatches auth:expired
-        // which is caught below). Handle 403 org-level blocks here so the correct
-        // overlay is shown rather than silently logging the user out.
+        // 401 is handled by the api.js interceptor (dispatches auth:expired below).
+        // Handle 403 org-level blocks here so the correct overlay is shown.
         if (status === 403) {
           if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
           if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
         }
       })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [persist, clearSession]);
 
   // Global 401 handler — any API call with an expired/invalid token fires this.
@@ -63,26 +80,30 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const login = useCallback(async (email, password) => {
+    // Cancel any pending /auth/me — prevents its eventual 401 from firing the
+    // session-expired handler after this login succeeds (race condition fix).
+    authMeControllerRef.current?.abort();
     const { data } = await api.post("/auth/login", { email, password });
-    // Backend sets httpOnly cookie; we only store display-safe fields locally.
-    // Token also saved as fallback for cross-domain envs where cookie is rejected.
     persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const signup = useCallback(async (payload) => {
+    authMeControllerRef.current?.abort();
     const { data } = await api.post("/auth/signup", payload);
     persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const googleLogin = useCallback(async (credential) => {
+    authMeControllerRef.current?.abort();
     const { data } = await api.post("/auth/google", { credential });
     persist(data.user, data.org, data.token);
     return data;
   }, [persist]);
 
   const phoneLogin = useCallback(async (idToken) => {
+    authMeControllerRef.current?.abort();
     const { data } = await api.post("/auth/phone-login", { idToken });
     persist(data.user, data.org, data.token);
     return data;
@@ -90,6 +111,7 @@ export function AuthProvider({ children }) {
 
   // Used after backend-verified OTP — data already contains user + org + token
   const persistAuth = useCallback((data) => {
+    authMeControllerRef.current?.abort();
     persist(data.user, data.org, data.token);
   }, [persist]);
 

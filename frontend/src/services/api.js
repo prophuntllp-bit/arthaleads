@@ -20,6 +20,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // Aborted requests (e.g. /auth/me cancelled by a concurrent login) must be
+    // ignored entirely — do not treat them as auth failures.
+    if (axios.isCancel(err)) return Promise.reject(err);
+
     const status = err.response?.status;
     const msg    = err.response?.data?.message;
 
@@ -28,7 +32,7 @@ api.interceptors.response.use(
       // Return a never-resolving promise so component .catch() blocks never fire —
       // prevents misleading "Failed to load X" toasts when the real issue is an expired session.
       // Only show the toast when a session was previously stored — avoids showing "session
-      // expired" on a fresh page load (e.g. user has never logged in or just logged out).
+      // expired" on a fresh page load where /auth/me returns 401 with no prior session.
       const hadSession = !!localStorage.getItem("crm_user");
       localStorage.removeItem("crm_user");
       localStorage.removeItem("crm_org");
