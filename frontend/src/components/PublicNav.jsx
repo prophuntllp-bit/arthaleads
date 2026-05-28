@@ -3,15 +3,16 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Menu, X, ChevronDown, Sun, Moon,
   BookOpen, BarChart2, Zap, HelpCircle,
-  Building2, Briefcase,
+  Building2, Briefcase, Puzzle,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 const NAV_RESOURCES = [
-  { label: "Blog",            href: "/blog",            desc: "CRM insights & real estate tips", icon: BookOpen },
-  { label: "Case Studies",    href: "/case-studies",    desc: "Real results from real teams",    icon: BarChart2 },
-  { label: "Product Updates", href: "/product-updates", desc: "What's new in Arthaleads",        icon: Zap },
-  { label: "Help Guide",      href: "/help-guide",      desc: "Tutorials & FAQs",               icon: HelpCircle },
+  { label: "Blog",             href: "/blog",             desc: "CRM insights & real estate tips",    icon: BookOpen },
+  { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
+  { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
+  { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
+  { label: "WordPress Plugin", href: "/wordpress-plugin", desc: "Capture leads from any WP form",    icon: Puzzle },
 ];
 
 const NAV_COMPANY = [
@@ -266,7 +267,6 @@ function NavInner({ onScrollTo }) {
 
             <NavLink id="pricing"  label="Pricing" />
             <NavLink href="/contact" label="Contact" />
-            <NavLink href="/wordpress-plugin" label="WordPress Plugin" />
           </div>
 
           {/* Desktop CTAs */}
@@ -369,7 +369,6 @@ function NavInner({ onScrollTo }) {
                     style={{ color: textMuted }}>{label}</Link>
             ))}
             <Link to="/contact" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Contact</Link>
-            <Link to="/wordpress-plugin" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>WordPress Plugin</Link>
 
             {/* Auth CTAs */}
             <div className="pt-3 flex flex-col gap-2 mt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
