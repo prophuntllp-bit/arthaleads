@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { PageLoader, Spinner } from "../components/UI";
 import api from "../services/api";
@@ -6,7 +6,8 @@ import toast from "react-hot-toast";
 import {
   ArrowLeft, Building2, Users, BarChart3, FolderOpen,
   CheckCircle2, XCircle, Clock, ExternalLink, LogIn,
-  Mail, Phone, Shield, Zap, RefreshCw,
+  Mail, Phone, Shield, Zap, RefreshCw, HardDrive,
+  ShieldCheck, ChevronLeft, ChevronRight, Activity,
 } from "lucide-react";
 
 const PLAN_COLORS = {
@@ -29,6 +30,40 @@ const LEAD_STATUS_COLORS = {
   "Call Back":    "#eab308",
 };
 
+const ACTION_LABELS = {
+  plan_change:         { label: "Plan Changed",    color: "bg-violet-500/10 text-violet-600 border-violet-500/25" },
+  org_activated:       { label: "Org Activated",   color: "bg-green-500/10 text-green-600 border-green-500/25" },
+  org_deactivated:     { label: "Org Deactivated", color: "bg-red-500/10 text-red-500 border-red-500/25" },
+  trial_extended:      { label: "Trial Extended",  color: "bg-amber-500/10 text-amber-600 border-amber-500/25" },
+  impersonate:         { label: "Impersonated",    color: "bg-blue-500/10 text-blue-600 border-blue-500/25" },
+  org_name_changed:    { label: "Name Changed",    color: "bg-gray-500/10 text-gray-500 border-gray-500/25" },
+  logo_changed:        { label: "Logo Changed",    color: "bg-gray-500/10 text-gray-500 border-gray-500/25" },
+  brand_color_changed: { label: "Colour Changed",  color: "bg-pink-500/10 text-pink-600 border-pink-500/25" },
+  broadcast_sent:      { label: "Broadcast Sent",  color: "bg-orange-500/10 text-orange-600 border-orange-500/25" },
+};
+
+const ALL_ACTIONS = Object.keys(ACTION_LABELS);
+
+function auditDetailText(log) {
+  const d = log.details || {};
+  switch (log.action) {
+    case "plan_change":         return `${d.from?.toUpperCase()} → ${d.to?.toUpperCase()}`;
+    case "trial_extended":      return `+${d.days} day${d.days !== 1 ? "s" : ""}`;
+    case "impersonate":         return `as ${log.targetUserName || "?"} (${d.adminEmail || ""})`;
+    case "org_name_changed":    return `"${d.from}" → "${d.to}"`;
+    case "brand_color_changed": return d.color || "";
+    case "broadcast_sent":      return `${d.sent} sent · "${d.subject?.slice(0, 40)}"`;
+    default:                    return "";
+  }
+}
+
+function fmtBytes(bytes) {
+  if (!bytes) return "< 1 KB";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 function RoleBadge({ role }) {
   const cls = {
     admin:       "bg-orange-500/10 text-orange-600 border-orange-500/25",
@@ -43,8 +78,9 @@ function RoleBadge({ role }) {
   );
 }
 
-const fmtDate = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
+const fmtDate     = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const fmtDateTime = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Never";
+const fmtFull     = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 
 export default function SuperAdminOrgDetail() {
   const { id }        = useParams();
@@ -53,6 +89,14 @@ export default function SuperAdminOrgDetail() {
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState("overview");
   const [impersonating, setImp] = useState(false);
+
+  // Activity tab state
+  const [actLogs,    setActLogs]    = useState([]);
+  const [actTotal,   setActTotal]   = useState(0);
+  const [actPages,   setActPages]   = useState(1);
+  const [actPage,    setActPage]    = useState(1);
+  const [actLoading, setActLoading] = useState(false);
+  const [actAction,  setActAction]  = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -71,6 +115,33 @@ export default function SuperAdminOrgDetail() {
     document.title = "Org Detail · Arthaleads Admin";
     load();
   }, [id]);
+
+  const loadActivity = useCallback(async (p = actPage) => {
+    setActLoading(true);
+    try {
+      const params = new URLSearchParams({ page: p, limit: 25, orgId: id });
+      if (actAction) params.set("action", actAction);
+      const { data: res } = await api.get(`/super-admin/audit?${params}`);
+      setActLogs(res.logs || []);
+      setActTotal(res.total || 0);
+      setActPages(res.pages || 1);
+    } catch {
+      toast.error("Failed to load activity log");
+    } finally {
+      setActLoading(false);
+    }
+  }, [id, actPage, actAction]);
+
+  useEffect(() => {
+    if (tab === "activity") {
+      loadActivity(1);
+      setActPage(1);
+    }
+  }, [tab, actAction]);
+
+  useEffect(() => {
+    if (tab === "activity") loadActivity(actPage);
+  }, [actPage]);
 
   const handleImpersonate = async () => {
     if (!window.confirm(`Login as the admin of "${data.org.name}"? Your current admin session will end.`)) return;
@@ -93,7 +164,7 @@ export default function SuperAdminOrgDetail() {
   if (loading) return <PageLoader />;
   if (!data)   return null;
 
-  const { org, users, leadByStatus, totalLeads, projectCount, automations } = data;
+  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes } = data;
   const isTrialExpired = org.trialStatus === "expired";
   const effectivelyActive = org.isActive && !isTrialExpired;
   const planLabel = org.plan === "pro" ? "growth" : org.plan;
@@ -154,18 +225,19 @@ export default function SuperAdminOrgDetail() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
         {[
-          { label: "Team Members", value: users.length,    icon: Users,      color: "text-blue-500",   bg: "bg-blue-500/10" },
-          { label: "Total Leads",  value: totalLeads,      icon: BarChart3,  color: "text-violet-500", bg: "bg-violet-500/10" },
-          { label: "Projects",     value: projectCount,    icon: FolderOpen, color: "text-green-500",  bg: "bg-green-500/10" },
-          { label: "Automations",  value: automations?.length || 0, icon: Zap, color: "text-orange-500", bg: "bg-orange-500/10" },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
+          { label: "Team Members", value: users.length,           icon: Users,      color: "text-blue-500",   bg: "bg-blue-500/10" },
+          { label: "Total Leads",  value: totalLeads,             icon: BarChart3,  color: "text-violet-500", bg: "bg-violet-500/10" },
+          { label: "Projects",     value: projectCount,           icon: FolderOpen, color: "text-green-500",  bg: "bg-green-500/10" },
+          { label: "Automations",  value: automations?.length || 0, icon: Zap,      color: "text-orange-500", bg: "bg-orange-500/10" },
+          { label: "Storage Used", value: fmtBytes(storageBytes), icon: HardDrive,  color: "text-teal-500",   bg: "bg-teal-500/10",  isText: true },
+        ].map(({ label, value, icon: Icon, color, bg, isText }) => (
           <div key={label} className="card p-4">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2 ${bg}`}>
               <Icon className={`w-4 h-4 ${color}`} />
             </div>
-            <p className={`text-2xl font-black ${color}`}>{value}</p>
+            <p className={`${isText ? "text-lg" : "text-2xl"} font-black ${color}`}>{value}</p>
             <p className="text-xs text-app-soft mt-0.5">{label}</p>
           </div>
         ))}
@@ -189,9 +261,10 @@ export default function SuperAdminOrgDetail() {
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         {[
-          { key: "overview", label: "Overview" },
-          { key: "users",    label: `Users (${users.length})` },
-          { key: "integrations", label: "Integrations" },
+          { key: "overview",      label: "Overview" },
+          { key: "users",         label: `Users (${users.length})` },
+          { key: "integrations",  label: "Integrations" },
+          { key: "activity",      label: `Activity (${actTotal > 0 ? actTotal : "…"})` },
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-4 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
@@ -241,6 +314,7 @@ export default function SuperAdminOrgDetail() {
                 { label: "Status",       value: effectivelyActive ? "Active" : isTrialExpired ? "Trial Expired" : "Inactive" },
                 { label: "Created",      value: fmtDate(org.createdAt) },
                 { label: "Trial Ends",   value: org.trialEndsAt ? fmtDate(org.trialEndsAt) : "N/A" },
+                { label: "Storage",      value: fmtBytes(storageBytes) },
                 { label: "Brand Colour", value: org.brandColor || "Default" },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-center gap-2">
@@ -383,6 +457,96 @@ export default function SuperAdminOrgDetail() {
             <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full border bg-gray-500/10 text-gray-500 border-gray-500/25">
               N/A
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Activity tab */}
+      {tab === "activity" && (
+        <div>
+          {/* Filter + refresh */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <select
+              className="input text-sm px-3 py-2 w-52"
+              value={actAction}
+              onChange={e => { setActAction(e.target.value); setActPage(1); }}
+            >
+              <option value="">All Actions</option>
+              {ALL_ACTIONS.map(a => (
+                <option key={a} value={a}>{ACTION_LABELS[a]?.label}</option>
+              ))}
+            </select>
+            {actAction && (
+              <button onClick={() => { setActAction(""); setActPage(1); }}
+                className="text-xs text-app-soft hover:text-app transition cursor-pointer">
+                Clear filter
+              </button>
+            )}
+            <button onClick={() => loadActivity(actPage)}
+              className="ml-auto btn-secondary gap-1.5 text-xs px-3 py-2 cursor-pointer">
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </button>
+          </div>
+
+          <div className="card overflow-hidden">
+            {actLoading ? (
+              <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
+            ) : actLogs.length === 0 ? (
+              <div className="text-center py-16">
+                <ShieldCheck className="w-10 h-10 mx-auto mb-3 text-app-soft opacity-40" />
+                <p className="text-sm text-app-soft">No admin activity recorded for this organisation</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="stitch-table min-w-[600px]">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Action</th>
+                      <th>Performed By</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {actLogs.map(log => {
+                      const meta = ACTION_LABELS[log.action] || { label: log.action, color: "bg-gray-500/10 text-gray-500 border-gray-500/25" };
+                      return (
+                        <tr key={log._id}>
+                          <td className="text-xs text-app-soft whitespace-nowrap">{fmtFull(log.createdAt)}</td>
+                          <td>
+                            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${meta.color}`}>
+                              {meta.label}
+                            </span>
+                          </td>
+                          <td className="text-xs font-semibold text-app">{log.performedByName || "—"}</td>
+                          <td className="text-xs text-app-soft">{auditDetailText(log) || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {actPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+                <p className="text-xs text-app-soft">Page {actPage} of {actPages} · {actTotal} events</p>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-1.5 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 cursor-pointer"
+                    disabled={actPage <= 1} onClick={() => setActPage(p => p - 1)}>
+                    <ChevronLeft className="w-4 h-4 text-app" />
+                  </button>
+                  <span className="text-xs font-semibold text-app px-2">{actPage}</span>
+                  <button
+                    className="p-1.5 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 cursor-pointer"
+                    disabled={actPage >= actPages} onClick={() => setActPage(p => p + 1)}>
+                    <ChevronRight className="w-4 h-4 text-app" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -437,7 +437,7 @@ const superAdminController = {
     try {
       const orgId = new mongoose.Types.ObjectId(req.params.id);
 
-      const [org, users, leadStats, projectCount, automations] = await Promise.all([
+      const [org, users, leadStats, projectCount, automations, leadSizeAgg, userSizeAgg] = await Promise.all([
         Organization.findById(orgId).lean(),
         User.find({ orgId }).select("name email role phone isActive lastLogin createdAt avatar").lean(),
         Lead.aggregate([
@@ -446,12 +446,23 @@ const superAdminController = {
         ]),
         Project.countDocuments({ orgId }),
         Automation.find({ orgId }).select("platform status pageId pageName createdAt updatedAt").lean(),
+        Lead.aggregate([
+          { $match: { orgId } },
+          { $project: { s: { $bsonSize: "$$ROOT" } } },
+          { $group: { _id: null, total: { $sum: "$s" } } },
+        ]).catch(() => []),
+        User.aggregate([
+          { $match: { orgId } },
+          { $project: { s: { $bsonSize: "$$ROOT" } } },
+          { $group: { _id: null, total: { $sum: "$s" } } },
+        ]).catch(() => []),
       ]);
 
       if (!org) return next(new AppError("Organisation not found", 404));
 
-      const totalLeads  = leadStats.reduce((s, g) => s + g.count, 0);
+      const totalLeads   = leadStats.reduce((s, g) => s + g.count, 0);
       const leadByStatus = leadStats.reduce((acc, s) => { acc[s._id] = s.count; return acc; }, {});
+      const storageBytes = (leadSizeAgg[0]?.total || 0) + (userSizeAgg[0]?.total || 0);
 
       // compute trial status
       const tStatus = trialStatus(org);
@@ -464,6 +475,7 @@ const superAdminController = {
         totalLeads,
         projectCount,
         automations,
+        storageBytes,
       });
     } catch (err) {
       next(err);
