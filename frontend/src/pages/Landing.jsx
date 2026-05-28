@@ -640,6 +640,18 @@ function HowItWorks({ isDark }) {
 
 // ── About ─────────────────────────────────────────────────────────────────────
 function About({ isDark }) {
+  const sectionRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState(null);
+  const [counts, setCounts] = useState([0, 0, 0, 0]);
+
+  const stats = [
+    { num: 50,    suffix: "+",  label: "Real Estate Teams",    sub: "actively using Arthaleads",    color: "#ff6b00" },
+    { num: 10000, suffix: "+",  label: "Leads Managed Monthly",sub: "across all organisations",     color: "#22c55e" },
+    { num: 98,    suffix: "%",  label: "Uptime Guaranteed",    sub: "enterprise-grade reliability", color: "#3b82f6" },
+    { num: 3,     suffix: "×",  label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
+  ];
+
   const points = [
     "Founded by real estate professionals who felt the pain of managing hundreds of leads across WhatsApp, email, and spreadsheets.",
     "Designed for the Indian market - we understand the way property sales teams actually work in Pune, Mumbai, and across Maharashtra.",
@@ -647,20 +659,59 @@ function About({ isDark }) {
     "Continuously improved based on direct feedback from our customers' daily workflows.",
   ];
 
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setVisible(true);
+      observer.disconnect();
+      stats.forEach((stat, i) => {
+        const duration = 1600;
+        const fps = 60;
+        const steps = (duration / 1000) * fps;
+        let step = 0;
+        const id = setInterval(() => {
+          step++;
+          const progress = 1 - Math.pow(1 - step / steps, 3); // ease-out cubic
+          setCounts(prev => {
+            const next = [...prev];
+            next[i] = Math.round(progress * stat.num);
+            return next;
+          });
+          if (step >= steps) clearInterval(id);
+        }, 1000 / fps);
+      });
+    }, { threshold: 0.25 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  function fmtCount(i) {
+    const n = counts[i];
+    const { suffix } = stats[i];
+    if (i === 1) return n.toLocaleString("en-IN") + suffix;
+    return n + suffix;
+  }
+
   const bg      = isDark ? "#0d0d1a" : "#ffffff";
   const heading = isDark ? "#ffffff" : "#111827";
   const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const cardBg  = isDark ? "linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))" : "#ffffff";
+  const cardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
   const cardSub = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
 
   return (
-    <section id="about" className="py-10 lg:py-14" style={{ background: bg }}>
+    <section id="about" ref={sectionRef} className="py-10 lg:py-14 overflow-hidden" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
 
-          {/* Left - text */}
-          <div>
+          {/* Left - text with slide-in */}
+          <div style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateX(0)" : "translateX(-40px)",
+            transition: "opacity 0.7s ease, transform 0.7s ease",
+          }}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
               <Building2 className="w-3.5 h-3.5 text-[#ff6b00]" />
               <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">About Arthaleads</span>
@@ -678,8 +729,12 @@ function About({ isDark }) {
               We built the CRM we always wished we had - one that speaks the language of property sales, handles the volume of real estate campaigns, and makes every agent's job easier from day one.
             </p>
             <div className="space-y-3">
-              {points.map((p) => (
-                <div key={p} className="flex items-start gap-3">
+              {points.map((p, i) => (
+                <div key={p} className="flex items-start gap-3" style={{
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? "translateX(0)" : "translateX(-20px)",
+                  transition: `opacity 0.5s ease ${0.35 + i * 0.1}s, transform 0.5s ease ${0.35 + i * 0.1}s`,
+                }}>
                   <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[#ff6b00]/15 flex items-center justify-center mt-0.5">
                     <Check className="w-3 h-3 text-[#ff6b00]" />
                   </div>
@@ -689,16 +744,33 @@ function About({ isDark }) {
             </div>
           </div>
 
-          {/* Right - stat cards */}
+          {/* Right - stat cards with animated counters + hover glow */}
           <div className="grid grid-cols-2 gap-4">
-            {[
-              { val: "50+",     label: "Real Estate Teams",    sub: "actively using Arthaleads",  color: "#ff6b00" },
-              { val: "10,000+", label: "Leads Managed Monthly",sub: "across all organisations",    color: "#22c55e" },
-              { val: "98%",     label: "Uptime Guaranteed",    sub: "enterprise-grade reliability", color: "#3b82f6" },
-              { val: "3×",      label: "Faster Follow-ups",    sub: "vs. manual spreadsheet teams", color: "#a855f7" },
-            ].map(({ val, label, sub, color }) => (
-              <div key={label} className="p-6 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-                <div className="text-3xl font-black mb-1" style={{ color }}>{val}</div>
+            {stats.map(({ color, label, sub }, i) => (
+              <div
+                key={label}
+                onMouseEnter={() => setHoveredCard(i)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className="p-6 rounded-2xl cursor-default select-none"
+                style={{
+                  background: cardBg,
+                  border: `1px solid ${hoveredCard === i ? color + "66" : cardBdr}`,
+                  boxShadow: hoveredCard === i ? `0 8px 30px ${color}28` : "none",
+                  transform: visible
+                    ? (hoveredCard === i ? "translateY(-5px) scale(1.02)" : "translateY(0) scale(1)")
+                    : "translateY(20px)",
+                  opacity: visible ? 1 : 0,
+                  transition: [
+                    `opacity 0.6s ease ${0.1 + i * 0.12}s`,
+                    `transform 0.6s ease ${0.1 + i * 0.12}s`,
+                    "border 0.22s ease",
+                    "box-shadow 0.22s ease",
+                  ].join(", "),
+                }}
+              >
+                <div className="text-3xl font-black mb-1 tabular-nums" style={{ color }}>
+                  {fmtCount(i)}
+                </div>
                 <div className="font-semibold text-sm mb-1" style={{ color: heading }}>{label}</div>
                 <div className="text-xs" style={{ color: cardSub }}>{sub}</div>
               </div>
