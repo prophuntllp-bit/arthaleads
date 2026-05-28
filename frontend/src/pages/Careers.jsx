@@ -26,7 +26,7 @@ const JOBS = [
     responsibilities: [
       "Plan, run, and optimise Facebook, Instagram, and Google Ads campaigns for lead generation",
       "Create engaging content (graphics, short videos, copy) for social media and email newsletters",
-      "Manage SEO strategy — keyword research, on-page optimisation, blog content briefs",
+      "Manage SEO strategy: keyword research, on-page optimisation, blog content briefs",
       "Track campaign KPIs (CPL, CTR, ROAS) and present weekly performance reports",
       "Run email marketing campaigns via tools like Mailchimp or similar",
       "Coordinate with the design team to produce marketing collateral",
@@ -36,7 +36,7 @@ const JOBS = [
       "1–3 years of hands-on digital marketing experience (agency or in-house)",
       "Proficiency in Meta Ads Manager and Google Ads",
       "Working knowledge of Google Analytics 4 and Search Console",
-      "Basic design skills — Canva, Figma, or Adobe Suite",
+      "Basic design skills: Canva, Figma, or Adobe Suite",
       "Strong written English and Hindi communication",
       "Bonus: experience marketing a SaaS or B2B product",
     ],
@@ -55,7 +55,7 @@ const JOBS = [
       "We're hiring a driven Business Development Executive to grow Arthaleads' customer base. You'll identify, pitch, and onboard real estate developers, builders, and channel partner companies who need a modern CRM. This is a high-impact role with direct visibility to the founding team.",
     responsibilities: [
       "Identify and reach out to real estate developers, builders, and channel partner networks in Pune and Maharashtra",
-      "Conduct product demos and pitches — online and in-person",
+      "Conduct product demos and pitches, online and in-person",
       "Build and manage a sales pipeline from cold outreach to closed deal",
       "Achieve monthly lead and revenue targets",
       "Maintain accurate records in the CRM (yes, you'll use Arthaleads itself)",
@@ -65,7 +65,7 @@ const JOBS = [
     requirements: [
       "1–3 years of B2B sales or business development experience",
       "Excellent spoken and written communication in English, Hindi, and Marathi",
-      "Strong interpersonal skills — you enjoy meeting people and building relationships",
+      "Strong interpersonal skills; you enjoy meeting people and building relationships",
       "Familiarity with real estate industry (developers, channel partners, RERA) is a big plus",
       "Self-motivated with the ability to work independently and hit targets",
       "Bonus: prior experience selling SaaS or tech products",
@@ -690,7 +690,7 @@ export default function Careers() {
   const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
 
   useEffect(() => {
-    document.title = "Careers — Arthaleads";
+    document.title = "Careers | Arthaleads";
     return () => { document.title = "Arthaleads - Real Estate CRM"; };
   }, []);
 
@@ -1033,11 +1033,11 @@ export default function Careers() {
                 Don't see the right role?
               </h3>
               <p style={{ fontSize: 14, color: body, lineHeight: 1.75, marginBottom: 28, maxWidth: 380 }}>
-                We're always open to hearing from talented people excited about real estate tech. Drop us a note — we review every message.
+                We're always open to hearing from talented people excited about real estate tech. Drop us a note. We review every message.
               </p>
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <a
-                  href="mailto:hr@arthaleads.com?subject=General Application — Arthaleads"
+                  href="mailto:hr@arthaleads.com?subject=General Application - Arthaleads"
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 8,
                     background: "#ff6b00", color: "#fff",

@@ -39,7 +39,7 @@ const VALUES = [
 ];
 
 const STORY_POINTS = [
-  { icon: Layers,   text: "Every lead source connected to one inbox — Facebook, Google, WhatsApp, forms, portals." },
+  { icon: Layers,   text: "Every lead source connected to one inbox: Facebook, Google, WhatsApp, forms, portals." },
   { icon: Users,    text: "Duplicate prevention so your team never wastes a call." },
   { icon: Shield,   text: "Role-based access so telecallers, managers, and admins each see exactly what they need." },
   { icon: BarChart3,text: "Real-time dashboards built for the pace of property sales campaigns." },
@@ -47,7 +47,7 @@ const STORY_POINTS = [
 
 const TIMELINE = [
   { year: "2022", title: "The idea",         desc: "Watched real estate teams lose hot leads across WhatsApp groups and spreadsheets. Knew there had to be a better way." },
-  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. Immediate product-market fit — teams never looked back at Excel." },
+  { year: "2023", title: "First version",    desc: "Shipped the first version of Arthaleads to 5 teams in Pune. Immediate product-market fit. Teams never looked back at Excel." },
   { year: "2024", title: "Growing fast",     desc: "Expanded to 100+ teams across Maharashtra. Added Facebook Ads integration, pipeline view, and team analytics." },
   { year: "2025", title: "Scaling up",       desc: "500+ teams, 50,000+ leads managed monthly. Launching WordPress plugin and deepening integrations with Indian property portals." },
 ];
@@ -144,7 +144,7 @@ export default function AboutUs() {
           </h1>
 
           <p style={{ fontSize: 18, lineHeight: 1.75, color: body, maxWidth: 580, margin: "0 auto 44px", animation: "fadeUp 0.7s ease 0.2s both" }}>
-            We set out to solve a problem every Indian real estate team knows — leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
+            We set out to solve a problem every Indian real estate team knows: leads slipping through the cracks across WhatsApp groups, Facebook campaigns, and forgotten spreadsheets.
           </p>
 
           {/* Floating chips */}
@@ -195,13 +195,13 @@ export default function AboutUs() {
               <span style={{ color: "#ff6b00" }}>Arthaleads</span>
             </h2>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: body, marginBottom: 16 }}>
-              Real estate sales teams in India work across multiple channels simultaneously — Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals — all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.
+              Real estate sales teams in India work across multiple channels simultaneously: Facebook lead ads, Google campaigns, WhatsApp enquiries, walk-ins, and housing portals, all at once. Before Arthaleads, managing this meant juggling six different tabs, three WhatsApp groups, and a shared Excel sheet that nobody trusted.
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: body, marginBottom: 16 }}>
               Hot leads would go cold because no one followed up in time. Telecallers would call the same number three times from different lists. Managers had no way to see what the team was actually doing.
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.8, color: body }}>
-              We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked — from first contact to closed deal.
+              We built Arthaleads to be the single workspace where every property enquiry lands, gets assigned, gets called, and gets tracked. From first contact to closed deal.
             </p>
           </div>
 
@@ -407,7 +407,7 @@ export default function AboutUs() {
               Start managing leads the smarter way
             </h2>
             <p style={{ fontSize: 15, color: body, lineHeight: 1.75, marginBottom: 32 }}>
-              No spreadsheets. No missed follow-ups. Your whole team working from one place — set up in under 5 minutes.
+              No spreadsheets. No missed follow-ups. Your whole team working from one place, set up in under 5 minutes.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
               <Link
@@ -450,7 +450,7 @@ export default function AboutUs() {
             gap: 18,
           }}>
             {[
-              "Free 14-day trial — no credit card",
+              "Free 14-day trial, no credit card",
               "Set up in under 5 minutes",
               "All lead sources in one inbox",
               "Built for Indian real estate teams",

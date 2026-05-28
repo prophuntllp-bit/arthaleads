@@ -54,10 +54,10 @@ const INSTALL_STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Zap,       title: "Instant Capture",        desc: "Leads arrive in your CRM within seconds of a form submission — no delays, no missed enquiries." },
+  { icon: Zap,       title: "Instant Capture",        desc: "Leads arrive in your CRM within seconds of a form submission. No delays, no missed enquiries." },
   { icon: RefreshCw, title: "Auto-Assigned",           desc: "Route each lead to the right agent based on your project rules automatically." },
-  { icon: Shield,    title: "Duplicate Detection",     desc: "The same phone number won't create duplicate leads — existing records are updated instead." },
-  { icon: Globe,     title: "Any WordPress Site",      desc: "Works on single sites, multisite, and WooCommerce — no server-side configuration needed." },
+  { icon: Shield,    title: "Duplicate Detection",     desc: "The same phone number won't create duplicate leads. Existing records are updated instead." },
+  { icon: Globe,     title: "Any WordPress Site",      desc: "Works on single sites, multisite, and WooCommerce. No server-side configuration needed." },
   { icon: Bell,      title: "Instant Notifications",   desc: "Your team gets a push notification the moment a new website lead comes in." },
   { icon: Code2,     title: "Zero Code Required",      desc: "No webhooks, no API calls from your side. Install, connect your token, done." },
 ];
@@ -69,7 +69,7 @@ const FAQS = [
   },
   {
     q: "Is the Arthaleads WordPress plugin free?",
-    a: "Yes, completely free. You need an active Arthaleads account to receive leads — start with our 14-day free trial, no credit card required.",
+    a: "Yes, completely free. You need an active Arthaleads account to receive leads. Start with our 14-day free trial, no credit card required.",
   },
   {
     q: "What lead data is captured from my forms?",
@@ -93,7 +93,7 @@ const FAQS = [
   },
   {
     q: "What happens if my website is down or the CRM is temporarily unavailable?",
-    a: "If the connection fails, the plugin retries automatically. Your form submissions are never lost — leads that couldn't be synced are queued and retried on the next submission.",
+    a: "If the connection fails, the plugin retries automatically. Your form submissions are never lost. Leads that couldn't be synced are queued and retried on the next submission.",
   },
   {
     q: "Does the plugin slow down my WordPress website?",
@@ -101,11 +101,11 @@ const FAQS = [
   },
   {
     q: "Can I choose which forms send leads to Arthaleads?",
-    a: "Yes. The plugin lists all detected forms on your site. You simply toggle on the forms you want to capture from — forms that are toggled off are ignored completely.",
+    a: "Yes. The plugin lists all detected forms on your site. You simply toggle on the forms you want to capture from. Forms that are toggled off are ignored completely.",
   },
   {
     q: "Does it work with WooCommerce or custom post type forms?",
-    a: "The plugin works with any form created using the supported form builders, regardless of what page or post type it's placed on — including WooCommerce product pages.",
+    a: "The plugin works with any form created using the supported form builders, regardless of what page or post type it's placed on, including WooCommerce product pages.",
   },
   {
     q: "What is the Arthaleads account token and where do I get it?",
@@ -303,7 +303,7 @@ function WordPressPluginInner() {
             </span>
           </h1>
           <p className="text-lg leading-relaxed mb-3 max-w-xl mx-auto" style={{ color: soft }}>
-            Connect Contact Form 7, WPForms, Elementor and 5 more form builders to Arthaleads in under 5 minutes — no code needed.
+            Connect Contact Form 7, WPForms, Elementor and 5 more form builders to Arthaleads in under 5 minutes. No code needed.
           </p>
 
           {/* Live notification demo */}
@@ -316,7 +316,7 @@ function WordPressPluginInner() {
               className="inline-flex items-center gap-2 text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5 hover:shadow-orange-500/40"
               style={{ background: "linear-gradient(135deg,#e05d00,#ff6b00)" }}>
               <Download className="w-5 h-5" />
-              Download Plugin — Free
+              Download Plugin - Free
             </a>
             <Link to="/signup"
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
@@ -407,7 +407,7 @@ function WordPressPluginInner() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Step-by-Step Setup Guide</h2>
-            <p className="text-base" style={{ color: soft }}>Be up and running in under 5 minutes — no developer needed.</p>
+            <p className="text-base" style={{ color: soft }}>Be up and running in under 5 minutes. No developer needed.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -457,7 +457,7 @@ function WordPressPluginInner() {
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold mb-3" style={{ color: text }}>Everything Your Team Needs</h2>
             <p className="text-base" style={{ color: soft }}>
-              More than just a form-to-CRM bridge — built for real estate teams.
+              More than just a form-to-CRM bridge. Built for real estate teams.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
