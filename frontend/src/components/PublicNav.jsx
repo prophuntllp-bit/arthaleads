@@ -7,41 +7,162 @@ import {
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
-const resourcesLinks = {
-  knowledgeHub: [
-    { label: "Blog",            href: "/blog",            desc: "CRM insights & real estate tips", icon: BookOpen },
-    { label: "Case Studies",    href: "/case-studies",    desc: "Real results from real teams",    icon: BarChart2 },
-    { label: "Product Updates", href: "/product-updates", desc: "What's new in Arthaleads",        icon: Zap },
-    { label: "Help Guide",      href: "/help-guide",      desc: "Tutorials & FAQs",               icon: HelpCircle },
-  ],
-  company: [
-    { label: "About Us", href: "/about-us", desc: "Our mission & story",      icon: Building2 },
-    { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team", icon: Briefcase, badge: "Hiring" },
-  ],
-};
+const NAV_RESOURCES = [
+  { label: "Blog",            href: "/blog",            desc: "CRM insights & real estate tips", icon: BookOpen },
+  { label: "Case Studies",    href: "/case-studies",    desc: "Real results from real teams",    icon: BarChart2 },
+  { label: "Product Updates", href: "/product-updates", desc: "What's new in Arthaleads",        icon: Zap },
+  { label: "Help Guide",      href: "/help-guide",      desc: "Tutorials & FAQs",               icon: HelpCircle },
+];
 
+const NAV_COMPANY = [
+  { label: "About Us", href: "/about-us", desc: "Our mission & story",      icon: Building2 },
+  { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team", icon: Briefcase, badge: "Hiring" },
+];
+
+// ── Reusable dropdown panel ───────────────────────────────────────────────────
+function DropdownPanel({ items, onClose, isDark, width = 268 }) {
+  const bg     = isDark ? "rgba(18,18,30,0.99)" : "#ffffff";
+  const border = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
+  const shadow = isDark
+    ? "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)"
+    : "0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px #e5e7eb";
+  const itemText    = isDark ? "rgba(255,255,255,0.75)" : "#111827";
+  const itemDesc    = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
+  const iconBase    = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
+  const iconColor   = isDark ? "rgba(255,255,255,0.45)" : "#6b7280";
+  const hoverBg     = isDark ? "rgba(255,255,255,0.06)" : "#f9fafb";
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "calc(100% + 12px)",
+        left: "50%",
+        transform: "translateX(-50%)",
+        width,
+        background: bg,
+        border: `1px solid ${border}`,
+        boxShadow: shadow,
+        borderRadius: 16,
+        padding: "8px",
+        zIndex: 100,
+        animation: "ddIn 0.18s cubic-bezier(0.34,1.56,0.64,1)",
+      }}
+    >
+      <style>{`
+        @keyframes ddIn {
+          from { opacity:0; transform:translateX(-50%) translateY(-6px) scale(0.97); }
+          to   { opacity:1; transform:translateX(-50%) translateY(0)    scale(1);    }
+        }
+      `}</style>
+      {items.map((l) => {
+        const Icon = l.icon;
+        return (
+          <Link
+            key={l.href}
+            to={l.href}
+            onClick={onClose}
+            style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, textDecoration: "none", transition: "background 0.15s", color: "inherit" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = hoverBg;
+              e.currentTarget.querySelector(".dd-icon").style.background = "rgba(255,107,0,0.12)";
+              e.currentTarget.querySelector(".dd-icon").style.color = "#ff6b00";
+              e.currentTarget.querySelector(".dd-label").style.color = "#ff6b00";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.querySelector(".dd-icon").style.background = iconBase;
+              e.currentTarget.querySelector(".dd-icon").style.color = iconColor;
+              e.currentTarget.querySelector(".dd-label").style.color = itemText;
+            }}
+          >
+            {/* Icon box */}
+            <div
+              className="dd-icon"
+              style={{
+                flexShrink: 0, width: 34, height: 34, borderRadius: 9,
+                background: iconBase, color: iconColor,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "background 0.15s, color 0.15s",
+              }}
+            >
+              <Icon style={{ width: 15, height: 15 }} />
+            </div>
+
+            {/* Text */}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <span
+                  className="dd-label"
+                  style={{ fontSize: 13, fontWeight: 600, color: itemText, transition: "color 0.15s", lineHeight: 1 }}
+                >
+                  {l.label}
+                </span>
+                {l.badge && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 20,
+                    background: "rgba(255,107,0,0.12)", color: "#ff6b00",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    {l.badge}
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: itemDesc, lineHeight: 1.3 }}>{l.desc}</div>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Nav trigger button ────────────────────────────────────────────────────────
+function DropdownTrigger({ label, isOpen, onClick, textMuted, textActive }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 3,
+        fontSize: 14, fontWeight: 500, color: isOpen ? textActive : textMuted,
+        background: "none", border: "none", cursor: "pointer",
+        padding: 0,
+        transition: "color 0.2s",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.color = textActive)}
+      onMouseLeave={e => { if (!isOpen) e.currentTarget.style.color = textMuted; }}
+    >
+      {label}
+      <ChevronDown
+        style={{
+          width: 14, height: 14,
+          transition: "transform 0.2s",
+          transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+        }}
+      />
+    </button>
+  );
+}
+
+// ── Main nav ──────────────────────────────────────────────────────────────────
 function NavInner({ onScrollTo }) {
   const { isDark, toggle } = usePublicTheme();
-  const [open, setOpen]       = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [resOpen, setResOpen] = useState(false);
-  const resRef                = useRef(null);
-  const location              = useLocation();
-  const isHome                = location.pathname === "/";
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled]     = useState(false);
+  const [resOpen, setResOpen]       = useState(false);
+  const [compOpen, setCompOpen]     = useState(false);
+  const resRef  = useRef(null);
+  const compRef = useRef(null);
+  const location = useLocation();
+  const isHome   = location.pathname === "/";
 
-  // Text colour helpers
   const textMuted  = isDark ? "rgba(255,255,255,0.70)" : "#4b5563";
   const textActive = isDark ? "#ffffff" : "#111827";
-  const logoText   = isDark ? "#ffffff" : "#111827";
 
-  // Scrolled nav background
-  const scrolledBg    = isDark
-    ? "rgba(13,13,26,0.97)"
-    : "rgba(255,255,255,0.97)";
-  const scrolledBorder = isDark
-    ? "1px solid rgba(255,255,255,0.08)"
-    : "1px solid #e5e7eb";
-  const mobileBg = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
+  const scrolledBg     = isDark ? "rgba(13,13,26,0.97)" : "rgba(255,255,255,0.97)";
+  const scrolledBorder = isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid #e5e7eb";
+  const mobileBg       = isDark ? "rgba(13,13,26,0.98)" : "rgba(255,255,255,0.98)";
+  const catLabel       = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
@@ -49,93 +170,37 @@ function NavInner({ onScrollTo }) {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e) => {
-      if (resRef.current && !resRef.current.contains(e.target)) {
-        setResOpen(false);
-      }
+      if (resRef.current  && !resRef.current.contains(e.target))  setResOpen(false);
+      if (compRef.current && !compRef.current.contains(e.target)) setCompOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Dropdown card styles
-  const dropdownBg     = isDark ? "rgba(18,18,30,0.99)" : "#ffffff";
-  const dropdownBorder = isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
-  const dropdownShadow = isDark
-    ? "0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)"
-    : "0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px #e5e7eb";
-  const catLabel    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
-  const itemText    = isDark ? "rgba(255,255,255,0.65)" : "#374151";
-  const itemDesc    = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
-  const itemHoverBg = isDark ? "rgba(255,255,255,0.06)" : "#f9fafb";
+  function closeAll() { setResOpen(false); setCompOpen(false); }
 
   function NavLink({ id, label, href }) {
-    const linkClass = "text-sm font-medium transition-colors duration-200";
-    const style = { color: textMuted };
-    const hoverStyle = { color: textActive };
-
-    if (href) {
-      return (
-        <Link
-          to={href}
-          className={linkClass}
-          style={style}
-          onMouseEnter={e => Object.assign(e.currentTarget.style, hoverStyle)}
-          onMouseLeave={e => Object.assign(e.currentTarget.style, style)}
-        >
-          {label}
-        </Link>
-      );
-    }
+    const style = { fontSize: 14, fontWeight: 500, color: textMuted, transition: "color 0.2s" };
+    const hov   = { color: textActive };
+    const shared = {
+      style,
+      onMouseEnter: e => Object.assign(e.currentTarget.style, hov),
+      onMouseLeave: e => Object.assign(e.currentTarget.style, style),
+    };
+    if (href) return <Link to={href} className="transition-colors" {...shared}>{label}</Link>;
     if (isHome && onScrollTo) {
       return (
-        <button
-          onClick={() => { onScrollTo(id); setOpen(false); }}
-          className={linkClass}
-          style={style}
-          onMouseEnter={e => Object.assign(e.currentTarget.style, hoverStyle)}
+        <button onClick={() => { onScrollTo(id); setMobileOpen(false); }}
+          style={{ ...style, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          onMouseEnter={e => Object.assign(e.currentTarget.style, hov)}
           onMouseLeave={e => Object.assign(e.currentTarget.style, style)}
-        >
-          {label}
-        </button>
+        >{label}</button>
       );
     }
-    return (
-      <Link
-        to={`/#${id}`}
-        className={linkClass}
-        style={style}
-        onMouseEnter={e => Object.assign(e.currentTarget.style, hoverStyle)}
-        onMouseLeave={e => Object.assign(e.currentTarget.style, style)}
-      >
-        {label}
-      </Link>
-    );
-  }
-
-  function MobileNavLink({ id, label, href }) {
-    const cls = "block w-full text-left px-4 py-3 text-sm font-medium rounded-xl transition-colors";
-    const style = { color: textMuted };
-    if (href) {
-      return (
-        <Link to={href} onClick={() => setOpen(false)} className={cls} style={style}>
-          {label}
-        </Link>
-      );
-    }
-    if (isHome && onScrollTo) {
-      return (
-        <button onClick={() => { onScrollTo(id); setOpen(false); }} className={cls} style={style}>
-          {label}
-        </button>
-      );
-    }
-    return (
-      <Link to={`/#${id}`} onClick={() => setOpen(false)} className={cls} style={style}>
-        {label}
-      </Link>
-    );
+    return <Link to={`/#${id}`} className="transition-colors" {...shared}>{label}</Link>;
   }
 
   const navStyle = scrolled
@@ -143,168 +208,59 @@ function NavInner({ onScrollTo }) {
     : { background: "transparent" };
 
   return (
-    <nav
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-      style={navStyle}
-    >
+    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style={navStyle}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <img
-              src="/logo.png"
-              alt="Arthaleads"
-              className="w-9 h-9 rounded-xl object-cover"
-            />
+            <img src="/logo.png" alt="Arthaleads" className="w-9 h-9 rounded-xl object-cover" />
             <div>
               <span style={{ color: isDark ? "#fff" : "#111827" }} className="font-bold text-lg leading-none">Artha</span>
               <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
             </div>
           </Link>
 
-          {/* Desktop links */}
-          <div className="hidden lg:flex items-center gap-8">
+          {/* Desktop nav links */}
+          <div className="hidden lg:flex items-center gap-7">
             <NavLink id="hero"     label="Home" />
             <NavLink id="features" label="Features" />
 
             {/* Resources dropdown */}
             <div className="relative" ref={resRef}>
-              <button
-                onClick={() => setResOpen(!resOpen)}
-                className="flex items-center gap-1 text-sm font-medium transition-colors duration-200"
-                style={{ color: textMuted }}
-                onMouseEnter={e => (e.currentTarget.style.color = textActive)}
-                onMouseLeave={e => (e.currentTarget.style.color = resOpen ? textActive : textMuted)}
-              >
-                Resources
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${resOpen ? "rotate-180" : ""}`} />
-              </button>
-
+              <DropdownTrigger
+                label="Resources"
+                isOpen={resOpen}
+                onClick={() => { setResOpen(o => !o); setCompOpen(false); }}
+                textMuted={textMuted}
+                textActive={textActive}
+              />
               {resOpen && (
-                <div
-                  className="absolute top-full mt-3 rounded-2xl overflow-hidden"
-                  style={{
-                    background: dropdownBg,
-                    border: `1px solid ${dropdownBorder}`,
-                    boxShadow: dropdownShadow,
-                    width: 520,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                  }}
-                >
-                  <div style={{ display: "flex" }}>
+                <DropdownPanel
+                  items={NAV_RESOURCES}
+                  onClose={() => setResOpen(false)}
+                  isDark={isDark}
+                  width={272}
+                />
+              )}
+            </div>
 
-                    {/* Left — Knowledge Hub */}
-                    <div style={{ flex: "1 1 0", padding: "24px 20px 24px 24px" }}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: catLabel }}>
-                        Knowledge Hub
-                      </p>
-                      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                        {resourcesLinks.knowledgeHub.map((l) => {
-                          const Icon = l.icon;
-                          return (
-                            <li key={l.href}>
-                              <Link
-                                to={l.href}
-                                onClick={() => setResOpen(false)}
-                                className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
-                                style={{ textDecoration: "none", transition: "background 0.15s" }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.background = itemHoverBg;
-                                  e.currentTarget.querySelector(".nav-icon").style.color = "#ff6b00";
-                                  e.currentTarget.querySelector(".nav-icon").style.background = "rgba(255,107,0,0.12)";
-                                  e.currentTarget.querySelector(".nav-label").style.color = "#ff6b00";
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.background = "transparent";
-                                  e.currentTarget.querySelector(".nav-icon").style.color = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
-                                  e.currentTarget.querySelector(".nav-icon").style.background = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
-                                  e.currentTarget.querySelector(".nav-label").style.color = itemText;
-                                }}
-                              >
-                                <div
-                                  className="nav-icon flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-                                  style={{
-                                    background: isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
-                                    color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280",
-                                    transition: "background 0.15s, color 0.15s",
-                                  }}
-                                >
-                                  <Icon style={{ width: 15, height: 15 }} />
-                                </div>
-                                <div>
-                                  <div className="nav-label text-sm font-semibold leading-none mb-1" style={{ color: itemText, transition: "color 0.15s" }}>{l.label}</div>
-                                  <div className="text-xs leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
-                                </div>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-
-                    {/* Divider */}
-                    <div style={{ width: 1, background: isDark ? "rgba(255,255,255,0.07)" : "#f0f0f0", margin: "20px 0" }} />
-
-                    {/* Right — Company */}
-                    <div style={{ width: 200, padding: "24px 24px 24px 20px", flexShrink: 0 }}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: catLabel }}>
-                        Company
-                      </p>
-                      <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                        {resourcesLinks.company.map((l) => {
-                          const Icon = l.icon;
-                          return (
-                            <li key={l.href}>
-                              <Link
-                                to={l.href}
-                                onClick={() => setResOpen(false)}
-                                className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
-                                style={{ textDecoration: "none", transition: "background 0.15s" }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.background = itemHoverBg;
-                                  e.currentTarget.querySelector(".nav-icon").style.color = "#ff6b00";
-                                  e.currentTarget.querySelector(".nav-icon").style.background = "rgba(255,107,0,0.12)";
-                                  e.currentTarget.querySelector(".nav-label").style.color = "#ff6b00";
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.background = "transparent";
-                                  e.currentTarget.querySelector(".nav-icon").style.color = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
-                                  e.currentTarget.querySelector(".nav-icon").style.background = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
-                                  e.currentTarget.querySelector(".nav-label").style.color = itemText;
-                                }}
-                              >
-                                <div
-                                  className="nav-icon flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-                                  style={{
-                                    background: isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6",
-                                    color: isDark ? "rgba(255,255,255,0.5)" : "#6b7280",
-                                    transition: "background 0.15s, color 0.15s",
-                                  }}
-                                >
-                                  <Icon style={{ width: 15, height: 15 }} />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="nav-label text-sm font-semibold leading-none" style={{ color: itemText, transition: "color 0.15s" }}>{l.label}</span>
-                                    {l.badge && (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00" }}>
-                                        {l.badge}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs leading-snug" style={{ color: itemDesc }}>{l.desc}</div>
-                                </div>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-
-                  </div>
-                </div>
+            {/* Company dropdown */}
+            <div className="relative" ref={compRef}>
+              <DropdownTrigger
+                label="Company"
+                isOpen={compOpen}
+                onClick={() => { setCompOpen(o => !o); setResOpen(false); }}
+                textMuted={textMuted}
+                textActive={textActive}
+              />
+              {compOpen && (
+                <DropdownPanel
+                  items={NAV_COMPANY}
+                  onClose={() => setCompOpen(false)}
+                  isDark={isDark}
+                  width={248}
+                />
               )}
             </div>
 
@@ -313,20 +269,17 @@ function NavInner({ onScrollTo }) {
             <NavLink href="/wordpress-plugin" label="WordPress Plugin" />
           </div>
 
-          {/* Desktop CTAs + theme toggle */}
+          {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
-            {/* Theme toggle */}
             <button
               onClick={toggle}
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-black/5"
               style={{ color: textMuted }}
               aria-label="Toggle theme"
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-
-            <Link
-              to="/login"
+            <Link to="/login"
               className="text-sm font-medium transition-colors px-4 py-2"
               style={{ color: textMuted }}
               onMouseEnter={e => (e.currentTarget.style.color = textActive)}
@@ -334,101 +287,99 @@ function NavInner({ onScrollTo }) {
             >
               Login
             </Link>
-            <Link
-              to="/signup"
+            <Link to="/signup"
               className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
               Get Started Free
             </Link>
           </div>
 
-          {/* Mobile: theme toggle + hamburger */}
+          {/* Mobile: theme + hamburger */}
           <div className="flex items-center gap-2 lg:hidden">
-            <button
-              onClick={toggle}
-              className="w-8 h-8 flex items-center justify-center rounded-lg"
-              style={{ color: textMuted }}
-              aria-label="Toggle theme"
-            >
+            <button onClick={toggle} className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ color: textMuted }} aria-label="Toggle theme">
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button
-              onClick={() => setOpen(!open)}
-              className="w-8 h-8 flex items-center justify-center"
-              style={{ color: textMuted }}
-            >
-              {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <button onClick={() => setMobileOpen(o => !o)} className="w-8 h-8 flex items-center justify-center" style={{ color: textMuted }}>
+              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
-      {open && (
-        <div
-          className="lg:hidden backdrop-blur-xl"
-          style={{
-            background: mobileBg,
-            borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}`,
-          }}
-        >
+      {mobileOpen && (
+        <div className="lg:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
           <div className="px-4 py-4 space-y-1">
-            <MobileNavLink id="hero"     label="Home" />
-            <MobileNavLink id="features" label="Features" />
 
-            <p
-              className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest"
-              style={{ color: catLabel }}
-            >
+            {/* Main links */}
+            {[
+              { id: "hero",     label: "Home" },
+              { id: "features", label: "Features" },
+            ].map(({ id, label }) => (
+              isHome && onScrollTo
+                ? <button key={id} onClick={() => { onScrollTo(id); setMobileOpen(false); }}
+                    className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
+                    style={{ color: textMuted }}>{label}</button>
+                : <Link key={id} to={`/#${id}`} onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium rounded-xl"
+                    style={{ color: textMuted }}>{label}</Link>
+            ))}
+
+            {/* Resources section */}
+            <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
               Resources
             </p>
-            {resourcesLinks.knowledgeHub.map((l) => (
-              <Link
-                key={l.href}
-                to={l.href}
-                onClick={() => setOpen(false)}
-                className="block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                style={{ color: textMuted }}
-              >
-                {l.label}
-              </Link>
-            ))}
-            {resourcesLinks.company.map((l) => (
-              <Link
-                key={l.href}
-                to={l.href}
-                onClick={() => setOpen(false)}
-                className="block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                style={{ color: textMuted }}
-              >
+            {NAV_RESOURCES.map(l => (
+              <Link key={l.href} to={l.href} onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium"
+                style={{ color: textMuted, textDecoration: "none" }}>
+                <l.icon style={{ width: 14, height: 14, flexShrink: 0, opacity: 0.6 }} />
                 {l.label}
               </Link>
             ))}
 
-            <MobileNavLink id="pricing"  label="Pricing" />
-            <MobileNavLink href="/contact" label="Contact" />
-            <MobileNavLink href="/wordpress-plugin" label="WordPress Plugin" />
+            {/* Company section */}
+            <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
+              Company
+            </p>
+            {NAV_COMPANY.map(l => (
+              <Link key={l.href} to={l.href} onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium"
+                style={{ color: textMuted, textDecoration: "none" }}>
+                <l.icon style={{ width: 14, height: 14, flexShrink: 0, opacity: 0.6 }} />
+                {l.label}
+                {l.badge && (
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 20, background: "rgba(255,107,0,0.12)", color: "#ff6b00", marginLeft: 2 }}>
+                    {l.badge}
+                  </span>
+                )}
+              </Link>
+            ))}
 
-            <div
-              className="pt-3 flex flex-col gap-2 mt-3"
-              style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}
-            >
-              <Link
-                to="/login"
-                onClick={() => setOpen(false)}
-                className="text-center py-2.5 text-sm font-medium rounded-xl transition-colors"
-                style={{
-                  color: textMuted,
-                  border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#d1d5db"}`,
-                }}
-              >
+            {/* Rest */}
+            {[
+              { id: "pricing", label: "Pricing" },
+            ].map(({ id, label }) => (
+              isHome && onScrollTo
+                ? <button key={id} onClick={() => { onScrollTo(id); setMobileOpen(false); }}
+                    className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
+                    style={{ color: textMuted }}>{label}</button>
+                : <Link key={id} to={`/#${id}`} onClick={() => setMobileOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium rounded-xl"
+                    style={{ color: textMuted }}>{label}</Link>
+            ))}
+            <Link to="/contact" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Contact</Link>
+            <Link to="/wordpress-plugin" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>WordPress Plugin</Link>
+
+            {/* Auth CTAs */}
+            <div className="pt-3 flex flex-col gap-2 mt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
+              <Link to="/login" onClick={() => setMobileOpen(false)}
+                className="text-center py-2.5 text-sm font-medium rounded-xl"
+                style={{ color: textMuted, border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#d1d5db"}` }}>
                 Login
               </Link>
-              <Link
-                to="/signup"
-                onClick={() => setOpen(false)}
-                className="text-center bg-[#ff6b00] text-white py-2.5 rounded-xl text-sm font-semibold"
-              >
+              <Link to="/signup" onClick={() => setMobileOpen(false)}
+                className="text-center bg-[#ff6b00] text-white py-2.5 rounded-xl text-sm font-semibold">
                 Get Started Free
               </Link>
             </div>
