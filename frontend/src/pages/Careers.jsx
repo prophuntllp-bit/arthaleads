@@ -1010,15 +1010,15 @@ export default function Careers() {
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
           <div style={{
             borderRadius: 28, padding: "52px 40px", textAlign: "center",
-            background: "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)",
+            background: isDark ? "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)" : "linear-gradient(135deg, #fff7f0 0%, #fff0e6 100%)",
             border: "1px solid rgba(255,107,0,0.25)",
-            boxShadow: "0 24px 60px rgba(255,107,0,0.12)",
+            boxShadow: "0 24px 60px rgba(255,107,0,0.10)",
             position: "relative", overflow: "hidden",
           }}>
             <div style={{
               position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)",
               width: 400, height: 300,
-              background: "radial-gradient(ellipse, rgba(255,107,0,0.18) 0%, transparent 70%)",
+              background: "radial-gradient(ellipse, rgba(255,107,0,0.12) 0%, transparent 70%)",
               pointerEvents: "none",
             }} />
             <div style={{
@@ -1030,10 +1030,10 @@ export default function Careers() {
             }}>
               <Target style={{ width: 24, height: 24, color: "#ff6b00" }} />
             </div>
-            <h3 style={{ fontSize: 26, fontWeight: 900, color: "#ffffff", marginBottom: 10, position: "relative" }}>
+            <h3 style={{ fontSize: 26, fontWeight: 900, color: heading, marginBottom: 10, position: "relative" }}>
               Don't see the right role?
             </h3>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", lineHeight: 1.75, marginBottom: 28, maxWidth: 420, margin: "0 auto 28px", position: "relative" }}>
+            <p style={{ fontSize: 14, color: body, lineHeight: 1.75, marginBottom: 28, maxWidth: 420, margin: "0 auto 28px", position: "relative" }}>
               We're always open to hearing from talented people who are excited about real estate tech. Send us a note and we'll keep you in mind.
             </p>
             <a

@@ -233,11 +233,10 @@ export default function AboutUs() {
         </div>
       </section>
 
-      {/* ── Mission ── dark dramatic */}
-      <section ref={missionRef} style={{ background: "#0d0d1a", padding: "96px 24px", position: "relative", overflow: "hidden" }}>
+      {/* ── Mission ── */}
+      <section ref={missionRef} style={{ background: isDark ? "#0d0d1a" : "#fff7f0", padding: "96px 24px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 400, background: "radial-gradient(ellipse, rgba(255,107,0,0.15) 0%, transparent 70%)", filter: "blur(60px)" }} />
-          <div style={{ position: "absolute", inset: 0, opacity: 0.03, backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 700, height: 400, background: "radial-gradient(ellipse, rgba(255,107,0,0.12) 0%, transparent 70%)", filter: "blur(60px)" }} />
         </div>
         <div style={{ maxWidth: 760, margin: "0 auto", textAlign: "center", position: "relative" }}>
           <div style={{
@@ -249,7 +248,7 @@ export default function AboutUs() {
           }}>Our Mission</div>
           <h2 style={{
             fontSize: "clamp(30px, 5vw, 52px)", fontWeight: 900, lineHeight: 1.15,
-            background: "linear-gradient(135deg, #ff6b00, #ffaa00, #ffffff)",
+            background: isDark ? "linear-gradient(135deg, #ff6b00, #ffaa00, #ffffff)" : "linear-gradient(135deg, #ff6b00, #c94e00)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             marginBottom: 24,
             opacity: missionVisible ? 1 : 0,
@@ -259,7 +258,7 @@ export default function AboutUs() {
             Turn every property enquiry into a closed deal.
           </h2>
           <p style={{
-            fontSize: 16, lineHeight: 1.8, color: "rgba(255,255,255,0.55)", maxWidth: 540, margin: "0 auto",
+            fontSize: 16, lineHeight: 1.8, color: body, maxWidth: 540, margin: "0 auto",
             opacity: missionVisible ? 1 : 0,
             transform: missionVisible ? "translateY(0)" : "translateY(12px)",
             transition: "opacity 0.7s ease 0.22s, transform 0.7s ease 0.22s",
@@ -313,13 +312,13 @@ export default function AboutUs() {
       </section>
 
       {/* ── Timeline ── */}
-      <section style={{ background: isDark ? "#0d0d1a" : "#111827", padding: "88px 24px" }}>
+      <section style={{ background: isDark ? "#0d0d1a" : "#f1f5f9", padding: "88px 24px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
           <div ref={timelineRef} style={{ textAlign: "center", marginBottom: 56,
             opacity: timelineVisible ? 1 : 0, transform: timelineVisible ? "translateY(0)" : "translateY(20px)", transition: "opacity 0.6s ease, transform 0.6s ease",
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>Our Journey</div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: "#ffffff" }}>How we got here</h2>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading }}>How we got here</h2>
           </div>
 
           <div style={{ position: "relative" }}>
@@ -353,22 +352,22 @@ export default function AboutUs() {
                   <div style={{
                     flex: 1, paddingTop: 8, paddingBottom: i < TIMELINE.length - 1 ? 8 : 0,
                     paddingLeft: 20, paddingRight: 20,
-                    background: "rgba(255,255,255,0.03)",
+                    background: sectionBg,
                     borderRadius: 14,
-                    border: "1px solid rgba(255,255,255,0.07)",
+                    border: `1px solid ${sectionBdr}`,
                     marginBottom: i < TIMELINE.length - 1 ? 0 : 0,
                     padding: "14px 18px",
                     transition: "background 0.2s, border 0.2s",
                     cursor: "default",
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,0,0.07)"; e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = sectionBg; e.currentTarget.style.borderColor = sectionBdr; }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, color: "#ff6b00", background: "rgba(255,107,0,0.12)", padding: "2px 8px", borderRadius: 20 }}>{year}</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: "#ffffff" }}>{title}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: heading }}>{title}</span>
                     </div>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.65, margin: 0 }}>{desc}</p>
+                    <p style={{ fontSize: 13, color: body, lineHeight: 1.65, margin: 0 }}>{desc}</p>
                   </div>
                 </div>
               ))}
@@ -382,19 +381,19 @@ export default function AboutUs() {
         <div ref={ctaRef} style={{
           maxWidth: 720, margin: "0 auto",
           borderRadius: 28, padding: "56px 40px", textAlign: "center",
-          background: "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)",
+          background: isDark ? "linear-gradient(135deg, #0d0d1a 0%, #1a0d00 100%)" : "linear-gradient(135deg, #fff7f0 0%, #fff0e6 100%)",
           border: "1px solid rgba(255,107,0,0.25)",
-          boxShadow: "0 24px 60px rgba(255,107,0,0.12)",
+          boxShadow: "0 24px 60px rgba(255,107,0,0.10)",
           position: "relative", overflow: "hidden",
           opacity: ctaVisible ? 1 : 0,
           transform: ctaVisible ? "translateY(0)" : "translateY(28px)",
           transition: "opacity 0.7s ease, transform 0.7s ease",
         }}>
-          <div style={{ position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)", width: 500, height: 320, background: "radial-gradient(ellipse, rgba(255,107,0,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: "#ffffff", marginBottom: 14, position: "relative" }}>
+          <div style={{ position: "absolute", top: "-40%", left: "50%", transform: "translateX(-50%)", width: 500, height: 320, background: "radial-gradient(ellipse, rgba(255,107,0,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: heading, marginBottom: 14, position: "relative" }}>
             Ready to bring your team onto Arthaleads?
           </h2>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.55)", lineHeight: 1.7, marginBottom: 32, maxWidth: 440, margin: "0 auto 32px", position: "relative" }}>
+          <p style={{ fontSize: 15, color: body, lineHeight: 1.7, marginBottom: 32, maxWidth: 440, margin: "0 auto 32px", position: "relative" }}>
             Start your free trial — no credit card required. Your team can be up and running today.
           </p>
           <Link
