@@ -557,6 +557,11 @@ const leadService = {
 
     const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+    const thisMonthStart = new Date(); thisMonthStart.setDate(1); thisMonthStart.setHours(0,0,0,0);
+    const thisMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth()+1, 0, 23, 59, 59, 999);
+    const lastMonthStart = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth()-1, 1, 0, 0, 0, 0);
+    const lastMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 0, 23, 59, 59, 999);
+    const next48hEnd     = new Date(todayEnd.getTime() + 48 * 60 * 60 * 1000);
 
     // ── Single $facet aggregation - 1 round-trip instead of 8 ────────────────
     const [result] = await Lead.aggregate([
@@ -622,6 +627,52 @@ const leadService = {
             { $match: { followUpDate: { $ne: null } } },
             { $count: "count" },
           ],
+
+          // ── New intelligence facets ──────────────────────────────────────
+          // Pipeline value: budget.max sum for active (non-closed) leads
+          pipelineValue: [
+            { $match: { status: { $nin: ["Closed Won", "Closed Lost"] } } },
+            { $group: { _id: null, total: { $sum: "$budget.max" }, count: { $sum: 1 } } },
+          ],
+
+          // Month-over-month comparisons
+          thisMonthLeads: [
+            { $match: { createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
+            { $count: "count" },
+          ],
+          lastMonthLeads: [
+            { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+            { $count: "count" },
+          ],
+          thisMonthClosedWon: [
+            { $match: { status: "Closed Won", createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
+            { $count: "count" },
+          ],
+          lastMonthClosedWon: [
+            { $match: { status: "Closed Won", createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+            { $count: "count" },
+          ],
+
+          // Today's new leads and site visits
+          todayCreated: [
+            { $match: { createdAt: { $gte: todayStart, $lte: todayEnd } } },
+            { $count: "count" },
+          ],
+          todaySiteVisits: [
+            { $match: { siteVisitDate: { $gte: todayStart, $lte: todayEnd } } },
+            { $count: "count" },
+          ],
+
+          // Upcoming follow-ups and site visits in next 48h (after today)
+          upcomingItems: [
+            { $match: { $or: [
+              { followUpDate: { $gt: todayEnd, $lte: next48hEnd } },
+              { siteVisitDate: { $gt: todayEnd, $lte: next48hEnd } },
+            ]}},
+            { $sort: { followUpDate: 1 } },
+            { $limit: 8 },
+            { $project: { name: 1, phone: 1, followUpDate: 1, siteVisitDate: 1, status: 1, assignedToName: 1 } },
+          ],
         },
       },
     ]);
@@ -650,6 +701,18 @@ const leadService = {
       recentLeads:    result.recentLeads,
       todayFollowUps: result.todayFollowUps[0]?.count || 0,
       totalFollowUps: result.totalFollowUps[0]?.count || 0,
+      pipelineValue:      result.pipelineValue[0]?.total || 0,
+      pipelineLeads:      result.pipelineValue[0]?.count || 0,
+      thisMonthLeads:     result.thisMonthLeads[0]?.count || 0,
+      lastMonthLeads:     result.lastMonthLeads[0]?.count || 0,
+      thisMonthClosedWon: result.thisMonthClosedWon[0]?.count || 0,
+      lastMonthClosedWon: result.lastMonthClosedWon[0]?.count || 0,
+      conversionRate:     result.allTimeTotal[0]?.count
+        ? Math.round((allTimeStatus["Closed Won"] || 0) / result.allTimeTotal[0].count * 1000) / 10
+        : 0,
+      todayCreated:       result.todayCreated[0]?.count || 0,
+      todaySiteVisits:    result.todaySiteVisits[0]?.count || 0,
+      upcomingItems:      result.upcomingItems || [],
     };
   },
 

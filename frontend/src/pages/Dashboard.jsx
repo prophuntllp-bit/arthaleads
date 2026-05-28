@@ -5,15 +5,18 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveCo
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  Calendar,
   CheckCircle,
   ChevronDown,
   Clock3,
   Globe,
+  IndianRupee,
   MessageCircle,
   MoonStar,
   Phone,
   Search,
   SunMedium,
+  Target,
   TrendingUp,
   Users,
   X,
@@ -43,6 +46,18 @@ function getGreeting() {
   if (hour < 17) return "Good afternoon";
   if (hour < 21) return "Good evening";
   return "Good night";
+}
+
+function fmtINR(val) {
+  if (!val) return "₹0";
+  if (val >= 1e7) return `₹${(val / 1e7).toFixed(1)}Cr`;
+  if (val >= 1e5) return `₹${(val / 1e5).toFixed(1)}L`;
+  return `₹${val.toLocaleString("en-IN")}`;
+}
+
+function calcDelta(current, previous) {
+  if (!previous || previous === 0) return null;
+  return Math.round((current - previous) / previous * 100);
 }
 
 export default function Dashboard() {
@@ -196,14 +211,18 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
+          delta={data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : undefined}
           onClick={() => navigate("/leads")} />
         <StatCard label="New" value={data?.allTimeNew || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
           onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
         <StatCard label="Closed Won" value={data?.allTimeClosedWon || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
+          delta={data ? calcDelta(data.thisMonthClosedWon, data.lastMonthClosedWon) : undefined}
           onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
         <StatCard label="Follow-ups Today" value={data?.todayFollowUps || 0} icon={Clock3} color="text-amber-400" sub={`${data?.totalFollowUps || 0} total scheduled`}
           onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
       </div>
+      <InsightStrip data={data} />
+      <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <section className="card p-4 xl:col-span-7">
@@ -396,6 +415,82 @@ export default function Dashboard() {
         </section>
       </div>
     </div>
+  );
+}
+
+// ── Insight Strip ─────────────────────────────────────────────────────────────
+function InsightStrip({ data }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="card p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)" }}>
+          <IndianRupee className="w-5 h-5 text-orange-500" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Pipeline Value</p>
+          <p className="text-xl font-bold text-app">{fmtINR(data?.pipelineValue)}</p>
+          <p className="text-[10px] text-app-soft">{data?.pipelineLeads || 0} active leads</p>
+        </div>
+      </div>
+
+      <div className="card p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(34,197,94,0.10)" }}>
+          <Target className="w-5 h-5 text-emerald-500" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Conversion Rate</p>
+          <p className="text-xl font-bold text-emerald-400">{data?.conversionRate ?? 0}%</p>
+          <p className="text-[10px] text-app-soft">{data?.allTimeClosedWon || 0} of {data?.allTimeTotal || 0} leads closed</p>
+        </div>
+      </div>
+
+      <div className="card p-4 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.10)" }}>
+          <Zap className="w-5 h-5 text-indigo-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Today's Activity</p>
+          <p className="text-xl font-bold text-indigo-400">{data?.todayCreated || 0} new leads</p>
+          <p className="text-[10px] text-app-soft">{data?.todaySiteVisits || 0} site visits · {data?.todayFollowUps || 0} follow-ups</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Upcoming Schedule ─────────────────────────────────────────────────────────
+function UpcomingSchedule({ items, navigate }) {
+  if (!items || items.length === 0) return null;
+  return (
+    <section className="card overflow-hidden">
+      <div className="px-4 py-3 flex items-center gap-3" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <Calendar className="h-4 w-4 text-indigo-400 shrink-0" />
+        <span className="text-sm font-bold text-app">Upcoming 48 hours</span>
+        <span className="badge bg-indigo-500/10 text-indigo-400 ml-auto">{items.length}</span>
+      </div>
+      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {items.map((lead) => {
+          const date = lead.followUpDate || lead.siteVisitDate;
+          const type = lead.followUpDate ? "Follow-up" : "Site Visit";
+          return (
+            <button key={lead._id} type="button"
+              onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+              className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-orange-500/5 transition">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-app truncate">{lead.name}</p>
+                <p className="text-xs text-app-soft">{type} · {lead.assignedToName || "Unassigned"}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-semibold text-indigo-400">
+                  {new Date(date).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                </p>
+                <p className="text-[10px] text-app-soft">{lead.status}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

@@ -81,7 +81,7 @@ export function EmptyState({ icon: Icon, title, desc, action }) {
   );
 }
 
-export function StatCard({ label, value, sub, color = "text-brand-600", icon: Icon, onClick }) {
+export function StatCard({ label, value, sub, delta, color = "text-brand-600", icon: Icon, onClick }) {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
@@ -93,6 +93,11 @@ export function StatCard({ label, value, sub, color = "text-brand-600", icon: Ic
           <p className="stitch-kicker mb-1 sm:mb-2 text-[9px] sm:text-[11px]">{label}</p>
           <p className={`text-2xl sm:text-3xl font-bold ${color}`}>{value}</p>
           {sub && <p className="text-[10px] sm:text-xs text-app-soft mt-1 sm:mt-2 truncate">{sub}</p>}
+          {delta !== null && delta !== undefined && (
+            <p className={`text-[10px] font-semibold mt-0.5 ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}% vs last month
+            </p>
+          )}
         </div>
         {Icon && (
           <div className="w-9 h-9 sm:w-12 sm:h-12 shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center ml-2" style={{ background: "color-mix(in srgb, var(--app-primary) 10%, transparent)" }}>
