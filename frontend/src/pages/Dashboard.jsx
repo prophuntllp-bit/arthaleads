@@ -405,7 +405,9 @@ function FollowUpDuePanel({ user, navigate }) {
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("fup_panel_dismissed") === "1"
   );
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(
+    () => localStorage.getItem("fup_panel_minimized") !== "0"
+  );
 
   useEffect(() => {
     if (dismissed) return;
@@ -473,7 +475,7 @@ function FollowUpDuePanel({ user, navigate }) {
         </button>
         <button
           type="button"
-          onClick={() => setMinimized((v) => !v)}
+          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
           title={minimized ? "Expand" : "Minimize"}
           className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
         >
