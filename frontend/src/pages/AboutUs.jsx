@@ -118,6 +118,24 @@ export default function AboutUs() {
 
   return (
     <div style={{ background: pageBg, minHeight: "100vh" }}>
+      <style>{`
+        .about-story-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
+        .about-stats-grid  { display: grid; grid-template-columns: repeat(4, 1fr); }
+        .about-values-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .about-cta-grid    { display: grid; grid-template-columns: 1fr 1fr; }
+        .about-cta-right   { display: flex; }
+        @media (max-width: 900px) {
+          .about-story-grid  { grid-template-columns: 1fr; gap: 40px; }
+          .about-stats-grid  { grid-template-columns: repeat(2, 1fr); }
+          .about-values-grid { grid-template-columns: repeat(2, 1fr); }
+          .about-cta-grid    { grid-template-columns: 1fr; }
+          .about-cta-right   { display: none; }
+        }
+        @media (max-width: 560px) {
+          .about-stats-grid  { grid-template-columns: repeat(2, 1fr); }
+          .about-values-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
       <PublicNav />
 
       {/* ── Hero ── */}
@@ -166,11 +184,11 @@ export default function AboutUs() {
 
       {/* ── Stats strip ── */}
       <section ref={statsRef} style={{ background: sectionBg, borderTop: `1px solid ${sectionBdr}`, borderBottom: `1px solid ${sectionBdr}`, padding: "36px 24px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+        <div className="about-stats-grid" style={{ maxWidth: 900, margin: "0 auto" }}>
           {STATS.map(({ num, suffix, label, color }, i) => (
             <div key={label} style={{
               textAlign: "center", padding: "14px 20px",
-              borderRight: i < STATS.length - 1 ? `1px solid ${sectionBdr}` : "none",
+              borderRight: `1px solid ${sectionBdr}`,
               opacity: statsVisible ? 1 : 0,
               transform: statsVisible ? "translateY(0)" : "translateY(16px)",
               transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s`,
@@ -186,7 +204,7 @@ export default function AboutUs() {
 
       {/* ── Our Story ── */}
       <section style={{ padding: "88px 24px" }}>
-        <div ref={storyRef} style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 64, alignItems: "center" }}>
+        <div ref={storyRef} className="about-story-grid" style={{ maxWidth: 1100, margin: "0 auto" }}>
           {/* Left */}
           <div style={{ opacity: storyVisible ? 1 : 0, transform: storyVisible ? "translateX(0)" : "translateX(-40px)", transition: "opacity 0.7s ease, transform 0.7s ease" }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 12 }}>Our Story</div>
@@ -284,7 +302,7 @@ export default function AboutUs() {
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+          <div className="about-values-grid">
             {VALUES.map(({ icon: Icon, color, title, desc }, i) => (
               <div
                 key={title}
@@ -384,12 +402,13 @@ export default function AboutUs() {
           background: isDark ? "#161620" : "#ffffff",
           border: `1px solid ${sectionBdr}`,
           boxShadow: isDark ? "0 24px 60px rgba(0,0,0,0.3)" : "0 24px 60px rgba(0,0,0,0.07)",
-          display: "grid", gridTemplateColumns: "1fr 1fr",
           position: "relative",
           opacity: ctaVisible ? 1 : 0,
           transform: ctaVisible ? "translateY(0)" : "translateY(28px)",
           transition: "opacity 0.7s ease, transform 0.7s ease",
-        }}>
+        }}
+        className="about-cta-grid"
+        >
           {/* Orange top accent bar */}
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #ff6b00, #ffaa00, #ff6b00)", backgroundSize: "200% 100%", animation: "shimmer 3s linear infinite" }} />
 
@@ -442,10 +461,10 @@ export default function AboutUs() {
           </div>
 
           {/* Right — trust checklist */}
-          <div style={{
+          <div className="about-cta-right" style={{
             background: isDark ? "rgba(255,107,0,0.05)" : "#fff7f0",
             borderLeft: `1px solid ${isDark ? "rgba(255,107,0,0.15)" : "rgba(255,107,0,0.12)"}`,
-            display: "flex", flexDirection: "column", justifyContent: "center",
+            flexDirection: "column", justifyContent: "center",
             padding: "52px 44px",
             gap: 18,
           }}>

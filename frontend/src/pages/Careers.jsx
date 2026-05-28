@@ -7,7 +7,7 @@ import {
   MapPin, Clock, Briefcase, ChevronDown, ChevronUp,
   TrendingUp, Users, Zap, Heart, ArrowRight, Mail,
   Target, Handshake, Megaphone, X, CheckCircle, Loader,
-  Paperclip, Upload, Send,
+  Paperclip, Upload, Send, Eye, Lightbulb, Rocket,
 } from "lucide-react";
 
 const JOBS = [
@@ -666,12 +666,12 @@ const STATS = [
 ];
 
 const CULTURE = [
-  { emoji: "🚀", title: "Ship every week",         desc: "We don't wait for perfection. We ship, learn, and improve continuously." },
-  { emoji: "🎯", title: "Direct ownership",         desc: "You own your work end-to-end. No hand-offs, no waiting for approvals." },
-  { emoji: "💬", title: "Transparent by default",  desc: "All company metrics, decisions, and direction shared with the full team." },
-  { emoji: "🏗️", title: "Build from first principles", desc: "We question everything. If there's a better way, we do it that way." },
-  { emoji: "📈", title: "Grow with us",             desc: "Early team members have grown faster here than anywhere before." },
-  { emoji: "🤝", title: "Customer-obsessed",        desc: "Our best ideas come from spending time with real estate teams in Pune." },
+  { icon: Rocket,     color: "#ff6b00", title: "Ship every week",            desc: "We don't wait for perfection. We ship, learn, and improve continuously." },
+  { icon: Target,     color: "#3b82f6", title: "Direct ownership",            desc: "You own your work end-to-end. No hand-offs, no waiting for approvals." },
+  { icon: Eye,        color: "#8b5cf6", title: "Transparent by default",     desc: "All company metrics, decisions, and direction shared with the full team." },
+  { icon: Lightbulb,  color: "#f59e0b", title: "Build from first principles", desc: "We question everything. If there's a better way, we do it that way." },
+  { icon: TrendingUp, color: "#22c55e", title: "Grow with us",                desc: "Early team members have grown faster here than anywhere before." },
+  { icon: Handshake,  color: "#ec4899", title: "Customer-obsessed",           desc: "Our best ideas come from spending time with real estate teams in Pune." },
 ];
 
 export default function Careers() {
@@ -700,6 +700,22 @@ export default function Careers() {
 
   return (
     <div style={{ background: pageBg, minHeight: "100vh" }}>
+      <style>{`
+        .careers-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+        .careers-perks-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .careers-cta-split  { display: grid; grid-template-columns: 1fr auto; }
+        .careers-cta-right  { display: flex; }
+        @media (max-width: 900px) {
+          .careers-stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .careers-perks-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 640px) {
+          .careers-stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .careers-perks-grid { grid-template-columns: repeat(2, 1fr); }
+          .careers-cta-split  { grid-template-columns: 1fr; }
+          .careers-cta-right  { display: none; }
+        }
+      `}</style>
       <PublicNav />
 
       {/* ── Hero ── */}
@@ -849,11 +865,11 @@ export default function Careers() {
         borderBottom: `1px solid ${sectionBdr}`,
         padding: "32px 24px",
       }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 0 }}>
+        <div className="careers-stats-grid" style={{ maxWidth: 900, margin: "0 auto" }}>
           {STATS.map(({ label, to, suffix, color }, i) => (
             <div key={label} style={{
               textAlign: "center", padding: "12px 20px",
-              borderRight: i < STATS.length - 1 ? `1px solid ${sectionBdr}` : "none",
+              borderRight: `1px solid ${sectionBdr}`,
               opacity: statsVisible ? 1 : 0,
               transform: statsVisible ? "translateY(0)" : "translateY(16px)",
               transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s`,
@@ -884,7 +900,7 @@ export default function Careers() {
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
+          <div className="careers-perks-grid">
             {PERKS.map(({ icon: Icon, title, desc, color }, i) => (
               <div key={title}
                 style={{
@@ -925,46 +941,63 @@ export default function Careers() {
       </section>
 
       {/* ── Culture Grid ── */}
-      <section ref={cultureRef} style={{
-        background: isDark ? "#0d0d1a" : "#f1f5f9",
-        padding: "72px 24px",
-      }}>
+      <section ref={cultureRef} style={{ background: isDark ? "#0d0d1a" : "#f1f5f9", padding: "72px 24px" }}>
+        <style>{`
+          .culture-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+          @media (max-width: 900px) { .culture-grid { grid-template-columns: repeat(2, 1fr); } }
+          @media (max-width: 560px) { .culture-grid { grid-template-columns: 1fr; } }
+        `}</style>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
-              color: "#ff6b00", marginBottom: 10,
-            }}>Life at Arthaleads</div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 0 }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 10 }}>
+              Life at Arthaleads
+            </div>
+            <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 900, color: heading, marginBottom: 10 }}>
               How we work
             </h2>
+            <p style={{ fontSize: 15, color: body, maxWidth: 420, margin: "0 auto" }}>
+              Six principles that define how our team operates every day.
+            </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-            {CULTURE.map(({ emoji, title, desc }, i) => (
-              <div key={title}
+          <div className="culture-grid">
+            {CULTURE.map(({ icon: Icon, color, title, desc }, i) => (
+              <div
+                key={title}
                 style={{
-                  padding: "22px 20px",
-                  borderRadius: 16,
+                  padding: "28px 24px",
+                  borderRadius: 18,
                   background: sectionBg,
                   border: `1px solid ${sectionBdr}`,
                   opacity: cultureVisible ? 1 : 0,
                   transform: cultureVisible ? "translateY(0)" : "translateY(24px)",
-                  transition: `opacity 0.55s ease ${i * 0.08}s, transform 0.55s ease ${i * 0.08}s, background 0.2s, border 0.2s`,
+                  transition: `opacity 0.55s ease ${i * 0.08}s, transform 0.55s ease ${i * 0.08}s, border-color 0.2s, box-shadow 0.2s`,
                   cursor: "default",
+                  position: "relative",
+                  overflow: "hidden",
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = "rgba(255,107,0,0.07)";
-                  e.currentTarget.style.borderColor = "rgba(255,107,0,0.22)";
+                  e.currentTarget.style.borderColor = color + "55";
+                  e.currentTarget.style.boxShadow = `0 8px 32px ${color}18`;
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = sectionBg;
                   e.currentTarget.style.borderColor = sectionBdr;
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <div style={{ fontSize: 28, marginBottom: 12 }}>{emoji}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 6 }}>{title}</div>
-                <div style={{ fontSize: 13, color: body, lineHeight: 1.65 }}>{desc}</div>
+                {/* Subtle top accent */}
+                <div style={{ position: "absolute", top: 0, left: 24, right: 24, height: 2, borderRadius: "0 0 4px 4px", background: color, opacity: 0.5 }} />
+
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: color + "18",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  marginBottom: 16,
+                }}>
+                  <Icon style={{ width: 20, height: 20, color }} />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 8 }}>{title}</div>
+                <div style={{ fontSize: 13, color: body, lineHeight: 1.7 }}>{desc}</div>
               </div>
             ))}
           </div>
@@ -1008,12 +1041,11 @@ export default function Careers() {
       {/* ── Bottom CTA ── */}
       <section style={{ padding: "0 24px 80px" }}>
         <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div style={{
+          <div className="careers-cta-split" style={{
             borderRadius: 28, overflow: "hidden",
             background: isDark ? "#161620" : "#ffffff",
             border: `1px solid ${sectionBdr}`,
             boxShadow: isDark ? "0 24px 60px rgba(0,0,0,0.3)" : "0 24px 60px rgba(0,0,0,0.07)",
-            display: "grid", gridTemplateColumns: "1fr auto",
             position: "relative",
           }}>
             {/* Orange left accent bar */}
@@ -1057,9 +1089,9 @@ export default function Careers() {
             </div>
 
             {/* Right decorative panel */}
-            <div style={{
+            <div className="careers-cta-right" style={{
               width: 220, background: "rgba(255,107,0,0.06)", borderLeft: `1px solid ${sectionBdr}`,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              flexDirection: "column", alignItems: "center", justifyContent: "center",
               padding: "32px 24px", gap: 18,
             }}>
               {[
