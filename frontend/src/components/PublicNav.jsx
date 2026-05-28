@@ -12,6 +12,7 @@ const resourcesLinks = {
   ],
   company: [
     { label: "About Us", href: "/about-us", desc: "Our mission & story" },
+    { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team" },
   ],
 };
 

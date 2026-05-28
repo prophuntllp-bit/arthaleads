@@ -379,6 +379,7 @@ const ProductUpdates = lazy(() => import("./pages/ProductUpdates"));
 const HelpGuide      = lazy(() => import("./pages/HelpGuide"));
 const WordPressPlugin = lazy(() => import("./pages/WordPressPlugin"));
 const Contact         = lazy(() => import("./pages/Contact"));
+const Careers         = lazy(() => import("./pages/Careers"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
 const AdminLogin            = lazy(() => import("./pages/AdminLogin"));
@@ -624,6 +625,7 @@ export default function App() {
         <Route path="/product-updates"      element={<ProductUpdates />} />
         <Route path="/help-guide"           element={<HelpGuide />} />
         <Route path="/wordpress-plugin"     element={<WordPressPlugin />} />
+        <Route path="/careers"              element={<Careers />} />
         <Route path="/contact"              element={<Contact />} />
         <Route path="/share-target"         element={<ShareTarget />} />
 
