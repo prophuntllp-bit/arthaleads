@@ -283,11 +283,18 @@ function WordPressPluginInner() {
 
       {/* ── Hero ── */}
       <section className="relative pt-28 pb-24 overflow-hidden text-center"
-        style={{ background: isDark ? "linear-gradient(135deg,#0d0d1a 0%,#1a0a00 100%)" : "linear-gradient(135deg,#fff7ed 0%,#ffedd5 50%,#ffffff 100%)" }}>
+        style={{ background: isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)" }}>
+        {/* Grid background – matches homepage */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.09)" }} />
-          <div className="absolute bottom-0 right-1/4 w-80 h-80 rounded-full blur-3xl" style={{ background: "rgba(255,107,0,0.06)" }} />
+          <div style={{ position: "absolute", top: "25%", left: "25%", width: 384, height: 384, borderRadius: "50%", background: "rgba(255,107,0,0.10)", filter: "blur(60px)", animation: "blobDrift1 8s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "25%", right: "25%", width: 320, height: 320, borderRadius: "50%", background: "rgba(120,53,15,0.10)", filter: "blur(60px)", animation: "blobDrift2 10s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 256, height: 256, borderRadius: "50%", background: "rgba(255,107,0,0.05)", filter: "blur(60px)", animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.03 : 0.04, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
         </div>
+        <style>{`
+          @keyframes blobDrift1 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-20px,15px); } }
+          @keyframes blobDrift2 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(18px,-18px); } }
+        `}</style>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Badge */}

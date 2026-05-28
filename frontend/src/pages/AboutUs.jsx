@@ -139,12 +139,13 @@ export default function AboutUs() {
       <PublicNav />
 
       {/* ── Hero ── */}
-      <section style={{ position: "relative", overflow: "hidden", background: isDark ? "#0d0d1a" : "#f8fafc", paddingTop: 120, paddingBottom: 100 }}>
-        {/* Blobs */}
+      <section style={{ position: "relative", overflow: "hidden", background: isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)", paddingTop: 120, paddingBottom: 100 }}>
+        {/* Grid background – matches homepage */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          <div style={{ position: "absolute", top: "-15%", right: "5%", width: 560, height: 560, borderRadius: "50%", background: isDark ? "radial-gradient(circle, rgba(255,107,0,0.2) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,107,0,0.12) 0%, transparent 70%)", filter: "blur(64px)", animation: "blobA 9s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", bottom: "-20%", left: "0%",  width: 480, height: 480, borderRadius: "50%", background: isDark ? "radial-gradient(circle, rgba(59,130,246,0.14) 0%, transparent 70%)" : "radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)", filter: "blur(72px)", animation: "blobB 11s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.04 : 0.025, backgroundImage: isDark ? "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)" : "radial-gradient(rgba(0,0,0,0.5) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+          <div style={{ position: "absolute", top: "25%", left: "25%", width: 384, height: 384, borderRadius: "50%", background: "rgba(255,107,0,0.10)", filter: "blur(60px)", animation: "blobDrift1 8s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "25%", right: "25%", width: 320, height: 320, borderRadius: "50%", background: "rgba(120,53,15,0.10)", filter: "blur(60px)", animation: "blobDrift2 10s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 256, height: 256, borderRadius: "50%", background: "rgba(255,107,0,0.05)", filter: "blur(60px)", animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.03 : 0.04, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
@@ -177,8 +178,8 @@ export default function AboutUs() {
 
         <style>{`
           @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-          @keyframes blobA  { 0%,100% { transform:translate(0,0); }   50% { transform:translate(-28px, 18px); } }
-          @keyframes blobB  { 0%,100% { transform:translate(0,0); }   50% { transform:translate(22px,-22px); } }
+          @keyframes blobDrift1 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-20px,15px); } }
+          @keyframes blobDrift2 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(18px,-18px); } }
         `}</style>
       </section>
 

@@ -721,92 +721,15 @@ export default function Careers() {
       {/* ── Hero ── */}
       <section style={{
         position: "relative", overflow: "hidden",
-        background: isDark ? "#0a0a14" : "#ffffff",
+        background: isDark ? "#0d0d1a" : "linear-gradient(135deg, #fff7f0 0%, #fff 60%)",
         paddingTop: 112, paddingBottom: 96,
       }}>
-        {/* ── Animated background layer ── */}
+        {/* Grid background – matches homepage */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          {/* Base gradient wash */}
-          <div style={{
-            position: "absolute", inset: 0,
-            background: isDark
-              ? "radial-gradient(ellipse 80% 60% at 70% -10%, rgba(255,107,0,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at -10% 80%, rgba(59,130,246,0.15) 0%, transparent 60%)"
-              : "radial-gradient(ellipse 80% 60% at 70% -10%, rgba(255,107,0,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at -10% 80%, rgba(59,130,246,0.12) 0%, transparent 60%)",
-          }} />
-
-          {/* Large primary orb — top right */}
-          <div style={{
-            position: "absolute", top: "-15%", right: "-5%",
-            width: 700, height: 700, borderRadius: "50%",
-            background: isDark
-              ? "radial-gradient(circle, rgba(255,107,0,0.28) 0%, rgba(255,107,0,0.08) 45%, transparent 70%)"
-              : "radial-gradient(circle, rgba(255,107,0,0.22) 0%, rgba(255,107,0,0.06) 45%, transparent 70%)",
-            filter: "blur(50px)",
-            animation: "orb1 7s ease-in-out infinite",
-          }} />
-
-          {/* Secondary orb — bottom left */}
-          <div style={{
-            position: "absolute", bottom: "-20%", left: "-8%",
-            width: 600, height: 600, borderRadius: "50%",
-            background: isDark
-              ? "radial-gradient(circle, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.06) 45%, transparent 70%)"
-              : "radial-gradient(circle, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0.05) 45%, transparent 70%)",
-            filter: "blur(55px)",
-            animation: "orb2 9s ease-in-out infinite",
-          }} />
-
-          {/* Accent orb — center left */}
-          <div style={{
-            position: "absolute", top: "20%", left: "15%",
-            width: 300, height: 300, borderRadius: "50%",
-            background: isDark
-              ? "radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)"
-              : "radial-gradient(circle, rgba(255,107,0,0.1) 0%, transparent 70%)",
-            filter: "blur(40px)",
-            animation: "orb3 11s ease-in-out infinite",
-          }} />
-
-          {/* Small accent orb — top left */}
-          <div style={{
-            position: "absolute", top: "5%", left: "-5%",
-            width: 250, height: 250, borderRadius: "50%",
-            background: isDark
-              ? "radial-gradient(circle, rgba(255,170,0,0.12) 0%, transparent 70%)"
-              : "radial-gradient(circle, rgba(255,170,0,0.14) 0%, transparent 70%)",
-            filter: "blur(35px)",
-            animation: "orb4 6s ease-in-out infinite",
-          }} />
-
-          {/* Dot grid */}
-          <div style={{
-            position: "absolute", inset: 0,
-            opacity: isDark ? 0.07 : 0.06,
-            backgroundImage: isDark
-              ? "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)"
-              : "radial-gradient(rgba(0,0,0,0.45) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }} />
-
-          {/* Floating rings */}
-          <div style={{
-            position: "absolute", top: "12%", right: "18%",
-            width: 80, height: 80, borderRadius: "50%",
-            border: `1.5px solid ${isDark ? "rgba(255,107,0,0.25)" : "rgba(255,107,0,0.2)"}`,
-            animation: "ring1 8s ease-in-out infinite",
-          }} />
-          <div style={{
-            position: "absolute", bottom: "18%", right: "10%",
-            width: 50, height: 50, borderRadius: "50%",
-            border: `1.5px solid ${isDark ? "rgba(59,130,246,0.22)" : "rgba(59,130,246,0.18)"}`,
-            animation: "ring2 10s ease-in-out infinite",
-          }} />
-          <div style={{
-            position: "absolute", top: "40%", left: "8%",
-            width: 36, height: 36, borderRadius: "50%",
-            border: `1.5px solid ${isDark ? "rgba(255,170,0,0.2)" : "rgba(255,107,0,0.15)"}`,
-            animation: "ring3 7s ease-in-out infinite",
-          }} />
+          <div style={{ position: "absolute", top: "25%", left: "25%", width: 384, height: 384, borderRadius: "50%", background: "rgba(255,107,0,0.10)", filter: "blur(60px)", animation: "blobDrift1 8s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "25%", right: "25%", width: 320, height: 320, borderRadius: "50%", background: "rgba(120,53,15,0.10)", filter: "blur(60px)", animation: "blobDrift2 10s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", top: 0, right: 0, width: 256, height: 256, borderRadius: "50%", background: "rgba(255,107,0,0.05)", filter: "blur(60px)", animation: "blobDrift1 12s ease-in-out infinite reverse" }} />
+          <div style={{ position: "absolute", inset: 0, opacity: isDark ? 0.03 : 0.04, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
         </div>
 
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px", textAlign: "center", position: "relative" }}>
@@ -916,13 +839,8 @@ export default function Careers() {
         <style>{`
           @keyframes fadeUp { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:translateY(0); } }
           @keyframes pulse  { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
-          @keyframes orb1   { 0%,100% { transform:translate(0,0) scale(1); }    40% { transform:translate(-50px,30px) scale(1.08); }  70% { transform:translate(20px,-20px) scale(0.95); } }
-          @keyframes orb2   { 0%,100% { transform:translate(0,0) scale(1); }    35% { transform:translate(40px,-35px) scale(1.1); }   70% { transform:translate(-20px,20px) scale(0.96); } }
-          @keyframes orb3   { 0%,100% { transform:translate(0,0) scale(1); }    50% { transform:translate(30px,40px) scale(1.12); } }
-          @keyframes orb4   { 0%,100% { transform:translate(0,0) scale(1); }    50% { transform:translate(25px,-30px) scale(0.9); } }
-          @keyframes ring1  { 0%,100% { transform:translate(0,0) rotate(0deg); }   50% { transform:translate(-18px,14px) rotate(180deg); } }
-          @keyframes ring2  { 0%,100% { transform:translate(0,0) rotate(0deg); }   50% { transform:translate(14px,-18px) rotate(-180deg); } }
-          @keyframes ring3  { 0%,100% { transform:translate(0,0) rotate(0deg); }   50% { transform:translate(20px,12px) rotate(120deg); } }
+          @keyframes blobDrift1 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-20px,15px); } }
+          @keyframes blobDrift2 { 0%,100% { transform:translate(0,0); } 50% { transform:translate(18px,-18px); } }
         `}</style>
       </section>
 
