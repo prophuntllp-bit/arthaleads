@@ -20,22 +20,41 @@ function sanitize(str, maxLen = 200) {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+const ALLOWED_MIME = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
 async function submitApplication(req, res) {
   const raw = req.body || {};
 
-  const name       = sanitize(raw.name,       100);
-  const email      = sanitize(raw.email,      254);
-  const phone      = sanitize(raw.phone,       20);
-  const role       = sanitize(raw.role,       120);
-  const linkedin   = sanitize(raw.linkedin,   300);
-  const experience = sanitize(raw.experience,  50);
-  const note       = sanitize(raw.note,      2000);
+  const name           = sanitize(raw.name,           100);
+  const email          = sanitize(raw.email,          254);
+  const phone          = sanitize(raw.phone,           20);
+  const role           = sanitize(raw.role,           120);
+  const linkedin       = sanitize(raw.linkedin,       300);
+  const experience     = sanitize(raw.experience,      50);
+  const note           = sanitize(raw.note,          2000);
+  const resumeBase64   = typeof raw.resumeBase64 === "string" ? raw.resumeBase64 : null;
+  const resumeFilename = sanitize(raw.resumeFilename, 120) || "resume";
+  const resumeMime     = sanitize(raw.resumeMime,      80);
 
-  if (!name || !email || !role) {
-    return res.status(400).json({ success: false, message: "Name, email, and role are required." });
+  if (!name || !email || !role || !linkedin) {
+    return res.status(400).json({ success: false, message: "Name, email, LinkedIn, and role are required." });
   }
   if (!EMAIL_RE.test(email)) {
     return res.status(400).json({ success: false, message: "Invalid email address." });
+  }
+  if (!resumeBase64) {
+    return res.status(400).json({ success: false, message: "Resume attachment is required." });
+  }
+  if (resumeMime && !ALLOWED_MIME.has(resumeMime)) {
+    return res.status(400).json({ success: false, message: "Resume must be a PDF, DOC, or DOCX file." });
+  }
+  // Guard against oversized payloads slipping through (5 MB base64 ≈ 6.7 MB string)
+  if (resumeBase64.length > 7 * 1024 * 1024) {
+    return res.status(400).json({ success: false, message: "Resume file is too large (max 5 MB)." });
   }
 
   try {
@@ -141,7 +160,11 @@ async function submitApplication(req, res) {
       replyTo: email,
       subject: `Job Application: ${role} — ${name}`,
       html,
-      text: `New Job Application\n\nRole: ${role}\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${experience ? `\nExperience: ${experience}` : ""}${linkedin ? `\nLinkedIn: ${linkedin}` : ""}${note ? `\n\nCover Note:\n${note}` : ""}`,
+      text: `New Job Application\n\nRole: ${role}\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${experience ? `\nExperience: ${experience}` : ""}${linkedin ? `\nLinkedIn: ${linkedin}` : ""}${note ? `\n\nCover Note:\n${note}` : ""}\n\nResume attached.`,
+      attachments: [{
+        filename: resumeFilename,
+        content:  resumeBase64,
+      }],
     });
 
     logger.info(`[careers] Application from ${email} for "${role}"`);

@@ -7,6 +7,7 @@ import {
   MapPin, Clock, Briefcase, ChevronDown, ChevronUp,
   TrendingUp, Users, Zap, Heart, ArrowRight, Mail,
   Target, Handshake, Megaphone, X, CheckCircle, Loader,
+  Paperclip, Upload,
 } from "lucide-react";
 
 const JOBS = [
@@ -102,25 +103,41 @@ function useVisible(threshold = 0.15) {
   return [ref, visible];
 }
 
+const MAX_RESUME_BYTES = 5 * 1024 * 1024; // 5 MB
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // result is "data:application/pdf;base64,<data>" — strip the prefix
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Apply Modal ───────────────────────────────────────────────────────────────
 function ApplyModal({ job, isDark, onClose }) {
   const [form, setForm] = useState({ name: "", email: "", phone: "", linkedin: "", experience: "", note: "" });
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeError, setResumeError] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState("");
+  const fileInputRef = useRef(null);
 
-  const heading = isDark ? "#ffffff" : "#111827";
-  const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const inputBg = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
+  const heading  = isDark ? "#ffffff" : "#111827";
+  const body     = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const inputBg  = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
   const inputBdr = isDark ? "rgba(255,255,255,0.1)" : "#d1d5db";
   const modalBg  = isDark ? "#1a1a2e" : "#ffffff";
 
-  // Lock body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
@@ -131,20 +148,43 @@ function ApplyModal({ job, isDark, onClose }) {
     setForm(prev => ({ ...prev, [field]: val }));
   }
 
+  function handleResumeChange(e) {
+    const file = e.target.files?.[0];
+    setResumeError("");
+    if (!file) { setResumeFile(null); return; }
+    const allowed = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    if (!allowed.includes(file.type)) {
+      setResumeError("Only PDF, DOC, or DOCX files are accepted.");
+      setResumeFile(null);
+      return;
+    }
+    if (file.size > MAX_RESUME_BYTES) {
+      setResumeError("File size must be under 5 MB.");
+      setResumeFile(null);
+      return;
+    }
+    setResumeFile(file);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim()) return;
+    if (!form.name.trim() || !form.email.trim() || !form.linkedin.trim()) return;
+    if (!resumeFile) { setResumeError("Please attach your resume."); return; }
     setStatus("loading");
     setErrorMsg("");
     try {
+      const resumeBase64 = await readFileAsBase64(resumeFile);
       await api.post("/careers/apply", {
-        role:       job.title,
-        name:       form.name.trim(),
-        email:      form.email.trim(),
-        phone:      form.phone.trim(),
-        linkedin:   form.linkedin.trim(),
-        experience: form.experience,
-        note:       form.note.trim(),
+        role:           job.title,
+        name:           form.name.trim(),
+        email:          form.email.trim(),
+        phone:          form.phone.trim(),
+        linkedin:       form.linkedin.trim(),
+        experience:     form.experience,
+        note:           form.note.trim(),
+        resumeBase64,
+        resumeFilename: resumeFile.name,
+        resumeMime:     resumeFile.type,
       });
       setStatus("success");
     } catch (err) {
@@ -177,6 +217,8 @@ function ApplyModal({ job, isDark, onClose }) {
     letterSpacing: "0.06em",
   };
 
+  const req = <span style={{ color: "#ef4444" }}>*</span>;
+
   return (
     <div
       style={{
@@ -193,7 +235,7 @@ function ApplyModal({ job, isDark, onClose }) {
           background: modalBg,
           borderRadius: 20,
           width: "100%",
-          maxWidth: 520,
+          maxWidth: 540,
           maxHeight: "90vh",
           overflowY: "auto",
           border: `1px solid ${job.color}33`,
@@ -206,6 +248,7 @@ function ApplyModal({ job, isDark, onClose }) {
             from { opacity: 0; transform: scale(0.93) translateY(16px); }
             to   { opacity: 1; transform: scale(1) translateY(0); }
           }
+          @keyframes spin { to { transform: rotate(360deg); } }
         `}</style>
 
         {/* Header */}
@@ -248,7 +291,7 @@ function ApplyModal({ job, isDark, onClose }) {
               <CheckCircle style={{ width: 32, height: 32, color: "#22c55e" }} />
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, color: heading, marginBottom: 10 }}>Application Submitted!</div>
-            <div style={{ fontSize: 14, color: body, lineHeight: 1.7, marginBottom: 28, maxWidth: 340, margin: "0 auto 28px" }}>
+            <div style={{ fontSize: 14, color: body, lineHeight: 1.7, maxWidth: 340, margin: "0 auto 28px" }}>
               Thanks for applying for <strong style={{ color: heading }}>{job.title}</strong>. Our HR team will review your application and get back to you at <strong style={{ color: job.color }}>{form.email}</strong>.
             </div>
             <button
@@ -263,30 +306,23 @@ function ApplyModal({ job, isDark, onClose }) {
             </button>
           </div>
         ) : (
-          /* Form */
           <form onSubmit={handleSubmit} style={{ padding: "24px" }}>
+
+            {/* Row 1: Name + Email */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: 16 }}>
               <div>
-                <label style={labelStyle}>Full Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Rahul Sharma"
-                  value={form.name}
-                  onChange={e => set("name", e.target.value)}
+                <label style={labelStyle}>Full Name {req}</label>
+                <input required type="text" placeholder="Rahul Sharma"
+                  value={form.name} onChange={e => set("name", e.target.value)}
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = job.color}
                   onBlur={e => e.target.style.borderColor = inputBdr}
                 />
               </div>
               <div>
-                <label style={labelStyle}>Email Address <span style={{ color: "#ef4444" }}>*</span></label>
-                <input
-                  required
-                  type="email"
-                  placeholder="rahul@example.com"
-                  value={form.email}
-                  onChange={e => set("email", e.target.value)}
+                <label style={labelStyle}>Email Address {req}</label>
+                <input required type="email" placeholder="rahul@example.com"
+                  value={form.email} onChange={e => set("email", e.target.value)}
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = job.color}
                   onBlur={e => e.target.style.borderColor = inputBdr}
@@ -294,14 +330,12 @@ function ApplyModal({ job, isDark, onClose }) {
               </div>
             </div>
 
+            {/* Row 2: Phone + Experience */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: 16 }}>
               <div>
                 <label style={labelStyle}>Phone Number</label>
-                <input
-                  type="tel"
-                  placeholder="+91 98765 43210"
-                  value={form.phone}
-                  onChange={e => set("phone", e.target.value)}
+                <input type="tel" placeholder="+91 98765 43210"
+                  value={form.phone} onChange={e => set("phone", e.target.value)}
                   style={inputStyle}
                   onFocus={e => e.target.style.borderColor = job.color}
                   onBlur={e => e.target.style.borderColor = inputBdr}
@@ -309,9 +343,7 @@ function ApplyModal({ job, isDark, onClose }) {
               </div>
               <div>
                 <label style={labelStyle}>Years of Experience</label>
-                <select
-                  value={form.experience}
-                  onChange={e => set("experience", e.target.value)}
+                <select value={form.experience} onChange={e => set("experience", e.target.value)}
                   style={{ ...inputStyle, cursor: "pointer" }}
                   onFocus={e => e.target.style.borderColor = job.color}
                   onBlur={e => e.target.style.borderColor = inputBdr}
@@ -322,29 +354,83 @@ function ApplyModal({ job, isDark, onClose }) {
               </div>
             </div>
 
+            {/* LinkedIn — required */}
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>LinkedIn / Portfolio URL</label>
-              <input
-                type="url"
-                placeholder="https://linkedin.com/in/yourname"
-                value={form.linkedin}
-                onChange={e => set("linkedin", e.target.value)}
+              <label style={labelStyle}>LinkedIn Profile URL {req}</label>
+              <input required type="url" placeholder="https://linkedin.com/in/yourname"
+                value={form.linkedin} onChange={e => set("linkedin", e.target.value)}
                 style={inputStyle}
                 onFocus={e => e.target.style.borderColor = job.color}
                 onBlur={e => e.target.style.borderColor = inputBdr}
               />
             </div>
 
+            {/* Resume upload — required */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Resume / CV {req}</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleResumeChange}
+                style={{ display: "none" }}
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  background: inputBg,
+                  border: `1px dashed ${resumeFile ? job.color : resumeError ? "#ef4444" : inputBdr}`,
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  cursor: "pointer",
+                  transition: "border-color 0.2s, background 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.08)" : "#f3f4f6"}
+                onMouseLeave={e => e.currentTarget.style.background = inputBg}
+              >
+                {resumeFile ? (
+                  <>
+                    <Paperclip style={{ width: 16, height: 16, color: job.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: heading, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {resumeFile.name}
+                    </span>
+                    <span style={{ fontSize: 11, color: body, flexShrink: 0 }}>
+                      {(resumeFile.size / 1024).toFixed(0)} KB
+                    </span>
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); setResumeFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: body, flexShrink: 0 }}
+                    >
+                      <X style={{ width: 14, height: 14 }} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Upload style={{ width: 16, height: 16, color: body, flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, color: body }}>
+                      Click to upload PDF, DOC, or DOCX
+                      <span style={{ marginLeft: 6, fontSize: 11, color: isDark ? "rgba(255,255,255,0.3)" : "#9ca3af" }}>
+                        (max 5 MB)
+                      </span>
+                    </span>
+                  </>
+                )}
+              </div>
+              {resumeError && (
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#ef4444" }}>{resumeError}</p>
+              )}
+            </div>
+
+            {/* Cover note */}
             <div style={{ marginBottom: 24 }}>
               <label style={labelStyle}>
                 Why are you a great fit?
                 <span style={{ fontWeight: 400, textTransform: "none", marginLeft: 6, color: body, fontSize: 11 }}>(optional)</span>
               </label>
-              <textarea
-                rows={4}
-                placeholder="Tell us about yourself, your relevant experience, and why you want to join Arthaleads..."
-                value={form.note}
-                onChange={e => set("note", e.target.value)}
+              <textarea rows={3} placeholder="Tell us about yourself and why you want to join Arthaleads..."
+                value={form.note} onChange={e => set("note", e.target.value)}
                 style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }}
                 onFocus={e => e.target.style.borderColor = job.color}
                 onBlur={e => e.target.style.borderColor = inputBdr}
@@ -378,12 +464,8 @@ function ApplyModal({ job, isDark, onClose }) {
                   : <><Mail style={{ width: 16, height: 16 }} /> Submit Application</>
                 }
               </button>
-              <span style={{ fontSize: 12, color: body }}>
-                Sent to hr@arthaleads.com
-              </span>
+              <span style={{ fontSize: 12, color: body }}>Sent to hr@arthaleads.com</span>
             </div>
-
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </form>
         )}
       </div>
