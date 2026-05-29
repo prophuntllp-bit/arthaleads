@@ -241,6 +241,7 @@ const leadController = {
         Email: lead.email || "",
         Source: lead.source || "",
         SourceSite: lead.leadSourceLabel || "",
+        SourceDomain: lead.sourceDomain || "",
         SourcePage: lead.sourcePage || "",
         Status: lead.status || "",
         Priority: lead.priority || "",

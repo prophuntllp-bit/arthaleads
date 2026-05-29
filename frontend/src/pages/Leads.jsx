@@ -1342,6 +1342,11 @@ export default function Leads() {
                             {lead.leadSourceLabel}
                           </span>
                         )}
+                        {lead.sourceDomain && lead.sourceDomain !== lead.leadSourceLabel && (
+                          <span className="text-[10px] text-blue-500 truncate max-w-[130px]" title={lead.sourceDomain}>
+                            {lead.sourceDomain}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>

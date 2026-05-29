@@ -175,7 +175,7 @@ const leadService = {
     }
     if (query.siteFilter) {
       const rx = { $regex: escapeRegex(query.siteFilter), $options: "i" };
-      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }] });
+      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }] });
     }
 
     if (andConditions.length) {
@@ -479,7 +479,7 @@ const leadService = {
     }
     if (siteFilter) {
       const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
-      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }] });
+      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }] });
     }
     if (andConditions.length) leadFilter.$and = andConditions;
 

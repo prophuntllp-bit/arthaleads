@@ -146,6 +146,7 @@ const leadSchema = new mongoose.Schema(
     leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP - Lead Ads", "prophuntllp.com"
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
     sourcePage:      { type: String, trim: true, default: "" }, // full page URL where the form was submitted
+    sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")
     requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
 
     // ── Response Time Tracking ────────────────────────────────────────────────
@@ -181,6 +182,8 @@ leadSchema.index({ orgId: 1, followUpDate: 1, isArchived: 1 });
 leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
 // phone dedup check
 leadSchema.index({ orgId: 1, phone: 1 });
+// domain filter
+leadSchema.index({ orgId: 1, sourceDomain: 1 });
 
 const Lead = mongoose.model("Lead", leadSchema);
 module.exports = Lead;

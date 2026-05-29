@@ -465,6 +465,7 @@ router.post("/website", express.json(), async (req, res) => {
       leadSourceLabel: sourceLabel,
       formPlugin: form_plugin || "",
       sourcePage: page_url || "",
+      sourceDomain: (() => { try { return page_url ? new URL(page_url).hostname.replace(/^www\./, "") : ""; } catch { return ""; } })(),
       notes: [
         {
           text: [
