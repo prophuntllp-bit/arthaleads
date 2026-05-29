@@ -397,6 +397,7 @@ export default function Leads() {
   const [transferMeta, setTransferMeta] = useState(null);
   const [importing, setImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const exportMenuRef = useRef(null);
   const exportBtnRef = useRef(null);
   const topScrollRef   = useRef(null);
@@ -979,18 +980,22 @@ export default function Leads() {
             <h1 className="text-xl font-black tracking-tight text-app leading-none">Leads Management</h1>
             <p className="text-xs text-app-soft mt-1 hidden sm:block">{total} active leads across your property funnel.</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Import — icon only on mobile */}
-            <label className="btn-secondary cursor-pointer rounded-xl flex items-center gap-1.5" title="Import CSV/Excel">
-              <Upload className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-sm">{importing ? "Importing…" : "Import"}</span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Import — compact icon button */}
+            <label
+              className="inline-flex items-center justify-center h-8 w-8 rounded-full cursor-pointer transition-colors hover:opacity-80"
+              style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+              title={importing ? "Importing…" : "Import CSV/Excel"}
+            >
+              <Upload className="h-3.5 w-3.5 shrink-0" />
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
-            {/* Export — icon only on mobile */}
+            {/* Export — compact icon button */}
             <div ref={exportMenuRef}>
               <button
                 ref={exportBtnRef}
-                className="btn-secondary rounded-xl flex items-center gap-1.5"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
+                style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
                 title="Export leads"
                 onClick={() => {
                   const rect = exportBtnRef.current?.getBoundingClientRect();
@@ -998,110 +1003,143 @@ export default function Leads() {
                   setShowExportMenu((c) => !c);
                 }}
               >
-                <Download className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline text-sm">Export</span>
-                <ChevronDown className="h-4 w-4 hidden sm:inline" />
+                <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
             </div>
-            {/* Add Lead — always show label */}
-            <button className="btn-primary rounded-xl flex items-center gap-1.5" onClick={() => { setEditLead(null); setShowForm(true); }}>
-              <Plus className="h-4 w-4 shrink-0" />
-              <span className="text-sm font-semibold">Add Lead</span>
+            {/* Add Lead */}
+            <button
+              className="btn-primary flex items-center gap-1.5 rounded-full whitespace-nowrap"
+              style={{ padding: "6px 14px", fontSize: 13, fontWeight: 600 }}
+              onClick={() => { setEditLead(null); setShowForm(true); }}
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span>Add Lead</span>
             </button>
           </div>
         </div>
 
-        {/* Row 2: filter bar — scrollable on mobile */}
-        <div className="flex gap-2 items-center pt-2 border-t overflow-x-auto pb-0.5" style={{ borderColor: "var(--app-border)", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", flexWrap: "nowrap" }}>
-          {projects.length > 0 && (
-            <div className="relative" style={{ flexShrink: 0 }}>
-              <select
-                style={{ minWidth: 130, padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
-                value={selectedProject?._id || ""}
-                onChange={(e) => {
-                  const p = projects.find((x) => x._id === e.target.value) || null;
-                  setSelectedProject(p); setProjPage(1); setProjSearch("");
-                }}
-              >
-                <option value="">All Projects</option>
-                {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+        {/* Row 2: filters */}
+        {(() => {
+          const activeFilterCount = [
+            filters.status, filters.source, filters.priority, filters.siteFilter,
+            filters.myOnly === "true" ? "t" : null, selectedProject ? "t" : null,
+          ].filter(Boolean).length;
+          const selStyle = { padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" };
+          return (
+            <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+              {/* Search row — always visible */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                  <input
+                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                    placeholder="Search name, phone…"
+                    value={filters.search}
+                    onChange={(e) => setFilter("search", e.target.value)}
+                  />
+                </div>
+                {/* Domain filter — always on sm+, hidden on mobile (shown in expanded panel) */}
+                <div className="relative hidden sm:block" style={{ flexShrink: 0, width: 150 }}>
+                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                  <input
+                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                    placeholder="Domain…"
+                    value={filters.siteFilter || ""}
+                    onChange={(e) => setFilter("siteFilter", e.target.value)}
+                  />
+                </div>
+                {/* Filters toggle — mobile only */}
+                <button
+                  className="sm:hidden inline-flex items-center gap-1.5 rounded-full text-xs font-semibold relative transition-all flex-shrink-0"
+                  style={{ padding: "5px 12px", border: "1px solid var(--app-border)", background: showFilters ? "var(--app-primary)" : "var(--app-surface-low)", color: showFilters ? "#fff" : "var(--app-text-soft)" }}
+                  onClick={() => setShowFilters(f => !f)}
+                >
+                  <Filter className="h-3.5 w-3.5" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Expandable filter controls — always on sm+, toggle on mobile */}
+              <div className={`flex flex-wrap gap-2 ${showFilters ? "" : "hidden sm:flex"}`}>
+                {/* Domain on mobile (inside expanded panel) */}
+                <div className="relative sm:hidden" style={{ flexShrink: 0 }}>
+                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                  <input
+                    style={{ width: 150, paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                    placeholder="Domain…"
+                    value={filters.siteFilter || ""}
+                    onChange={(e) => setFilter("siteFilter", e.target.value)}
+                  />
+                </div>
+                {projects.length > 0 && (
+                  <div className="relative" style={{ flexShrink: 0 }}>
+                    <select
+                      style={{ ...selStyle, minWidth: 120 }}
+                      value={selectedProject?._id || ""}
+                      onChange={(e) => {
+                        const p = projects.find((x) => x._id === e.target.value) || null;
+                        setSelectedProject(p); setProjPage(1); setProjSearch("");
+                      }}
+                    >
+                      <option value="">All Projects</option>
+                      {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                  </div>
+                )}
+                {[
+                  { key: "status",   placeholder: "Status",   opts: STATUS_OPTIONS   },
+                  { key: "source",   placeholder: "Source",   opts: SOURCE_OPTIONS   },
+                  { key: "priority", placeholder: "Priority", opts: PRIORITY_OPTIONS },
+                ].map(({ key, placeholder, opts }) => (
+                  <div key={key} className="relative" style={{ flexShrink: 0 }}>
+                    <select style={selStyle} value={filters[key]} onChange={(e) => setFilter(key, e.target.value)}>
+                      <option value="">All {placeholder}s</option>
+                      {opts.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                  </div>
+                ))}
+                <div className="relative" style={{ flexShrink: 0 }}>
+                  <select style={selStyle} value={filters.dateRange} onChange={(e) => setFilter("dateRange", e.target.value)}>
+                    {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                </div>
+                {isAdmin && (
+                  <button
+                    onClick={toggleMyOnly}
+                    className="inline-flex items-center gap-2 rounded-xl text-xs font-semibold transition-all"
+                    style={{ padding: "5px 10px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+                  >
+                    <User className="w-3.5 h-3.5 shrink-0" />
+                    <span>My Leads</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
+                      <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
+                    </span>
+                  </button>
+                )}
+                {(Object.values(filters).some(Boolean) || selectedProject) && (
+                  <button
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
+                    onClick={() => {
+                      ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
+                      setSelectedProject(null);
+                      try { localStorage.removeItem("leads_myOnly"); } catch {}
+                    }}
+                  >
+                    <X className="h-3 w-3" /> Clear
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-          <div className="relative" style={{ flexShrink: 0, width: 180 }}>
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-            <input
-              style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              placeholder="Search name, phone…"
-              value={filters.search}
-              onChange={(e) => setFilter("search", e.target.value)}
-            />
-          </div>
-          <div className="relative" style={{ flexShrink: 0, width: 160 }}>
-            <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-            <input
-              style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              placeholder="Filter by domain…"
-              value={filters.siteFilter || ""}
-              onChange={(e) => setFilter("siteFilter", e.target.value)}
-            />
-          </div>
-          {[
-            { key: "status",    placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
-            { key: "source",    placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
-            { key: "priority",  placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
-          ].map(({ key, placeholder, opts }) => (
-            <div key={key} className="relative" style={{ flexShrink: 0 }}>
-              <select
-                style={{ padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
-                value={filters[key]}
-                onChange={(e) => setFilter(key, e.target.value)}
-              >
-                <option value="">{placeholder}</option>
-                {opts.map((s) => <option key={s}>{s}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-            </div>
-          ))}
-          <div className="relative" style={{ flexShrink: 0 }}>
-            <select
-              style={{ padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
-              value={filters.dateRange}
-              onChange={(e) => setFilter("dateRange", e.target.value)}
-            >
-              {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-          </div>
-          {/* My Leads toggle — admin/manager only */}
-          {isAdmin && (
-            <button
-              onClick={toggleMyOnly}
-              className="inline-flex items-center gap-2 rounded-xl text-xs font-semibold transition-all"
-              style={{ padding: "5px 10px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-              title={filters.myOnly === "true" ? "Showing only your leads — click to show all" : "Showing all leads — click to show only yours"}
-            >
-              <User className="w-3.5 h-3.5 shrink-0" />
-              <span>My Leads</span>
-              <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
-                <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
-              </span>
-            </button>
-          )}
-          {(Object.values(filters).some(Boolean) || selectedProject) && (
-            <button
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
-              onClick={() => {
-                ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
-                setSelectedProject(null);
-                try { localStorage.removeItem("leads_myOnly"); } catch {}
-              }}
-            >
-              <X className="h-3 w-3" /> Clear
-            </button>
-          )}
-        </div>
+          );
+        })()}
       </div>
 
       {/* ── Project leads table (shown when a project is selected) ─────────────── */}
