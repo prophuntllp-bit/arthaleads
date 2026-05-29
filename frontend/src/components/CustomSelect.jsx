@@ -24,10 +24,19 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
 
   const selectedLabel = items.find((o) => o.value === value)?.label || placeholder;
 
+  const calcPos = (r) => {
+    const vw = window.innerWidth;
+    const dropW = Math.min(Math.max(r.width, 200), vw - 16);
+    // Flip to right-align when left-align would overflow the viewport
+    if (r.left + dropW > vw - 8) {
+      return { top: r.bottom + 4, right: vw - r.right, width: dropW };
+    }
+    return { top: r.bottom + 4, left: r.left, width: dropW };
+  };
+
   const openDropdown = () => {
     if (triggerRef.current) {
-      const r = triggerRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 160) });
+      setPos(calcPos(triggerRef.current.getBoundingClientRect()));
     }
     setOpen((o) => !o);
   };
@@ -49,8 +58,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
     if (!open) return;
     const update = () => {
       if (triggerRef.current) {
-        const r = triggerRef.current.getBoundingClientRect();
-        setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 160) });
+        setPos(calcPos(triggerRef.current.getBoundingClientRect()));
       }
     };
     window.addEventListener("scroll", update, true);
@@ -95,8 +103,9 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
           className="fixed z-[9999] overflow-hidden"
           style={{
             top: pos.top,
-            left: pos.left,
+            ...(pos.right !== undefined ? { right: pos.right } : { left: pos.left }),
             minWidth: pos.width,
+            maxWidth: pos.width,
             maxHeight: 260,
             overflowY: "auto",
             borderRadius: 12,
