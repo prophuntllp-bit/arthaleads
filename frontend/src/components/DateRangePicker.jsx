@@ -86,7 +86,7 @@ function presetDates(value) {
   }
 }
 
-function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover }) {
+function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, hideHeader = false, compact = false }) {
   const firstDay   = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
@@ -111,14 +111,18 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
     return d && d.getTime() === t.getTime();
   };
 
+  const cellH = compact ? "h-7" : "h-8";
+
   return (
     <div className="flex-1 min-w-0">
-      <div className="mb-3 text-center text-sm font-semibold text-app">
-        {MONTHS[month]} {year}
-      </div>
-      <div className="grid grid-cols-7 mb-1">
+      {!hideHeader && (
+        <div className={`${compact ? "mb-2" : "mb-3"} text-center text-sm font-semibold text-app`}>
+          {MONTHS[month]} {year}
+        </div>
+      )}
+      <div className="grid grid-cols-7 mb-0.5">
         {DAYS.map((d) => (
-          <div key={d} className="py-1 text-center text-[10px] font-bold uppercase text-app-soft">{d}</div>
+          <div key={d} className={`${compact ? "py-0.5" : "py-1"} text-center text-[10px] font-bold uppercase text-app-soft`}>{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7">
@@ -131,7 +135,7 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
               type="button"
               onClick={() => onDayClick(d)}
               onMouseEnter={() => onDayHover(d)}
-              className={`relative h-8 w-full text-xs font-medium transition-colors
+              className={`relative ${cellH} w-full text-xs font-medium transition-colors
                 ${start || end ? "text-white z-10" : inR ? "text-orange-700" : tod ? "font-bold text-orange-500" : "text-app hover:text-orange-500"}
                 ${inR && !start && !end ? "bg-orange-100 dark:bg-orange-500/15 rounded-none" : ""}
                 ${start ? "rounded-l-full" : ""} ${end ? "rounded-r-full" : ""}
@@ -274,23 +278,23 @@ export default function DateRangePicker({ value, onChange, label }) {
           style={{
             top: popoverPos.top,
             ...(isMobile
-              ? { left: popoverPos.left, right: popoverPos.right }
+              ? { left: popoverPos.left, right: popoverPos.right, maxWidth: 320, margin: "0 auto" }
               : { right: popoverPos.right, minWidth: 580 }),
             background: "var(--app-surface)",
             border: "1px solid var(--app-border)",
             backdropFilter: "var(--glass-blur-heavy)",
             WebkitBackdropFilter: "var(--glass-blur-heavy)",
             boxShadow: "var(--app-shadow-lg)",
-            maxHeight: "80vh",
+            maxHeight: isMobile ? "70vh" : "80vh",
             overflowY: "auto",
           }}
         >
           {isMobile ? (
-            /* ── Mobile layout: vertical stack ── */
+            /* ── Mobile layout: compact Zoho-style ── */
             <div className="flex flex-col">
-              {/* Preset chips horizontal scroll */}
-              <div className="border-b px-3 py-2.5 overflow-x-auto" style={{ borderColor: "var(--app-border)" }}>
-                <div className="flex gap-2 w-max">
+              {/* Preset chips — 2-col grid, compact */}
+              <div className="border-b px-3 py-2" style={{ borderColor: "var(--app-border)" }}>
+                <div className="grid grid-cols-2 gap-1">
                   {PRESETS.map((p) => (
                     <button
                       key={p.value}
@@ -302,12 +306,12 @@ export default function DateRangePicker({ value, onChange, label }) {
                         setRangeEnd(d.end);
                         setPicking(false);
                       }}
-                      className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium border transition-colors flex-shrink-0 ${
+                      className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                         pending === p.value
-                          ? "bg-orange-500 text-white border-orange-500"
-                          : "text-app-soft border-app-soft/30 hover:text-app hover:border-app-soft/60"
+                          ? "bg-orange-500 text-white"
+                          : "text-app-soft hover:text-app hover:bg-orange-500/8"
                       }`}
-                      style={pending !== p.value ? { borderColor: "var(--app-border)" } : {}}
+                      style={pending !== p.value ? { background: "transparent" } : {}}
                     >
                       {p.label}
                     </button>
@@ -315,17 +319,17 @@ export default function DateRangePicker({ value, onChange, label }) {
                 </div>
               </div>
 
-              {/* Single month calendar */}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1.5">
-                    <ChevronLeft className="h-4 w-4" />
+              {/* Compact calendar */}
+              <div className="px-3 pt-2.5 pb-1">
+                <div className="flex items-center justify-between mb-2">
+                  <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1">
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
-                  <span className="text-sm font-semibold text-app">
+                  <span className="text-xs font-bold text-app tracking-wide">
                     {MONTHS[rightMonth.month]} {rightMonth.year}
                   </span>
-                  <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1.5">
-                    <ChevronRight className="h-4 w-4" />
+                  <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1">
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
 
@@ -333,23 +337,24 @@ export default function DateRangePicker({ value, onChange, label }) {
                   year={rightMonth.year} month={rightMonth.month}
                   rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
                   onDayClick={handleDayClick} onDayHover={setHoverDate}
+                  hideHeader compact
                 />
               </div>
 
               {/* Footer */}
-              <div className="border-t px-4 py-3 flex items-center justify-between gap-3" style={{ borderColor: "var(--app-border)" }}>
+              <div className="border-t px-3 py-2.5 flex items-center justify-between gap-2" style={{ borderColor: "var(--app-border)" }}>
                 <div className="min-w-0 flex-1">
                   {rangeStart ? (
-                    <p className="text-[11px] text-app-soft truncate">
+                    <p className="text-[10px] text-app-soft truncate font-medium">
                       {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
                     </p>
                   ) : (
-                    <p className="text-[11px] text-app-soft">Select start date</p>
+                    <p className="text-[10px] text-app-soft">Tap a start date</p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-2 text-xs">Cancel</button>
-                  <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-2 text-xs">Apply</button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-1.5 text-xs">Cancel</button>
+                  <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-1.5 text-xs">Apply</button>
                 </div>
               </div>
             </div>
