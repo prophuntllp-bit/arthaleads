@@ -1381,76 +1381,132 @@ function Pricing({ isDark }) {
 
 // ── Contact ───────────────────────────────────────────────────────────────────
 function Contact({ isDark }) {
-  const info = [
-    { icon: Mail,    label: "Email Us",  val: "contact@arthaleads.com",    href: "mailto:contact@arthaleads.com" },
-    { icon: Phone,   label: "Call Us",   val: "+91 80801 97945",           href: "tel:+918080197945" },
-    { icon: MapPin,  label: "Based In",  val: "Pune, Maharashtra, India",  href: null },
+  const bg      = isDark ? "#080810" : "#f4f0eb";
+  const heading = isDark ? "#ffffff" : "#111827";
+  const body    = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const cardBg  = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
+  const cardBdr = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
+
+  const perks = [
+    { icon: Zap,       text: "Response within 2 hours" },
+    { icon: Users,     text: "Dedicated onboarding support" },
+    { icon: Shield,    text: "Free 14-day trial, no card needed" },
+    { icon: TrendingUp, text: "Custom demo for your team" },
   ];
 
-  const bg        = isDark ? "#080810" : "#f9fafb";
-  const heading   = isDark ? "#ffffff" : "#111827";
-  const body      = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const infoLabel = isDark ? "rgba(255,255,255,0.35)" : "#9ca3af";
-  const infoVal   = isDark ? "#ffffff" : "#111827";
-  const cardBg    = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBdr   = isDark ? "rgba(255,255,255,0.06)" : "#e5e7eb";
-  const waText    = isDark ? "#ffffff" : "#111827";
-  const waSub     = isDark ? "rgba(255,255,255,0.40)" : "#9ca3af";
+  const info = [
+    { icon: Mail,   label: "Email Us",  val: "contact@arthaleads.com",   href: "mailto:contact@arthaleads.com" },
+    { icon: Phone,  label: "Call Us",   val: "+91 80801 97945",          href: "tel:+918080197945" },
+    { icon: MapPin, label: "Based In",  val: "Pune, Maharashtra, India", href: null },
+  ];
+
+  const infoCardBg  = isDark ? "rgba(255,255,255,0.04)" : "#ffffff";
+  const infoCardBdr = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
+  const infoLabel   = isDark ? "rgba(255,255,255,0.38)" : "#9ca3af";
+  const infoVal     = isDark ? "#ffffff" : "#111827";
 
   return (
-    <section id="contact" className="py-10 lg:py-14" style={{ background: bg }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+    <section id="contact" className="py-16 lg:py-24 relative overflow-hidden" style={{ background: bg }}>
+      {/* Background glow blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div style={{
+          position: "absolute", top: "10%", left: "-10%", width: 500, height: 500,
+          borderRadius: "50%", background: "radial-gradient(circle, rgba(255,107,0,0.07) 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+        <div style={{
+          position: "absolute", bottom: "5%", right: "-5%", width: 400, height: 400,
+          borderRadius: "50%", background: "radial-gradient(circle, rgba(255,170,0,0.06) 0%, transparent 70%)",
+          filter: "blur(40px)",
+        }} />
+      </div>
 
-          {/* Left - info */}
-          <div>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-6">
-              <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
-              <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Section header */}
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-5">
+            <MessageCircle className="w-3.5 h-3.5 text-[#ff6b00]" />
+            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Get in Touch</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-4" style={{ color: heading }}>
+            Ready to transform your{" "}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+              lead management?
+            </span>
+          </h2>
+          <p className="text-base sm:text-lg max-w-xl mx-auto" style={{ color: body }}>
+            Talk to our team for a personalised demo, pricing info, or any question about how Arthaleads fits your workflow.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10 items-start">
+
+          {/* Left panel — 2 cols */}
+          <div className="lg:col-span-2 flex flex-col gap-6">
+
+            {/* Perks */}
+            <div className="rounded-2xl p-6 space-y-4" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
+              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "#ff6b00" }}>Why reach out?</p>
+              {perks.map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-[#ff6b00]" />
+                  </div>
+                  <span className="text-sm font-medium" style={{ color: heading }}>{text}</span>
+                </div>
+              ))}
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4" style={{ color: heading }}>
-              Ready to transform your{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-                lead management?
-              </span>
-            </h2>
-            <p className="text-base leading-relaxed mb-10" style={{ color: body }}>
-              Talk to our team for a personalised demo, pricing information, or any questions about how Arthaleads can fit your workflow.
-            </p>
 
-            <div className="space-y-5">
+            {/* Contact info cards */}
+            <div className="space-y-3">
               {info.map(({ icon: Icon, label, val, href }) => (
-                <div key={label} className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-[#ff6b00]" />
+                <div key={label}
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md cursor-default"
+                  style={{ background: infoCardBg, border: `1px solid ${infoCardBdr}` }}>
+                  <div className="w-9 h-9 rounded-lg bg-[#ff6b00]/10 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-[#ff6b00]" />
                   </div>
                   <div>
-                    <div className="text-xs font-medium" style={{ color: infoLabel }}>{label}</div>
-                    {href ? (
-                      <a href={href} className="text-sm font-medium hover:text-[#ff6b00] transition-colors" style={{ color: infoVal }}>{val}</a>
-                    ) : (
-                      <div className="text-sm font-medium" style={{ color: infoVal }}>{val}</div>
-                    )}
+                    <div className="text-[11px] font-semibold uppercase tracking-wider mb-0.5" style={{ color: infoLabel }}>{label}</div>
+                    {href
+                      ? <a href={href} className="text-sm font-semibold hover:text-[#ff6b00] transition-colors" style={{ color: infoVal }}>{val}</a>
+                      : <div className="text-sm font-semibold" style={{ color: infoVal }}>{val}</div>}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* WhatsApp CTA */}
+            {/* WhatsApp */}
             <a href="https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20Arthaleads"
               target="_blank" rel="noopener noreferrer"
-              className="mt-10 inline-flex items-center gap-3 bg-[#25D366]/10 border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-colors px-5 py-3 rounded-xl">
-              <MessageCircle className="w-5 h-5 text-[#25D366]" />
-              <div>
-                <div className="text-sm font-semibold" style={{ color: waText }}>Chat on WhatsApp</div>
-                <div className="text-xs" style={{ color: waSub }}>Usually replies within minutes</div>
+              className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group"
+              style={{ background: "linear-gradient(135deg, rgba(37,211,102,0.12), rgba(37,211,102,0.06))", border: "1px solid rgba(37,211,102,0.25)" }}>
+              <div className="w-10 h-10 rounded-xl bg-[#25D366]/20 flex items-center justify-center flex-shrink-0 group-hover:bg-[#25D366]/30 transition-colors">
+                <MessageCircle className="w-5 h-5 text-[#25D366]" />
               </div>
+              <div>
+                <div className="text-sm font-bold" style={{ color: isDark ? "#ffffff" : "#111827" }}>Chat on WhatsApp</div>
+                <div className="text-xs" style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9ca3af" }}>Usually replies within minutes</div>
+              </div>
+              <ArrowRight className="w-4 h-4 ml-auto text-[#25D366] opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
           </div>
 
-          {/* Right - form */}
-          <div className="p-7 rounded-2xl" style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-            <ContactForm isDark={isDark} />
+          {/* Right panel — 3 cols — form */}
+          <div className="lg:col-span-3 rounded-3xl overflow-hidden"
+            style={{
+              background: cardBg,
+              border: `1px solid ${cardBdr}`,
+              boxShadow: isDark
+                ? "0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,107,0,0.06)"
+                : "0 32px 80px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,107,0,0.06)",
+            }}>
+            {/* Top accent strip */}
+            <div style={{ height: 3, background: "linear-gradient(to right, #ff6b00, #ffaa00, #ff6b00)" }} />
+            <div className="p-8">
+              <ContactForm isDark={isDark} />
+            </div>
           </div>
 
         </div>
@@ -1464,6 +1520,7 @@ function ContactForm({ isDark }) {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [focused, setFocused] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1487,56 +1544,142 @@ function ContactForm({ isDark }) {
   };
 
   const heading  = isDark ? "#ffffff" : "#111827";
-  const body     = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
-  const labelClr = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const labelClr = isDark ? "rgba(255,255,255,0.55)" : "#374151";
   const inputBg  = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
-  const inputBdr = isDark ? "rgba(255,255,255,0.08)" : "#d1d5db";
+  const inputBdr = isDark ? "rgba(255,255,255,0.09)" : "#e5e7eb";
   const inputClr = isDark ? "#ffffff" : "#111827";
 
+  const fieldStyle = (id) => ({
+    background: focused === id ? (isDark ? "rgba(255,107,0,0.06)" : "rgba(255,107,0,0.03)") : inputBg,
+    border: `1.5px solid ${focused === id ? "#ff6b00" : inputBdr}`,
+    color: inputClr,
+    transition: "all 0.2s",
+    outline: "none",
+  });
+
   if (sent) return (
-    <div className="flex flex-col items-center justify-center text-center py-16">
-      <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-        <Check className="w-8 h-8 text-green-400" />
+    <div className="flex flex-col items-center justify-center text-center py-14">
+      <div className="relative mb-6">
+        <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
+          <Check className="w-10 h-10 text-green-400" />
+        </div>
+        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#ff6b00] flex items-center justify-center">
+          <span style={{ fontSize: 12 }}>✓</span>
+        </div>
       </div>
-      <h3 className="font-bold text-xl mb-2" style={{ color: heading }}>Message Sent!</h3>
-      <p className="text-sm" style={{ color: body }}>We'll get back to you at <strong>{form.email}</strong> within 24 hours.</p>
+      <h3 className="font-black text-2xl mb-2" style={{ color: heading }}>Message Sent!</h3>
+      <p className="text-sm mb-1" style={{ color: body }}>We'll get back to you at</p>
+      <p className="text-sm font-bold mb-6" style={{ color: "#ff6b00" }}>{form.email}</p>
+      <p className="text-xs px-6" style={{ color: body }}>Our team typically responds within 2 hours during business hours.</p>
       <button onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", company: "", message: "" }); }}
-        className="mt-6 text-[#ff6b00] text-sm font-medium hover:underline">Send another message</button>
+        className="mt-8 px-6 py-2.5 rounded-xl border text-sm font-semibold transition-all hover:bg-[#ff6b00] hover:text-white hover:border-[#ff6b00]"
+        style={{ color: "#ff6b00", borderColor: "#ff6b00" }}>
+        Send another message
+      </button>
     </div>
   );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="font-bold text-lg mb-6" style={{ color: heading }}>Send us a message</h3>
-      {[
-        { id: "name",    label: "Your Name",      type: "text",  ph: "Rajesh Patil",        req: true },
-        { id: "email",   label: "Email Address",  type: "email", ph: "rajesh@example.com",  req: true },
-        { id: "phone",   label: "Phone Number",   type: "tel",   ph: "+91 98765 43210",     req: false },
-        { id: "company", label: "Company / Team", type: "text",  ph: "Milestone Properties", req: false },
-      ].map(({ id, label, type, ph, req }) => (
-        <div key={id}>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>
-            {label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}
-          </label>
-          <input type={type} placeholder={ph} required={req}
-            value={form[id]} onChange={(e) => setForm({ ...form, [id]: e.target.value })}
-            className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all"
-            style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
-        </div>
-      ))}
-      <div>
-        <label className="block text-xs font-medium mb-1.5" style={{ color: labelClr }}>Message</label>
-        <textarea rows={4} placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
-          value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })}
-          className="w-full rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40 transition-all resize-none"
-          style={{ background: inputBg, border: `1px solid ${inputBdr}`, color: inputClr }} />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="mb-6">
+        <h3 className="font-black text-xl mb-1" style={{ color: heading }}>Send us a message</h3>
+        <p className="text-sm" style={{ color: body }}>Fill in the form and we'll be in touch shortly.</p>
       </div>
-      {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+
+      {/* Name + Email row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { id: "name",  label: "Your Name",     type: "text",  ph: "Rajesh Patil",       req: true },
+          { id: "email", label: "Email Address", type: "email", ph: "rajesh@example.com", req: true },
+        ].map(({ id, label, type, ph, req }) => (
+          <div key={id}>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: labelClr }}>
+              {label}{req && <span className="text-[#ff6b00] ml-0.5">*</span>}
+            </label>
+            <input type={type} placeholder={ph} required={req}
+              value={form[id]}
+              onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+              onFocus={() => setFocused(id)}
+              onBlur={() => setFocused("")}
+              className="w-full rounded-xl px-4 py-2.5 text-sm"
+              style={fieldStyle(id)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Phone + Company row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { id: "phone",   label: "Phone Number",   type: "tel",  ph: "+91 98765 43210",    req: false },
+          { id: "company", label: "Company / Team", type: "text", ph: "Milestone Properties", req: false },
+        ].map(({ id, label, type, ph, req }) => (
+          <div key={id}>
+            <label className="block text-xs font-semibold mb-1.5" style={{ color: labelClr }}>
+              {label}
+            </label>
+            <input type={type} placeholder={ph}
+              value={form[id]}
+              onChange={(e) => setForm({ ...form, [id]: e.target.value })}
+              onFocus={() => setFocused(id)}
+              onBlur={() => setFocused("")}
+              className="w-full rounded-xl px-4 py-2.5 text-sm"
+              style={fieldStyle(id)} />
+          </div>
+        ))}
+      </div>
+
+      {/* Message */}
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-semibold" style={{ color: labelClr }}>Message</label>
+          <span className="text-[11px]" style={{ color: form.message.length > 1800 ? "#ef4444" : body }}>
+            {form.message.length}/2000
+          </span>
+        </div>
+        <textarea rows={4}
+          placeholder="Tell us about your team size, current lead volume, and what you're looking for..."
+          value={form.message}
+          onChange={(e) => setForm({ ...form, message: e.target.value })}
+          onFocus={() => setFocused("message")}
+          onBlur={() => setFocused("")}
+          maxLength={2000}
+          className="w-full rounded-xl px-4 py-3 text-sm resize-none"
+          style={fieldStyle("message")} />
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+          <span className="text-red-400 text-sm">{error}</span>
+        </div>
+      )}
+
       <button type="submit" disabled={loading}
-        className="w-full bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2">
-        {loading ? "Sending…" : "Send Message"}
-        {!loading && <ArrowRight className="w-4 h-4" />}
+        className="w-full relative overflow-hidden text-white font-bold py-3.5 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 group"
+        style={{
+          background: loading ? "#cc5500" : "linear-gradient(135deg, #ff6b00, #ff8c00)",
+          boxShadow: loading ? "none" : "0 8px 32px rgba(255,107,0,0.35)",
+          transform: loading ? "none" : undefined,
+        }}>
+        {/* Shimmer on hover */}
+        <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.1), transparent)" }} />
+        {loading ? (
+          <>
+            <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            Sending…
+          </>
+        ) : (
+          <>
+            Send Message
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </>
+        )}
       </button>
+
+      <p className="text-center text-[11px]" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#9ca3af" }}>
+        By sending, you agree to our privacy policy. We never spam.
+      </p>
     </form>
   );
 }
