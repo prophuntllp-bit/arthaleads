@@ -32,7 +32,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -963,69 +963,94 @@ export default function Leads() {
 
   return (
     <div className="stitch-page space-y-6">
-      <section className="card p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="stitch-kicker mb-2">Curated Pipeline</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Leads Management</h1>
-            <p className="mt-2 text-sm text-app-soft">{total} active leads across your property funnel.</p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <label className="btn-secondary cursor-pointer rounded-xl">
-              <Upload className="h-4 w-4" /> {importing ? "Importing..." : "Import"}
-              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
-            </label>
-
-            <div ref={exportMenuRef}>
-              <button
-                ref={exportBtnRef}
-                className="btn-secondary rounded-xl"
-                onClick={() => {
-                  const rect = exportBtnRef.current?.getBoundingClientRect();
-                  if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-                  setShowExportMenu((c) => !c);
-                }}
-              >
-                <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
-              </button>
-            </div>
-
-            <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
-              <Plus className="h-4 w-4" /> Add Lead
+      {/* ── Compact topbar ─────────────────────────────────────────────────────── */}
+      <header className="stitch-topbar">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-app">Leads Management</h1>
+          <p className="text-xs text-app-soft mt-0.5">{total} active leads across your property funnel.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="btn-secondary cursor-pointer rounded-xl text-sm">
+            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+            <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+          <div ref={exportMenuRef}>
+            <button
+              ref={exportBtnRef}
+              className="btn-secondary rounded-xl"
+              onClick={() => {
+                const rect = exportBtnRef.current?.getBoundingClientRect();
+                if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                setShowExportMenu((c) => !c);
+              }}
+            >
+              <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
             </button>
           </div>
+          <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
+            <Plus className="h-4 w-4" /> Add Lead
+          </button>
         </div>
-      </section>
+      </header>
 
-      {/* ── Project-wise leads section ── */}
-      {projects.length > 0 && (
-        <section className="card p-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <FolderKanban className="h-4 w-4 text-orange-500" />
-            <p className="stitch-kicker">View by Project</p>
+      {/* ── Compact filter bar ─────────────────────────────────────────────────── */}
+      <div className="card p-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          {projects.length > 0 && (
             <select
-              className="select rounded-2xl max-w-xs"
+              className="select rounded-xl text-sm py-1.5"
+              style={{ minWidth: 160 }}
               value={selectedProject?._id || ""}
               onChange={(e) => {
                 const p = projects.find((x) => x._id === e.target.value) || null;
-                setSelectedProject(p);
-                setProjPage(1);
-                setProjSearch("");
+                setSelectedProject(p); setProjPage(1); setProjSearch("");
               }}
             >
-              <option value="">- Select a project -</option>
-              {projects.map((p) => (
-                <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0} leads)</option>
-              ))}
+              <option value="">All Projects</option>
+              {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
             </select>
-            {selectedProject && (
-              <button className="btn-ghost text-xs" onClick={() => setSelectedProject(null)}>Clear</button>
-            )}
+          )}
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+            <input
+              className="input rounded-xl pl-9 py-1.5 text-sm w-full"
+              placeholder="Search name, phone, email…"
+              value={filters.search}
+              onChange={(e) => setFilter("search", e.target.value)}
+            />
           </div>
+          <select className="select rounded-xl text-sm py-1.5" value={filters.status} onChange={(e) => setFilter("status", e.target.value)}>
+            <option value="">All Statuses</option>
+            {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+          </select>
+          <select className="select rounded-xl text-sm py-1.5" value={filters.source} onChange={(e) => setFilter("source", e.target.value)}>
+            <option value="">All Sources</option>
+            {SOURCE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
+          </select>
+          <select className="select rounded-xl text-sm py-1.5" value={filters.dateRange} onChange={(e) => setFilter("dateRange", e.target.value)}>
+            {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <select className="select rounded-xl text-sm py-1.5" value={filters.priority} onChange={(e) => setFilter("priority", e.target.value)}>
+            <option value="">All Priorities</option>
+            {PRIORITY_OPTIONS.map((p) => <option key={p}>{p}</option>)}
+          </select>
+          {(Object.values(filters).some(Boolean) || selectedProject) && (
+            <button
+              className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
+              onClick={() => {
+                ["search", "status", "source", "priority", "dateRange"].forEach((k) => setFilter(k, ""));
+                setSelectedProject(null);
+              }}
+            >
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
 
-          {selectedProject && (
-            <div>
+      {/* ── Project leads table (shown when a project is selected) ─────────────── */}
+      {selectedProject && (
+            <section className="card p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-2 mb-3">
                 <div className="relative flex-1 max-w-sm min-w-[180px]">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
@@ -1166,53 +1191,8 @@ export default function Leads() {
                   </div>
                 </div>
               )}
-            </div>
+            </section>
           )}
-        </section>
-      )}
-
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        <div className="card p-4 xl:col-span-2">
-          <div className="mb-3 flex items-center gap-3">
-            <Filter className="h-4 w-4 text-app-soft" />
-            <p className="stitch-kicker">Filters</p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <div className="relative lg:col-span-2">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-              <input className="input rounded-2xl pl-11" placeholder="Search name, phone, email..." value={filters.search} onChange={(e) => setFilter("search", e.target.value)} />
-            </div>
-            <select className="select rounded-2xl" value={filters.status} onChange={(e) => setFilter("status", e.target.value)}>
-              <option value="">All Statuses</option>
-              {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
-            </select>
-            <select className="select rounded-2xl" value={filters.source} onChange={(e) => setFilter("source", e.target.value)}>
-              <option value="">All Sources</option>
-              {SOURCE_OPTIONS.map((source) => <option key={source}>{source}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="card p-4">
-          <p className="stitch-kicker mb-3">Date Window</p>
-          <select className="select rounded-2xl" value={filters.dateRange} onChange={(e) => setFilter("dateRange", e.target.value)}>
-            {DATE_RANGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </div>
-
-        <div className="card p-4">
-          <p className="stitch-kicker mb-3">Priority Focus</p>
-          <select className="select rounded-2xl" value={filters.priority} onChange={(e) => setFilter("priority", e.target.value)}>
-            <option value="">All Priorities</option>
-            {PRIORITY_OPTIONS.map((priority) => <option key={priority}>{priority}</option>)}
-          </select>
-          {Object.values(filters).some(Boolean) && (
-            <button className="btn-ghost mt-3 px-0 text-xs" onClick={() => ["search", "status", "source", "priority", "dateRange"].forEach((key) => setFilter(key, ""))}>
-              Clear filters
-            </button>
-          )}
-        </div>
-      </section>
 
       <section className="card overflow-hidden">
         {loading ? (

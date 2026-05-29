@@ -138,7 +138,7 @@ const leadSchema = new mongoose.Schema(
     followUp2: { type: Date, default: null },
     booking: {
       type: String,
-      enum: ["", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable"],
+      enum: ["", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget"],
       default: "",
     },
 
