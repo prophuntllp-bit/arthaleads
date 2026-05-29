@@ -51,4 +51,22 @@ router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, r
   } catch (err) { next(err); }
 });
 
+// PATCH /api/org/me/goal — set monthly closing goal (admin + manager)
+router.patch("/me/goal", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const goal = parseInt(req.body.monthlyClosingGoal, 10);
+    if (isNaN(goal) || goal < 1) {
+      return res.status(400).json({ success: false, message: "Goal must be a positive number" });
+    }
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId,
+      { monthlyClosingGoal: goal },
+      { new: true }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, monthlyClosingGoal: org.monthlyClosingGoal });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

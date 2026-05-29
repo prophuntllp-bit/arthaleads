@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   Calendar,
+  Check,
   CheckCircle,
   ChevronDown,
   Clock3,
@@ -13,7 +14,9 @@ import {
   IndianRupee,
   MessageCircle,
   MoonStar,
+  Pencil,
   Phone,
+  Plus,
   Search,
   SunMedium,
   Target,
@@ -22,6 +25,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import LeadForm from "../components/LeadForm";
 import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
 import { useTheme } from "../context/ThemeContext";
@@ -60,6 +64,16 @@ function calcDelta(current, previous) {
   return Math.round((current - previous) / previous * 100);
 }
 
+function fmtResponseTime(ms) {
+  if (!ms || ms <= 0) return "No data";
+  const mins = Math.round(ms / 60000);
+  if (mins < 1) return "< 1 min";
+  if (mins < 60) return `${mins} min`;
+  const hrs = ms / 3600000;
+  if (hrs < 24) return `${hrs.toFixed(1)} hrs`;
+  return `${(hrs / 24).toFixed(1)} days`;
+}
+
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
@@ -76,6 +90,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [showAddLead, setShowAddLead] = useState(false);
+  const [agents, setAgents] = useState([]);
+  const [goalOverride, setGoalOverride] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -86,7 +104,11 @@ export default function Dashboard() {
         toast.error("Failed to load dashboard data. Please refresh.");
       })
       .finally(() => setLoading(false));
-  }, [dateRange]);
+  }, [dateRange, refreshKey]);
+
+  useEffect(() => {
+    api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
+  }, []);
 
   // Fetch connected automations to drive dynamic source cards
   useEffect(() => {
@@ -118,6 +140,8 @@ export default function Dashboard() {
     : Object.keys(PLATFORM_CONFIG).filter(
         (p) => (data?.bySource?.[PLATFORM_CONFIG[p].sourceKey] || 0) > 0
       );
+
+  const monthlyGoal = goalOverride !== null ? goalOverride : (data?.monthlyClosingGoal || 0);
 
   return (
     <div className="stitch-page space-y-6">
@@ -164,6 +188,11 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => setShowAddLead(true)}
+            className="btn-primary flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Lead</span>
+          </button>
           <button className="stitch-pill" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             {theme === "dark" ? "Dark" : "Light"}
@@ -222,6 +251,13 @@ export default function Dashboard() {
           onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
       </div>
       <InsightStrip data={data} />
+      <GoalMetricsRow
+        goal={monthlyGoal}
+        current={data?.thisMonthClosedWon || 0}
+        avgResponseMs={data?.avgResponseMs}
+        role={user?.role}
+        onGoalUpdate={(n) => setGoalOverride(n)}
+      />
       <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
@@ -344,6 +380,8 @@ export default function Dashboard() {
         </section>
       </div>
 
+      <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
         <section className="card p-6 xl:col-span-5">
           <div className="mb-5 flex items-center justify-between">
@@ -379,41 +417,15 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="card p-6 xl:col-span-7">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <p className="stitch-kicker mb-2">Fresh Activity</p>
-              <h3 className="text-lg font-bold text-app">Recent Leads</h3>
-            </div>
-            <div className="stitch-pill">{sourceChartData.length} active sources</div>
-          </div>
-          <div className="space-y-3">
-            {data?.recentLeads?.length === 0 && <p className="text-sm text-app-soft">No leads yet</p>}
-            {data?.recentLeads?.map((lead) => (
-              <button
-                key={lead._id}
-                type="button"
-                onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
-                className="flex w-full items-center justify-between gap-4 rounded-[1.35rem] p-4 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
-                  <p className="mt-1 text-xs text-app-soft">{fmtDate(lead.createdAt)}</p>
-                </div>
-                <span className={`badge ${
-                  lead.status === "New"
-                    ? "bg-blue-500/10 text-blue-400"
-                    : lead.status === "Closed Won"
-                      ? "bg-green-500/10 text-green-400"
-                      : "bg-white/5 text-app-soft"
-                }`}>
-                  {lead.status}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
+
+      <LeadForm
+        open={showAddLead}
+        onClose={() => setShowAddLead(false)}
+        onSaved={() => { setShowAddLead(false); setRefreshKey((k) => k + 1); }}
+        agents={agents}
+      />
     </div>
   );
 }
@@ -487,6 +499,186 @@ function UpcomingSchedule({ items, navigate }) {
                 <p className="text-[10px] text-app-soft">{lead.status}</p>
               </div>
             </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── Goal Metrics Row ─────────────────────────────────────────────────────────
+function GoalMetricsRow({ goal, current, avgResponseMs, role, onGoalUpdate }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  const [saving, setSaving] = useState(false);
+  const canEdit = role === "admin" || role === "manager";
+  const pct = goal > 0 ? Math.min(100, Math.round(current / goal * 100)) : 0;
+
+  const save = async () => {
+    const n = parseInt(val, 10);
+    if (isNaN(n) || n < 1) return;
+    setSaving(true);
+    try {
+      await api.patch("/org/me/goal", { monthlyClosingGoal: n });
+      onGoalUpdate(n);
+      setEditing(false);
+    } catch { toast.error("Failed to save goal. Please try again."); } finally { setSaving(false); setEditing(false); }
+  };
+
+  if (goal === 0 && !canEdit) return null;
+
+  return (
+    <section className="card p-3 sm:p-4">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+        <div className="flex items-center gap-2 shrink-0">
+          <Target className="w-4 h-4 text-orange-500" />
+          <span className="text-[11px] font-bold text-app uppercase tracking-wider">Monthly Goal</span>
+        </div>
+
+        {goal > 0 ? (
+          <>
+            <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${pct}%`, background: pct >= 100 ? "#22c55e" : "linear-gradient(90deg,#ff6b00,#ffaa00)" }} />
+              </div>
+              <span className={`text-xs font-bold shrink-0 ${pct >= 100 ? "text-emerald-400" : "text-orange-500"}`}>{pct}%</span>
+            </div>
+            <span className="text-xs text-app-soft shrink-0">
+              <span className="font-bold text-app">{current}</span> / {goal} closings this month
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-app-soft flex-1">
+            {canEdit ? "No goal set — click the pencil to set a monthly closing target." : "No monthly goal set."}
+          </span>
+        )}
+
+        {canEdit && (
+          editing ? (
+            <div className="flex items-center gap-2 shrink-0">
+              <input type="number" min="1" value={val}
+                onChange={(e) => setVal(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && save()}
+                className="input w-20 text-center text-sm py-1" placeholder="Target"
+                autoFocus />
+              <button type="button" onClick={save} disabled={saving}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition">
+                <Check className="w-3.5 h-3.5" />
+              </button>
+              <button type="button" onClick={() => setEditing(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+                <X className="w-3.5 h-3.5 text-app-soft" />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => { setEditing(true); setVal(String(goal || "")); }}
+              title="Set monthly goal"
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 shrink-0">
+              <Pencil className="w-3.5 h-3.5 text-app-soft" />
+            </button>
+          )
+        )}
+
+        {avgResponseMs !== null && avgResponseMs !== undefined && (
+          <>
+            <div className="hidden sm:block h-5 w-px shrink-0" style={{ background: "var(--app-border)" }} />
+            <div className="flex items-center gap-2 shrink-0">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs text-app-soft">Avg first response · </span>
+              <span className="text-xs font-bold text-emerald-400">{fmtResponseTime(avgResponseMs)}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ── Activity Feed ─────────────────────────────────────────────────────────────
+function ActivityFeed({ items, navigate }) {
+  function timeAgo(date) {
+    const s = Math.floor((Date.now() - new Date(date)) / 1000);
+    if (s < 60) return "just now";
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  }
+  const TYPE_COLOR = {
+    status_changed: "#f59e0b", called: "#22c55e", site_visit: "#8b5cf6",
+    note_added: "#06b6d4", assigned: "#3b82f6", follow_up_set: "#f97316",
+    created: "#ff6b00", emailed: "#ec4899",
+  };
+  return (
+    <section className="card p-6 xl:col-span-7">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="stitch-kicker mb-1">Live Feed</p>
+          <h3 className="text-base font-bold text-app">Team Activity</h3>
+        </div>
+        <div className="stitch-pill text-xs">Last 10 actions</div>
+      </div>
+      {(!items || items.length === 0) ? (
+        <p className="text-sm text-app-soft py-4">No activity recorded yet.</p>
+      ) : (
+        <div className="space-y-0.5">
+          {items.map((item, i) => (
+            <button key={i} type="button"
+              onClick={() => navigate("/leads", { state: { openLeadId: item.leadId } })}
+              className="w-full flex items-start gap-3 rounded-xl px-2 py-2 text-left hover:bg-orange-500/5 transition">
+              <div className="mt-1.5 w-2 h-2 rounded-full shrink-0"
+                style={{ background: TYPE_COLOR[item.type] || "#6b7280" }} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-app leading-snug">
+                  <span className="font-semibold">{item.performedByName || "System"}</span>
+                  <span className="text-app-soft"> · {item.description}</span>
+                </p>
+                <p className="text-[10px] text-app-soft mt-0.5">{item.leadName} · {timeAgo(item.createdAt)}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── Pipeline Drop-off Funnel ──────────────────────────────────────────────────
+function DropoffFunnel({ allTimeByStatus }) {
+  const STAGES = [
+    { key: "New",         color: "#6366f1" },
+    { key: "Contacted",   color: "#f59e0b" },
+    { key: "Site Visit",  color: "#8b5cf6" },
+    { key: "Negotiation", color: "#f97316" },
+    { key: "Closed Won",  color: "#22c55e" },
+    { key: "Closed Lost", color: "#ef4444" },
+  ];
+  const total = STAGES.reduce((s, st) => s + (allTimeByStatus?.[st.key] || 0), 0);
+  if (!total) return null;
+  return (
+    <section className="card p-4 sm:p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="stitch-kicker mb-1">Where leads get stuck</p>
+          <h3 className="text-base font-bold text-app">Pipeline Drop-off</h3>
+        </div>
+        <div className="stitch-pill text-xs">{total} all-time</div>
+      </div>
+      <div className="space-y-2">
+        {STAGES.map(({ key, color }) => {
+          const count = allTimeByStatus?.[key] || 0;
+          const pct = Math.round(count / total * 100);
+          return (
+            <div key={key} className="flex items-center gap-3">
+              <div className="w-24 text-xs text-app-soft text-right shrink-0">{key}</div>
+              <div className="flex-1 h-5 rounded-lg overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                <div className="h-full rounded-lg flex items-center px-2 transition-all duration-700"
+                  style={{ width: pct > 0 ? `${Math.max(pct, 4)}%` : "0%", background: color }}>
+                  {pct >= 8 && <span className="text-[10px] font-bold text-white">{count}</span>}
+                </div>
+              </div>
+              <div className="w-10 text-xs font-semibold text-app text-right shrink-0">{pct}%</div>
+            </div>
           );
         })}
       </div>

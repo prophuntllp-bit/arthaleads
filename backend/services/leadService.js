@@ -645,11 +645,11 @@ const leadService = {
             { $count: "count" },
           ],
           thisMonthClosedWon: [
-            { $match: { status: "Closed Won", createdAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
+            { $match: { status: "Closed Won", updatedAt: { $gte: thisMonthStart, $lte: thisMonthEnd } } },
             { $count: "count" },
           ],
           lastMonthClosedWon: [
-            { $match: { status: "Closed Won", createdAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+            { $match: { status: "Closed Won", updatedAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
             { $count: "count" },
           ],
 
@@ -673,9 +673,36 @@ const leadService = {
             { $limit: 8 },
             { $project: { name: 1, phone: 1, followUpDate: 1, siteVisitDate: 1, status: 1, assignedToName: 1 } },
           ],
+
+          // Recent activity feed — top 10 actions from 50 most recently modified leads
+          recentActivity: [
+            { $sort: { updatedAt: -1 } },
+            { $limit: 50 },
+            { $unwind: { path: "$activities", preserveNullAndEmptyArrays: false } },
+            { $sort: { "activities.createdAt": -1 } },
+            { $limit: 10 },
+            { $project: {
+              leadName: "$name",
+              leadId: "$_id",
+              type: "$activities.type",
+              description: "$activities.description",
+              performedByName: "$activities.performedByName",
+              createdAt: "$activities.createdAt",
+            }},
+          ],
+
+          // Average first response time (all-time)
+          avgFirstResponse: [
+            { $match: { firstContactedAt: { $ne: null } } },
+            { $project: { responseMs: { $subtract: ["$firstContactedAt", "$createdAt"] } } },
+            { $group: { _id: null, avgMs: { $avg: "$responseMs" } } },
+          ],
         },
       },
     ]);
+
+    const orgDoc = await Organization.findById(user.orgId, "monthlyClosingGoal");
+    const orgGoal = orgDoc?.monthlyClosingGoal ?? 0;
 
     const toMap = (arr) => arr.reduce((acc, i) => { acc[i._id] = i.count; return acc; }, {});
     const sourceMap   = toMap(result.bySource);
@@ -713,6 +740,12 @@ const leadService = {
       todayCreated:       result.todayCreated[0]?.count || 0,
       todaySiteVisits:    result.todaySiteVisits[0]?.count || 0,
       upcomingItems:      result.upcomingItems || [],
+      allTimeByStatus:    allTimeStatus,
+      recentActivity:     result.recentActivity || [],
+      avgResponseMs:      result.avgFirstResponse[0]?.avgMs != null
+        ? Math.max(0, result.avgFirstResponse[0].avgMs)
+        : null,
+      monthlyClosingGoal: orgGoal,
     };
   },
 

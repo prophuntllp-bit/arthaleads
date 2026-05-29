@@ -30,6 +30,7 @@ const orgSchema = new mongoose.Schema(
     logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
+    monthlyClosingGoal: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );
