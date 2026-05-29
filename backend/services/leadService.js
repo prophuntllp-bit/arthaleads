@@ -495,6 +495,8 @@ const leadService = {
       projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
     }
     if (user.role === "agent") projFilter.importedBy = user._id;
+    // Project leads have no leadSourceLabel/sourcePage — exclude them entirely when filtering by site
+    if (siteFilter) projFilter._id = { $exists: false };
 
     // Derive pipeline status from booking for ProjectLeads that have no explicit status
     const deriveStatus = (pl) => {
