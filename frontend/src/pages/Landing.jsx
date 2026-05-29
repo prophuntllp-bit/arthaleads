@@ -1614,7 +1614,8 @@ function DashboardScrollSection({ isDark }) {
         <img
           src={isDark ? "/dashboard-dark.png" : "/dashboard-light.png"}
           alt="Arthaleads CRM Dashboard"
-          className="w-full h-full object-cover object-top rounded-2xl"
+          className="w-full block"
+          style={{ borderRadius: 16 }}
           draggable={false}
         />
       </ContainerScroll>
