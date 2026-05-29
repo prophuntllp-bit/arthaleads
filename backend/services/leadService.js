@@ -152,9 +152,9 @@ const leadService = {
     const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     const andConditions = [];
 
-    // Agents only see leads explicitly assigned to them
-    if (user.role === "agent") {
-      andConditions.push({ assignedTo: user._id });
+    // Agents always see only their own leads; myOnly lets admin/manager opt in to same scope
+    if (user.role === "agent" || query.myOnly === "true") {
+      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
     }
 
     if (status) filter.status = status;
@@ -457,7 +457,9 @@ const leadService = {
 
     // ── Lead filter ────────────────────────────────────────────────────────────
     const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
-    if (user.role === "agent") leadFilter.assignedTo = user._id;
+    if (user.role === "agent" || query.myOnly === "true") {
+      leadFilter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
+    }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;

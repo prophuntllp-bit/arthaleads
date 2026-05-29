@@ -32,7 +32,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -366,6 +366,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
 export default function Leads() {
   useEffect(() => { document.title = "Lead Management - Arthaleads CRM"; }, []);
   const { user } = useAuth();
+  const isAdmin = user?.role && user.role !== "agent";
   const location = useLocation();
   const navigate = useNavigate();
   const {
@@ -377,7 +378,14 @@ export default function Leads() {
     status: location.state?.presetStatus || "",
     source: location.state?.presetSource || "",
     followUpToday: location.state?.presetFollowUpToday ? "true" : "",
+    myOnly: (() => { try { return localStorage.getItem("leads_myOnly") === "true" ? "true" : ""; } catch { return ""; } })(),
   });
+
+  const toggleMyOnly = () => {
+    const next = filters.myOnly !== "true";
+    setFilter("myOnly", next ? "true" : "");
+    try { localStorage.setItem("leads_myOnly", String(next)); } catch {}
+  };
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -1041,12 +1049,28 @@ export default function Leads() {
           >
             {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
+          {/* My Leads toggle — admin/manager only */}
+          {isAdmin && (
+            <button
+              onClick={toggleMyOnly}
+              className="inline-flex items-center gap-2 rounded-xl text-xs font-semibold transition-all"
+              style={{ padding: "5px 10px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+              title={filters.myOnly === "true" ? "Showing only your leads — click to show all" : "Showing all leads — click to show only yours"}
+            >
+              <User className="w-3.5 h-3.5 shrink-0" />
+              <span>My Leads</span>
+              <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
+                <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
+              </span>
+            </button>
+          )}
           {(Object.values(filters).some(Boolean) || selectedProject) && (
             <button
               className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
               onClick={() => {
-                ["search", "status", "source", "priority", "dateRange"].forEach((k) => setFilter(k, ""));
+                ["search", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
                 setSelectedProject(null);
+                try { localStorage.removeItem("leads_myOnly"); } catch {}
               }}
             >
               <X className="h-3 w-3" /> Clear
