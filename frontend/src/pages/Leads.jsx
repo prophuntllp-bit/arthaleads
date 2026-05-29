@@ -977,7 +977,7 @@ export default function Leads() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-black tracking-tight text-app leading-none">Leads Management</h1>
-            <p className="text-xs text-app-soft mt-1">{total} active leads across your property funnel.</p>
+            <p className="text-xs text-app-soft mt-1 hidden sm:block">{total} active leads across your property funnel.</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Import — icon only on mobile */}
@@ -1014,17 +1014,20 @@ export default function Leads() {
         {/* Row 2: filter bar — scrollable on mobile */}
         <div className="flex gap-2 items-center pt-2 border-t overflow-x-auto pb-0.5" style={{ borderColor: "var(--app-border)", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", flexWrap: "nowrap" }}>
           {projects.length > 0 && (
-            <select
-              style={{ flexShrink: 0, width: "auto", minWidth: 130, padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              value={selectedProject?._id || ""}
-              onChange={(e) => {
-                const p = projects.find((x) => x._id === e.target.value) || null;
-                setSelectedProject(p); setProjPage(1); setProjSearch("");
-              }}
-            >
-              <option value="">All Projects</option>
-              {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
-            </select>
+            <div className="relative" style={{ flexShrink: 0 }}>
+              <select
+                style={{ minWidth: 130, padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
+                value={selectedProject?._id || ""}
+                onChange={(e) => {
+                  const p = projects.find((x) => x._id === e.target.value) || null;
+                  setSelectedProject(p); setProjPage(1); setProjSearch("");
+                }}
+              >
+                <option value="">All Projects</option>
+                {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+            </div>
           )}
           <div className="relative" style={{ flexShrink: 0, width: 180 }}>
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
@@ -1049,23 +1052,28 @@ export default function Leads() {
             { key: "source",    placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
             { key: "priority",  placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
           ].map(({ key, placeholder, opts }) => (
-            <select
-              key={key}
-              style={{ flexShrink: 0, width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              value={filters[key]}
-              onChange={(e) => setFilter(key, e.target.value)}
-            >
-              <option value="">{placeholder}</option>
-              {opts.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            <div key={key} className="relative" style={{ flexShrink: 0 }}>
+              <select
+                style={{ padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
+                value={filters[key]}
+                onChange={(e) => setFilter(key, e.target.value)}
+              >
+                <option value="">{placeholder}</option>
+                {opts.map((s) => <option key={s}>{s}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+            </div>
           ))}
-          <select
-            style={{ flexShrink: 0, width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-            value={filters.dateRange}
-            onChange={(e) => setFilter("dateRange", e.target.value)}
-          >
-            {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+          <div className="relative" style={{ flexShrink: 0 }}>
+            <select
+              style={{ padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
+              value={filters.dateRange}
+              onChange={(e) => setFilter("dateRange", e.target.value)}
+            >
+              {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+          </div>
           {/* My Leads toggle — admin/manager only */}
           {isAdmin && (
             <button

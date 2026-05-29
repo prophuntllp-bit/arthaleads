@@ -189,13 +189,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-nowrap items-center gap-2">
           <button type="button" onClick={() => setShowAddLead(true)}
-            className="btn-primary flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold">
-            <Plus className="w-4 h-4" />
+            className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
+            <Plus className="w-3.5 h-3.5 shrink-0" />
             <span>New Lead</span>
           </button>
-          <button className="stitch-pill" onClick={toggleTheme}>
+          <button className="stitch-pill whitespace-nowrap" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             {theme === "dark" ? "Dark" : "Light"}
           </button>
