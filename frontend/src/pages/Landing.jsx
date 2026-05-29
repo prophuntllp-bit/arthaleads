@@ -12,6 +12,7 @@ import {
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
+import { ContainerScroll } from "../components/ContainerScroll";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -1584,6 +1585,43 @@ function FinalCTA({ isDark }) {
 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
+// ── Dashboard scroll-reveal section ──────────────────────────────────────────
+function DashboardScrollSection({ isDark }) {
+  const bg          = isDark ? "#0d0d1a" : "#fff7f0";
+  const headingClr  = isDark ? "#ffffff" : "#111827";
+  const subClr      = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
+
+  return (
+    <section style={{ background: bg, overflow: "hidden" }}>
+      <ContainerScroll
+        titleComponent={
+          <div className="px-4">
+            <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#ff6b00" }}>
+              Built for Real Estate Teams
+            </p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-4" style={{ color: headingClr }}>
+              Everything your team needs,{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+                in one place.
+              </span>
+            </h2>
+            <p className="text-base sm:text-lg max-w-xl mx-auto" style={{ color: subClr }}>
+              Track every lead from first enquiry to deal closure — across Facebook, Google, WhatsApp and more.
+            </p>
+          </div>
+        }
+      >
+        <img
+          src={isDark ? "/dashboard-dark.png" : "/dashboard-light.png"}
+          alt="Arthaleads CRM Dashboard"
+          className="w-full h-full object-cover object-top rounded-2xl"
+          draggable={false}
+        />
+      </ContainerScroll>
+    </section>
+  );
+}
+
 export default function Landing() {
   const { isDark } = usePublicTheme();
 
@@ -1599,6 +1637,7 @@ export default function Landing() {
     <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
       <PublicNav onScrollTo={scrollTo} />
       <Hero isDark={isDark} />
+      <DashboardScrollSection isDark={isDark} />
       <SourcesStrip isDark={isDark} />
       <Features isDark={isDark} />
       <HowItWorks isDark={isDark} />
