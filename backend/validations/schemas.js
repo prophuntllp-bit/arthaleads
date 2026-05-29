@@ -164,7 +164,7 @@ const updateLeadSchema = Joi.object({
   remark1: Joi.string().allow("").max(500),
   remark2: Joi.string().allow("").max(500),
   remark: Joi.string().allow("").max(1000),
-  booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Booked", "Not Interested", "Call Back").allow(""),
+  booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
 }).min(1); // At least one field required for update
@@ -208,7 +208,7 @@ const importLeadsSchema = Joi.object({
         })
       ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
-      booking: Joi.string().valid("Not Interested","Interested","Booked","Call Back","Site Visit Booked","").allow("").optional(),
+      booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow("").optional(),
       remark: Joi.string().allow("").optional(),
       remark1: Joi.string().allow("").optional(),
       remark2: Joi.string().allow("").optional(),

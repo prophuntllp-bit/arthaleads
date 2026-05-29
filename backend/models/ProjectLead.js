@@ -43,7 +43,7 @@ const projectLeadSchema = new mongoose.Schema(
     followUpSetByName:  { type: String, default: "" },
     booking: {
       type: String,
-      enum: ["", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable"],
+      enum: ["", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget"],
       default: "",
     },
 
