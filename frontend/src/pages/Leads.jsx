@@ -963,43 +963,43 @@ export default function Leads() {
 
   return (
     <div className="stitch-page space-y-6">
-      {/* ── Compact topbar ─────────────────────────────────────────────────────── */}
-      <header className="stitch-topbar">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-app">Leads Management</h1>
-          <p className="text-xs text-app-soft mt-0.5">{total} active leads across your property funnel.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="btn-secondary cursor-pointer rounded-xl text-sm">
-            <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
-            <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
-          </label>
-          <div ref={exportMenuRef}>
-            <button
-              ref={exportBtnRef}
-              className="btn-secondary rounded-xl"
-              onClick={() => {
-                const rect = exportBtnRef.current?.getBoundingClientRect();
-                if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
-                setShowExportMenu((c) => !c);
-              }}
-            >
-              <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
+      {/* ── Header + filters (single card) ────────────────────────────────────── */}
+      <div className="card px-5 py-4 space-y-3">
+        {/* Row 1: title + action buttons */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-black tracking-tight text-app leading-none">Leads Management</h1>
+            <p className="text-xs text-app-soft mt-1">{total} active leads across your property funnel.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="btn-secondary cursor-pointer rounded-xl text-sm">
+              <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+            </label>
+            <div ref={exportMenuRef}>
+              <button
+                ref={exportBtnRef}
+                className="btn-secondary rounded-xl"
+                onClick={() => {
+                  const rect = exportBtnRef.current?.getBoundingClientRect();
+                  if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                  setShowExportMenu((c) => !c);
+                }}
+              >
+                <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+            <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
+              <Plus className="h-4 w-4" /> Add Lead
             </button>
           </div>
-          <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
-            <Plus className="h-4 w-4" /> Add Lead
-          </button>
         </div>
-      </header>
 
-      {/* ── Compact filter bar ─────────────────────────────────────────────────── */}
-      <div className="card p-3">
-        <div className="flex flex-wrap gap-2 items-center">
+        {/* Row 2: filter bar */}
+        <div className="flex flex-wrap gap-2 items-center pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
           {projects.length > 0 && (
             <select
-              className="select rounded-xl text-sm py-1.5"
-              style={{ minWidth: 160 }}
+              style={{ width: "auto", minWidth: 140, padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
               value={selectedProject?._id || ""}
               onChange={(e) => {
                 const p = projects.find((x) => x._id === e.target.value) || null;
@@ -1010,33 +1010,40 @@ export default function Leads() {
               {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
             </select>
           )}
-          <div className="relative flex-1 min-w-[160px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+          <div className="relative" style={{ flex: "1 1 160px", maxWidth: 260 }}>
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
             <input
-              className="input rounded-xl pl-9 py-1.5 text-sm w-full"
+              style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
               placeholder="Search name, phone, email…"
               value={filters.search}
               onChange={(e) => setFilter("search", e.target.value)}
             />
           </div>
-          <select className="select rounded-xl text-sm py-1.5" value={filters.status} onChange={(e) => setFilter("status", e.target.value)}>
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-          </select>
-          <select className="select rounded-xl text-sm py-1.5" value={filters.source} onChange={(e) => setFilter("source", e.target.value)}>
-            <option value="">All Sources</option>
-            {SOURCE_OPTIONS.map((s) => <option key={s}>{s}</option>)}
-          </select>
-          <select className="select rounded-xl text-sm py-1.5" value={filters.dateRange} onChange={(e) => setFilter("dateRange", e.target.value)}>
+          {[
+            { key: "status",    placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
+            { key: "source",    placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
+            { key: "priority",  placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
+          ].map(({ key, placeholder, opts }) => (
+            <select
+              key={key}
+              style={{ width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+              value={filters[key]}
+              onChange={(e) => setFilter(key, e.target.value)}
+            >
+              <option value="">{placeholder}</option>
+              {opts.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          ))}
+          <select
+            style={{ width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+            value={filters.dateRange}
+            onChange={(e) => setFilter("dateRange", e.target.value)}
+          >
             {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-          <select className="select rounded-xl text-sm py-1.5" value={filters.priority} onChange={(e) => setFilter("priority", e.target.value)}>
-            <option value="">All Priorities</option>
-            {PRIORITY_OPTIONS.map((p) => <option key={p}>{p}</option>)}
           </select>
           {(Object.values(filters).some(Boolean) || selectedProject) && (
             <button
-              className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
               onClick={() => {
                 ["search", "status", "source", "priority", "dateRange"].forEach((k) => setFilter(k, ""));
                 setSelectedProject(null);
