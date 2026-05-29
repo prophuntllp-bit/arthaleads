@@ -152,7 +152,7 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
           borderColor: "var(--app-border)",
           background: "var(--app-surface-low)",
           color: value ? "var(--app-text)" : "#94a3b8",
-          minWidth: 160,
+          minWidth: 175,
         }}
       >
         {fmtDisplay(value) || placeholder}

@@ -425,7 +425,7 @@ export default function Leads() {
     lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
     status: 88, priority: 82, requirements: 175, budget: 88, purpose: 72,
     remark: 128, remark1: 118, remark2: 118,
-    followup: 162, followup2: 162, booking: 138,
+    followup: 185, followup2: 185, booking: 138,
     property: 148, assigned: 98, actions: 108,
   });
 
@@ -1059,7 +1059,7 @@ export default function Leads() {
                           </th>
                         )}
                         <th>#</th><th>Name</th><th>Phone</th><th>WhatsApp</th><th>Email</th><th>Source</th>
-                        <th>Contact Status</th><th>Follow Up</th><th>Follow Up 2</th>
+                        <th>Contact Status</th><th style={{ minWidth: 185 }}>Follow Up</th><th style={{ minWidth: 185 }}>Follow Up 2</th>
                         <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Status</th>
                         <th></th>
                       </tr>
@@ -1086,8 +1086,8 @@ export default function Leads() {
                           <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
-                          <td><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
-                          <td><ProjInlineDate value={lead.followUp2} leadId={lead._id} projectId={selectedProject._id} field="followUp2" onSaved={handleProjLeadUpdated} /></td>
+                          <td className="min-w-[185px]"><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
+                          <td className="min-w-[185px]"><ProjInlineDate value={lead.followUp2} leadId={lead._id} projectId={selectedProject._id} field="followUp2" onSaved={handleProjLeadUpdated} /></td>
                           <td><RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={selectedProject._id} field="remark1" placeholder="Remark 1…" onSaved={handleProjLeadUpdated} /></td>
                           <td><RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={selectedProject._id} field="remark2" placeholder="Remark 2…" onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
@@ -1360,7 +1360,7 @@ export default function Leads() {
                     <td className="min-w-[110px]">
                       <RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
                     </td>
-                    <td>
+                    <td className="min-w-[185px]">
                       <InlineDate
                         value={lead.followUpDate}
                         leadId={lead._id}
@@ -1369,7 +1369,7 @@ export default function Leads() {
                         onSaved={handleInlineUpdate}
                       />
                     </td>
-                    <td>
+                    <td className="min-w-[185px]">
                       <InlineDate
                         value={lead.followUp2}
                         leadId={lead._id}

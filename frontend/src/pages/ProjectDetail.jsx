@@ -9,9 +9,10 @@ import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import DateTimePicker from "../components/DateTimePicker";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
-  Clock, Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
+  Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -135,59 +136,19 @@ function InlineText({ value, leadId, projectId, field, placeholder = "Add note�
   );
 }
 
-// ── Local time helpers (timezone-agnostic, uses browser local time) ───────────
-const _pad = n => String(n).padStart(2, "0");
-function toLocalInput(utcStr) {
-  if (!utcStr) return "";
-  const d = new Date(utcStr);
-  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
-}
-function fromLocalInput(localStr) {
-  if (!localStr) return null;
-  return new Date(localStr).toISOString();
-}
-function nowLocal() {
-  const d = new Date();
-  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
-}
-function fmtLocalTime(utcStr) {
-  if (!utcStr) return "";
-  return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
-
-// ── Inline date cell (compact single-line) ────────────────────────────────────
+// ── Inline date cell ──────────────────────────────────────────────────────────
 function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
-
-  const save = async (dateStr) => {
+  const save = async (isoStr) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromLocalInput(dateStr) });
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: isoStr });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-
-  const dateVal = toLocalInput(value);
-  const displayTime = value ? fmtLocalTime(value) : "";
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return (
-    <div className="flex items-center gap-1">
-      <input
-        type="datetime-local"
-        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
-        value={dateVal}
-        title={displayTime || "Set date & time"}
-        onChange={(e) => save(e.target.value)}
-      />
-      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
-        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-        <Clock className="h-3 w-3" />
-      </button>
-    </div>
-  );
+  return <DateTimePicker value={value} onChange={save} />;
 }
 
 // ── Inline booking select ─────────────────────────────────────────────────────
@@ -978,8 +939,8 @@ export default function ProjectDetail() {
                         <th style={{ width: 130, minWidth: 130 }}>Contact Status</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
                         <th style={{ width: 140, minWidth: 140 }}>Remark</th>
                         <th style={{ width: 150, minWidth: 150 }}>Status</th>
                         <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
@@ -1293,8 +1254,8 @@ export default function ProjectDetail() {
                         <th style={{ width: 130, minWidth: 130 }}>Phone</th>
                         <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
                         <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
@@ -1481,8 +1442,8 @@ export default function ProjectDetail() {
                         <th style={{ width: 130, minWidth: 130 }}>Phone</th>
                         <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
                         <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up</th>
-                        <th style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
+                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
                         <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
