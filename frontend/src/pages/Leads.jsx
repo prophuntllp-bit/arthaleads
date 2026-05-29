@@ -974,40 +974,48 @@ export default function Leads() {
       {/* ── Header + filters (single card) ────────────────────────────────────── */}
       <div className="card px-5 py-4 space-y-3">
         {/* Row 1: title + action buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-xl font-black tracking-tight text-app leading-none">Leads Management</h1>
             <p className="text-xs text-app-soft mt-1">{total} active leads across your property funnel.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="btn-secondary cursor-pointer rounded-xl text-sm">
-              <Upload className="h-4 w-4" /> {importing ? "Importing…" : "Import"}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Import — icon only on mobile */}
+            <label className="btn-secondary cursor-pointer rounded-xl flex items-center gap-1.5" title="Import CSV/Excel">
+              <Upload className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-sm">{importing ? "Importing…" : "Import"}</span>
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
+            {/* Export — icon only on mobile */}
             <div ref={exportMenuRef}>
               <button
                 ref={exportBtnRef}
-                className="btn-secondary rounded-xl"
+                className="btn-secondary rounded-xl flex items-center gap-1.5"
+                title="Export leads"
                 onClick={() => {
                   const rect = exportBtnRef.current?.getBoundingClientRect();
                   if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
                   setShowExportMenu((c) => !c);
                 }}
               >
-                <Download className="h-4 w-4" /> Export <ChevronDown className="h-4 w-4" />
+                <Download className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline text-sm">Export</span>
+                <ChevronDown className="h-4 w-4 hidden sm:inline" />
               </button>
             </div>
-            <button className="btn-primary rounded-xl" onClick={() => { setEditLead(null); setShowForm(true); }}>
-              <Plus className="h-4 w-4" /> Add Lead
+            {/* Add Lead — always show label */}
+            <button className="btn-primary rounded-xl flex items-center gap-1.5" onClick={() => { setEditLead(null); setShowForm(true); }}>
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="text-sm font-semibold">Add Lead</span>
             </button>
           </div>
         </div>
 
-        {/* Row 2: filter bar */}
-        <div className="flex flex-wrap gap-2 items-center pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+        {/* Row 2: filter bar — scrollable on mobile */}
+        <div className="flex gap-2 items-center pt-2 border-t overflow-x-auto pb-0.5" style={{ borderColor: "var(--app-border)", scrollbarWidth: "none", WebkitOverflowScrolling: "touch", flexWrap: "nowrap" }}>
           {projects.length > 0 && (
             <select
-              style={{ width: "auto", minWidth: 140, padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+              style={{ flexShrink: 0, width: "auto", minWidth: 130, padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
               value={selectedProject?._id || ""}
               onChange={(e) => {
                 const p = projects.find((x) => x._id === e.target.value) || null;
@@ -1018,20 +1026,20 @@ export default function Leads() {
               {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
             </select>
           )}
-          <div className="relative" style={{ flex: "1 1 160px", maxWidth: 260 }}>
+          <div className="relative" style={{ flexShrink: 0, width: 180 }}>
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
             <input
               style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              placeholder="Search name, phone, email…"
+              placeholder="Search name, phone…"
               value={filters.search}
               onChange={(e) => setFilter("search", e.target.value)}
             />
           </div>
-          <div className="relative" style={{ flex: "0 1 180px" }}>
+          <div className="relative" style={{ flexShrink: 0, width: 160 }}>
             <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
             <input
               style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-              placeholder="Filter by site / domain…"
+              placeholder="Filter by domain…"
               value={filters.siteFilter || ""}
               onChange={(e) => setFilter("siteFilter", e.target.value)}
             />
@@ -1043,7 +1051,7 @@ export default function Leads() {
           ].map(({ key, placeholder, opts }) => (
             <select
               key={key}
-              style={{ width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+              style={{ flexShrink: 0, width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
               value={filters[key]}
               onChange={(e) => setFilter(key, e.target.value)}
             >
@@ -1052,7 +1060,7 @@ export default function Leads() {
             </select>
           ))}
           <select
-            style={{ width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+            style={{ flexShrink: 0, width: "auto", padding: "5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
             value={filters.dateRange}
             onChange={(e) => setFilter("dateRange", e.target.value)}
           >
@@ -1580,56 +1588,77 @@ export default function Leads() {
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 rounded-2xl px-4 py-3 shadow-2xl backdrop-blur-sm"
-          style={{ background: "var(--app-card-solid, #1e1e1e)", border: "1.5px solid var(--app-border)", minWidth: 340, boxShadow: "0 8px 32px rgba(0,0,0,0.35)" }}
+          className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:left-auto sm:right-auto z-[9999] backdrop-blur-sm"
+          style={{
+            background: "var(--app-card-solid, #1e1e1e)",
+            border: "1.5px solid var(--app-border)",
+            boxShadow: "0 -4px 32px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.35)",
+            borderRadius: "16px 16px 0 0",
+            padding: "12px 16px 16px",
+          }}
+          // On sm+ override inline radius
         >
-          {/* Count badge */}
-          <span className="shrink-0 flex items-center justify-center rounded-xl bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-400 border border-orange-500/30">
-            {selectedIds.size} selected
-          </span>
+          {/* Top row: count + close */}
+          <div className="flex items-center justify-between mb-2 sm:hidden">
+            <span className="flex items-center gap-2 text-xs font-bold text-orange-400">
+              <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+              {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""} selected
+            </span>
+            <button onClick={() => setSelectedIds(new Set())}
+              className="p-1.5 rounded-lg text-app-soft hover:bg-white/10">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          {/* Agent assign (admin/manager only) */}
-          {user?.role !== "agent" && agents.length > 0 && (
-            <>
-              <select
-                value={bulkAssignAgentId}
-                onChange={(e) => setBulkAssignAgentId(e.target.value)}
-                className="flex-1 min-w-0 rounded-xl border px-2.5 py-1.5 text-xs focus:outline-none focus:border-orange-400 appearance-none"
-                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-              >
-                <option value="">Assign to agent…</option>
-                {agents.map((a) => (
-                  <option key={a._id} value={a._id}>{a.name}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleBulkAssign}
-                disabled={bulkAssigning || !bulkAssignAgentId}
-                className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-orange-600 disabled:opacity-40"
-              >
-                <Users className="h-3.5 w-3.5" />
-                {bulkAssigning ? "Assigning…" : "Assign"}
-              </button>
-            </>
-          )}
+          {/* Actions row */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Count badge — desktop only */}
+            <span className="hidden sm:flex shrink-0 items-center justify-center rounded-xl bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-400 border border-orange-500/30">
+              {selectedIds.size} selected
+            </span>
 
-          {/* Delete */}
-          <button
-            onClick={() => setShowBulkConfirm(true)}
-            className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-red-600"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </button>
+            {/* Agent assign */}
+            {user?.role !== "agent" && agents.length > 0 && (
+              <>
+                <select
+                  value={bulkAssignAgentId}
+                  onChange={(e) => setBulkAssignAgentId(e.target.value)}
+                  className="flex-1 min-w-0 rounded-xl border px-2.5 py-2 text-xs focus:outline-none focus:border-orange-400 appearance-none"
+                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                >
+                  <option value="">Assign to agent…</option>
+                  {agents.map((a) => (
+                    <option key={a._id} value={a._id}>{a.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleBulkAssign}
+                  disabled={bulkAssigning || !bulkAssignAgentId}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-orange-600 disabled:opacity-40"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  {bulkAssigning ? "Assigning…" : "Assign"}
+                </button>
+              </>
+            )}
 
-          {/* Clear */}
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            className="shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/10"
-            style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-          >
-            ✕
-          </button>
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-red-600"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+
+            {/* Clear — desktop only (mobile has top-row close) */}
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="hidden sm:flex shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/10"
+              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+            >
+              ✕
+            </button>
+          </div>
         </div>,
         document.body
       )}

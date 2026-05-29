@@ -7,7 +7,7 @@ import {
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
-  PanelLeftClose, PanelLeft, Zap,
+  PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -92,6 +92,13 @@ export default function Sidebar() {
   const mobileBellRef   = useRef(null);
   const mobileSidebarRef = useRef(null);
   const profileBtnRef   = useRef(null);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileSearchQ, setMobileSearchQ]       = useState("");
+  const mobileSearchRef = useRef(null);
+
+  useEffect(() => {
+    if (mobileSearchOpen) setTimeout(() => mobileSearchRef.current?.focus(), 60);
+  }, [mobileSearchOpen]);
   const lastSeenRef     = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
 
   // ── Clock In / Out ────────────────────────────────────────────────────────
@@ -702,46 +709,86 @@ export default function Sidebar() {
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between border-b sidebar-glass mobile-topbar"
-        style={{ borderColor: "var(--app-border)" }}
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2.5 flex items-center justify-between border-b sidebar-glass mobile-topbar"
+        style={{ borderColor: "var(--app-border)", minHeight: 52 }}
       >
-        <NavLink to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2.5">
-          {org?.logo ? (
-            <>
-              <div className="h-8 max-w-[80px] flex items-center flex-shrink-0">
-                <img key={org.logo} src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 6 }}
-                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
-              </div>
-              <span className="font-bold text-sm text-app truncate max-w-[100px]">{org.name}</span>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover" />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow">
-                <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
-              </div>
-              <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
-            </>
-          )}
-        </NavLink>
-        <div className="flex items-center gap-2">
-          <div ref={mobileBellRef}>
-            <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts">
-              <Bell className="w-5 h-5" />
-              {alertCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white animate-pulse"
-                  style={{ background: "var(--app-primary)" }}>
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
+        {/* Search overlay mode */}
+        {mobileSearchOpen ? (
+          <div className="flex flex-1 items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-app-soft" />
+              <input
+                ref={mobileSearchRef}
+                value={mobileSearchQ}
+                onChange={(e) => setMobileSearchQ(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && mobileSearchQ.trim()) {
+                    navigate("/leads", { state: { presetSearch: mobileSearchQ.trim() } });
+                    setMobileSearchOpen(false); setMobileSearchQ("");
+                  }
+                  if (e.key === "Escape") { setMobileSearchOpen(false); setMobileSearchQ(""); }
+                }}
+                placeholder="Search leads by name, phone…"
+                className="w-full rounded-xl pl-9 pr-3 py-2 text-sm text-app"
+                style={{ background: "var(--app-surface-low)", border: "1.5px solid var(--app-primary)", outline: "none" }}
+              />
+            </div>
+            <button onClick={() => { setMobileSearchOpen(false); setMobileSearchQ(""); }}
+              className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 flex-shrink-0">
+              <XIcon className="w-5 h-5" />
             </button>
           </div>
-          <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
+        ) : (
+          <>
+            {/* Brand */}
+            <NavLink to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2 min-w-0">
+              {org?.logo ? (
+                <>
+                  <div className="h-7 max-w-[72px] flex items-center flex-shrink-0">
+                    <img key={org.logo} src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 5 }}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  </div>
+                  <span className="font-bold text-sm text-app truncate max-w-[90px]">{org.name}</span>
+                  <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover flex-shrink-0" />
+                </>
+              ) : (
+                <>
+                  <div className="w-7 h-7 rounded-xl overflow-hidden flex-shrink-0 shadow">
+                    <img src="/logo.png" alt="Arthaleads" className="w-full h-full object-cover" />
+                  </div>
+                  <span className="font-black text-sm tracking-tight text-app">Arthaleads</span>
+                </>
+              )}
+            </NavLink>
+
+            {/* Right icons */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Search icon */}
+              <button onClick={() => setMobileSearchOpen(true)}
+                className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="Search leads">
+                <Search className="w-5 h-5" />
+              </button>
+
+              {/* Bell */}
+              <div ref={mobileBellRef}>
+                <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts">
+                  <Bell className="w-5 h-5" />
+                  {alertCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white animate-pulse"
+                      style={{ background: "var(--app-primary)" }}>
+                      {alertCount > 9 ? "9+" : alertCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Menu */}
+              <button onClick={() => setOpen(!open)} className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5">
+                {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Mobile overlay ──────────────────────────────────────────────────── */}

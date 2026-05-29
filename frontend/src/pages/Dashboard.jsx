@@ -148,7 +148,8 @@ export default function Dashboard() {
       <header className="stitch-topbar">
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[260px] flex-1 max-w-xl">
+            {/* Search: hidden on mobile/tablet, visible on desktop */}
+            <div className="relative min-w-[260px] flex-1 max-w-xl hidden md:block">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
               <input
                 className="input rounded-full pl-11 pr-4"
@@ -163,6 +164,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="hidden h-4 w-px lg:block" style={{ background: "var(--app-border)" }} />
+            {/* Platform pills: always visible */}
             <div className="flex flex-wrap items-center gap-2">
               {activePlatforms.map((platform) => {
                 const cfg = PLATFORM_CONFIG[platform];
@@ -191,7 +193,7 @@ export default function Dashboard() {
           <button type="button" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold">
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">New Lead</span>
+            <span>New Lead</span>
           </button>
           <button className="stitch-pill" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
