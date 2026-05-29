@@ -162,6 +162,7 @@ export default function DateRangePicker({ value, onChange, label }) {
   const [picking, setPicking]       = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
   const [isMobile, setIsMobile]     = useState(false);
+  const [mobileShowCalendar, setMobileShowCalendar] = useState(false);
   const today = new Date(); today.setHours(0,0,0,0);
   const [leftMonth, setLeftMonth] = useState({ year: today.getFullYear(), month: today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1, adjYear: today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear() });
   const [rightMonth, setRightMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -240,9 +241,9 @@ export default function DateRangePicker({ value, onChange, label }) {
       const mobile = window.innerWidth < 640;
       setIsMobile(mobile);
       if (mobile) {
-        // Full-width anchored just below the button
-        const top = Math.min(rect.bottom + 8, window.innerHeight - 460);
+        const top = Math.min(rect.bottom + 8, window.innerHeight - 320);
         setPopoverPos({ top: Math.max(top, 8), left: 8, right: 8 });
+        setMobileShowCalendar(value === "custom");
       } else {
         setPopoverPos({
           top: rect.bottom + 8,
@@ -290,73 +291,88 @@ export default function DateRangePicker({ value, onChange, label }) {
           }}
         >
           {isMobile ? (
-            /* ── Mobile layout: compact Zoho-style ── */
+            /* ── Mobile: preset list (instant-apply) + optional custom calendar ── */
             <div className="flex flex-col">
-              {/* Preset chips — 2-col grid, compact */}
-              <div className="border-b px-3 py-2" style={{ borderColor: "var(--app-border)" }}>
-                <div className="grid grid-cols-2 gap-1">
-                  {PRESETS.map((p) => (
+              {!mobileShowCalendar ? (
+                /* Preset grid — tap = instant apply + close */
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-0.5">
+                    {PRESETS.map((p) => {
+                      const active = p.value === value;
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => { onChange(p.value); setOpen(false); }}
+                          className="text-left px-3 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                          style={{
+                            background: active ? "var(--app-primary)" : "transparent",
+                            color: active ? "#fff" : "var(--app-text-soft)",
+                          }}
+                          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--app-surface-low)"; }}
+                          onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Custom range trigger */}
+                  <div className="mt-1 pt-1 border-t" style={{ borderColor: "var(--app-border)" }}>
                     <button
-                      key={p.value}
                       type="button"
-                      onClick={() => {
-                        setPending(p.value);
-                        const d = presetDates(p.value);
-                        setRangeStart(d.start);
-                        setRangeEnd(d.end);
-                        setPicking(false);
-                      }}
-                      className={`text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
-                        pending === p.value
-                          ? "bg-orange-500 text-white"
-                          : "text-app-soft hover:text-app hover:bg-orange-500/8"
-                      }`}
-                      style={pending !== p.value ? { background: "transparent" } : {}}
+                      className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                      style={{ color: "var(--app-primary)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.08)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      onClick={() => { setPending("custom"); setRangeStart(null); setRangeEnd(null); setMobileShowCalendar(true); }}
                     >
-                      {p.label}
+                      + Custom date range
                     </button>
-                  ))}
+                  </div>
                 </div>
-              </div>
-
-              {/* Compact calendar */}
-              <div className="px-3 pt-2.5 pb-1">
-                <div className="flex items-center justify-between mb-2">
-                  <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1">
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="text-xs font-bold text-app tracking-wide">
-                    {MONTHS[rightMonth.month]} {rightMonth.year}
-                  </span>
-                  <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1">
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-
-                <CalendarMonth
-                  year={rightMonth.year} month={rightMonth.month}
-                  rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
-                  onDayClick={handleDayClick} onDayHover={setHoverDate}
-                  hideHeader compact
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="border-t px-3 py-2.5 flex items-center justify-between gap-2" style={{ borderColor: "var(--app-border)" }}>
-                <div className="min-w-0 flex-1">
-                  {rangeStart ? (
-                    <p className="text-[10px] text-app-soft truncate font-medium">
-                      {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
+              ) : (
+                /* Custom calendar — shown only when user taps custom range */
+                <div className="flex flex-col">
+                  {/* Back header */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
+                    <button type="button" onClick={() => setMobileShowCalendar(false)} className="btn-ghost p-1">
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="text-xs font-semibold text-app">Custom date range</span>
+                  </div>
+                  {/* Mini calendar */}
+                  <div className="px-3 pt-2 pb-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1">
+                        <ChevronLeft className="h-3 w-3" />
+                      </button>
+                      <span className="text-[11px] font-bold text-app">
+                        {MONTHS[rightMonth.month]} {rightMonth.year}
+                      </span>
+                      <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1">
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <CalendarMonth
+                      year={rightMonth.year} month={rightMonth.month}
+                      rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                      onDayClick={handleDayClick} onDayHover={setHoverDate}
+                      hideHeader compact
+                    />
+                  </div>
+                  {/* Footer */}
+                  <div className="border-t px-3 py-2 flex items-center justify-between gap-2" style={{ borderColor: "var(--app-border)" }}>
+                    <p className="text-[10px] text-app-soft truncate flex-1">
+                      {rangeStart ? `${toIST(rangeStart)}${rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}` : "Tap start date"}
                     </p>
-                  ) : (
-                    <p className="text-[10px] text-app-soft">Tap a start date</p>
-                  )}
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Cancel</button>
+                      <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-1.5 text-[11px]">Apply</button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-1.5 text-xs">Cancel</button>
-                  <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-1.5 text-xs">Apply</button>
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             /* ── Desktop layout: sidebar + dual calendar ── */
