@@ -1064,74 +1064,86 @@ export default function Leads() {
                 </button>
               </div>
 
-              {/* Expandable filter controls — always on sm+, toggle on mobile */}
-              <div className={`flex flex-wrap gap-2 ${showFilters ? "" : "hidden sm:flex"}`}>
-                {/* Domain on mobile (inside expanded panel) */}
-                <div className="relative sm:hidden" style={{ flexShrink: 0 }}>
-                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                  <input
-                    style={{ width: 150, paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                    placeholder="Domain…"
-                    value={filters.siteFilter || ""}
-                    onChange={(e) => setFilter("siteFilter", e.target.value)}
+              {/* Expandable filter controls — 2-col grid on mobile, flex-wrap on desktop */}
+              <div className={`${showFilters ? "block" : "hidden"} sm:block`}>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+                  {/* Domain — mobile only (shown in panel here; desktop has it in search row) */}
+                  <div className="relative sm:hidden">
+                    <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                    <input
+                      style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                      placeholder="Domain…"
+                      value={filters.siteFilter || ""}
+                      onChange={(e) => setFilter("siteFilter", e.target.value)}
+                    />
+                  </div>
+                  {projects.length > 0 && (
+                    <CustomSelect
+                      value={selectedProject?._id || ""}
+                      onChange={(v) => {
+                        const p = projects.find((x) => x._id === v) || null;
+                        setSelectedProject(p); setProjPage(1); setProjSearch("");
+                      }}
+                      placeholder="All Projects"
+                      options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
+                      style={{ width: "100%" }}
+                    />
+                  )}
+                  {[
+                    { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
+                    { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
+                    { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
+                  ].map(({ key, placeholder, opts }) => (
+                    <CustomSelect
+                      key={key}
+                      value={filters[key]}
+                      onChange={(v) => setFilter(key, v)}
+                      placeholder={placeholder}
+                      options={opts}
+                      style={{ width: "100%" }}
+                    />
+                  ))}
+                  <CustomSelect
+                    value={filters.dateRange}
+                    onChange={(v) => setFilter("dateRange", v)}
+                    placeholder="Date range"
+                    options={DATE_RANGE_OPTIONS}
+                    style={{ width: "100%" }}
                   />
+                  {/* My Leads — spans both columns on mobile */}
+                  {isAdmin && (
+                    <div className="col-span-2 sm:col-auto">
+                      <button
+                        onClick={toggleMyOnly}
+                        className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-start gap-2 rounded-xl text-xs font-semibold transition-all"
+                        style={{ padding: "7px 12px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 shrink-0" />
+                          <span>My Leads</span>
+                        </div>
+                        <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
+                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                  {/* Clear — spans both columns on mobile */}
+                  {(Object.values(filters).some(Boolean) || selectedProject) && (
+                    <div className="col-span-2 sm:col-auto">
+                      <button
+                        className="w-full sm:w-auto flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
+                        onClick={() => {
+                          ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
+                          setSelectedProject(null);
+                          try { localStorage.removeItem("leads_myOnly"); } catch {}
+                        }}
+                      >
+                        <X className="h-3 w-3" /> Clear all filters
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {projects.length > 0 && (
-                  <CustomSelect
-                    value={selectedProject?._id || ""}
-                    onChange={(v) => {
-                      const p = projects.find((x) => x._id === v) || null;
-                      setSelectedProject(p); setProjPage(1); setProjSearch("");
-                    }}
-                    placeholder="All Projects"
-                    options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
-                    style={{ minWidth: 120 }}
-                  />
-                )}
-                {[
-                  { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
-                  { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
-                  { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
-                ].map(({ key, placeholder, opts }) => (
-                  <CustomSelect
-                    key={key}
-                    value={filters[key]}
-                    onChange={(v) => setFilter(key, v)}
-                    placeholder={placeholder}
-                    options={opts}
-                  />
-                ))}
-                <CustomSelect
-                  value={filters.dateRange}
-                  onChange={(v) => setFilter("dateRange", v)}
-                  placeholder="Date range"
-                  options={DATE_RANGE_OPTIONS}
-                />
-                {isAdmin && (
-                  <button
-                    onClick={toggleMyOnly}
-                    className="inline-flex items-center gap-2 rounded-xl text-xs font-semibold transition-all"
-                    style={{ padding: "5px 10px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                  >
-                    <User className="w-3.5 h-3.5 shrink-0" />
-                    <span>My Leads</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
-                      <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
-                    </span>
-                  </button>
-                )}
-                {(Object.values(filters).some(Boolean) || selectedProject) && (
-                  <button
-                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
-                    onClick={() => {
-                      ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
-                      setSelectedProject(null);
-                      try { localStorage.removeItem("leads_myOnly"); } catch {}
-                    }}
-                  >
-                    <X className="h-3 w-3" /> Clear
-                  </button>
-                )}
               </div>
             </div>
           );
