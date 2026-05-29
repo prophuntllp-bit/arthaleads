@@ -8,6 +8,7 @@ import {
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
+import CustomSelect from "../components/CustomSelect";
 import TransferModal from "../components/TransferModal";
 import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
@@ -1024,7 +1025,6 @@ export default function Leads() {
             filters.status, filters.source, filters.priority, filters.siteFilter,
             filters.myOnly === "true" ? "t" : null, selectedProject ? "t" : null,
           ].filter(Boolean).length;
-          const selStyle = { padding: "5px 28px 5px 10px", borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none", appearance: "none", WebkitAppearance: "none", cursor: "pointer" };
           return (
             <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
               {/* Search row — always visible */}
@@ -1077,40 +1077,36 @@ export default function Leads() {
                   />
                 </div>
                 {projects.length > 0 && (
-                  <div className="relative" style={{ flexShrink: 0 }}>
-                    <select
-                      style={{ ...selStyle, minWidth: 120 }}
-                      value={selectedProject?._id || ""}
-                      onChange={(e) => {
-                        const p = projects.find((x) => x._id === e.target.value) || null;
-                        setSelectedProject(p); setProjPage(1); setProjSearch("");
-                      }}
-                    >
-                      <option value="">All Projects</option>
-                      {projects.map((p) => <option key={p._id} value={p._id}>{p.name} ({p.leadCount || 0})</option>)}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-                  </div>
+                  <CustomSelect
+                    value={selectedProject?._id || ""}
+                    onChange={(v) => {
+                      const p = projects.find((x) => x._id === v) || null;
+                      setSelectedProject(p); setProjPage(1); setProjSearch("");
+                    }}
+                    placeholder="All Projects"
+                    options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
+                    style={{ minWidth: 120 }}
+                  />
                 )}
                 {[
-                  { key: "status",   placeholder: "Status",   opts: STATUS_OPTIONS   },
-                  { key: "source",   placeholder: "Source",   opts: SOURCE_OPTIONS   },
-                  { key: "priority", placeholder: "Priority", opts: PRIORITY_OPTIONS },
+                  { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
+                  { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
+                  { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
                 ].map(({ key, placeholder, opts }) => (
-                  <div key={key} className="relative" style={{ flexShrink: 0 }}>
-                    <select style={selStyle} value={filters[key]} onChange={(e) => setFilter(key, e.target.value)}>
-                      <option value="">All {placeholder}s</option>
-                      {opts.map((s) => <option key={s}>{s}</option>)}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-                  </div>
+                  <CustomSelect
+                    key={key}
+                    value={filters[key]}
+                    onChange={(v) => setFilter(key, v)}
+                    placeholder={placeholder}
+                    options={opts}
+                  />
                 ))}
-                <div className="relative" style={{ flexShrink: 0 }}>
-                  <select style={selStyle} value={filters.dateRange} onChange={(e) => setFilter("dateRange", e.target.value)}>
-                    {DATE_RANGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
-                </div>
+                <CustomSelect
+                  value={filters.dateRange}
+                  onChange={(v) => setFilter("dateRange", v)}
+                  placeholder="Date range"
+                  options={DATE_RANGE_OPTIONS}
+                />
                 {isAdmin && (
                   <button
                     onClick={toggleMyOnly}
