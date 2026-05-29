@@ -1,5 +1,5 @@
 ﻿// pages/Landing.jsx - Arthaleads public marketing homepage
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight,
@@ -12,6 +12,7 @@ import {
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
+const InfiniteGallery = lazy(() => import("../components/InfiniteGallery"));
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -471,6 +472,73 @@ const HOW_STEPS = [
     highlight: "3× conversion improvement reported",
   },
 ];
+
+const GALLERY_IMAGES = [
+  { src: "/gallery-1.jpg", alt: "One CRM. Every Device." },
+  { src: "/gallery-2.jpg", alt: "ArthLeads Dashboard on MacBook" },
+  { src: "/gallery-3.jpg", alt: "ArthLeads Dashboard Overview" },
+  { src: "/gallery-4.jpg", alt: "From Everywhere. Into One ArthLeads." },
+];
+
+function GallerySection({ isDark }) {
+  const bg         = isDark ? "#0d0d1a" : "#fff7f0";
+  const headingClr = isDark ? "#ffffff" : "#111827";
+  const subClr     = isDark ? "rgba(255,255,255,0.5)" : "#6b7280";
+
+  return (
+    <section style={{ background: bg, position: "relative", overflow: "hidden" }}>
+      {/* Heading */}
+      <div className="text-center pt-16 pb-6 px-4" style={{ position: "relative", zIndex: 2 }}>
+        <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "#ff6b00" }}>
+          Built for Real Estate Teams
+        </p>
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight mb-3" style={{ color: headingClr }}>
+          See ArthLeads{" "}
+          <span style={{ color: "#ff6b00" }}>in action.</span>
+        </h2>
+        <p className="text-base sm:text-lg max-w-xl mx-auto" style={{ color: subClr }}>
+          One platform. Every screen. Every device. Built for the way your team actually works.
+        </p>
+      </div>
+
+      {/* 3D Gallery */}
+      <div style={{ position: "relative", height: "70vh", minHeight: 400 }}>
+        <Suspense fallback={
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+          </div>
+        }>
+          <InfiniteGallery
+            images={GALLERY_IMAGES}
+            className="h-full w-full"
+            fadeSettings={{
+              fadeIn:  { start: 0.05, end: 0.25 },
+              fadeOut: { start: 0.75, end: 0.9 },
+            }}
+            blurSettings={{
+              blurIn:  { start: 0.0, end: 0.1 },
+              blurOut: { start: 0.75, end: 0.9 },
+              maxBlur: 6.0,
+            }}
+          />
+        </Suspense>
+        {/* Hint text */}
+        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none" style={{ zIndex: 10 }}>
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: subClr }}>
+            Scroll or use arrow keys to navigate
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom fade */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 80,
+        background: `linear-gradient(to bottom, transparent, ${bg})`,
+        pointerEvents: "none", zIndex: 3,
+      }} />
+    </section>
+  );
+}
 
 function HowItWorks({ isDark }) {
   const [active, setActive] = useState(0);
@@ -1601,6 +1669,7 @@ export default function Landing() {
       <Hero isDark={isDark} />
       <SourcesStrip isDark={isDark} />
       <Features isDark={isDark} />
+      <GallerySection isDark={isDark} />
       <HowItWorks isDark={isDark} />
       <About isDark={isDark} />
       <Testimonials isDark={isDark} />
