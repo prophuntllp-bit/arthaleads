@@ -1,16 +1,18 @@
-﻿const Lead = require("../models/Lead");
+const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const mongoose = require("mongoose");
 
 const followupService = {
-  async get(user, { section, from, to, page = 1, limit = 50, sort }) {
+  async get(user, { section, from, to, page = 1, limit = 50, sort, myOnly = false }) {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Agent-scoped conditions for main leads only.
-    // Project leads are shared project resources - org is enforced via project lookup, no per-agent filter.
-    const agentLeadCond = user.role === "agent"
+    // Agents always see only their own leads.
+    // myOnly=true lets admin/manager opt-in to the same per-user scope.
+    // Project leads have no individual owner — excluded entirely when scopedToSelf.
+    const scopedToSelf = user.role === "agent" || myOnly;
+    const selfCond = scopedToSelf
       ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
       : [];
 
@@ -25,20 +27,16 @@ const followupService = {
 
     if (section === "past") {
       const pastFilter = { $lt: todayStart };
-      // Past events = full history view; do NOT filter by status (show closed deals too)
       leadFilter = {
         $and: [
           baseLeadFilter,
-          ...agentLeadCond,
-          {
-            $or: [
-              { followUpDate: pastFilter },
-              { followUpDate: null, createdAt: pastFilter, status: "New" },
-            ],
-          },
+          ...selfCond,
+          { $or: [
+            { followUpDate: pastFilter },
+            { followUpDate: null, createdAt: pastFilter, status: "New" },
+          ]},
         ],
       };
-      // Check followUp OR followUp2 - either missed date qualifies; show all booking states in history
       projFilter = {
         $or: [
           { followUp:  pastFilter },
@@ -51,11 +49,10 @@ const followupService = {
       leadFilter = {
         $and: [
           baseLeadFilter,
-          ...agentLeadCond,
+          ...selfCond,
           { followUpDate: todayRange },
         ],
       };
-      // Match project leads whose followUp OR followUp2 falls today
       projFilter = {
         $or: [
           { followUp:  todayRange },
@@ -69,11 +66,10 @@ const followupService = {
       leadFilter = {
         $and: [
           baseLeadFilter,
-          ...agentLeadCond,
+          ...selfCond,
           { followUpDate: futureFollowUp },
         ],
       };
-      // Match project leads whose followUp OR followUp2 is in the future window
       projFilter = {
         $or: [
           { followUp:  futureFollowUp },
@@ -84,9 +80,8 @@ const followupService = {
 
     const orgIdObj = typeof user.orgId === "string" ? new mongoose.Types.ObjectId(user.orgId) : user.orgId;
 
-    const [result] = await Lead.aggregate([
-      { $match: leadFilter },
-      { $addFields: { _type: "lead" } },
+    // Build the project-leads $unionWith stage (omitted when scopedToSelf)
+    const projUnionStage = scopedToSelf ? [] : [
       { $unionWith: {
         coll: "projectleads",
         pipeline: [
@@ -118,6 +113,12 @@ const followupService = {
           { $project: { _proj: 0 } },
         ],
       }},
+    ];
+
+    const [result] = await Lead.aggregate([
+      { $match: leadFilter },
+      { $addFields: { _type: "lead" } },
+      ...projUnionStage,
       // Smart default: past → latest missed first (desc); future/present → soonest first (asc)
       { $sort: {
         followUpDate: sort === "asc" ? 1 : sort === "desc" ? -1 : (section === "past" ? -1 : 1),

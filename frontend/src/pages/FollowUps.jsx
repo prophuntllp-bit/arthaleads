@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2 } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 // ── Route patch to correct API based on lead type ─────────────────────────────
 async function patchLead(lead, data) {
@@ -119,6 +120,7 @@ const FU_BOOKING_OPTIONS = [
   { value: "Booked",             label: "Booked",             color: "text-green-600" },
   { value: "Not Interested",     label: "Not Interested",     color: "text-red-500" },
   { value: "Not Reachable",      label: "Not Reachable",      color: "text-gray-500" },
+  { value: "Low Budget",         label: "Low Budget",          color: "text-orange-500" },
 ];
 function FUBooking({ lead, onUpdate }) {
   const [saving, setSaving] = useState(false);
@@ -175,6 +177,9 @@ function BookingBadge({ value }) {
 
 export default function FollowUps() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role && user.role !== "agent";
+
   const [section, setSection] = useState("present");
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
@@ -185,8 +190,21 @@ export default function FollowUps() {
   const [to, setTo] = useState("");
   // Smart defaults: past = latest missed first (desc), future/present = soonest first (asc)
   const [sort, setSort] = useState("desc"); // "asc" | "desc"
+  // myOnly: admin/manager toggle to see only their own leads (persisted per session)
+  const [myOnly, setMyOnly] = useState(() => {
+    try { return localStorage.getItem("followups_myOnly") === "true"; } catch { return false; }
+  });
 
   const limit = 50;
+
+  const toggleMyOnly = () => {
+    setMyOnly(v => {
+      const next = !v;
+      try { localStorage.setItem("followups_myOnly", String(next)); } catch {}
+      return next;
+    });
+    setPage(1);
+  };
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -196,6 +214,7 @@ export default function FollowUps() {
         if (from) params.set("from", from);
         if (to) params.set("to", to);
       }
+      if (isAdmin && myOnly) params.set("myOnly", "true");
       const r = await api.get(`/followups?${params.toString()}`);
       setLeads(r.data.leads || []);
       setTotal(r.data.total || 0);
@@ -205,7 +224,7 @@ export default function FollowUps() {
     } finally {
       setLoading(false);
     }
-  }, [section, page, from, to, sort]);
+  }, [section, page, from, to, sort, myOnly, isAdmin]);
 
   // Reset page + set smart sort default when switching sections
   useEffect(() => {
@@ -257,8 +276,25 @@ export default function FollowUps() {
         </div>
       </div>
 
-      {/* Controls row - sort toggle + future date filters */}
+      {/* Controls row - sort toggle + future date filters + my-only toggle */}
       <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
+        {/* My leads only toggle — admin/manager only */}
+        {isAdmin && (
+          <button
+            onClick={toggleMyOnly}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
+            style={{
+              borderColor: myOnly ? "var(--app-primary)" : "var(--app-border)",
+              background: myOnly ? "rgba(var(--app-primary-rgb),0.12)" : "var(--app-surface-low)",
+              color: myOnly ? "var(--app-primary)" : "var(--app-text-soft)",
+            }}
+            title={myOnly ? "Showing only your leads — click to show all" : "Showing all team leads — click to show only yours"}
+          >
+            <User className="w-3.5 h-3.5" />
+            {myOnly ? "My Leads Only" : "All Leads"}
+          </button>
+        )}
+
         {/* Sort toggle - always visible */}
         <div className="flex items-center gap-1 p-0.5 rounded-xl" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           <button
