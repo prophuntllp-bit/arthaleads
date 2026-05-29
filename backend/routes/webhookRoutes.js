@@ -464,6 +464,7 @@ router.post("/website", express.json(), async (req, res) => {
       assignedToName: assignee?.name || "",
       leadSourceLabel: sourceLabel,
       formPlugin: form_plugin || "",
+      sourcePage: page_url || "",
       notes: [
         {
           text: [

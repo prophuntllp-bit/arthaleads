@@ -240,6 +240,8 @@ const leadController = {
         Phone: lead.phone || "",
         Email: lead.email || "",
         Source: lead.source || "",
+        SourceSite: lead.leadSourceLabel || "",
+        SourcePage: lead.sourcePage || "",
         Status: lead.status || "",
         Priority: lead.priority || "",
         PropertyType: lead.propertyType || "",

@@ -32,7 +32,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, Pencil, Plus, Search, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -1027,6 +1027,15 @@ export default function Leads() {
               onChange={(e) => setFilter("search", e.target.value)}
             />
           </div>
+          <div className="relative" style={{ flex: "0 1 180px" }}>
+            <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+            <input
+              style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+              placeholder="Filter by site / domain…"
+              value={filters.siteFilter || ""}
+              onChange={(e) => setFilter("siteFilter", e.target.value)}
+            />
+          </div>
           {[
             { key: "status",    placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
             { key: "source",    placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
@@ -1068,7 +1077,7 @@ export default function Leads() {
             <button
               className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-500/10 transition"
               onClick={() => {
-                ["search", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
+                ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
                 setSelectedProject(null);
                 try { localStorage.removeItem("leads_myOnly"); } catch {}
               }}

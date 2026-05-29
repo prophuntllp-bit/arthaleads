@@ -173,6 +173,10 @@ const leadService = {
         { preferredLocation: { $regex: safeSearch, $options: "i" } },
       ] });
     }
+    if (query.siteFilter) {
+      const rx = { $regex: escapeRegex(query.siteFilter), $options: "i" };
+      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }] });
+    }
 
     if (andConditions.length) {
       filter.$and = andConditions;
@@ -445,7 +449,7 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to, followUpToday } = query;
+    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
     const limitInt = parseInt(limit);
     const pageInt  = parseInt(page);
     const skip     = (pageInt - 1) * limitInt;
@@ -457,8 +461,10 @@ const leadService = {
 
     // ── Lead filter ────────────────────────────────────────────────────────────
     const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
+    const andConditions = [];
+
     if (user.role === "agent" || query.myOnly === "true") {
-      leadFilter.$and = [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }];
+      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
     }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
@@ -469,8 +475,13 @@ const leadService = {
     }
     if (search) {
       const rx = { $regex: escapeRegex(search), $options: "i" };
-      leadFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
+      andConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }] });
     }
+    if (siteFilter) {
+      const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
+      andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }] });
+    }
+    if (andConditions.length) leadFilter.$and = andConditions;
 
     // ── ProjectLead filter (native DB fields only) ─────────────────────────────
     const projFilter = { booking: { $ne: "Not Interested" }, orgId: user.orgId };
