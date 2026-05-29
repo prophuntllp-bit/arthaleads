@@ -149,7 +149,7 @@ const leadService = {
       dateRange, from, to,
     } = query;
 
-    const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
+    const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     const andConditions = [];
 
     // Agents only see leads explicitly assigned to them
@@ -456,7 +456,7 @@ const leadService = {
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
 
     // ── Lead filter ────────────────────────────────────────────────────────────
-    const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true }, booking: { $ne: "Not Interested" } };
+    const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
     if (user.role === "agent") leadFilter.assignedTo = user._id;
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
@@ -858,7 +858,6 @@ const leadService = {
       orgId: user.orgId,
       $or: [
         { isDeleted: true },
-        { booking: "Not Interested" },
         { status: "Closed Lost" },
       ],
     };

@@ -123,6 +123,20 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
   const dateVal = toLocalInput(value);
   const displayTime = value ? fmtLocalTime(value) : "";
+
+  // Derive current hour from local datetime string (e.g. "2025-05-29T14:30")
+  const localHour = dateVal ? parseInt(dateVal.split("T")[1]?.split(":")[0] ?? "0", 10) : null;
+  const isAM = localHour !== null && localHour < 12;
+
+  const toggleAmPm = () => {
+    if (!dateVal) return;
+    const [datePart, timePart] = dateVal.split("T");
+    if (!timePart) return;
+    const [h, m] = timePart.split(":").map(Number);
+    const newH = h < 12 ? h + 12 : h - 12;
+    save(`${datePart}T${_pad(newH)}:${_pad(m)}`);
+  };
+
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <div className="flex items-center gap-1">
@@ -134,6 +148,17 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
         title={displayTime || "Set date & time"}
         onChange={(e) => save(e.target.value)}
       />
+      {localHour !== null && (
+        <button
+          type="button"
+          onClick={toggleAmPm}
+          title={`Switch to ${isAM ? "PM" : "AM"}`}
+          className={`shrink-0 flex items-center justify-center h-6 px-1.5 rounded-md border text-[10px] font-bold transition ${isAM ? "text-sky-500 hover:bg-sky-500/10" : "text-orange-500 hover:bg-orange-500/10"}`}
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+        >
+          {isAM ? "AM" : "PM"}
+        </button>
+      )}
       <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
         className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
@@ -302,6 +327,19 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
   };
   const dateVal = toLocalInput(value);
   const displayTime = value ? fmtLocalTime(value) : "";
+
+  const localHour = dateVal ? parseInt(dateVal.split("T")[1]?.split(":")[0] ?? "0", 10) : null;
+  const isAM = localHour !== null && localHour < 12;
+
+  const toggleAmPm = () => {
+    if (!dateVal) return;
+    const [datePart, timePart] = dateVal.split("T");
+    if (!timePart) return;
+    const [h, m] = timePart.split(":").map(Number);
+    const newH = h < 12 ? h + 12 : h - 12;
+    save(`${datePart}T${_pad(newH)}:${_pad(m)}`);
+  };
+
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
     <div className="flex items-center gap-1">
@@ -311,6 +349,17 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
         value={dateVal}
         title={displayTime || "Set date & time"}
         onChange={(e) => save(e.target.value)} />
+      {localHour !== null && (
+        <button
+          type="button"
+          onClick={toggleAmPm}
+          title={`Switch to ${isAM ? "PM" : "AM"}`}
+          className={`shrink-0 flex items-center justify-center h-6 px-1.5 rounded-md border text-[10px] font-bold transition ${isAM ? "text-sky-500 hover:bg-sky-500/10" : "text-orange-500 hover:bg-orange-500/10"}`}
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+        >
+          {isAM ? "AM" : "PM"}
+        </button>
+      )}
       <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
         className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
         style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>

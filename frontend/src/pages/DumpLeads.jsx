@@ -495,12 +495,12 @@ export default function DumpLeads() {
                               className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
-                          ) : lead.isDeleted ? (
+                          ) : (
                             <button onClick={() => handleRestore(lead._id)}
                               className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
-                          ) : null}
+                          )}
                           {lead._type === "project" ? (
                             <button onClick={() => handleProjHardDelete(lead)}
                               className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
