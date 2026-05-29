@@ -32,8 +32,9 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Clock, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Pencil, Plus, Search, Trash2, Upload, Users } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
+import DateTimePicker from "../components/DateTimePicker";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -82,90 +83,22 @@ function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "A
   );
 }
 
-// ── Datetime helpers - use browser local time, no manual timezone math ───────
-const _pad = n => String(n).padStart(2, "0");
-// UTC string from DB → datetime-local input value in device local time
-function toLocalInput(utcStr) {
-  if (!utcStr) return "";
-  const d = new Date(utcStr);
-  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
-}
-// datetime-local input value (local time) → UTC ISO string for DB
-function fromLocalInput(localStr) {
-  if (!localStr) return null;
-  return new Date(localStr).toISOString();
-}
-// Current local time string for "Now" button
-function nowLocal() {
-  const d = new Date();
-  return `${d.getFullYear()}-${_pad(d.getMonth()+1)}-${_pad(d.getDate())}T${_pad(d.getHours())}:${_pad(d.getMinutes())}`;
-}
-// Readable time label below the input
-function fmtLocalTime(utcStr) {
-  if (!utcStr) return "";
-  return new Date(utcStr).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-}
 
 // ── Inline date cell (compact single-line) ────────────────────────────────────
 function InlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
-
-  const save = async (dateStr) => {
+  const save = async (isoStr) => {
     setSaving(true);
     try {
       const res = projectId
-        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromLocalInput(dateStr) })
-        : await api.put(`/leads/${leadId}`, { [field]: fromLocalInput(dateStr) });
+        ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: isoStr })
+        : await api.put(`/leads/${leadId}`, { [field]: isoStr });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-
-  const dateVal = toLocalInput(value);
-  const displayTime = value ? fmtLocalTime(value) : "";
-
-  // Derive current hour from local datetime string (e.g. "2025-05-29T14:30")
-  const localHour = dateVal ? parseInt(dateVal.split("T")[1]?.split(":")[0] ?? "0", 10) : null;
-  const isAM = localHour !== null && localHour < 12;
-
-  const toggleAmPm = () => {
-    if (!dateVal) return;
-    const [datePart, timePart] = dateVal.split("T");
-    if (!timePart) return;
-    const [h, m] = timePart.split(":").map(Number);
-    const newH = h < 12 ? h + 12 : h - 12;
-    save(`${datePart}T${_pad(newH)}:${_pad(m)}`);
-  };
-
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return (
-    <div className="flex items-center gap-1">
-      <input
-        type="datetime-local"
-        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
-        value={dateVal}
-        title={displayTime || "Set date & time"}
-        onChange={(e) => save(e.target.value)}
-      />
-      {localHour !== null && (
-        <button
-          type="button"
-          onClick={toggleAmPm}
-          title={`Switch to ${isAM ? "PM" : "AM"}`}
-          className={`shrink-0 flex items-center justify-center h-6 px-1.5 rounded-md border text-[10px] font-bold transition ${isAM ? "text-sky-500 hover:bg-sky-500/10" : "text-orange-500 hover:bg-orange-500/10"}`}
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-        >
-          {isAM ? "AM" : "PM"}
-        </button>
-      )}
-      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
-        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-        <Clock className="h-3 w-3" />
-      </button>
-    </div>
-  );
+  return <DateTimePicker value={value} onChange={save} />;
 }
 
 // ── Inline booking select ─────────────────────────────────────────────────────
@@ -317,56 +250,16 @@ function RemarkPopupCell({ value, leadId, projectId, field, placeholder = "Add r
 
 function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
   const [saving, setSaving] = useState(false);
-  const save = async (dateStr) => {
+  const save = async (isoStr) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: fromLocalInput(dateStr) });
+      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: isoStr });
       onSaved(res.data.data);
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-  const dateVal = toLocalInput(value);
-  const displayTime = value ? fmtLocalTime(value) : "";
-
-  const localHour = dateVal ? parseInt(dateVal.split("T")[1]?.split(":")[0] ?? "0", 10) : null;
-  const isAM = localHour !== null && localHour < 12;
-
-  const toggleAmPm = () => {
-    if (!dateVal) return;
-    const [datePart, timePart] = dateVal.split("T");
-    if (!timePart) return;
-    const [h, m] = timePart.split(":").map(Number);
-    const newH = h < 12 ? h + 12 : h - 12;
-    save(`${datePart}T${_pad(newH)}:${_pad(m)}`);
-  };
-
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return (
-    <div className="flex items-center gap-1">
-      <input type="datetime-local"
-        className="rounded-lg border px-1.5 py-1 text-xs focus:outline-none focus:border-orange-400"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", width: 138 }}
-        value={dateVal}
-        title={displayTime || "Set date & time"}
-        onChange={(e) => save(e.target.value)} />
-      {localHour !== null && (
-        <button
-          type="button"
-          onClick={toggleAmPm}
-          title={`Switch to ${isAM ? "PM" : "AM"}`}
-          className={`shrink-0 flex items-center justify-center h-6 px-1.5 rounded-md border text-[10px] font-bold transition ${isAM ? "text-sky-500 hover:bg-sky-500/10" : "text-orange-500 hover:bg-orange-500/10"}`}
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-        >
-          {isAM ? "AM" : "PM"}
-        </button>
-      )}
-      <button type="button" title={`Set to now${displayTime ? " (currently: " + displayTime + ")" : ""}`} onClick={() => save(nowLocal())}
-        className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md border text-orange-500 hover:bg-orange-500/10 transition"
-        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-        <Clock className="h-3 w-3" />
-      </button>
-    </div>
-  );
+  return <DateTimePicker value={value} onChange={save} />;
 }
 
 const PROJ_BOOKING_OPTIONS = [
