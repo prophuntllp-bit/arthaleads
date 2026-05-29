@@ -282,16 +282,31 @@ export default function FollowUps() {
         {isAdmin && (
           <button
             onClick={toggleMyOnly}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all"
-            style={{
-              borderColor: myOnly ? "var(--app-primary)" : "var(--app-border)",
-              background: myOnly ? "rgba(var(--app-primary-rgb),0.12)" : "var(--app-surface-low)",
-              color: myOnly ? "var(--app-primary)" : "var(--app-text-soft)",
-            }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
             title={myOnly ? "Showing only your leads — click to show all" : "Showing all team leads — click to show only yours"}
           >
-            <User className="w-3.5 h-3.5" />
-            {myOnly ? "My Leads Only" : "All Leads"}
+            <User className="w-3.5 h-3.5 shrink-0" />
+            <span>My Leads</span>
+            {/* iOS-style toggle track */}
+            <span
+              style={{
+                display: "inline-flex", alignItems: "center",
+                width: 32, height: 18, borderRadius: 9, padding: "0 2px",
+                background: myOnly ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)",
+                transition: "background 0.2s",
+                flexShrink: 0,
+              }}
+            >
+              {/* thumb */}
+              <span style={{
+                width: 14, height: 14, borderRadius: "50%", background: "#fff",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                transform: myOnly ? "translateX(14px)" : "translateX(0)",
+                transition: "transform 0.2s",
+                display: "block",
+              }} />
+            </span>
           </button>
         )}
 
