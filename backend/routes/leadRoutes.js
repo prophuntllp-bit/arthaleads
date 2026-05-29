@@ -183,4 +183,39 @@ router.post("/:id/retry-facebook", async (req, res, next) => {
   }
 });
 
+// POST /api/leads/backfill-source-domain  (admin only)
+// One-time migration: scans notes for "Page: <url>" and populates sourcePage + sourceDomain
+router.post("/backfill-source-domain", authorize("admin"), async (req, res, next) => {
+  try {
+    const leads = await Lead.find({
+      orgId: req.user.orgId,
+      sourcePage: { $in: ["", null] },
+      "notes.0": { $exists: true },
+    }).select("_id notes sourcePage sourceDomain");
+
+    let updated = 0;
+    const PAGE_RE = /(?:^|\n)Page:\s*(https?:\/\/\S+)/i;
+
+    const ops = [];
+    for (const lead of leads) {
+      const noteText = (lead.notes || []).map((n) => n.text || "").join("\n");
+      const match = noteText.match(PAGE_RE);
+      if (!match) continue;
+      const pageUrl = match[1].trim();
+      let domain = "";
+      try { domain = new URL(pageUrl).hostname.replace(/^www\./, ""); } catch {}
+      ops.push({
+        updateOne: {
+          filter: { _id: lead._id },
+          update: { $set: { sourcePage: pageUrl, sourceDomain: domain } },
+        },
+      });
+      updated++;
+    }
+
+    if (ops.length) await Lead.bulkWrite(ops);
+    res.json({ success: true, updated, message: `Backfilled ${updated} lead(s)` });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
