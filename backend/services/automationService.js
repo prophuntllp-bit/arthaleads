@@ -208,7 +208,6 @@ const automationService = {
         "pages_manage_metadata",
         "pages_read_engagement",
         "leads_retrieval",
-        "business_management",
       ].join(","),
     });
 
@@ -290,46 +289,14 @@ const automationService = {
     const directPages = json1.data || [];
     console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} direct page(s)`);
 
-    // 2️⃣ Business Manager pages — always query even when direct pages exist,
-    //    because users often have a mix of personally-managed and BM-managed pages.
-    //    The old code short-circuited here if directPages.length > 0 which caused
-    //    BM-only pages to go missing from the dropdown.
-    const bmPages = [];
-    try {
-      const bizParams = new URLSearchParams({ access_token: accessToken, fields: "id,name", limit: "50" });
-      const bizResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/businesses?${bizParams.toString()}`);
-      const bizJson = await bizResp.json();
-
-      if (bizResp.ok && !bizJson.error) {
-        const businesses = bizJson.data || [];
-        console.log(`[fetchFacebookPages] /me/businesses: ${businesses.length} business(es) - ${businesses.map(b => `${b.name}(${b.id})`).join(", ")}`);
-
-        for (const biz of businesses) {
-          for (const endpoint of ["owned_pages", "client_pages"]) {
-            const pageParams = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token", limit: "200" });
-            const pageResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${biz.id}/${endpoint}?${pageParams.toString()}`);
-            const pageJson = await pageResp.json();
-            if (pageJson.error) {
-              console.warn(`[fetchFacebookPages] ${endpoint} for biz "${biz.name}" error:`, JSON.stringify(pageJson.error));
-              continue;
-            }
-            const batch = pageJson.data || [];
-            console.log(`[fetchFacebookPages] Business "${biz.name}" ${endpoint}: ${batch.length} page(s)`);
-            bmPages.push(...batch);
-          }
-        }
-      } else {
-        console.warn("[fetchFacebookPages] /me/businesses failed or returned error:", JSON.stringify(bizJson.error || bizJson));
-      }
-    } catch (bizErr) {
-      console.warn("[fetchFacebookPages] Business Manager lookup exception:", bizErr.message);
-    }
-
-    // 3️⃣ Merge both sources; fetch missing page tokens; deduplicate by page ID
-    const combined = [...directPages, ...bmPages];
-
+    // 2️⃣ Fetch page tokens for any pages missing them, then deduplicate
+    // Note: /me/businesses (Business Manager pages) requires the business_management
+    // permission which needs separate Facebook App Review approval. Until that is
+    // granted, only pages directly administered on the user's personal profile
+    // (/me/accounts) are returned. Customers whose pages are Business-Manager-only
+    // must add themselves as a personal Page Admin first, then reconnect.
     const enriched = await Promise.all(
-      combined.map(async (page) => {
+      directPages.map(async (page) => {
         if (page.access_token) return page;
         const pageToken = await this.fetchPageToken(page.id, accessToken);
         return { ...page, access_token: pageToken };
@@ -339,7 +306,7 @@ const automationService = {
     const seen = new Set();
     const deduped = enriched.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
-    console.log(`[fetchFacebookPages] Total unique pages: ${deduped.length} (${directPages.length} direct + ${bmPages.length} via BM, after dedup)`);
+    console.log(`[fetchFacebookPages] Total unique pages: ${deduped.length} (direct /me/accounts)`);
     return deduped;
   },
 
