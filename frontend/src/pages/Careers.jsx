@@ -869,58 +869,35 @@ export default function Careers() {
         </div>
       </section>
 
-      {/* ── Perks ── */}
-      <section ref={perksRef} style={{ padding: "72px 24px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
+      {/* ── Open Positions ── */}
+      <section ref={positionsRef} style={{ padding: "72px 24px" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto" }}>
+          <div ref={jobsRef} style={{ textAlign: "center", marginBottom: 48,
+            opacity: jobsVisible ? 1 : 0,
+            transform: jobsVisible ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.6s ease, transform 0.6s ease",
+          }}>
             <div style={{
-              fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
-              color: "#ff6b00", marginBottom: 10,
-            }}>Why join us</div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>
-              Built for people who want to{" "}
-              <span style={{ color: "#ff6b00" }}>make an impact</span>
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "5px 14px", borderRadius: 30, marginBottom: 14,
+              background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                2 Positions Open
+              </span>
+            </div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 900, color: heading }}>
+              Open Positions
             </h2>
-            <p style={{ fontSize: 15, color: body, maxWidth: 480, margin: "0 auto" }}>
-              Small team. Big real-estate market. Every person here shapes how the product works.
+            <p style={{ fontSize: 15, color: body, marginTop: 8 }}>
+              Click a role to see the full details, then hit Apply Now.
             </p>
           </div>
 
-          <div className="careers-perks-grid">
-            {PERKS.map(({ icon: Icon, title, desc, color }, i) => (
-              <div key={title}
-                style={{
-                  padding: "24px 22px",
-                  borderRadius: 18,
-                  background: sectionBg,
-                  border: `1px solid ${sectionBdr}`,
-                  opacity: perksVisible ? 1 : 0,
-                  transform: perksVisible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
-                  transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s, box-shadow 0.22s, border 0.22s`,
-                  cursor: "default",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.boxShadow = `0 12px 36px ${color}22`;
-                  e.currentTarget.style.borderColor = color + "44";
-                  e.currentTarget.style.transform = "translateY(-4px) scale(1)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.boxShadow = "none";
-                  e.currentTarget.style.borderColor = sectionBdr;
-                  e.currentTarget.style.transform = "translateY(0) scale(1)";
-                }}
-              >
-                <div style={{
-                  width: 44, height: 44, borderRadius: 14,
-                  background: color + "18",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  marginBottom: 14,
-                }}>
-                  <Icon style={{ width: 20, height: 20, color }} />
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 6 }}>{title}</div>
-                <div style={{ fontSize: 13, color: body, lineHeight: 1.65 }}>{desc}</div>
-              </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {JOBS.map((job, i) => (
+              <JobCard key={job.id} job={job} isDark={isDark} index={i} onApply={setApplyJob} />
             ))}
           </div>
         </div>
@@ -990,35 +967,58 @@ export default function Careers() {
         </div>
       </section>
 
-      {/* ── Open Positions ── */}
-      <section ref={positionsRef} style={{ padding: "72px 24px" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto" }}>
-          <div ref={jobsRef} style={{ textAlign: "center", marginBottom: 48,
-            opacity: jobsVisible ? 1 : 0,
-            transform: jobsVisible ? "translateY(0)" : "translateY(20px)",
-            transition: "opacity 0.6s ease, transform 0.6s ease",
-          }}>
+      {/* ── Perks ── */}
+      <section ref={perksRef} style={{ padding: "72px 24px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
             <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "5px 14px", borderRadius: 30, marginBottom: 14,
-              background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)",
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite" }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                2 Positions Open
-              </span>
-            </div>
-            <h2 style={{ fontSize: "clamp(26px, 4vw, 40px)", fontWeight: 900, color: heading }}>
-              Open Positions
+              fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em",
+              color: "#ff6b00", marginBottom: 10,
+            }}>Why join us</div>
+            <h2 style={{ fontSize: "clamp(26px, 4vw, 38px)", fontWeight: 900, color: heading, marginBottom: 12 }}>
+              Built for people who want to{" "}
+              <span style={{ color: "#ff6b00" }}>make an impact</span>
             </h2>
-            <p style={{ fontSize: 15, color: body, marginTop: 8 }}>
-              Click a role to see the full details, then hit Apply Now.
+            <p style={{ fontSize: 15, color: body, maxWidth: 480, margin: "0 auto" }}>
+              Small team. Big real-estate market. Every person here shapes how the product works.
             </p>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {JOBS.map((job, i) => (
-              <JobCard key={job.id} job={job} isDark={isDark} index={i} onApply={setApplyJob} />
+          <div className="careers-perks-grid">
+            {PERKS.map(({ icon: Icon, title, desc, color }, i) => (
+              <div key={title}
+                style={{
+                  padding: "24px 22px",
+                  borderRadius: 18,
+                  background: sectionBg,
+                  border: `1px solid ${sectionBdr}`,
+                  opacity: perksVisible ? 1 : 0,
+                  transform: perksVisible ? "translateY(0) scale(1)" : "translateY(24px) scale(0.97)",
+                  transition: `opacity 0.55s ease ${i * 0.1}s, transform 0.55s ease ${i * 0.1}s, box-shadow 0.22s, border 0.22s`,
+                  cursor: "default",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.boxShadow = `0 12px 36px ${color}22`;
+                  e.currentTarget.style.borderColor = color + "44";
+                  e.currentTarget.style.transform = "translateY(-4px) scale(1)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.boxShadow = "none";
+                  e.currentTarget.style.borderColor = sectionBdr;
+                  e.currentTarget.style.transform = "translateY(0) scale(1)";
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: 14,
+                  background: color + "18",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  marginBottom: 14,
+                }}>
+                  <Icon style={{ width: 20, height: 20, color }} />
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 13, color: body, lineHeight: 1.65 }}>{desc}</div>
+              </div>
             ))}
           </div>
         </div>
