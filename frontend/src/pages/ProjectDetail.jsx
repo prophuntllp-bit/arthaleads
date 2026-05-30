@@ -10,6 +10,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
+import CustomSelect from "../components/CustomSelect";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
   Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
@@ -193,16 +194,12 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
 
   return (
-    <select
-      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 120, maxWidth: 145 }}
+    <CustomSelect
       value={value || ""}
-      onChange={(e) => save(e.target.value)}
-    >
-      {BOOKING_OPTIONS.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
+      onChange={save}
+      options={BOOKING_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+      style={{ minWidth: 120, maxWidth: 145 }}
+    />
   );
 }
 
@@ -238,16 +235,20 @@ function RemarkCell({ lead, projectId, onUpdated }) {
   return (
     <div className="flex flex-col gap-2 min-w-[160px]">
       <div className="relative">
-        <select
+        <CustomSelect
           value={remark}
-          onChange={handleChange}
-          className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${remarkClass}`}
-          style={{ background: "var(--app-surface-low)" }}
-        >
-          <option value="">- None -</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Not Contacted">Not Contacted</option>
-        </select>
+          onChange={(val) => {
+            setRemark(val);
+            if (val !== "Contacted") { setNote(""); saveRemark(val, ""); }
+            else saveRemark(val, note);
+          }}
+          placeholder="- None -"
+          options={[
+            { value: "Contacted", label: "Contacted" },
+            { value: "Not Contacted", label: "Not Contacted" },
+          ]}
+          style={{ width: "100%" }}
+        />
         {saving && <div className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></div>}
       </div>
       {remark === "Contacted" && (

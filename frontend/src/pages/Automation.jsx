@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
 const PLATFORM_PRESETS = {
@@ -381,12 +382,20 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
               <div className="space-y-1">
                 <label className="label">Facebook Page</label>
                 {pages.length > 0 ? (
-                  <select className="select" value={pageId} onChange={handlePageChange}>
-                    <option value="">Select a page…</option>
-                    {pages.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    value={pageId}
+                    onChange={(id) => {
+                      setPageId(id);
+                      const pg = pages.find((p) => p.id === id);
+                      setFormId(pg?.forms?.[0]?.id || "");
+                      if (!connName || connName.endsWith("- Lead Ads")) {
+                        setConnName(pg ? `${pg.name} - Lead Ads` : "");
+                      }
+                    }}
+                    placeholder="Select a page…"
+                    options={pages.map((p) => ({ value: p.id, label: p.name }))}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                  />
                 ) : (
                   <input
                     className="input"
@@ -400,12 +409,13 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
               <div className="space-y-1">
                 <label className="label">Lead Form</label>
                 {pages.length > 0 ? (
-                  <select className="select" value={formId} onChange={(e) => setFormId(e.target.value)}>
-                    <option value="">All forms on this page</option>
-                    {formOptions.map((f) => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    value={formId}
+                    onChange={setFormId}
+                    placeholder="All forms on this page"
+                    options={formOptions.map((f) => ({ value: f.id, label: f.name }))}
+                    style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                  />
                 ) : (
                   <input
                     className="input"
@@ -575,19 +585,35 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
           </div>
           <div>
             <label className="label">Platform</label>
-            <select className="select" value={form.platform} onChange={handlePlatformChange}>
-              {Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook").map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
+            <CustomSelect
+              value={form.platform}
+              onChange={(platform) => {
+                const preset = PLATFORM_PRESETS[platform] || PLATFORM_PRESETS.Custom;
+                setForm((f) => ({
+                  ...f,
+                  platform,
+                  mode: preset.mode,
+                  leadSourceLabel: preset.leadSourceLabel,
+                  webhookPath: preset.webhookPath,
+                  description: preset.description || "",
+                }));
+              }}
+              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook")}
+              style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+            />
           </div>
           <div>
             <label className="label">Status</label>
-            <select className="select" value={form.status} onChange={set("status")}>
-              <option value="draft">Draft</option>
-              <option value="connected">Connected</option>
-              <option value="paused">Paused</option>
-            </select>
+            <CustomSelect
+              value={form.status}
+              onChange={(v) => setForm((f) => ({ ...f, status: v }))}
+              options={[
+                { value: "draft", label: "Draft" },
+                { value: "connected", label: "Connected" },
+                { value: "paused", label: "Paused" },
+              ]}
+              style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+            />
           </div>
           <div>
             <label className="label">Lead Source Label</label>
@@ -1351,16 +1377,22 @@ function LeadRoutingSection() {
 
             <div className="space-y-1">
               <label className="label">Assign To</label>
-              <select className="select" value={form.assignTo} onChange={(e) => setForm((f) => ({ ...f, assignTo: e.target.value }))}>
-                {SALES_AGENTS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              <CustomSelect
+                value={form.assignTo}
+                onChange={(v) => setForm((f) => ({ ...f, assignTo: v }))}
+                options={SALES_AGENTS.map((a) => ({ value: a.id, label: a.name }))}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
             </div>
 
             <div className="space-y-1">
               <label className="label">Match By</label>
-              <select className="select" value={form.matchField} onChange={(e) => setForm((f) => ({ ...f, matchField: e.target.value }))}>
-                {Object.entries(MATCH_FIELD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              <CustomSelect
+                value={form.matchField}
+                onChange={(v) => setForm((f) => ({ ...f, matchField: v }))}
+                options={Object.entries(MATCH_FIELD_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
             </div>
 
             <div className="space-y-1">

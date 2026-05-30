@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -383,13 +384,12 @@ export default function DumpLeads() {
         />
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs text-app-soft whitespace-nowrap">Show rows</span>
-          <select
-            className="input w-20 py-2 text-sm"
-            value={limit}
-            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-          >
-            {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
+          <CustomSelect
+            value={String(limit)}
+            onChange={(v) => { setLimit(Number(v)); setPage(1); }}
+            options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+            style={{ minWidth: 70 }}
+          />
         </div>
       </div>
 

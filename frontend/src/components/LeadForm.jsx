@@ -137,22 +137,22 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
           <input className="input" value={form.city} onChange={setValue("city")} />
         </FormField>
         <FormField label="Source">
-          <CustomSelect value={form.source} onChange={setField("source")} options={SOURCE_OPTIONS} style={{ width: "100%" }} />
+          <CustomSelect value={form.source} onChange={setField("source")} options={SOURCE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Status">
-          <CustomSelect value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} style={{ width: "100%" }} />
+          <CustomSelect value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Priority">
-          <CustomSelect value={form.priority} onChange={setField("priority")} options={PRIORITY_OPTIONS} style={{ width: "100%" }} />
+          <CustomSelect value={form.priority} onChange={setField("priority")} options={PRIORITY_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Property Type">
-          <CustomSelect value={form.propertyType} onChange={setField("propertyType")} options={PROPERTY_TYPES} style={{ width: "100%" }} />
+          <CustomSelect value={form.propertyType} onChange={setField("propertyType")} options={PROPERTY_TYPES} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="BHK">
-          <CustomSelect value={form.bhk} onChange={setField("bhk")} options={BHK_OPTIONS} style={{ width: "100%" }} />
+          <CustomSelect value={form.bhk} onChange={setField("bhk")} options={BHK_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Purpose">
-          <CustomSelect value={form.purpose} onChange={setField("purpose")} options={PURPOSE_OPTIONS} style={{ width: "100%" }} />
+          <CustomSelect value={form.purpose} onChange={setField("purpose")} options={PURPOSE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Preferred Location">
           <input className="input" value={form.preferredLocation} onChange={setValue("preferredLocation")} />
@@ -172,7 +172,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
             onChange={setField("assignedTo")}
             placeholder="Unassigned"
             options={agents.map((a) => ({ value: a._id, label: `${a.name} (${a.role})` }))}
-            style={{ width: "100%" }}
+            style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
           />
         </FormField>
         <div className="md:col-span-2">

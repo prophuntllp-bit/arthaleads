@@ -4,6 +4,7 @@ import { ArrowLeftRight, CheckCircle2, Clock3, MapPinned, PhoneCall, RefreshCw, 
 import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
@@ -257,9 +258,12 @@ export default function LeadPipeline() {
                     {/* Move stage */}
                     <div>
                       <label className="label">Move to stage</label>
-                      <select className="select rounded-2xl" value={lead.status} onChange={(e) => handleMove(lead, e.target.value)}>
-                        {STATUS_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-                      </select>
+                      <CustomSelect
+                        value={lead.status}
+                        onChange={(v) => handleMove(lead, v)}
+                        options={STATUS_OPTIONS}
+                        style={{ width: "100%" }}
+                      />
                     </div>
                   </article>
                 ))}

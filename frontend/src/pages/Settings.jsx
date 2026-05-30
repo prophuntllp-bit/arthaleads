@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import CustomSelect from "../components/CustomSelect";
 
 export default function Settings() {
   useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
@@ -141,11 +142,16 @@ export default function Settings() {
             <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
             <div>
               <label className="label">Role</label>
-              <select className="select" value={form.role} onChange={setValue("role")}>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="agent">Sales Agent</option>
-              </select>
+              <CustomSelect
+                value={form.role}
+                onChange={(v) => setValue("role")({ target: { value: v } })}
+                options={[
+                  { value: "admin", label: "Admin" },
+                  { value: "manager", label: "Manager" },
+                  { value: "agent", label: "Sales Agent" },
+                ]}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
             </div>
           </div>
         </section>

@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 
 const emptyMember = {
   name: "",
@@ -280,11 +281,16 @@ export default function Team() {
           </div>
           <div>
             <label className="label">Role</label>
-            <select className="select" value={form.role} onChange={handleChange("role")}>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="agent">Sales Agent</option>
-            </select>
+            <CustomSelect
+              value={form.role}
+              onChange={(v) => handleChange("role")({ target: { value: v } })}
+              options={[
+                { value: "admin", label: "Admin" },
+                { value: "manager", label: "Manager" },
+                { value: "agent", label: "Sales Agent" },
+              ]}
+              style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+            />
           </div>
           <div className="md:col-span-2">
             <label className="label">Profile Picture URL</label>
