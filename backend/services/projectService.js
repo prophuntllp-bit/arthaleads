@@ -346,6 +346,8 @@ const projectService = {
     if (!lead) throw new AppError("Lead not found", 404);
 
     if (toProjectId) {
+      if (String(toProjectId) === String(fromProjectId))
+        throw new AppError("Lead is already in this project", 400);
       const target = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
       if (!target) throw new AppError("Target project not found", 404);
       lead.project = toProjectId;

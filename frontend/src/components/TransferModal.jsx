@@ -85,7 +85,9 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
                 value={toProjectId}
                 onChange={setToProjectId}
                 placeholder="Choose project…"
-                options={projects.map(p => ({ value: p._id, label: p.name + (String(p._id) === String(currentProjectId) ? " (current)" : "") }))}
+                options={projects
+                  .filter(p => leadType !== "project" || String(p._id) !== String(currentProjectId))
+                  .map(p => ({ value: p._id, label: p.name }))}
                 style={{ width: "100%" }}
               />
             )}
