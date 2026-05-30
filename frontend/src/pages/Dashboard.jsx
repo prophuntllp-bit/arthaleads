@@ -242,9 +242,9 @@ export default function Dashboard() {
           </button>
           <button className="stitch-pill whitespace-nowrap" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
-            {theme === "dark" ? "Dark" : "Light"}
+            <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
           </button>
-          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <DateRangePicker value={dateRange} onChange={setDateRange} compact />
         </div>
       </header>
 

@@ -153,7 +153,7 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
   );
 }
 
-export default function DateRangePicker({ value, onChange, label }) {
+export default function DateRangePicker({ value, onChange, label, compact = false }) {
   const [open, setOpen]         = useState(false);
   const [pending, setPending]   = useState(value);
   const [rangeStart, setRangeStart] = useState(null);
@@ -264,7 +264,7 @@ export default function DateRangePicker({ value, onChange, label }) {
         className="stitch-pill flex items-center gap-2 whitespace-nowrap"
       >
         <CalendarDays className="h-4 w-4 text-orange-500" />
-        <span>{label || selectedLabel}</span>
+        <span className={compact ? "hidden sm:inline" : ""}>{label || selectedLabel}</span>
         {displayDates.start && displayDates.end && (
           <span className="text-[10px] opacity-60 hidden sm:inline">
             {toIST(displayDates.start)} – {toIST(displayDates.end)}

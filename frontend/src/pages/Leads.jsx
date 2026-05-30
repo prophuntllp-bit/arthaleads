@@ -977,8 +977,8 @@ export default function Leads() {
       <div className="card px-5 py-4 space-y-3">
         {/* Row 1: title + action buttons */}
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-[15px] sm:text-xl font-black tracking-tight text-app leading-none whitespace-nowrap">Leads Management</h1>
+          <div className="min-w-0 overflow-hidden">
+            <h1 className="text-[15px] sm:text-xl font-black tracking-tight text-app leading-none truncate">Leads Management</h1>
             <p className="text-xs text-app-soft mt-1 hidden sm:block">{total} active leads across your property funnel.</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -1066,7 +1066,7 @@ export default function Leads() {
 
               {/* Expandable filter controls — 2-col grid on mobile, flex-wrap on desktop */}
               <div className={`${showFilters ? "block" : "hidden"} sm:block`}>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid sm:grid-cols-3 sm:gap-2">
                   {/* Domain — mobile only (shown in panel here; desktop has it in search row) */}
                   <div className="relative sm:hidden">
                     <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
@@ -1115,7 +1115,7 @@ export default function Leads() {
                     <div className="col-span-2 sm:col-auto">
                       <button
                         onClick={toggleMyOnly}
-                        className="w-full sm:w-auto inline-flex items-center justify-between sm:justify-start gap-2 rounded-xl text-xs font-semibold transition-all"
+                        className="w-full inline-flex items-center justify-between gap-2 rounded-xl text-xs font-semibold transition-all"
                         style={{ padding: "7px 12px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
                       >
                         <div className="flex items-center gap-2">
@@ -1132,7 +1132,7 @@ export default function Leads() {
                   {(Object.values(filters).some(Boolean) || selectedProject) && (
                     <div className="col-span-2 sm:col-auto">
                       <button
-                        className="w-full sm:w-auto flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
+                        className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                         onClick={() => {
                           ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
                           setSelectedProject(null);
