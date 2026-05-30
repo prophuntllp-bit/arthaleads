@@ -261,7 +261,7 @@ export default function DateRangePicker({ value, onChange, label }) {
         ref={btnRef}
         type="button"
         onClick={openPicker}
-        className="stitch-pill flex items-center gap-2"
+        className="stitch-pill flex items-center gap-2 whitespace-nowrap"
       >
         <CalendarDays className="h-4 w-4 text-orange-500" />
         <span>{label || selectedLabel}</span>

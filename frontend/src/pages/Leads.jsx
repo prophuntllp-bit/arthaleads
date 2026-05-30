@@ -978,7 +978,7 @@ export default function Leads() {
         {/* Row 1: title + action buttons */}
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-xl font-black tracking-tight text-app leading-none">Leads Management</h1>
+            <h1 className="text-[15px] sm:text-xl font-black tracking-tight text-app leading-none whitespace-nowrap">Leads Management</h1>
             <p className="text-xs text-app-soft mt-1 hidden sm:block">{total} active leads across your property funnel.</p>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
