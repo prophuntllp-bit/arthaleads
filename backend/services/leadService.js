@@ -483,79 +483,14 @@ const leadService = {
     }
     if (andConditions.length) leadFilter.$and = andConditions;
 
-    // ── ProjectLead filter (native DB fields only) ─────────────────────────────
-    const projFilter = { booking: { $ne: "Not Interested" }, orgId: user.orgId };
-    if (source) projFilter.source = source;
-    if (createdAtFilter) projFilter.createdAt = createdAtFilter;
-    if (followUpToday === "true" || followUpToday === true) {
-      projFilter.followUp = { $gte: todayStart, $lte: todayEnd };
-    }
-    if (search) {
-      const rx = { $regex: escapeRegex(search), $options: "i" };
-      projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
-    }
-    if (user.role === "agent") {
-      const assignedProjectIds = await Project.find({ assignedTo: user._id, orgId: user.orgId, isArchived: false }).select("_id").lean().then(ps => ps.map(p => p._id));
-      if (assignedProjectIds.length > 0) {
-        projFilter.$or = [{ importedBy: user._id }, { project: { $in: assignedProjectIds } }];
-      } else {
-        projFilter.importedBy = user._id;
-      }
-    }
-    // Project leads have no leadSourceLabel/sourcePage — exclude them entirely when filtering by site
-    if (siteFilter) projFilter._id = { $exists: false };
-
-    // Derive pipeline status from booking — booking always takes priority over stored status
-    const deriveStatus = (pl) => {
-      const b = pl.booking || "";
-      if (b === "Site Visit Booked" || b === "Site Visit Done") return "Site Visit";
-      if (b === "Booked") return "Closed Won";
-      if (b === "Not Interested") return "Closed Lost";
-      if (b === "Interested" || b === "Call Back" || b === "Not Reachable" || b === "Low Budget") return "Contacted";
-      return pl.status || (pl.remark === "Contacted" ? "Contacted" : "New");
-    };
-
-    // For large limit (pipeline/kanban view) fetch all project leads with no cap.
-    // For normal paginated views, over-fetch enough to fill the requested page.
-    const projFetchLimit = limitInt >= 2000
-      ? 0  // 0 = no limit in Mongoose
-      : (status || priority)
-        ? Math.max(limitInt * pageInt * 5, 2000)
-        : Math.max(limitInt * pageInt, 2000);
-
-    const [leads, projLeadsRaw, leadTotal, projTotal] = await Promise.all([
+    const [leads, leadTotal] = await Promise.all([
       Lead.find(leadFilter).sort({ createdAt: -1 }).lean(),
-      ProjectLead.find(projFilter).sort({ createdAt: -1 }).limit(projFetchLimit)
-        .populate("project", "name _id").lean(),
       Lead.countDocuments(leadFilter),
-      ProjectLead.countDocuments(projFilter),
     ]);
 
-    // Shape ProjectLeads and apply JS-only filters (status, priority)
-    const projLeads = projLeadsRaw
-      .map((pl) => ({
-        ...pl,
-        _type: "project",
-        projectId: pl.project?._id ?? pl.project,
-        projectName: pl.project?.name ?? "",
-        status: deriveStatus(pl),
-        priority: "Medium",
-        assignedToName: pl.assignedToName || "",
-        followUpDate: pl.followUp || null,
-      }))
-      .filter((pl) => {
-        if (status   && pl.status   !== status)   return false;
-        if (priority && pl.priority !== priority) return false;
-        return true;
-      });
-
-    // Combine, sort newest first, paginate
-    const combined = [
-      ...leads.map((l) => ({ ...l, _type: "lead" })),
-      ...projLeads,
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    const total    = leadTotal + (status || priority ? projLeads.length : projTotal);
+    // Paginate pipeline leads only (ProjectLeads live in the Projects section)
+    const combined  = leads.map((l) => ({ ...l, _type: "lead" }));
+    const total     = leadTotal;
     const paginated = combined.slice(skip, skip + limitInt);
 
     return { leads: paginated, total, page: pageInt, pages: Math.ceil(total / limitInt) };
