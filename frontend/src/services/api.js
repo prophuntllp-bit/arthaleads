@@ -28,11 +28,14 @@ api.interceptors.response.use(
     const msg    = err.response?.data?.message;
 
     if (status === 401) {
-      // Token expired or invalid — clear session, show one friendly toast, and redirect.
-      // Return a never-resolving promise so component .catch() blocks never fire —
-      // prevents misleading "Failed to load X" toasts when the real issue is an expired session.
-      // Only show the toast when a session was previously stored — avoids showing "session
-      // expired" on a fresh page load where /auth/me returns 401 with no prior session.
+      // Auth endpoints (login, signup, OTP verify) return 401 for bad credentials —
+      // those must propagate so the form can show the error message.
+      const isAuthEndpoint = /\/auth\/(login|signup|otp\/verify|google|phone-login)/.test(err.config?.url || "");
+      if (isAuthEndpoint) return Promise.reject(err);
+
+      // All other 401s mean the session expired — clear state, show one toast, redirect.
+      // Return a never-resolving promise so component .catch() blocks never fire and
+      // don't show misleading "Failed to load X" errors when the real issue is an expired session.
       const hadSession = !!localStorage.getItem("crm_user");
       localStorage.removeItem("crm_user");
       localStorage.removeItem("crm_org");
