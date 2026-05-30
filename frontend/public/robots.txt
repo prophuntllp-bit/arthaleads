@@ -1,12 +1,15 @@
-﻿User-agent: *
+User-agent: *
 Allow: /
 Allow: /blog
 Allow: /about-us
+Allow: /careers
+Allow: /contact
 Allow: /case-studies
 Allow: /product-updates
 Allow: /help-guide
 Allow: /wordpress-plugin
-Allow: /contact
+Allow: /privacy
+Allow: /terms
 
 # Internal CRM pages - not for indexing
 Disallow: /dashboard
@@ -28,8 +31,6 @@ Disallow: /reset-password
 Disallow: /forgot-password
 Disallow: /fb-callback
 Disallow: /share-target
-Disallow: /privacy
-Disallow: /terms
 Disallow: /api/
 
 Sitemap: https://www.arthaleads.com/sitemap.xml
