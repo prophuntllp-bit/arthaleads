@@ -122,24 +122,38 @@ async function autoRefreshPageToken(auto) {
 }
 
 // Try all active Facebook tokens until one successfully fetches the lead.
-// If all page tokens fail with auth errors, auto-refresh them using stored userToken
-// before giving up - this makes the system self-healing without manual reconnection.
+// Step 2 always tries the App Token (AppId|AppSecret) — works for any page that
+// authorized the app and never expires, so customers who connected once never need
+// to reconnect as long as they haven't revoked the app.
 async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
   const primaryAutomationId = primaryAutomation?._id;
 
-  // 1️⃣ Try the primary token first
+  // 1️⃣ Try the primary (stored page) token first
   try {
     const result = await getFacebookLeadFields(leadgenId, primaryToken);
     return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
   } catch (err) {
     if (err.isAuthError) {
-      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying auto-refresh then fallbacks`);
+      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying App Token then fallbacks`);
     } else {
-      logger.warn(`Facebook webhook: primary token failed for lead ${leadgenId} (${err.message}), trying fallback tokens`);
+      logger.warn(`Facebook webhook: primary token failed for lead ${leadgenId} (${err.message}), trying App Token`);
     }
   }
 
-  // 2️⃣ Auto-refresh primary automation's page token using its userToken
+  // 2️⃣ Try the App Access Token — approved apps can fetch leads from any authorized page,
+  //    and this token never expires (derived from FB_APP_ID + FB_APP_SECRET).
+  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
+    const appToken = `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`;
+    try {
+      const result = await getFacebookLeadFields(leadgenId, appToken);
+      logger.info(`Facebook webhook: App Token succeeded for lead ${leadgenId} — page token was stale but app access is intact`);
+      return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+    } catch (appErr) {
+      logger.warn(`Facebook webhook: App Token failed for lead ${leadgenId}: ${appErr.message}`);
+    }
+  }
+
+  // 3️⃣ Auto-refresh primary automation's page token using its userToken
   if (primaryAutomation?.userToken && primaryAutomation?.pageId) {
     const refreshed = await autoRefreshPageToken(primaryAutomation);
     if (refreshed) {
@@ -153,7 +167,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     }
   }
 
-  // 3️⃣ Try all other active automation tokens from the SAME ORG
+  // 4️⃣ Try all other active automation tokens from the SAME ORG
   const allAutomations = await Automation.find({
     orgId,
     platform: "Facebook",
@@ -178,7 +192,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     }
   }
 
-  // 4️⃣ Auto-refresh all fallback automations that had auth errors and have a userToken
+  // 5️⃣ Auto-refresh all fallback automations that had auth errors and have a userToken
   for (const errEntry of errors.filter(e => e.type === "auth" && e.doc?.userToken)) {
     const refreshed = await autoRefreshPageToken(errEntry.doc);
     if (refreshed) {
@@ -192,7 +206,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     }
   }
 
-  // 5️⃣ All tokens exhausted - check if it's just a test lead
+  // 6️⃣ All tokens exhausted - check if it's just a test lead
   const hasNoLeadErrors = errors.some(e => e.message?.includes("No lead with leadgen id"));
   if (hasNoLeadErrors && errors.every(e => e.message?.includes("No lead with leadgen id"))) {
     return {
