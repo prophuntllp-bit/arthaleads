@@ -15,7 +15,8 @@ router.get("/facebook/callback", automationController.facebookCallback);
 router.use(protect, authorize("admin", "manager"));
 
 // Protected: only authenticated admin/manager can read the OAuth result
-router.get("/facebook/result", automationController.getFacebookResult);
+router.get("/facebook/result",                  automationController.getFacebookResult);
+router.post("/facebook/verify-system-token",    automationController.verifySystemToken);
 
 router.get("/website/token", automationController.getWebsiteToken);
 router.post("/website/create", automationController.createWebsiteConnection);

@@ -118,10 +118,13 @@ const automationService = {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
 
-    // When a fresh userToken is saved, record when it will expire (60 days from now)
+    // When a fresh userToken is saved, record expiry.
+    // System user tokens (permanent) skip the 60-day window so the cron never touches them.
     if (payload.userToken && payload.userToken !== automation.userToken) {
-      automation.userTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-      automation.tokenRefreshedAt   = new Date();
+      automation.userTokenExpiresAt = payload.isSystemToken
+        ? new Date("2099-12-31")                                       // permanent — cron skips
+        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);            // normal 60-day token
+      automation.tokenRefreshedAt = new Date();
     }
 
     automation.updatedBy = actor._id;
@@ -379,6 +382,28 @@ const automationService = {
 
     // Return pages + the fresh user token (used as fallback access token on reconnect)
     return { pages, freshToken: userAccessToken };
+  },
+
+  async verifySystemToken(token) {
+    // Verify the token is valid and get the identity
+    const meResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me?access_token=${encodeURIComponent(token)}`);
+    const me = await meResp.json();
+    if (me.error) throw new AppError(me.error.message || "Invalid token — check permissions and try again", 400);
+
+    // Fetch pages (reuses existing logic that handles personal + Business Manager pages)
+    const rawPages = await this.fetchFacebookPages(token);
+    const pages = await Promise.all(rawPages.map(async (page) => {
+      const pageToken = page.access_token || token;
+      return {
+        id:          page.id,
+        name:        page.name,
+        tasks:       page.tasks || [],
+        accessToken: pageToken,
+        forms:       await this.fetchFacebookForms(page.id, pageToken),
+      };
+    }));
+
+    return { pages, systemToken: token };
   },
 
   async storeOAuthResult(sessionId, data) {

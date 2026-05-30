@@ -179,6 +179,17 @@ const automationController = {
     if (!result) return res.status(404).json({ error: "Session not found or expired" });
     return res.json(result);
   },
+
+  async verifySystemToken(req, res, next) {
+    try {
+      const { token } = req.body;
+      if (!token?.trim()) return next(new AppError("Token is required", 400));
+      const result = await automationService.verifySystemToken(token.trim());
+      res.json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = automationController;

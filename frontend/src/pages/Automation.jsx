@@ -86,6 +86,10 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
   const [connName, setConnName] = useState("");
   const [saving, setSaving] = useState(false);
   const [freshToken, setFreshToken] = useState(""); // from latest OAuth
+  const [systemToken, setSystemToken] = useState(""); // permanent system user token
+  const [sysTokenInput, setSysTokenInput] = useState("");
+  const [sysTokenLoading, setSysTokenLoading] = useState(false);
+  const [showSysPanel, setShowSysPanel] = useState(false);
   const [noPagesWarning, setNoPagesWarning] = useState(false);
 
   const selectedPage = pages.find((p) => p.id === pageId);
@@ -115,6 +119,9 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     }
     setConnecting(false);
     setFreshToken("");
+    setSystemToken("");
+    setSysTokenInput("");
+    setShowSysPanel(false);
     setNoPagesWarning(false);
   }, [open, editingItem]);
 
@@ -217,10 +224,13 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     if (!connName.trim()) { toast.error("Please give this connection a name"); return; }
     setSaving(true);
     const selectedPageData = pages.find((p) => p.id === pageId);
-    // Priority: page-specific access token > fresh user token from latest OAuth > existing stored token
-    const accessToken = selectedPageData?.accessToken || freshToken || editingItem?.accessToken || "";
-    // Always save the fresh long-lived user token - used for silent page-token auto-refresh
-    const userToken = freshToken || editingItem?.userToken || "";
+    // System user token: use it as both access token and user token (permanent, never expires)
+    // OAuth token: page-specific token > fresh user token > existing stored token
+    const isSystemToken = !!systemToken;
+    const accessToken = isSystemToken
+      ? (selectedPageData?.accessToken || systemToken)
+      : (selectedPageData?.accessToken || freshToken || editingItem?.accessToken || "");
+    const userToken = systemToken || freshToken || editingItem?.userToken || "";
     const payload = {
       name: connName.trim(),
       platform: "Facebook",
@@ -233,6 +243,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       formId,
       accessToken,
       userToken,
+      isSystemToken,
       verifyToken: editingItem?.verifyToken || `arthaleads_${Date.now()}`,
       isActive: true,
     };
@@ -335,6 +346,72 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
               <p className="text-center text-xs text-app-soft">
                 No technical setup needed. We handle everything securely.
               </p>
+
+              {/* ── System User Token alternative ── */}
+              <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSysPanel((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold text-app-soft hover:text-app transition"
+                  style={{ background: "var(--app-surface-low)" }}
+                >
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                    Using Facebook Business Manager? Paste a System User Token (never expires)
+                  </span>
+                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showSysPanel ? "rotate-90" : ""}`} />
+                </button>
+                {showSysPanel && (
+                  <div className="px-4 pb-4 pt-3 space-y-3" style={{ background: "var(--app-surface-low)" }}>
+                    <p className="text-xs text-app-soft leading-relaxed">
+                      Go to <strong className="text-app">business.facebook.com → System Users → Prophunt CRM → Generate Token</strong>.
+                      Select the <em>Arthaleads</em> app and check: <code className="bg-black/20 px-1 rounded">leads_retrieval</code>, <code className="bg-black/20 px-1 rounded">pages_show_list</code>, <code className="bg-black/20 px-1 rounded">pages_read_engagement</code>.
+                    </p>
+                    <input
+                      className="input text-xs font-mono"
+                      placeholder="Paste system user token here…"
+                      value={sysTokenInput}
+                      onChange={(e) => setSysTokenInput(e.target.value.trim())}
+                    />
+                    <button
+                      type="button"
+                      disabled={!sysTokenInput || sysTokenLoading}
+                      onClick={async () => {
+                        setSysTokenLoading(true);
+                        try {
+                          const base = (apiBase || "").replace(/\/api\/?$/, "");
+                          const resp = await fetch(`${base}/api/automations/facebook/verify-system-token`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("_at") || ""}` },
+                            credentials: "include",
+                            body: JSON.stringify({ token: sysTokenInput }),
+                          });
+                          const json = await resp.json();
+                          if (!json.success) throw new Error(json.message || "Verification failed");
+                          const fetchedPages = json.pages || [];
+                          if (!fetchedPages.length) throw new Error("No Facebook pages found for this token. Check System User has page access.");
+                          setSystemToken(sysTokenInput);
+                          setPages(fetchedPages);
+                          const first = fetchedPages[0];
+                          setPageId(first.id || "");
+                          setFormId(first.forms?.[0]?.id || "");
+                          setConnName((prev) => prev || `${first.name} - Lead Ads`);
+                          setStep("select");
+                          toast.success(`System User Token verified — ${fetchedPages.length} page${fetchedPages.length !== 1 ? "s" : ""} found. Token never expires.`);
+                        } catch (e) {
+                          toast.error(e.message || "Token verification failed");
+                        } finally {
+                          setSysTokenLoading(false);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-white disabled:opacity-40 transition"
+                      style={{ background: "#16a34a" }}
+                    >
+                      {sysTokenLoading ? <><Spinner size="sm" /> Verifying…</> : <><ShieldCheck className="h-3.5 w-3.5" /> Verify & Use Permanent Token</>}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1126,12 +1203,13 @@ export default function Automation() {
 
                   {isFb ? (() => {
                     // Token health calculation
-                    const expiresAt    = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
-                    const daysLeft     = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-                    const tokenExpired = daysLeft !== null && daysLeft <= 0;
-                    const tokenOk      = daysLeft === null || daysLeft > 20;
-                    const tokenWarn    = daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
-                    const tokenBad     = daysLeft !== null && daysLeft <= 5;
+                    const expiresAt     = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
+                    const daysLeft      = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                    const isPermanent   = daysLeft !== null && daysLeft > 365 * 5; // 2099 sentinel
+                    const tokenExpired  = !isPermanent && daysLeft !== null && daysLeft <= 0;
+                    const tokenOk       = isPermanent || daysLeft === null || daysLeft > 20;
+                    const tokenWarn     = !isPermanent && daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
+                    const tokenBad      = !isPermanent && daysLeft !== null && daysLeft <= 5;
                     return (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
@@ -1149,15 +1227,17 @@ export default function Automation() {
                           <div className="flex items-center gap-1.5">
                             {tokenBad ? <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> : tokenWarn ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
                             <span className={tokenBad ? "text-red-400 font-semibold" : tokenWarn ? "text-amber-400 font-semibold" : "text-emerald-400"}>
-                              {daysLeft === null
-                                ? "Token health unknown - click Refresh"
-                                : tokenExpired
-                                  ? "Token expired — reconnect now to resume lead capture"
-                                  : tokenBad
-                                    ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
-                                    : tokenWarn
-                                      ? `Token expires in ${daysLeft} days — refresh soon`
-                                      : `Token valid for ${daysLeft} days`}
+                              {isPermanent
+                                ? "Permanent System User Token — never expires"
+                                : daysLeft === null
+                                  ? "Token health unknown - click Refresh"
+                                  : tokenExpired
+                                    ? "Token expired — reconnect now to resume lead capture"
+                                    : tokenBad
+                                      ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
+                                      : tokenWarn
+                                        ? `Token expires in ${daysLeft} days — refresh soon`
+                                        : `Token valid for ${daysLeft} days`}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
