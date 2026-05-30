@@ -140,138 +140,120 @@ export default function LeadPipeline() {
   if (loading) return <div className="stitch-page flex items-center justify-center py-24"><Spinner /></div>;
 
   return (
-    <div className="stitch-page space-y-6">
-      <section className="card p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="stitch-kicker mb-2">Pipeline View</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Lead Pipeline</h1>
-            <p className="mt-2 max-w-2xl text-sm text-app-soft">
-              Each stage is color-coded so your team can instantly understand what needs outreach, visits, negotiation, or closure.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <button
-              onClick={() => fetchLeads(true)}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
-              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
-            {lastUpdated && (
-              <span className="flex items-center gap-1 text-[10px] text-app-soft">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                Live · updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
-              </span>
-            )}
-          </div>
+    <div className="stitch-page space-y-4">
+      {/* Compact header */}
+      <div className="flex items-center justify-between gap-4 px-1">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-app">Lead Pipeline</h1>
+          {lastUpdated && (
+            <span className="flex items-center gap-1 text-[11px] text-app-soft mt-0.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              Live · updated {lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+            </span>
+          )}
         </div>
-      </section>
+        <button
+          onClick={() => fetchLeads(true)}
+          disabled={refreshing}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50 shrink-0"
+          style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {refreshing ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {STATUS_OPTIONS.map((status) => {
-          const meta = STAGE_META[status];
-          const Icon = meta.icon;
-          const stageLeads = grouped[status] || [];
-          return (
-            <div key={status} className={`card overflow-hidden border ${meta.border}`}>
-              <div className={`bg-gradient-to-br ${meta.stripe} px-5 py-5`}>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${meta.badge}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <span className={`badge ${meta.badge}`}>{stageLeads.length} leads</span>
+      {/* Horizontal kanban — each column scrolls independently */}
+      <div className="overflow-x-auto pb-2 -mx-4 px-4">
+        <div className="flex gap-3" style={{ minWidth: "max-content" }}>
+          {STATUS_OPTIONS.map((status) => {
+            const meta = STAGE_META[status];
+            const Icon = meta.icon;
+            const stageLeads = grouped[status] || [];
+            return (
+              <div
+                key={status}
+                className={`flex flex-col rounded-2xl border overflow-hidden ${meta.border}`}
+                style={{ width: 252, minWidth: 252 }}
+              >
+                {/* Column header */}
+                <div className={`bg-gradient-to-br ${meta.stripe} px-3 py-3 shrink-0`}>
+                  <div className="flex items-center gap-2">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-xl ${meta.badge}`}>
+                      <Icon className="h-3.5 w-3.5" />
                     </div>
-                    <h2 className="text-xl font-bold text-app">{meta.title}</h2>
-                    <p className="mt-1 text-sm text-app-soft">{meta.subtitle}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-app leading-none">{meta.title}</p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${meta.badge}`}>
+                      {stageLeads.length}
+                    </span>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-3 p-4">
-                {stageLeads.length === 0 && (
-                  <div className="rounded-2xl border border-dashed p-4 text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
-                    No leads in {status.toLowerCase()} right now.
-                  </div>
-                )}
-
-                {stageLeads.map((lead) => (
-                  <article key={lead._id} className="rounded-[1.25rem] border p-4 stitch-surface-muted space-y-3" style={{ borderColor: "var(--app-border)" }}>
-                    {/* Name + source */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-app">{lead.name}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} />
-                          <span className="text-xs text-app-soft">· {lead.source}</span>
-                        </div>
-                        <div className="mt-1.5">
-                          <WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} />
-                        </div>
-                      </div>
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />
+                {/* Scrollable lead cards */}
+                <div
+                  className="flex-1 overflow-y-auto p-2 space-y-2"
+                  style={{ maxHeight: "calc(100vh - 220px)", background: "var(--app-surface-low)" }}
+                >
+                  {stageLeads.length === 0 && (
+                    <div className="rounded-xl border border-dashed px-3 py-4 text-xs text-center text-app-soft" style={{ borderColor: "var(--app-border)" }}>
+                      No leads here
                     </div>
+                  )}
 
-                    {/* Info grid */}
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div>
-                        <p className="text-app-soft">Assigned</p>
-                        <p className="mt-0.5 text-app font-medium truncate">{lead.assignedToName || "Unassigned"}</p>
+                  {stageLeads.map((lead) => (
+                    <article
+                      key={lead._id}
+                      className="rounded-xl border p-3 space-y-2"
+                      style={{ borderColor: "var(--app-border)", background: "var(--app-surface)" }}
+                    >
+                      {/* Name */}
+                      <div className="flex items-start justify-between gap-1.5">
+                        <p className="text-[13px] font-semibold text-app leading-tight truncate">{lead.name}</p>
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-orange-500 mt-0.5" />
                       </div>
-                      <div>
-                        <p className="text-app-soft">Priority</p>
-                        <p className="mt-0.5 text-app font-medium">{lead.priority || "-"}</p>
+
+                      {/* Phone + WhatsApp on one row */}
+                      <div className="flex items-center gap-2">
+                        <PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} />
+                        <WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} />
                       </div>
+
+                      {/* Project tag */}
                       {lead.projectName && (
-                        <div className="col-span-2">
-                          <p className="text-app-soft">Project</p>
-                          <p className="mt-0.5 text-app font-medium truncate">{lead.projectName}</p>
-                        </div>
+                        <p className="text-[11px] text-app-soft truncate leading-none">{lead.projectName}</p>
                       )}
+
+                      {/* Follow-up date */}
                       {(lead.followUpDate || lead.followUp) && (
-                        <div>
-                          <p className="text-app-soft">Follow Up</p>
-                          <p className="mt-0.5 text-orange-400 font-medium">{fmtDate(lead.followUpDate || lead.followUp)}</p>
-                        </div>
+                        <p className="text-[11px] font-medium text-orange-400 leading-none">
+                          {fmtDate(lead.followUpDate || lead.followUp)}
+                        </p>
                       )}
-                      {lead.remark && lead.remark !== "" && (
-                        <div className={lead.followUpDate || lead.followUp ? "" : "col-span-2"}>
-                          <p className="text-app-soft">Contact Status</p>
-                          <p className="mt-0.5 text-app font-medium">{lead.remark}</p>
-                        </div>
+
+                      {/* First note — single truncated line */}
+                      {(lead.remark1 || lead.remark2 || lead.remarkNote) && (
+                        <p className="text-[11px] text-app-soft truncate leading-none">
+                          {lead.remark1 || lead.remark2 || lead.remarkNote}
+                        </p>
                       )}
-                    </div>
 
-                    {/* Remark notes */}
-                    {(lead.remark1 || lead.remark2 || lead.remarkNote) && (
-                      <div className="rounded-xl border px-3 py-2 text-xs text-app-soft space-y-1" style={{ borderColor: "var(--app-border)" }}>
-                        {lead.remark1 && <p><span className="font-medium text-app">Note 1:</span> {lead.remark1}</p>}
-                        {lead.remark2 && <p><span className="font-medium text-app">Note 2:</span> {lead.remark2}</p>}
-                        {lead.remarkNote && <p><span className="font-medium text-app">Note:</span> {lead.remarkNote}</p>}
-                      </div>
-                    )}
-
-                    {/* Move stage */}
-                    <div>
-                      <label className="label">Move to stage</label>
+                      {/* Move to stage */}
                       <CustomSelect
                         value={lead.status}
                         onChange={(v) => handleMove(lead, v)}
                         options={STATUS_OPTIONS}
-                        style={{ width: "100%" }}
+                        style={{ width: "100%", fontSize: 12, padding: "5px 8px" }}
                       />
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </section>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
