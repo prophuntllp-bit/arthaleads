@@ -12,7 +12,8 @@ const projectController = {
 
   async getAll(req, res, next) {
     try {
-      const projects = await projectService.getAll(req.user);
+      const forTransfer = req.query.forTransfer === "true";
+      const projects = await projectService.getAll(req.user, { forTransfer });
       res.json({ success: true, data: projects });
     } catch (err) { next(err); }
   },

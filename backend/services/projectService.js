@@ -32,11 +32,12 @@ const projectService = {
     return project;
   },
 
-  async getAll(user) {
+  async getAll(user, { forTransfer = false } = {}) {
     const filter = { isArchived: false, orgId: user.orgId };
 
-    // Agents can ONLY see projects explicitly assigned to them
-    if (user.role === "agent") {
+    // Agents can only see projects assigned to them, except when picking a
+    // transfer destination — they must be able to route leads to any org project.
+    if (user.role === "agent" && !forTransfer) {
       filter.assignedTo = user._id;
     }
 
