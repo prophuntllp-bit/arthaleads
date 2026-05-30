@@ -108,6 +108,20 @@ const projectController = {
     } catch (err) { next(err); }
   },
 
+  async bulkUpdateStatus(req, res, next) {
+    try {
+      const { ids, booking } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      if (!booking) {
+        return res.status(400).json({ success: false, message: "booking value is required" });
+      }
+      const count = await projectService.bulkUpdateStatus(req.params.id, ids, booking, req.user);
+      res.json({ success: true, message: `${count} lead(s) updated`, count });
+    } catch (err) { next(err); }
+  },
+
   async transferLead(req, res, next) {
     try {
       const { toProjectId, toLeads, source } = req.body;

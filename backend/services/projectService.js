@@ -325,6 +325,19 @@ const projectService = {
     return result.deletedCount;
   },
 
+  async bulkUpdateStatus(projectId, ids, booking, user) {
+    const project = await Project.findOne({ _id: projectId, orgId: user.orgId });
+    if (!project) throw new AppError("Project not found", 404);
+    if (user.role === "agent" && !project.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
+    const result = await ProjectLead.updateMany(
+      { _id: { $in: ids }, project: projectId, orgId: user.orgId },
+      { $set: { booking } }
+    );
+    return result.modifiedCount;
+  },
+
   async transferLead(leadId, fromProjectId, { toProjectId, toLeads, source }, user) {
     // Ensure source project belongs to the user's org
     const fromProject = await Project.findOne({ _id: fromProjectId, orgId: user.orgId });

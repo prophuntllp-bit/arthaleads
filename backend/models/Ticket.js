@@ -1,5 +1,6 @@
 // models/Ticket.js
 const mongoose = require("mongoose");
+const Counter  = require("./Counter");
 
 const ticketSchema = new mongoose.Schema(
   {
@@ -56,17 +57,20 @@ const ticketSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Auto-generate a unique sequential ticket number before first save
+// Auto-generate a unique sequential ticket number — atomic $inc prevents duplicates
 ticketSchema.pre("save", async function (next) {
-  if (this.ticketNumber) return next(); // already set
+  if (this.ticketNumber) return next();
   try {
-    // Count ALL existing tickets to get a global sequential ID
-    const count = await this.constructor.countDocuments();
-    const now   = new Date();
+    const counter = await Counter.findOneAndUpdate(
+      { _id: "ticketNumber" },
+      { $inc: { seq: 1 } },
+      { new: true, upsert: true }
+    );
+    const now = new Date();
     const y  = now.getFullYear();
     const mo = String(now.getMonth() + 1).padStart(2, "0");
     const d  = String(now.getDate()).padStart(2, "0");
-    this.ticketNumber = `TKT-${y}${mo}${d}-${String(count + 1).padStart(4, "0")}`;
+    this.ticketNumber = `TKT-${y}${mo}${d}-${String(counter.seq).padStart(4, "0")}`;
     next();
   } catch (err) {
     next(err);

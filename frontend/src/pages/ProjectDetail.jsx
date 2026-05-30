@@ -301,6 +301,8 @@ export default function ProjectDetail() {
   // Bulk select – Prospective tab
   const [prospSelectedIds, setProspSelectedIds]   = useState(new Set());
   const [showProspBulkConfirm, setShowProspBulkConfirm] = useState(false);
+  const [prospBulkStatusBook, setProspBulkStatusBook] = useState("");
+  const [bulkStatusUpdating, setBulkStatusUpdating]   = useState(false);
 
   // Bulk select – Site Visit Done tab
   const [svdSelectedIds, setSvdSelectedIds]     = useState(new Set());
@@ -639,6 +641,25 @@ export default function ProjectDetail() {
     } finally {
       setBulkDeleting(false);
       setShowProspBulkConfirm(false);
+    }
+  };
+
+  const handleProspBulkStatus = async () => {
+    if (!prospBulkStatusBook || prospSelectedIds.size === 0) return;
+    setBulkStatusUpdating(true);
+    try {
+      const ids = [...prospSelectedIds];
+      await api.patch(`/projects/${id}/leads/bulk-status`, { ids, booking: prospBulkStatusBook });
+      setProspLeads((prev) => prev.map((l) =>
+        prospSelectedIds.has(l._id) ? { ...l, booking: prospBulkStatusBook } : l
+      ));
+      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} updated to "${prospBulkStatusBook}"`);
+      setProspSelectedIds(new Set());
+      setProspBulkStatusBook("");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk status update failed");
+    } finally {
+      setBulkStatusUpdating(false);
     }
   };
 
@@ -1113,11 +1134,27 @@ export default function ProjectDetail() {
                 <p className="text-xs text-app-soft">Marked as Interested or Site Visit Booked</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {prospSelectedIds.size > 0 && canManage && (
-                <button className="btn-danger" onClick={() => setShowProspBulkConfirm(true)}>
-                  <Trash2 className="h-4 w-4" /> Delete {prospSelectedIds.size} selected
-                </button>
+                <>
+                  <button className="btn-danger" onClick={() => setShowProspBulkConfirm(true)}>
+                    <Trash2 className="h-4 w-4" /> Delete {prospSelectedIds.size}
+                  </button>
+                  <CustomSelect
+                    value={prospBulkStatusBook}
+                    onChange={setProspBulkStatusBook}
+                    placeholder="Set status…"
+                    options={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
+                    style={{ minWidth: 140 }}
+                  />
+                  <button
+                    className="btn-primary"
+                    onClick={handleProspBulkStatus}
+                    disabled={!prospBulkStatusBook || bulkStatusUpdating}
+                  >
+                    {bulkStatusUpdating ? <Spinner size="sm" /> : "Update"}
+                  </button>
+                </>
               )}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />

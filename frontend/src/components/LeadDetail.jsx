@@ -51,12 +51,16 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
 
   if (!lead) return null;
 
+  const isProjectLead = lead._type === "project";
+
   const refreshLead = async () => {
+    if (isProjectLead) return;
     const { data } = await api.get(`/leads/${lead._id}`);
     onUpdated(data.data);
   };
 
   const handleNote = async () => {
+    if (isProjectLead) { toast.error("Notes are not available for project leads"); return; }
     if (!note.trim()) return;
     setSaving(true);
     try {
@@ -74,8 +78,15 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
   const handleStatus = async (nextStatus) => {
     setStatus(nextStatus);
     try {
-      const { data } = await api.put(`/leads/${lead._id}`, { status: nextStatus });
-      onUpdated(data.data);
+      let updated;
+      if (isProjectLead && lead.projectId) {
+        const { data } = await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, { status: nextStatus });
+        updated = data.data;
+      } else {
+        const { data } = await api.put(`/leads/${lead._id}`, { status: nextStatus });
+        updated = data.data;
+      }
+      onUpdated(updated);
       toast.success("Status updated");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update status");
