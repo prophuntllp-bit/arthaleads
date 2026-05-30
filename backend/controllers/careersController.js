@@ -154,19 +154,91 @@ async function submitApplication(req, res) {
 </body>
 </html>`.trim();
 
-    await resend.emails.send({
-      from:    FROM_ADDRESS,
-      to:      HR_EMAIL,
-      replyTo: email,
-      subject: `Job Application: ${role} — ${name}`,
-      html,
-      text: `New Job Application\n\nRole: ${role}\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${experience ? `\nExperience: ${experience}` : ""}${linkedin ? `\nLinkedIn: ${linkedin}` : ""}${note ? `\n\nCover Note:\n${note}` : ""}\n\nResume attached.`,
-      attachments: [{
-        filename:     resumeFilename,
-        content:      Buffer.from(resumeBase64, "base64"),
-        content_type: resumeMime || "application/octet-stream",
-      }],
-    });
+    const confirmHtml = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;">
+
+        <tr>
+          <td align="center" style="padding-bottom:24px;">
+            <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
+              style="display:inline-block;border-radius:14px;border:0;" />
+            <br/>
+            <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;">Artha<span style="color:#ff6b00;">leads</span></span>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 20px 60px rgba(0,0,0,0.22);overflow:hidden;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:linear-gradient(160deg,rgba(255,107,0,0.12) 0%,rgba(30,29,32,0) 55%);padding:36px 40px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
+                    <tr>
+                      <td style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.25);border-radius:14px;width:52px;height:52px;text-align:center;vertical-align:middle;">
+                        <span style="font-size:24px;line-height:1;">✅</span>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#ff6b00;text-transform:uppercase;letter-spacing:0.14em;">Application Received</p>
+                  <h1 style="margin:0 0 10px;font-size:22px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.3;">Hi ${name}, your application is with us!</h1>
+                  <p style="margin:0;font-size:13px;color:#969696;line-height:1.7;">
+                    We've received your application for
+                    <strong style="color:#ff8a3d;">${role}</strong>
+                    at Arthaleads. Our team will review it and get back to you within <strong style="color:#d4d4d4;">48 hours</strong>.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:28px 40px 36px;">
+                  <p style="margin:0;font-size:13px;color:#777;line-height:1.75;">
+                    Questions? Simply reply to this email — we read every message.<br/>
+                    You can also reach us at <a href="mailto:hr@arthaleads.com" style="color:#ff6b00;text-decoration:none;">hr@arthaleads.com</a>.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center" style="padding:26px 0 8px;">
+            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Pune, India</p>
+            <p style="margin:0;font-size:11px;color:#bbb;">You applied via arthaleads.com/careers</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`.trim();
+
+    await Promise.all([
+      resend.emails.send({
+        from:    FROM_ADDRESS,
+        to:      HR_EMAIL,
+        replyTo: email,
+        subject: `Job Application: ${role} — ${name}`,
+        html,
+        text: `New Job Application\n\nRole: ${role}\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${experience ? `\nExperience: ${experience}` : ""}${linkedin ? `\nLinkedIn: ${linkedin}` : ""}${note ? `\n\nCover Note:\n${note}` : ""}\n\nResume attached.`,
+        attachments: [{
+          filename:     resumeFilename,
+          content:      Buffer.from(resumeBase64, "base64"),
+          content_type: resumeMime || "application/octet-stream",
+        }],
+      }),
+      resend.emails.send({
+        from:    FROM_ADDRESS,
+        to:      email,
+        subject: `Application received — ${role} | Arthaleads`,
+        html:    confirmHtml,
+        text:    `Hi ${name},\n\nYour application is with us!\n\nWe've received your application for ${role} at Arthaleads. Our team will review it and get back to you within 48 hours.\n\nQuestions? Reply to this email or reach us at hr@arthaleads.com.\n\n© ${YEAR} Arthaleads · Pune, India`,
+      }),
+    ]);
 
     logger.info(`[careers] Application from ${email} for "${role}"`);
     res.json({ success: true, message: "Application submitted successfully." });
