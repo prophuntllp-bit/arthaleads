@@ -287,6 +287,7 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
       options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
       style={{ minWidth: 125, fontWeight: 600 }}
     />
+  );
 }
 
 // ── Column resize hook ────────────────────────────────────────────────────────
