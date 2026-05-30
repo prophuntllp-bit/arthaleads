@@ -80,12 +80,18 @@ const followupService = {
 
     const orgIdObj = typeof user.orgId === "string" ? new mongoose.Types.ObjectId(user.orgId) : user.orgId;
 
-    // Build the project-leads $unionWith stage (omitted when scopedToSelf)
-    const projUnionStage = scopedToSelf ? [] : [
+    // Build the project-leads $unionWith stage.
+    // Agents see project leads where they set the follow-up (followUpSetBy).
+    // Admins/managers see all project leads scoped to their org.
+    const effectiveProjFilter = scopedToSelf
+      ? { $and: [{ followUpSetBy: user._id }, { orgId: orgIdObj }, projFilter] }
+      : projFilter;
+
+    const projUnionStage = [
       { $unionWith: {
         coll: "projectleads",
         pipeline: [
-          { $match: projFilter },
+          { $match: effectiveProjFilter },
           { $lookup: { from: "projects", localField: "project", foreignField: "_id", as: "_proj" } },
           // Enforce org scope - only project leads belonging to this org's projects
           { $match: { "_proj.0.orgId": orgIdObj } },
