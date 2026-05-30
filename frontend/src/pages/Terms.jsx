@@ -1,15 +1,12 @@
-﻿import { useEffect } from "react";
-import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
+﻿import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
+import { useSEO } from "../utils/useSEO";
 
 export default function Terms() {
-  useEffect(() => {
-    document.title = "Terms of Service - Arthaleads";
-    // Tell search engines not to index this page
-    let meta = document.querySelector('meta[name="robots"]');
-    if (!meta) { meta = document.createElement("meta"); meta.name = "robots"; document.head.appendChild(meta); }
-    meta.content = "noindex, nofollow";
-    return () => { meta.content = "index, follow"; };
-  }, []);
+  useSEO({
+    title:       "Terms of Service | Arthaleads Real Estate CRM",
+    description: "Read the Arthaleads terms of service. Understand the usage terms for India's leading real estate CRM and lead management platform.",
+    canonical:   "https://www.arthaleads.com/terms",
+  });
 
   return (
     <LegalLayout title="Terms of Service" badge="Legal" updated="11 April 2026">

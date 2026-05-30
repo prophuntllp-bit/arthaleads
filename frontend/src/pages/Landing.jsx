@@ -12,6 +12,7 @@ import {
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
+import { useSEO } from "../utils/useSEO";
 
 // ── Smooth scroll helper ──────────────────────────────────────────────────────
 function scrollTo(id) {
@@ -1731,13 +1732,13 @@ function FinalCTA({ isDark }) {
 export default function Landing() {
   const { isDark } = usePublicTheme();
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    document.title = "Arthaleads - Real Estate CRM | Manage Every Property Lead";
-    let desc = document.querySelector('meta[name="description"]');
-    if (!desc) { desc = document.createElement("meta"); desc.name = "description"; document.head.appendChild(desc); }
-    desc.content = "Arthaleads is India's #1 real estate CRM. Capture Facebook, Google, WhatsApp & website leads automatically. Built for developers, brokers & channel partners.";
-  }, []);
+  useSEO({
+    title:       "Arthaleads – Lead Management CRM for Real Estate | India's #1 Property CRM",
+    description: "Arthaleads is the best CRM for real estate leads in India. Capture, track & convert property leads from Facebook, Google, WhatsApp & website forms. Built for developers, brokers & channel partners.",
+    canonical:   "https://www.arthaleads.com",
+  });
+
+  useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>

@@ -1,23 +1,44 @@
 import { useEffect } from "react";
 
-export function useSEO({ title, description, canonical }) {
+function setMetaName(name, content) {
+  if (!content) return;
+  let el = document.querySelector(`meta[name="${name}"]`);
+  if (!el) { el = document.createElement("meta"); el.name = name; document.head.appendChild(el); }
+  el.content = content;
+}
+
+function setMetaProp(property, content) {
+  if (!content) return;
+  let el = document.querySelector(`meta[property="${property}"]`);
+  if (!el) { el = document.createElement("meta"); el.setAttribute("property", property); document.head.appendChild(el); }
+  el.setAttribute("content", content);
+}
+
+export function useSEO({ title, description, canonical, robots = "index, follow" }) {
   useEffect(() => {
+    const prev = {
+      title:  document.title,
+      robots: document.querySelector('meta[name="robots"]')?.content ?? "",
+    };
+
     document.title = title;
-    let desc = document.querySelector('meta[name="description"]');
-    if (!desc) {
-      desc = document.createElement("meta");
-      desc.name = "description";
-      document.head.appendChild(desc);
-    }
-    desc.content = description;
+    setMetaName("description",        description);
+    setMetaName("robots",             robots);
+    setMetaProp("og:title",           title);
+    setMetaProp("og:description",     description);
+    setMetaName("twitter:title",      title);
+    setMetaName("twitter:description", description);
+
     if (canonical) {
       let link = document.querySelector('link[rel="canonical"]');
-      if (!link) {
-        link = document.createElement("link");
-        link.rel = "canonical";
-        document.head.appendChild(link);
-      }
+      if (!link) { link = document.createElement("link"); link.rel = "canonical"; document.head.appendChild(link); }
       link.href = canonical;
     }
-  }, [title, description, canonical]);
+
+    return () => {
+      document.title = prev.title;
+      setMetaName("robots", prev.robots || "index, follow");
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, canonical, robots]);
 }

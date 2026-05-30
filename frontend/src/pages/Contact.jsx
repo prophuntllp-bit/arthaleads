@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin, MessageCircle, ArrowRight, Check } from "lucide-re
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
+import { useSEO } from "../utils/useSEO";
 
 export default function Contact() {
   const { isDark } = usePublicTheme();
@@ -11,10 +12,11 @@ export default function Contact() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    document.title = "Contact Us - Arthaleads CRM | Get in Touch";
-    return () => { document.title = "Arthaleads - Real Estate CRM"; };
-  }, []);
+  useSEO({
+    title:       "Contact Arthaleads | Real Estate CRM Support & Sales – India",
+    description: "Get in touch with the Arthaleads team. Questions about our real estate lead management CRM, pricing, or integrations? We're here to help.",
+    canonical:   "https://www.arthaleads.com/contact",
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();

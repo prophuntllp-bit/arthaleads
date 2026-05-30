@@ -109,8 +109,8 @@ function BlogPageInner() {
   const [tagFilter,   setTagFilter]   = useState(searchParams.get("tag") || "");
 
   useSEO({
-    title: "Blog - Arthaleads | Real Estate CRM Insights",
-    description: "Expert tips on lead management, real estate sales, and CRM strategies from Arthaleads - India's modern real estate CRM platform.",
+    title: "Real Estate CRM Blog | Lead Management Tips & Insights – Arthaleads",
+    description: "Expert guides on real estate lead management, CRM best practices, and property sales strategies. Helping Indian developers & brokers close more deals.",
     url: "https://www.arthaleads.com/blog",
   });
 
