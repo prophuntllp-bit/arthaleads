@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   StatusBadge, PriorityBadge, SourceBadge,
-  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink
+  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber,
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -33,7 +33,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, Pencil, Plus, Search, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -404,7 +404,8 @@ export default function Leads() {
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkAssignAgentId, setBulkAssignAgentId] = useState("");
-  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [bulkAssigning, setBulkAssigning]     = useState(false);
+  const [waBroadcast, setWaBroadcast]         = useState(null); // null | { list, msg, idx, skipped, step }
 
   // ── Project-wise leads ────────────────────────────────────────────────────
   const [projRefreshKey, setProjRefreshKey] = useState(0);
@@ -1687,6 +1688,19 @@ export default function Leads() {
             )}
 
             <button
+              onClick={() => {
+                const list = leads.filter((l) => selectedIds.has(l._id) && l.phone);
+                if (!list.length) { toast.error("No selected leads have a phone number"); return; }
+                setWaBroadcast({ list, msg: "Hi {name}, ", idx: 0, skipped: 0, step: "compose" });
+              }}
+              className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow transition"
+              style={{ background: "#25d366" }}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              WhatsApp
+            </button>
+
+            <button
               onClick={() => setShowBulkConfirm(true)}
               className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-red-600"
             >
@@ -1747,6 +1761,183 @@ export default function Leads() {
         </>,
         document.body
       )}
+
+      {/* ── WhatsApp Broadcast Modal ─────────────────────────────────────── */}
+      {waBroadcast && <WaBroadcastModal state={waBroadcast} setState={setWaBroadcast} />}
+    </div>
+  );
+}
+
+// ── WaBroadcastModal ──────────────────────────────────────────────────────────
+function interpolate(template, lead) {
+  return template
+    .replace(/\{name\}/gi,    lead.name    || "")
+    .replace(/\{phone\}/gi,   lead.phone   || "")
+    .replace(/\{project\}/gi, lead.projectName || lead.project || "");
+}
+
+function WaBroadcastModal({ state, setState }) {
+  const { list, msg, idx, skipped, step } = state;
+  const total   = list.length;
+  const current = list[idx];
+  const sent    = idx - skipped;
+
+  const set = (patch) => setState((s) => ({ ...s, ...patch }));
+
+  // ── Compose step ────────────────────────────────────────────────────────
+  if (step === "compose") {
+    const preview = interpolate(msg, list[0] || {});
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+        style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+        <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4"
+          style={{ background: "var(--app-card-solid, #1e1e1e)", border: "1px solid var(--app-border)" }}>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#25d366" }}>WhatsApp Broadcast</p>
+              <h3 className="text-lg font-black text-app mt-0.5">{total} lead{total !== 1 ? "s" : ""} selected</h3>
+            </div>
+            <button onClick={() => setState(null)} className="p-2 rounded-xl hover:bg-white/10 text-app-soft"><X className="h-4 w-4" /></button>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-app-soft uppercase tracking-wide block mb-1.5">
+              Message Template
+            </label>
+            <textarea
+              className="textarea text-sm"
+              rows={5}
+              value={msg}
+              onChange={(e) => set({ msg: e.target.value })}
+              placeholder="Hi {name}, we have an exciting property update for you…"
+              autoFocus
+            />
+            <p className="mt-1.5 text-[11px] text-app-soft">
+              Variables: <span className="font-mono bg-black/20 px-1 rounded">{"{name}"}</span>  <span className="font-mono bg-black/20 px-1 rounded">{"{project}"}</span>
+            </p>
+          </div>
+
+          <div className="rounded-2xl p-3.5 text-sm" style={{ background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.2)" }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#25d366" }}>Preview — {list[0]?.name}</p>
+            <p className="text-app whitespace-pre-wrap leading-relaxed">{preview || <span className="text-app-soft italic">Type a message above…</span>}</p>
+          </div>
+
+          <button
+            disabled={!msg.trim()}
+            onClick={() => set({ step: "running" })}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white disabled:opacity-40 transition"
+            style={{ background: "#25d366" }}
+          >
+            <Send className="h-4 w-4" /> Start Broadcast
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Running step ────────────────────────────────────────────────────────
+  if (step === "running") {
+    const waUrl = `https://wa.me/${toWaNumber(current.phone)}?text=${encodeURIComponent(interpolate(msg, current))}`;
+    const progress = Math.round((idx / total) * 100);
+
+    const advance = (wasSkipped) => {
+      const nextIdx     = idx + 1;
+      const nextSkipped = skipped + (wasSkipped ? 1 : 0);
+      if (nextIdx >= total) {
+        set({ idx: nextIdx, skipped: nextSkipped, step: "done" });
+      } else {
+        set({ idx: nextIdx, skipped: nextSkipped });
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+        style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+        <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4"
+          style={{ background: "var(--app-card-solid, #1e1e1e)", border: "1px solid var(--app-border)" }}>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#25d366" }}>Broadcasting…</p>
+              <h3 className="text-lg font-black text-app mt-0.5">{idx + 1} of {total}</h3>
+            </div>
+            <button onClick={() => setState(null)} className="p-2 rounded-xl hover:bg-white/10 text-app-soft"><X className="h-4 w-4" /></button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+            <div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, background: "#25d366" }} />
+          </div>
+
+          {/* Lead card */}
+          <div className="rounded-2xl p-4 space-y-1" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <p className="text-base font-black text-app">{current.name}</p>
+            <p className="text-sm text-app-soft">{current.phone}</p>
+            {current.status && <p className="text-xs text-app-soft">Status: {current.status}</p>}
+          </div>
+
+          {/* Message preview */}
+          <div className="rounded-2xl p-3.5 text-sm" style={{ background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.2)" }}>
+            <p className="text-app whitespace-pre-wrap leading-relaxed">{interpolate(msg, current)}</p>
+          </div>
+
+          {/* Actions */}
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-white transition"
+            style={{ background: "#25d366" }}
+          >
+            <MessageSquare className="h-4 w-4" /> Open WhatsApp
+          </a>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => advance(true)}
+              className="rounded-2xl py-2.5 text-xs font-semibold text-app-soft transition hover:bg-white/10"
+              style={{ border: "1px solid var(--app-border)" }}
+            >
+              Skip
+            </button>
+            <button
+              onClick={() => advance(false)}
+              className="rounded-2xl py-2.5 text-xs font-bold text-white transition"
+              style={{ background: "var(--app-primary, #ff6b00)" }}
+            >
+              Sent ✓ &nbsp;Next →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Done step ───────────────────────────────────────────────────────────
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}>
+      <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-4 text-center"
+        style={{ background: "var(--app-card-solid, #1e1e1e)", border: "1px solid var(--app-border)" }}>
+
+        <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+          style={{ background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.25)" }}>
+          ✓
+        </div>
+        <div>
+          <h3 className="text-xl font-black text-app">Broadcast Complete</h3>
+          <p className="mt-1 text-sm text-app-soft">
+            <span className="font-bold text-app">{total - skipped}</span> sent &nbsp;·&nbsp; <span className="font-bold text-app">{skipped}</span> skipped
+          </p>
+        </div>
+        <button
+          onClick={() => setState(null)}
+          className="w-full rounded-2xl py-3 text-sm font-bold text-white"
+          style={{ background: "var(--app-primary, #ff6b00)" }}
+        >
+          Done
+        </button>
+      </div>
     </div>
   );
 }
