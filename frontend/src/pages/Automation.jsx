@@ -144,12 +144,16 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           setConnName((prev) => prev || `${first.name} - Lead Ads`);
           setNoPagesWarning(false);
           toast.success("Facebook connected! Choose your page and form.");
+          setStep("select");
         } else {
-          // OAuth succeeded but no pages returned - token is stored, show warning
+          // OAuth returned 0 pages — most common cause: page is in Business Manager, not
+          // directly on the personal profile. Auto-expand the System User Token panel so
+          // the customer sees the permanent fix immediately without extra navigation.
           setNoPagesWarning(true);
-          toast.error("No Facebook Pages found. Please check permissions and try again.");
+          setShowSysPanel(true);
+          // Stay on connect step so the System Token panel is visible
+          toast.error("No Facebook Pages found. Your page may be in Business Manager — use the System Token below.");
         }
-        setStep("select");
       }
       if (result.type === "facebook_oauth_error") {
         toast.error(result.message || "Facebook connection failed. Please try again.");
@@ -364,8 +368,8 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 {showSysPanel && (
                   <div className="px-4 pb-4 pt-3 space-y-3" style={{ background: "var(--app-surface-low)" }}>
                     <p className="text-xs text-app-soft leading-relaxed">
-                      Go to <strong className="text-app">business.facebook.com → System Users → Prophunt CRM → Generate Token</strong>.
-                      Select the <em>Arthaleads</em> app and check: <code className="bg-black/20 px-1 rounded">leads_retrieval</code>, <code className="bg-black/20 px-1 rounded">pages_show_list</code>, <code className="bg-black/20 px-1 rounded">pages_read_engagement</code>.
+                      In your <strong className="text-app">Facebook Business Manager → System users</strong>, create a System User, assign your Page to it, then click <strong className="text-app">Generate Token</strong>.
+                      Select the <em>Arthaleads</em> app and enable: <code className="bg-black/20 px-1 rounded">leads_retrieval</code>, <code className="bg-black/20 px-1 rounded">pages_show_list</code>, <code className="bg-black/20 px-1 rounded">pages_read_engagement</code>. This token never expires.
                     </p>
                     <input
                       className="input text-xs font-mono"
