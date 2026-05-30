@@ -11,6 +11,9 @@ const Organization    = require("../models/Organization");
 
 const router = express.Router();
 
+// One alert per org per hour — prevents push spam when token is dead and leads keep arriving
+const tokenAlertCooldown = new Map(); // orgId → lastAlertTimestamp
+
 // ── Facebook signature verification ──────────────────────────────────────────
 // Uses the `verify` callback of express.json() to access the raw buffer
 // before parsing. Throws 403 if the signature doesn't match FB_APP_SECRET.
@@ -270,7 +273,21 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
             isTestLead  = fetchResult.isTestLead;
             isAuthError = fetchResult.isAuthError;
             fetchError  = fetchResult.fetchError;
-            if (isAuthError) logger.error(`Facebook webhook: all tokens failed for lead ${leadData.leadgen_id}: ${fetchError}`);
+            if (isAuthError) {
+              logger.error(`Facebook webhook: all tokens failed for lead ${leadData.leadgen_id}: ${fetchError}`);
+              // Push-notify admins — but at most once per org per hour to avoid spam
+              const orgKey   = automation.orgId?.toString();
+              const lastSent = tokenAlertCooldown.get(orgKey) || 0;
+              if (Date.now() - lastSent > 60 * 60 * 1000) {
+                tokenAlertCooldown.set(orgKey, Date.now());
+                sendPushToAll({
+                  type:  "facebook_token_expired",
+                  title: "Action Required: Facebook Token Expired",
+                  body:  "New leads are arriving but contact data can't be fetched. Go to Automation → Facebook and reconnect your account.",
+                  data:  { url: "/automation" },
+                }, automation.orgId).catch((e) => logger.warn("Push notification failed:", e.message));
+              }
+            }
             if (isTestLead)  logger.warn(`Facebook webhook: lead ${leadData.leadgen_id} is a test/fake ID: ${fetchError}`);
           }
         }

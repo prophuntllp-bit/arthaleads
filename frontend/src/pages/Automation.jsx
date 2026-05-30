@@ -1126,11 +1126,12 @@ export default function Automation() {
 
                   {isFb ? (() => {
                     // Token health calculation
-                    const expiresAt = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
-                    const daysLeft  = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-                    const tokenOk   = daysLeft === null || daysLeft > 20;
-                    const tokenWarn = daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
-                    const tokenBad  = daysLeft !== null && daysLeft <= 5;
+                    const expiresAt    = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
+                    const daysLeft     = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                    const tokenExpired = daysLeft !== null && daysLeft <= 0;
+                    const tokenOk      = daysLeft === null || daysLeft > 20;
+                    const tokenWarn    = daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
+                    const tokenBad     = daysLeft !== null && daysLeft <= 5;
                     return (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
@@ -1150,21 +1151,34 @@ export default function Automation() {
                             <span className={tokenBad ? "text-red-400 font-semibold" : tokenWarn ? "text-amber-400 font-semibold" : "text-emerald-400"}>
                               {daysLeft === null
                                 ? "Token health unknown - click Refresh"
-                                : tokenBad
-                                  ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} - refresh now!`
-                                  : tokenWarn
-                                    ? `Token expires in ${daysLeft} days - refresh soon`
-                                    : `Token valid for ${daysLeft} days`}
+                                : tokenExpired
+                                  ? "Token expired — reconnect now to resume lead capture"
+                                  : tokenBad
+                                    ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
+                                    : tokenWarn
+                                      ? `Token expires in ${daysLeft} days — refresh soon`
+                                      : `Token valid for ${daysLeft} days`}
                             </span>
                           </div>
-                          <button
-                            onClick={() => handleRefreshFbTokens(item._id, item.orgId)}
-                            disabled={refreshingId === item._id}
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 ${tokenBad ? "bg-red-500 text-white" : tokenWarn ? "bg-amber-500 text-white" : "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"}`}
-                          >
-                            <RefreshCw className={`w-3 h-3 ${refreshingId === item._id ? "animate-spin" : ""}`} />
-                            {refreshingId === item._id ? "Refreshing…" : "Refresh"}
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {tokenExpired ? (
+                              <button
+                                onClick={() => { setFbEditingItem(item); setFbWizardOpen(true); }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-500 text-white transition hover:bg-red-600"
+                              >
+                                <RefreshCw className="w-3 h-3" /> Reconnect
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleRefreshFbTokens(item._id, item.orgId)}
+                                disabled={refreshingId === item._id}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 ${tokenBad ? "bg-red-500 text-white" : tokenWarn ? "bg-amber-500 text-white" : "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"}`}
+                              >
+                                <RefreshCw className={`w-3 h-3 ${refreshingId === item._id ? "animate-spin" : ""}`} />
+                                {refreshingId === item._id ? "Refreshing…" : "Refresh"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {item.tokenRefreshedAt && (
                           <p className="text-[10px] text-app-soft px-1">
