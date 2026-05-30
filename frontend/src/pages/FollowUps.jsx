@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User } from "lucide-react";
@@ -130,15 +131,15 @@ function FUBooking({ lead, onUpdate }) {
     catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-  const opt = FU_BOOKING_OPTIONS.find((o) => o.value === (lead.booking || "")) || FU_BOOKING_OPTIONS[0];
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <select
-      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 120, maxWidth: 145 }}
-      value={lead.booking || ""} onChange={(e) => save(e.target.value)}>
-      {FU_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
+    <CustomSelect
+      value={lead.booking || ""}
+      onChange={save}
+      placeholder="- None -"
+      options={FU_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      style={{ minWidth: 130, fontWeight: 600 }}
+    />
   );
 }
 

@@ -3,6 +3,7 @@ import { Modal, Spinner } from "./UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { ArrowRightLeft } from "lucide-react";
+import CustomSelect from "./CustomSelect";
 
 const SOURCES = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "99acres", "MagicBricks", "Other"];
 
@@ -80,14 +81,13 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
           <div>
             <label className="label">Select Project</label>
             {projLoading ? <Spinner size="sm" /> : (
-              <select className="select w-full" value={toProjectId} onChange={e => setToProjectId(e.target.value)}>
-                <option value="">Choose project…</option>
-                {projects.map(p => (
-                  <option key={p._id} value={p._id}>
-                    {p.name}{String(p._id) === String(currentProjectId) ? " (current project)" : ""}
-                  </option>
-                ))}
-              </select>
+              <CustomSelect
+                value={toProjectId}
+                onChange={setToProjectId}
+                placeholder="Choose project…"
+                options={projects.map(p => ({ value: p._id, label: p.name + (String(p._id) === String(currentProjectId) ? " (current)" : "") }))}
+                style={{ width: "100%" }}
+              />
             )}
           </div>
         )}
@@ -95,9 +95,7 @@ export default function TransferModal({ open, onClose, lead, leadType, currentPr
         {mode === "pipeline" && leadType === "project" && (
           <div>
             <label className="label">Campaign / Source</label>
-            <select className="select w-full" value={source} onChange={e => setSource(e.target.value)}>
-              {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <CustomSelect value={source} onChange={setSource} options={SOURCES} style={{ width: "100%" }} />
           </div>
         )}
 

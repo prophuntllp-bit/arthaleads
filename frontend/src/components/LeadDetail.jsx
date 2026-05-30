@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { RefreshCw } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
+import CustomSelect from "./CustomSelect";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 
 const FB_ERROR_PATTERN = "Facebook lead received but field data could not be fetched";
@@ -115,9 +116,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
               {item === "notes" ? `Notes (${lead.notes?.length || 0})` : item[0].toUpperCase() + item.slice(1)}
             </button>
           ))}
-          <select className="select ml-auto max-w-52 rounded-xl" value={status} onChange={(e) => handleStatus(e.target.value)}>
-            {STATUS_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect
+            value={status}
+            onChange={handleStatus}
+            options={STATUS_OPTIONS}
+            style={{ marginLeft: "auto", minWidth: 160 }}
+          />
         </div>
 
         {tab === "info" && (

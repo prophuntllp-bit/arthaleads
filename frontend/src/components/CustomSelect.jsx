@@ -26,12 +26,19 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
 
   const calcPos = (r) => {
     const vw = window.innerWidth;
+    const vh = window.innerHeight;
     const dropW = Math.min(Math.max(r.width, 200), vw - 16);
+    // Estimate dropdown height to decide open direction
+    const estH  = Math.min(260, items.length * 38 + 60);
+    const openUp = (r.bottom + estH > vh - 8) && (r.top > estH + 8);
+
+    const posV = openUp ? { bottom: vh - r.top + 4 } : { top: r.bottom + 4 };
     // Flip to right-align when left-align would overflow the viewport
-    if (r.left + dropW > vw - 8) {
-      return { top: r.bottom + 4, right: vw - r.right, width: dropW };
-    }
-    return { top: r.bottom + 4, left: r.left, width: dropW };
+    const posH = r.left + dropW > vw - 8
+      ? { right: vw - r.right }
+      : { left: r.left };
+
+    return { ...posV, ...posH, width: dropW };
   };
 
   const openDropdown = () => {
@@ -102,8 +109,8 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
           ref={dropdownRef}
           className="fixed z-[9999] overflow-hidden"
           style={{
-            top: pos.top,
-            ...(pos.right !== undefined ? { right: pos.right } : { left: pos.left }),
+            ...(pos.bottom !== undefined ? { bottom: pos.bottom } : { top: pos.top }),
+            ...(pos.right  !== undefined ? { right: pos.right  } : { left: pos.left  }),
             minWidth: pos.width,
             maxWidth: pos.width,
             maxHeight: 260,
