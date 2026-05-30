@@ -1,6 +1,7 @@
 ﻿const leadService = require("../services/leadService");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { AppError } = require("../middlewares/errorHandler");
+const Lead = require("../models/Lead");
 
 const leadController = {
   async create(req, res, next) {
@@ -205,6 +206,16 @@ const leadController = {
     try {
       const { toProjectId } = req.body;
       if (!toProjectId) return next(new AppError("toProjectId required", 400));
+
+      // Agents may only transfer leads that are assigned to them
+      if (req.user.role === "agent") {
+        const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId }).lean();
+        if (!lead) return next(new AppError("Lead not found", 404));
+        if (String(lead.assignedTo) !== String(req.user._id)) {
+          return next(new AppError("You can only transfer leads assigned to you", 403));
+        }
+      }
+
       const result = await leadService.transferToProject(req.params.id, toProjectId, req.user);
       res.json({ success: true, data: result });
     } catch (err) { next(err); }

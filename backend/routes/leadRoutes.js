@@ -87,7 +87,7 @@ router.patch("/:id/restore", authorize("admin", "manager"), leadController.resto
 router.delete("/:id/permanent", authorize("admin", "manager"), leadController.permanentDelete);
 router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
 router.post("/:id/assign", authorize("admin", "manager"), validate(assignLeadSchema), leadController.assign);
-router.post("/:id/transfer", authorize("admin", "manager"), leadController.transferLead);
+router.post("/:id/transfer", leadController.transferLead);
 
 // POST /api/leads/:id/retry-facebook
 // Re-fetches lead field data from Meta Graph API after a token has been reconnected.

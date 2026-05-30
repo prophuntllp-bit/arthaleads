@@ -129,20 +129,15 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
     finally { setSaving(false); }
   };
 
-  const opt = BOOKING_OPTIONS.find((o) => o.value === (value || "")) || BOOKING_OPTIONS[0];
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-
   return (
-    <select
-      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 130 }}
+    <CustomSelect
       value={value || ""}
-      onChange={(e) => save(e.target.value)}
-    >
-      {BOOKING_OPTIONS.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
+      onChange={save}
+      placeholder="- None -"
+      options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      style={{ minWidth: 130, fontWeight: 600 }}
+    />
   );
 }
 
@@ -283,16 +278,15 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
     } catch { toast.error("Save failed"); }
     finally { setSaving(false); }
   };
-  const opt = PROJ_BOOKING_OPTIONS.find((o) => o.value === (value || "")) || PROJ_BOOKING_OPTIONS[0];
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
   return (
-    <select
-      className={`rounded-lg border px-2 py-1 text-xs appearance-none focus:outline-none focus:border-orange-400 font-semibold ${opt.color}`}
-      style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", minWidth: 125 }}
-      value={value || ""} onChange={(e) => save(e.target.value)}>
-      {PROJ_BOOKING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
+    <CustomSelect
+      value={value || ""}
+      onChange={save}
+      placeholder="- None -"
+      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      style={{ minWidth: 125, fontWeight: 600 }}
+    />
 }
 
 // ── Column resize hook ────────────────────────────────────────────────────────
@@ -341,27 +335,24 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
     finally { setSaving(false); }
   };
 
-  const cls = remark === "Contacted"
-    ? "bg-green-500/10 border-green-500/30 text-green-600"
+  const triggerStyle = remark === "Contacted"
+    ? { color: "#16a34a", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", fontWeight: 600 }
     : remark === "Not Contacted"
-    ? "bg-red-500/10 border-red-500/30 text-red-500"
-    : "border-[var(--app-border)] text-app-soft";
+    ? { color: "#ef4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", fontWeight: 600 }
+    : { fontWeight: 600 };
 
+  if (saving) return <span className="flex items-center px-2"><Spinner size="sm" /></span>;
   return (
-    <div className="relative min-w-[150px]">
-      <select
-        value={remark}
-        onChange={(e) => { const v = e.target.value; setRemark(v); save(v); }}
-        className={`w-full rounded-xl border px-2.5 py-1.5 text-xs font-semibold appearance-none transition ${cls}`}
-        style={{ background: "var(--app-surface-low)" }}
-      >
-        <option value="">- None -</option>
-        <option value="Contacted">Contacted</option>
-        <option value="Not Contacted">Not Contacted</option>
-      </select>
-      {saving && <span className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></span>}
-    </div>
-  );
+    <CustomSelect
+      value={remark}
+      onChange={(v) => { setRemark(v); save(v); }}
+      placeholder="- None -"
+      options={[
+        { value: "Contacted",     label: "Contacted"     },
+        { value: "Not Contacted", label: "Not Contacted" },
+      ]}
+      style={{ minWidth: 140, width: "100%", ...triggerStyle }}
+    />
 }
 
 export default function Leads() {
@@ -1029,7 +1020,7 @@ export default function Leads() {
             <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
               {/* Search row — always visible */}
               <div className="flex items-center gap-2">
-                <div className="relative flex-1 min-w-0">
+                <div className="relative flex-1 min-w-0 sm:max-w-[55%]">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
                   <input
                     style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
@@ -1039,7 +1030,7 @@ export default function Leads() {
                   />
                 </div>
                 {/* Domain filter — always on sm+, hidden on mobile (shown in expanded panel) */}
-                <div className="relative hidden sm:block" style={{ flexShrink: 0, width: 150 }}>
+                <div className="relative hidden sm:block sm:flex-1" style={{ flexShrink: 0, minWidth: 120, maxWidth: 220 }}>
                   <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
                   <input
                     style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
@@ -1642,13 +1633,12 @@ export default function Leads() {
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
         <div
-          className="fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 sm:left-auto sm:right-auto z-[9999] backdrop-blur-sm"
+          className="fixed bottom-0 left-0 right-0 rounded-t-2xl sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:rounded-2xl sm:min-w-[420px] z-[9999] backdrop-blur-sm"
           style={{
             background: "var(--app-card-solid, #1e1e1e)",
             border: "1.5px solid var(--app-border)",
             boxShadow: "0 -4px 32px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.35)",
-            borderRadius: "16px 16px 0 0",
-            padding: "12px 16px 16px",
+            padding: "12px 16px",
           }}
           // On sm+ override inline radius
         >
@@ -1674,17 +1664,15 @@ export default function Leads() {
             {/* Agent assign */}
             {user?.role !== "agent" && agents.length > 0 && (
               <>
-                <select
-                  value={bulkAssignAgentId}
-                  onChange={(e) => setBulkAssignAgentId(e.target.value)}
-                  className="flex-1 min-w-0 rounded-xl border px-2.5 py-2 text-xs focus:outline-none focus:border-orange-400 appearance-none"
-                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                >
-                  <option value="">Assign to agent…</option>
-                  {agents.map((a) => (
-                    <option key={a._id} value={a._id}>{a.name}</option>
-                  ))}
-                </select>
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkAssignAgentId}
+                    onChange={(v) => setBulkAssignAgentId(v)}
+                    placeholder="Assign to agent…"
+                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
                 <button
                   onClick={handleBulkAssign}
                   disabled={bulkAssigning || !bulkAssignAgentId}
