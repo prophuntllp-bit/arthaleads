@@ -498,15 +498,14 @@ const leadService = {
     // Project leads have no leadSourceLabel/sourcePage — exclude them entirely when filtering by site
     if (siteFilter) projFilter._id = { $exists: false };
 
-    // Derive pipeline status from booking for ProjectLeads that have no explicit status
+    // Derive pipeline status from booking — booking always takes priority over stored status
     const deriveStatus = (pl) => {
-      if (pl.status) return pl.status;
       const b = pl.booking || "";
       if (b === "Site Visit Booked" || b === "Site Visit Done") return "Site Visit";
       if (b === "Booked") return "Closed Won";
-      if (b === "Interested" || b === "Call Back") return "Contacted";
-      if (pl.remark === "Contacted") return "Contacted";
-      return "New";
+      if (b === "Not Interested") return "Closed Lost";
+      if (b === "Interested" || b === "Call Back" || b === "Not Reachable" || b === "Low Budget") return "Contacted";
+      return pl.status || (pl.remark === "Contacted" ? "Contacted" : "New");
     };
 
     // For large limit (pipeline/kanban view) fetch all project leads with no cap.

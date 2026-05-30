@@ -1480,7 +1480,7 @@ export default function Leads() {
                         <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500" onClick={() => setTransferMeta({ lead, leadType: "lead", projectId: null })} title="Transfer to project">
+                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500" onClick={() => setTransferMeta({ lead, leadType: lead._type || "lead", projectId: lead._type === "project" ? lead.projectId : null })} title="Transfer to project">
                           <ArrowRightLeft className="h-4 w-4" />
                         </button>
                         {canDelete && (
