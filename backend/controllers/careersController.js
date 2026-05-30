@@ -162,8 +162,9 @@ async function submitApplication(req, res) {
       html,
       text: `New Job Application\n\nRole: ${role}\nName: ${name}\nEmail: ${email}${phone ? `\nPhone: ${phone}` : ""}${experience ? `\nExperience: ${experience}` : ""}${linkedin ? `\nLinkedIn: ${linkedin}` : ""}${note ? `\n\nCover Note:\n${note}` : ""}\n\nResume attached.`,
       attachments: [{
-        filename: resumeFilename,
-        content:  resumeBase64,
+        filename:     resumeFilename,
+        content:      Buffer.from(resumeBase64, "base64"),
+        content_type: resumeMime || "application/octet-stream",
       }],
     });
 
