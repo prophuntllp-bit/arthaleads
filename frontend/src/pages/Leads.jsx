@@ -354,6 +354,7 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
       ]}
       style={{ minWidth: 140, width: "100%", ...triggerStyle }}
     />
+  );
 }
 
 export default function Leads() {
