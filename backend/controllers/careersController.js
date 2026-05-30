@@ -7,7 +7,7 @@ function getResend() {
 }
 
 const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-const HR_EMAIL = "hr@arthaleads.com";
+const HR_EMAIL = "prophuntllp@gmail.com";
 const YEAR = new Date().getFullYear();
 
 function sanitize(str, maxLen = 200) {
