@@ -494,7 +494,14 @@ const leadService = {
       const rx = { $regex: escapeRegex(search), $options: "i" };
       projFilter.$or = [{ name: rx }, { phone: rx }, { email: rx }];
     }
-    if (user.role === "agent") projFilter.importedBy = user._id;
+    if (user.role === "agent") {
+      const assignedProjectIds = await Project.find({ assignedTo: user._id, orgId: user.orgId, isArchived: false }).select("_id").lean().then(ps => ps.map(p => p._id));
+      if (assignedProjectIds.length > 0) {
+        projFilter.$or = [{ importedBy: user._id }, { project: { $in: assignedProjectIds } }];
+      } else {
+        projFilter.importedBy = user._id;
+      }
+    }
     // Project leads have no leadSourceLabel/sourcePage — exclude them entirely when filtering by site
     if (siteFilter) projFilter._id = { $exists: false };
 
