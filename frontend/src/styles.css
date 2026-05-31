@@ -349,6 +349,10 @@
     background: rgba(var(--app-primary-rgb), 0.30);
   }
 
+  /* ── Hide scrollbar (e.g. horizontally-scrolled tab strips) ── */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
   /* ── Top-scrollbar mirror strip — always show the track ── */
   .top-scroll-mirror::-webkit-scrollbar { height: 8px; display: block; }
   .top-scroll-mirror::-webkit-scrollbar-track {

@@ -230,9 +230,6 @@ function NavInner({ onScrollTo }) {
 
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-7">
-            <NavLink id="hero"     label="Home" />
-            <NavLink id="features" label="Features" />
-
             {/* Resources dropdown */}
             <div className="relative" ref={resRef}>
               <DropdownTrigger
@@ -316,20 +313,6 @@ function NavInner({ onScrollTo }) {
       {mobileOpen && (
         <div className="lg:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
           <div className="px-4 py-4 space-y-1">
-
-            {/* Main links */}
-            {[
-              { id: "hero",     label: "Home" },
-              { id: "features", label: "Features" },
-            ].map(({ id, label }) => (
-              isHome && onScrollTo
-                ? <button key={id} onClick={() => { onScrollTo(id); setMobileOpen(false); }}
-                    className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
-                    style={{ color: textMuted }}>{label}</button>
-                : <Link key={id} to={`/#${id}`} onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 text-sm font-medium rounded-xl"
-                    style={{ color: textMuted }}>{label}</Link>
-            ))}
 
             {/* Resources section */}
             <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
