@@ -9,7 +9,6 @@ import {
 import { usePublicTheme } from "../context/PublicThemeContext";
 
 const NAV_RESOURCES = [
-  { label: "Blog",             href: "/blog",             desc: "CRM insights & real estate tips",    icon: BookOpen },
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
   { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
@@ -19,7 +18,6 @@ const NAV_RESOURCES = [
 ];
 
 const NAV_COMPANY = [
-  { label: "About Us",      href: "/about-us", desc: "Our mission & story",        icon: Building2 },
   { label: "Careers",       href: "/careers",  desc: "Join the Arthaleads team",   icon: Briefcase, badge: "Hiring" },
   { label: "Security",      href: "/security", desc: "How we protect your data",   icon: Shield },
   { label: "System Status", href: "/status",   desc: "Live uptime & incidents",    icon: Activity },
@@ -229,7 +227,12 @@ function NavInner({ onScrollTo }) {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden lg:flex items-center gap-7">
+          <div className="hidden lg:flex items-center gap-5 xl:gap-6">
+            <NavLink id="hero"        label="Home" />
+            <NavLink href="/about-us" label="About Us" />
+            <NavLink id="pricing"     label="Pricing" />
+            <NavLink href="/blog"     label="Blog" />
+
             {/* Resources dropdown */}
             <div className="relative" ref={resRef}>
               <DropdownTrigger
@@ -268,7 +271,6 @@ function NavInner({ onScrollTo }) {
               )}
             </div>
 
-            <NavLink id="pricing"  label="Pricing" />
             <NavLink href="/contact" label="Contact" />
           </div>
 
@@ -314,6 +316,24 @@ function NavInner({ onScrollTo }) {
         <div className="lg:hidden backdrop-blur-xl" style={{ background: mobileBg, borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
           <div className="px-4 py-4 space-y-1">
 
+            {/* Primary links */}
+            {isHome && onScrollTo
+              ? <button onClick={() => { onScrollTo("hero"); setMobileOpen(false); }}
+                  className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
+                  style={{ color: textMuted }}>Home</button>
+              : <Link to="/" onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 text-sm font-medium rounded-xl"
+                  style={{ color: textMuted }}>Home</Link>}
+            <Link to="/about-us" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>About Us</Link>
+            {isHome && onScrollTo
+              ? <button onClick={() => { onScrollTo("pricing"); setMobileOpen(false); }}
+                  className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
+                  style={{ color: textMuted }}>Pricing</button>
+              : <Link to="/#pricing" onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-3 text-sm font-medium rounded-xl"
+                  style={{ color: textMuted }}>Pricing</Link>}
+            <Link to="/blog" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Blog</Link>
+
             {/* Resources section */}
             <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>
               Resources
@@ -345,19 +365,8 @@ function NavInner({ onScrollTo }) {
               </Link>
             ))}
 
-            {/* Rest */}
-            {[
-              { id: "pricing", label: "Pricing" },
-            ].map(({ id, label }) => (
-              isHome && onScrollTo
-                ? <button key={id} onClick={() => { onScrollTo(id); setMobileOpen(false); }}
-                    className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
-                    style={{ color: textMuted }}>{label}</button>
-                : <Link key={id} to={`/#${id}`} onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 text-sm font-medium rounded-xl"
-                    style={{ color: textMuted }}>{label}</Link>
-            ))}
-            <Link to="/contact" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Contact</Link>
+            {/* Contact */}
+            <Link to="/contact" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl mt-2" style={{ color: textMuted }}>Contact</Link>
 
             {/* Auth CTAs */}
             <div className="pt-3 flex flex-col gap-2 mt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
