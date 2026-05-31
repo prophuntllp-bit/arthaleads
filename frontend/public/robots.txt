@@ -17,6 +17,7 @@ Allow: /status
 Allow: /refer
 Allow: /api-docs
 Allow: /compare
+Allow: /pricing
 
 # Internal CRM pages - not for indexing
 Disallow: /dashboard

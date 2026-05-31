@@ -230,7 +230,7 @@ function NavInner({ onScrollTo }) {
           <div className="hidden lg:flex items-center gap-5 xl:gap-6">
             <NavLink id="hero"        label="Home" />
             <NavLink href="/about-us" label="About Us" />
-            <NavLink id="pricing"     label="Pricing" />
+            <NavLink href="/pricing"  label="Pricing" />
             <NavLink href="/blog"     label="Blog" />
 
             {/* Resources dropdown */}
@@ -325,13 +325,7 @@ function NavInner({ onScrollTo }) {
                   className="block px-4 py-3 text-sm font-medium rounded-xl"
                   style={{ color: textMuted }}>Home</Link>}
             <Link to="/about-us" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>About Us</Link>
-            {isHome && onScrollTo
-              ? <button onClick={() => { onScrollTo("pricing"); setMobileOpen(false); }}
-                  className="block w-full text-left px-4 py-3 text-sm font-medium rounded-xl"
-                  style={{ color: textMuted }}>Pricing</button>
-              : <Link to="/#pricing" onClick={() => setMobileOpen(false)}
-                  className="block px-4 py-3 text-sm font-medium rounded-xl"
-                  style={{ color: textMuted }}>Pricing</Link>}
+            <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Pricing</Link>
             <Link to="/blog" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Blog</Link>
 
             {/* Resources section */}

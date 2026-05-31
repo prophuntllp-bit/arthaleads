@@ -389,6 +389,7 @@ const Status          = lazy(() => import("./pages/Status"));
 const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
 const Compare         = lazy(() => import("./pages/Compare"));
+const Pricing         = lazy(() => import("./pages/Pricing"));
 const AdminLogin            = lazy(() => import("./pages/AdminLogin"));
 const SuperAdminHome        = lazy(() => import("./pages/SuperAdminHome"));
 const SuperAdminUsers       = lazy(() => import("./pages/SuperAdminUsers"));
@@ -629,6 +630,7 @@ export default function App() {
         <Route path="/refer"                element={<ReferEarn />} />
         <Route path="/api-docs"             element={<ApiDocs />} />
         <Route path="/compare"              element={<Compare />} />
+        <Route path="/pricing"              element={<Pricing />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />

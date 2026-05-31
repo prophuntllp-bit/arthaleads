@@ -31,9 +31,12 @@ export function planLabel(plan) {
   return PLAN_LABELS[plan] ?? "Starter";
 }
 
-// Human-readable upgrade target
+// Human-readable upgrade target.
+// A trial user is trialing Growth-level features — the right next step is to
+// subscribe to Growth (the plan they're already using), NOT jump to Enterprise.
 export function upgradeTarget(plan) {
-  if (planLevel(plan) === 1) return "Growth";
-  if (planLevel(plan) === 2) return "Enterprise";
-  return null;
+  if (plan === "trial") return "Growth";
+  if (planLevel(plan) === 1) return "Growth";   // starter -> Growth
+  if (planLevel(plan) === 2) return "Enterprise"; // growth/pro -> Enterprise
+  return null;                                     // enterprise -> nothing higher
 }
