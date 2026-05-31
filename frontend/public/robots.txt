@@ -10,6 +10,13 @@ Allow: /help-guide
 Allow: /wordpress-plugin
 Allow: /privacy
 Allow: /terms
+Allow: /refund
+Allow: /cookie-policy
+Allow: /security
+Allow: /status
+Allow: /refer
+Allow: /api-docs
+Allow: /compare
 
 # Internal CRM pages - not for indexing
 Disallow: /dashboard

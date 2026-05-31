@@ -90,11 +90,24 @@ export default function Terms() {
           uninterrupted or error-free access to the Service. The platform may be temporarily unavailable
           due to scheduled maintenance, infrastructure issues, or events beyond our control. Arthaleads
           will make reasonable efforts to notify users of planned downtime in advance. We are not liable
-          for any losses or inconvenience caused by service interruptions.
+          for any losses or inconvenience caused by service interruptions. You can view live platform
+          status on our{" "}
+          <a href="/status" style={{ color: "var(--app-primary)" }} className="hover:underline">System Status</a> page.
         </p>
       </Section>
 
-      <Section title="8. Termination">
+      <Section title="8. Billing, Subscriptions & Refunds">
+        <p>
+          Paid plans are billed in advance for the chosen billing period. You can cancel at any time, with
+          no lock-in; your plan stays active until the end of the current billing cycle. We offer a 7-day
+          money-back guarantee on your first payment. Full details on refunds and cancellations are in our{" "}
+          <a href="/refund" style={{ color: "var(--app-primary)" }} className="hover:underline">Refund &amp; Cancellation Policy</a>.
+          Our use of cookies is described in our{" "}
+          <a href="/cookie-policy" style={{ color: "var(--app-primary)" }} className="hover:underline">Cookie Policy</a>.
+        </p>
+      </Section>
+
+      <Section title="9. Termination">
         <p>
           Arthaleads reserves the right to suspend or terminate your account at any time, with or without
           notice, if we determine that you have violated these Terms of Service or engaged in conduct that
@@ -104,7 +117,7 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="9. Limitation of Liability">
+      <Section title="10. Limitation of Liability">
         <p>
           To the fullest extent permitted by applicable law, Arthaleads shall not be liable
           for any indirect, incidental, special, consequential, or punitive damages - including but not
@@ -116,7 +129,7 @@ export default function Terms() {
         </p>
       </Section>
 
-      <Section title="10. Contact">
+      <Section title="11. Contact">
         <p>
           If you have any questions about these Terms of Service or wish to report a violation, please
           contact us:

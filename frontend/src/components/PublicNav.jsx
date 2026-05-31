@@ -4,6 +4,7 @@ import {
   Menu, X, ChevronDown, Sun, Moon,
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
+  Code2, GitCompare, Shield, Activity, Gift,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
@@ -13,11 +14,16 @@ const NAV_RESOURCES = [
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
   { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
   { label: "WordPress Plugin", href: "/wordpress-plugin", desc: "Capture leads from any WP form",    icon: Puzzle },
+  { label: "API Docs",         href: "/api-docs",         desc: "Integrate with the REST API",       icon: Code2 },
+  { label: "Compare",          href: "/compare",          desc: "Arthaleads vs other CRMs",          icon: GitCompare },
 ];
 
 const NAV_COMPANY = [
-  { label: "About Us", href: "/about-us", desc: "Our mission & story",      icon: Building2 },
-  { label: "Careers",  href: "/careers",  desc: "Join the Arthaleads team", icon: Briefcase, badge: "Hiring" },
+  { label: "About Us",      href: "/about-us", desc: "Our mission & story",        icon: Building2 },
+  { label: "Careers",       href: "/careers",  desc: "Join the Arthaleads team",   icon: Briefcase, badge: "Hiring" },
+  { label: "Security",      href: "/security", desc: "How we protect your data",   icon: Shield },
+  { label: "System Status", href: "/status",   desc: "Live uptime & incidents",    icon: Activity },
+  { label: "Refer & Earn",  href: "/refer",    desc: "Give a month, get a month",  icon: Gift, badge: "Earn" },
 ];
 
 // ── Reusable dropdown panel ───────────────────────────────────────────────────

@@ -39,10 +39,12 @@ export default function PublicFooter() {
             <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h4>
             <div className="space-y-2.5">
               {[
-                ["Features",         "/#features"],
-                ["Pricing",          "/#pricing"],
-                ["WordPress Plugin", "/wordpress-plugin"],
-                ["Product Updates",  "/product-updates"],
+                ["Features",           "/#features"],
+                ["Pricing",            "/#pricing"],
+                ["WordPress Plugin",   "/wordpress-plugin"],
+                ["API Docs",           "/api-docs"],
+                ["Feature Comparison", "/compare"],
+                ["Refer & Earn",       "/refer"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
               ))}
@@ -54,12 +56,13 @@ export default function PublicFooter() {
             <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Company</h4>
             <div className="space-y-2.5">
               {[
-                ["About Us",    "/about-us"],
-                ["Careers",     "/careers"],
-                ["Blog",        "/blog"],
-                ["Case Studies","/case-studies"],
-                ["Help Guide",  "/help-guide"],
-                ["Contact Us",  "/contact"],
+                ["About Us",      "/about-us"],
+                ["Careers",       "/careers"],
+                ["Blog",          "/blog"],
+                ["Help Guide",    "/help-guide"],
+                ["Security",      "/security"],
+                ["System Status", "/status"],
+                ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
               ))}
@@ -73,6 +76,8 @@ export default function PublicFooter() {
               {[
                 ["Privacy Policy",   "/privacy"],
                 ["Terms of Service", "/terms"],
+                ["Refund Policy",    "/refund"],
+                ["Cookie Policy",    "/cookie-policy"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>
               ))}
