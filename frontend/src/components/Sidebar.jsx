@@ -580,14 +580,10 @@ export default function Sidebar() {
                   <User style={{ width: 15, height: 15, flexShrink: 0 }} />
                   My Profile
                 </button>
-                <button onClick={() => { navigate("/refer"); setProfileOpen(false); }}
+                <button onClick={() => { navigate("/referrals"); setProfileOpen(false); }}
                   className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
                   <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
-                  <span className="flex-1">Referrals</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: "rgba(255,107,0,0.1)", color: "#ff6b00" }}>
-                    Earn free months
-                  </span>
+                  Referrals
                 </button>
                 <button onClick={() => { toggleTheme(); setProfileOpen(false); }}
                   className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">

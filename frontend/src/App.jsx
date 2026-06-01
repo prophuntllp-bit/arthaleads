@@ -387,6 +387,7 @@ const CookiePolicy    = lazy(() => import("./pages/CookiePolicy"));
 const Security        = lazy(() => import("./pages/Security"));
 const Status          = lazy(() => import("./pages/Status"));
 const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
+const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
 const Compare         = lazy(() => import("./pages/Compare"));
 const Pricing         = lazy(() => import("./pages/Pricing"));
@@ -661,6 +662,7 @@ export default function App() {
           <Route path="/pipeline"  element={<LeadPipeline />} />
           <Route path="/settings"      element={<Settings />} />
           <Route path="/help-support"  element={<HelpSupport />} />
+          <Route path="/referrals"     element={<Referrals />} />
           <Route path="/projects"      element={<Projects />} />
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
