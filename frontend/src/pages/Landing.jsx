@@ -261,6 +261,7 @@ function Hero({ isDark }) {
 
 // ── Sources strip ─────────────────────────────────────────────────────────────
 function SourcesStrip({ isDark }) {
+  const [hoveredSource, setHoveredSource] = useState(null);
   const bg       = isDark ? "#0d0d1a" : "#f9fafb";
   const border   = isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb";
   const label    = isDark ? "rgba(255,255,255,0.30)" : "#9ca3af";
@@ -269,14 +270,14 @@ function SourcesStrip({ isDark }) {
   const chipText = isDark ? "rgba(255,255,255,0.60)" : "#6b7280";
 
   const sources = [
-    { name: "Facebook Ads",  Logo: FbLogo },
-    { name: "WhatsApp",      Logo: WaLogo },
-    { name: "Google Ads",    Logo: GoogleLogo },
-    { name: "Walk-ins",      Logo: ({ size }) => <Building2 style={{ width: size, height: size, color: "#ff6b00" }} /> },
-    { name: "99acres",       Logo: AcresLogo },
-    { name: "Housing.com",   Logo: HousingLogo },
-    { name: "MagicBricks",   Logo: MagicBricksLogo },
-    { name: "Email & Forms", Logo: ({ size }) => <Mail style={{ width: size, height: size, color: "#6366f1" }} /> },
+    { name: "Facebook Ads",  color: "#1877F2", type: "Auto",   Logo: FbLogo },
+    { name: "WhatsApp",      color: "#25D366", type: "Auto",   Logo: WaLogo },
+    { name: "Google Ads",    color: "#4285F4", type: "Auto",   Logo: GoogleLogo },
+    { name: "Walk-ins",      color: "#ff6b00", type: "Manual", Logo: ({ size }) => <Building2 style={{ width: size, height: size, color: "#ff6b00" }} /> },
+    { name: "99acres",       color: "#f97316", type: "Auto",   Logo: AcresLogo },
+    { name: "Housing.com",   color: "#2563eb", type: "Auto",   Logo: HousingLogo },
+    { name: "MagicBricks",   color: "#dc2626", type: "Auto",   Logo: MagicBricksLogo },
+    { name: "Email & Forms", color: "#6366f1", type: "Manual", Logo: ({ size }) => <Mail style={{ width: size, height: size, color: "#6366f1" }} /> },
   ];
 
   return (
@@ -286,13 +287,33 @@ function SourcesStrip({ isDark }) {
           Capture leads from every source
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          {sources.map(({ name, Logo }) => (
-            <div key={name} className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-colors"
-              style={{ background: chipBg, border: `1px solid ${chipBdr}` }}>
-              <Logo size={16} />
-              <span className="text-sm font-medium" style={{ color: chipText }}>{name}</span>
-            </div>
-          ))}
+          {sources.map(({ name, color, type, Logo }) => {
+            const isHovered = hoveredSource === name;
+            return (
+              <div key={name}
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-default"
+                style={{
+                  background: isHovered ? `${color}12` : chipBg,
+                  border: `1px solid ${isHovered ? color + "50" : chipBdr}`,
+                  boxShadow: isHovered ? `0 4px 16px ${color}25` : "none",
+                  transform: isHovered ? "translateY(-2px)" : "none",
+                }}
+                onMouseEnter={() => setHoveredSource(name)}
+                onMouseLeave={() => setHoveredSource(null)}>
+                <Logo size={16} />
+                <span className="text-sm font-medium transition-colors duration-150"
+                  style={{ color: isHovered ? color : chipText }}>{name}</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-all duration-150"
+                  style={{
+                    background: isHovered ? `${color}18` : "transparent",
+                    color: isHovered ? color : "transparent",
+                    minWidth: 0,
+                  }}>
+                  {type}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -301,69 +322,34 @@ function SourcesStrip({ isDark }) {
 
 // ── Features ──────────────────────────────────────────────────────────────────
 const FEATURES = [
-  {
-    icon: Layers,
-    color: "#ff6b00",
-    title: "Unified Lead Inbox",
-    desc: "Every lead from Facebook, WhatsApp, Google Ads, walk-ins and portals lands in one place. No more juggling spreadsheets or missing follow-ups across platforms.",
-  },
-  {
-    icon: Building2,
-    color: "#22c55e",
-    title: "Project Management",
-    desc: "Run multiple real estate projects simultaneously. Import thousands of leads per project, track their status, and assign telecallers - all in one workspace.",
-  },
-  {
-    icon: PhoneCall,
-    color: "#3b82f6",
-    title: "Telecaller Workflow",
-    desc: "Streamline your calling team with remark tracking, booking status, follow-up scheduling, and call outcomes. Never let a hot lead go cold again.",
-  },
-  {
-    icon: BarChart3,
-    color: "#a855f7",
-    title: "Performance Analytics",
-    desc: "Real-time dashboards showing lead sources, team conversion rates, follow-up completion, and deal pipeline. Make data-driven decisions every day.",
-  },
-  {
-    icon: Users,
-    color: "#f59e0b",
-    title: "Team Management",
-    desc: "Assign roles - Admin, Manager, Agent - with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel.",
-  },
-  {
-    icon: Bell,
-    color: "#ec4899",
-    title: "Smart Alerts & Follow-ups",
-    desc: "Automated reminders for scheduled follow-ups, push notifications for new lead assignments, and overdue call alerts so nothing slips through the cracks.",
-  },
-  {
-    icon: Filter,
-    color: "#14b8a6",
-    title: "Duplicate Prevention",
-    desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically - even across different formats. Every agent calls a unique lead.",
-  },
-  {
-    icon: TrendingUp,
-    color: "#ff6b00",
-    title: "Lead Pipeline",
-    desc: "Kanban-style pipeline view lets you drag leads through stages - New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance.",
-  },
-  {
-    icon: Shield,
-    color: "#22c55e",
-    title: "Secure & Multi-tenant",
-    desc: "Enterprise-grade data isolation. Every organisation's data is completely separate. Role-based access ensures agents only see what they're supposed to.",
-  },
+  { cat: "leads",      icon: Layers,     color: "#ff6b00", title: "Unified Lead Inbox",       desc: "Every lead from Facebook, WhatsApp, Google Ads, walk-ins and portals lands in one place. No more juggling spreadsheets or missing follow-ups across platforms." },
+  { cat: "leads",      icon: Building2,  color: "#22c55e", title: "Project Management",        desc: "Run multiple real estate projects simultaneously. Import thousands of leads per project, track their status, and assign telecallers - all in one workspace." },
+  { cat: "team",       icon: PhoneCall,  color: "#3b82f6", title: "Telecaller Workflow",       desc: "Streamline your calling team with remark tracking, booking status, follow-up scheduling, and call outcomes. Never let a hot lead go cold again." },
+  { cat: "analytics",  icon: BarChart3,  color: "#a855f7", title: "Performance Analytics",     desc: "Real-time dashboards showing lead sources, team conversion rates, follow-up completion, and deal pipeline. Make data-driven decisions every day." },
+  { cat: "team",       icon: Users,      color: "#f59e0b", title: "Team Management",           desc: "Assign roles - Admin, Manager, Agent - with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel." },
+  { cat: "automation", icon: Bell,       color: "#ec4899", title: "Smart Alerts & Follow-ups", desc: "Automated reminders for scheduled follow-ups, push notifications for new lead assignments, and overdue call alerts so nothing slips through the cracks." },
+  { cat: "leads",      icon: Filter,     color: "#14b8a6", title: "Duplicate Prevention",      desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically - even across different formats. Every agent calls a unique lead." },
+  { cat: "leads",      icon: TrendingUp, color: "#ff6b00", title: "Lead Pipeline",             desc: "Kanban-style pipeline view lets you drag leads through stages - New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance." },
+  { cat: "analytics",  icon: Shield,     color: "#22c55e", title: "Secure & Multi-tenant",     desc: "Enterprise-grade data isolation. Every organisation's data is completely separate. Role-based access ensures agents only see what they're supposed to." },
+];
+
+const FEAT_FILTERS = [
+  { id: "all",        label: "All Features",    color: "#ff6b00" },
+  { id: "leads",      label: "Lead Management", color: "#14b8a6" },
+  { id: "team",       label: "Team",            color: "#3b82f6" },
+  { id: "analytics",  label: "Analytics",       color: "#a855f7" },
+  { id: "automation", label: "Automation",      color: "#ec4899" },
 ];
 
 function Features({ isDark }) {
+  const [activeFilter, setActiveFilter] = useState("all");
   const bg       = isDark ? "#0d0d1a" : "#ffffff";
   const heading  = isDark ? "#ffffff" : "#111827";
   const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
   const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
   const cardBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
   const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
+  const filtered = activeFilter === "all" ? FEATURES : FEATURES.filter(f => f.cat === activeFilter);
 
   const Card = ({ icon: Icon, color, title, desc, idx }) => (
     <div className="group relative flex-shrink-0 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
@@ -406,19 +392,44 @@ function Features({ isDark }) {
           </p>
         </div>
 
+        {/* Category filter tabs */}
+        <div className="flex justify-center mb-7">
+          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+            {FEAT_FILTERS.map((f) => {
+              const isActive = activeFilter === f.id;
+              return (
+                <button key={f.id} onClick={() => setActiveFilter(f.id)}
+                  className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: isActive ? `${f.color}15` : "transparent",
+                    border: `1px solid ${isActive ? f.color + "55" : (isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb")}`,
+                    color: isActive ? f.color : (isDark ? "rgba(255,255,255,0.45)" : "#6b7280"),
+                    boxShadow: isActive ? `0 0 0 3px ${f.color}12` : "none",
+                  }}>
+                  {f.label}
+                  {isActive && activeFilter !== "all" && (
+                    <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${f.color}20`, color: f.color }}>
+                      {filtered.length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Mobile: horizontal swipe carousel */}
         <div className="lg:hidden -mx-4 px-4">
           <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-            {FEATURES.map((f, i) => (
+            {filtered.map((f, i) => (
               <div key={f.title} className="snap-start flex-shrink-0" style={{ width: "72vw", maxWidth: 300 }}>
                 <Card {...f} idx={i} />
               </div>
             ))}
-            {/* Trailing spacer so last card isn't flush to edge */}
             <div className="flex-shrink-0 w-4" />
           </div>
-          {/* Swipe hint */}
           <p className="text-center text-xs mt-2" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#d1d5db" }}>
             swipe to see more
           </p>
@@ -426,7 +437,7 @@ function Features({ isDark }) {
 
         {/* Desktop: 3-column grid */}
         <div className="hidden lg:grid grid-cols-3 gap-5">
-          {FEATURES.map((f, i) => <Card key={f.title} {...f} idx={i} />)}
+          {filtered.map((f, i) => <Card key={f.title} {...f} idx={i} />)}
         </div>
       </div>
     </section>
