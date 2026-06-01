@@ -256,6 +256,17 @@ const superAdminController = {
     }
   },
 
+  // GET /api/super-admin/tickets/:id/thread - full ticket with replies (admin)
+  async getTicketThread(req, res, next) {
+    try {
+      const ticket = await Ticket.findById(req.params.id).lean();
+      if (!ticket) return next(new AppError("Ticket not found", 404));
+      res.json({ success: true, ticket });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // GET /api/super-admin/tickets - list all support tickets across orgs
   async listTickets(req, res, next) {
     try {
@@ -324,6 +335,42 @@ const superAdminController = {
       const ticket = await Ticket.findByIdAndUpdate(req.params.id, update, { new: true });
       if (!ticket) return next(new AppError("Ticket not found", 404));
 
+      res.json({ success: true, ticket });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/super-admin/tickets/:id/reply - admin posts a reply visible to the user
+  async replyTicket(req, res, next) {
+    try {
+      const { body, attachments } = req.body;
+      if (!body?.trim()) return next(new AppError("Reply body is required", 400));
+
+      const ticket = await Ticket.findById(req.params.id);
+      if (!ticket) return next(new AppError("Ticket not found", 404));
+
+      const sanitised = Array.isArray(attachments)
+        ? attachments.slice(0, 3).map((a) => ({
+            url:  String(a.url  || "").slice(0, 2_000_000),
+            name: String(a.name || "attachment").slice(0, 200),
+            size: Number(a.size || 0),
+          })).filter((a) => a.url)
+        : [];
+
+      ticket.replies.push({
+        body:        body.trim().slice(0, 3000),
+        authorId:    req.user._id,
+        authorName:  req.user.name,
+        isAdmin:     true,
+        attachments: sanitised,
+        createdAt:   new Date(),
+      });
+
+      // Auto-move to in-progress when admin first replies from open
+      if (ticket.status === "open") ticket.status = "in-progress";
+
+      await ticket.save();
       res.json({ success: true, ticket });
     } catch (err) {
       next(err);

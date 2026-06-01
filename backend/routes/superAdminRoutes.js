@@ -22,8 +22,10 @@ router.post("/backup",                ctrl.triggerBackup);
 router.post("/migrate-logos", ctrl.migrateLogos);
 
 // ── Ticket management (super admin sees all tickets) ──────────────────────────
-router.get("/tickets",         ctrl.listTickets);
-router.patch("/tickets/:id",   ctrl.updateTicket);
-router.post("/broadcast",      ctrl.broadcast);
+router.get("/tickets",              ctrl.listTickets);
+router.get("/tickets/:id/thread",   ctrl.getTicketThread);
+router.patch("/tickets/:id",        ctrl.updateTicket);
+router.post("/tickets/:id/reply",   ctrl.replyTicket);
+router.post("/broadcast",           ctrl.broadcast);
 
 module.exports = router;

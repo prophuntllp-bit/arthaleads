@@ -1,5 +1,5 @@
 // pages/HelpSupport.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronDown, ChevronRight, ExternalLink, Headset, LifeBuoy, Mail,
@@ -7,7 +7,7 @@ import {
   Plus, X, Clock, CheckCircle2, AlertCircle, Loader2, RefreshCw,
   ChevronLeft, ChevronRight as ChRight,
   BookOpen, Zap, Users, GitBranch, Bell, BarChart2,
-  PlayCircle, ArrowRight, MapPin,
+  ArrowRight, MapPin, Paperclip, Send, Image, FileText,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -379,9 +379,86 @@ function GettingStartedTab() {
   );
 }
 
+// ── Attachment helpers ────────────────────────────────────────────────────────
+const MAX_FILE_BYTES = 600 * 1024; // 600 KB
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function AttachmentPicker({ attachments, onChange }) {
+  const ref = useRef();
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = 3 - attachments.length;
+    if (remaining <= 0) { toast.error("Maximum 3 attachments allowed"); return; }
+    const toProcess = files.slice(0, remaining);
+    const results = [];
+    for (const f of toProcess) {
+      if (f.size > MAX_FILE_BYTES) { toast.error(`${f.name} is too large (max 600 KB)`); continue; }
+      try {
+        const url = await fileToBase64(f);
+        results.push({ url, name: f.name, size: f.size });
+      } catch { toast.error(`Failed to read ${f.name}`); }
+    }
+    if (results.length) onChange([...attachments, ...results]);
+    e.target.value = "";
+  };
+
+  const remove = (i) => onChange(attachments.filter((_, idx) => idx !== i));
+
+  const icon = (name) => {
+    const ext = name.split(".").pop()?.toLowerCase();
+    if (["jpg","jpeg","png","gif","webp"].includes(ext)) return <Image className="h-3.5 w-3.5" />;
+    return <FileText className="h-3.5 w-3.5" />;
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="text-xs font-semibold text-app-soft uppercase tracking-wide">Attachments</label>
+        <span className="text-[10px] text-app-soft">{attachments.length}/3 · max 600 KB each</span>
+      </div>
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {attachments.map((a, i) => (
+            <div key={i} className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <span style={{ color: "var(--app-primary)" }}>{icon(a.name)}</span>
+              <span className="text-app max-w-[120px] truncate">{a.name}</span>
+              <button type="button" onClick={() => remove(i)} className="text-app-soft hover:text-red-500 transition ml-0.5">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {attachments.length < 3 && (
+        <>
+          <input ref={ref} type="file" accept="image/*,.pdf,.txt,.doc,.docx" multiple className="hidden" onChange={handleFiles} />
+          <button type="button" onClick={() => ref.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-app-soft hover:text-app transition"
+            style={{ border: "1px dashed var(--app-border)" }}>
+            <Paperclip className="h-3.5 w-3.5" />
+            Attach screenshot or file
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Raise Ticket Modal ────────────────────────────────────────────────────────
 function RaiseTicketModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ subject: "", description: "", category: "general", priority: "medium" });
+  const [attachments, setAttachments] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -399,7 +476,7 @@ function RaiseTicketModal({ onClose, onSuccess }) {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setSaving(true);
     try {
-      const { data } = await api.post("/tickets", form);
+      const { data } = await api.post("/tickets", { ...form, attachments });
       onSuccess(data.ticket);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to submit ticket");
@@ -411,10 +488,10 @@ function RaiseTicketModal({ onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
-      <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden"
+      <div className="w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col"
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b" style={{ borderColor: "var(--app-border)" }}>
+        <div className="flex items-center justify-between px-6 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--app-border)" }}>
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
               <TicketIcon className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
@@ -430,7 +507,7 @@ function RaiseTicketModal({ onClose, onSuccess }) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
           {/* Subject */}
           <div>
             <label className="block text-xs font-semibold text-app-soft mb-1.5 uppercase tracking-wide">Subject *</label>
@@ -481,6 +558,9 @@ function RaiseTicketModal({ onClose, onSuccess }) {
               <p className="text-[10px] text-app-soft">{form.description.length}/3000</p>
             </div>
           </div>
+
+          {/* Attachments */}
+          <AttachmentPicker attachments={attachments} onChange={setAttachments} />
 
           {/* Actions */}
           <div className="flex items-center gap-3 pt-2">
@@ -547,6 +627,227 @@ function TicketSuccessModal({ ticket, onClose }) {
   );
 }
 
+// ── Attachment preview chip ───────────────────────────────────────────────────
+function AttachChip({ a }) {
+  const ext = a.name?.split(".").pop()?.toLowerCase();
+  const isImg = ["jpg","jpeg","png","gif","webp"].includes(ext);
+  return (
+    <a href={a.url} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition cursor-pointer"
+      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+      {isImg
+        ? <Image className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+        : <FileText className="h-3.5 w-3.5 text-app-soft" />}
+      <span className="text-app max-w-[140px] truncate">{a.name || "attachment"}</span>
+    </a>
+  );
+}
+
+// ── Ticket Thread Modal (user-facing) ─────────────────────────────────────────
+function TicketThreadModal({ ticketId, onClose, onUpdated }) {
+  const { user } = useAuth();
+  const [ticket, setTicket] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [replyBody, setReplyBody] = useState("");
+  const [replyAttachments, setReplyAttachments] = useState([]);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef();
+
+  const load = async () => {
+    try {
+      const { data } = await api.get(`/tickets/${ticketId}`);
+      setTicket(data.ticket);
+    } catch {
+      toast.error("Failed to load ticket");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [ticketId]);
+
+  useEffect(() => {
+    if (ticket) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [ticket]);
+
+  const sendReply = async () => {
+    if (!replyBody.trim()) return;
+    setSending(true);
+    try {
+      const { data } = await api.post(`/tickets/${ticketId}/reply`, {
+        body: replyBody.trim(),
+        attachments: replyAttachments,
+      });
+      setTicket(data.ticket);
+      setReplyBody("");
+      setReplyAttachments([]);
+      if (onUpdated) onUpdated(data.ticket);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send reply");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const fmtFull = (iso) => iso
+    ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "";
+
+  const isClosed = ticket?.status === "closed";
+
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
+      <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: "92vh", background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
+          style={{ borderColor: "var(--app-border)" }}>
+          {loading || !ticket ? (
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-app-soft" />
+              <span className="text-sm text-app-soft">Loading ticket…</span>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl flex-shrink-0"
+                style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
+                <TicketIcon className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-sm font-black" style={{ color: "var(--app-primary)" }}>
+                    {ticket.ticketNumber}
+                  </span>
+                  {statusBadge(ticket.status)}
+                  {priorityBadge(ticket.priority)}
+                </div>
+                <p className="text-sm font-bold text-app mt-0.5 truncate">{ticket.subject}</p>
+                <p className="text-[10px] text-app-soft mt-0.5">
+                  {ticket.category?.replace("-", " ")} · Opened {fmtDate(ticket.createdAt)}
+                </p>
+              </div>
+            </div>
+          )}
+          <button onClick={onClose}
+            className="p-2 rounded-xl text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 transition flex-shrink-0 ml-3">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Thread */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-app-soft" />
+            </div>
+          ) : !ticket ? null : (
+            <>
+              {/* Initial message */}
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-black"
+                  style={{ background: "var(--app-primary)" }}>
+                  {ticket.userName?.[0]?.toUpperCase() || "U"}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-xs font-bold text-app">{ticket.userName}</span>
+                    <span className="text-[10px] text-app-soft">{fmtFull(ticket.createdAt)}</span>
+                  </div>
+                  <div className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-app leading-relaxed whitespace-pre-wrap"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                    {ticket.description}
+                  </div>
+                  {ticket.attachments?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {ticket.attachments.map((a, i) => <AttachChip key={i} a={a} />)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Replies */}
+              {ticket.replies?.map((r, i) => {
+                const isMe = !r.isAdmin;
+                return (
+                  <div key={i} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                    <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-black ${
+                      r.isAdmin ? "bg-purple-500/15 text-purple-600" : "text-white"
+                    }`} style={!r.isAdmin ? { background: "var(--app-primary)" } : {}}>
+                      {r.isAdmin ? "S" : (r.authorName?.[0]?.toUpperCase() || "U")}
+                    </div>
+                    <div className={`flex-1 min-w-0 ${isMe ? "flex flex-col items-end" : ""}`}>
+                      <div className={`flex items-baseline gap-2 mb-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                        <span className="text-xs font-bold text-app">
+                          {r.isAdmin ? "Support Team" : r.authorName}
+                        </span>
+                        <span className="text-[10px] text-app-soft">{fmtFull(r.createdAt)}</span>
+                      </div>
+                      <div className={`rounded-2xl px-4 py-3 text-sm text-app leading-relaxed whitespace-pre-wrap inline-block max-w-full ${
+                        r.isAdmin ? "rounded-tl-sm" : "rounded-tr-sm"
+                      }`} style={{
+                        background: r.isAdmin ? "rgba(var(--app-primary-rgb),0.07)" : "var(--app-surface-low)",
+                        border: "1px solid var(--app-border)",
+                      }}>
+                        {r.body}
+                      </div>
+                      {r.attachments?.length > 0 && (
+                        <div className={`flex flex-wrap gap-2 mt-2 ${isMe ? "justify-end" : ""}`}>
+                          {r.attachments.map((a, j) => <AttachChip key={j} a={a} />)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div ref={bottomRef} />
+            </>
+          )}
+        </div>
+
+        {/* Reply box */}
+        {!loading && ticket && (
+          <div className="flex-shrink-0 border-t px-5 py-4 space-y-3"
+            style={{ borderColor: "var(--app-border)" }}>
+            {isClosed ? (
+              <p className="text-center text-xs text-app-soft py-2">
+                This ticket is closed. Raise a new ticket if you need further help.
+              </p>
+            ) : (
+              <>
+                <textarea
+                  className="input w-full resize-none text-sm"
+                  rows={3}
+                  placeholder="Type your reply…"
+                  value={replyBody}
+                  maxLength={3000}
+                  onChange={e => setReplyBody(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendReply(); }}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <AttachmentPicker attachments={replyAttachments} onChange={setReplyAttachments} />
+                  <button
+                    onClick={sendReply}
+                    disabled={sending || !replyBody.trim()}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                    style={{ background: "var(--app-primary)" }}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Send
+                  </button>
+                </div>
+                <p className="text-[10px] text-app-soft">Ctrl+Enter to send</p>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── My Tickets Section ────────────────────────────────────────────────────────
 function MyTickets({ refreshTrigger }) {
   const [tickets, setTickets] = useState([]);
@@ -554,6 +855,7 @@ function MyTickets({ refreshTrigger }) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
+  const [viewId, setViewId] = useState(null);
 
   const load = async (p = 1) => {
     setLoading(true);
@@ -571,6 +873,10 @@ function MyTickets({ refreshTrigger }) {
   };
 
   useEffect(() => { load(1); }, [refreshTrigger]);
+
+  const handleThreadUpdate = (updated) => {
+    setTickets(prev => prev.map(t => t._id === updated._id ? { ...t, status: updated.status } : t));
+  };
 
   if (loading && tickets.length === 0) {
     return (
@@ -592,19 +898,28 @@ function MyTickets({ refreshTrigger }) {
 
   return (
     <div>
+      {viewId && (
+        <TicketThreadModal
+          ticketId={viewId}
+          onClose={() => setViewId(null)}
+          onUpdated={handleThreadUpdate}
+        />
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b" style={{ borderColor: "var(--app-border)" }}>
-              {["Ticket #", "Subject", "Category", "Priority", "Status", "Raised On"].map(h => (
+              {["Ticket #", "Subject", "Category", "Priority", "Status", "Raised On", ""].map(h => (
                 <th key={h} className="text-left px-3 py-2.5 text-[10px] font-bold uppercase tracking-wide text-app-soft whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {tickets.map(t => (
-              <tr key={t._id} className="border-b hover:bg-black/2 dark:hover:bg-white/2 transition"
-                style={{ borderColor: "var(--app-border)" }}>
+              <tr key={t._id}
+                className="border-b hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition cursor-pointer"
+                style={{ borderColor: "var(--app-border)" }}
+                onClick={() => setViewId(t._id)}>
                 <td className="px-3 py-3">
                   <span className="font-mono text-xs font-bold" style={{ color: "var(--app-primary)" }}>{t.ticketNumber}</span>
                 </td>
@@ -618,6 +933,9 @@ function MyTickets({ refreshTrigger }) {
                 <td className="px-3 py-3">{statusBadge(t.status)}</td>
                 <td className="px-3 py-3">
                   <span className="text-xs text-app-soft">{fmtDate(t.createdAt)}</span>
+                </td>
+                <td className="px-3 py-3">
+                  <span className="text-xs font-semibold" style={{ color: "var(--app-primary)" }}>View →</span>
                 </td>
               </tr>
             ))}

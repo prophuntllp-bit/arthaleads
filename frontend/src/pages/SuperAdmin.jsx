@@ -10,6 +10,7 @@ import {
   Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
   RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
   Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
+  Send, Paperclip, Image, FileText, Loader2,
 } from "lucide-react";
 
 function PlanBadge({ plan }) {
@@ -815,12 +816,100 @@ function TicketStatusBadge({ status }) {
   );
 }
 
+// ── Admin Attachment Picker (same logic as user-side) ─────────────────────────
+function AdminAttachChip({ a }) {
+  const ext = a.name?.split(".").pop()?.toLowerCase();
+  const isImg = ["jpg","jpeg","png","gif","webp"].includes(ext);
+  return (
+    <a href={a.url} target="_blank" rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition"
+      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+      {isImg
+        ? <Image className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+        : <FileText className="h-3.5 w-3.5 text-app-soft" />}
+      <span className="text-app max-w-[120px] truncate">{a.name || "attachment"}</span>
+    </a>
+  );
+}
+
+function AdminAttachmentPicker({ attachments, onChange }) {
+  const ref = useRef();
+  const MAX = 3;
+  const MAX_BYTES = 600 * 1024;
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const remaining = MAX - attachments.length;
+    if (remaining <= 0) { toast.error("Maximum 3 attachments"); return; }
+    const results = [];
+    for (const f of files.slice(0, remaining)) {
+      if (f.size > MAX_BYTES) { toast.error(`${f.name} too large (max 600 KB)`); continue; }
+      const url = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      }).catch(() => null);
+      if (url) results.push({ url, name: f.name, size: f.size });
+    }
+    if (results.length) onChange([...attachments, ...results]);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {attachments.map((a, i) => (
+        <div key={i} className="flex items-center gap-1">
+          <AdminAttachChip a={a} />
+          <button type="button" onClick={() => onChange(attachments.filter((_, j) => j !== i))}
+            className="text-app-soft hover:text-red-500 transition">
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+      {attachments.length < MAX && (
+        <>
+          <input ref={ref} type="file" accept="image/*,.pdf,.txt,.doc,.docx" multiple className="hidden" onChange={handleFiles} />
+          <button type="button" onClick={() => ref.current?.click()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-app-soft hover:text-app transition"
+            style={{ border: "1px dashed var(--app-border)" }}>
+            <Paperclip className="h-3.5 w-3.5" /> Attach
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Ticket Detail Modal ───────────────────────────────────────────────────────
-function TicketDetailModal({ ticket, onClose, onUpdated }) {
-  const [status,     setStatus]     = useState(ticket.status);
-  const [priority,   setPriority]   = useState(ticket.priority);
-  const [adminNotes, setAdminNotes] = useState(ticket.adminNotes || "");
+function TicketDetailModal({ ticket: initialTicket, onClose, onUpdated }) {
+  const [ticket,     setTicket]     = useState(initialTicket);
+  const [status,     setStatus]     = useState(initialTicket.status);
+  const [priority,   setPriority]   = useState(initialTicket.priority);
+  const [adminNotes, setAdminNotes] = useState(initialTicket.adminNotes || "");
   const [saving,     setSaving]     = useState(false);
+  const [replyBody,  setReplyBody]  = useState("");
+  const [replyAtts,  setReplyAtts]  = useState([]);
+  const [sending,    setSending]    = useState(false);
+  const [loading,    setLoading]    = useState(true);
+  const bottomRef = useRef();
+
+  // Load full ticket (with replies) on open
+  useEffect(() => {
+    api.get(`/super-admin/tickets/${initialTicket._id}/thread`)
+      .then(({ data }) => {
+        setTicket(data.ticket);
+        setStatus(data.ticket.status);
+        setAdminNotes(data.ticket.adminNotes || "");
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [initialTicket._id]);
+
+  useEffect(() => {
+    if (!loading) setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [loading]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -828,9 +917,9 @@ function TicketDetailModal({ ticket, onClose, onUpdated }) {
       const { data } = await api.patch(`/super-admin/tickets/${ticket._id}`, {
         status, priority, adminNotes,
       });
+      setTicket(t => ({ ...t, ...data.ticket }));
       onUpdated(data.ticket);
       toast.success("Ticket updated");
-      onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update ticket");
     } finally {
@@ -838,30 +927,59 @@ function TicketDetailModal({ ticket, onClose, onUpdated }) {
     }
   };
 
-  const fmtFull = (iso) => iso ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
+  const handleReply = async () => {
+    if (!replyBody.trim()) return;
+    setSending(true);
+    try {
+      const { data } = await api.post(`/super-admin/tickets/${ticket._id}/reply`, {
+        body: replyBody.trim(),
+        attachments: replyAtts,
+      });
+      setTicket(data.ticket);
+      setStatus(data.ticket.status);
+      setReplyBody("");
+      setReplyAtts([]);
+      onUpdated(data.ticket);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send reply");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const fmtFull = (iso) => iso
+    ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "-";
 
   return (
-    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-3"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
-      <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+      <div className="w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        style={{ maxHeight: "94vh", background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
+        <div className="flex items-start justify-between px-6 py-4 border-b flex-shrink-0"
           style={{ borderColor: "var(--app-border)" }}>
           <div className="flex items-start gap-3 min-w-0">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl flex-shrink-0"
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl flex-shrink-0"
               style={{ background: "rgba(var(--app-primary-rgb),0.10)" }}>
-              <TicketIcon className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+              <TicketIcon className="h-4 w-4" style={{ color: "var(--app-primary)" }} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-sm font-black" style={{ color: "var(--app-primary)" }}>
                   {ticket.ticketNumber}
                 </span>
-                <TicketStatusBadge status={ticket.status} />
+                <TicketStatusBadge status={status} />
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${TICKET_PRIORITY_COLORS[priority] || "bg-gray-100 text-gray-500"}`}>
+                  {priority}
+                </span>
               </div>
-              <p className="text-base font-bold text-app mt-0.5 truncate">{ticket.subject}</p>
+              <p className="text-sm font-bold text-app mt-0.5 truncate">{ticket.subject}</p>
+              <p className="text-[10px] text-app-soft mt-0.5">
+                {ticket.orgName} · {ticket.userName} · {ticket.category?.replace("-", " ")} · {fmtFull(ticket.createdAt)}
+              </p>
             </div>
           </div>
           <button onClick={onClose}
@@ -870,94 +988,166 @@ function TicketDetailModal({ ticket, onClose, onUpdated }) {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-5">
-          {/* Metadata row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: "Organization", value: ticket.orgName },
-              { label: "Submitted By", value: ticket.userName },
-              { label: "Email", value: ticket.userEmail },
-              { label: "Raised On", value: fmtFull(ticket.createdAt) },
-            ].map(({ label, value }) => (
-              <div key={label} className="rounded-2xl px-4 py-3" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                <p className="text-[10px] font-bold text-app-soft uppercase tracking-wide mb-1">{label}</p>
-                <p className="text-xs font-semibold text-app">{value}</p>
-              </div>
-            ))}
-          </div>
+        {/* Two-column layout */}
+        <div className="flex flex-1 overflow-hidden min-h-0">
 
-          {/* Category + Priority badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="stitch-kicker">Category:</span>
-            <span className="text-xs font-semibold text-app capitalize">{ticket.category?.replace("-", " ")}</span>
-            <span className="stitch-kicker ml-2">Priority:</span>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${TICKET_PRIORITY_COLORS[ticket.priority] || "bg-gray-100 text-gray-500"}`}>
-              {ticket.priority}
-            </span>
-          </div>
+          {/* Left: conversation thread */}
+          <div className="flex-1 flex flex-col min-w-0 border-r" style={{ borderColor: "var(--app-border)" }}>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-app-soft" />
+                </div>
+              ) : (
+                <>
+                  {/* Initial description */}
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-black"
+                      style={{ background: "#64748b" }}>
+                      {ticket.userName?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="text-xs font-bold text-app">{ticket.userName}</span>
+                        <span className="text-[10px] text-app-soft">{ticket.userEmail}</span>
+                        <span className="text-[10px] text-app-soft">{fmtFull(ticket.createdAt)}</span>
+                      </div>
+                      <div className="rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-app leading-relaxed whitespace-pre-wrap"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                        {ticket.description}
+                      </div>
+                      {ticket.attachments?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {ticket.attachments.map((a, i) => <AdminAttachChip key={i} a={a} />)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-          {/* Description */}
-          <div>
-            <p className="text-xs font-bold text-app-soft uppercase tracking-wide mb-2">Description</p>
-            <div className="rounded-2xl px-5 py-4 text-sm text-app leading-relaxed whitespace-pre-wrap"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              {ticket.description}
+                  {/* Replies */}
+                  {ticket.replies?.map((r, i) => (
+                    <div key={i} className={`flex gap-3 ${!r.isAdmin ? "" : "flex-row-reverse"}`}>
+                      <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-xs font-black ${
+                        r.isAdmin ? "text-white" : "bg-slate-200 dark:bg-slate-700 text-app"
+                      }`} style={r.isAdmin ? { background: "var(--app-primary)" } : {}}>
+                        {r.isAdmin ? "A" : (r.authorName?.[0]?.toUpperCase() || "U")}
+                      </div>
+                      <div className={`flex-1 min-w-0 ${r.isAdmin ? "flex flex-col items-end" : ""}`}>
+                        <div className={`flex items-baseline gap-2 mb-1 ${r.isAdmin ? "flex-row-reverse" : ""}`}>
+                          <span className="text-xs font-bold text-app">
+                            {r.isAdmin ? "Support Team (Admin)" : r.authorName}
+                          </span>
+                          <span className="text-[10px] text-app-soft">{fmtFull(r.createdAt)}</span>
+                        </div>
+                        <div className={`inline-block max-w-full rounded-2xl px-4 py-3 text-sm text-app leading-relaxed whitespace-pre-wrap ${
+                          r.isAdmin ? "rounded-tr-sm" : "rounded-tl-sm"
+                        }`} style={{
+                          background: r.isAdmin ? "rgba(var(--app-primary-rgb),0.09)" : "var(--app-surface-low)",
+                          border: "1px solid var(--app-border)",
+                        }}>
+                          {r.body}
+                        </div>
+                        {r.attachments?.length > 0 && (
+                          <div className={`flex flex-wrap gap-2 mt-2 ${r.isAdmin ? "justify-end" : ""}`}>
+                            {r.attachments.map((a, j) => <AdminAttachChip key={j} a={a} />)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={bottomRef} />
+                </>
+              )}
             </div>
+
+            {/* Admin reply box */}
+            {!loading && ticket.status !== "closed" && (
+              <div className="flex-shrink-0 border-t p-4 space-y-3" style={{ borderColor: "var(--app-border)" }}>
+                <textarea
+                  className="input w-full resize-none text-sm"
+                  rows={3}
+                  placeholder="Reply to this ticket… (visible to the customer)"
+                  value={replyBody}
+                  maxLength={3000}
+                  onChange={e => setReplyBody(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleReply(); }}
+                />
+                <div className="flex items-center justify-between gap-3">
+                  <AdminAttachmentPicker attachments={replyAtts} onChange={setReplyAtts} />
+                  <button
+                    onClick={handleReply}
+                    disabled={sending || !replyBody.trim()}
+                    className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+                    style={{ background: "var(--app-primary)" }}>
+                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Reply
+                  </button>
+                </div>
+                <p className="text-[10px] text-app-soft">Ctrl+Enter to send · Reply is visible to the customer</p>
+              </div>
+            )}
+            {!loading && ticket.status === "closed" && (
+              <div className="flex-shrink-0 border-t px-4 py-3 text-center" style={{ borderColor: "var(--app-border)" }}>
+                <p className="text-xs text-app-soft">Ticket is closed — update status to re-open for replies</p>
+              </div>
+            )}
           </div>
 
-          {/* Admin Controls */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Status */}
+          {/* Right: admin controls */}
+          <div className="w-72 flex-shrink-0 overflow-y-auto p-5 space-y-5">
             <div>
-              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Update Status</label>
+              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Status</label>
               <select className="input w-full" value={status} onChange={e => setStatus(e.target.value)}>
                 {TICKET_STATUSES.filter(s => s.value !== "all").map(s => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
             </div>
-            {/* Priority */}
             <div>
-              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Update Priority</label>
+              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Priority</label>
               <select className="input w-full" value={priority} onChange={e => setPriority(e.target.value)}>
                 {["low", "medium", "high", "urgent"].map(p => (
                   <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
                 ))}
               </select>
             </div>
-          </div>
+            <div>
+              <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">
+                Internal Notes
+                <span className="ml-1 normal-case font-normal text-app-soft/70">(admin only)</span>
+              </label>
+              <textarea
+                className="input w-full resize-none text-xs"
+                rows={5}
+                placeholder="Internal notes, investigation steps…"
+                value={adminNotes}
+                maxLength={2000}
+                onChange={e => setAdminNotes(e.target.value)}
+              />
+              <p className="text-[10px] text-app-soft text-right mt-0.5">{adminNotes.length}/2000</p>
+            </div>
+            <button onClick={handleSave} disabled={saving}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              style={{ background: "var(--app-primary)" }}>
+              {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Save className="h-4 w-4" /> Save Changes</>}
+            </button>
 
-          {/* Admin Notes */}
-          <div>
-            <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">
-              Internal Notes <span className="normal-case font-normal">(only visible to super admins)</span>
-            </label>
-            <textarea
-              className="input w-full resize-none"
-              rows={3}
-              placeholder="Add internal notes, resolution steps, or follow-up actions…"
-              value={adminNotes}
-              maxLength={2000}
-              onChange={e => setAdminNotes(e.target.value)}
-            />
-            <p className="text-[10px] text-app-soft text-right mt-0.5">{adminNotes.length}/2000</p>
+            {/* Metadata */}
+            <div className="space-y-3 pt-1 border-t" style={{ borderColor: "var(--app-border)" }}>
+              {[
+                { label: "Organization", value: ticket.orgName },
+                { label: "Submitted By", value: ticket.userName },
+                { label: "Email", value: ticket.userEmail },
+                { label: "Raised On", value: fmtFull(ticket.createdAt) },
+                { label: "Category", value: ticket.category?.replace("-", " ") },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <p className="text-[10px] font-bold text-app-soft uppercase tracking-wide">{label}</p>
+                  <p className="text-xs text-app mt-0.5 break-all">{value || "-"}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t flex-shrink-0"
-          style={{ borderColor: "var(--app-border)" }}>
-          <button onClick={onClose}
-            className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-app-soft transition hover:bg-black/5 dark:hover:bg-white/5"
-            style={{ border: "1px solid var(--app-border)" }}>
-            Cancel
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-            style={{ background: "var(--app-primary)" }}>
-            {saving ? <><Spinner size="sm" /> Saving…</> : <><Save className="h-4 w-4" /> Save Changes</>}
-          </button>
         </div>
       </div>
     </div>

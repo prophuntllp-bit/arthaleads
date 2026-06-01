@@ -6,7 +6,9 @@ const ctrl = require("../controllers/ticketController");
 
 router.use(protect);
 
-router.post("/",   ctrl.create);   // POST /api/tickets
-router.get("/",    ctrl.listMine); // GET  /api/tickets
+router.post("/",           ctrl.create);    // POST /api/tickets
+router.get("/",            ctrl.listMine);  // GET  /api/tickets
+router.get("/:id",         ctrl.getOne);    // GET  /api/tickets/:id
+router.post("/:id/reply",  ctrl.addReply);  // POST /api/tickets/:id/reply
 
 module.exports = router;
