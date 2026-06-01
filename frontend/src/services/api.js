@@ -40,7 +40,13 @@ api.interceptors.response.use(
       localStorage.removeItem("crm_user");
       localStorage.removeItem("crm_org");
       localStorage.removeItem("_at");
-      if (hadSession) {
+
+      // Never show "session expired" when the user is already on an auth page.
+      // Scenario: stale crm_user in localStorage → /auth/me returns 401 on mount →
+      // user is already on /login and about to sign in → the toast fires BEFORE
+      // login() can abort the request, causing both toasts to appear simultaneously.
+      const onAuthPage = /^\/(login|signup|forgot-password|reset-password)/.test(window.location.pathname);
+      if (hadSession && !onAuthPage) {
         toast.error("Your session has expired. Please log in again.", { id: "session-expired" });
       }
       window.dispatchEvent(new CustomEvent("auth:expired"));
