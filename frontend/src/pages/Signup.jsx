@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useRef, useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall, CheckCircle2, RefreshCw } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -16,12 +16,14 @@ const VERIFIED = "verified"; // phone is confirmed ✓
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signup, googleLogin } = useAuth();
   const [loading, setLoading]   = useState(false);
   const [gLoading, setGLoading] = useState(false);
   const [error, setError]       = useState("");
   const [showPwd, setShowPwd]   = useState(false);
   const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "", phone: "" });
+  const [referralCode] = useState(() => searchParams.get("ref") || "");
 
   // Phone OTP verification states
   const [phoneStep, setPhoneStep] = useState(IDLE);
@@ -112,7 +114,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      await signup({ ...form, phoneToken });
+      await signup({ ...form, phoneToken, ...(referralCode ? { referralCode } : {}) });
       toast.success("Account created! Welcome to Arthaleads.");
       navigate("/dashboard");
     } catch (err) {

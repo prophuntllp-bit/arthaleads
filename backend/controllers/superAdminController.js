@@ -138,9 +138,16 @@ const superAdminController = {
 
       invalidateOrgCache(req.params.id);
 
-      // Audit log meaningful changes
-      if (update.plan && before?.plan !== update.plan)
+      // When an org moves off trial onto a paid plan, schedule referral reward (7 days)
+      if (update.plan && before?.plan !== update.plan) {
         logAudit("plan_change", req, { targetOrg: org._id, targetOrgName: org.name, details: { from: before.plan, to: update.plan } });
+        const PAID = ["starter", "growth", "pro", "enterprise"];
+        if (before?.plan === "trial" && PAID.includes(update.plan) && org.referredBy && !org.referralRewardAt) {
+          await Organization.findByIdAndUpdate(org._id, {
+            referralRewardAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          });
+        }
+      }
       if (update.isActive !== undefined && before?.isActive !== update.isActive)
         logAudit(update.isActive ? "org_activated" : "org_deactivated", req, { targetOrg: org._id, targetOrgName: org.name });
       if (update.name && before?.name !== update.name)

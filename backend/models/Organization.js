@@ -31,9 +31,21 @@ const orgSchema = new mongoose.Schema(
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
     monthlyClosingGoal: { type: Number, default: 0, min: 0 },
+    // ── Referral tracking ──────────────────────────────────────────────────────
+    referralCode:    { type: String, uppercase: true, sparse: true, index: true },
+    referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
+    referralRewardAt: { type: Date, default: null }, // set 7 days after referred org subscribes
   },
   { timestamps: true }
 );
+
+// Auto-generate referralCode from _id on first save
+orgSchema.pre("save", function (next) {
+  if (this.isNew && !this.referralCode) {
+    this.referralCode = String(this._id).slice(-6).toUpperCase();
+  }
+  next();
+});
 
 // Generate slug from name
 orgSchema.statics.generateSlug = function (name) {

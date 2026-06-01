@@ -173,6 +173,7 @@ app.use("/api/push", pushRoutes);
 app.use("/api/voice", require("./routes/voiceRoutes"));
 app.use("/api/followups",   require("./routes/followupRoutes"));
 app.use("/api/attendance",   require("./routes/attendanceRoutes"));
+app.use("/api/referrals",    require("./routes/referralRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 app.use("/api/tickets",    require("./routes/ticketRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);

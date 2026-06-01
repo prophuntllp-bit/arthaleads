@@ -50,6 +50,16 @@ const authService = {
 
     const org = await Organization.create({ name: orgName, slug });
 
+    // Attribute referral if a valid code was passed
+    if (data.referralCode) {
+      const code = String(data.referralCode).toUpperCase();
+      const referrer = await Organization.findOne({ referralCode: code }).lean();
+      if (referrer && referrer._id.toString() !== org._id.toString()) {
+        org.referredBy = referrer._id;
+        await org.save({ validateBeforeSave: false });
+      }
+    }
+
     // Strip phoneToken from user data before creating the user doc
     const { phoneToken: _pt, ...userData } = data;
     const user = await User.create({ ...userData, phone: normPhone, orgId: org._id, role: "admin" });
