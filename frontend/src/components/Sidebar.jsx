@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  LayoutDashboard, Users, UserCheck, Settings,
+  LayoutDashboard, Users, UserCheck, Settings, User, Gift,
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
@@ -577,8 +577,17 @@ export default function Sidebar() {
               <div className="px-2 py-1.5">
                 <button onClick={() => { navigate("/settings"); setProfileOpen(false); }}
                   className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-                  <Settings style={{ width: 15, height: 15, flexShrink: 0 }} />
-                  Account Settings
+                  <User style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  My Profile
+                </button>
+                <button onClick={() => { navigate("/refer"); setProfileOpen(false); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
+                  <span className="flex-1">Referrals</span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: "rgba(255,107,0,0.1)", color: "#ff6b00" }}>
+                    Earn free months
+                  </span>
                 </button>
                 <button onClick={() => { toggleTheme(); setProfileOpen(false); }}
                   className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
