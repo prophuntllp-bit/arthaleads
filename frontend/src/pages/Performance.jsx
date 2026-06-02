@@ -283,17 +283,17 @@ export default function Performance() {
     <div className="stitch-page space-y-6">
       {/* Header */}
       <section className="card p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <p className="stitch-kicker mb-2">Performance Board</p>
-            <h1 className="text-3xl font-black tracking-tight text-app">Team Performance</h1>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">Team Performance</h1>
             <p className="mt-2 max-w-2xl text-sm text-app-soft">
               Track how each team member is handling leads across both the main pipeline and project pipelines - updated live.
             </p>
           </div>
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
             {/* Date range filter */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
               <input
                 type="date"
@@ -395,7 +395,7 @@ export default function Performance() {
                   <span className="text-xs font-semibold text-app">Main Pipeline</span>
                   <span className="ml-auto text-xs text-app-soft">{pipeline.totalAssigned || 0} leads</span>
                 </div>
-                <div className="p-3 grid grid-cols-5 gap-2">
+                <div className="p-3 grid grid-cols-3 xs:grid-cols-5 sm:grid-cols-5 gap-2">
                   <SmallTile label="Assigned"     value={pipeline.totalAssigned || 0} />
                   <SmallTile label="New"           value={pipeline.newLeads      || 0} />
                   <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} />
@@ -423,7 +423,7 @@ export default function Performance() {
                   <span className="text-xs font-semibold text-app">Project Pipeline</span>
                   <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} leads</span>
                 </div>
-                <div className="p-3 grid grid-cols-4 gap-2">
+                <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <SmallTile label="Assigned"     value={project.totalAssigned || 0} />
                   <SmallTile label="Interested"   value={project.interested    || 0} />
                   <SmallTile label="Site Visit"   value={project.siteVisits    || 0}

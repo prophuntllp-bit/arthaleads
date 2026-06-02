@@ -405,19 +405,6 @@ export default function Dashboard() {
                         <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 10,
-                        border: "1px solid var(--app-border)",
-                        background: "var(--app-card)",
-                        color: "var(--app-text)",
-                        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                        fontSize: 12,
-                        padding: "6px 12px",
-                      }}
-                      itemStyle={{ color: "var(--app-text)" }}
-                      labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                    />
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center label */}

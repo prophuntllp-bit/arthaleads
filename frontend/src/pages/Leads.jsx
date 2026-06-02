@@ -1658,35 +1658,101 @@ export default function Leads() {
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
         <div
-          className="fixed bottom-0 left-0 right-0 rounded-t-2xl sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:rounded-2xl sm:min-w-[420px] z-[9999] backdrop-blur-sm"
+          className="fixed bottom-0 left-0 right-0 z-[9999] sm:bottom-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:rounded-2xl sm:min-w-[480px] rounded-t-2xl backdrop-blur-sm"
           style={{
             background: "var(--app-card-solid, #1e1e1e)",
             border: "1.5px solid var(--app-border)",
             boxShadow: "0 -4px 32px rgba(0,0,0,0.25), 0 8px 32px rgba(0,0,0,0.35)",
             padding: "12px 16px",
+            paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
           }}
-          // On sm+ override inline radius
         >
-          {/* Top row: count + close */}
-          <div className="flex items-center justify-between mb-2 sm:hidden">
-            <span className="flex items-center gap-2 text-xs font-bold text-orange-400">
-              <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
-              {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""} selected
-            </span>
-            <button onClick={() => setSelectedIds(new Set())}
-              className="p-1.5 rounded-lg text-app-soft hover:bg-white/10">
-              <X className="h-4 w-4" />
-            </button>
+          {/* ── Mobile layout ── */}
+          <div className="flex flex-col gap-2 sm:hidden">
+            {/* Row 1: count + close */}
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-xs font-bold text-orange-400">
+                <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" />
+                {selectedIds.size} lead{selectedIds.size !== 1 ? "s" : ""} selected
+              </span>
+              <button onClick={() => setSelectedIds(new Set())}
+                className="p-1.5 rounded-lg text-app-soft hover:bg-white/10 cursor-pointer">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Row 2: Assign (admin only) */}
+            {user?.role !== "agent" && agents.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkAssignAgentId}
+                    onChange={(v) => setBulkAssignAgentId(v)}
+                    placeholder="Assign to agent…"
+                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={handleBulkAssign}
+                  disabled={bulkAssigning || !bulkAssignAgentId}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-40 cursor-pointer"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  {bulkAssigning ? "…" : "Assign"}
+                </button>
+              </div>
+            )}
+
+            {/* Row 3: Status update */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <CustomSelect
+                  value={bulkStatusValue}
+                  onChange={(v) => setBulkStatusValue(v)}
+                  placeholder="Set status…"
+                  options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <button
+                onClick={handleBulkStatusUpdate}
+                disabled={bulkUpdatingStatus || !bulkStatusValue}
+                className="shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-40 cursor-pointer"
+                style={{ background: "var(--app-primary)" }}
+              >
+                {bulkUpdatingStatus ? "…" : "Update"}
+              </button>
+            </div>
+
+            {/* Row 4: WhatsApp + Delete */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  const list = leads.filter((l) => selectedIds.has(l._id) && l.phone);
+                  if (!list.length) { toast.error("No selected leads have a phone number"); return; }
+                  setWaBroadcast({ list, msg: "Hi {name}, ", idx: 0, skipped: 0, step: "compose" });
+                }}
+                className="flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-white transition cursor-pointer"
+                style={{ background: "#25d366" }}
+              >
+                <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+              </button>
+              <button
+                onClick={() => setShowBulkConfirm(true)}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-red-500 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-red-600 cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
+            </div>
           </div>
 
-          {/* Actions row */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            {/* Count badge — desktop only */}
-            <span className="hidden sm:flex shrink-0 items-center justify-center rounded-xl bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-400 border border-orange-500/30">
+          {/* ── Desktop layout (single row) ── */}
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="shrink-0 flex items-center justify-center rounded-xl bg-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-400 border border-orange-500/30">
               {selectedIds.size} selected
             </span>
 
-            {/* Agent assign */}
             {user?.role !== "agent" && agents.length > 0 && (
               <>
                 <div className="flex-1 min-w-0">
@@ -1701,7 +1767,7 @@ export default function Leads() {
                 <button
                   onClick={handleBulkAssign}
                   disabled={bulkAssigning || !bulkAssignAgentId}
-                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-orange-600 disabled:opacity-40"
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 disabled:opacity-40 cursor-pointer"
                 >
                   <Users className="h-3.5 w-3.5" />
                   {bulkAssigning ? "Assigning…" : "Assign"}
@@ -1709,7 +1775,6 @@ export default function Leads() {
               </>
             )}
 
-            {/* Bulk status update */}
             <div className="flex items-center gap-1.5 flex-1 min-w-0">
               <div className="flex-1 min-w-0">
                 <CustomSelect
@@ -1723,7 +1788,7 @@ export default function Leads() {
               <button
                 onClick={handleBulkStatusUpdate}
                 disabled={bulkUpdatingStatus || !bulkStatusValue}
-                className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow transition hover:opacity-90 disabled:opacity-40"
+                className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-40 cursor-pointer"
                 style={{ background: "var(--app-primary)" }}
               >
                 {bulkUpdatingStatus ? "Updating…" : "Update"}
@@ -1736,25 +1801,22 @@ export default function Leads() {
                 if (!list.length) { toast.error("No selected leads have a phone number"); return; }
                 setWaBroadcast({ list, msg: "Hi {name}, ", idx: 0, skipped: 0, step: "compose" });
               }}
-              className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow transition"
+              className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white transition cursor-pointer"
               style={{ background: "#25d366" }}
             >
-              <MessageSquare className="h-3.5 w-3.5" />
-              WhatsApp
+              <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
             </button>
 
             <button
               onClick={() => setShowBulkConfirm(true)}
-              className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-red-600"
+              className="shrink-0 flex items-center gap-1.5 rounded-xl bg-red-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-600 cursor-pointer"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
+              <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
 
-            {/* Clear — desktop only (mobile has top-row close) */}
             <button
               onClick={() => setSelectedIds(new Set())}
-              className="hidden sm:flex shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/10"
+              className="shrink-0 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition hover:bg-white/10 cursor-pointer"
               style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
             >
               ✕
