@@ -94,6 +94,12 @@ export default function Settings() {
       };
 
       if (form.newPassword) {
+        const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(form.newPassword);
+        if (form.newPassword.length < 8 || !pwdOk) {
+          toast.error("New password must be 8+ characters with 1 uppercase, 1 number, and 1 special character");
+          setSaving(false);
+          return;
+        }
         payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
@@ -200,7 +206,7 @@ export default function Settings() {
                 <div>
                   <label className="label">New Password</label>
                   <div className="relative">
-                    <input className="input pr-10" type={showNewPwd ? "text" : "password"} value={form.newPassword} onChange={setValue("newPassword")} placeholder="Minimum 6 characters" />
+                    <input className="input pr-10" type={showNewPwd ? "text" : "password"} value={form.newPassword} onChange={setValue("newPassword")} placeholder="8+ chars, uppercase, number, special" />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowNewPwd((v) => !v)}>
                       {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>

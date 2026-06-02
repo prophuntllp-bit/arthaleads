@@ -109,7 +109,8 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (form.password.length < 6) { setError("Password must be at least 6 characters"); return; }
+    const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(form.password);
+    if (form.password.length < 8 || !pwdOk) { setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character"); return; }
     if (phoneStep !== VERIFIED) { setError("Please verify your phone number before creating your account."); return; }
 
     setLoading(true);
@@ -323,10 +324,10 @@ export default function Signup() {
                     type={showPwd ? "text" : "password"}
                     value={form.password}
                     onChange={set("password")}
-                    placeholder="Minimum 6 characters"
+                    placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special char"
                     autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                   <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition"
                     onClick={() => setShowPwd((v) => !v)}>
@@ -334,7 +335,7 @@ export default function Signup() {
                   </button>
                 </div>
                 <p className="mt-1.5 text-xs text-app-soft">
-                  You'll be the admin of your workspace. Add your team after signing in.
+                  8+ characters · 1 uppercase · 1 number · 1 special character (e.g. !@#$)
                 </p>
               </div>
 

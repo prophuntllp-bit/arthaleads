@@ -119,7 +119,14 @@ export default function Team() {
       };
 
       if (!editingUser || form.password) {
-        payload.password = form.password;
+        const pwd = form.password;
+        const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(pwd);
+        if (pwd.length < 8 || !pwdOk) {
+          toast.error("Password must be 8+ characters with 1 uppercase, 1 number, and 1 special character");
+          setSaving(false);
+          return;
+        }
+        payload.password = pwd;
       }
 
       if (editingUser) {
@@ -316,7 +323,7 @@ export default function Team() {
           <div className="md:col-span-2">
             <label className="label">{editingUser ? "Set New Password (optional)" : "Temporary Password"}</label>
             <div className="relative">
-              <input className="input pr-10" type={showPwd ? "text" : "password"} value={form.password} onChange={handleChange("password")} required={!editingUser} />
+              <input className="input pr-10" type={showPwd ? "text" : "password"} value={form.password} onChange={handleChange("password")} required={!editingUser} placeholder="8+ chars, uppercase, number, special" />
               <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowPwd((v) => !v)}>
                 {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

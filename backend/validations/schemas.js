@@ -5,12 +5,21 @@ const avatarSchema = Joi.string()
   .allow("")
   .optional();
 
+// 8+ chars, 1 uppercase, 1 digit, 1 special character
+const passwordSchema = Joi.string()
+  .min(8)
+  .pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/)
+  .messages({
+    "string.pattern.base": "Password must have at least 1 uppercase letter, 1 number, and 1 special character",
+    "string.min": "Password must be at least 8 characters",
+  });
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const signupSchema = Joi.object({
   orgName:      Joi.string().min(2).max(100).required(),
   name:         Joi.string().min(2).max(80).required(),
   email:        Joi.string().email().required(),
-  password:     Joi.string().min(8).required(),
+  password:     passwordSchema.required(),
   phone:        Joi.string().min(10).max(15).required(),
   phoneToken:   Joi.string().required(), // short-lived JWT issued after OTP verification
   referralCode: Joi.string().length(6).uppercase().alphanum().optional().allow("", null),
@@ -28,7 +37,7 @@ const loginSchema = Joi.object({
 const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(80).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(8).required(),
+  password: passwordSchema.required(),
   role: Joi.string().valid("admin", "manager", "agent").required(),
   phone: Joi.string().allow("").optional(),
   avatar: avatarSchema,
@@ -37,7 +46,7 @@ const createUserSchema = Joi.object({
 const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(80),
   email: Joi.string().email(),
-  password: Joi.string().min(8),
+  password: passwordSchema,
   role: Joi.string().valid("admin", "manager", "agent"),
   phone: Joi.string().allow(""),
   avatar: avatarSchema,
@@ -50,7 +59,7 @@ const updateProfileSchema = Joi.object({
   avatar: avatarSchema,
   role: Joi.string().valid("admin", "manager", "agent"),
   currentPassword: Joi.string().allow(""),
-  newPassword: Joi.string().min(8).allow(""),
+  newPassword: passwordSchema.allow(""),
 }).min(1);
 
 const createAutomationSchema = Joi.object({
