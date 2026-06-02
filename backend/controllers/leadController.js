@@ -151,6 +151,27 @@ const leadController = {
     }
   },
 
+  async bulkUpdateStatus(req, res, next) {
+    try {
+      const { ids, status } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const VALID = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
+      if (!VALID.includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status value" });
+      }
+      const Lead = require("../models/Lead");
+      const result = await Lead.updateMany(
+        { _id: { $in: ids }, orgId: req.user.orgId },
+        { $set: { status } }
+      );
+      res.json({ success: true, message: `${result.modifiedCount} lead(s) updated to "${status}"` });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async restore(req, res, next) {
     try {
       const lead = await leadService.restore(req.params.id, req.orgId);

@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers } from "lucide-react";
+import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
 import api from "../services/api";
 import { PageLoader } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +15,81 @@ export default function Performance() {
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const exportPDF = () => {
+    const now = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const rows = members.map((m) => {
+      const p = m.pipeline || {};
+      const pr = m.project  || {};
+      return `
+        <tr>
+          <td>${m.name}</td>
+          <td class="center">${m.role}</td>
+          <td class="center">${p.totalAssigned || 0}</td>
+          <td class="center">${p.siteVisits || 0}</td>
+          <td class="center">${p.closedWon || 0}</td>
+          <td class="center">${p.conversionRate || 0}%</td>
+          <td class="center">${pr.totalAssigned || 0}</td>
+          <td class="center">${pr.siteVisitBooked || 0}</td>
+          <td class="center">${pr.booked || 0}</td>
+          <td class="center">${pr.conversionRate || 0}%</td>
+        </tr>`;
+    }).join("");
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Arthaleads – Team Performance Report</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Inter, Arial, sans-serif; color: #111; padding: 32px; font-size: 13px; }
+        h1 { font-size: 22px; font-weight: 800; color: #f97316; margin-bottom: 4px; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+        .summary { display: flex; gap: 16px; margin-bottom: 28px; }
+        .card { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+        .card .val { font-size: 28px; font-weight: 800; color: #111; }
+        .card .lbl { font-size: 11px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f97316; color: #fff; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+        th.center, td.center { text-align: center; }
+        td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; }
+        tr:nth-child(even) td { background: #fafafa; }
+        .section-head { background: #f9fafb; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #666; padding: 6px 12px; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h1>Arthaleads CRM</h1>
+      <p class="meta">Team Performance Report &nbsp;·&nbsp; Generated ${now}</p>
+      <div class="summary">
+        <div class="card"><div class="val">${totals.totalAssigned.toLocaleString("en-IN")}</div><div class="lbl">Total Leads</div></div>
+        <div class="card"><div class="val">${totals.siteVisits.toLocaleString("en-IN")}</div><div class="lbl">Site Visits</div></div>
+        <div class="card"><div class="val">${totals.closedWon.toLocaleString("en-IN")}</div><div class="lbl">Closed / Booked</div></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Agent</th><th rowspan="2" class="center">Role</th>
+            <th colspan="4" class="center" style="background:#ea6c00">Main Pipeline</th>
+            <th colspan="4" class="center" style="background:#4f46e5">Project Pipeline</th>
+          </tr>
+          <tr>
+            <th class="center" style="background:#fb923c">Assigned</th>
+            <th class="center" style="background:#fb923c">Site Visits</th>
+            <th class="center" style="background:#fb923c">Closed Won</th>
+            <th class="center" style="background:#fb923c">Conv %</th>
+            <th class="center" style="background:#6366f1">Assigned</th>
+            <th class="center" style="background:#6366f1">Site Visit</th>
+            <th class="center" style="background:#6366f1">Booked</th>
+            <th class="center" style="background:#6366f1">Book %</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </body></html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) { toast.error("Allow pop-ups to export the PDF"); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
 
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -56,15 +131,26 @@ export default function Performance() {
               Track how each team member is handling leads across both the main pipeline and project pipelines - updated live.
             </p>
           </div>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
-            style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportPDF}
+              disabled={!members.length}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-40"
+              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              Export PDF
+            </button>
+            <button
+              onClick={() => fetchData(true)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
+              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
         </div>
       </section>
 

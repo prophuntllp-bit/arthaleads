@@ -405,6 +405,8 @@ export default function Leads() {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkAssignAgentId, setBulkAssignAgentId] = useState("");
   const [bulkAssigning, setBulkAssigning]     = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState("");
+  const [bulkUpdatingStatus, setBulkUpdatingStatus] = useState(false);
   const [waBroadcast, setWaBroadcast]         = useState(null); // null | { list, msg, idx, skipped, step }
 
   // ── Project-wise leads ────────────────────────────────────────────────────
@@ -571,6 +573,26 @@ export default function Leads() {
       toast.error(e.response?.data?.message || "Bulk assign failed");
     } finally {
       setBulkAssigning(false);
+    }
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatusValue) { toast.error("Please select a status"); return; }
+    setBulkUpdatingStatus(true);
+    try {
+      const ids = [...selectedIds];
+      const r = await api.patch("/leads/bulk-status", { ids, status: bulkStatusValue });
+      toast.success(r.data.message || `${ids.length} lead(s) updated`);
+      ids.forEach((id) => {
+        const lead = leads.find((l) => l._id === id);
+        if (lead) upsertLead({ ...lead, status: bulkStatusValue }, false);
+      });
+      setSelectedIds(new Set());
+      setBulkStatusValue("");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk status update failed");
+    } finally {
+      setBulkUpdatingStatus(false);
     }
   };
 
@@ -1686,6 +1708,27 @@ export default function Leads() {
                 </button>
               </>
             )}
+
+            {/* Bulk status update */}
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <div className="flex-1 min-w-0">
+                <CustomSelect
+                  value={bulkStatusValue}
+                  onChange={(v) => setBulkStatusValue(v)}
+                  placeholder="Set status…"
+                  options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <button
+                onClick={handleBulkStatusUpdate}
+                disabled={bulkUpdatingStatus || !bulkStatusValue}
+                className="shrink-0 flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold text-white shadow transition hover:opacity-90 disabled:opacity-40"
+                style={{ background: "var(--app-primary)" }}
+              >
+                {bulkUpdatingStatus ? "Updating…" : "Update"}
+              </button>
+            </div>
 
             <button
               onClick={() => {
