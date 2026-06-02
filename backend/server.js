@@ -180,6 +180,7 @@ app.use("/api/referrals",    require("./routes/referralRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 app.use("/api/tickets",    require("./routes/ticketRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);
+app.use("/api/help",        require("./routes/helpRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
 

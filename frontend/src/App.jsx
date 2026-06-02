@@ -6,6 +6,7 @@ import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import HelpBot from "./components/HelpBot";
 import CookieBanner from "./components/CookieBanner";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -550,6 +551,8 @@ function RequireAuth() {
       <NotificationBanner />
       {/* Phone number prompt - shows once per session to users missing a phone */}
       <PhonePromptModal />
+      {/* Floating AI help assistant + guided tours - on every CRM page */}
+      <HelpBot />
       {/* Blocking overlays - rendered on top of everything */}
       {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
       {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}

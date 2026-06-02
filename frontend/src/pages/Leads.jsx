@@ -1025,6 +1025,7 @@ export default function Leads() {
             </div>
             {/* Add Lead */}
             <button
+              data-tour="add-lead-btn"
               className="btn-primary flex items-center gap-1.5 rounded-full whitespace-nowrap"
               style={{ padding: "6px 14px", fontSize: 13, fontWeight: 600 }}
               onClick={() => { setEditLead(null); setShowForm(true); }}
@@ -1044,7 +1045,7 @@ export default function Leads() {
           return (
             <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
               {/* Search row — always visible */}
-              <div className="flex items-center gap-2">
+              <div data-tour="leads-search" className="flex items-center gap-2">
                 <div className="relative flex-1 min-w-0 sm:max-w-[55%]">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
                   <input
@@ -1336,7 +1337,7 @@ export default function Leads() {
             >
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
-          <div ref={tableScrollRef} className="overflow-x-auto">
+          <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
             <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
               <colgroup>
                 {canDelete && <col style={{ width: 40 }} />}

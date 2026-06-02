@@ -241,7 +241,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-nowrap items-center gap-2">
-          <button type="button" onClick={() => setShowAddLead(true)}
+          <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
             <Plus className="w-3.5 h-3.5 shrink-0" />
             <span>New Lead</span>
@@ -250,7 +250,7 @@ export default function Dashboard() {
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
           </button>
-          <DateRangePicker value={dateRange} onChange={setDateRange} compact />
+          <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>
 
@@ -308,7 +308,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
+      <div data-tour="stat-cards" className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
           delta={data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : undefined}
           onClick={() => navigate("/leads")} />
@@ -963,7 +963,7 @@ function HotLeadsWidget({ navigate }) {
   };
 
   return (
-    <section className="card overflow-hidden">
+    <section data-tour="hot-today" className="card overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3"
         style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(239,68,68,0.06), transparent)" }}>
