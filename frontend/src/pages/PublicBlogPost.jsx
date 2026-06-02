@@ -31,30 +31,61 @@ function useSEO(post) {
     if (!canon) { canon = document.createElement("link"); canon.setAttribute("rel", "canonical"); document.head.appendChild(canon); }
     canon.setAttribute("href", url);
 
-    // JSON-LD Article schema
-    const existing = document.getElementById("blog-jsonld");
-    if (existing) existing.remove();
+    // JSON-LD BlogPosting schema
+    document.getElementById("blog-jsonld")?.remove();
     const script = document.createElement("script");
     script.id = "blog-jsonld";
     script.type = "application/ld+json";
+    const authorName = post.authorName || "Arthaleads Editorial Team";
     script.textContent = JSON.stringify({
       "@context": "https://schema.org",
-      "@type":    "Article",
+      "@type":    "BlogPosting",
       "headline": post.title,
       "description": desc,
       "image": post.featuredImage || "",
       "datePublished": post.publishedAt,
       "dateModified":  post.updatedAt,
-      "author":        { "@type": "Organization", "name": "Arthaleads" },
-      "publisher":     { "@type": "Organization", "name": "Arthaleads", "url": "https://www.arthaleads.com" },
+      "wordCount": post.readTime ? post.readTime * 200 : undefined,
+      "keywords": post.tags?.join(", ") || "real estate CRM, lead management, property CRM India",
+      "author": post.authorName
+        ? { "@type": "Person",  "name": post.authorName }
+        : { "@type": "Organization", "name": "Arthaleads", "url": "https://www.arthaleads.com" },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Arthaleads",
+        "url": "https://www.arthaleads.com",
+        "logo": { "@type": "ImageObject", "url": "https://www.arthaleads.com/logo.png" },
+      },
       "mainEntityOfPage": { "@type": "WebPage", "@id": url },
     });
     document.head.appendChild(script);
 
+    // BreadcrumbList schema
+    document.getElementById("breadcrumb-jsonld")?.remove();
+    const bcScript = document.createElement("script");
+    bcScript.id = "breadcrumb-jsonld";
+    bcScript.type = "application/ld+json";
+    const breadcrumbs = [
+      { "@type": "ListItem", "position": 1, "name": "Home",  "item": "https://www.arthaleads.com" },
+      { "@type": "ListItem", "position": 2, "name": "Blog",  "item": "https://www.arthaleads.com/blog" },
+    ];
+    if (post.category?.name) {
+      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.category.name, "item": `https://www.arthaleads.com/blog?category=${post.category._id}` });
+      breadcrumbs.push({ "@type": "ListItem", "position": 4, "name": post.title, "item": url });
+    } else {
+      breadcrumbs.push({ "@type": "ListItem", "position": 3, "name": post.title, "item": url });
+    }
+    bcScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": breadcrumbs,
+    });
+    document.head.appendChild(bcScript);
+
     return () => {
       document.title = "Arthaleads - Real Estate CRM";
-      const s = document.getElementById("blog-jsonld");
-      if (s) s.remove();
+      document.getElementById("blog-jsonld")?.remove();
+      document.getElementById("breadcrumb-jsonld")?.remove();
     };
   }, [post]);
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Check, Zap, Users, Target, ChevronDown, ArrowRight, Sparkles } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -113,6 +113,23 @@ export default function Pricing() {
     description: "Simple, transparent pricing for Arthaleads. Starter, Growth, and Enterprise plans for real estate teams of every size. 14-day free trial, no credit card required.",
     canonical:   "https://www.arthaleads.com/pricing",
   });
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.id   = "faq-jsonld-pricing";
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": FAQS.map(([q, a]) => ({
+        "@type": "Question",
+        "name": q,
+        "acceptedAnswer": { "@type": "Answer", "text": a },
+      })),
+    });
+    document.head.appendChild(script);
+    return () => { document.getElementById("faq-jsonld-pricing")?.remove(); };
+  }, []);
 
   const bg         = isDark ? "#0d0d1a" : "#ffffff";
   const altBg      = isDark ? "#080810" : "#f9fafb";

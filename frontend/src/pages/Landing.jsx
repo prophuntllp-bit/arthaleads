@@ -1751,6 +1751,27 @@ export default function Landing() {
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.id   = "howto-jsonld-landing";
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to manage real estate leads with Arthaleads",
+      "description": "Get your entire real estate team capturing, assigning, and converting leads in four steps.",
+      "totalTime": "PT5M",
+      "step": HOW_STEPS.map((s) => ({
+        "@type": "HowToStep",
+        "position": s.num,
+        "name": s.title,
+        "text": s.desc,
+      })),
+    });
+    document.head.appendChild(script);
+    return () => { document.getElementById("howto-jsonld-landing")?.remove(); };
+  }, []);
+
   return (
     <div className="min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
       <PublicNav onScrollTo={scrollTo} />

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ArrowRight, Mail } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -85,6 +85,45 @@ function HelpGuideInner() {
     description: "Learn how to use Arthaleads CRM with step-by-step guides and FAQs. Set up leads, automate workflows, track site visits, and close deals faster.",
     canonical: "https://www.arthaleads.com/help-guide",
   });
+
+  useEffect(() => {
+    const faqScript = document.createElement("script");
+    faqScript.id   = "faq-jsonld-help";
+    faqScript.type = "application/ld+json";
+    faqScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqs.map(({ q, a }) => ({
+        "@type": "Question",
+        "name": q,
+        "acceptedAnswer": { "@type": "Answer", "text": a },
+      })),
+    });
+    document.head.appendChild(faqScript);
+
+    const howtoScript = document.createElement("script");
+    howtoScript.id   = "howto-jsonld-help";
+    howtoScript.type = "application/ld+json";
+    howtoScript.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "How to get started with Arthaleads CRM",
+      "description": "Set up your Arthaleads account and start managing real estate leads in minutes.",
+      "totalTime": "PT10M",
+      "step": steps.map((s, i) => ({
+        "@type": "HowToStep",
+        "position": i + 1,
+        "name": s.title,
+        "text": s.desc,
+      })),
+    });
+    document.head.appendChild(howtoScript);
+
+    return () => {
+      document.getElementById("faq-jsonld-help")?.remove();
+      document.getElementById("howto-jsonld-help")?.remove();
+    };
+  }, []);
 
   const bg         = isDark ? "#0d0d1a" : "#ffffff";
   const altBg      = isDark ? "#080810" : "#f9fafb";

@@ -21,34 +21,97 @@
     <meta property="og:title" content="Arthaleads - Every Lead. One Place.">
     <meta property="og:description" content="Premium real estate CRM for Pune developers and channel partners. Manage all your property leads in one workspace.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://arthaleads.com">
-    <meta property="og:image" content="https://arthaleads.com/og-image.png">
+    <meta property="og:url" content="https://www.arthaleads.com">
+    <meta property="og:image" content="https://www.arthaleads.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:alt" content="Arthaleads – Real Estate CRM dashboard showing lead pipeline and team performance">
+    <meta property="og:locale" content="en_IN">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@arthaleads">
     <meta name="twitter:title" content="Arthaleads - Real Estate CRM for Pune">
     <meta name="twitter:description" content="Manage every property lead in one premium workspace. Built for developers & channel partners.">
-    <meta name="twitter:image" content="https://arthaleads.com/og-image.png">
+    <meta name="twitter:image" content="https://www.arthaleads.com/og-image.png">
+    <meta name="twitter:image:alt" content="Arthaleads CRM dashboard">
 
-    <!-- Structured Data -->
+    <!-- Structured Data — Organization + SoftwareApplication + WebSite -->
     <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Arthaleads",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Web",
-  "description": "Premium real estate CRM for managing property leads, team performance, and deal pipelines. Built for Pune developers and channel partners.",
-  "url": "https://arthaleads.com",
-  "offers": {
-    "@type": "Offer",
-    "category": "Real Estate CRM"
-  },
-  "author": {
+[
+  {
+    "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Arthaleads"
+    "@id": "https://www.arthaleads.com/#organization",
+    "name": "Arthaleads",
+    "url": "https://www.arthaleads.com",
+    "logo": "https://www.arthaleads.com/logo.png",
+    "description": "Arthaleads is a real estate CRM platform built for Indian property developers, brokers and channel partners. Capture and manage leads from Facebook, Google, WhatsApp and website forms in one workspace.",
+    "foundingDate": "2022",
+    "foundingLocation": "Pune, Maharashtra, India",
+    "areaServed": "IN",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Pune",
+      "addressRegion": "Maharashtra",
+      "addressCountry": "IN"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "url": "https://www.arthaleads.com/contact",
+      "availableLanguage": ["English", "Hindi", "Marathi"]
+    },
+    "sameAs": [
+      "https://www.linkedin.com/company/arthaleads",
+      "https://twitter.com/arthaleads"
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://www.arthaleads.com/#software",
+    "name": "Arthaleads",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "CRM Software",
+    "operatingSystem": "Web, Android, iOS",
+    "description": "Real estate CRM for Indian developers and channel partners. Manage leads from Facebook Ads, Google Ads, WhatsApp and website forms. Track team performance, site visits, follow-ups and conversions.",
+    "url": "https://www.arthaleads.com",
+    "screenshot": "https://www.arthaleads.com/dashboard-dark.png",
+    "featureList": "Lead capture from Facebook & Google Ads, WhatsApp lead management, team assignment & tracking, site visit scheduling, follow-up reminders, performance analytics, WordPress plugin, CSV import/export",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "INR",
+      "lowPrice": "0",
+      "offerCount": "3",
+      "offers": [
+        { "@type": "Offer", "name": "Starter", "description": "For small teams up to 3 agents" },
+        { "@type": "Offer", "name": "Growth",  "description": "For growing teams with automation and analytics" },
+        { "@type": "Offer", "name": "Enterprise", "description": "For large developers and channel partner networks" }
+      ]
+    },
+    "publisher": { "@id": "https://www.arthaleads.com/#organization" },
+    "author":    { "@id": "https://www.arthaleads.com/#organization" }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://www.arthaleads.com/#website",
+    "name": "Arthaleads",
+    "url": "https://www.arthaleads.com",
+    "description": "Real estate CRM for Indian property developers and channel partners",
+    "publisher": { "@id": "https://www.arthaleads.com/#organization" },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://www.arthaleads.com/blog?search={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
   }
-}
+]
     </script>
 
     <!-- Favicon / App Icons -->
