@@ -1,5 +1,6 @@
 ﻿// controllers/attendanceController.js
 const Attendance = require("../models/Attendance");
+const Organization = require("../models/Organization");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -9,6 +10,31 @@ function todayStr() {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+// Fetch org attendance settings with sensible defaults
+async function getOrgSettings(orgId) {
+  const org = await Organization.findById(orgId).select("attendanceSettings").lean();
+  const s = org?.attendanceSettings || {};
+  return {
+    shiftStartTime: s.shiftStartTime || "09:30",
+    bufferMinutes:  s.bufferMinutes  ?? 15,
+    halfDayMinutes: s.halfDayMinutes ?? 240,
+    fullDayMinutes: s.fullDayMinutes ?? 480,
+  };
+}
+
+// Parse "HH:MM" → total minutes since midnight
+function parseHHMM(str) {
+  const [h, m] = (str || "09:30").split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Compute day type from total worked minutes
+function computeDayType(totalMins, settings) {
+  if (totalMins >= settings.fullDayMinutes) return "full";
+  if (totalMins >= settings.halfDayMinutes) return "half";
+  return "short";
 }
 
 const attendanceController = {
@@ -27,24 +53,36 @@ const attendanceController = {
   async clockIn(req, res, next) {
     try {
       const date = todayStr();
-      // Upsert: create if not exists, only set clockIn if it's still null
       let record = await Attendance.findOne({ userId: req.user._id, date });
 
       if (record && record.clockIn) {
         return next(new AppError("Already clocked in today.", 400));
       }
 
+      // Compute late status against org shift settings
+      const settings = await getOrgSettings(req.user.orgId);
+      const now = new Date();
+      const clockInMins = now.getHours() * 60 + now.getMinutes();
+      const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
+      const isLate = clockInMins > lateThreshold;
+      const lateByMinutes = isLate ? clockInMins - lateThreshold : null;
+
       if (!record) {
         record = await Attendance.create({
           userId: req.user._id,
           orgId: req.user.orgId,
           date,
-          clockIn: new Date(),
+          clockIn: now,
+          isLate,
+          lateByMinutes,
         });
       } else {
-        record.clockIn = new Date();
+        record.clockIn = now;
         record.clockOut = null;
         record.totalMinutes = null;
+        record.dayType = null;
+        record.isLate = isLate;
+        record.lateByMinutes = lateByMinutes;
         await record.save();
       }
 
@@ -67,9 +105,11 @@ const attendanceController = {
         return next(new AppError("Already clocked out.", 400));
       }
 
+      const settings = await getOrgSettings(req.user.orgId);
       const now = new Date();
       record.clockOut = now;
       record.totalMinutes = Math.round((now - record.clockIn) / 60000);
+      record.dayType = computeDayType(record.totalMinutes, settings);
       if (req.body.note) record.note = req.body.note;
       await record.save();
 
@@ -155,7 +195,7 @@ const attendanceController = {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
       };
 
-      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Note"];
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Note"];
       const rows = records.map((r) => [
         r.date,
         r.userId?.name || "",
@@ -164,6 +204,9 @@ const attendanceController = {
         fmtTime(r.clockIn),
         fmtTime(r.clockOut),
         fmtDur(r.totalMinutes),
+        r.dayType || "",
+        r.isLate ? "Yes" : "No",
+        r.lateByMinutes ? fmtDur(r.lateByMinutes) : "",
         r.note || "",
       ]);
 
@@ -197,13 +240,24 @@ const attendanceController = {
         return next(new AppError("Clock-out must be after clock-in.", 400));
       }
 
+      const settings = await getOrgSettings(req.user.orgId);
       const totalMinutes = (clockInDate && clockOutDate)
         ? Math.round((clockOutDate - clockInDate) / 60000)
         : null;
 
+      // Compute late status from the clock-in time
+      let isLate = false, lateByMinutes = null;
+      if (clockInDate) {
+        const clockInMins = clockInDate.getHours() * 60 + clockInDate.getMinutes();
+        const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
+        isLate = clockInMins > lateThreshold;
+        lateByMinutes = isLate ? clockInMins - lateThreshold : null;
+      }
+      const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;
+
       const record = await Attendance.findOneAndUpdate(
         { userId, orgId: req.user.orgId, date },
-        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, note: note || "" } },
+        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, dayType, note: note || "" } },
         { upsert: true, new: true, runValidators: false }
       ).populate("userId", "name email role");
 

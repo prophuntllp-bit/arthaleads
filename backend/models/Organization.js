@@ -31,6 +31,12 @@ const orgSchema = new mongoose.Schema(
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
     monthlyClosingGoal: { type: Number, default: 0, min: 0 },
+    attendanceSettings: {
+      shiftStartTime: { type: String, default: "09:30" }, // "HH:MM" 24-hour
+      bufferMinutes:  { type: Number, default: 15 },      // grace period before marked late
+      halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
+      fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
+    },
     // ── Referral tracking ──────────────────────────────────────────────────────
     referralCode:    { type: String, uppercase: true, sparse: true, index: true },
     referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },

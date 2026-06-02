@@ -23,8 +23,16 @@ const attendanceSchema = new mongoose.Schema(
     clockIn:  { type: Date, default: null },
     clockOut: { type: Date, default: null },
     // Calculated on clockOut (minutes)
-    totalMinutes: { type: Number, default: null },
-    note: { type: String, trim: true, default: "" },
+    totalMinutes:  { type: Number, default: null },
+    note:          { type: String, trim: true, default: "" },
+    // HRM fields — computed on clock-in / clock-out against org shift settings
+    isLate:        { type: Boolean, default: false },
+    lateByMinutes: { type: Number, default: null },
+    dayType: {
+      type: String,
+      enum: ["full", "half", "short", null],
+      default: null,
+    },
   },
   { timestamps: true }
 );

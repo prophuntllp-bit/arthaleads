@@ -51,6 +51,46 @@ router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, r
   } catch (err) { next(err); }
 });
 
+// GET /api/org/me/attendance-settings — read shift/attendance config
+router.get("/me/attendance-settings", async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("attendanceSettings").lean();
+    const s = org?.attendanceSettings || {};
+    res.json({
+      success: true,
+      settings: {
+        shiftStartTime: s.shiftStartTime || "09:30",
+        bufferMinutes:  s.bufferMinutes  ?? 15,
+        halfDayMinutes: s.halfDayMinutes ?? 240,
+        fullDayMinutes: s.fullDayMinutes ?? 480,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/org/me/attendance-settings — update shift/attendance config (admin only)
+router.patch("/me/attendance-settings", authorize("admin"), async (req, res, next) => {
+  try {
+    const { shiftStartTime, bufferMinutes, halfDayMinutes, fullDayMinutes } = req.body;
+    const update = {};
+    if (shiftStartTime)    update["attendanceSettings.shiftStartTime"] = shiftStartTime;
+    if (bufferMinutes  != null) update["attendanceSettings.bufferMinutes"]  = Math.max(0, parseInt(bufferMinutes));
+    if (halfDayMinutes != null) update["attendanceSettings.halfDayMinutes"] = Math.max(1, parseInt(halfDayMinutes));
+    if (fullDayMinutes != null) update["attendanceSettings.fullDayMinutes"] = Math.max(1, parseInt(fullDayMinutes));
+
+    if (!Object.keys(update).length) {
+      return res.status(400).json({ success: false, message: "No valid fields provided." });
+    }
+
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { $set: update }, { new: true, runValidators: false }
+    ).select("attendanceSettings");
+
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, settings: org.attendanceSettings });
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/org/me/goal — set monthly closing goal (admin + manager)
 router.patch("/me/goal", authorize("admin", "manager"), async (req, res, next) => {
   try {
