@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HelpCircle, X, Send, ArrowRight, Sparkles, MessageCircle, Compass } from "lucide-react";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
 import GuidedTour from "./GuidedTour";
 
@@ -11,6 +12,8 @@ export default function HelpBot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTour, setActiveTour] = useState(null); // steps[] when a tour is running
+  const [showWelcome, setShowWelcome] = useState(false); // first-login tour offer
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const scrollRef = useRef(null);
@@ -18,6 +21,25 @@ export default function HelpBot() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
+
+  // Offer the dashboard tour once, on the user's first visit after this feature ships.
+  const welcomeKey = user?._id ? `al_tour_offered_${user._id}` : null;
+  useEffect(() => {
+    if (!welcomeKey) return;
+    if (localStorage.getItem(welcomeKey)) return;
+    const t = setTimeout(() => setShowWelcome(true), 1500); // let the page settle first
+    return () => clearTimeout(t);
+  }, [welcomeKey]);
+
+  const dismissWelcome = () => {
+    if (welcomeKey) localStorage.setItem(welcomeKey, "1");
+    setShowWelcome(false);
+  };
+
+  const acceptWelcome = () => {
+    dismissWelcome();
+    startTour("dashboard");
+  };
 
   const startTour = (tourKey) => {
     const tour = TOURS[tourKey];
@@ -64,6 +86,43 @@ export default function HelpBot() {
 
   return (
     <>
+      {/* First-login tour offer — appears once above the help button */}
+      {showWelcome && !open && !activeTour && (
+        <div
+          className="fixed z-[997] card p-4 shadow-2xl"
+          style={{
+            right: "max(16px, env(safe-area-inset-right))",
+            bottom: `calc(84px + env(safe-area-inset-bottom, 0px))`,
+            width: "min(300px, calc(100vw - 32px))",
+            background: "var(--app-bg)", border: "1px solid var(--app-border)", borderRadius: 18,
+          }}
+        >
+          <button type="button" onClick={dismissWelcome} aria-label="Dismiss"
+            className="absolute right-3 top-3 text-app-soft hover:text-app transition cursor-pointer">
+            <X className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0" style={{ background: "rgba(255,107,0,0.14)" }}>
+              <Sparkles className="h-4 w-4" style={{ color: "var(--app-primary, #ff6b00)" }} />
+            </div>
+            <p className="text-sm font-bold text-app">Welcome to Arthaleads! 👋</p>
+          </div>
+          <p className="text-xs text-app-soft leading-relaxed mb-3">
+            New here? Take a 30-second tour and I’ll show you where everything is on your dashboard.
+          </p>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={acceptWelcome}
+              className="btn-primary flex-1 rounded-lg px-3 py-1.5 text-xs cursor-pointer flex items-center justify-center gap-1">
+              <Compass className="h-3.5 w-3.5" /> Take the tour
+            </button>
+            <button type="button" onClick={dismissWelcome}
+              className="btn-secondary rounded-lg px-3 py-1.5 text-xs cursor-pointer">
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Floating button */}
       {!open && (
         <button
