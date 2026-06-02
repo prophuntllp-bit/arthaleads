@@ -483,17 +483,12 @@ const leadService = {
     }
     if (andConditions.length) leadFilter.$and = andConditions;
 
-    const [leads, leadTotal] = await Promise.all([
-      Lead.find(leadFilter).sort({ createdAt: -1 }).lean(),
+    const [leads, total] = await Promise.all([
+      Lead.find(leadFilter).sort({ createdAt: -1 }).skip(skip).limit(limitInt).lean(),
       Lead.countDocuments(leadFilter),
     ]);
 
-    // Paginate pipeline leads only (ProjectLeads live in the Projects section)
-    const combined  = leads.map((l) => ({ ...l, _type: "lead" }));
-    const total     = leadTotal;
-    const paginated = combined.slice(skip, skip + limitInt);
-
-    return { leads: paginated, total, page: pageInt, pages: Math.ceil(total / limitInt) };
+    return { leads: leads.map((l) => ({ ...l, _type: "lead" })), total, page: pageInt, pages: Math.ceil(total / limitInt) };
   },
 
   async getAnalytics(user, query = {}) {
