@@ -340,6 +340,7 @@ export default function Dashboard() {
               layout="vertical"
               barCategoryGap="18%"
               margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
+              style={{ outline: "none" }}
             >
               <XAxis
                 type="number"
@@ -387,9 +388,9 @@ export default function Dashboard() {
             <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
           ) : (
             <div className="flex flex-col gap-4">
-              <div className="relative">
+              <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
                 <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
+                  <PieChart style={{ outline: "none" }}>
                     <Pie
                       data={sourceChartData}
                       cx="50%"
@@ -400,6 +401,8 @@ export default function Dashboard() {
                       labelLine={false}
                       paddingAngle={2}
                       strokeWidth={0}
+                      isAnimationActive={false}
+                      tabIndex={-1}
                     >
                       {sourceChartData.map((_, index) => (
                         <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />

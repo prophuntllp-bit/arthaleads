@@ -349,6 +349,15 @@
     background: rgba(var(--app-primary-rgb), 0.30);
   }
 
+  /* ── Recharts: kill tap-highlight & focus ring on mobile ── */
+  .recharts-wrapper,
+  .recharts-wrapper svg,
+  .recharts-wrapper svg *,
+  .recharts-surface {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
   /* ── Hide scrollbar (e.g. horizontally-scrolled tab strips) ── */
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
