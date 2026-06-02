@@ -1,5 +1,6 @@
 // pages/HelpSupport.jsx
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   ChevronDown, ChevronRight, ExternalLink, Headset, LifeBuoy, Mail,
@@ -696,7 +697,7 @@ function TicketThreadModal({ ticketId, onClose, onUpdated }) {
 
   const isClosed = ticket?.status === "closed";
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}>
       <div className="w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col"
@@ -844,7 +845,8 @@ function TicketThreadModal({ ticketId, onClose, onUpdated }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
