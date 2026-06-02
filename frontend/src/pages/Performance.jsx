@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
@@ -17,6 +17,7 @@ export default function Performance() {
   const [refreshing, setRefreshing] = useState(false);
   const [dateFrom,   setDateFrom]   = useState("");
   const [dateTo,     setDateTo]     = useState("");
+  const dateFilterMounted = useRef(false);
 
   const exportPDF = () => {
     const now = new Date();
@@ -255,7 +256,15 @@ export default function Performance() {
     }
   };
 
+  // Initial full load
   useEffect(() => { fetchData(); }, []);
+
+  // Auto-refetch when date filter changes (skip first render)
+  useEffect(() => {
+    if (!dateFilterMounted.current) { dateFilterMounted.current = true; return; }
+    fetchData(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo]);
 
   const totals = useMemo(() => members.reduce((acc, m) => {
     acc.totalAssigned += m.totalAssigned || 0;
@@ -328,7 +337,7 @@ export default function Performance() {
                 style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
               >
                 <FileDown className="w-3.5 h-3.5" />
-                Export PDF
+                Download Report
               </button>
             </div>
           </div>
