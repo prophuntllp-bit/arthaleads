@@ -104,6 +104,7 @@ export default function Sidebar() {
   // ── Clock In / Out ────────────────────────────────────────────────────────
   const [clockStatus, setClockStatus] = useState(null);
   const [clocking,    setClocking]    = useState(false);
+  const [logoError,   setLogoError]   = useState(false);
   const clockTimer = useLiveClock(
     clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null
   );
@@ -115,6 +116,7 @@ export default function Sidebar() {
     api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
   }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
+  useEffect(() => { setLogoError(false); }, [org?.logo]);
 
   const handleClockIn = async () => {
     setClocking(true);
@@ -292,7 +294,7 @@ export default function Sidebar() {
           className="flex items-center px-3 flex-shrink-0"
           style={{ height: 68, minHeight: 68 }}
         >
-          {org?.logo ? (
+          {org?.logo && !logoError ? (
             <>
               <div
                 className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl overflow-hidden"
@@ -303,7 +305,7 @@ export default function Sidebar() {
                   src={org.logo}
                   alt={org.name}
                   className="max-w-full max-h-full object-contain"
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  onError={() => setLogoError(true)}
                 />
               </div>
               <div className="ml-3 overflow-hidden flex-1" style={labelStyle}>
@@ -747,11 +749,11 @@ export default function Sidebar() {
           <>
             {/* Brand */}
             <NavLink to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2 min-w-0">
-              {org?.logo ? (
+              {org?.logo && !logoError ? (
                 <>
                   <div className="h-7 max-w-[72px] flex items-center flex-shrink-0">
                     <img key={org.logo} src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 5 }}
-                      onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                      onError={() => setLogoError(true)} />
                   </div>
                   <span className="font-bold text-sm text-app truncate max-w-[90px]">{org.name}</span>
                   <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover flex-shrink-0" />

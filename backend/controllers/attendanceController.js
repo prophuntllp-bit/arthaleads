@@ -120,6 +120,97 @@ const attendanceController = {
     } catch (err) { next(err); }
   },
 
+  // GET /api/attendance/export - download CSV (admin/manager only)
+  // Query: ?from=YYYY-MM-DD&to=YYYY-MM-DD&userId=xxx
+  async exportCsv(req, res, next) {
+    try {
+      if (req.user.role === "agent") {
+        return next(new AppError("Not authorized.", 403));
+      }
+
+      const { from, to, userId } = req.query;
+      const filter = { orgId: req.user.orgId };
+      if (userId) filter.userId = userId;
+      if (from || to) {
+        filter.date = {};
+        if (from) filter.date.$gte = from;
+        if (to)   filter.date.$lte = to;
+      }
+
+      const records = await Attendance.find(filter)
+        .sort({ date: 1, clockIn: 1 })
+        .populate("userId", "name email role")
+        .lean();
+
+      // Build CSV
+      const fmtTime = (d) => {
+        if (!d) return "";
+        const dt = new Date(d);
+        const h = dt.getHours(), m = dt.getMinutes();
+        const ampm = h >= 12 ? "PM" : "AM";
+        return `${String(h % 12 || 12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
+      };
+      const fmtDur = (mins) => {
+        if (mins == null) return "";
+        return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+      };
+
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Note"];
+      const rows = records.map((r) => [
+        r.date,
+        r.userId?.name || "",
+        r.userId?.email || "",
+        r.userId?.role || "",
+        fmtTime(r.clockIn),
+        fmtTime(r.clockOut),
+        fmtDur(r.totalMinutes),
+        r.note || "",
+      ]);
+
+      const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+      const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+
+      const label = from && to ? `${from}_to_${to}` : "all";
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="attendance_${label}.csv"`);
+      res.send(csv);
+    } catch (err) { next(err); }
+  },
+
+  // POST /api/attendance/admin-entry - admin manually adds/edits a record (admin only)
+  // Body: { userId, date, clockIn, clockOut, note }
+  async adminEntry(req, res, next) {
+    try {
+      if (!["admin", "manager"].includes(req.user.role)) {
+        return next(new AppError("Not authorized.", 403));
+      }
+
+      const { userId, date, clockIn, clockOut, note } = req.body;
+      if (!userId || !date) return next(new AppError("userId and date are required.", 400));
+
+      const clockInDate  = clockIn  ? new Date(clockIn)  : null;
+      const clockOutDate = clockOut ? new Date(clockOut) : null;
+
+      if (clockInDate && isNaN(clockInDate)) return next(new AppError("Invalid clockIn time.", 400));
+      if (clockOutDate && isNaN(clockOutDate)) return next(new AppError("Invalid clockOut time.", 400));
+      if (clockInDate && clockOutDate && clockOutDate <= clockInDate) {
+        return next(new AppError("Clock-out must be after clock-in.", 400));
+      }
+
+      const totalMinutes = (clockInDate && clockOutDate)
+        ? Math.round((clockOutDate - clockInDate) / 60000)
+        : null;
+
+      const record = await Attendance.findOneAndUpdate(
+        { userId, orgId: req.user.orgId, date },
+        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, note: note || "" } },
+        { upsert: true, new: true, runValidators: false }
+      ).populate("userId", "name email role");
+
+      res.json({ success: true, data: record });
+    } catch (err) { next(err); }
+  },
+
   // GET /api/attendance/team-today - all members' status for today (admin/manager)
   async teamToday(req, res, next) {
     try {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner, EmptyState } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
@@ -7,7 +7,8 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   Clock, ChevronLeft, ChevronRight, CalendarDays,
-  Users, Timer, CheckCircle2, LogIn, Filter
+  Users, Timer, CheckCircle2, LogIn, Filter,
+  Download, PlusCircle, X, Edit3,
 } from "lucide-react";
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -37,7 +38,7 @@ function todayStr() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-// Live elapsed timer - seeds correct elapsed time on mount/change (not just on first render)
+// Live elapsed timer
 function LiveTimer({ since }) {
   const [secs, setSecs] = useState(0);
   useEffect(() => {
@@ -49,6 +50,28 @@ function LiveTimer({ since }) {
   return <span className="tabular-nums">{pad(Math.floor(secs / 3600))}:{pad(Math.floor((secs % 3600) / 60))}:{pad(secs % 60)}</span>;
 }
 
+function StatusBadge({ a }) {
+  const isIn  = a?.clockIn && !a?.clockOut;
+  const isOut = a?.clockIn && a?.clockOut;
+  if (isOut) return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+      <CheckCircle2 className="w-3 h-3" /> Completed
+    </span>
+  );
+  if (isIn) return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
+      Absent
+    </span>
+  );
+}
+
+const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
+
 export default function Attendance() {
   const { user, org } = useAuth();
   if (!canAccess(org, "growth")) {
@@ -57,22 +80,22 @@ export default function Attendance() {
   const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   // Today's own status
-  const [status, setStatus] = useState(null);
+  const [status, setStatus]           = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
-  const [clocking, setClocking] = useState(false);
+  const [clocking, setClocking]       = useState(false);
 
   // Records list
-  const [records, setRecords] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(1);
-  const [page, setPage] = useState(1);
+  const [records, setRecords]   = useState([]);
+  const [total, setTotal]       = useState(0);
+  const [pages, setPages]       = useState(1);
+  const [page, setPage]         = useState(1);
   const [listLoading, setListLoading] = useState(false);
 
-  // Team today (admin/manager)
-  const [teamToday, setTeamToday] = useState([]);
+  // Team today
+  const [teamToday, setTeamToday]   = useState([]);
   const [teamLoading, setTeamLoading] = useState(false);
 
-  // Team members list for filter (admin/manager)
+  // Team member list for filter/entry
   const [teamMembers, setTeamMembers] = useState([]);
 
   // Filters
@@ -80,11 +103,18 @@ export default function Attendance() {
     const d = new Date(); d.setDate(d.getDate() - 29);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
-  const [to, setTo] = useState(todayStr);
-  const [filterUser, setFilterUser] = useState(""); // admin: filter by member
-  const [tab, setTab] = useState("team"); // "team" | "records" - admin default is team
+  const [to, setTo]           = useState(todayStr);
+  const [filterUser, setFilterUser] = useState("");
+  const [tab, setTab]         = useState("team");
 
-  // Fetch today's own clock status
+  // Admin entry modal
+  const [entryModal, setEntryModal]   = useState(false);
+  const [entryForm, setEntryForm]     = useState(EMPTY_ENTRY);
+  const [entrySaving, setEntrySaving] = useState(false);
+
+  // Export
+  const [exporting, setExporting] = useState(false);
+
   const fetchStatus = useCallback(async () => {
     setStatusLoading(true);
     try {
@@ -94,7 +124,6 @@ export default function Attendance() {
     finally { setStatusLoading(false); }
   }, []);
 
-  // Fetch records
   const fetchRecords = useCallback(async () => {
     setListLoading(true);
     try {
@@ -110,7 +139,6 @@ export default function Attendance() {
     finally { setListLoading(false); }
   }, [page, from, to, filterUser]);
 
-  // Fetch team today
   const fetchTeamToday = useCallback(async () => {
     if (!isAdmin) return;
     setTeamLoading(true);
@@ -121,7 +149,6 @@ export default function Attendance() {
     finally { setTeamLoading(false); }
   }, [isAdmin]);
 
-  // Fetch team member list for filter dropdown
   const fetchTeamMembers = useCallback(async () => {
     if (!isAdmin) return;
     try {
@@ -134,8 +161,6 @@ export default function Attendance() {
   useEffect(() => { fetchRecords(); }, [fetchRecords]);
   useEffect(() => { fetchTeamToday(); fetchTeamMembers(); }, [fetchTeamToday, fetchTeamMembers]);
   useEffect(() => { setPage(1); }, [from, to, filterUser]);
-
-  // Non-admin defaults to records tab
   useEffect(() => { if (!isAdmin) setTab("records"); }, [isAdmin]);
 
   const handleClockIn = async () => {
@@ -144,8 +169,7 @@ export default function Attendance() {
       const r = await api.post("/attendance/clockin");
       setStatus(r.data.data);
       toast.success("Clocked in successfully!");
-      fetchTeamToday();
-      fetchRecords();
+      fetchTeamToday(); fetchRecords();
     } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
     finally { setClocking(false); }
   };
@@ -156,35 +180,61 @@ export default function Attendance() {
       const r = await api.post("/attendance/clockout");
       setStatus(r.data.data);
       toast.success("Clocked out! Great work today.");
-      fetchTeamToday();
-      fetchRecords();
+      fetchTeamToday(); fetchRecords();
     } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
     finally { setClocking(false); }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (from) params.set("from", from);
+      if (to)   params.set("to", to);
+      if (filterUser) params.set("userId", filterUser);
+      const r = await api.get(`/attendance/export?${params}`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([r.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      const label = from && to ? `${from}_to_${to}` : "all";
+      a.href = url; a.download = `attendance_${label}.csv`;
+      a.click(); URL.revokeObjectURL(url);
+      toast.success("Report downloaded");
+    } catch { toast.error("Export failed"); }
+    finally { setExporting(false); }
+  };
+
+  const handleAdminEntry = async (e) => {
+    e.preventDefault();
+    setEntrySaving(true);
+    try {
+      // Build ISO datetime strings from date + time inputs
+      const toIso = (date, time) => time ? new Date(`${date}T${time}:00`).toISOString() : null;
+      await api.post("/attendance/admin-entry", {
+        userId:   entryForm.userId,
+        date:     entryForm.date,
+        clockIn:  toIso(entryForm.date, entryForm.clockIn),
+        clockOut: toIso(entryForm.date, entryForm.clockOut),
+        note:     entryForm.note,
+      });
+      toast.success("Attendance record saved");
+      setEntryModal(false);
+      setEntryForm(EMPTY_ENTRY);
+      fetchRecords(); fetchTeamToday();
+    } catch (e) { toast.error(e.response?.data?.message || "Failed to save entry"); }
+    finally { setEntrySaving(false); }
   };
 
   const isClockedIn  = status?.clockIn && !status?.clockOut;
   const isClockedOut = status?.clockIn && status?.clockOut;
 
-  // ── Status badge helper ──────────────────────────────────────────────────────
-  function StatusBadge({ a }) {
-    const isIn  = a?.clockIn && !a?.clockOut;
-    const isOut = a?.clockIn && a?.clockOut;
-    if (isOut) return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-        <CheckCircle2 className="w-3 h-3" /> Completed
-      </span>
-    );
-    if (isIn) return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
-      </span>
-    );
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-500 dark:bg-white/5 dark:text-gray-400">
-        Absent
-      </span>
-    );
-  }
+  // Monthly summary computed from loaded records
+  const summary = (() => {
+    if (!records.length) return null;
+    const totalMins = records.reduce((s, r) => s + (r.totalMinutes || 0), 0);
+    const daysPresent = records.filter(r => r.clockIn).length;
+    const avgMins = daysPresent ? Math.round(totalMins / daysPresent) : 0;
+    return { totalMins, daysPresent, avgMins };
+  })();
 
   return (
     <div className="stitch-page">
@@ -201,7 +251,6 @@ export default function Attendance() {
           </div>
         </div>
 
-        {/* Clock In / Out action */}
         <div className="flex items-center gap-3">
           {statusLoading ? (
             <Spinner size="sm" />
@@ -221,14 +270,12 @@ export default function Attendance() {
                 <span className="text-green-500 font-bold text-sm"><LiveTimer since={status.clockIn} /></span>
               </div>
               <button onClick={handleClockOut} disabled={clocking} className="btn-danger py-2 px-4 text-sm">
-                {clocking ? <Spinner size="sm" /> : null}
-                Clock Out
+                {clocking ? <Spinner size="sm" /> : null} Clock Out
               </button>
             </div>
           ) : (
             <button onClick={handleClockIn} disabled={clocking} className="btn-primary py-2 px-5 text-sm">
-              {clocking ? <Spinner size="sm" /> : <LogIn className="h-4 w-4" />}
-              Clock In
+              {clocking ? <Spinner size="sm" /> : <LogIn className="h-4 w-4" />} Clock In
             </button>
           )}
         </div>
@@ -310,27 +357,24 @@ export default function Attendance() {
                           </td>
                           <td className="px-5 py-3 capitalize text-app-soft">{u.role}</td>
                           <td className="px-5 py-3">
-                            {a?.clockIn ? (
-                              <span className="text-green-500 font-semibold">{fmtTime(a.clockIn)}</span>
-                            ) : <span className="text-app-soft">-</span>}
+                            {a?.clockIn ? <span className="text-green-500 font-semibold">{fmtTime(a.clockIn)}</span>
+                              : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3">
-                            {a?.clockOut ? (
-                              <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
-                            ) : <span className="text-app-soft">-</span>}
+                            {a?.clockOut ? <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
+                              : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
-                            {isOut ? fmtDuration(a.totalMinutes) :
-                             isIn  ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span> : "-"}
+                            {isOut ? fmtDuration(a.totalMinutes)
+                              : isIn ? <span className="text-green-500"><LiveTimer since={a.clockIn} /></span>
+                              : "-"}
                           </td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
                         </tr>
                       );
                     })}
                     {teamToday.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td>
-                      </tr>
+                      <tr><td colSpan={6} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -344,7 +388,23 @@ export default function Attendance() {
       {tab === "records" && (
         <div className="px-4 lg:px-6 pt-4 pb-6">
 
-          {/* Filters */}
+          {/* Summary strip */}
+          {summary && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {[
+                { label: "Total Hours", value: fmtDuration(summary.totalMins), color: "text-orange-500" },
+                { label: "Days Present", value: summary.daysPresent, color: "text-green-500" },
+                { label: "Avg Hours/Day", value: fmtDuration(summary.avgMins), color: "text-blue-500" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="card px-4 py-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
+                  <p className={`text-sm font-bold ${color}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Filters + actions */}
           <div className="flex items-center gap-3 flex-wrap mb-4">
             <Filter className="w-4 h-4 text-app-soft flex-shrink-0" />
             <div className="flex items-center gap-2">
@@ -370,6 +430,28 @@ export default function Attendance() {
               </div>
             )}
             <span className="text-xs text-app-soft">{total} record{total !== 1 ? "s" : ""}</span>
+
+            {/* Action buttons */}
+            <div className="ml-auto flex items-center gap-2">
+              {isAdmin && (
+                <button
+                  onClick={() => { setEntryForm({ ...EMPTY_ENTRY, date: todayStr() }); setEntryModal(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 cursor-pointer"
+                  style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}>
+                  <PlusCircle className="w-3.5 h-3.5" /> Add Entry
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition hover:opacity-90 cursor-pointer"
+                  style={{ background: "var(--app-primary)" }}>
+                  {exporting ? <Spinner size="sm" /> : <Download className="w-3.5 h-3.5" />}
+                  Download Report
+                </button>
+              )}
+            </div>
           </div>
 
           {listLoading ? (
@@ -385,10 +467,11 @@ export default function Attendance() {
                       {[
                         "Date",
                         ...(isAdmin ? ["Member"] : []),
-                        "Clock In", "Clock Out", "Duration", "Status",
+                        "Clock In", "Clock Out", "Duration", "Note", "Status",
                       ].map(h => (
                         <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
+                      {isAdmin && <th className="px-5 py-3" />}
                     </tr>
                   </thead>
                   <tbody>
@@ -424,7 +507,32 @@ export default function Attendance() {
                                 : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
+                          <td className="px-5 py-3 text-app-soft max-w-[160px] truncate">{rec.note || "-"}</td>
                           <td className="px-5 py-3"><StatusBadge a={rec} /></td>
+                          {isAdmin && (
+                            <td className="px-3 py-3">
+                              <button
+                                onClick={() => {
+                                  const toLocalTime = (d) => {
+                                    if (!d) return "";
+                                    const dt = new Date(d);
+                                    return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+                                  };
+                                  setEntryForm({
+                                    userId:   rec.userId?._id || rec.userId || "",
+                                    date:     rec.date,
+                                    clockIn:  toLocalTime(rec.clockIn),
+                                    clockOut: toLocalTime(rec.clockOut),
+                                    note:     rec.note || "",
+                                  });
+                                  setEntryModal(true);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-orange-500/10 text-app-soft hover:text-orange-500 transition cursor-pointer"
+                                title="Edit entry">
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -436,12 +544,12 @@ export default function Attendance() {
                 <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
                   <p className="text-xs text-app-soft">Page {page} of {pages} · {total} total</p>
                   <div className="flex items-center gap-2">
-                    <button className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition"
+                    <button className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition cursor-pointer"
                       disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
                       <ChevronLeft className="w-4 h-4 text-app" />
                     </button>
                     <span className="text-xs font-semibold text-app px-2">{page}</span>
-                    <button className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition"
+                    <button className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition cursor-pointer"
                       disabled={page >= pages} onClick={() => setPage(p => p + 1)}>
                       <ChevronRight className="w-4 h-4 text-app" />
                     </button>
@@ -450,6 +558,65 @@ export default function Attendance() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Admin Entry Modal ── */}
+      {entryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setEntryModal(false); }}>
+          <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-app flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-orange-500" /> Manual Attendance Entry
+              </h2>
+              <button onClick={() => setEntryModal(false)} className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleAdminEntry} className="flex flex-col gap-4">
+              <div>
+                <label className="label">Member</label>
+                <select className="input" required value={entryForm.userId}
+                  onChange={e => setEntryForm(f => ({ ...f, userId: e.target.value }))}>
+                  <option value="">Select member</option>
+                  {teamMembers.map(m => (
+                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label">Date</label>
+                <input type="date" className="input" required value={entryForm.date}
+                  onChange={e => setEntryForm(f => ({ ...f, date: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Clock In</label>
+                  <input type="time" className="input" value={entryForm.clockIn}
+                    onChange={e => setEntryForm(f => ({ ...f, clockIn: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="label">Clock Out</label>
+                  <input type="time" className="input" value={entryForm.clockOut}
+                    onChange={e => setEntryForm(f => ({ ...f, clockOut: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Note (optional)</label>
+                <input type="text" className="input" placeholder="e.g. Work from home" value={entryForm.note}
+                  onChange={e => setEntryForm(f => ({ ...f, note: e.target.value }))} />
+              </div>
+              <p className="text-xs text-app-soft">If a record already exists for this member on this date, it will be overwritten.</p>
+              <div className="flex justify-end gap-3 pt-1">
+                <button type="button" className="btn-secondary" onClick={() => setEntryModal(false)}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={entrySaving}>
+                  {entrySaving ? <Spinner size="sm" /> : null} Save Entry
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

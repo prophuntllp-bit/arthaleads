@@ -7,10 +7,12 @@ const ctrl = require("../controllers/attendanceController");
 
 router.use(protect, planGate("growth"));
 
-router.get  ("/status",     ctrl.status);
-router.get  ("/team-today", ctrl.teamToday);
-router.get  ("/",           ctrl.list);
-router.post ("/clockin",    ctrl.clockIn);
-router.post ("/clockout",   ctrl.clockOut);
+router.get  ("/status",      ctrl.status);
+router.get  ("/team-today",  ctrl.teamToday);
+router.get  ("/export",      ctrl.exportCsv);
+router.get  ("/",            ctrl.list);
+router.post ("/clockin",     ctrl.clockIn);
+router.post ("/clockout",    ctrl.clockOut);
+router.post ("/admin-entry", ctrl.adminEntry);
 
 module.exports = router;
