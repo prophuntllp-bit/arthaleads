@@ -526,6 +526,7 @@ const authService = {
         assigned:        [{ $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
         booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
         siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        siteVisitDone:   [{ $match: { booking: "Site Visit Done"  } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
         interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
         callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
         notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
@@ -536,6 +537,7 @@ const authService = {
     const pr_assigned        = mapFrom(projectFacet?.assigned,        "count");
     const pr_booked          = mapFrom(projectFacet?.booked,          "count");
     const pr_siteVisitBooked = mapFrom(projectFacet?.siteVisitBooked, "count");
+    const pr_siteVisitDone   = mapFrom(projectFacet?.siteVisitDone,   "count");
     const pr_interested      = mapFrom(projectFacet?.interested,      "count");
     const pr_callBack        = mapFrom(projectFacet?.callBack,        "count");
     const pr_notInterested   = mapFrom(projectFacet?.notInterested,   "count");
@@ -572,6 +574,9 @@ const authService = {
         totalAssigned:    pr_assigned[id]        || 0,
         interested:       pr_interested[id]      || 0,
         siteVisitBooked:  pr_siteVisitBooked[id] || 0,
+        siteVisitDone:    pr_siteVisitDone[id]   || 0,
+        // combined: all leads that have reached the site visit stage
+        siteVisits:      (pr_siteVisitBooked[id] || 0) + (pr_siteVisitDone[id] || 0),
         booked:           pr_booked[id]          || 0,
         callBack:         pr_callBack[id]        || 0,
         notInterested:    pr_notInterested[id]   || 0,
@@ -584,7 +589,7 @@ const authService = {
         ...user.toJSON(),
         // top-level totals (combined) for summary cards
         totalAssigned: pipeline.totalAssigned + project.totalAssigned,
-        siteVisits:    pipeline.siteVisits    + project.siteVisitBooked,
+        siteVisits:    pipeline.siteVisits    + project.siteVisits,
         closedWon:     pipeline.closedWon     + project.booked,
         newLeads:      pipeline.newLeads,
         // per-pipeline breakdown

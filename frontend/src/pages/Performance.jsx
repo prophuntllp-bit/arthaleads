@@ -90,7 +90,7 @@ export default function Performance() {
                 <tbody><tr>
                   <td>${(pr.totalAssigned||0).toLocaleString("en-IN")}</td>
                   <td class="orange">${(pr.interested||0).toLocaleString("en-IN")}</td>
-                  <td>${(pr.siteVisitBooked||0).toLocaleString("en-IN")}</td>
+                  <td>${(pr.siteVisits||0).toLocaleString("en-IN")}${pr.siteVisitDone > 0 ? `<span style="display:block;font-size:9px;color:#14b8a6;font-weight:700;margin-top:2px;">${pr.siteVisitDone} done</span>` : ""}</td>
                   <td class="won">${(pr.booked||0).toLocaleString("en-IN")}</td>
                 </tr></tbody>
               </table>
@@ -424,10 +424,11 @@ export default function Performance() {
                   <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} leads</span>
                 </div>
                 <div className="p-3 grid grid-cols-4 gap-2">
-                  <SmallTile label="Assigned"     value={project.totalAssigned   || 0} />
-                  <SmallTile label="Interested"   value={project.interested      || 0} />
-                  <SmallTile label="Site Visit"   value={project.siteVisitBooked || 0} />
-                  <SmallTile label="Booked"       value={project.booked          || 0} highlight={project.booked > 0} />
+                  <SmallTile label="Assigned"     value={project.totalAssigned || 0} />
+                  <SmallTile label="Interested"   value={project.interested    || 0} />
+                  <SmallTile label="Site Visit"   value={project.siteVisits    || 0}
+                    note={project.siteVisitDone > 0 ? `${project.siteVisitDone} done` : null} />
+                  <SmallTile label="Booked"       value={project.booked        || 0} highlight={project.booked > 0} />
                 </div>
                 <div className="p-3 pt-0 grid grid-cols-3 gap-2">
                   <SmallTile label="Call Back"      value={project.callBack      || 0} />
@@ -478,7 +479,7 @@ function MetricCard({ icon: Icon, label, value, note }) {
   );
 }
 
-function SmallTile({ label, value, highlight = false, valueClass = "" }) {
+function SmallTile({ label, value, highlight = false, valueClass = "", note = null }) {
   const isNum = typeof value === "number";
   return (
     <div className="rounded-xl p-3 stitch-surface-muted">
@@ -486,6 +487,7 @@ function SmallTile({ label, value, highlight = false, valueClass = "" }) {
       <p className={`mt-1.5 text-base font-bold truncate ${valueClass || (highlight && value > 0 ? "text-green-500" : "text-app")}`}>
         {isNum ? value.toLocaleString("en-IN") : value}
       </p>
+      {note && <p className="text-[9px] text-teal-500 font-semibold mt-0.5 leading-none">{note}</p>}
     </div>
   );
 }
