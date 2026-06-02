@@ -15,7 +15,16 @@ function useSEO({ title, description, url, image }) {
     setMeta("og:description", description);
     setMeta("og:url", url || window.location.href);
     if (image) setMeta("og:image", image);
-    return () => { document.title = "Arthaleads - Real Estate CRM"; };
+    if (url) {
+      let canon = document.querySelector("link[rel='canonical']");
+      if (!canon) { canon = document.createElement("link"); canon.rel = "canonical"; document.head.appendChild(canon); }
+      canon.href = url;
+    }
+    return () => {
+      document.title = "Arthaleads - Real Estate CRM";
+      const canon = document.querySelector("link[rel='canonical']");
+      if (canon) canon.remove();
+    };
   }, [title, description, url, image]);
 }
 function setMeta(name, content) {

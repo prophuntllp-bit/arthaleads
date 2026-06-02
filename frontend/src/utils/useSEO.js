@@ -29,6 +29,7 @@ export function useSEO({ title, description, canonical, robots = "index, follow"
     setMetaName("twitter:title",      title);
     setMetaName("twitter:description", description);
 
+    const prevCanonical = document.querySelector('link[rel="canonical"]')?.href ?? null;
     if (canonical) {
       let link = document.querySelector('link[rel="canonical"]');
       if (!link) { link = document.createElement("link"); link.rel = "canonical"; document.head.appendChild(link); }
@@ -38,6 +39,12 @@ export function useSEO({ title, description, canonical, robots = "index, follow"
     return () => {
       document.title = prev.title;
       setMetaName("robots", prev.robots || "index, follow");
+      // Restore or remove canonical so navigating away doesn't leave a stale tag
+      const link = document.querySelector('link[rel="canonical"]');
+      if (link) {
+        if (prevCanonical) { link.href = prevCanonical; }
+        else { link.remove(); }
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, canonical, robots]);

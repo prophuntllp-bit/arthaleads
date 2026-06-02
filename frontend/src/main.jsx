@@ -58,6 +58,7 @@ if ("serviceWorker" in navigator) {
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
 // Self-hosted Inter (served from Vercel, no Google Fonts CDN dependency)
@@ -71,14 +72,16 @@ import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
-      <ThemeProvider>
-        <BrowserRouter>
-          <App />
-          <Toaster position="top-right" />
-        </BrowserRouter>
-      </ThemeProvider>
-    </GoogleOAuthProvider>
+    <HelmetProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+        <ThemeProvider>
+          <BrowserRouter>
+            <App />
+            <Toaster position="top-right" />
+          </BrowserRouter>
+        </ThemeProvider>
+      </GoogleOAuthProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );
 
