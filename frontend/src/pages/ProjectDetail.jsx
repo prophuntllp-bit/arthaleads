@@ -436,9 +436,15 @@ export default function ProjectDetail() {
     setExportLeadsDropOpen(false);
     setExportingLeads(true);
     try {
-      const params = { page: 1, limit: 9999, ...(search && { search }), ...(bookingFilter && { bookingIn: bookingFilter }) };
-      const { data } = await api.get(`/projects/${id}/leads`, { params });
-      const rows = (data.leads || []).map((lead, i) => ({
+      let sourceLeads;
+      if (selectedIds.size > 0) {
+        sourceLeads = leads.filter((l) => selectedIds.has(l._id));
+      } else {
+        const params = { page: 1, limit: 9999, ...(search && { search }), ...(bookingFilter && { bookingIn: bookingFilter }) };
+        const { data } = await api.get(`/projects/${id}/leads`, { params });
+        sourceLeads = data.leads || [];
+      }
+      const rows = sourceLeads.map((lead, i) => ({
         "#":           i + 1,
         "Name":        lead.name || "",
         "Phone":       lead.phone || "",
@@ -455,7 +461,8 @@ export default function ProjectDetail() {
       if (!rows.length) { toast.error("No leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
       const filterLabel = bookingFilter ? `_${bookingFilter.replace(/ /g, "_")}` : "";
-      const filename = `Leads_${projectName}${filterLabel}`;
+      const selectionLabel = selectedIds.size > 0 ? `_${selectedIds.size}selected` : "";
+      const filename = `Leads_${projectName}${filterLabel}${selectionLabel}`;
       if (format === "csv") {
         const ws = xlsxUtils.json_to_sheet(rows);
         const csv = xlsxUtils.sheet_to_csv(ws);

@@ -459,7 +459,7 @@ const authService = {
     return { token, user, org };
   },
 
-  async getPerformance(actor) {
+  async getPerformance(actor, { dateFrom, dateTo } = {}) {
     const memberMatch = actor.role === "manager"
       ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
       : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
@@ -474,9 +474,15 @@ const authService = {
         return acc;
       }, {});
 
+    // Build optional date filter for createdAt
+    const dateFilter = {};
+    if (dateFrom) dateFilter.$gte = new Date(dateFrom);
+    if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+    const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+
     // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
     const [pipelineFacet] = await Lead.aggregate([
-      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false } },
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, ...dateMatch } },
       { $facet: {
         assigned:   [{ $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
         closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
@@ -504,7 +510,7 @@ const authService = {
     // working those leads. We $lookup the parent project, $unwind assignedTo,
     // then group by the assigned user - regardless of who imported the leads.
     const [projectFacet] = await ProjectLead.aggregate([
-      { $match: { orgId } },
+      { $match: { orgId, ...dateMatch } },
       { $lookup: {
           from: "projects",
           localField: "project",

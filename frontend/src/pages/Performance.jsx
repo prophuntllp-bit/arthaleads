@@ -15,6 +15,8 @@ export default function Performance() {
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dateFrom,   setDateFrom]   = useState("");
+  const [dateTo,     setDateTo]     = useState("");
 
   const exportPDF = () => {
     const now = new Date();
@@ -22,6 +24,9 @@ export default function Performance() {
     const timeStr  = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
     const orgName  = org?.name  || "Your Organisation";
     const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? org.logo : null;
+    const rangeLabel = dateFrom || dateTo
+      ? `${dateFrom ? new Date(dateFrom).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"} → ${dateTo ? new Date(dateTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Today"}`
+      : "All time · Live data";
 
     const agentCards = members.map((m, idx) => {
       const p  = m.pipeline || {};
@@ -54,15 +59,20 @@ export default function Performance() {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
                 Main Pipeline
               </div>
-              <div class="stats-row">
-                <div class="stat"><div class="stat-val">${(p.totalAssigned||0).toLocaleString("en-IN")}</div><div class="stat-label">Assigned</div></div>
-                <div class="stat"><div class="stat-val">${(p.newLeads||0).toLocaleString("en-IN")}</div><div class="stat-label">New</div></div>
-                <div class="stat"><div class="stat-val">${(p.siteVisits||0).toLocaleString("en-IN")}</div><div class="stat-label">Site Visit</div></div>
-                <div class="stat"><div class="stat-val highlight">${(p.closedWon||0).toLocaleString("en-IN")}</div><div class="stat-label">Closed Won</div></div>
-                <div class="stat"><div class="stat-val blue">${p.avgResponseTime||"—"}</div><div class="stat-label">Avg Resp.</div></div>
-              </div>
+              <table class="stat-table">
+                <thead><tr>
+                  <th>Assigned</th><th>New</th><th>Site Visit</th><th>Closed Won</th><th>Avg Resp.</th>
+                </tr></thead>
+                <tbody><tr>
+                  <td>${(p.totalAssigned||0).toLocaleString("en-IN")}</td>
+                  <td>${(p.newLeads||0).toLocaleString("en-IN")}</td>
+                  <td>${(p.siteVisits||0).toLocaleString("en-IN")}</td>
+                  <td class="won">${(p.closedWon||0).toLocaleString("en-IN")}</td>
+                  <td class="blue">${p.avgResponseTime||"—"}</td>
+                </tr></tbody>
+              </table>
               <div class="prog-row">
-                <div style="font-size:9px;color:#94a3b8;font-weight:600;min-width:80px;">Conversion Rate</div>
+                <div class="prog-lbl">Conversion Rate</div>
                 <div class="prog-bar"><div class="prog-fill orange" style="width:${pConv}%"></div></div>
                 <div class="prog-pct orange">${p.conversionRate||0}%</div>
               </div>
@@ -72,19 +82,29 @@ export default function Performance() {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="9" width="6" height="12" rx="1"/><rect x="16" y="6" width="6" height="15" rx="1"/></svg>
                 Project Pipeline
               </div>
-              <div class="stats-row four">
-                <div class="stat"><div class="stat-val">${(pr.totalAssigned||0).toLocaleString("en-IN")}</div><div class="stat-label">Assigned</div></div>
-                <div class="stat"><div class="stat-val orange">${(pr.interested||0).toLocaleString("en-IN")}</div><div class="stat-label">Interested</div></div>
-                <div class="stat"><div class="stat-val">${(pr.siteVisitBooked||0).toLocaleString("en-IN")}</div><div class="stat-label">Site Visit</div></div>
-                <div class="stat"><div class="stat-val highlight">${(pr.booked||0).toLocaleString("en-IN")}</div><div class="stat-label">Booked</div></div>
-              </div>
-              <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
-                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.callBack||0).toLocaleString("en-IN")}</div><div class="stat-label">Call Back</div></div>
-                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.notInterested||0).toLocaleString("en-IN")}</div><div class="stat-label">Not Interested</div></div>
-                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.notReachable||0).toLocaleString("en-IN")}</div><div class="stat-label">Not Reachable</div></div>
-              </div>
+              <table class="stat-table">
+                <thead><tr>
+                  <th>Assigned</th><th>Interested</th><th>Site Visit</th><th>Booked</th>
+                </tr></thead>
+                <tbody><tr>
+                  <td>${(pr.totalAssigned||0).toLocaleString("en-IN")}</td>
+                  <td class="orange">${(pr.interested||0).toLocaleString("en-IN")}</td>
+                  <td>${(pr.siteVisitBooked||0).toLocaleString("en-IN")}</td>
+                  <td class="won">${(pr.booked||0).toLocaleString("en-IN")}</td>
+                </tr></tbody>
+              </table>
+              <table class="stat-table secondary">
+                <thead><tr>
+                  <th>Call Back</th><th>Not Interested</th><th>Not Reachable</th>
+                </tr></thead>
+                <tbody><tr>
+                  <td>${(pr.callBack||0).toLocaleString("en-IN")}</td>
+                  <td>${(pr.notInterested||0).toLocaleString("en-IN")}</td>
+                  <td>${(pr.notReachable||0).toLocaleString("en-IN")}</td>
+                </tr></tbody>
+              </table>
               <div class="prog-row">
-                <div style="font-size:9px;color:#94a3b8;font-weight:600;min-width:80px;">Booking Rate</div>
+                <div class="prog-lbl">Booking Rate</div>
                 <div class="prog-bar"><div class="prog-fill indigo" style="width:${prConv}%"></div></div>
                 <div class="prog-pct indigo">${pr.conversionRate||0}%</div>
               </div>
@@ -134,12 +154,17 @@ export default function Performance() {
   .pipeline-section+.pipeline-section{border-left:1.5px solid #f1f5f9;}
   .pipeline-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;gap:5px;}
   .pipeline-label.orange{color:#f97316;} .pipeline-label.indigo{color:#6366f1;}
-  .stats-row{display:grid;gap:8px;}
-  .stat{text-align:center;}
-  .stat-val{font-size:20px;font-weight:900;color:#0f172a;line-height:1;}
-  .stat-val.highlight{color:#22c55e;} .stat-val.blue{color:#3b82f6;} .stat-val.orange{color:#f97316;}
-  .stat-label{font-size:8.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
-  .prog-row{margin-top:12px;display:flex;align-items:center;gap:8px;}
+  .stat-table{width:100%;border-collapse:collapse;margin:8px 0;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;}
+  .stat-table thead tr{background:#f8fafc;}
+  .stat-table th{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;padding:6px 10px;text-align:center;border-right:1.5px solid #e2e8f0;}
+  .stat-table th:last-child{border-right:none;}
+  .stat-table tbody tr{background:#fff;}
+  .stat-table td{font-size:20px;font-weight:900;color:#0f172a;padding:10px 10px 8px;text-align:center;border-right:1.5px solid #f1f5f9;border-top:1.5px solid #e2e8f0;line-height:1;}
+  .stat-table td:last-child{border-right:none;}
+  .stat-table td.won{color:#22c55e;} .stat-table td.blue{color:#3b82f6;} .stat-table td.orange{color:#f97316;}
+  .stat-table.secondary th{font-size:8px;} .stat-table.secondary td{font-size:15px;padding:7px 10px 6px;}
+  .prog-row{margin-top:10px;display:flex;align-items:center;gap:8px;}
+  .prog-lbl{font-size:9px;color:#94a3b8;font-weight:600;min-width:80px;}
   .prog-bar{flex:1;height:5px;background:#f1f5f9;border-radius:999px;overflow:hidden;}
   .prog-fill{height:100%;border-radius:999px;}
   .prog-fill.orange{background:linear-gradient(90deg,#f97316,#fb923c);}
@@ -168,7 +193,7 @@ export default function Performance() {
     <div class="report-title">Team Performance Report</div>
     <div class="report-meta">
       Generated ${dateStr} at ${timeStr}<br>
-      ${members.length} team member${members.length !== 1 ? "s" : ""} · All pipelines · Live data
+      ${members.length} team member${members.length !== 1 ? "s" : ""} · ${rangeLabel}
     </div>
   </div>
 </div>
@@ -219,7 +244,8 @@ export default function Performance() {
   const fetchData = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const r = await api.get("/auth/performance");
+      const params = { ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }) };
+      const r = await api.get("/auth/performance", { params });
       setMembers(r.data.performance || []);
     } catch {
       toast.error("Failed to load team performance");
@@ -256,25 +282,55 @@ export default function Performance() {
               Track how each team member is handling leads across both the main pipeline and project pipelines - updated live.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={exportPDF}
-              disabled={!members.length}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-40"
-              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-            >
-              <FileDown className="w-3.5 h-3.5" />
-              Export PDF
-            </button>
-            <button
-              onClick={() => fetchData(true)}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
-              style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            {/* Date range filter */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
+                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
+              />
+              <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>To</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
+                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
+              />
+              {(dateFrom || dateTo) && (
+                <button
+                  onClick={() => { setDateFrom(""); setDateTo(""); }}
+                  className="text-xs font-medium text-orange-400 hover:text-orange-500 transition"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => fetchData(true)}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
+                style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Refreshing…" : "Refresh"}
+              </button>
+              <button
+                onClick={exportPDF}
+                disabled={!members.length}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-40"
+                style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Export PDF
+              </button>
+            </div>
           </div>
         </div>
       </section>

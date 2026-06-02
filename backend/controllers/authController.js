@@ -167,7 +167,8 @@ const authController = {
 
   async getPerformance(req, res, next) {
     try {
-      const performance = await authService.getPerformance(req.user);
+      const { dateFrom, dateTo } = req.query;
+      const performance = await authService.getPerformance(req.user, { dateFrom, dateTo });
       res.json({ success: true, performance });
     } catch (err) {
       next(err);
