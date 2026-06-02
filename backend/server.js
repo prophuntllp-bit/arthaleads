@@ -78,7 +78,10 @@ connectDB().then(async () => {
       }
       console.log(`[MIGRATION] orgId backfill complete`);
     }
-  } catch (e) { console.error("[MIGRATION] orgId backfill failed:", e.message); }
+  } catch (e) {
+    console.error("[MIGRATION] orgId backfill failed:", e.message);
+    try { require("./instrument").captureException(e, { tags: { migration: "orgId-backfill" } }); } catch {}
+  }
 }).catch((e) => {
   console.error("[BOOT] DB connection failed - cannot start:", e.message);
   process.exit(1);

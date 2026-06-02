@@ -10,7 +10,7 @@ const signupSchema = Joi.object({
   orgName:      Joi.string().min(2).max(100).required(),
   name:         Joi.string().min(2).max(80).required(),
   email:        Joi.string().email().required(),
-  password:     Joi.string().min(6).required(),
+  password:     Joi.string().min(8).required(),
   phone:        Joi.string().min(10).max(15).required(),
   phoneToken:   Joi.string().required(), // short-lived JWT issued after OTP verification
   referralCode: Joi.string().length(6).uppercase().alphanum().optional().allow("", null),
@@ -28,7 +28,7 @@ const loginSchema = Joi.object({
 const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(80).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  password: Joi.string().min(8).required(),
   role: Joi.string().valid("admin", "manager", "agent").required(),
   phone: Joi.string().allow("").optional(),
   avatar: avatarSchema,
@@ -37,7 +37,7 @@ const createUserSchema = Joi.object({
 const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(80),
   email: Joi.string().email(),
-  password: Joi.string().min(6),
+  password: Joi.string().min(8),
   role: Joi.string().valid("admin", "manager", "agent"),
   phone: Joi.string().allow(""),
   avatar: avatarSchema,
@@ -50,7 +50,7 @@ const updateProfileSchema = Joi.object({
   avatar: avatarSchema,
   role: Joi.string().valid("admin", "manager", "agent"),
   currentPassword: Joi.string().allow(""),
-  newPassword: Joi.string().min(6).allow(""),
+  newPassword: Joi.string().min(8).allow(""),
 }).min(1);
 
 const createAutomationSchema = Joi.object({

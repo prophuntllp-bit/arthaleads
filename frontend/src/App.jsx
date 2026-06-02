@@ -6,6 +6,7 @@ import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import CookieBanner from "./components/CookieBanner";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Download, X, Bell, Share } from "lucide-react";
@@ -615,6 +616,7 @@ export default function App() {
     <PublicThemeProvider>
     <AuthProvider>
       <ErrorBoundary>
+      <CookieBanner />
       <InstallBanner />
       <Suspense fallback={<PageFallback />}>
       <Routes>

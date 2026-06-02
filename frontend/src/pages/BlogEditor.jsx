@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import DOMPurify from "dompurify";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -673,8 +674,13 @@ export default function BlogEditor() {
     if (!title.trim()) { toast.error("Title is required"); return; }
     setSaving(true);
     try {
+      const sanitizedBlocks = blocks.map((b) => ({
+        ...b,
+        content: typeof b.content === "string" ? DOMPurify.sanitize(b.content) : b.content,
+        items: Array.isArray(b.items) ? b.items.map((item) => DOMPurify.sanitize(item)) : b.items,
+      }));
       const payload = {
-        title, slug, excerpt, blocks, featuredImage, featuredImageAlt,
+        title, slug, excerpt, blocks: sanitizedBlocks, featuredImage, featuredImageAlt,
         category: categoryId || null, tags,
         status: overrideStatus ?? status,
         metaTitle: metaTitle || title,
