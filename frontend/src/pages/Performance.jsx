@@ -17,72 +17,197 @@ export default function Performance() {
   const [refreshing, setRefreshing] = useState(false);
 
   const exportPDF = () => {
-    const now = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
-    const rows = members.map((m) => {
-      const p = m.pipeline || {};
+    const now = new Date();
+    const dateStr  = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+    const timeStr  = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    const orgName  = org?.name  || "Your Organisation";
+    const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? org.logo : null;
+
+    const agentCards = members.map((m, idx) => {
+      const p  = m.pipeline || {};
       const pr = m.project  || {};
+      const pConv  = Math.min(p.conversionRate  || 0, 100);
+      const prConv = Math.min(pr.conversionRate || 0, 100);
+      const initial = (m.name || "?")[0].toUpperCase();
+      const avatarColors = ["#f97316","#6366f1","#22c55e","#3b82f6","#ec4899","#f59e0b","#14b8a6"];
+      const avatarBg = avatarColors[idx % avatarColors.length];
       return `
-        <tr>
-          <td>${m.name}</td>
-          <td class="center">${m.role}</td>
-          <td class="center">${p.totalAssigned || 0}</td>
-          <td class="center">${p.siteVisits || 0}</td>
-          <td class="center">${p.closedWon || 0}</td>
-          <td class="center">${p.conversionRate || 0}%</td>
-          <td class="center">${pr.totalAssigned || 0}</td>
-          <td class="center">${pr.siteVisitBooked || 0}</td>
-          <td class="center">${pr.booked || 0}</td>
-          <td class="center">${pr.conversionRate || 0}%</td>
-        </tr>`;
+        <div class="agent-card">
+          <div class="agent-header">
+            <div class="agent-name-area">
+              <div class="agent-avatar" style="background:${avatarBg}">${initial}</div>
+              <div>
+                <div class="agent-name">${m.name || "—"}</div>
+                <div class="agent-email">${m.email || ""}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="role-badge">${m.role || ""}</span>
+              <span style="font-size:10px;color:${m.isActive !== false ? "#22c55e" : "#94a3b8"};font-weight:600;">
+                ${m.isActive !== false ? "● Active" : "○ Inactive"}
+              </span>
+            </div>
+          </div>
+          <div class="pipelines">
+            <div class="pipeline-section">
+              <div class="pipeline-label orange">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.5"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                Main Pipeline
+              </div>
+              <div class="stats-row">
+                <div class="stat"><div class="stat-val">${(p.totalAssigned||0).toLocaleString("en-IN")}</div><div class="stat-label">Assigned</div></div>
+                <div class="stat"><div class="stat-val">${(p.newLeads||0).toLocaleString("en-IN")}</div><div class="stat-label">New</div></div>
+                <div class="stat"><div class="stat-val">${(p.siteVisits||0).toLocaleString("en-IN")}</div><div class="stat-label">Site Visit</div></div>
+                <div class="stat"><div class="stat-val highlight">${(p.closedWon||0).toLocaleString("en-IN")}</div><div class="stat-label">Closed Won</div></div>
+                <div class="stat"><div class="stat-val blue">${p.avgResponseTime||"—"}</div><div class="stat-label">Avg Resp.</div></div>
+              </div>
+              <div class="prog-row">
+                <div style="font-size:9px;color:#94a3b8;font-weight:600;min-width:80px;">Conversion Rate</div>
+                <div class="prog-bar"><div class="prog-fill orange" style="width:${pConv}%"></div></div>
+                <div class="prog-pct orange">${p.conversionRate||0}%</div>
+              </div>
+            </div>
+            <div class="pipeline-section">
+              <div class="pipeline-label indigo">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5"><rect x="2" y="3" width="6" height="18" rx="1"/><rect x="9" y="9" width="6" height="12" rx="1"/><rect x="16" y="6" width="6" height="15" rx="1"/></svg>
+                Project Pipeline
+              </div>
+              <div class="stats-row four">
+                <div class="stat"><div class="stat-val">${(pr.totalAssigned||0).toLocaleString("en-IN")}</div><div class="stat-label">Assigned</div></div>
+                <div class="stat"><div class="stat-val orange">${(pr.interested||0).toLocaleString("en-IN")}</div><div class="stat-label">Interested</div></div>
+                <div class="stat"><div class="stat-val">${(pr.siteVisitBooked||0).toLocaleString("en-IN")}</div><div class="stat-label">Site Visit</div></div>
+                <div class="stat"><div class="stat-val highlight">${(pr.booked||0).toLocaleString("en-IN")}</div><div class="stat-label">Booked</div></div>
+              </div>
+              <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
+                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.callBack||0).toLocaleString("en-IN")}</div><div class="stat-label">Call Back</div></div>
+                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.notInterested||0).toLocaleString("en-IN")}</div><div class="stat-label">Not Interested</div></div>
+                <div class="stat"><div class="stat-val" style="font-size:14px">${(pr.notReachable||0).toLocaleString("en-IN")}</div><div class="stat-label">Not Reachable</div></div>
+              </div>
+              <div class="prog-row">
+                <div style="font-size:9px;color:#94a3b8;font-weight:600;min-width:80px;">Booking Rate</div>
+                <div class="prog-bar"><div class="prog-fill indigo" style="width:${prConv}%"></div></div>
+                <div class="prog-pct indigo">${pr.conversionRate||0}%</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
     }).join("");
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-      <title>Arthaleads – Team Performance Report</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Inter, Arial, sans-serif; color: #111; padding: 32px; font-size: 13px; }
-        h1 { font-size: 22px; font-weight: 800; color: #f97316; margin-bottom: 4px; }
-        .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
-        .summary { display: flex; gap: 16px; margin-bottom: 28px; }
-        .card { flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
-        .card .val { font-size: 28px; font-weight: 800; color: #111; }
-        .card .lbl { font-size: 11px; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f97316; color: #fff; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-        th.center, td.center { text-align: center; }
-        td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; }
-        tr:nth-child(even) td { background: #fafafa; }
-        .section-head { background: #f9fafb; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #666; padding: 6px 12px; }
-        @media print { body { padding: 0; } }
-      </style></head><body>
-      <h1>Arthaleads CRM</h1>
-      <p class="meta">Team Performance Report &nbsp;·&nbsp; Generated ${now}</p>
-      <div class="summary">
-        <div class="card"><div class="val">${totals.totalAssigned.toLocaleString("en-IN")}</div><div class="lbl">Total Leads</div></div>
-        <div class="card"><div class="val">${totals.siteVisits.toLocaleString("en-IN")}</div><div class="lbl">Site Visits</div></div>
-        <div class="card"><div class="val">${totals.closedWon.toLocaleString("en-IN")}</div><div class="lbl">Closed / Booked</div></div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th rowspan="2">Agent</th><th rowspan="2" class="center">Role</th>
-            <th colspan="4" class="center" style="background:#ea6c00">Main Pipeline</th>
-            <th colspan="4" class="center" style="background:#4f46e5">Project Pipeline</th>
-          </tr>
-          <tr>
-            <th class="center" style="background:#fb923c">Assigned</th>
-            <th class="center" style="background:#fb923c">Site Visits</th>
-            <th class="center" style="background:#fb923c">Closed Won</th>
-            <th class="center" style="background:#fb923c">Conv %</th>
-            <th class="center" style="background:#6366f1">Assigned</th>
-            <th class="center" style="background:#6366f1">Site Visit</th>
-            <th class="center" style="background:#6366f1">Booked</th>
-            <th class="center" style="background:#6366f1">Book %</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </body></html>`;
+    const html = `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Team Performance Report – Arthaleads</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',-apple-system,system-ui,sans-serif;color:#0f172a;background:#fff;font-size:12px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .header{background:linear-gradient(135deg,#f97316 0%,#c2410c 100%);color:#fff;padding:28px 40px 24px;display:flex;align-items:center;justify-content:space-between;}
+  .logo-area{display:flex;align-items:center;gap:14px;}
+  .logo-icon{width:48px;height:48px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;flex-shrink:0;}
+  .logo-img{width:48px;height:48px;border-radius:14px;object-fit:cover;}
+  .logo-name{font-size:20px;font-weight:900;letter-spacing:-0.5px;}
+  .logo-sub{font-size:11px;opacity:0.78;margin-top:2px;font-weight:500;}
+  .header-right{text-align:right;}
+  .report-title{font-size:15px;font-weight:800;letter-spacing:-0.2px;}
+  .report-meta{font-size:10px;opacity:0.72;margin-top:5px;line-height:1.6;}
+  .content{padding:28px 40px;}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+  .metric{border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;border:1.5px solid #f1f5f9;}
+  .metric-accent{position:absolute;top:0;left:0;right:0;height:4px;border-radius:14px 14px 0 0;}
+  .m-orange .metric-accent{background:linear-gradient(90deg,#f97316,#fb923c);}
+  .m-blue   .metric-accent{background:linear-gradient(90deg,#3b82f6,#60a5fa);}
+  .m-green  .metric-accent{background:linear-gradient(90deg,#22c55e,#4ade80);}
+  .metric-val{font-size:34px;font-weight:900;letter-spacing:-1.5px;line-height:1;margin-top:4px;}
+  .m-orange .metric-val{color:#f97316;} .m-blue .metric-val{color:#3b82f6;} .m-green .metric-val{color:#22c55e;}
+  .metric-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin-top:6px;}
+  .metric-note{font-size:10px;color:#94a3b8;margin-top:3px;}
+  .section-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:14px;padding-bottom:10px;border-bottom:1.5px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;}
+  .agent-card{border:1.5px solid #f1f5f9;border-radius:16px;margin-bottom:14px;overflow:hidden;page-break-inside:avoid;}
+  .agent-header{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;background:linear-gradient(135deg,#f8fafc,#fff);border-bottom:1.5px solid #f1f5f9;}
+  .agent-name-area{display:flex;align-items:center;gap:11px;}
+  .agent-avatar{width:36px;height:36px;border-radius:10px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;}
+  .agent-name{font-size:13px;font-weight:700;color:#0f172a;}
+  .agent-email{font-size:10px;color:#94a3b8;margin-top:1px;}
+  .role-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;text-transform:capitalize;background:rgba(249,115,22,0.1);color:#ea580c;letter-spacing:.02em;}
+  .pipelines{display:grid;grid-template-columns:1fr 1fr;}
+  .pipeline-section{padding:14px 18px;}
+  .pipeline-section+.pipeline-section{border-left:1.5px solid #f1f5f9;}
+  .pipeline-label{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;gap:5px;}
+  .pipeline-label.orange{color:#f97316;} .pipeline-label.indigo{color:#6366f1;}
+  .stats-row{display:grid;gap:8px;}
+  .stat{text-align:center;}
+  .stat-val{font-size:20px;font-weight:900;color:#0f172a;line-height:1;}
+  .stat-val.highlight{color:#22c55e;} .stat-val.blue{color:#3b82f6;} .stat-val.orange{color:#f97316;}
+  .stat-label{font-size:8.5px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
+  .prog-row{margin-top:12px;display:flex;align-items:center;gap:8px;}
+  .prog-bar{flex:1;height:5px;background:#f1f5f9;border-radius:999px;overflow:hidden;}
+  .prog-fill{height:100%;border-radius:999px;}
+  .prog-fill.orange{background:linear-gradient(90deg,#f97316,#fb923c);}
+  .prog-fill.indigo{background:linear-gradient(90deg,#6366f1,#818cf8);}
+  .prog-pct{font-size:10px;font-weight:800;min-width:32px;text-align:right;}
+  .prog-pct.orange{color:#f97316;} .prog-pct.indigo{color:#6366f1;}
+  .footer{margin-top:28px;padding-top:14px;border-top:1.5px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;}
+  .footer-left{font-size:10px;color:#94a3b8;}
+  .footer-brand{font-size:11px;font-weight:800;color:#f97316;}
+  @page{margin:0;size:A4;}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo-area">
+    ${orgLogo
+      ? `<img src="${orgLogo}" class="logo-img" alt="Logo" />`
+      : `<div class="logo-icon">A</div>`}
+    <div>
+      <div class="logo-name">Arthaleads</div>
+      <div class="logo-sub">${orgName}</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="report-title">Team Performance Report</div>
+    <div class="report-meta">
+      Generated ${dateStr} at ${timeStr}<br>
+      ${members.length} team member${members.length !== 1 ? "s" : ""} · All pipelines · Live data
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="summary">
+    <div class="metric m-orange">
+      <div class="metric-accent"></div>
+      <div class="metric-val">${totals.totalAssigned.toLocaleString("en-IN")}</div>
+      <div class="metric-label">Total Leads</div>
+      <div class="metric-note">Pipeline + Projects combined</div>
+    </div>
+    <div class="metric m-blue">
+      <div class="metric-accent"></div>
+      <div class="metric-val">${totals.siteVisits.toLocaleString("en-IN")}</div>
+      <div class="metric-label">Site Visits</div>
+      <div class="metric-note">Across all pipelines</div>
+    </div>
+    <div class="metric m-green">
+      <div class="metric-accent"></div>
+      <div class="metric-val">${totals.closedWon.toLocaleString("en-IN")}</div>
+      <div class="metric-label">Closed / Booked</div>
+      <div class="metric-note">Won in pipeline + Booked in projects</div>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span>Agent Performance Breakdown</span>
+    <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">${members.length} member${members.length !== 1 ? "s" : ""}</span>
+  </div>
+
+  ${agentCards}
+
+  <div class="footer">
+    <div class="footer-left">Confidential · Internal use only · ${orgName} · ${dateStr}</div>
+    <div class="footer-brand">Arthaleads CRM · arthaleads.com</div>
+  </div>
+</div>
+</body></html>`;
 
     const win = window.open("", "_blank");
     if (!win) { toast.error("Allow pop-ups to export the PDF"); return; }

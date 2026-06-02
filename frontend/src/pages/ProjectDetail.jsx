@@ -946,7 +946,7 @@ export default function ProjectDetail() {
               <button
                 onClick={() => setExportLeadsDropOpen((v) => !v)}
                 disabled={exportingLeads}
-                className="btn-outline flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
                 title="Export leads"
               >
                 {exportingLeads ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
@@ -969,7 +969,7 @@ export default function ProjectDetail() {
                 <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
                 <button className="btn-primary" onClick={() => fileRef.current?.click()} disabled={importing}>
                   {importing ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
-                  {importing ? "Importing..." : "Import Excel / CSV"}
+                  {importing ? "Importing..." : "Import"}
                 </button>
               </>
             )}
