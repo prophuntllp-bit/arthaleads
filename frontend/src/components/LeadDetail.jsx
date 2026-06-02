@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Sparkles } from "lucide-react";
 import api from "../services/api";
-import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink } from "./UI";
+import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 
@@ -29,6 +29,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(lead?.status || "New");
   const [retrying, setRetrying] = useState(false);
+  const [aiDraft, setAiDraft] = useState(null);
+  const [drafting, setDrafting] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -47,7 +49,21 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
     setTab("info");
     setNote("");
     setStatus(lead?.status || "New");
+    setAiDraft(null);
   }, [lead, open]);
+
+  const handleAiDraft = async () => {
+    if (!lead?._id || drafting) return;
+    setDrafting(true);
+    try {
+      const { data } = await api.post(`/leads/${lead._id}/draft-message`);
+      setAiDraft(data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "AI drafting failed. Please try again.");
+    } finally {
+      setDrafting(false);
+    }
+  };
 
   if (!lead) return null;
 
@@ -105,8 +121,61 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
                 <WhatsAppLink phone={lead.phone} name={lead.name} />
+                {lead.phone && !isProjectLead && (
+                  <button
+                    type="button"
+                    onClick={handleAiDraft}
+                    disabled={drafting}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
+                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+                    title="Draft a personalized WhatsApp message with AI"
+                  >
+                    {drafting ? (
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+                    )}
+                    AI Draft
+                  </button>
+                )}
                 {lead.email && <span className="text-sm text-app-soft">{lead.email}</span>}
               </div>
+              {aiDraft !== null && (
+                <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">AI Drafted Message</span>
+                    <span className="text-[10px] text-app-soft ml-1">— edit before sending</span>
+                    <button type="button" onClick={() => setAiDraft(null)} className="ml-auto text-xs text-app-soft hover:text-app transition cursor-pointer">✕</button>
+                  </div>
+                  <textarea
+                    value={aiDraft}
+                    onChange={(e) => setAiDraft(e.target.value)}
+                    rows={3}
+                    className="input w-full resize-none rounded-xl text-sm"
+                    style={{ minHeight: 72 }}
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText(aiDraft); toast.success("Copied to clipboard!"); }}
+                      className="btn-secondary flex-1 rounded-lg text-xs cursor-pointer"
+                    >
+                      Copy
+                    </button>
+                    <a
+                      href={`https://wa.me/${toWaNumber(lead.phone)}?text=${encodeURIComponent(aiDraft)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-primary flex-1 rounded-lg text-center text-xs"
+                    >
+                      Send on WhatsApp
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <SourceBadge source={lead.source} />

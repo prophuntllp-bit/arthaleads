@@ -8,11 +8,42 @@ const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, imp
 const Lead = require("../models/Lead");
 const Automation = require("../models/Automation");
 const logger = require("../config/logger");
+const { scoreLead, scoreLabel, nextBestAction } = require("../utils/leadScorer");
+const { draftWhatsAppMessage } = require("../utils/openai");
 
 // All lead routes require authentication
 router.use(protect);
 
 router.get("/analytics", leadController.getAnalytics);
+
+// GET /api/leads/hot — top scored leads for the "Hot Today" dashboard widget
+router.get("/hot", async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 8, 20);
+    const filter = {
+      orgId: req.user.orgId,
+      isDeleted: { $ne: true },
+      isArchived: { $ne: true },
+      status: { $nin: ["Closed Won", "Closed Lost"] },
+    };
+    if (req.user.role === "agent") filter.assignedTo = req.user._id;
+
+    const leads = await Lead.find(filter)
+      .select("name phone status priority source budget booking siteVisitDone followUpDate firstContactedAt activities notes assignedToName assignedTo propertyType bhk preferredLocation purpose")
+      .populate("assignedTo", "name")
+      .lean();
+
+    const scored = leads
+      .map((l) => {
+        const score = scoreLead(l);
+        return { ...l, _score: score, _scoreLabel: scoreLabel(score), _nextAction: nextBestAction(l, score) };
+      })
+      .sort((a, b) => b._score - a._score)
+      .slice(0, limit);
+
+    res.json({ success: true, data: scored });
+  } catch (err) { next(err); }
+});
 router.get("/dump", leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/followups-due", leadController.getFollowUpsDue);
@@ -215,6 +246,29 @@ router.post("/:id/retry-facebook", async (req, res, next) => {
     logger.info(`[retry-facebook] Lead ${lead._id} updated from leadgen ${leadgenId} by ${req.user.name}`);
     res.json({ success: true, lead, message: "Lead data fetched and updated" });
   } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/leads/:id/draft-message — AI-drafted WhatsApp message via OpenAI
+router.post("/:id/draft-message", async (req, res, next) => {
+  try {
+    const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId })
+      .select("name phone status priority source budget booking siteVisitDone followUpDate notes propertyType bhk preferredLocation purpose assignedToName")
+      .lean();
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
+    }
+
+    const agentName = req.user.name || "";
+    const message = await draftWhatsAppMessage(lead, agentName);
+    res.json({ success: true, message });
+  } catch (err) {
+    if (err.message?.includes("OPENAI_API_KEY")) {
+      return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
+    }
     next(err);
   }
 });

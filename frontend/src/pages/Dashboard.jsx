@@ -5,19 +5,24 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveCo
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowRight,
+  Bell,
   Calendar,
   Check,
   CheckCircle,
   ChevronDown,
   Clock3,
+  Flame,
   Globe,
   IndianRupee,
+  MapPin,
   MessageCircle,
   MoonStar,
   Pencil,
   Phone,
   Plus,
   Search,
+  Sparkles,
   SunMedium,
   Target,
   TrendingUp,
@@ -324,6 +329,8 @@ export default function Dashboard() {
         onGoalUpdate={(n) => setGoalOverride(n)}
       />
       <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
+
+      <HotLeadsWidget navigate={navigate} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
         <section className="card p-4 xl:col-span-7">
@@ -902,6 +909,146 @@ function FollowUpDuePanel({ user, navigate }) {
           </button>
         </div>
       )}
+    </section>
+  );
+}
+
+// ── Hot Today Widget ──────────────────────────────────────────────────────────
+function HotLeadsWidget({ navigate }) {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get("/leads/hot", { params: { limit: 6 } })
+      .then((r) => setLeads(r.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return null;
+  if (!leads.length) return null;
+
+  const toWaNum = (phone = "") => {
+    const d = phone.replace(/\D/g, "");
+    if (d.length === 10) return `91${d}`;
+    if (d.length === 11 && d.startsWith("0")) return `91${d.slice(1)}`;
+    return d;
+  };
+
+  const SCORE_STYLE = (score) => {
+    if (score >= 80) return { bg: "rgba(239,68,68,0.12)", color: "#ef4444", label: "🔥" };
+    if (score >= 60) return { bg: "rgba(249,115,22,0.12)", color: "#f97316", label: "⚡" };
+    if (score >= 40) return { bg: "rgba(245,158,11,0.10)", color: "#f59e0b", label: "~" };
+    return { bg: "rgba(107,114,128,0.10)", color: "#6b7280", label: "·" };
+  };
+
+  const ACTION_COLOR = {
+    orange: { bg: "rgba(249,115,22,0.10)", color: "#f97316", border: "rgba(249,115,22,0.25)" },
+    amber:  { bg: "rgba(245,158,11,0.10)", color: "#f59e0b", border: "rgba(245,158,11,0.25)" },
+    indigo: { bg: "rgba(99,102,241,0.10)", color: "#6366f1", border: "rgba(99,102,241,0.25)" },
+    violet: { bg: "rgba(139,92,246,0.10)", color: "#8b5cf6", border: "rgba(139,92,246,0.25)" },
+    emerald:{ bg: "rgba(34,197,94,0.10)",  color: "#22c55e", border: "rgba(34,197,94,0.25)"  },
+    green:  { bg: "rgba(22,163,74,0.10)",  color: "#16a34a", border: "rgba(22,163,74,0.25)"  },
+    blue:   { bg: "rgba(59,130,246,0.10)", color: "#3b82f6", border: "rgba(59,130,246,0.25)" },
+  };
+
+  const ActionIcon = ({ icon }) => {
+    if (icon === "phone")   return <Phone className="h-3 w-3" />;
+    if (icon === "bell")    return <Bell className="h-3 w-3" />;
+    if (icon === "map-pin") return <MapPin className="h-3 w-3" />;
+    if (icon === "message") return <MessageCircle className="h-3 w-3" />;
+    if (icon === "file")    return <ArrowRight className="h-3 w-3" />;
+    if (icon === "handshake") return <CheckCircle className="h-3 w-3" />;
+    return <Zap className="h-3 w-3" />;
+  };
+
+  return (
+    <section className="card overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3"
+        style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(239,68,68,0.06), transparent)" }}>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+          style={{ background: "rgba(239,68,68,0.12)" }}>
+          <Flame className="h-4 w-4 text-red-400" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-bold text-app">Hot Today</h3>
+          <p className="text-[11px] text-app-soft">Highest-scored leads — prioritize these first</p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Sparkles className="h-3 w-3 text-indigo-400" />
+          <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">AI Scored</span>
+        </div>
+        <button type="button"
+          onClick={() => navigate("/leads")}
+          className="shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+          View all <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+
+      {/* Lead rows */}
+      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {leads.map((lead) => {
+          const ss = SCORE_STYLE(lead._score);
+          const ac = ACTION_COLOR[lead._nextAction?.color] || ACTION_COLOR.orange;
+          return (
+            <div key={lead._id}
+              className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-orange-500/5">
+
+              {/* Score badge */}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="shrink-0 flex h-9 w-9 flex-col items-center justify-center rounded-xl text-center"
+                  style={{ background: ss.bg }}>
+                  <span className="text-[11px] font-black leading-none" style={{ color: ss.color }}>{lead._score}</span>
+                  <span className="text-[8px] font-semibold uppercase" style={{ color: ss.color }}>pts</span>
+                </div>
+
+                {/* Name + meta */}
+                <button type="button"
+                  onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+                  className="text-left min-w-0 cursor-pointer">
+                  <p className="text-sm font-semibold text-app truncate hover:text-orange-500 transition">{lead.name}</p>
+                  <p className="text-[11px] text-app-soft truncate">
+                    {[lead.status, lead.priority !== "Medium" ? lead.priority : null, lead.preferredLocation].filter(Boolean).join(" · ")}
+                  </p>
+                </button>
+              </div>
+
+              {/* Next best action + quick actions */}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                {/* NBA badge */}
+                <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold whitespace-nowrap"
+                  style={{ background: ac.bg, color: ac.color, border: `1px solid ${ac.border}` }}>
+                  <ActionIcon icon={lead._nextAction?.icon} />
+                  {lead._nextAction?.action}
+                </span>
+
+                {/* Call */}
+                {lead.phone && (
+                  <a href={`tel:${lead.phone}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition cursor-pointer"
+                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}
+                    title={`Call ${lead.phone}`}>
+                    <Phone className="h-3.5 w-3.5" />
+                  </a>
+                )}
+
+                {/* WhatsApp */}
+                {lead.phone && (
+                  <a href={`https://wa.me/${toWaNum(lead.phone)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg transition cursor-pointer"
+                    style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", color: "#16a34a" }}
+                    title="WhatsApp">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }
