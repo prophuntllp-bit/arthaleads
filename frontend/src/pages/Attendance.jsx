@@ -372,7 +372,7 @@ export default function Attendance() {
 
       {/* ── Today's own status cards ── */}
       {!statusLoading && status && (
-        <div className="px-4 lg:px-6 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Clock In",  value: fmtTime(status.clockIn),  color: "text-green-500" },
             { label: "Clock Out", value: fmtTime(status.clockOut), color: "text-red-400" },
@@ -388,7 +388,7 @@ export default function Attendance() {
       )}
 
       {/* ── Tabs ── */}
-      <div className="px-4 lg:px-6 pt-4">
+      <div className="pt-4">
         <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {isAdmin && (
             <button onClick={() => setTab("team")}
@@ -407,7 +407,7 @@ export default function Attendance() {
 
       {/* ── Team Today tab ── */}
       {tab === "team" && isAdmin && (
-        <div className="px-4 lg:px-6 pt-4 pb-6">
+        <div className="pt-4 pb-6">
           {teamLoading ? (
             <div className="flex justify-center py-16"><Spinner size="lg" /></div>
           ) : (
@@ -485,7 +485,7 @@ export default function Attendance() {
 
       {/* ── Records tab ── */}
       {tab === "records" && (
-        <div className="px-4 lg:px-6 pt-4 pb-6">
+        <div className="pt-4 pb-6">
 
           {/* Summary strip */}
           {summary && (

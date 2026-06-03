@@ -280,7 +280,7 @@ export default function HelpBot() {
                 <div className="flex gap-2 items-start">
                   <img src="/ai-avatar.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                   <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 text-sm text-app" style={{ background: "var(--app-surface-low)" }}>
-                    Hi! I'm Artha, your CRM assistant. Tap a question below, ask me anything, or take a guided tour.
+                    Hi {user?.name?.split(" ")[0] || "there"}! I'm Artha, your CRM assistant. Tap a question below, ask me anything, or take a guided tour.
                   </div>
                 </div>
 
