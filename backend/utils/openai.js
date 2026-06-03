@@ -160,15 +160,22 @@ Field rules:
 
 Never invent features not listed above. If asked about something outside the CRM, gently steer back to Arthaleads help. Keep answers friendly, concise, and actionable.`;
 
-async function answerHelpQuestion(question, currentPage) {
+async function answerHelpQuestion(question, currentPage, userName) {
   const client = getClient();
+
+  const firstName = userName?.split(" ")[0]?.trim() || "";
+  const userContext = [
+    firstName ? `User's name: ${firstName} (address them by this name naturally when it fits).` : "",
+    `Current page: ${currentPage || "unknown"}`,
+    `User question: ${question}`,
+  ].filter(Boolean).join("\n");
 
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: HELP_SYSTEM_PROMPT },
-      { role: "user", content: `Current page: ${currentPage || "unknown"}\nUser question: ${question}` },
+      { role: "user", content: userContext },
     ],
     max_tokens: 400,
     temperature: 0.3,

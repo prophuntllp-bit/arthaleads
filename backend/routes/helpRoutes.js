@@ -11,6 +11,7 @@ router.post("/ask", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
     const page = (req.body.page || "").toString().slice(0, 60);
+    const userName = (req.user?.name || "").toString().slice(0, 80);
     if (!question) return res.status(400).json({ success: false, message: "Please type a question." });
 
     if (!process.env.OPENAI_API_KEY) {
@@ -20,7 +21,7 @@ router.post("/ask", async (req, res, next) => {
       });
     }
 
-    const result = await answerHelpQuestion(question, page);
+    const result = await answerHelpQuestion(question, page, userName);
     res.json({ success: true, ...result });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {

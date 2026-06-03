@@ -76,6 +76,7 @@ export default function HelpBot() {
 
   const handleQuick = (item) => {
     setMessages((m) => [
+      ...(m.length === 0 ? [greetingMsg] : []),
       ...m,
       { role: "user", text: item.q },
       { role: "bot", text: item.a, goto: item.goto, tour: item.tour },
@@ -84,15 +85,19 @@ export default function HelpBot() {
 
   const handleGoto = (path) => { setOpen(false); navigate(path); };
 
+  const firstName = user?.name?.split(" ")[0]?.trim() || "there";
+
+  const greetingMsg = { role: "bot", text: `Hi ${firstName}! I'm Artha, your CRM assistant. How can I help you today?` };
+
   const handleAsk = async (e) => {
     e?.preventDefault();
     const q = input.trim();
     if (!q || loading) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", text: q }]);
+    setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const { data } = await api.post("/help/ask", { question: q, page: location.pathname });
+      const { data } = await api.post("/help/ask", { question: q, page: location.pathname, userName: user?.name });
       setMessages((m) => [...m, {
         role: "bot",
         text: data.answer,
