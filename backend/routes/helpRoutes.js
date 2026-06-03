@@ -6,7 +6,7 @@ const { answerHelpQuestion } = require("../utils/openai");
 
 router.use(protect);
 
-// POST /api/help/ask — { question, page } → { answer }
+// POST /api/help/ask — { question, page } → { answer, suggestTicket, comingSoon }
 router.post("/ask", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
@@ -16,12 +16,12 @@ router.post("/ask", async (req, res, next) => {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({
         success: false,
-        message: "The AI assistant isn't configured yet. Try the quick answers, or contact support.",
+        message: "The AI assistant isn't configured yet. Try the quick answers, or raise a support ticket.",
       });
     }
 
-    const answer = await answerHelpQuestion(question, page);
-    res.json({ success: true, answer });
+    const result = await answerHelpQuestion(question, page);
+    res.json({ success: true, ...result });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {
       return res.status(503).json({ success: false, message: "The AI assistant isn't configured yet." });
