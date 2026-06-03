@@ -17,12 +17,14 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
   const triggerRef        = useRef(null);
   const dropdownRef       = useRef(null);
 
-  // Normalise options to { value, label }
+  // Normalise options to { value, label, color? }
   const items = options.map((o) =>
     typeof o === "string" ? { value: o, label: o } : o
   );
 
-  const selectedLabel = items.find((o) => o.value === value)?.label || placeholder;
+  const selectedItem  = items.find((o) => o.value === value);
+  const selectedLabel = selectedItem?.label || placeholder;
+  const selectedColor = selectedItem?.color || null;
 
   const calcPos = (r) => {
     const vw = window.innerWidth;
@@ -89,7 +91,7 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
           fontSize: 13,
           border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
           background: "var(--app-surface-low)",
-          color: value ? "var(--app-text)" : "var(--app-text-soft)",
+          color: (value && selectedColor) ? selectedColor : (value ? "var(--app-text)" : "var(--app-text-soft)"),
           outline: "none",
           cursor: "pointer",
           whiteSpace: "nowrap",
@@ -97,6 +99,9 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
           ...style,
         }}
       >
+        {selectedColor && value && (
+          <span className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: selectedColor }} />
+        )}
         <span className="truncate">{selectedLabel}</span>
         <ChevronDown
           className="shrink-0 transition-transform duration-150"
@@ -159,7 +164,10 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
                 onMouseLeave={(e) => { if (!selected) e.currentTarget.style.background = "transparent"; }}
                 onClick={() => { onChange(item.value); setOpen(false); }}
               >
-                <span className="flex-1 truncate">{item.label}</span>
+                {item.color && (
+                  <span className="shrink-0 rounded-full" style={{ width: 8, height: 8, background: item.color }} />
+                )}
+                <span className="flex-1 truncate" style={item.color ? { color: item.color, fontWeight: selected ? 700 : 500 } : {}}>{item.label}</span>
                 {selected && <Check style={{ width: 13, height: 13, color: "var(--app-primary)", flexShrink: 0 }} />}
               </button>
             );

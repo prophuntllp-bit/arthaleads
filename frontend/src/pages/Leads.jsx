@@ -104,15 +104,17 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                   label: "- None -",           color: "" },
-  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
-  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
-  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
-  { value: "Site Visit Done",    label: "Site Visit Done",     color: "text-teal-600" },
-  { value: "Booked",             label: "Booked",              color: "text-green-600" },
-  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
-  { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" }, // blue
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" }, // red
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" }, // gray
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" }, // pink
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" }, // amber
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" }, // violet
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" }, // teal
+  { value: "Booked",             label: "Booked",              color: "#16a34a" }, // green
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" }, // orange
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" }, // indigo
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -135,7 +137,7 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
       value={value || ""}
       onChange={save}
       placeholder="- None -"
-      options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
       style={{ minWidth: 130, fontWeight: 600 }}
     />
   );
@@ -259,13 +261,17 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
 }
 
 const PROJ_BOOKING_OPTIONS = [
-  { value: "", label: "- None -", color: "" },
-  { value: "Interested", label: "Interested", color: "text-blue-600" },
-  { value: "Call Back", label: "Call Back", color: "text-amber-600" },
-  { value: "Site Visit Booked", label: "Site Visit Booked", color: "text-violet-600" },
-  { value: "Booked", label: "Booked", color: "text-green-600" },
-  { value: "Not Interested", label: "Not Interested", color: "text-red-500" },
-  { value: "Low Budget",    label: "Low Budget",     color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" },
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" },
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" },
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" },
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" },
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" },
+  { value: "Booked",             label: "Booked",              color: "#16a34a" },
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" },
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" },
 ];
 
 function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
@@ -284,7 +290,7 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
       value={value || ""}
       onChange={save}
       placeholder="- None -"
-      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
       style={{ minWidth: 125, fontWeight: 600 }}
     />
   );
