@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2, XCircle } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useCopilot } from "../context/CopilotContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
 import GuidedTour from "./GuidedTour";
 
@@ -32,8 +33,10 @@ export default function HelpBot() {
   const fileInputRef = useRef(null);
 
   const { user } = useAuth();
+  const { focusedLead } = useCopilot();
   const navigate = useNavigate();
   const location = useLocation();
+  const [actionLoading, setActionLoading] = useState(null); // messageIndex being confirmed
   const scrollRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -97,12 +100,19 @@ export default function HelpBot() {
     setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m, { role: "user", text: q }]);
     setLoading(true);
     try {
-      const { data } = await api.post("/help/ask", { question: q, page: location.pathname, userName: user?.name });
+      const { data } = await api.post("/help/ask", {
+        question: q,
+        page: location.pathname,
+        userName: user?.name,
+        leadId: focusedLead?._id || "",
+      });
       setMessages((m) => [...m, {
         role: "bot",
         text: data.answer,
         suggestTicket: data.suggestTicket,
         comingSoon: data.comingSoon,
+        action: data.action || null,
+        actionDone: false,
       }]);
     } catch (err) {
       setMessages((m) => [...m, {
@@ -171,6 +181,26 @@ export default function HelpBot() {
   };
 
   const resetChat = () => { setMessages([]); setTicketPanel(false); };
+
+  const confirmAction = async (msgIndex) => {
+    const msg = messages[msgIndex];
+    if (!msg?.action || actionLoading !== null) return;
+    setActionLoading(msgIndex);
+    try {
+      const { data } = await api.post("/help/action", { type: msg.action.type, params: msg.action.params });
+      setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
+      setMessages((m) => [...m, { role: "bot", text: `Done! ${data.message}` }]);
+    } catch (err) {
+      setMessages((m) => [...m, { role: "bot", text: err.response?.data?.message || "Action failed. Please try again." }]);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const cancelAction = (msgIndex) => {
+    setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
+    setMessages((m) => [...m, { role: "bot", text: "No problem, no changes were made." }]);
+  };
 
   return (
     <>
@@ -260,7 +290,13 @@ export default function HelpBot() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-app leading-tight">Artha · Help Assistant</p>
-              <p className="text-[11px] text-green-500 leading-tight font-medium">Online · Ask me anything</p>
+              {focusedLead ? (
+                <p className="text-[11px] leading-tight font-medium flex items-center gap-1" style={{ color: "#6366f1" }}>
+                  <Zap className="h-2.5 w-2.5" /> Copilot · {focusedLead.name}
+                </p>
+              ) : (
+                <p className="text-[11px] text-green-500 leading-tight font-medium">Online · Ask me anything</p>
+              )}
             </div>
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
@@ -346,7 +382,7 @@ export default function HelpBot() {
                     {m.text}
                   </div>
                   {/* Action chips */}
-                  {m.role === "bot" && (m.goto || m.tour || m.suggestTicket) && (
+                  {m.role === "bot" && (m.goto || m.tour || m.suggestTicket || (m.action && !m.actionDone)) && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {m.goto && (
                         <button type="button" onClick={() => handleGoto(m.goto)}
@@ -369,6 +405,29 @@ export default function HelpBot() {
                           <TicketCheck className="h-3 w-3" /> Raise a ticket
                         </button>
                       )}
+                      {m.action && !m.actionDone && (() => {
+                        const idx = messages.indexOf(m);
+                        const isLoading = actionLoading === idx;
+                        return (
+                          <>
+                            <button type="button" onClick={() => confirmAction(idx)} disabled={isLoading}
+                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                              style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.3)" }}>
+                              {isLoading ? (
+                                <span className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-3 w-3" />
+                              )}
+                              {isLoading ? "Working…" : `Do it — ${m.action.label}`}
+                            </button>
+                            <button type="button" onClick={() => cancelAction(idx)} disabled={isLoading}
+                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                              style={{ background: "rgba(239,68,68,0.06)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.18)" }}>
+                              <XCircle className="h-3 w-3" /> Cancel
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

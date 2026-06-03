@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { useCopilot } from "../context/CopilotContext";
 import { RefreshCw, Sparkles } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
@@ -24,6 +25,14 @@ function Info({ label, value }) {
 }
 
 export default function LeadDetail({ open, onClose, lead, onUpdated }) {
+  const { setFocusedLead } = useCopilot();
+
+  useEffect(() => {
+    if (open && lead) setFocusedLead(lead);
+    else setFocusedLead(null);
+    return () => setFocusedLead(null);
+  }, [open, lead?._id]);
+
   const [tab, setTab] = useState("info");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);

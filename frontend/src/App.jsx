@@ -2,6 +2,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { CopilotProvider } from "./context/CopilotContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
@@ -618,6 +619,7 @@ export default function App() {
   return (
     <PublicThemeProvider>
     <AuthProvider>
+    <CopilotProvider>
       <ErrorBoundary>
       <CookieBanner />
       <InstallBanner />
@@ -711,6 +713,7 @@ export default function App() {
       </Routes>
       </Suspense>
       </ErrorBoundary>
+    </CopilotProvider>
     </AuthProvider>
     </PublicThemeProvider>
   );

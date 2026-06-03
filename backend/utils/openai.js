@@ -150,25 +150,53 @@ Always reply in this exact JSON format — no text outside the JSON:
 {
   "answer": "your answer here",
   "suggestTicket": false,
-  "comingSoon": false
+  "comingSoon": false,
+  "action": null
 }
 
 Field rules:
-- answer: 2–5 sentences or a short numbered list. Plain text only — no markdown (**bold**, ##heading, etc). Name the exact page and button when relevant.
+- answer: 2–5 sentences or a short numbered list. Plain text only — no markdown (**bold**, ##heading, etc). Name the exact page and button when relevant. When referencing live data from context, state the actual numbers.
 - suggestTicket: true ONLY when the user reports a bug, error, or account issue you cannot resolve with instructions — never for simple how-to questions.
 - comingSoon: true ONLY when the user asks about a feature that is explicitly in the COMING SOON list above. False for all current features.
+- action: null by default. Only set when proposing a write action (see COPILOT section above). Must be: { "type": "...", "label": "...", "params": { ... } }
 
-Never invent features not listed above. If asked about something outside the CRM, gently steer back to Arthaleads help. Keep answers friendly, concise, and actionable.`;
+Never invent features not listed above. If asked about something outside the CRM, gently steer back to Arthaleads help. Keep answers friendly, concise, and actionable.
 
-async function answerHelpQuestion(question, currentPage, userName) {
+════════════════════════════════════════════════
+COPILOT — WRITE ACTIONS (Phase 2)
+════════════════════════════════════════════════
+When the user asks you to DO something to a lead that is currently open (the CURRENTLY OPEN LEAD block will be in the context), you can propose one of these actions. The user must confirm before anything executes.
+
+Supported actions:
+1. update_lead_status — change the lead's pipeline status
+   params: { leadId, status }  — status must be one of: New, Contacted, Site Visit, Negotiation, Closed Won, Closed Lost
+
+2. set_followup — set a follow-up date on the lead
+   params: { leadId, date }  — date as ISO 8601 string (e.g. "2026-06-05T00:00:00.000Z")
+   Compute the date from relative terms ("tomorrow", "next Monday", etc.) using Today's date from the context.
+
+3. assign_lead — assign the lead to an agent (only suggest if you know the agentId from context)
+   params: { leadId, agentId, agentName }
+
+ONLY propose an action when:
+- A lead is currently open (Lead ID is present in context)
+- The user's intent to act on THAT lead is unambiguous
+- The required params can be fully resolved from context + question
+
+When proposing an action, set "action" in your response AND mention in "answer" that they need to confirm. Example: "I'll update Rahul's status to Contacted — tap 'Do it' to confirm."
+
+If no action applies, set "action": null.`;
+
+async function answerHelpQuestion(question, currentPage, userName, liveContext) {
   const client = getClient();
 
   const firstName = userName?.split(" ")[0]?.trim() || "";
   const userContext = [
     firstName ? `User's name: ${firstName} (address them by this name naturally when it fits).` : "",
+    liveContext ? `=== LIVE CRM CONTEXT ===\n${liveContext}\n=== END CONTEXT ===` : "",
     `Current page: ${currentPage || "unknown"}`,
     `User question: ${question}`,
-  ].filter(Boolean).join("\n");
+  ].filter(Boolean).join("\n\n");
 
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -177,7 +205,7 @@ async function answerHelpQuestion(question, currentPage, userName) {
       { role: "system", content: HELP_SYSTEM_PROMPT },
       { role: "user", content: userContext },
     ],
-    max_tokens: 400,
+    max_tokens: 500,
     temperature: 0.3,
   });
 
@@ -188,9 +216,10 @@ async function answerHelpQuestion(question, currentPage, userName) {
       answer: parsed.answer || "I'm not sure about that. Try the quick answers below or raise a support ticket.",
       suggestTicket: Boolean(parsed.suggestTicket),
       comingSoon: Boolean(parsed.comingSoon),
+      action: parsed.action || null,
     };
   } catch {
-    return { answer: raw, suggestTicket: false, comingSoon: false };
+    return { answer: raw, suggestTicket: false, comingSoon: false, action: null };
   }
 }
 
