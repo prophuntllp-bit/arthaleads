@@ -126,10 +126,7 @@ export default function HelpBot() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, ticketPanel]);
 
-  // Focus input when panel opens
-  useEffect(() => {
-    if (open && !ticketPanel) setTimeout(() => inputRef.current?.focus(), 200);
-  }, [open, ticketPanel]);
+  const [showCommonQ, setShowCommonQ] = useState(false);
 
   // First-login tour offer
   const welcomeKey = user?._id ? `al_tour_offered_${user._id}` : null;
@@ -267,7 +264,7 @@ export default function HelpBot() {
     }
   };
 
-  const resetChat = () => { setMessages([]); setTicketPanel(false); };
+  const resetChat = () => { setMessages([]); setTicketPanel(false); setShowCommonQ(false); };
 
   const confirmAction = async (msgIndex) => {
     const msg = messages[msgIndex];
@@ -413,7 +410,7 @@ export default function HelpBot() {
                 </div>
 
                 {pageInfo ? (
-                  /* Copilot mode: just chips + ticket — clean and focused */
+                  /* Copilot mode: chips + collapsible common questions + ticket */
                   <>
                     <div className="space-y-1.5">
                       {pageInfo.chips.map((chip) => (
@@ -427,6 +424,27 @@ export default function HelpBot() {
                         </button>
                       ))}
                     </div>
+                    {/* Common questions accordion */}
+                    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
+                      <button type="button" onClick={() => setShowCommonQ(v => !v)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold cursor-pointer transition hover:bg-orange-500/5"
+                        style={{ color: "var(--app-text-soft)" }}>
+                        <span className="flex items-center gap-2"><MessageCircle className="h-3.5 w-3.5" /> Common questions</span>
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCommonQ ? "rotate-180" : ""}`} />
+                      </button>
+                      {showCommonQ && (
+                        <div className="border-t" style={{ borderColor: "var(--app-border)" }}>
+                          {QUICK_ANSWERS.map((item) => (
+                            <button key={item.id} type="button" onClick={() => handleQuick(item)}
+                              className="w-full text-left px-3 py-2 text-xs text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 border-b last:border-b-0"
+                              style={{ borderColor: "var(--app-border)" }}>
+                              <span className="min-w-0 flex-1">{item.q}</span>
+                              <ArrowRight className="h-3 w-3 shrink-0 text-app-soft" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button type="button" onClick={openTicket}
                       className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
                       style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
@@ -436,7 +454,7 @@ export default function HelpBot() {
                     </button>
                   </>
                 ) : (
-                  /* Generic pages: tours + how-to questions */
+                  /* Generic pages: tours + collapsible common questions + ticket */
                   <>
                     <div className="flex flex-wrap gap-2 pl-9">
                       {Object.entries(TOURS).map(([key, t]) => (
@@ -447,17 +465,25 @@ export default function HelpBot() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">Popular questions</p>
-                    <div className="space-y-1.5">
-                      {QUICK_ANSWERS.map((item) => (
-                        <button key={item.id} type="button" onClick={() => handleQuick(item)}
-                          className="w-full text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
-                          style={{ border: "1px solid var(--app-border)" }}>
-                          <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                          <span className="min-w-0 flex-1">{item.q}</span>
-                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                        </button>
-                      ))}
+                    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--app-border)" }}>
+                      <button type="button" onClick={() => setShowCommonQ(v => !v)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-semibold cursor-pointer transition hover:bg-orange-500/5"
+                        style={{ color: "var(--app-text-soft)" }}>
+                        <span className="flex items-center gap-2"><MessageCircle className="h-3.5 w-3.5" /> Common questions</span>
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCommonQ ? "rotate-180" : ""}`} />
+                      </button>
+                      {showCommonQ && (
+                        <div className="border-t" style={{ borderColor: "var(--app-border)" }}>
+                          {QUICK_ANSWERS.map((item) => (
+                            <button key={item.id} type="button" onClick={() => handleQuick(item)}
+                              className="w-full text-left px-3 py-2 text-xs text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 border-b last:border-b-0"
+                              style={{ borderColor: "var(--app-border)" }}>
+                              <span className="min-w-0 flex-1">{item.q}</span>
+                              <ArrowRight className="h-3 w-3 shrink-0 text-app-soft" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <button type="button" onClick={openTicket}
                       className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
