@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { HelpCircle, X, Send, ArrowRight, Sparkles, MessageCircle, Compass } from "lucide-react";
+import { HelpCircle, X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
@@ -166,6 +166,12 @@ export default function HelpBot() {
               <p className="text-sm font-bold text-app leading-tight">Help Assistant</p>
               <p className="text-[11px] text-app-soft leading-tight">Ask anything about the CRM</p>
             </div>
+            {messages.length > 0 && (
+              <button type="button" onClick={() => setMessages([])} aria-label="Back to FAQs"
+                className="text-app-soft hover:text-app transition cursor-pointer mr-1" title="Back to quick answers">
+                <House className="h-4.5 w-4.5" />
+              </button>
+            )}
             <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-app-soft hover:text-app transition cursor-pointer">
               <X className="h-5 w-5" />
             </button>
