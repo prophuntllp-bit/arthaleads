@@ -147,7 +147,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
                   <div className="mb-2 flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
                     <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">AI Drafted Message</span>
-                    <span className="text-[10px] text-app-soft ml-1">— edit before sending</span>
+                    <span className="text-[10px] text-app-soft ml-1">(edit before sending)</span>
                     <button type="button" onClick={() => setAiDraft(null)} className="ml-auto text-xs text-app-soft hover:text-app transition cursor-pointer">✕</button>
                   </div>
                   <textarea

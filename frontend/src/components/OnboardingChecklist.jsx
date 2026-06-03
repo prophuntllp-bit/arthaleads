@@ -136,7 +136,7 @@ export default function OnboardingChecklist({ totalLeads }) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-black text-app leading-tight">
-              {allDone ? "Setup complete — you're all set!" : "Get started with Arthaleads"}
+              {allDone ? "Setup complete! You're all set!" : "Get started with Arthaleads"}
             </p>
             <p className="text-xs text-app-soft mt-0.5">
               {allDone

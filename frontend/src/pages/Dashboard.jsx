@@ -612,7 +612,7 @@ function GoalMetricsRow({ goal, current, avgResponseMs, role, onGoalUpdate }) {
           </>
         ) : (
           <span className="text-xs text-app-soft flex-1">
-            {canEdit ? "No goal set — click the pencil to set a monthly closing target." : "No monthly goal set."}
+            {canEdit ? "No goal set. Click the pencil to set a monthly closing target." : "No monthly goal set."}
           </span>
         )}
 
@@ -973,7 +973,7 @@ function HotLeadsWidget({ navigate }) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold text-app">Hot Today</h3>
-          <p className="text-[11px] text-app-soft">Highest-scored leads — prioritize these first</p>
+          <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Sparkles className="h-3 w-3 text-indigo-400" />

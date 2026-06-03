@@ -128,8 +128,8 @@ export default function LeadPipeline() {
         </button>
       </div>
 
-      {/* Kanban board — horizontal scroll, each column scrolls independently */}
-      <div className="overflow-x-auto pb-3 -mx-4 px-4">
+      {/* Kanban board */}
+      <div data-tour="pipeline-board" className="overflow-x-auto pb-3 -mx-4 px-4">
         <div className="flex gap-3" style={{ minWidth: "max-content" }}>
           {STATUS_OPTIONS.map((status) => {
             const meta = STAGE_META[status];

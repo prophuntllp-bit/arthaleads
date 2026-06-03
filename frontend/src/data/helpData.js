@@ -6,7 +6,7 @@ export const QUICK_ANSWERS = [
   {
     id: "add-lead",
     q: "How do I add a new lead?",
-    a: "Go to the Leads page and click the “+ New Lead” button at the top right. You can also import leads in bulk from a CSV, or connect Facebook so they arrive automatically.",
+    a: "Go to the Leads page and click the '+ New Lead' button at the top right. You can also import leads in bulk from a CSV, or connect Facebook so they arrive automatically.",
     goto: "/leads",
     tour: "leads",
   },
@@ -26,38 +26,44 @@ export const QUICK_ANSWERS = [
   {
     id: "assign",
     q: "How do I assign leads to my team?",
-    a: "On the Leads page, open a lead and use the Assign field — or tick several leads and use the bulk “Assign” action in the bar that appears. Agents get an instant notification.",
+    a: "On the Leads page, open a lead and use the Assign field. Or tick several leads and use the bulk Assign action in the bar that appears. Agents get an instant notification.",
     goto: "/leads",
+    tour: "leads",
   },
   {
     id: "followup",
     q: "How do I set and track follow-ups?",
-    a: "Open any lead and pick a follow-up date. All your reminders — overdue (red) and due today (amber) — live on the Follow-ups page with quick Call & WhatsApp buttons.",
+    a: "Open any lead and pick a follow-up date. All your reminders (overdue in red, due today in amber) live on the Follow-ups page with quick Call and WhatsApp buttons.",
     goto: "/followups",
+    tour: "followups",
   },
   {
     id: "pipeline",
     q: "What is the Pipeline / Kanban board?",
-    a: "The Pipeline page is a visual board. Drag a lead card from one column to the next (New → Contacted → Site Visit → Negotiation → Closed) to update its status. Great for spotting stuck deals.",
+    a: "The Pipeline page is a visual board. Drag a lead card from one column to the next (New, Contacted, Site Visit, Negotiation, Closed) to update its status. Great for spotting stuck deals.",
     goto: "/pipeline",
+    tour: "pipeline",
   },
   {
     id: "hot",
-    q: "What is the “Hot Today” widget?",
-    a: "On the Dashboard, Hot Today ranks your highest-scoring leads (0–100) based on status, budget, urgency and engagement — so you call the most likely-to-close leads first. Each has one-tap Call & WhatsApp.",
+    q: "What is the 'Hot Today' widget?",
+    a: "On the Dashboard, Hot Today ranks your highest-scoring leads (0-100) based on status, budget, urgency and engagement so you call the most likely-to-close leads first. Each has one-tap Call and WhatsApp.",
     goto: "/dashboard",
+    tour: "dashboard",
   },
   {
     id: "ai-draft",
     q: "How do I use AI to write a WhatsApp message?",
-    a: "Open any lead and click the “AI Draft” button next to WhatsApp. It writes a personalized message using the lead’s details. Edit it if you like, then send.",
+    a: "Open any lead and click the 'AI Draft' button next to WhatsApp. It writes a personalized message using the lead's details. Edit it if you like, then send.",
     goto: "/leads",
+    tour: "leads",
   },
   {
     id: "report",
     q: "How do I export reports?",
-    a: "On the Leads page you can export to CSV/Excel. For attendance, the Attendance page has a “Download Report” button (Admin). Performance metrics per agent are on the Performance page.",
+    a: "On the Leads page you can export to CSV/Excel. For attendance, the Attendance page has a Download Report button (Admin). Performance metrics per agent are on the Performance page.",
     goto: "/leads",
+    tour: "leads",
   },
   {
     id: "team",
@@ -68,25 +74,40 @@ export const QUICK_ANSWERS = [
 ];
 
 // Guided tours. Each step targets an element by data-tour attribute (preferred)
-// or a CSS selector. If a target isn't found on the page, that step is skipped.
+// or a CSS selector. If a target is not found on the page, that step is skipped.
 export const TOURS = {
   dashboard: {
     label: "Dashboard tour",
     path: "/dashboard",
     steps: [
-      { target: '[data-tour="new-lead"]', title: "Add a lead", body: "Click here any time to add a new lead manually." },
-      { target: '[data-tour="date-range"]', title: "Change the time range", body: "Filter every stat and chart by date — today, last 30 days, and more." },
-      { target: '[data-tour="hot-today"]', title: "Hot Today", body: "Your highest-scoring leads to call first, with one-tap Call & WhatsApp." },
-      { target: '[data-tour="stat-cards"]', title: "Your key numbers", body: "Total leads, new, closed won, and follow-ups due — click any card to drill in." },
+      { target: '[data-tour="new-lead"]',   title: "Add a lead",            body: "Click here any time to add a new lead manually." },
+      { target: '[data-tour="date-range"]', title: "Change the time range", body: "Filter every stat and chart by date - today, last 30 days, and more." },
+      { target: '[data-tour="hot-today"]',  title: "Hot Today",             body: "Your highest-scoring leads to call first, with one-tap Call and WhatsApp." },
+      { target: '[data-tour="stat-cards"]', title: "Your key numbers",      body: "Total leads, new, closed won, and follow-ups due - click any card to drill in." },
     ],
   },
   leads: {
     label: "Leads tour",
     path: "/leads",
     steps: [
-      { target: '[data-tour="add-lead-btn"]', title: "Add a lead", body: "Create a single lead, or use Import to upload many at once." },
+      { target: '[data-tour="add-lead-btn"]', title: "Add a lead",        body: "Create a single lead, or use Import to upload many at once." },
       { target: '[data-tour="leads-search"]', title: "Find anything fast", body: "Search by name, phone or email, and filter by status, source or agent." },
-      { target: '[data-tour="leads-table"]', title: "Your leads", body: "Click a lead to open its details. Tick the checkboxes to assign, message or update many at once." },
+      { target: '[data-tour="leads-table"]',  title: "Your leads",        body: "Click a lead to open its details. Tick the checkboxes to assign, message or update many at once." },
+    ],
+  },
+  pipeline: {
+    label: "Pipeline tour",
+    path: "/pipeline",
+    steps: [
+      { target: '[data-tour="pipeline-board"]', title: "Your Pipeline board", body: "Each column is a stage in your sales process. Drag cards left or right to move a lead forward. Great for spotting stuck deals at a glance." },
+    ],
+  },
+  followups: {
+    label: "Follow-ups tour",
+    path: "/followups",
+    steps: [
+      { target: '[data-tour="followup-tabs"]',  title: "Overdue and Upcoming", body: "Switch between Overdue (missed follow-ups) and Upcoming (scheduled calls). Red means urgent." },
+      { target: '[data-tour="followup-table"]', title: "Follow-up list",       body: "Each row shows the lead, follow-up date, and quick Call and WhatsApp buttons - act without leaving this page." },
     ],
   },
 };

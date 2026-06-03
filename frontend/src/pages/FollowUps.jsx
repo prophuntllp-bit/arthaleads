@@ -256,7 +256,7 @@ export default function FollowUps() {
 
       {/* Section tabs */}
       <div className="px-4 lg:px-6 pt-4">
-        <div className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+        <div data-tour="followup-tabs" className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {SECTIONS.map(s => {
             const Icon = s.icon;
             const isActive = section === s.key;
@@ -381,7 +381,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[1830px]" style={{ borderCollapse: "collapse" }}>
+              <table data-tour="followup-table" className="w-full text-xs min-w-[1830px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>

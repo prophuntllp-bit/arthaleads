@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
@@ -28,6 +28,8 @@ export default function HelpBot() {
   const [ticketDesc, setTicketDesc] = useState("");
   const [ticketCategory, setTicketCategory] = useState("general");
   const [ticketSubmitting, setTicketSubmitting] = useState(false);
+  const [ticketFiles, setTicketFiles] = useState([]); // [{name, size, url(base64)}]
+  const fileInputRef = useRef(null);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -117,7 +119,23 @@ export default function HelpBot() {
     setTicketPanel(true);
   };
 
-  const closeTicket = () => { setTicketPanel(false); inputRef.current?.focus(); };
+  const closeTicket = () => { setTicketPanel(false); setTicketFiles([]); inputRef.current?.focus(); };
+
+  const handleFileSelect = (e) => {
+    const MAX_FILES = 3;
+    const MAX_BYTES = 600 * 1024;
+    const files = Array.from(e.target.files || []).slice(0, MAX_FILES - ticketFiles.length);
+    const valid = files.filter((f) => f.size <= MAX_BYTES);
+    if (valid.length < files.length) alert("Some files exceed 600 KB and were skipped.");
+    Promise.all(valid.map((f) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve({ name: f.name, size: f.size, url: reader.result });
+      reader.readAsDataURL(f);
+    }))).then((results) => setTicketFiles((prev) => [...prev, ...results].slice(0, MAX_FILES)));
+    e.target.value = "";
+  };
+
+  const removeFile = (idx) => setTicketFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const submitTicket = async () => {
     if (!ticketSubject.trim() || !ticketDesc.trim() || ticketSubmitting) return;
@@ -128,8 +146,10 @@ export default function HelpBot() {
         description: ticketDesc.trim(),
         category: ticketCategory,
         priority: "medium",
+        attachments: ticketFiles,
       });
       setTicketPanel(false);
+      setTicketFiles([]);
       setMessages((m) => [...m, {
         role: "bot",
         text: `Ticket ${data.ticket.ticketNumber} raised! We'll get back to you at ${user?.email || "your email"} within 24 hours. You can track it in Settings > Support.`,
@@ -234,7 +254,7 @@ export default function HelpBot() {
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: "var(--app-bg)" }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-app leading-tight">Artha — Help Assistant</p>
+              <p className="text-sm font-bold text-app leading-tight">Artha · Help Assistant</p>
               <p className="text-[11px] text-green-500 leading-tight font-medium">Online · Ask me anything</p>
             </div>
             <div className="flex items-center gap-1">
@@ -278,13 +298,23 @@ export default function HelpBot() {
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">Popular questions</p>
                 <div className="space-y-1.5">
                   {QUICK_ANSWERS.map((item) => (
-                    <button key={item.id} type="button" onClick={() => handleQuick(item)}
-                      className="w-full text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
-                      style={{ border: "1px solid var(--app-border)" }}>
-                      <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                      <span className="min-w-0 flex-1">{item.q}</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                    </button>
+                    <div key={item.id} className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => handleQuick(item)}
+                        className="flex-1 text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
+                        style={{ border: "1px solid var(--app-border)" }}>
+                        <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                        <span className="min-w-0 flex-1">{item.q}</span>
+                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                      </button>
+                      {item.tour && TOURS[item.tour] && (
+                        <button type="button" onClick={() => startTour(item.tour)}
+                          title={`Start ${TOURS[item.tour].label}`}
+                          className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer transition hover:bg-indigo-500/10"
+                          style={{ border: "1px solid rgba(99,102,241,0.25)", color: "#6366f1" }}>
+                          <Compass className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   ))}
                 </div>
 
@@ -391,6 +421,33 @@ export default function HelpBot() {
                 rows={3}
                 className="input w-full rounded-xl text-sm resize-none"
               />
+              {/* File attachments */}
+              <div>
+                <input ref={fileInputRef} type="file" className="hidden"
+                  accept="image/*,.pdf,.doc,.docx" multiple onChange={handleFileSelect} />
+                {ticketFiles.length < 3 && (
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs cursor-pointer transition text-app-soft hover:text-app">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    Attach screenshot or file (max 600 KB, up to 3)
+                  </button>
+                )}
+                {ticketFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {ticketFiles.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                        <span className="truncate max-w-[90px] text-app">{f.name}</span>
+                        <button type="button" onClick={() => removeFile(i)}
+                          className="text-app-soft hover:text-red-500 cursor-pointer shrink-0">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <select
