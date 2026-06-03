@@ -298,23 +298,13 @@ export default function HelpBot() {
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">Popular questions</p>
                 <div className="space-y-1.5">
                   {QUICK_ANSWERS.map((item) => (
-                    <div key={item.id} className="flex items-center gap-1.5">
-                      <button type="button" onClick={() => handleQuick(item)}
-                        className="flex-1 text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
-                        style={{ border: "1px solid var(--app-border)" }}>
-                        <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                        <span className="min-w-0 flex-1">{item.q}</span>
-                        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                      </button>
-                      {item.tour && TOURS[item.tour] && (
-                        <button type="button" onClick={() => startTour(item.tour)}
-                          title={`Start ${TOURS[item.tour].label}`}
-                          className="shrink-0 h-8 w-8 flex items-center justify-center rounded-xl cursor-pointer transition hover:bg-indigo-500/10"
-                          style={{ border: "1px solid rgba(99,102,241,0.25)", color: "#6366f1" }}>
-                          <Compass className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
+                    <button key={item.id} type="button" onClick={() => handleQuick(item)}
+                      className="w-full text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
+                      style={{ border: "1px solid var(--app-border)" }}>
+                      <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                      <span className="min-w-0 flex-1">{item.q}</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                    </button>
                   ))}
                 </div>
 
