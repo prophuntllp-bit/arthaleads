@@ -161,11 +161,13 @@ export default function HelpBot() {
       ...(m.length === 0 ? [greetingMsg] : []),
       ...m,
       { role: "user", text: item.q },
-      { role: "bot", text: item.a, goto: item.goto, tour: item.tour },
+      { role: "bot", text: cleanText(item.a), goto: item.goto, tour: item.tour },
     ]);
   };
 
   const handleGoto = (path) => { setOpen(false); navigate(path); };
+
+  const cleanText = (t) => (t || "").replace(/—/g, "-").replace(/–/g, "-");
 
   const firstName = user?.name?.split(" ")[0]?.trim() || "there";
   const pageInfo = PAGE_COPILOT[location.pathname.split("?")[0]] || null;
@@ -192,7 +194,7 @@ export default function HelpBot() {
       });
       setMessages((m) => [...m, {
         role: "bot",
-        text: data.answer,
+        text: cleanText(data.answer),
         suggestTicket: data.suggestTicket,
         comingSoon: data.comingSoon,
         action: data.action || null,
@@ -445,16 +447,9 @@ export default function HelpBot() {
                         </div>
                       )}
                     </div>
-                    <button type="button" onClick={openTicket}
-                      className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
-                      style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
-                      <TicketCheck className="h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1 font-medium">Raise a support ticket</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0" />
-                    </button>
                   </>
                 ) : (
-                  /* Generic pages: tours + collapsible common questions + ticket */
+                  /* Generic pages: tours + collapsible common questions */
                   <>
                     <div className="flex flex-wrap gap-2 pl-9">
                       {Object.entries(TOURS).map(([key, t]) => (
@@ -485,13 +480,6 @@ export default function HelpBot() {
                         </div>
                       )}
                     </div>
-                    <button type="button" onClick={openTicket}
-                      className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
-                      style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
-                      <TicketCheck className="h-3.5 w-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1 font-medium">Raise a support ticket</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0" />
-                    </button>
                   </>
                 )}
               </div>
