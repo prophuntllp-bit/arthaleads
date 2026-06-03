@@ -14,6 +14,88 @@ const TICKET_CATEGORIES = [
   { value: "feature-request", label: "Feature request" },
 ];
 
+// Page-aware copilot: live-data chips for each CRM section
+const PAGE_COPILOT = {
+  "/dashboard": {
+    label: "Dashboard",
+    chips: [
+      "How many new leads came in today?",
+      "Who are my hottest leads right now?",
+      "How many overdue follow-ups do I have?",
+      "What's our total pipeline value?",
+    ],
+  },
+  "/leads": {
+    label: "Lead Management",
+    chips: [
+      "How many new leads today?",
+      "Show me hot leads",
+      "Which leads are overdue for follow-up?",
+      "How many leads came from Facebook?",
+    ],
+  },
+  "/followups": {
+    label: "Follow-ups",
+    chips: [
+      "How many follow-ups are overdue?",
+      "How many are due today?",
+      "Who are the most overdue leads?",
+      "How do I set a follow-up?",
+    ],
+  },
+  "/pipeline": {
+    label: "Pipeline",
+    chips: [
+      "How many leads are in Negotiation?",
+      "Which stage has the most leads?",
+      "How many were Closed Won this month?",
+      "How do I move a lead to Site Visit?",
+    ],
+  },
+  "/performance": {
+    label: "Performance",
+    chips: [
+      "Who is the top performer right now?",
+      "How many site visits did the team do?",
+      "Which agent has the best conversion rate?",
+      "How do I export this report?",
+    ],
+  },
+  "/attendance": {
+    label: "Attendance",
+    chips: [
+      "Am I clocked in today?",
+      "How many hours have I worked today?",
+      "How do I clock out?",
+      "How do I edit my attendance?",
+    ],
+  },
+  "/projects": {
+    label: "Projects",
+    chips: [
+      "How do I add leads to a project?",
+      "Which project has the most leads?",
+      "How do I view the project pipeline?",
+    ],
+  },
+  "/automation": {
+    label: "Automation",
+    chips: [
+      "How do I connect Facebook Lead Ads?",
+      "How do I set up auto-routing?",
+      "How does the WordPress plugin work?",
+    ],
+  },
+  "/team": {
+    label: "Team",
+    chips: [
+      "How do I invite a new agent?",
+      "What's the difference between roles?",
+      "How do I deactivate a team member?",
+    ],
+  },
+};
+
 export default function HelpBot() {
   const [open, setOpen] = useState(false);
   // {role:'user'|'bot', text, goto?, tour?, suggestTicket?, comingSoon?}
@@ -89,14 +171,19 @@ export default function HelpBot() {
   const handleGoto = (path) => { setOpen(false); navigate(path); };
 
   const firstName = user?.name?.split(" ")[0]?.trim() || "there";
+  const pageInfo = PAGE_COPILOT[location.pathname.split("?")[0]] || null;
+  const greetingMsg = {
+    role: "bot",
+    text: pageInfo
+      ? `Hi ${firstName}! I can see you're on ${pageInfo.label}. I have live data ready — tap a chip below or ask me anything!`
+      : `Hi ${firstName}! I'm Artha, your CRM assistant. How can I help you today?`,
+  };
 
-  const greetingMsg = { role: "bot", text: `Hi ${firstName}! I'm Artha, your CRM assistant. How can I help you today?` };
-
-  const handleAsk = async (e) => {
+  const handleAsk = async (e, overrideText) => {
     e?.preventDefault();
-    const q = input.trim();
+    const q = overrideText || input.trim();
     if (!q || loading) return;
-    setInput("");
+    if (!overrideText) setInput("");
     setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m, { role: "user", text: q }]);
     setLoading(true);
     try {
@@ -290,9 +377,9 @@ export default function HelpBot() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-app leading-tight">Artha · Help Assistant</p>
-              {focusedLead ? (
+              {pageInfo ? (
                 <p className="text-[11px] leading-tight font-medium flex items-center gap-1" style={{ color: "#6366f1" }}>
-                  <Zap className="h-2.5 w-2.5" /> Copilot · {focusedLead.name}
+                  <Zap className="h-2.5 w-2.5" /> Copilot · {pageInfo.label}
                 </p>
               ) : (
                 <p className="text-[11px] text-green-500 leading-tight font-medium">Online · Ask me anything</p>
@@ -321,22 +408,56 @@ export default function HelpBot() {
                 <div className="flex gap-2 items-start">
                   <img src="/ai-avatar.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                   <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 text-sm text-app" style={{ background: "var(--app-surface-low)" }}>
-                    Hi {user?.name?.split(" ")[0] || "there"}! I'm Artha, your CRM assistant. Tap a question below, ask me anything, or take a guided tour.
+                    {greetingMsg.text}
                   </div>
                 </div>
 
-                {/* Tour buttons */}
-                <div className="flex flex-wrap gap-2 pl-9">
-                  {Object.entries(TOURS).map(([key, t]) => (
-                    <button key={key} type="button" onClick={() => startTour(key)}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition"
-                      style={{ background: "rgba(99,102,241,0.10)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
-                      <Compass className="h-3.5 w-3.5" /> {t.label}
-                    </button>
-                  ))}
-                </div>
+                {/* Page-aware copilot chips — live data questions */}
+                {pageInfo ? (
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider px-1 flex items-center gap-1.5" style={{ color: "#6366f1" }}>
+                      <Zap className="h-3 w-3" /> Ask about {pageInfo.label}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {pageInfo.chips.map((chip) => (
+                        <button key={chip} type="button" onClick={() => handleAsk(null, chip)}
+                          disabled={loading}
+                          className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-indigo-500/5 disabled:opacity-50"
+                          style={{ border: "1px solid rgba(99,102,241,0.2)", color: "var(--app-text)" }}>
+                          <Sparkles className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                          <span className="min-w-0 flex-1 text-xs font-medium">{chip}</span>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* Tour buttons — shown on pages without specific copilot config */
+                  <div className="flex flex-wrap gap-2 pl-9">
+                    {Object.entries(TOURS).map(([key, t]) => (
+                      <button key={key} type="button" onClick={() => startTour(key)}
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition"
+                        style={{ background: "rgba(99,102,241,0.10)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
+                        <Compass className="h-3.5 w-3.5" /> {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">Popular questions</p>
+                {/* Tour shortcuts — always shown when on a known page */}
+                {pageInfo && (
+                  <div className="flex flex-wrap gap-1.5 pl-1">
+                    {Object.entries(TOURS).map(([key, t]) => (
+                      <button key={key} type="button" onClick={() => startTour(key)}
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium cursor-pointer transition"
+                        style={{ background: "rgba(99,102,241,0.07)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.15)" }}>
+                        <Compass className="h-2.5 w-2.5" /> {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">How-to questions</p>
                 <div className="space-y-1.5">
                   {QUICK_ANSWERS.map((item) => (
                     <button key={item.id} type="button" onClick={() => handleQuick(item)}
