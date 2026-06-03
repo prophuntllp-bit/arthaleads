@@ -412,17 +412,14 @@ export default function HelpBot() {
                   </div>
                 </div>
 
-                {/* Page-aware copilot chips — live data questions */}
                 {pageInfo ? (
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider px-1 flex items-center gap-1.5" style={{ color: "#6366f1" }}>
-                      <Zap className="h-3 w-3" /> Ask about {pageInfo.label}
-                    </p>
-                    <div className="flex flex-col gap-1.5">
+                  /* Copilot mode: just chips + ticket — clean and focused */
+                  <>
+                    <div className="space-y-1.5">
                       {pageInfo.chips.map((chip) => (
                         <button key={chip} type="button" onClick={() => handleAsk(null, chip)}
                           disabled={loading}
-                          className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-indigo-500/5 disabled:opacity-50"
+                          className="w-full text-left rounded-xl px-3 py-2 transition cursor-pointer flex items-center gap-2 hover:bg-indigo-500/5 disabled:opacity-50"
                           style={{ border: "1px solid rgba(99,102,241,0.2)", color: "var(--app-text)" }}>
                           <Sparkles className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
                           <span className="min-w-0 flex-1 text-xs font-medium">{chip}</span>
@@ -430,54 +427,47 @@ export default function HelpBot() {
                         </button>
                       ))}
                     </div>
-                  </div>
-                ) : (
-                  /* Tour buttons — shown on pages without specific copilot config */
-                  <div className="flex flex-wrap gap-2 pl-9">
-                    {Object.entries(TOURS).map(([key, t]) => (
-                      <button key={key} type="button" onClick={() => startTour(key)}
-                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition"
-                        style={{ background: "rgba(99,102,241,0.10)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
-                        <Compass className="h-3.5 w-3.5" /> {t.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Tour shortcuts — always shown when on a known page */}
-                {pageInfo && (
-                  <div className="flex flex-wrap gap-1.5 pl-1">
-                    {Object.entries(TOURS).map(([key, t]) => (
-                      <button key={key} type="button" onClick={() => startTour(key)}
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium cursor-pointer transition"
-                        style={{ background: "rgba(99,102,241,0.07)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.15)" }}>
-                        <Compass className="h-2.5 w-2.5" /> {t.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">How-to questions</p>
-                <div className="space-y-1.5">
-                  {QUICK_ANSWERS.map((item) => (
-                    <button key={item.id} type="button" onClick={() => handleQuick(item)}
-                      className="w-full text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
-                      style={{ border: "1px solid var(--app-border)" }}>
-                      <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
-                      <span className="min-w-0 flex-1">{item.q}</span>
-                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                    <button type="button" onClick={openTicket}
+                      className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
+                      style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
+                      <TicketCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 flex-1 font-medium">Raise a support ticket</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0" />
                     </button>
-                  ))}
-                </div>
-
-                {/* Raise ticket from home */}
-                <button type="button" onClick={openTicket}
-                  className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
-                  style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
-                  <TicketCheck className="h-3.5 w-3.5 shrink-0" />
-                  <span className="min-w-0 flex-1 font-medium">Raise a support ticket</span>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0" />
-                </button>
+                  </>
+                ) : (
+                  /* Generic pages: tours + how-to questions */
+                  <>
+                    <div className="flex flex-wrap gap-2 pl-9">
+                      {Object.entries(TOURS).map(([key, t]) => (
+                        <button key={key} type="button" onClick={() => startTour(key)}
+                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition"
+                          style={{ background: "rgba(99,102,241,0.10)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
+                          <Compass className="h-3.5 w-3.5" /> {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-app-soft px-1 pt-1">Popular questions</p>
+                    <div className="space-y-1.5">
+                      {QUICK_ANSWERS.map((item) => (
+                        <button key={item.id} type="button" onClick={() => handleQuick(item)}
+                          className="w-full text-left rounded-xl px-3 py-2 text-sm text-app transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5 min-w-0"
+                          style={{ border: "1px solid var(--app-border)" }}>
+                          <MessageCircle className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                          <span className="min-w-0 flex-1">{item.q}</span>
+                          <ArrowRight className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" onClick={openTicket}
+                      className="w-full text-left rounded-xl px-3 py-2 text-sm transition cursor-pointer flex items-center gap-2 hover:bg-orange-500/5"
+                      style={{ border: "1px solid var(--app-border)", color: "var(--app-primary, #ff6b00)" }}>
+                      <TicketCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span className="min-w-0 flex-1 font-medium">Raise a support ticket</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                    </button>
+                  </>
+                )}
               </div>
             )}
 

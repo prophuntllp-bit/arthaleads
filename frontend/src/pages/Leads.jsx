@@ -1422,8 +1422,8 @@ export default function Leads() {
                         <div className="stitch-surface-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold text-orange-500">
                           {lead.name?.slice(0, 1)?.toUpperCase()}
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-app max-w-[140px]">{lead.name}</p>
+                        <div className="min-w-0 cursor-pointer group" onClick={() => setDetailLead(lead)}>
+                          <p className="truncate text-sm font-semibold text-app max-w-[140px] group-hover:text-orange-500 transition-colors">{lead.name}</p>
                           <p className="truncate text-xs text-app-soft max-w-[140px]">{lead.email || "No email"}</p>
                         </div>
                       </div>
