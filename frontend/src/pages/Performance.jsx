@@ -15,9 +15,15 @@ export default function Performance() {
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dateFrom,   setDateFrom]   = useState("");
-  const [dateTo,     setDateTo]     = useState("");
+  const [dateFrom,        setDateFrom]        = useState("");
+  const [dateTo,          setDateTo]          = useState("");
+  const [filterMemberId,  setFilterMemberId]  = useState("");
   const dateFilterMounted = useRef(false);
+
+  const displayMembers = useMemo(
+    () => filterMemberId ? members.filter((m) => m._id === filterMemberId) : members,
+    [members, filterMemberId]
+  );
 
   const exportPDF = () => {
     const now = new Date();
@@ -29,7 +35,7 @@ export default function Performance() {
       ? `${dateFrom ? new Date(dateFrom).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"} → ${dateTo ? new Date(dateTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Today"}`
       : "All time · Live data";
 
-    const agentCards = members.map((m, idx) => {
+    const agentCards = displayMembers.map((m, idx) => {
       const p  = m.pipeline || {};
       const pr = m.project  || {};
       const pConv  = Math.min(p.conversionRate  || 0, 100);
@@ -194,7 +200,7 @@ export default function Performance() {
     <div class="report-title">Team Performance Report</div>
     <div class="report-meta">
       Generated ${dateStr} at ${timeStr}<br>
-      ${members.length} team member${members.length !== 1 ? "s" : ""} · ${rangeLabel}
+      ${displayMembers.length} team member${displayMembers.length !== 1 ? "s" : ""} · ${rangeLabel}
     </div>
   </div>
 </div>
@@ -223,7 +229,7 @@ export default function Performance() {
 
   <div class="section-title">
     <span>Agent Performance Breakdown</span>
-    <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">${members.length} member${members.length !== 1 ? "s" : ""}</span>
+    <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">${displayMembers.length} member${displayMembers.length !== 1 ? "s" : ""}</span>
   </div>
 
   ${agentCards}
@@ -266,12 +272,12 @@ export default function Performance() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo]);
 
-  const totals = useMemo(() => members.reduce((acc, m) => {
+  const totals = useMemo(() => displayMembers.reduce((acc, m) => {
     acc.totalAssigned += m.totalAssigned || 0;
     acc.closedWon     += m.closedWon     || 0;
     acc.siteVisits    += m.siteVisits    || 0;
     return acc;
-  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [members]);
+  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [displayMembers]);
 
   if (!canAccess(org, "growth")) {
     return <UpgradeWall org={org} feature="Analytics & Reports" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;
@@ -292,6 +298,31 @@ export default function Performance() {
             </p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+            {/* Agent filter */}
+            {members.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>Agent</span>
+                <select
+                  value={filterMemberId}
+                  onChange={(e) => setFilterMemberId(e.target.value)}
+                  className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
+                  style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)", minWidth: 140 }}
+                >
+                  <option value="">All Members</option>
+                  {members.map((m) => (
+                    <option key={m._id} value={m._id}>{m.name}</option>
+                  ))}
+                </select>
+                {filterMemberId && (
+                  <button
+                    onClick={() => setFilterMemberId("")}
+                    className="text-xs font-medium text-orange-400 hover:text-orange-500 transition"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
             {/* Date range filter */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
@@ -353,7 +384,7 @@ export default function Performance() {
 
       {/* Member cards */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {members.map((member) => {
+        {displayMembers.map((member) => {
           const focused  = location.state?.focusUserId === member._id;
           const pipeline = member.pipeline || {};
           const project  = member.project  || {};
@@ -453,9 +484,9 @@ export default function Performance() {
         })}
       </section>
 
-      {!members.length && (
+      {!displayMembers.length && (
         <section className="card p-6 text-sm text-app-soft flex items-center gap-3">
-          <BarChart3 className="h-4 w-4" /> No performance data available yet.
+          <BarChart3 className="h-4 w-4" /> {filterMemberId ? "No data for this agent." : "No performance data available yet."}
         </section>
       )}
     </div>
