@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { HelpCircle, X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
@@ -129,15 +129,15 @@ export default function HelpBot() {
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Open help assistant"
-          className="fixed z-[997] flex items-center justify-center rounded-full shadow-lg transition hover:scale-105 cursor-pointer"
+          className="fixed z-[997] flex items-center justify-center rounded-full shadow-lg transition hover:scale-105 cursor-pointer overflow-hidden"
           style={{
             right: 20,
             bottom: `calc(20px + env(safe-area-inset-bottom, 0px))`,
-            width: 52, height: 52,
-            background: "var(--app-primary, #ff6b00)", color: "#fff",
+            width: 56, height: 56,
+            background: "var(--app-primary, #ff6b00)",
           }}
         >
-          <HelpCircle className="h-6 w-6" />
+          <img src="/ai-avatar.png" alt="Help Assistant" className="w-full h-full object-cover rounded-full" />
         </button>
       )}
 
@@ -159,8 +159,8 @@ export default function HelpBot() {
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 shrink-0"
             style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(255,107,0,0.08), transparent)" }}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0" style={{ background: "rgba(255,107,0,0.14)" }}>
-              <Sparkles className="h-4 w-4" style={{ color: "var(--app-primary, #ff6b00)" }} />
+            <div className="flex h-9 w-9 rounded-full shrink-0 overflow-hidden border-2" style={{ borderColor: "rgba(255,107,0,0.3)" }}>
+              <img src="/ai-avatar.png" alt="Help Assistant" className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-app leading-tight">Help Assistant</p>
