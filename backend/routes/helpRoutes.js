@@ -27,8 +27,40 @@ router.post("/ask", async (req, res, next) => {
       });
     }
 
+    // Auto-resolve a lead by name mentioned in the question (when no panel is open)
+    let resolvedLeadId = leadId;
+    if (!resolvedLeadId) {
+      try {
+        const STOP = new Set([
+          "what","whats","is","the","of","this","lead","a","an","for","in","at","to",
+          "and","or","his","her","their","my","how","when","where","why","can","do",
+          "did","has","have","been","status","update","phone","email","budget","follow",
+          "up","set","mark","assign","show","tell","me","get","find","i","us","s",
+          "that","with","about","last","next","current","any","check","please","hi",
+        ]);
+        // Prefer capitalized name sequences ("Sahil Mishra"); fall back to non-stopword words
+        const capMatch = question.match(/\b([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,}){1,3})\b/);
+        const words = capMatch
+          ? capMatch[1].split(/\s+/)
+          : question.split(/\s+/).filter(w => w.length >= 3 && !STOP.has(w.toLowerCase())).slice(0, 3);
+
+        if (words.length > 0) {
+          const regexConds = words.map(w => ({ name: { $regex: w, $options: "i" } }));
+          const query = {
+            orgId: req.user.orgId, isDeleted: { $ne: true },
+            ...(regexConds.length > 1 ? { $and: regexConds } : regexConds[0]),
+          };
+          const matches = await Lead.find(query).select("_id name").limit(2).lean();
+          // Use when exactly 1 lead matches, or when a multi-word name matches anything
+          if (matches.length === 1 || (matches.length >= 1 && words.length >= 2)) {
+            resolvedLeadId = matches[0]._id.toString();
+          }
+        }
+      } catch { /* non-critical — fall through without lead context */ }
+    }
+
     // Fetch live context from the database for this user/page
-    const context = await fetchPageContext(page, req.user._id, req.user.orgId, leadId || null);
+    const context = await fetchPageContext(page, req.user._id, req.user.orgId, resolvedLeadId || null);
 
     const result = await answerHelpQuestion(question, page, userName, context);
     res.json({ success: true, ...result });
