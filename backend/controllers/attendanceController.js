@@ -18,9 +18,22 @@ async function getOrgSettings(orgId) {
   const s = org?.attendanceSettings || {};
   return {
     shiftStartTime: s.shiftStartTime || "09:30",
+    shiftEndTime:   s.shiftEndTime   || "19:00",
     bufferMinutes:  s.bufferMinutes  ?? 15,
     halfDayMinutes: s.halfDayMinutes ?? 240,
     fullDayMinutes: s.fullDayMinutes ?? 480,
+  };
+}
+
+// Compute early leave flag from clock-out time vs expected end time
+function computeEarlyLeave(clockOutDate, settings) {
+  if (!clockOutDate) return { isEarlyLeave: false, earlyLeaveByMinutes: null };
+  const clockOutMins = clockOutDate.getHours() * 60 + clockOutDate.getMinutes();
+  const endMins = parseHHMM(settings.shiftEndTime);
+  const isEarlyLeave = clockOutMins < endMins;
+  return {
+    isEarlyLeave,
+    earlyLeaveByMinutes: isEarlyLeave ? endMins - clockOutMins : null,
   };
 }
 
@@ -110,6 +123,9 @@ const attendanceController = {
       record.clockOut = now;
       record.totalMinutes = Math.round((now - record.clockIn) / 60000);
       record.dayType = computeDayType(record.totalMinutes, settings);
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings);
+      record.isEarlyLeave = isEarlyLeave;
+      record.earlyLeaveByMinutes = earlyLeaveByMinutes;
       if (req.body.note) record.note = req.body.note;
       await record.save();
 
@@ -195,7 +211,7 @@ const attendanceController = {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
       };
 
-      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Note"];
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Note"];
       const rows = records.map((r) => [
         r.date,
         r.userId?.name || "",
@@ -207,6 +223,8 @@ const attendanceController = {
         r.dayType || "",
         r.isLate ? "Yes" : "No",
         r.lateByMinutes ? fmtDur(r.lateByMinutes) : "",
+        r.isEarlyLeave ? "Yes" : "No",
+        r.earlyLeaveByMinutes ? fmtDur(r.earlyLeaveByMinutes) : "",
         r.note || "",
       ]);
 
@@ -254,10 +272,11 @@ const attendanceController = {
         lateByMinutes = isLate ? clockInMins - lateThreshold : null;
       }
       const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(clockOutDate, settings);
 
       const record = await Attendance.findOneAndUpdate(
         { userId, orgId: req.user.orgId, date },
-        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, dayType, note: note || "" } },
+        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, isEarlyLeave, earlyLeaveByMinutes, dayType, note: note || "" } },
         { upsert: true, new: true, runValidators: false }
       ).populate("userId", "name email role");
 

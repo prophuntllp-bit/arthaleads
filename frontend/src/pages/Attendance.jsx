@@ -104,8 +104,18 @@ function LateBadge({ isLate, lateByMinutes }) {
   );
 }
 
+function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
+  if (!isEarlyLeave) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+      <AlertTriangle className="w-2.5 h-2.5" />
+      Early {earlyLeaveByMinutes ? `-${fmtDuration(earlyLeaveByMinutes)}` : ""}
+    </span>
+  );
+}
+
 const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
-const DEFAULT_SETTINGS = { shiftStartTime: "09:30", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480 };
+const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480 };
 
 export default function Attendance() {
   const { user, org } = useAuth();
@@ -313,7 +323,7 @@ export default function Attendance() {
           <div>
             <h1 className="text-lg font-bold text-app leading-none">Attendance</h1>
             <p className="text-xs text-app-soft mt-0.5">
-              Shift: {shiftSettings.shiftStartTime} · {shiftSettings.bufferMinutes}m grace ·{" "}
+              Shift: {shiftSettings.shiftStartTime} - {shiftSettings.shiftEndTime} · {shiftSettings.bufferMinutes}m grace ·{" "}
               {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h half · {(shiftSettings.fullDayMinutes / 60).toFixed(1)}h full
             </p>
           </div>
@@ -443,8 +453,12 @@ export default function Attendance() {
                             ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3">
-                            {a?.clockOut ? <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
-                              : <span className="text-app-soft">-</span>}
+                            {a?.clockOut ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
+                                <EarlyLeaveBadge isEarlyLeave={a?.isEarlyLeave} earlyLeaveByMinutes={a?.earlyLeaveByMinutes} />
+                              </div>
+                            ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
                             {isOut ? fmtDuration(a.totalMinutes)
@@ -484,7 +498,7 @@ export default function Attendance() {
                 { label: "Half Days",     value: summary.halfDays,                color: "text-amber-500" },
                 { label: "Late",          value: summary.lateCount,               color: "text-red-500" },
               ].map(({ label, value, color }) => (
-                <div key={label} className="card px-3 py-3 text-center">
+                <div key={label} className="card px-4 py-3 text-center">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
                   <p className={`text-sm font-bold ${color}`}>{value}</p>
                 </div>
@@ -589,11 +603,14 @@ export default function Attendance() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            {rec.clockOut
-                              ? <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
-                              : isIn
-                                ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
-                                : <span className="text-app-soft">-</span>}
+                            {rec.clockOut ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
+                                <EarlyLeaveBadge isEarlyLeave={rec.isEarlyLeave} earlyLeaveByMinutes={rec.earlyLeaveByMinutes} />
+                              </div>
+                            ) : isIn
+                              ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
+                              : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-4 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
                           <td className="px-4 py-3">
@@ -670,11 +687,19 @@ export default function Attendance() {
             </div>
             {settingsLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
               <form onSubmit={handleSaveSettings} className="flex flex-col gap-5">
-                <div>
-                  <label className="label">Office Start Time</label>
-                  <input type="time" className="input" value={shiftSettings.shiftStartTime}
-                    onChange={e => setShiftSettings(s => ({ ...s, shiftStartTime: e.target.value }))} required />
-                  <p className="text-xs text-app-soft mt-1">The time employees are expected to clock in by.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Office Start Time</label>
+                    <input type="time" className="input" value={shiftSettings.shiftStartTime}
+                      onChange={e => setShiftSettings(s => ({ ...s, shiftStartTime: e.target.value }))} required />
+                    <p className="text-xs text-app-soft mt-1">Expected clock-in time.</p>
+                  </div>
+                  <div>
+                    <label className="label">Office End Time</label>
+                    <input type="time" className="input" value={shiftSettings.shiftEndTime || "19:00"}
+                      onChange={e => setShiftSettings(s => ({ ...s, shiftEndTime: e.target.value }))} required />
+                    <p className="text-xs text-app-soft mt-1">Expected clock-out time.</p>
+                  </div>
                 </div>
 
                 <div>
@@ -708,7 +733,9 @@ export default function Attendance() {
                 <div className="rounded-2xl px-4 py-3 text-xs text-app-soft space-y-1"
                   style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
                   <p className="font-semibold text-app mb-2">Preview</p>
+                  <p>Shift: <strong>{shiftSettings.shiftStartTime}</strong> to <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
                   <p>On time: clock-in by <strong>{shiftSettings.shiftStartTime}</strong> + {shiftSettings.bufferMinutes} min grace</p>
+                  <p>Early leave: clock-out before <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
                   <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> worked</p>
                   <p>Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong> worked</p>
                   <p>Short day: &lt; {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h worked</p>

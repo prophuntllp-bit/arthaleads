@@ -33,6 +33,7 @@ const orgSchema = new mongoose.Schema(
     monthlyClosingGoal: { type: Number, default: 0, min: 0 },
     attendanceSettings: {
       shiftStartTime: { type: String, default: "09:30" }, // "HH:MM" 24-hour
+      shiftEndTime:   { type: String, default: "19:00" }, // expected clock-out time
       bufferMinutes:  { type: Number, default: 15 },      // grace period before marked late
       halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
       fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)

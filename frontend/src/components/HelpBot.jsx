@@ -221,7 +221,7 @@ export default function HelpBot() {
             onClick={() => setOpen(true)}
             aria-label="Open help assistant"
             className="relative rounded-full shadow-lg transition hover:scale-105 cursor-pointer overflow-hidden"
-            style={{ width: 56, height: 56 }}
+            style={{ width: 56, height: 56, background: "var(--app-surface)" }}
           >
             <img src="/ai-avatar.png" alt="Help Assistant" className="w-full h-full object-cover" />
           </button>
