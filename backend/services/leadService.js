@@ -514,7 +514,7 @@ const leadService = {
     const lastMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 0, 23, 59, 59, 999);
     const next48hEnd     = new Date(todayEnd.getTime() + 48 * 60 * 60 * 1000);
 
-    // ── Single $facet aggregation - 1 round-trip instead of 8 ────────────────
+    // Single $facet aggregation — allowDiskUse prevents OOM on large orgs
     const [result] = await Lead.aggregate([
       { $match: baseMatch },
       {
@@ -650,7 +650,7 @@ const leadService = {
           ],
         },
       },
-    ]);
+    ], { allowDiskUse: true });
 
     const orgDoc = await Organization.findById(user.orgId, "monthlyClosingGoal");
     const orgGoal = orgDoc?.monthlyClosingGoal ?? 0;
