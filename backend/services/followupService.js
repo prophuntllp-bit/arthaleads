@@ -18,7 +18,7 @@ const followupService = {
 
     const baseLeadFilter = {
       orgId: user.orgId,
-      isArchived: false,
+      isArchived: { $ne: true },
       isDeleted: { $ne: true },
     };
 

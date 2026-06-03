@@ -54,7 +54,7 @@ const superAdminController = {
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
         Lead.aggregate([
-          { $match: { isDeleted: { $ne: true }, isArchived: false } },
+          { $match: { isDeleted: { $ne: true }, isArchived: { $ne: true } } },
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
       ]);

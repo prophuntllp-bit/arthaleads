@@ -482,7 +482,7 @@ const authService = {
 
     // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
     const [pipelineFacet] = await Lead.aggregate([
-      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, ...dateMatch } },
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: { $ne: true }, ...dateMatch } },
       { $facet: {
         assigned:   [{ $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
         closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],

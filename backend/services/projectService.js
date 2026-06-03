@@ -19,7 +19,7 @@ const projectService = {
     if (user.role !== "super_admin") {
       const org = await Organization.findById(user.orgId).select("plan").lean();
       if (org && levelOf(org.plan) === 1) {
-        const count = await Project.countDocuments({ orgId: user.orgId, isArchived: false });
+        const count = await Project.countDocuments({ orgId: user.orgId, isArchived: { $ne: true } });
         if (count >= 1) {
           throw new AppError(
             "Starter plan is limited to 1 project. Upgrade to Growth to create multiple projects.",
@@ -33,7 +33,7 @@ const projectService = {
   },
 
   async getAll(user) {
-    const filter = { isArchived: false, orgId: user.orgId };
+    const filter = { isArchived: { $ne: true }, orgId: user.orgId };
 
     // Agents can ONLY see projects explicitly assigned to them
     if (user.role === "agent") {
@@ -64,7 +64,7 @@ const projectService = {
   },
 
   async getById(id, user) {
-    const filter = { _id: id, isArchived: false, orgId: user.orgId };
+    const filter = { _id: id, isArchived: { $ne: true }, orgId: user.orgId };
 
     // Agents can ONLY access projects explicitly assigned to them
     if (user.role === "agent") {
@@ -80,7 +80,7 @@ const projectService = {
 
   async update(id, data, user) {
     const project = await Project.findOneAndUpdate(
-      { _id: id, isArchived: false, orgId: user.orgId },
+      { _id: id, isArchived: { $ne: true }, orgId: user.orgId },
       data,
       { new: true, runValidators: true }
     );
@@ -90,7 +90,7 @@ const projectService = {
 
   async remove(id, user) {
     const project = await Project.findOneAndUpdate(
-      { _id: id, isArchived: false, orgId: user.orgId },
+      { _id: id, isArchived: { $ne: true }, orgId: user.orgId },
       { isArchived: true },
       { new: true }
     );
@@ -100,7 +100,7 @@ const projectService = {
 
   async importLeads(projectId, rows, user) {
     // Verify project belongs to the same org
-    const project = await Project.findOne({ _id: projectId, isArchived: false, orgId: user.orgId });
+    const project = await Project.findOne({ _id: projectId, isArchived: { $ne: true }, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
 
     const invalid = rows.length - rows.filter((r) => r.name && r.phone).length;
@@ -348,7 +348,7 @@ const projectService = {
     if (toProjectId) {
       if (String(toProjectId) === String(fromProjectId))
         throw new AppError("Lead is already in this project", 400);
-      const target = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
+      const target = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
       if (!target) throw new AppError("Target project not found", 404);
       lead.project = toProjectId;
       await lead.save();
