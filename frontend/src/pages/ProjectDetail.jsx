@@ -154,28 +154,32 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                   label: "- None -",           color: "" },
-  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
-  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
-  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
-  { value: "Site Visit Done",    label: "Site Visit Done",     color: "text-teal-600" },
-  { value: "Booked",             label: "Booked",              color: "text-green-600" },
-  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
-  { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" },
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" },
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" },
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" },
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" },
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" },
+  { value: "Booked",             label: "Booked",              color: "#16a34a" },
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" },
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" },
 ];
 
-// Filter pills shown above the leads table (same values minus the empty one)
+// Filter pills shown above the leads table
 const STATUS_FILTERS = [
-  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",             text: "text-app-soft" },
+  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",              text: "text-app-soft" },
   { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",           text: "text-blue-600 dark:text-blue-400" },
+  { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",             text: "text-red-500 dark:text-red-400" },
+  { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",              text: "text-gray-500 dark:text-gray-400" },
+  { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",           text: "text-pink-600 dark:text-pink-400" },
   { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",         text: "text-amber-600 dark:text-amber-400" },
   { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",       text: "text-violet-600 dark:text-violet-400" },
   { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",           text: "text-teal-600 dark:text-teal-400" },
   { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",         text: "text-green-600 dark:text-green-400" },
-  { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",             text: "text-red-500 dark:text-red-400" },
-  { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",              text: "text-gray-500 dark:text-gray-400" },
-  { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",           text: "text-pink-600 dark:text-pink-400" },
+  { value: "Other Location",    label: "Other Location",    bg: "bg-orange-100 dark:bg-orange-500/20",       text: "text-orange-600 dark:text-orange-400" },
+  { value: "Commercial",        label: "Commercial",        bg: "bg-indigo-100 dark:bg-indigo-500/20",       text: "text-indigo-600 dark:text-indigo-400" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -197,8 +201,8 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
     <CustomSelect
       value={value || ""}
       onChange={save}
-      options={BOOKING_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-      style={{ minWidth: 120, maxWidth: 145 }}
+      options={BOOKING_OPTIONS.map((o) => ({ value: o.value, label: o.label, color: o.color }))}
+      style={{ minWidth: 120, maxWidth: 160 }}
     />
   );
 }
@@ -1231,7 +1235,7 @@ export default function ProjectDetail() {
                     value={prospBulkStatusBook}
                     onChange={setProspBulkStatusBook}
                     placeholder="Set status…"
-                    options={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
+                    options={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color }))}
                     style={{ minWidth: 140 }}
                   />
                   <button
