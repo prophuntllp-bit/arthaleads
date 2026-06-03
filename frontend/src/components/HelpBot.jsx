@@ -452,7 +452,7 @@ export default function HelpBot() {
                   /* Generic pages: tours + collapsible common questions */
                   <>
                     <div className="flex flex-wrap gap-2 pl-9">
-                      {Object.entries(TOURS).map(([key, t]) => (
+                      {Object.entries(TOURS).filter(([, t]) => t.primary).map(([key, t]) => (
                         <button key={key} type="button" onClick={() => startTour(key)}
                           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold cursor-pointer transition"
                           style={{ background: "rgba(99,102,241,0.10)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>

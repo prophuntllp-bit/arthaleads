@@ -1125,6 +1125,7 @@ export default function Automation() {
           {/* Facebook tile - special styling */}
           <button
             type="button"
+            data-tour="fb-connect"
             className="card p-5 text-left transition hover:-translate-y-1 hover:border-blue-500/30 relative overflow-hidden"
             onClick={() => { setFbEditingItem(null); setFbWizardOpen(true); }}
           >

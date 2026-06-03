@@ -1014,7 +1014,7 @@ export default function Leads() {
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
             {/* Export — compact icon button */}
-            <div ref={exportMenuRef}>
+            <div ref={exportMenuRef} data-tour="export-btn">
               <button
                 ref={exportBtnRef}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
