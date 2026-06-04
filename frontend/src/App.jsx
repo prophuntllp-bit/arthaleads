@@ -393,6 +393,9 @@ const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
 const Compare         = lazy(() => import("./pages/Compare"));
 const Pricing         = lazy(() => import("./pages/Pricing"));
+const Bookings              = lazy(() => import("./pages/Bookings"));
+const Invoices              = lazy(() => import("./pages/Invoices"));
+const Developers            = lazy(() => import("./pages/Developers"));
 const AdminLogin            = lazy(() => import("./pages/AdminLogin"));
 const SuperAdminHome        = lazy(() => import("./pages/SuperAdminHome"));
 const SuperAdminUsers       = lazy(() => import("./pages/SuperAdminUsers"));
@@ -672,6 +675,9 @@ export default function App() {
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
           <Route path="/attendance"    element={<Attendance />} />
+          <Route path="/bookings"      element={<Bookings />} />
+          <Route path="/invoices"      element={<Invoices />} />
+          <Route path="/developers"    element={<Developers />} />
           <Route path="/plans"         element={<Plans />} />
 
           {/* Admin only */}
