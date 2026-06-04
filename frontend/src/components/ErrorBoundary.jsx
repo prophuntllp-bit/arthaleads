@@ -11,11 +11,29 @@ export default class ErrorBoundary extends Component {
     this.state = { hasError: false, error: null };
   }
 
+  static isChunkError(error) {
+    const msg = error?.message || "";
+    return (
+      msg.includes("Failed to fetch dynamically imported module") ||
+      msg.includes("Importing a module script failed") ||
+      msg.includes("Loading chunk") ||
+      msg.includes("Unable to preload CSS") ||
+      (error?.name === "ChunkLoadError")
+    );
+  }
+
   static getDerivedStateFromError(error) {
+    // Stale deployment: old HTML references JS chunks that no longer exist.
+    // Auto-reload fetches the new HTML + new chunk URLs — invisible to the user.
+    if (ErrorBoundary.isChunkError(error)) {
+      window.location.reload();
+      return { hasError: false, error: null }; // won't render, reload is already triggered
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error, info) {
+    if (ErrorBoundary.isChunkError(error)) return; // reload already in flight
     console.error("[ErrorBoundary] Uncaught error:", error, info);
     // Fire-and-forget: report to backend so Sentry captures frontend render crashes
     try {
