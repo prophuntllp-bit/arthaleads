@@ -58,13 +58,7 @@ function parseBrand(org) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return {
-    hex,
-    light:   `rgba(${r},${g},${b},0.08)`,
-    mid:     `rgba(${r},${g},${b},0.18)`,
-    onColor: brightness > 160 ? "#1a1a1a" : "#ffffff",
-  };
+  return { hex, light: `rgba(${r},${g},${b},0.07)` };
 }
 
 // ── Shared Letterhead ─────────────────────────────────────────────────────────
@@ -72,60 +66,46 @@ function Letterhead({ org, invNumber, invDate }) {
   const c = parseBrand(org);
   return (
     <div>
-      {/* Top bar: logo + org name | invoice badge */}
+      <div style={{ height: 4, background: c.hex }} />
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: c.hex, padding: "14px 20px", gap: 16,
+        padding: "10px 20px", background: "#fff", borderBottom: "1px solid #e2e8f0",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {org?.logo ? (
             <img src={org.logo} alt={org?.name}
-              style={{ height: 52, maxWidth: 130, objectFit: "contain",
-                background: "#fff", borderRadius: 6, padding: "4px 8px" }} />
+              style={{ height: 40, maxWidth: 110, objectFit: "contain", borderRadius: 4 }} />
           ) : (
             <div style={{
-              height: 52, minWidth: 52, display: "flex", alignItems: "center",
-              justifyContent: "center", background: "rgba(255,255,255,0.2)",
-              borderRadius: 6, color: c.onColor, fontWeight: "bold", fontSize: 22,
+              height: 40, width: 40, display: "flex", alignItems: "center",
+              justifyContent: "center", background: c.hex,
+              borderRadius: 6, color: "#fff", fontWeight: "bold", fontSize: 18,
             }}>
               {(org?.name || "?")[0].toUpperCase()}
             </div>
           )}
-          <div>
-            <p style={{ color: c.onColor, fontWeight: "bold", fontSize: 18, margin: 0, lineHeight: 1.2 }}>
-              {org?.name || ""}
-            </p>
-            {org?.industry && (
-              <p style={{ color: c.onColor, opacity: 0.75, fontSize: 10, margin: "3px 0 0" }}>
-                {org.industry}
-              </p>
-            )}
-          </div>
+          <p style={{ color: "#1e293b", fontWeight: "800", fontSize: 16, margin: 0 }}>{org?.name || ""}</p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <p style={{
-            color: c.onColor, fontWeight: "bold", fontSize: 15, letterSpacing: 2,
-            margin: 0, padding: "5px 14px", background: "rgba(255,255,255,0.18)",
-            borderRadius: 6, display: "inline-block",
-          }}>TAX INVOICE</p>
-          <p style={{ color: c.onColor, opacity: 0.85, fontSize: 10, margin: "4px 0 0" }}>
+          <div style={{ display: "inline-block", padding: "4px 12px", background: "#1e293b", borderRadius: 4, marginBottom: 3 }}>
+            <span style={{ color: "#fff", fontWeight: "bold", fontSize: 11, letterSpacing: 2 }}>TAX INVOICE</span>
+          </div>
+          <p style={{ color: "#64748b", fontSize: 10, margin: 0 }}>
             No.&nbsp;{invNumber}&nbsp;&nbsp;|&nbsp;&nbsp;{fmtDate(invDate)}
           </p>
         </div>
       </div>
-
-      {/* Contact/registration strip */}
-      <div style={{
-        display: "flex", flexWrap: "wrap", alignItems: "center", gap: "2px 20px",
-        background: c.light, borderBottom: `2px solid ${c.hex}`,
-        padding: "5px 20px", fontSize: 9.5,
-      }}>
-        {org?.address && <span style={{ color: "#555" }}>📍 {org.address}</span>}
-        {org?.phone   && <span style={{ color: "#555" }}>📞 {org.phone}</span>}
-        {org?.email   && <span style={{ color: "#555" }}>✉ {org.email}</span>}
-        {org?.gstNo   && <span style={{ color: "#555" }}>GST:&nbsp;<strong>{org.gstNo}</strong></span>}
-        {org?.pan     && <span style={{ color: "#555" }}>PAN:&nbsp;<strong>{org.pan}</strong></span>}
-        {org?.rera    && <span style={{ color: "#555" }}>RERA:&nbsp;<strong>{org.rera}</strong></span>}
+      <div style={{ background: "#f8fafc", borderBottom: "2px solid #e2e8f0", padding: "3px 20px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0 14px", fontSize: 8.5, color: "#475569", marginBottom: 1 }}>
+          {org?.address && <span>📍 {org.address}</span>}
+          {org?.phone   && <span>📞 {org.phone}</span>}
+          {org?.email   && <span>✉ {org.email}</span>}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0 14px", fontSize: 8.5, color: "#475569" }}>
+          {org?.gstNo && <span>GST: <strong>{org.gstNo}</strong></span>}
+          {org?.pan   && <span>PAN: <strong>{org.pan}</strong></span>}
+          {org?.rera  && <span>RERA: <strong>{org.rera}</strong></span>}
+        </div>
       </div>
     </div>
   );
@@ -134,58 +114,44 @@ function Letterhead({ org, invNumber, invDate }) {
 // ── SIMPLE Invoice Template ───────────────────────────────────────────────────
 function SimpleInvoicePDF({ inv, org }) {
   const c = parseBrand(org);
-  const thS = { padding: "7px 10px", fontWeight: "bold", border: `1px solid ${c.hex}`, background: c.hex, color: c.onColor };
-  const tdS = { padding: "6px 10px", border: "1px solid #ddd" };
+  const secH = { padding: "5px 10px", fontWeight: "bold", background: "#1e293b", color: "#fff", textAlign: "left", fontSize: 10, letterSpacing: 0.3 };
+  const tdS  = { padding: "5px 10px", border: "1px solid #e2e8f0", fontSize: 10 };
 
   return (
-    <div className="invoice-print" style={{
-      fontFamily: "Arial, sans-serif", fontSize: 12, color: "#1a1a1a",
-      maxWidth: 720, margin: "0 auto", background: "#fff",
-    }}>
+    <div style={{ fontFamily: "Arial, sans-serif", fontSize: 10, color: "#1a1a1a", maxWidth: 720, margin: "0 auto", background: "#fff" }}>
       <Letterhead org={org} invNumber={inv.customInvoiceNumber || inv.invoiceNumber} invDate={inv.invoiceDate} />
 
-      <div style={{ padding: "16px 20px" }}>
+      <div style={{ padding: "14px 20px" }}>
         {/* Bill To + Invoice Meta */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 14 }}>
-          <div style={{
-            flex: 1, padding: "12px 14px", borderRadius: 6,
-            background: "#f9f9f9", border: "1px solid #e5e5e5",
-          }}>
-            <p style={{ fontSize: 9, fontWeight: "bold", color: "#888", letterSpacing: 1, marginBottom: 5 }}>BILL TO</p>
-            <p style={{ fontWeight: "bold", fontSize: 13, margin: "0 0 3px" }}>{inv.developerName}</p>
-            {inv.developerAddress && <p style={{ fontSize: 10, color: "#555", margin: "0 0 2px" }}>{inv.developerAddress}</p>}
-            {inv.developerGst     && <p style={{ fontSize: 10, margin: 0 }}>GSTIN: <strong>{inv.developerGst}</strong></p>}
-            {inv.developerPan     && <p style={{ fontSize: 10, margin: 0 }}>PAN: <strong>{inv.developerPan}</strong></p>}
+        <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
+          <div style={{ flex: 1, padding: "10px 12px", borderRadius: 5, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <p style={{ fontSize: 8, fontWeight: "bold", color: "#94a3b8", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase" }}>Bill To</p>
+            <p style={{ fontWeight: "bold", fontSize: 12, margin: "0 0 2px", color: "#1e293b" }}>{inv.developerName}</p>
+            {inv.developerAddress && <p style={{ fontSize: 9, color: "#64748b", margin: "0 0 2px" }}>{inv.developerAddress}</p>}
+            {inv.developerGst && <p style={{ fontSize: 9, margin: 0 }}>GSTIN: <strong>{inv.developerGst}</strong></p>}
+            {inv.developerPan && <p style={{ fontSize: 9, margin: 0 }}>PAN: <strong>{inv.developerPan}</strong></p>}
           </div>
-          <div style={{
-            width: 190, padding: "12px 14px", borderRadius: 6,
-            background: c.light, border: `1px solid ${c.hex}33`,
-          }}>
-            <p style={{ fontSize: 9, fontWeight: "bold", color: "#888", letterSpacing: 1, marginBottom: 6 }}>INVOICE DETAILS</p>
+          <div style={{ width: 180, padding: "10px 12px", borderRadius: 5, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <p style={{ fontSize: 8, fontWeight: "bold", color: "#94a3b8", letterSpacing: 1, marginBottom: 4, textTransform: "uppercase" }}>Invoice Details</p>
             {[
               ["Invoice No", inv.customInvoiceNumber || inv.invoiceNumber],
               ["Date",       fmtDate(inv.invoiceDate)],
               ["GST Type",   inv.gstType || "CGST+SGST"],
             ].map(([k, v]) => (
-              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 3 }}>
-                <span style={{ color: "#666" }}>{k}</span>
-                <strong>{v}</strong>
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, marginBottom: 2 }}>
+                <span style={{ color: "#64748b" }}>{k}</span>
+                <strong style={{ color: "#1e293b" }}>{v}</strong>
               </div>
             ))}
           </div>
         </div>
 
         {/* Subject */}
-        <div style={{
-          background: c.light, borderLeft: `4px solid ${c.hex}`,
-          padding: "8px 12px", marginBottom: 12, borderRadius: "0 4px 4px 0",
-        }}>
-          <p style={{ fontSize: 11, fontWeight: "bold", margin: 0 }}>
-            Brokerage for {inv.unitType} {inv.unitNo}
-            {inv.tower ? ` / Tower ${inv.tower}` : ""}
-            {inv.phase ? ` / Phase ${inv.phase}` : ""} at {inv.projectName}
+        <div style={{ borderLeft: `3px solid ${c.hex}`, background: "#f8fafc", padding: "6px 10px", marginBottom: 10, borderRadius: "0 4px 4px 0" }}>
+          <p style={{ fontSize: 10, fontWeight: "bold", margin: 0, color: "#1e293b" }}>
+            Brokerage for {inv.unitType} {inv.unitNo}{inv.tower ? ` / Tower ${inv.tower}` : ""}{inv.phase ? ` / Phase ${inv.phase}` : ""} at {inv.projectName}
           </p>
-          <p style={{ fontSize: 10, color: "#555", margin: "3px 0 0" }}>
+          <p style={{ fontSize: 9, color: "#64748b", margin: "2px 0 0" }}>
             Customer: {inv.customerName}{inv.jointBuyerName ? ` / ${inv.jointBuyerName}` : ""}
           </p>
         </div>
@@ -194,9 +160,9 @@ function SimpleInvoicePDF({ inv, org }) {
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 4 }}>
           <thead>
             <tr>
-              <th style={{ ...thS, textAlign: "left", width: "10%" }}>Sr.</th>
-              <th style={{ ...thS, textAlign: "left" }}>Description</th>
-              <th style={{ ...thS, textAlign: "right", whiteSpace: "nowrap" }}>Amount (₹)</th>
+              <th style={{ ...secH, width: "8%", textAlign: "center" }}>Sr.</th>
+              <th style={secH}>Description</th>
+              <th style={{ ...secH, textAlign: "right", whiteSpace: "nowrap" }}>Amount (₹)</th>
             </tr>
           </thead>
           <tbody>
@@ -204,9 +170,9 @@ function SimpleInvoicePDF({ inv, org }) {
               <td style={{ ...tdS, textAlign: "center", verticalAlign: "top" }}>1</td>
               <td style={tdS}>
                 <strong>Brokerage Charges</strong>
-                {inv.brokerageAdjustment > 0 && <p style={{ fontSize: 10, margin: "2px 0 0", color: "#666" }}>Less adjustment: {fmtINR(inv.brokerageAdjustment)}</p>}
-                {inv.fosIncentive > 0 && <p style={{ fontSize: 10, margin: "2px 0 0", color: "#666" }}>FOS Incentive: {fmtINR(inv.fosIncentive)}</p>}
-                {inv.eoiIncentive > 0 && <p style={{ fontSize: 10, margin: "2px 0 0", color: "#666" }}>EOI Incentive: {fmtINR(inv.eoiIncentive)}</p>}
+                {inv.brokerageAdjustment > 0 && <p style={{ fontSize: 9, margin: "1px 0 0", color: "#64748b" }}>Less adjustment: {fmtINR(inv.brokerageAdjustment)}</p>}
+                {inv.fosIncentive > 0 && <p style={{ fontSize: 9, margin: "1px 0 0", color: "#64748b" }}>FOS Incentive: {fmtINR(inv.fosIncentive)}</p>}
+                {inv.eoiIncentive > 0 && <p style={{ fontSize: 9, margin: "1px 0 0", color: "#64748b" }}>EOI Incentive: {fmtINR(inv.eoiIncentive)}</p>}
               </td>
               <td style={{ ...tdS, textAlign: "right", fontWeight: "bold" }}>{fmtINR(inv.totalBrokerage)}</td>
             </tr>
@@ -216,25 +182,22 @@ function SimpleInvoicePDF({ inv, org }) {
             </>) : (
               <tr><td style={{ ...tdS, textAlign: "center" }}></td><td style={tdS}>IGST @ 18%</td><td style={{ ...tdS, textAlign: "right" }}>{fmtINR(inv.igst)}</td></tr>
             )}
-            <tr style={{ background: c.light }}>
-              <td colSpan={2} style={{ ...tdS, textAlign: "right", fontWeight: "bold", fontSize: 13 }}>GRAND TOTAL</td>
-              <td style={{ ...tdS, textAlign: "right", fontWeight: "bold", fontSize: 13, color: c.hex }}>{fmtINR(inv.totalBill)}</td>
+            <tr style={{ background: "#1e293b" }}>
+              <td colSpan={2} style={{ ...tdS, textAlign: "right", fontWeight: "bold", fontSize: 12, color: "#fff", border: "none" }}>GRAND TOTAL</td>
+              <td style={{ ...tdS, textAlign: "right", fontWeight: "bold", fontSize: 12, color: c.hex, border: "none" }}>{fmtINR(inv.totalBill)}</td>
             </tr>
           </tbody>
         </table>
 
-        <p style={{ fontSize: 10, fontStyle: "italic", margin: "4px 0 16px", color: "#555" }}>
-          Amount in Words: <strong>{amountInWords(inv.totalBill)}</strong>
+        <p style={{ fontSize: 9, fontStyle: "italic", margin: "4px 0 12px", color: "#64748b" }}>
+          Amount in Words: <strong style={{ color: "#1e293b" }}>{amountInWords(inv.totalBill)}</strong>
         </p>
 
         {/* Payment details + signatory */}
-        <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
-          <div style={{
-            flex: 2, padding: "12px 14px", borderRadius: 6,
-            background: "#f0f7ff", border: "1px solid #bfdbfe",
-          }}>
-            <p style={{ fontWeight: "bold", color: "#1e40af", fontSize: 11, marginBottom: 6 }}>Payment Details</p>
-            <table style={{ fontSize: 10, width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ flex: 2, padding: "10px 12px", borderRadius: 5, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <p style={{ fontWeight: "bold", color: "#1e293b", fontSize: 10, marginBottom: 6 }}>Payment Details</p>
+            <table style={{ fontSize: 9.5, width: "100%", borderCollapse: "collapse" }}>
               <tbody>
                 {[
                   ["Account Name",  org?.bankAccountName || ""],
@@ -243,34 +206,24 @@ function SimpleInvoicePDF({ inv, org }) {
                   ["Bank / Branch", [org?.bankName, org?.bankBranch].filter(Boolean).join(", ")],
                 ].filter(([, v]) => v).map(([k, v]) => (
                   <tr key={k}>
-                    <td style={{ color: "#1e40af", fontWeight: "bold", paddingRight: 10, paddingBottom: 3, whiteSpace: "nowrap" }}>{k}</td>
-                    <td style={{ paddingBottom: 3 }}>{v}</td>
+                    <td style={{ color: "#475569", fontWeight: "600", paddingRight: 10, paddingBottom: 3, whiteSpace: "nowrap" }}>{k}</td>
+                    <td style={{ paddingBottom: 3, color: "#1e293b" }}>{v}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p style={{ fontSize: 10, marginTop: 6, color: "#555" }}>
-              Cheque payable to: <strong>{org?.name || ""}</strong>
-            </p>
           </div>
-          <div style={{
-            flex: 1, padding: "12px 14px", borderRadius: 6,
-            border: "1px solid #e5e5e5", display: "flex",
-            flexDirection: "column", justifyContent: "space-between",
-          }}>
-            <p style={{ fontSize: 10, color: "#888" }}>For {org?.name || ""}</p>
+          <div style={{ flex: 1, padding: "10px 12px", borderRadius: 5, border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <p style={{ fontSize: 9, color: "#94a3b8", margin: 0 }}>For {org?.name || ""}</p>
             <div>
-              <div style={{ height: 48, borderBottom: "1px dashed #aaa", marginBottom: 4 }} />
-              <p style={{ fontSize: 10, color: "#555", margin: 0 }}>Authorized Signatory</p>
+              <div style={{ height: 44, borderBottom: "1px dashed #cbd5e1", marginBottom: 4 }} />
+              <p style={{ fontSize: 9, color: "#64748b", margin: 0 }}>Authorized Signatory</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{
-          marginTop: 20, padding: "7px 14px", borderRadius: 4,
-          background: c.hex, color: c.onColor, fontSize: 9.5, textAlign: "center",
-        }}>
+        <div style={{ marginTop: 16, padding: "6px 14px", borderRadius: 3, background: "#1e293b", color: "#94a3b8", fontSize: 8.5, textAlign: "center" }}>
           {[org?.address, org?.phone, org?.email].filter(Boolean).join("  ·  ")}
         </div>
       </div>
@@ -280,42 +233,39 @@ function SimpleInvoicePDF({ inv, org }) {
 
 // ── DETAILED Invoice Template ─────────────────────────────────────────────────
 function DetailedInvoicePDF({ inv, org }) {
-  const c = parseBrand(org);
-  const thD = { padding: "7px 10px", fontWeight: "bold", border: `1px solid ${c.hex}`, background: c.hex, color: c.onColor, textAlign: "center" };
-  const thL = { padding: "5px 8px", fontWeight: "600", background: "#f3f4f6", border: "1px solid #ddd", fontSize: 10, whiteSpace: "nowrap" };
-  const tdD = { padding: "5px 10px", border: "1px solid #ddd", fontSize: 10 };
+  const c   = parseBrand(org);
+  const secH = { padding: "5px 10px", fontWeight: "bold", background: "#1e293b", color: "#fff", textAlign: "center", fontSize: 9.5, letterSpacing: 0.3 };
+  const thL  = { padding: "4px 8px", fontWeight: "600", background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 9, whiteSpace: "nowrap", color: "#475569" };
+  const tdD  = { padding: "4px 8px", border: "1px solid #e2e8f0", fontSize: 9, color: "#1e293b" };
 
   return (
-    <div className="invoice-print" style={{
-      fontFamily: "Arial, sans-serif", fontSize: 11, color: "#1a1a1a",
-      maxWidth: 760, margin: "0 auto", background: "#fff",
-    }}>
+    <div style={{ fontFamily: "Arial, sans-serif", fontSize: 9.5, color: "#1a1a1a", maxWidth: 760, margin: "0 auto", background: "#fff" }}>
       <Letterhead org={org} invNumber={inv.customInvoiceNumber || inv.invoiceNumber} invDate={inv.invoiceDate} />
 
-      <div style={{ padding: "16px 20px" }}>
-        {/* To / From */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 10 }}>
+      <div style={{ padding: "12px 20px" }}>
+        {/* TO / FROM */}
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
           <thead>
             <tr>
-              <th colSpan={2} style={{ ...thD, width: "50%", borderRight: `2px solid #fff` }}>TO (Developer)</th>
-              <th colSpan={2} style={{ ...thD, width: "50%" }}>FROM (Brokerage Firm)</th>
+              <th colSpan={2} style={{ ...secH, width: "50%", borderRight: "2px solid #fff" }}>TO (Developer)</th>
+              <th colSpan={2} style={secH}>FROM (Brokerage Firm)</th>
             </tr>
           </thead>
           <tbody>
             {[
-              ["Name",          inv.developerName || "-",                          "Company",       org?.name || ""],
-              ["Address",       inv.developerAddress || "-",                       "Address",       org?.address || "-"],
-              ["PAN",           inv.developerPan || "-",                           "PAN",           org?.pan || "-"],
-              ["CIN",           inv.developerCin || "-",                           "GSTIN",         org?.gstNo || "-"],
-              ["GSTIN",         inv.developerGst || "-",                           "RERA Reg. No.", org?.rera || "-"],
-              ["RERA No.",      (inv.developerReraNumbers || []).join(", ") || "-","CIN",           org?.cin || "-"],
-              ["Invoice Date",  fmtDate(inv.invoiceDate, "short").replace(/\//g,"-"), "Invoice No.", String(inv.invoiceNumber)],
-              ["Place of Supply","MAHARASHTRA",                                    "State Code",    "27"],
+              ["Name",           inv.developerName || "-",                              "Company",       org?.name || ""],
+              ["Address",        inv.developerAddress || "-",                           "Address",       org?.address || "-"],
+              ["PAN",            inv.developerPan || "-",                               "PAN",           org?.pan || "-"],
+              ["CIN",            inv.developerCin || "-",                               "GSTIN",         org?.gstNo || "-"],
+              ["GSTIN",          inv.developerGst || "-",                               "RERA Reg. No.", org?.rera || "-"],
+              ["RERA No.",       (inv.developerReraNumbers || []).join(", ") || "-",    "CIN",           org?.cin || "-"],
+              ["Invoice Date",   fmtDate(inv.invoiceDate, "short").replace(/\//g,"-"), "Invoice No.",   String(inv.invoiceNumber)],
+              ["Place of Supply","MAHARASHTRA",                                         "State Code",    "27"],
             ].map(([k1, v1, k2, v2]) => (
-              <tr key={k1} style={{ borderBottom: "1px solid #ddd" }}>
-                <td style={{ ...thL, borderRight: "1px solid #ddd" }}>{k1}</td>
-                <td style={{ ...tdD, borderRight: `2px solid ${c.hex}` }}>{v1}</td>
-                <td style={{ ...thL, borderRight: "1px solid #ddd" }}>{k2}</td>
+              <tr key={k1} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>{k1}</td>
+                <td style={{ ...tdD, borderRight: "2px solid #1e293b" }}>{v1}</td>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>{k2}</td>
                 <td style={tdD}>{v2}</td>
               </tr>
             ))}
@@ -323,111 +273,113 @@ function DetailedInvoicePDF({ inv, org }) {
         </table>
 
         {/* Subject */}
-        <div style={{
-          background: c.light, borderLeft: `4px solid ${c.hex}`,
-          padding: "8px 12px", marginBottom: 10, borderRadius: "0 4px 4px 0",
-        }}>
-          <p style={{ fontWeight: "bold", fontSize: 11, margin: 0 }}>
+        <div style={{ borderLeft: `3px solid ${c.hex}`, background: "#f8fafc", padding: "5px 10px", marginBottom: 8, borderRadius: "0 3px 3px 0" }}>
+          <p style={{ fontWeight: "bold", fontSize: 9.5, margin: 0, color: "#1e293b" }}>
             SUBJECT: BROKERAGE FOR{inv.phase ? ` Phase ${inv.phase}` : ""} {inv.unitType} No.{inv.unitNo}
             {inv.tower ? ` / Tower ${inv.tower}` : ""} AT {(inv.projectName || "").toUpperCase()}
           </p>
         </div>
 
-        {/* Unit Details */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
-          <thead><tr><th colSpan={2} style={thD}>UNIT DETAILS</th></tr></thead>
-          <tbody>
-            {[
-              ["Project Name",       inv.projectName],
-              ["Customer Name",      inv.jointBuyerName ? `${inv.customerName} / ${inv.jointBuyerName}` : inv.customerName],
-              ["Phase",              inv.phase || "-"],
-              [inv.unitType === "Plot" ? "Plot No" : "Unit No", inv.unitNo + (inv.tower ? ` (Tower: ${inv.tower})` : "")],
-              ["Consideration Value", inv.considerationValue ? "₹" + inv.considerationValue.toLocaleString("en-IN") : "-"],
-            ].map(([k, v]) => (
-              <tr key={k} style={{ borderBottom: "1px solid #ddd" }}>
-                <td style={{ ...tdD, width: "40%", background: "#f9f9f9", fontWeight: "500" }}>{k}</td>
-                <td style={{ ...tdD, fontWeight: "bold", textAlign: "right" }}>{v}</td>
+        {/* Unit + Brokerage side by side */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 6 }}>
+          {/* Unit Details */}
+          <table style={{ flex: 1, borderCollapse: "collapse", alignSelf: "start" }}>
+            <thead><tr><th colSpan={2} style={secH}>UNIT DETAILS</th></tr></thead>
+            <tbody>
+              {[
+                ["Project",   inv.projectName],
+                ["Customer",  inv.jointBuyerName ? `${inv.customerName} / ${inv.jointBuyerName}` : inv.customerName],
+                ["Phase",     inv.phase || "-"],
+                [inv.unitType === "Plot" ? "Plot No" : "Unit No", inv.unitNo + (inv.tower ? ` (Tower: ${inv.tower})` : "")],
+                ["Sale Value", inv.considerationValue ? "₹" + Number(inv.considerationValue).toLocaleString("en-IN") : "-"],
+              ].map(([k, v]) => (
+                <tr key={k} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ ...thL, borderRight: "1px solid #e2e8f0", width: "40%" }}>{k}</td>
+                  <td style={{ ...tdD, fontWeight: "600", textAlign: "right" }}>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Brokerage Details */}
+          <table style={{ flex: 1, borderCollapse: "collapse", alignSelf: "start" }}>
+            <thead><tr><th colSpan={2} style={secH}>BROKERAGE DETAILS</th></tr></thead>
+            <tbody>
+              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>Brokerage @ {inv.brokeragePercent}%</td>
+                <td style={{ ...tdD, textAlign: "right", fontWeight: "600" }}>{fmtINR(inv.brokerageAmount)}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>Adjustment (–)</td>
+                <td style={{ ...tdD, textAlign: "right" }}>{inv.brokerageAdjustment ? `– ${fmtINR(inv.brokerageAdjustment)}` : "–"}</td>
+              </tr>
+              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>FOS Incentive</td>
+                <td style={{ ...tdD, textAlign: "right" }}>{inv.fosIncentive ? fmtINR(inv.fosIncentive) : "–"}</td>
+              </tr>
+              <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>EOI Incentive</td>
+                <td style={{ ...tdD, textAlign: "right" }}>{inv.eoiIncentive ? fmtINR(inv.eoiIncentive) : "–"}</td>
+              </tr>
+              <tr style={{ borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+                <td style={{ ...thL, fontWeight: "700", color: "#1e293b", borderRight: "1px solid #e2e8f0" }}>Pre-GST Total</td>
+                <td style={{ ...tdD, textAlign: "right", fontWeight: "700" }}>{fmtINR(inv.totalBrokerage)}</td>
+              </tr>
+              {inv.gstType !== "IGST" ? (<>
+                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>CGST @ 9%</td>
+                  <td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.cgst)}</td>
+                </tr>
+                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>SGST @ 9%</td>
+                  <td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.sgst)}</td>
+                </tr>
+              </>) : (
+                <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ ...thL, borderRight: "1px solid #e2e8f0" }}>IGST @ 18%</td>
+                  <td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.igst)}</td>
+                </tr>
+              )}
+              <tr style={{ background: "#1e293b" }}>
+                <td style={{ padding: "5px 8px", fontWeight: "bold", fontSize: 11, color: "#fff", border: "none" }}>TOTAL BILL</td>
+                <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: "bold", fontSize: 11, color: c.hex, border: "none" }}>{fmtINR(inv.totalBill)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        {/* Brokerage Details */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
-          <thead><tr><th colSpan={2} style={thD}>BROKERAGE DETAILS</th></tr></thead>
-          <tbody>
-            <tr style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={{ ...tdD, width: "65%", color: "#1e40af" }}>Brokerage @ {inv.brokeragePercent}%</td>
-              <td style={{ ...tdD, textAlign: "right", fontWeight: "bold" }}>{fmtINR(inv.brokerageAmount)}</td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={tdD}>Brokerage Adjustment (–)</td>
-              <td style={{ ...tdD, textAlign: "right" }}>{inv.brokerageAdjustment ? `– ${fmtINR(inv.brokerageAdjustment)}` : "–"}</td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={tdD}>FOS Incentive</td>
-              <td style={{ ...tdD, textAlign: "right" }}>{inv.fosIncentive ? fmtINR(inv.fosIncentive) : "–"}</td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #ddd" }}>
-              <td style={tdD}>EOI Incentive</td>
-              <td style={{ ...tdD, textAlign: "right" }}>{inv.eoiIncentive ? fmtINR(inv.eoiIncentive) : "–"}</td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #ddd", background: "#f9f9f9" }}>
-              <td style={{ ...tdD, fontWeight: "bold" }}>Total Brokerage (before GST)</td>
-              <td style={{ ...tdD, textAlign: "right", fontWeight: "bold" }}>{fmtINR(inv.totalBrokerage)}</td>
-            </tr>
-            {inv.gstType !== "IGST" ? (<>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: CGST @ 9%</td><td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.cgst)}</td></tr>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: SGST @ 9%</td><td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.sgst)}</td></tr>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: IGST @ 18%</td><td style={{ ...tdD, textAlign: "right" }}>–</td></tr>
-            </>) : (<>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: CGST @ 9%</td><td style={{ ...tdD, textAlign: "right" }}>–</td></tr>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: SGST @ 9%</td><td style={{ ...tdD, textAlign: "right" }}>–</td></tr>
-              <tr style={{ borderBottom: "1px solid #ddd" }}><td style={tdD}>Add: IGST @ 18%</td><td style={{ ...tdD, textAlign: "right" }}>{fmtINR(inv.igst)}</td></tr>
-            </>)}
-            <tr style={{ background: c.light }}>
-              <td style={{ ...tdD, fontWeight: "bold", fontSize: 13 }}>TOTAL BILL</td>
-              <td style={{ ...tdD, textAlign: "right", fontWeight: "bold", fontSize: 13, color: c.hex }}>{fmtINR(inv.totalBill)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p style={{ fontSize: 10, fontStyle: "italic", color: "#555", margin: "0 0 10px" }}>
-          Amount in Words: <strong>{amountInWords(inv.totalBill)}</strong>
+        <p style={{ fontSize: 8.5, fontStyle: "italic", color: "#64748b", margin: "0 0 8px" }}>
+          Amount in Words: <strong style={{ color: "#1e293b" }}>{amountInWords(inv.totalBill)}</strong>
         </p>
 
         {/* Payment + Signatory */}
-        <div style={{ display: "flex", gap: 14 }}>
+        <div style={{ display: "flex", gap: 10 }}>
           <table style={{ flex: 2, borderCollapse: "collapse", alignSelf: "start" }}>
-            <thead><tr><th colSpan={2} style={thD}>PAYMENT DETAILS</th></tr></thead>
+            <thead><tr><th colSpan={2} style={secH}>PAYMENT DETAILS</th></tr></thead>
             <tbody>
               {[
-                ["Payee Name",     org?.bankAccountName || org?.name || ""],
-                ["Bank Name",      org?.bankName        || ""],
-                ["Branch Address", org?.bankBranch      || ""],
-                ["Account Type",   "CURRENT ACCOUNT"],
-                ["Account No.",    org?.bankAccountNo   || ""],
-                ["IFSC Code",      org?.bankIfsc        || ""],
-              ].map(([k, v]) => (
-                <tr key={k} style={{ borderBottom: "1px solid #ddd" }}>
-                  <td style={{ ...tdD, width: "42%", background: "#f9f9f9", fontWeight: "500" }}>{k}</td>
+                ["Payee Name",   org?.bankAccountName || org?.name || ""],
+                ["Bank",         [org?.bankName, org?.bankBranch].filter(Boolean).join(", ") || ""],
+                ["Account Type", "Current Account"],
+                ["Account No.",  org?.bankAccountNo  || ""],
+                ["IFSC Code",    org?.bankIfsc       || ""],
+              ].filter(([, v]) => v).map(([k, v]) => (
+                <tr key={k} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                  <td style={{ ...thL, borderRight: "1px solid #e2e8f0", width: "38%" }}>{k}</td>
                   <td style={tdD}>{v}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div style={{
-            flex: 1, border: `1px solid ${c.hex}55`, borderRadius: 4,
-            display: "flex", flexDirection: "column", overflow: "hidden",
-          }}>
-            <div style={{ ...thD }}>AUTHORIZED SIGNATORY</div>
-            <div style={{ flex: 1, padding: 12, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-              <p style={{ fontSize: 10, color: "#888", margin: 0 }}>For {org?.name || ""}</p>
+          <div style={{ flex: 1, border: "1px solid #e2e8f0", borderRadius: 4, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ ...secH }}>AUTHORIZED SIGNATORY</div>
+            <div style={{ flex: 1, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <p style={{ fontSize: 9, color: "#94a3b8", margin: 0 }}>For {org?.name || ""}</p>
               <div>
-                <div style={{ height: 60 }} />
-                <div style={{ borderTop: "1px dashed #aaa", paddingTop: 4 }}>
-                  <p style={{ fontSize: 9, color: "#555", margin: 0 }}>Stamp &amp; Signature</p>
+                <div style={{ height: 50 }} />
+                <div style={{ borderTop: "1px dashed #cbd5e1", paddingTop: 4 }}>
+                  <p style={{ fontSize: 8.5, color: "#64748b", margin: 0 }}>Stamp &amp; Signature</p>
                 </div>
               </div>
             </div>
@@ -435,10 +387,7 @@ function DetailedInvoicePDF({ inv, org }) {
         </div>
 
         {/* Footer */}
-        <div style={{
-          marginTop: 18, padding: "7px 14px", borderRadius: 4,
-          background: c.hex, color: c.onColor, fontSize: 9.5, textAlign: "center",
-        }}>
+        <div style={{ marginTop: 12, padding: "6px 14px", borderRadius: 3, background: "#1e293b", color: "#94a3b8", fontSize: 8.5, textAlign: "center" }}>
           {[org?.address, org?.phone, org?.email].filter(Boolean).join("  ·  ")}
         </div>
       </div>
@@ -468,11 +417,12 @@ function PDFModal({ inv, org, onClose }) {
       const filename = `Invoice-${inv.customInvoiceNumber || inv.invoiceNumber}-${inv.customerName.replace(/\s+/g, "_")}.pdf`;
       await html2pdf()
         .set({
-          margin: 0,
+          margin: [6, 6, 6, 6],
           filename,
           image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, logging: false },
+          html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: "avoid-all" },
         })
         .from(printRef.current)
         .save();
