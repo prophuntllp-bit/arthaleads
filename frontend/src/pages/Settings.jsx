@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
+import { Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
          Building2, FileText, AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -510,16 +510,12 @@ export default function Settings() {
                 <input className="input text-app-soft" style={{ background: "var(--app-surface-low)" }} value={user?.email || ""} disabled />
               </div>
               <div className="sm:col-span-2">
-                <label className="label flex items-center gap-2"><Camera className="h-4 w-4 text-orange-500" /> Profile Picture URL</label>
-                <input className="input" value={form.avatar} onChange={setValue("avatar")} placeholder="https://example.com/avatar.jpg" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Or Upload Profile Picture</label>
+                <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Profile Picture</label>
                 <label className="btn-secondary inline-flex cursor-pointer rounded-xl">
                   <ImagePlus className="h-4 w-4" /> Choose Image
                   <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" className="hidden" onChange={handleAvatarUpload} />
                 </label>
-                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB. Stored directly in your CRM profile.</p>
+                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB.</p>
               </div>
             </div>
 
