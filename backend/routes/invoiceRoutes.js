@@ -113,4 +113,16 @@ router.patch("/:id/status", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// PATCH /api/invoices/:id/number — set a custom invoice number override
+router.patch("/:id/number", async (req, res, next) => {
+  try {
+    const { invoiceNumber } = req.body;
+    const inv = await Invoice.findOne({ _id: req.params.id, orgId: req.user.orgId });
+    if (!inv) return res.status(404).json({ success: false, message: "Invoice not found." });
+    inv.customInvoiceNumber = (invoiceNumber ?? "").toString().trim();
+    await inv.save();
+    res.json({ success: true, data: inv });
+  } catch (e) { next(e); }
+});
+
 module.exports = router;

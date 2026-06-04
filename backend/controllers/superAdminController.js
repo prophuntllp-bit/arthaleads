@@ -8,6 +8,7 @@ const Project     = require("../models/Project");
 const Automation  = require("../models/Automation");
 const Ticket      = require("../models/Ticket");
 const AuditLog    = require("../models/AuditLog");
+const AiUsage     = require("../models/AiUsage");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
@@ -48,8 +49,9 @@ const superAdminController = {
         Organization.countDocuments(),
       ]);
 
-      // Attach user count + lead count per org in two aggregations
-      const [userCounts, leadCounts] = await Promise.all([
+      // Attach user count + lead count + current-month AI usage per org
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const [userCounts, leadCounts, aiUsageDocs] = await Promise.all([
         User.aggregate([
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
@@ -57,16 +59,20 @@ const superAdminController = {
           { $match: { isDeleted: { $ne: true }, isArchived: { $ne: true } } },
           { $group: { _id: "$orgId", count: { $sum: 1 } } },
         ]),
+        AiUsage.find({ month: currentMonth }).select("orgId calls totalTokens").lean(),
       ]);
 
-      const userMap  = Object.fromEntries(userCounts.map((u) => [String(u._id), u.count]));
-      const leadMap  = Object.fromEntries(leadCounts.map((l) => [String(l._id), l.count]));
+      const userMap    = Object.fromEntries(userCounts.map((u) => [String(u._id), u.count]));
+      const leadMap    = Object.fromEntries(leadCounts.map((l) => [String(l._id), l.count]));
+      const aiUsageMap = Object.fromEntries(aiUsageDocs.map((a) => [String(a.orgId), { calls: a.calls, totalTokens: a.totalTokens }]));
 
       const enriched = orgs.map((org) => ({
         ...org,
         userCount:    userMap[String(org._id)] || 0,
         leadCount:    leadMap[String(org._id)] || 0,
         trialExpired: trialStatus(org) === "expired",
+        aiCallsMonth: aiUsageMap[String(org._id)]?.calls       || 0,
+        aiTokensMonth: aiUsageMap[String(org._id)]?.totalTokens || 0,
       }));
 
       res.json({ success: true, total, page, pages: Math.ceil(total / limit), orgs: enriched });
@@ -498,7 +504,7 @@ const superAdminController = {
     try {
       const orgId = new mongoose.Types.ObjectId(req.params.id);
 
-      const [org, users, leadStats, projectCount, automations, leadSizeAgg, userSizeAgg] = await Promise.all([
+      const [org, users, leadStats, projectCount, automations, leadSizeAgg, userSizeAgg, aiUsageHistory] = await Promise.all([
         Organization.findById(orgId).lean(),
         User.find({ orgId }).select("name email role phone isActive lastLogin createdAt avatar").lean(),
         Lead.aggregate([
@@ -517,6 +523,7 @@ const superAdminController = {
           { $project: { s: { $bsonSize: "$$ROOT" } } },
           { $group: { _id: null, total: { $sum: "$s" } } },
         ]).catch(() => []),
+        AiUsage.find({ orgId }).sort({ month: -1 }).limit(6).lean().catch(() => []),
       ]);
 
       if (!org) return next(new AppError("Organisation not found", 404));
@@ -537,6 +544,7 @@ const superAdminController = {
         projectCount,
         automations,
         storageBytes,
+        aiUsage: aiUsageHistory,
       });
     } catch (err) {
       next(err);

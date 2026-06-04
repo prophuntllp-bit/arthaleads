@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { BookMarked, Plus, FileText, X, Check, ChevronDown, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { BookMarked, Plus, FileText, X, Check, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { AppSelect } from "../components/UI";
 import { useNavigate } from "react-router-dom";
 
 const UNIT_TYPES = ["Flat", "Plot", "Villa", "Shop", "Office", "Other"];
@@ -186,14 +187,13 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               <p className="text-xs font-bold text-app-soft uppercase tracking-wide pt-1">Unit Details</p>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Developer *</label>
-                <div className="relative">
-                  <select value={form.developerId} onChange={e => set("developerId", e.target.value)}
-                    className="input w-full text-sm appearance-none pr-8 cursor-pointer">
-                    <option value="">-- Select developer --</option>
-                    {developers.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
-                </div>
+                <AppSelect
+                  value={form.developerId}
+                  onChange={v => set("developerId", v)}
+                  placeholder="-- Select developer --"
+                  options={developers.map(d => ({ value: d._id, label: d.name }))}
+                  triggerClassName="text-sm"
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Project Name *</label>
@@ -208,13 +208,12 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">Unit Type</label>
-                  <div className="relative">
-                    <select value={form.unitType} onChange={e => set("unitType", e.target.value)}
-                      className="input w-full text-sm appearance-none pr-7 cursor-pointer">
-                      {UNIT_TYPES.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-app-soft pointer-events-none" />
-                  </div>
+                  <AppSelect
+                    value={form.unitType}
+                    onChange={v => set("unitType", v)}
+                    options={UNIT_TYPES}
+                    triggerClassName="text-sm"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Building2, Plus, Pencil, Trash2, X, Check, ChevronDown, Upload } from "lucide-react";
+import { Building2, Plus, Pencil, Trash2, X, Check, Upload } from "lucide-react";
+import { AppSelect } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -217,14 +218,15 @@ function DevModal({ dev, onClose, onSaved }) {
 
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Invoice Template</label>
-              <div className="relative">
-                <select value={form.invoiceTemplate} onChange={e => set("invoiceTemplate", e.target.value)}
-                  className="input w-full text-sm appearance-none pr-8 cursor-pointer">
-                  <option value="detailed">Detailed (with brokerage breakdown)</option>
-                  <option value="simple">Simple (flat amount)</option>
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
-              </div>
+              <AppSelect
+                value={form.invoiceTemplate}
+                onChange={v => set("invoiceTemplate", v)}
+                options={[
+                  { value: "detailed", label: "Detailed (with brokerage breakdown)" },
+                  { value: "simple",   label: "Simple (flat amount)" },
+                ]}
+                triggerClassName="text-sm"
+              />
             </div>
           </div>
         </div>

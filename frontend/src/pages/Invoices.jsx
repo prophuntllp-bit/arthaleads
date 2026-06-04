@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FileText, X, Printer, ChevronDown, Send, CheckCircle2, Clock, FileCheck, RotateCcw } from "lucide-react";
+import { FileText, X, Printer, Send, CheckCircle2, Clock, FileCheck, Pencil, Check } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import { AppSelect } from "../components/UI";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,7 @@ function SimpleInvoicePDF({ inv, org }) {
       fontFamily: "Arial, sans-serif", fontSize: 12, color: "#1a1a1a",
       maxWidth: 720, margin: "0 auto", background: "#fff",
     }}>
-      <Letterhead org={org} invNumber={inv.invoiceNumber} invDate={inv.invoiceDate} />
+      <Letterhead org={org} invNumber={inv.customInvoiceNumber || inv.invoiceNumber} invDate={inv.invoiceDate} />
 
       <div style={{ padding: "16px 20px" }}>
         {/* Bill To + Invoice Meta */}
@@ -162,7 +163,7 @@ function SimpleInvoicePDF({ inv, org }) {
           }}>
             <p style={{ fontSize: 9, fontWeight: "bold", color: "#888", letterSpacing: 1, marginBottom: 6 }}>INVOICE DETAILS</p>
             {[
-              ["Invoice No", inv.invoiceNumber],
+              ["Invoice No", inv.customInvoiceNumber || inv.invoiceNumber],
               ["Date",       fmtDate(inv.invoiceDate)],
               ["GST Type",   inv.gstType || "CGST+SGST"],
             ].map(([k, v]) => (
@@ -289,7 +290,7 @@ function DetailedInvoicePDF({ inv, org }) {
       fontFamily: "Arial, sans-serif", fontSize: 11, color: "#1a1a1a",
       maxWidth: 760, margin: "0 auto", background: "#fff",
     }}>
-      <Letterhead org={org} invNumber={inv.invoiceNumber} invDate={inv.invoiceDate} />
+      <Letterhead org={org} invNumber={inv.customInvoiceNumber || inv.invoiceNumber} invDate={inv.invoiceDate} />
 
       <div style={{ padding: "16px 20px" }}>
         {/* To / From */}
@@ -462,7 +463,7 @@ function PDFModal({ inv, org, onClose }) {
     const content = printRef.current?.innerHTML;
     const win = window.open("", "_blank");
     win.document.write(`
-      <html><head><title>Invoice #${inv.invoiceNumber} - ${inv.customerName}</title>
+      <html><head><title>Invoice #${inv.customInvoiceNumber || inv.invoiceNumber} - ${inv.customerName}</title>
       <style>
         * { box-sizing: border-box; }
         body { margin: 0; font-family: Arial, sans-serif; }
@@ -481,7 +482,7 @@ function PDFModal({ inv, org, onClose }) {
       <div className="w-full max-w-3xl" style={{ background: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 25px 60px rgba(0,0,0,0.4)" }}>
         {/* Toolbar */}
         <div className="no-print flex items-center justify-between px-4 py-3 bg-gray-100">
-          <p className="font-bold text-gray-800 text-sm">Invoice #{inv.invoiceNumber} — {inv.customerName}</p>
+          <p className="font-bold text-gray-800 text-sm">Invoice #{inv.customInvoiceNumber || inv.invoiceNumber} — {inv.customerName}</p>
           <div className="flex items-center gap-2">
             <button onClick={handlePrint}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold cursor-pointer transition text-white"
@@ -509,8 +510,11 @@ export default function Invoices() {
   const [invoices, setInvoices]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [statusFilter, setFilter] = useState("all");
-  const [viewInv, setViewInv]     = useState(null);
-  const [updating, setUpdating]   = useState(null);
+  const [viewInv, setViewInv]         = useState(null);
+  const [updating, setUpdating]       = useState(null);
+  const [editingNum, setEditingNum]   = useState(null); // inv._id being edited
+  const [editNumVal, setEditNumVal]   = useState("");
+  const editNumRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -530,6 +534,23 @@ export default function Invoices() {
       toast.success(`Invoice marked as "${STATUS[status]?.label}".`);
     } catch { toast.error("Failed to update status."); }
     finally { setUpdating(null); }
+  };
+
+  const startEditNum = (inv) => {
+    setEditingNum(inv._id);
+    setEditNumVal(inv.customInvoiceNumber || String(inv.invoiceNumber));
+    setTimeout(() => editNumRef.current?.select(), 30);
+  };
+
+  const saveInvoiceNumber = async (inv) => {
+    const trimmed = editNumVal.trim();
+    setEditingNum(null);
+    if (!trimmed || trimmed === (inv.customInvoiceNumber || String(inv.invoiceNumber))) return;
+    try {
+      const { data } = await api.patch(`/invoices/${inv._id}/number`, { invoiceNumber: trimmed });
+      setInvoices(list => list.map(x => x._id === inv._id ? data.data : x));
+      toast.success("Invoice number updated.");
+    } catch { toast.error("Failed to update invoice number."); }
   };
 
   const filtered = statusFilter === "all" ? invoices : invoices.filter(i => i.status === statusFilter);
@@ -602,7 +623,34 @@ export default function Invoices() {
                     <tr key={inv._id} style={{ borderBottom: "1px solid var(--app-border)" }}
                       className="hover:bg-black/2 dark:hover:bg-white/2 transition">
                       <td className="px-4 py-3">
-                        <span className="font-black text-app text-base">#{inv.invoiceNumber}</span>
+                        {editingNum === inv._id ? (
+                          <div className="flex items-center gap-1">
+                            <span className="font-black text-app-soft text-base">#</span>
+                            <input
+                              ref={editNumRef}
+                              value={editNumVal}
+                              onChange={e => setEditNumVal(e.target.value)}
+                              onBlur={() => saveInvoiceNumber(inv)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") { e.target.blur(); }
+                                if (e.key === "Escape") { setEditingNum(null); }
+                              }}
+                              className="input text-sm font-bold w-24 py-0.5 px-1.5"
+                              style={{ height: 28 }}
+                            />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditNum(inv)}
+                            className="group flex items-center gap-1.5 hover:opacity-80 transition cursor-pointer"
+                            title="Click to edit invoice number"
+                          >
+                            <span className="font-black text-app text-base">
+                              #{inv.customInvoiceNumber || inv.invoiceNumber}
+                            </span>
+                            <Pencil className="h-3 w-3 text-app-soft opacity-0 group-hover:opacity-100 transition" />
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-semibold text-app">{inv.customerName}</p>
@@ -620,21 +668,22 @@ export default function Invoices() {
                         <p className="text-[10px] text-app-soft">Brok: {fmtINR(inv.totalBrokerage)}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="relative">
-                          <select
+                        {updating === inv._id ? (
+                          <span className="inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: s.bg, color: s.color }}>
+                            <span className="h-2.5 w-2.5 rounded-full border-2 border-current border-t-transparent animate-spin inline-block" />
+                            {s.label}
+                          </span>
+                        ) : (
+                          <AppSelect
                             value={inv.status}
+                            onChange={v => updateStatus(inv, v)}
                             disabled={updating === inv._id}
-                            onChange={e => updateStatus(inv, e.target.value)}
-                            className="appearance-none pl-2 pr-6 py-1 rounded-lg text-[10px] font-bold cursor-pointer border-0 outline-none disabled:opacity-60"
-                            style={{ background: s.bg, color: s.color }}>
-                            {STATUS_ORDER.map(k => (
-                              <option key={k} value={k}>{STATUS[k].label}</option>
-                            ))}
-                          </select>
-                          {updating === inv._id
-                            ? <span className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full border border-current border-t-transparent animate-spin" style={{ color: s.color }} />
-                            : <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-2.5 w-2.5 pointer-events-none" style={{ color: s.color }} />}
-                        </div>
+                            options={STATUS_ORDER.map(k => ({ value: k, label: STATUS[k].label }))}
+                            raw
+                            triggerClassName="pl-2.5 pr-2 py-1 rounded-lg text-[10px] font-bold"
+                            triggerStyle={{ background: s.bg, color: s.color }}
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-xs text-app-soft whitespace-nowrap">
                         {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}

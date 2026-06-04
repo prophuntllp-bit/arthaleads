@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
 import api from "../services/api";
-import { PageLoader } from "../components/UI";
+import { PageLoader, AppSelect } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
@@ -302,17 +302,14 @@ export default function Performance() {
             {members.length > 1 && (
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>Agent</span>
-                <select
+                <AppSelect
                   value={filterMemberId}
-                  onChange={(e) => setFilterMemberId(e.target.value)}
-                  className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
-                  style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)", minWidth: 140 }}
-                >
-                  <option value="">All Members</option>
-                  {members.map((m) => (
-                    <option key={m._id} value={m._id}>{m.name}</option>
-                  ))}
-                </select>
+                  onChange={setFilterMemberId}
+                  placeholder="All Members"
+                  options={[{ value: "", label: "All Members" }, ...members.map(m => ({ value: m._id, label: m.name }))]}
+                  className="min-w-[140px]"
+                  triggerClassName="text-xs py-1.5"
+                />
                 {filterMemberId && (
                   <button
                     onClick={() => setFilterMemberId("")}

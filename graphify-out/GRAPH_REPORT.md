@@ -1,7 +1,7 @@
-# Graph Report - PROPHUNT CRM  (2026-05-23)
+# Graph Report - PROPHUNT CRM  (2026-06-04)
 
 ## Corpus Check
-- 132 files · ~220,018 words
+- 140+ files · ~240,000+ words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,35 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `822da4b9`
+- Built from commit: `822da4b9` — **STALE** (run `graphify update .` to refresh)
+- Current HEAD is far ahead; graph does not reflect the following major additions:
+
+### Changes Since Last Graph Build
+**New Models**
+- `backend/models/AiUsage.js` — monthly AI copilot usage per org (calls, promptTokens, completionTokens, totalTokens)
+- `backend/models/Developer.js` — added `logo` field (Cloudinary URL or base64)
+
+**New Routes / Fields**
+- `PATCH /api/invoices/:id/number` — override invoice number with a custom string
+- `PATCH /api/org/me/billing` — save org billing/letterhead details (address, GST, PAN, bank, etc.)
+- `PATCH /api/org/me/logo` — upload org logo via admin Settings
+- `Invoice.customInvoiceNumber` — custom string override for display; auto-increment `invoiceNumber` still used as fallback
+- `Organization` billing fields — address, phone, email, gstNo, pan, cin, rera, bankAccountName, bankAccountNo, bankIfsc, bankName, bankBranch
+
+**New Frontend Components / Pages**
+- `AppSelect` (UI.jsx) — fully themed portal-based custom dropdown; replaces all native `<select>` across the app
+- `SuperAdminOrgDetail.jsx` — new **Billing tab** (Legal/Tax + Bank details read-only view)
+- `SuperAdminOrgDetail.jsx` — new **AI Calls** column in org list; last 6 months usage history in org detail
+- `ErrorBoundary.jsx` — `isChunkError()` auto-reload on stale Vite chunk errors (fixes post-deploy 500)
+- `Invoices.jsx` — full letterhead redesign using `parseBrand(org)` brand color; invoice number inline-editable
+
+**Key Relationships Added**
+- `helpRoutes /ask` → `AiUsage.findOneAndUpdate` (fire-and-forget usage tracking after each copilot call)
+- `authService.getMe/login/googleAuth` now selects all org billing fields (previously omitted, causing Settings form to appear empty)
+- `Bookings.jsx` DELETE → cascade-deletes linked `Invoice` document
+- `superAdminController.listOrgs` → `AiUsage` aggregation for current-month call counts per org
+- `superAdminController.getOrgDetail` → `AiUsage` last-6-months history
+
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -117,12 +145,12 @@ Nodes (60): CursorGlow(), AuthContext, AuthProvider(), useAuth(), DumpLeads(), N
 
 ### Community 5 - "Community 5"
 Cohesion: 0.28
-Nodes (11): authController, express, { protect, authorize }, router, {
-  signupSchema,
-  loginSchema,
-  createUserSchema,
-  updateUserSchema,
-  updateProfileSchema,
+Nodes (11): authController, express, { protect, authorize }, router, {
+  signupSchema,
+  loginSchema,
+  createUserSchema,
+  updateUserSchema,
+  updateProfileSchema,
 }, validate, createUserSchema, loginSchema (+3 more)
 
 ### Community 6 - "Community 6"

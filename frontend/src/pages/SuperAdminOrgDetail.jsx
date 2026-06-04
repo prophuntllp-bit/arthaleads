@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { PageLoader, Spinner } from "../components/UI";
+import { PageLoader, Spinner, AppSelect } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -521,16 +521,14 @@ export default function SuperAdminOrgDetail() {
         <div>
           {/* Filter + refresh */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <select
-              className="input text-sm px-3 py-2 w-52"
+            <AppSelect
               value={actAction}
-              onChange={e => { setActAction(e.target.value); setActPage(1); }}
-            >
-              <option value="">All Actions</option>
-              {ALL_ACTIONS.map(a => (
-                <option key={a} value={a}>{ACTION_LABELS[a]?.label}</option>
-              ))}
-            </select>
+              onChange={v => { setActAction(v); setActPage(1); }}
+              placeholder="All Actions"
+              options={[{ value: "", label: "All Actions" }, ...ALL_ACTIONS.map(a => ({ value: a, label: ACTION_LABELS[a]?.label }))]}
+              className="w-52"
+              triggerClassName="text-sm"
+            />
             {actAction && (
               <button onClick={() => { setActAction(""); setActPage(1); }}
                 className="text-xs text-app-soft hover:text-app transition cursor-pointer">

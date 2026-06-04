@@ -490,9 +490,10 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
       comingSoon: Boolean(parsed.comingSoon),
       action: parsed.action || null,
       _model: model,
+      _usage: response.usage || null,
     };
   } catch {
-    return { answer: raw, suggestTicket: false, comingSoon: false, action: null };
+    return { answer: raw, suggestTicket: false, comingSoon: false, action: null, _usage: response.usage || null };
   }
 }
 

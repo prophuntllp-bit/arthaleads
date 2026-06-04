@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { AppSelect } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 
 // ── Static data ──────────────────────────────────────────────────────────────
@@ -527,17 +528,19 @@ function RaiseTicketModal({ onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5 uppercase tracking-wide">Category</label>
-              <select className="input w-full" value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <AppSelect
+                value={form.category}
+                onChange={v => setForm(f => ({ ...f, category: v }))}
+                options={CATEGORIES.map(c => ({ value: c.value, label: c.label }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5 uppercase tracking-wide">Priority</label>
-              <select className="input w-full" value={form.priority}
-                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
+              <AppSelect
+                value={form.priority}
+                onChange={v => setForm(f => ({ ...f, priority: v }))}
+                options={PRIORITIES.map(p => ({ value: p.value, label: p.label }))}
+              />
             </div>
           </div>
 

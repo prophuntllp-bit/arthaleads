@@ -398,3 +398,118 @@ export function WhatsAppLink({ phone, name, onContact }) {
     </div>
   );
 }
+
+// ── AppSelect ─────────────────────────────────────────────────────────────────
+// Themed custom dropdown that respects --app-* CSS variables.
+// options: string[] | { value, label }[]
+// raw: skips .input class on trigger (use for badge/pill variants via triggerStyle)
+export function AppSelect({
+  value, onChange, options = [], disabled, placeholder = "Select…",
+  className = "", style,
+  triggerClassName = "", triggerStyle,
+  raw = false,
+}) {
+  const [open, setOpen]     = useState(false);
+  const [dropPos, setDropPos] = useState(null);
+  const triggerRef = useRef(null);
+  const dropRef    = useRef(null);
+
+  const normalised = options.map(o =>
+    (typeof o === "string" || typeof o === "number") ? { value: String(o), label: String(o) } : { value: String(o.value), label: String(o.label) }
+  );
+  const selected = normalised.find(o => o.value === String(value));
+
+  const openDrop = () => {
+    if (disabled) return;
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (r) { setDropPos({ ...r }); setOpen(true); }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const reposition = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (r) setDropPos({ ...r });
+    };
+    const onDown = (e) => {
+      if (!triggerRef.current?.contains(e.target) && !dropRef.current?.contains(e.target))
+        setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const baseCls = raw
+    ? `flex items-center justify-between gap-2 cursor-pointer select-none disabled:opacity-60 ${triggerClassName}`
+    : `input w-full text-left flex items-center justify-between gap-2 cursor-pointer select-none disabled:opacity-60 ${triggerClassName}`;
+
+  return (
+    <div className={`relative ${className}`} style={style}>
+      <button
+        ref={triggerRef}
+        type="button"
+        disabled={disabled}
+        onClick={openDrop}
+        className={baseCls}
+        style={triggerStyle}
+      >
+        <span className="flex-1 truncate min-w-0 text-left">
+          {selected ? selected.label : <span style={{ color: "var(--app-text-soft)" }}>{placeholder}</span>}
+        </span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          style={{ color: triggerStyle?.color ?? "var(--app-text-soft)", opacity: 0.7 }}
+        />
+      </button>
+
+      {open && dropPos && createPortal(
+        <div
+          ref={dropRef}
+          className="fixed z-[500] rounded-xl overflow-hidden py-1"
+          style={{
+            top:       dropPos.bottom + 4,
+            left:      dropPos.left,
+            minWidth:  dropPos.width,
+            maxHeight: 260,
+            overflowY: "auto",
+            background:    "var(--app-surface)",
+            border:        "1px solid var(--app-border)",
+            boxShadow:     "0 8px 32px rgba(0,0,0,0.18)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
+          {normalised.map(opt => {
+            const active = opt.value === String(value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onMouseDown={e => { e.preventDefault(); onChange(opt.value); setOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm transition-colors"
+                style={{
+                  background: active ? "var(--app-primary)" : "transparent",
+                  color:      active ? "#fff" : "var(--app-text)",
+                  cursor:     "pointer",
+                }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = "var(--app-surface-low)"; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}

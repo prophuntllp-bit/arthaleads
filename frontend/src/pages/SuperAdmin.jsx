@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner } from "../components/UI";
+import { PageLoader, Spinner, AppSelect } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -239,6 +239,9 @@ function LogoUploader({ org, onUpdated }) {
   const inputRef  = useRef(null);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(org.logo || "");
+
+  // Sync preview when org.logo prop changes (e.g. org admin uploaded via Settings)
+  useEffect(() => { setPreview(org.logo || ""); }, [org.logo]);
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -1097,19 +1100,19 @@ function TicketDetailModal({ ticket: initialTicket, onClose, onUpdated }) {
           <div className="w-72 flex-shrink-0 overflow-y-auto p-5 space-y-5">
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Status</label>
-              <select className="input w-full" value={status} onChange={e => setStatus(e.target.value)}>
-                {TICKET_STATUSES.filter(s => s.value !== "all").map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+              <AppSelect
+                value={status}
+                onChange={setStatus}
+                options={TICKET_STATUSES.filter(s => s.value !== "all").map(s => ({ value: s.value, label: s.label }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Priority</label>
-              <select className="input w-full" value={priority} onChange={e => setPriority(e.target.value)}>
-                {["low", "medium", "high", "urgent"].map(p => (
-                  <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                ))}
-              </select>
+              <AppSelect
+                value={priority}
+                onChange={setPriority}
+                options={["low","medium","high","urgent"].map(p => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">
@@ -1468,6 +1471,7 @@ export default function SuperAdmin() {
                   <th>Plan</th>
                   <th className="text-center">Users</th>
                   <th className="text-center">Leads</th>
+                  <th className="text-center">AI Calls</th>
                   <th>Logo</th>
                   <th>Brand Colour</th>
                   <th>Change Plan</th>

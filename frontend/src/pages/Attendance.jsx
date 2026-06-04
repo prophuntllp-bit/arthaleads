@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Spinner, EmptyState } from "../components/UI";
+import { Spinner, EmptyState, AppSelect } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
 import api from "../services/api";
@@ -522,13 +522,14 @@ export default function Attendance() {
             {isAdmin && teamMembers.length > 0 && (
               <div className="flex items-center gap-2">
                 <label className="text-xs text-app-soft font-medium">Member</label>
-                <select className="input text-xs py-1.5 px-3" value={filterUser}
-                  onChange={e => { setFilterUser(e.target.value); setPage(1); }}>
-                  <option value="">All members</option>
-                  {teamMembers.map(m => (
-                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={filterUser}
+                  onChange={v => { setFilterUser(v); setPage(1); }}
+                  placeholder="All members"
+                  options={[{ value: "", label: "All members" }, ...teamMembers.map(m => ({ value: m._id, label: `${m.name} (${m.role})` }))]}
+                  className="w-44"
+                  triggerClassName="text-xs py-1.5"
+                />
               </div>
             )}
             <span className="text-xs text-app-soft">{total} record{total !== 1 ? "s" : ""}</span>
@@ -771,13 +772,12 @@ export default function Attendance() {
             <form onSubmit={handleAdminEntry} className="flex flex-col gap-4">
               <div>
                 <label className="label">Member</label>
-                <select className="input" required value={entryForm.userId}
-                  onChange={e => setEntryForm(f => ({ ...f, userId: e.target.value }))}>
-                  <option value="">Select member</option>
-                  {teamMembers.map(m => (
-                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={entryForm.userId}
+                  onChange={v => setEntryForm(f => ({ ...f, userId: v }))}
+                  placeholder="Select member"
+                  options={[{ value: "", label: "Select member" }, ...teamMembers.map(m => ({ value: m._id, label: `${m.name} (${m.role})` }))]}
+                />
               </div>
               <div>
                 <label className="label">Date</label>
