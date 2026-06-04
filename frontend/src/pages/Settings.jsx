@@ -6,6 +6,72 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
 
+// ── Indian Banks list ─────────────────────────────────────────────────────────
+const INDIAN_BANKS = [
+  "Axis Bank","AU Small Finance Bank","Bandhan Bank","Bank of Baroda","Bank of India",
+  "Bank of Maharashtra","Canara Bank","Central Bank of India","City Union Bank",
+  "CSB Bank","DCB Bank","Dhanlaxmi Bank","Equitas Small Finance Bank",
+  "ESAF Small Finance Bank","Federal Bank","Fincare Small Finance Bank",
+  "HDFC Bank","ICICI Bank","IDBI Bank","IDFC First Bank","Indian Bank",
+  "Indian Overseas Bank","IndusInd Bank","J&K Bank","Jana Small Finance Bank",
+  "Karnataka Bank","Karur Vysya Bank","Kotak Mahindra Bank","Lakshmi Vilas Bank",
+  "Nainital Bank","North East Small Finance Bank","Punjab & Sind Bank",
+  "Punjab National Bank","RBL Bank","Saraswat Bank","South Indian Bank",
+  "State Bank of India","Suryoday Small Finance Bank","Tamilnad Mercantile Bank",
+  "UCO Bank","Ujjivan Small Finance Bank","Union Bank of India","Utkarsh Small Finance Bank",
+  "YES Bank",
+];
+
+// Searchable bank dropdown
+function BankSearchInput({ value, onChange, className }) {
+  const [query, setQuery]   = useState(value || "");
+  const [open, setOpen]     = useState(false);
+  const wrapRef             = useRef(null);
+
+  useEffect(() => { setQuery(value || ""); }, [value]);
+
+  const matches = query.trim()
+    ? INDIAN_BANKS.filter(b => b.toLowerCase().includes(query.toLowerCase()))
+    : [];
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!wrapRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={() => query && setOpen(true)}
+        placeholder="e.g. State Bank of India"
+        className={className}
+        autoComplete="off"
+      />
+      {open && matches.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-2xl shadow-xl overflow-hidden overflow-y-auto"
+          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: 220 }}>
+          {matches.map(bank => (
+            <button
+              key={bank}
+              type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(bank); setQuery(bank); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition text-app"
+            >
+              {bank}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Compress image to JPEG ≤ 400×400 before upload
 function compressImage(dataUri, maxPx = 400) {
   return new Promise((resolve) => {
@@ -126,7 +192,7 @@ const BILLING_FIELDS = [
     { key: "bankAccountName", label: "Account Name",     placeholder: "e.g. Your Company Name" },
     { key: "bankAccountNo",   label: "Account Number",   placeholder: "e.g. 000000000000", mono: true },
     { key: "bankIfsc",        label: "IFSC Code",        placeholder: "e.g. SBIN0000000",  mono: true },
-    { key: "bankName",        label: "Bank Name",        placeholder: "e.g. State Bank of India" },
+    { key: "bankName",        label: "Bank Name",        placeholder: "e.g. State Bank of India", bankSearch: true },
     { key: "bankBranch",      label: "Branch / Address", placeholder: "e.g. MG Road Branch, Mumbai", col: 2 },
   ]},
 ];
@@ -233,7 +299,7 @@ function OrgBillingSection({ org, updateOrg }) {
             <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {fields.map(({ key, label, placeholder, mono, col }) => (
+            {fields.map(({ key, label, placeholder, mono, col, bankSearch }) => (
               <div key={key} className={col === 2 ? "sm:col-span-2" : ""}>
                 <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1 block">
                   {label}
@@ -241,17 +307,25 @@ function OrgBillingSection({ org, updateOrg }) {
                     <span style={{ color: "#ef4444" }}>*</span>
                   )}
                 </label>
-                <input
-                  value={form[key]}
-                  onChange={e => set(key, key === "gstNo" || key === "pan" || key === "cin" || key === "bankIfsc"
-                    ? e.target.value.toUpperCase()
-                    : e.target.value)}
-                  placeholder={placeholder}
-                  className={`input w-full text-sm ${mono ? "font-mono" : ""}`}
-                  style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
-                    ? { borderColor: "rgba(245,158,11,0.6)" }
-                    : {}}
-                />
+                {bankSearch ? (
+                  <BankSearchInput
+                    value={form[key]}
+                    onChange={v => set(key, v)}
+                    className={`input w-full text-sm${BILLING_REQUIRED.includes(key) && !form[key]?.trim() ? " border-yellow-400/60" : ""}`}
+                  />
+                ) : (
+                  <input
+                    value={form[key]}
+                    onChange={e => set(key, ["gstNo","pan","cin","bankIfsc"].includes(key)
+                      ? e.target.value.toUpperCase()
+                      : e.target.value)}
+                    placeholder={placeholder}
+                    className={`input w-full text-sm ${mono ? "font-mono" : ""}`}
+                    style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
+                      ? { borderColor: "rgba(245,158,11,0.6)" }
+                      : {}}
+                  />
+                )}
               </div>
             ))}
           </div>
