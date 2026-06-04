@@ -10,7 +10,7 @@ import {
   Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
   RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
   Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
-  Send, Paperclip, Image, FileText, Loader2,
+  Send, Paperclip, FileText, Loader2,
 } from "lucide-react";
 
 function PlanBadge({ plan }) {
