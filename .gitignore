@@ -22,8 +22,15 @@ yarn-error.log*
 
 .vercel
 
+# Capacitor Android project — generated via "npx cap add android", not committed
+# google-services.json is kept (non-sensitive Firebase project config)
+frontend/android/
+!frontend/android/app/google-services.json
+
 # Android release — keystore & binaries (keep private)
 android-release/
+*.keystore
+*.jks
 
 # Python bytecode
 __pycache__/
