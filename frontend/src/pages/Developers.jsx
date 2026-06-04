@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Building2, Plus, Pencil, Trash2, X, Check, ChevronDown } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Building2, Plus, Pencil, Trash2, X, Check, ChevronDown, Upload } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -7,8 +7,81 @@ const EMPTY = {
   name: "", address: "", pan: "", cin: "", gstNo: "",
   reraNumbers: [], defaultBrokeragePercent: 2,
   defaultFosIncentive: 0, defaultEoiIncentive: 0,
-  invoiceTemplate: "detailed",
+  invoiceTemplate: "detailed", logo: "",
 };
+
+function compressImage(dataUri, maxPx = 400) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
+
+function DevLogoUpload({ value, onChange }) {
+  const inputRef    = useRef(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Only image files supported");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
+    setBusy(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const compressed = await compressImage(ev.target.result);
+        onChange(compressed);
+      } finally { setBusy(false); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        onClick={() => !busy && inputRef.current?.click()}
+        className="w-16 h-12 rounded-xl flex items-center justify-center overflow-hidden cursor-pointer shrink-0"
+        style={{ background: "var(--app-surface-low)",
+          border: value ? "2px solid var(--app-primary)" : "2px dashed var(--app-border)" }}
+        title="Click to upload logo"
+      >
+        {busy ? (
+          <span className="h-4 w-4 rounded-full border-2 border-orange-400 border-t-transparent animate-spin" />
+        ) : value ? (
+          <img src={value} alt="logo" className="max-w-full max-h-full object-contain p-1"
+            onError={() => onChange("")} />
+        ) : (
+          <Upload className="h-4 w-4 text-app-soft" />
+        )}
+      </div>
+      <div>
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}
+          className="btn-secondary rounded-xl text-xs px-3 py-1.5 flex items-center gap-1.5 disabled:opacity-50">
+          <Upload className="h-3 w-3" /> {value ? "Change Logo" : "Upload Logo"}
+        </button>
+        {value && (
+          <button type="button" onClick={() => onChange("")}
+            className="mt-1 text-[11px] text-app-soft hover:text-red-500 transition flex items-center gap-1">
+            <X className="h-3 w-3" /> Remove
+          </button>
+        )}
+        <p className="text-[10px] text-app-soft mt-0.5">Optional · PNG, JPG or SVG</p>
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
 
 function ReraInput({ value, onChange }) {
   const [input, setInput] = useState("");
@@ -80,6 +153,10 @@ function DevModal({ dev, onClose, onSaved }) {
 
         <div className="px-5 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "70vh" }}>
           <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">Developer Logo <span className="font-normal opacity-60">(optional)</span></label>
+              <DevLogoUpload value={form.logo} onChange={v => set("logo", v)} />
+            </div>
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Developer / Builder Name *</label>
               <input value={form.name} onChange={e => set("name", e.target.value)}
@@ -227,9 +304,22 @@ export default function Developers() {
             <div key={dev._id} className="card rounded-2xl p-4"
               style={{ border: "1px solid var(--app-border)" }}>
               <div className="flex items-start justify-between gap-2 mb-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-app text-sm leading-tight">{dev.name}</p>
-                  {dev.address && <p className="text-xs text-app-soft mt-0.5 line-clamp-2">{dev.address}</p>}
+                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                  {dev.logo ? (
+                    <img src={dev.logo} alt={dev.name}
+                      className="w-10 h-8 rounded-lg object-contain shrink-0"
+                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", padding: 3 }}
+                      onError={e => { e.target.style.display = "none"; }} />
+                  ) : (
+                    <div className="w-10 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                      <Building2 className="h-4 w-4 text-app-soft opacity-50" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-bold text-app text-sm leading-tight">{dev.name}</p>
+                    {dev.address && <p className="text-xs text-app-soft mt-0.5 line-clamp-2">{dev.address}</p>}
+                  </div>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button onClick={() => setModal(dev)}

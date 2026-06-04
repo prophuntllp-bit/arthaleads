@@ -15,6 +15,7 @@ const developerSchema = new mongoose.Schema(
     defaultFosIncentive:     { type: Number, default: 0,  min: 0 },
     defaultEoiIncentive:     { type: Number, default: 0,  min: 0 },
     invoiceTemplate: { type: String, enum: ["simple", "detailed"], default: "detailed" },
+    logo:     { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
