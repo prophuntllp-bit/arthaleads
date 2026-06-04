@@ -33,7 +33,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -1515,9 +1515,6 @@ export default function Leads() {
                     <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
                     <td>
                       <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
-                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-white/5 hover:text-app" onClick={() => setDetailLead(lead)} title="View">
-                          <Eye className="h-4 w-4" />
-                        </button>
                         <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -1603,7 +1600,13 @@ export default function Leads() {
       </section>
 
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />
-      <LeadDetail open={!!detailLead} onClose={() => setDetailLead(null)} lead={detailLead} onUpdated={handleDetailUpdated} />
+      <LeadDetail
+        open={!!detailLead}
+        onClose={() => setDetailLead(null)}
+        lead={detailLead}
+        onUpdated={handleDetailUpdated}
+        onEdit={(lead) => { setDetailLead(null); setEditLead(lead); setShowForm(true); }}
+      />
       <ConfirmDialog
         open={!!deletingId}
         onClose={() => setDeletingId(null)}

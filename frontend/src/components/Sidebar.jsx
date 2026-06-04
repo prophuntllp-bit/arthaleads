@@ -733,8 +733,16 @@ export default function Sidebar() {
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2.5 flex items-center justify-between border-b sidebar-glass mobile-topbar"
-        style={{ borderColor: "var(--app-border)", minHeight: 52 }}
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2.5 flex items-center justify-between mobile-topbar"
+        style={{
+          minHeight: 52,
+          background: "var(--app-surface)",
+          backdropFilter: "blur(20px) saturate(160%)",
+          WebkitBackdropFilter: "blur(20px) saturate(160%)",
+          borderBottom: "1px solid var(--app-border)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+        }}
       >
         {/* Search overlay mode */}
         {mobileSearchOpen ? (

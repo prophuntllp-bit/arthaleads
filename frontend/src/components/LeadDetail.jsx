@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
@@ -24,7 +24,7 @@ function Info({ label, value }) {
   );
 }
 
-export default function LeadDetail({ open, onClose, lead, onUpdated }) {
+export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const { setFocusedLead } = useCopilot();
 
   useEffect(() => {
@@ -186,10 +186,23 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <SourceBadge source={lead.source} />
               <PriorityBadge priority={lead.priority} />
               <StatusBadge status={lead.status} />
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onEdit(lead); }}
+                  title="Edit lead"
+                  className="p-1.5 rounded-xl transition-colors"
+                  style={{ color: "var(--app-text-soft)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.10)"; e.currentTarget.style.color = "var(--app-primary)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--app-text-soft)"; }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
