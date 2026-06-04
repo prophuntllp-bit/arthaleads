@@ -91,13 +91,32 @@ connectDB().then(async () => {
 app.use(helmet());
 
 // CORS - allow multiple frontend origins from env
-const allowedOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
+// Auto-expand every entry to include both www. and non-www variants so Samsung
+// Android PWA installs always match regardless of which form the app was
+// installed from (arthaleads.com vs www.arthaleads.com).
+const _rawOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
   .split(",").map((o) => o.trim());
+
+const allowedOrigins = new Set(_rawOrigins);
+for (const o of _rawOrigins) {
+  try {
+    const { protocol, hostname, port } = new URL(o);
+    const p = port ? `:${port}` : "";
+    if (hostname.startsWith("www.")) {
+      allowedOrigins.add(`${protocol}//${hostname.slice(4)}${p}`);
+    } else {
+      allowedOrigins.add(`${protocol}//www.${hostname}${p}`);
+    }
+  } catch {}
+}
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS blocked: ${origin}`));
+    if (!origin || allowedOrigins.has(origin)) return cb(null, true);
+    // Use cb(null, false) — returns a proper 403 with CORS headers so the
+    // browser logs a clear CORS error rather than a generic 500 network failure.
+    logger.warn(`CORS blocked: ${origin}`);
+    cb(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

@@ -173,7 +173,11 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     setLoading(true);
-    const RETRY_DELAYS = [6000, 10000, 15000];
+    // Retry only for genuine cold-start network errors (no response at all).
+    // CORS failures also appear as network errors but won't resolve on retry —
+    // we limit to 2 retries so Samsung users don't wait 30+ seconds for a CORS
+    // block that will never resolve.
+    const RETRY_DELAYS = [6000, 12000];
     for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       try {
         await login(form.email, form.password);
@@ -184,14 +188,16 @@ export default function Login() {
         const isNetworkErr = !e.response && e.request;
         if (isNetworkErr && attempt < RETRY_DELAYS.length) {
           const secs = RETRY_DELAYS[attempt] / 1000;
-          setErr(`Server is warming up… retrying in ${secs}s`);
+          setErr(`Connecting to server… retrying in ${secs}s`);
           await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
           setErr("");
           continue;
         }
         setErr(
           e.response?.data?.message ||
-          (isNetworkErr ? "Could not reach the server. Check your connection and try again." : "Login failed. Please check your email/phone and password.")
+          (isNetworkErr
+            ? "Could not reach the server. Please check your internet connection and try again. If on mobile data, try switching to Wi-Fi."
+            : "Login failed. Please check your email/phone and password.")
         );
         break;
       }
