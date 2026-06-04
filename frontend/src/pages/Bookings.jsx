@@ -386,7 +386,7 @@ export default function Bookings() {
           <p className="text-sm text-app-soft mt-0.5">Track every closed deal and generate brokerage invoices</p>
         </div>
         <button onClick={() => setModal("new")}
-          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer">
+          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0">
           <Plus className="h-4 w-4" /> New Booking
         </button>
       </div>

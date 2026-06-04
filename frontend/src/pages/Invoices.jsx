@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FileText, X, Printer, Send, CheckCircle2, Clock, FileCheck, Pencil, Check } from "lucide-react";
+import { FileText, X, Download, Send, CheckCircle2, Clock, FileCheck, Pencil, Check } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
@@ -458,22 +458,29 @@ const STATUS_ORDER = ["draft", "sent", "payment_pending", "payment_received"];
 // ── PDF Modal ─────────────────────────────────────────────────────────────────
 function PDFModal({ inv, org, onClose }) {
   const printRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
 
-  const handlePrint = () => {
-    const content = printRef.current?.innerHTML;
-    const win = window.open("", "_blank");
-    win.document.write(`
-      <html><head><title>Invoice #${inv.customInvoiceNumber || inv.invoiceNumber} - ${inv.customerName}</title>
-      <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; font-family: Arial, sans-serif; }
-        @media print { body { margin: 0; } .no-print { display: none !important; } }
-      </style></head>
-      <body>${content}</body></html>
-    `);
-    win.document.close();
-    win.focus();
-    setTimeout(() => { win.print(); win.close(); }, 300);
+  const handleDownload = async () => {
+    if (!printRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
+      const filename = `Invoice-${inv.customInvoiceNumber || inv.invoiceNumber}-${inv.customerName.replace(/\s+/g, "_")}.pdf`;
+      await html2pdf()
+        .set({
+          margin: 0,
+          filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, logging: false },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(printRef.current)
+        .save();
+    } catch {
+      toast.error("Download failed. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -484,10 +491,12 @@ function PDFModal({ inv, org, onClose }) {
         <div className="no-print flex items-center justify-between px-4 py-3 bg-gray-100">
           <p className="font-bold text-gray-800 text-sm">Invoice #{inv.customInvoiceNumber || inv.invoiceNumber} — {inv.customerName}</p>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold cursor-pointer transition text-white"
+            <button onClick={handleDownload} disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold cursor-pointer transition text-white disabled:opacity-60"
               style={{ background: "#ff6b00" }}>
-              <Printer className="h-4 w-4" /> Print / Download PDF
+              {downloading
+                ? <><span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Downloading…</>
+                : <><Download className="h-4 w-4" /> Download PDF</>}
             </button>
             <button onClick={onClose} className="p-1.5 rounded-xl text-gray-500 hover:text-gray-800 cursor-pointer">
               <X className="h-5 w-5" />
@@ -693,7 +702,7 @@ export default function Invoices() {
                           onClick={() => setViewInv(inv)}
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer transition"
                           style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
-                          <Printer className="h-3 w-3" /> View PDF
+                          <Download className="h-3 w-3" /> Download PDF
                         </button>
                       </td>
                     </tr>
