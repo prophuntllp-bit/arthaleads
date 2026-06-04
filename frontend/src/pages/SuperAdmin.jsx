@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, AppSelect } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, AppDatePicker } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -577,13 +577,7 @@ function TrialExtender({ org, onUpdated }) {
             ) : (
               <div key="other" className="px-4 py-3 space-y-2 border-t" style={{ borderColor: "var(--app-border)" }}>
                 <p className="text-[11px] font-semibold text-app-soft">Custom end date</p>
-                <input
-                  type="date"
-                  min={minDate}
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  className="input w-full text-xs py-1.5 px-2"
-                />
+                <AppDatePicker value={custom} onChange={setCustom} min={minDate} />
                 <button
                   onClick={handleCustomSubmit}
                   disabled={!custom || saving}
@@ -1482,7 +1476,7 @@ export default function SuperAdmin() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
+                    <td colSpan={10} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
                   </tr>
                 ) : filtered.map((org) => {
                   const isTrialExpired = !!org.trialExpired;
@@ -1503,6 +1497,12 @@ export default function SuperAdmin() {
                       <td><PlanBadge plan={org.plan} /></td>
                       <td className="text-center font-bold text-app">{org.userCount}</td>
                       <td className="text-center font-bold text-app">{org.leadCount}</td>
+                      <td className="text-center">
+                        <span className="font-bold text-app">{org.aiCallsMonth || 0}</span>
+                        {org.aiCallsMonth > 0 && (
+                          <p className="text-[10px] text-app-soft">{(org.aiTokensMonth || 0).toLocaleString()} tok</p>
+                        )}
+                      </td>
                       <td>
                         <LogoUploader org={org} onUpdated={handleOrgUpdated} />
                       </td>

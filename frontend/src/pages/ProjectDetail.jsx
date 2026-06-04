@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
 import TransferModal from "../components/TransferModal";
@@ -1329,23 +1329,9 @@ export default function ProjectDetail() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-semibold text-app-soft">Follow-up date:</span>
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
-                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                value={prospDateFrom}
-                onChange={(e) => { setProspDateFrom(e.target.value); setProspPage(1); }}
-                title="From date"
-              />
+              <AppDatePicker value={prospDateFrom} onChange={v => { setProspDateFrom(v); setProspPage(1); }} className="w-36" />
               <span className="text-xs text-app-soft">to</span>
-              <input
-                type="date"
-                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
-                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                value={prospDateTo}
-                onChange={(e) => { setProspDateTo(e.target.value); setProspPage(1); }}
-                title="To date"
-              />
+              <AppDatePicker value={prospDateTo} onChange={v => { setProspDateTo(v); setProspPage(1); }} className="w-36" />
               {(prospDateFrom || prospDateTo) && (
                 <button
                   className="rounded-xl px-2.5 py-1 text-xs font-semibold text-orange-500 hover:bg-orange-500/10 transition border"

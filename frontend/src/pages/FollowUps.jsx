@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
+import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge, AppDatePicker } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -340,21 +340,11 @@ export default function FollowUps() {
           <>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">From</label>
-              <input
-                type="date"
-                className="input text-xs py-1.5 px-3"
-                value={from}
-                onChange={e => { setFrom(e.target.value); setPage(1); }}
-              />
+              <AppDatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} className="w-36" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">To</label>
-              <input
-                type="date"
-                className="input text-xs py-1.5 px-3"
-                value={to}
-                onChange={e => { setTo(e.target.value); setPage(1); }}
-              />
+              <AppDatePicker value={to} onChange={v => { setTo(v); setPage(1); }} className="w-36" />
             </div>
             {(from || to) && (
               <button

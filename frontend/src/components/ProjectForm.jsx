@@ -1,6 +1,6 @@
 ﻿// components/ProjectForm.jsx
 import { useEffect, useRef, useState } from "react";
-import { Modal, Spinner } from "./UI";
+import { Modal, Spinner, AppDatePicker } from "./UI";
 import { ChevronDown, ImageOff, Plus, Search, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -299,7 +299,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
             <div>
               <label className="label">Possession Date</label>
-              <input className="input" type="date" value={form.possessionDate} onChange={set("possessionDate")} />
+              <AppDatePicker value={form.possessionDate} onChange={v => setForm(f => ({ ...f, possessionDate: v }))} />
             </div>
           </div>
 

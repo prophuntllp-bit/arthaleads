@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
 import api from "../services/api";
-import { PageLoader, AppSelect } from "../components/UI";
+import { PageLoader, AppSelect, AppDatePicker } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
@@ -323,21 +323,9 @@ export default function Performance() {
             {/* Date range filter */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
-                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
-              />
+              <AppDatePicker value={dateFrom} onChange={setDateFrom} className="w-36" />
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>To</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
-                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
-              />
+              <AppDatePicker value={dateTo} onChange={setDateTo} className="w-36" />
               {(dateFrom || dateTo) && (
                 <button
                   onClick={() => { setDateFrom(""); setDateTo(""); }}

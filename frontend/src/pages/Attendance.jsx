@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Spinner, EmptyState, AppSelect } from "../components/UI";
+import { Spinner, EmptyState, AppSelect, AppDatePicker } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
 import api from "../services/api";
@@ -511,13 +511,11 @@ export default function Attendance() {
             <Filter className="w-4 h-4 text-app-soft flex-shrink-0" />
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">From</label>
-              <input type="date" className="input text-xs py-1.5 px-3" value={from}
-                onChange={e => { setFrom(e.target.value); setPage(1); }} />
+              <AppDatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} className="w-36" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">To</label>
-              <input type="date" className="input text-xs py-1.5 px-3" value={to}
-                onChange={e => { setTo(e.target.value); setPage(1); }} />
+              <AppDatePicker value={to} onChange={v => { setTo(v); setPage(1); }} className="w-36" />
             </div>
             {isAdmin && teamMembers.length > 0 && (
               <div className="flex items-center gap-2">
@@ -781,8 +779,7 @@ export default function Attendance() {
               </div>
               <div>
                 <label className="label">Date</label>
-                <input type="date" className="input" required value={entryForm.date}
-                  onChange={e => setEntryForm(f => ({ ...f, date: e.target.value }))} />
+                <AppDatePicker value={entryForm.date} onChange={v => setEntryForm(f => ({ ...f, date: v }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

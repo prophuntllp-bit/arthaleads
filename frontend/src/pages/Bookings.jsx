@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { BookMarked, Plus, FileText, X, Check, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { AppSelect } from "../components/UI";
+import { AppSelect, AppDatePicker } from "../components/UI";
 import { useNavigate } from "react-router-dom";
 
 const UNIT_TYPES = ["Flat", "Plot", "Villa", "Shop", "Office", "Other"];
@@ -230,8 +230,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Booking Date</label>
-                <input type="date" value={form.bookingDate} onChange={e => set("bookingDate", e.target.value)}
-                  className="input w-full text-sm" />
+                <AppDatePicker value={form.bookingDate} onChange={v => set("bookingDate", v)} />
               </div>
             </div>
 
