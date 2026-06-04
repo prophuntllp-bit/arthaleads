@@ -576,9 +576,9 @@ export default function Invoices() {
           { label: "Received",     value: fmtINR(totalRecv), color: "#10b981" },
           { label: "Pending",      value: fmtINR(totalPend), color: "#f59e0b" },
         ].map(s => (
-          <div key={s.label} className="card rounded-2xl p-3" style={{ border: "1px solid var(--app-border)" }}>
+          <div key={s.label} className="card rounded-2xl p-4" style={{ border: "1px solid var(--app-border)" }}>
             <p className="text-xs text-app-soft">{s.label}</p>
-            <p className="text-lg font-black mt-0.5" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-lg font-black mt-1" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
       </div>

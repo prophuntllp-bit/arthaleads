@@ -399,10 +399,10 @@ export default function Bookings() {
           { label: "Invoice Pending", value: countPending,      color: "#f59e0b" },
           { label: "Payment Received",value: countPaid,         color: "#10b981" },
         ].map(s => (
-          <div key={s.label} className="card rounded-2xl p-3"
+          <div key={s.label} className="card rounded-2xl p-4"
             style={{ border: "1px solid var(--app-border)" }}>
             <p className="text-xs text-app-soft">{s.label}</p>
-            <p className="text-xl font-black mt-0.5" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
       </div>
