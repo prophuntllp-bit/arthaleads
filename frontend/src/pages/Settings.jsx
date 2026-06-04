@@ -10,22 +10,22 @@ import CustomSelect from "../components/CustomSelect";
 const BILLING_REQUIRED = ["address", "gstNo", "pan", "bankAccountName", "bankAccountNo", "bankIfsc"];
 const BILLING_FIELDS = [
   { section: "Organisation Identity", fields: [
-    { key: "address",   label: "Registered Address", placeholder: "291/3 Work Katta, Baner, Pune 411045", col: 2 },
-    { key: "phone",     label: "Contact Number",      placeholder: "7066880808" },
-    { key: "email",     label: "Official Email",      placeholder: "info@prophuntllp.com" },
+    { key: "address",   label: "Registered Address", placeholder: "e.g. Plot No. 12, Sector 5, Mumbai 400001", col: 2 },
+    { key: "phone",     label: "Contact Number",      placeholder: "e.g. 9800000000" },
+    { key: "email",     label: "Official Email",      placeholder: "e.g. accounts@yourcompany.com" },
   ]},
   { section: "Tax & Compliance", fields: [
-    { key: "gstNo", label: "GST Number",  placeholder: "27AAFCP1234K1Z3", mono: true },
-    { key: "pan",   label: "PAN Number",  placeholder: "AAFCP1234K",      mono: true },
-    { key: "cin",   label: "CIN",         placeholder: "U70200MH2020OPC123456", mono: true },
-    { key: "rera",  label: "RERA Reg. No.", placeholder: "A51800012345",   mono: true },
+    { key: "gstNo", label: "GST Number",    placeholder: "e.g. 27XXXXX0000X1ZX", mono: true },
+    { key: "pan",   label: "PAN Number",    placeholder: "e.g. XXXXX0000X",      mono: true },
+    { key: "cin",   label: "CIN",           placeholder: "e.g. U70200MH2020OPC000000", mono: true },
+    { key: "rera",  label: "RERA Reg. No.", placeholder: "e.g. A51800000000",    mono: true },
   ]},
   { section: "Bank Details (for invoice payment section)", fields: [
-    { key: "bankAccountName", label: "Account Name",    placeholder: "PropHunt LLP" },
-    { key: "bankAccountNo",   label: "Account Number",  placeholder: "007305014955", mono: true },
-    { key: "bankIfsc",        label: "IFSC Code",       placeholder: "ICIC0000073",  mono: true },
-    { key: "bankName",        label: "Bank Name",       placeholder: "ICICI Bank" },
-    { key: "bankBranch",      label: "Branch / Address",placeholder: "Aundh Branch, Pune", col: 2 },
+    { key: "bankAccountName", label: "Account Name",     placeholder: "e.g. Your Company Name" },
+    { key: "bankAccountNo",   label: "Account Number",   placeholder: "e.g. 000000000000", mono: true },
+    { key: "bankIfsc",        label: "IFSC Code",        placeholder: "e.g. SBIN0000000",  mono: true },
+    { key: "bankName",        label: "Bank Name",        placeholder: "e.g. State Bank of India" },
+    { key: "bankBranch",      label: "Branch / Address", placeholder: "e.g. MG Road Branch, Mumbai", col: 2 },
   ]},
 ];
 

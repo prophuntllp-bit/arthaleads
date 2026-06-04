@@ -61,7 +61,7 @@ function SimpleInvoicePDF({ inv, org }) {
       {/* Logo + header */}
       <div style={{ textAlign: "center", marginBottom: 12 }}>
         {org?.logo && <img src={org.logo} alt={org.name} style={{ height: 60, objectFit: "contain" }} />}
-        <p style={{ fontWeight: "bold", fontSize: 16, margin: "6px 0 2px" }}>{org?.name || "PropHunt LLP"}</p>
+        <p style={{ fontWeight: "bold", fontSize: 16, margin: "6px 0 2px" }}>{org?.name || ""}</p>
         {org?.address && <p style={{ fontSize: 10, color: "#555" }}>{org.address}</p>}
         {org?.phone && <p style={{ fontSize: 10, color: "#555" }}>Mobile: {org.phone}</p>}
       </div>
@@ -144,17 +144,17 @@ function SimpleInvoicePDF({ inv, org }) {
       <div style={{ display: "flex", gap: 16 }}>
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 11, fontWeight: "bold", marginBottom: 4 }}>Cheque should be on the name of</p>
-          <p style={{ fontSize: 13, fontWeight: "bold" }}>"{org?.name || "PropHunt LLP"}"</p>
+          <p style={{ fontSize: 13, fontWeight: "bold" }}>"{org?.name || ""}"</p>
         </div>
         <div style={{ flex: 2, background: "#1e40af11", borderRadius: 8, padding: "8px 12px" }}>
           <p style={{ fontWeight: "bold", color: "#1e40af", marginBottom: 6, fontSize: 11 }}>Online Payment</p>
           <table style={{ fontSize: 10, width: "100%" }}>
             {[
-              ["Account Name", org?.bankAccountName || "PropHunt LLP"],
-              ["Account No",   org?.bankAccountNo   || "007305014955"],
-              ["IFSC Code",    org?.bankIfsc         || "ICIC0000073"],
-              ["Bank Name",    org?.bankName         || "ICICI BANK"],
-              ["Branch",       org?.bankBranch       || "AUNDH BRANCH"],
+              ["Account Name", org?.bankAccountName || ""],
+              ["Account No",   org?.bankAccountNo   || ""],
+              ["IFSC Code",    org?.bankIfsc        || ""],
+              ["Bank Name",    org?.bankName        || ""],
+              ["Branch",       org?.bankBranch      || ""],
             ].map(([k, v]) => (
               <tr key={k}>
                 <td style={{ color: "#1e40af", fontWeight: "bold", paddingRight: 8, paddingBottom: 2 }}>{k}</td>
@@ -172,7 +172,7 @@ function SimpleInvoicePDF({ inv, org }) {
 
       {/* Footer bar */}
       <div style={{ background: "#c2410c", color: "#fff", marginTop: 24, padding: "8px 16px", borderRadius: 4, fontSize: 10, textAlign: "center" }}>
-        {org?.address || "291/3 Work katta Baner, Pune 411045"} &nbsp;|&nbsp; {org?.phone || "7066880808"} &nbsp;|&nbsp; {org?.email || "Info@prophuntllp.com"}
+        {[org?.address, org?.phone, org?.email].filter(Boolean).join("  |  ")}
       </div>
     </div>
   );
@@ -196,13 +196,13 @@ function DetailedInvoicePDF({ inv, org }) {
             <th style={{ ...th2, width: "12%", borderRight: "1px solid #000" }}>To</th>
             <td style={{ ...td2, width: "38%", fontWeight: "bold", borderRight: "1px solid #000" }}>{inv.developerName}</td>
             <th style={{ ...th2, width: "12%", borderRight: "1px solid #000" }}>From</th>
-            <td style={{ ...td2, fontWeight: "bold" }}>{org?.name || "PropHunt LLP"}</td>
+            <td style={{ ...td2, fontWeight: "bold" }}>{org?.name || ""}</td>
           </tr>
           <tr style={{ borderBottom: "1px solid #000" }}>
             <th style={{ ...th2, borderRight: "1px solid #000" }}>Address</th>
             <td style={{ ...td2, borderRight: "1px solid #000" }}>{inv.developerAddress || "-"}</td>
             <th style={{ ...th2, borderRight: "1px solid #000" }}>Address</th>
-            <td style={td2}>{org?.address || "Baner Pune MH - 411045"}</td>
+            <td style={td2}>{org?.address || ""}</td>
           </tr>
           <tr style={{ borderBottom: "1px solid #000" }}>
             <th style={{ ...th2, borderRight: "1px solid #000" }}>PAN</th>
@@ -348,12 +348,12 @@ function DetailedInvoicePDF({ inv, org }) {
         <thead><tr><th colSpan={2} style={{ ...th, background: "#e5e7eb", color: "#000", textAlign: "center" }}>PAYMENT DETAILS</th></tr></thead>
         <tbody>
           {[
-            ["Payee Name",    org?.bankAccountName || org?.name || "PropHunt LLP"],
-            ["Bank Name",     org?.bankName   || "ICICI BANK"],
-            ["Branch Address",org?.bankBranch || "ICICI BANK GULMOHAR PARK AUNDH"],
+            ["Payee Name",    org?.bankAccountName || org?.name || ""],
+            ["Bank Name",     org?.bankName        || ""],
+            ["Branch Address",org?.bankBranch      || ""],
             ["Account Type",  "CURRENT ACCOUNT"],
-            ["Account Number","*" + (org?.bankAccountNo || "007305014955")],
-            ["IFSC Code",     org?.bankIfsc   || "ICIC0000073"],
+            ["Account Number", org?.bankAccountNo ? "*" + org.bankAccountNo : ""],
+            ["IFSC Code",     org?.bankIfsc        || ""],
           ].map(([k, v]) => (
             <tr key={k} style={{ borderBottom: "1px solid #ccc" }}>
               <td style={{ ...td, width: "40%", background: "#f9f9f9" }}>{k}</td>
