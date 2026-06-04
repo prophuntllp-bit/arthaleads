@@ -358,7 +358,10 @@ export default function Bookings() {
   };
 
   const handleDelete = async (b) => {
-    if (!confirm("Delete this booking?")) return;
+    const msg = b.invoiceId
+      ? "Delete this booking and its linked invoice? This cannot be undone."
+      : "Delete this booking? This cannot be undone.";
+    if (!confirm(msg)) return;
     try {
       await api.delete(`/bookings/${b._id}`);
       setBookings(x => x.filter(b2 => b2._id !== b._id));
@@ -496,12 +499,10 @@ export default function Bookings() {
                           className="p-1.5 rounded-xl text-app-soft hover:text-app cursor-pointer transition">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
-                        {!b.invoiceId && (
-                          <button onClick={() => handleDelete(b)} title="Delete"
-                            className="p-1.5 rounded-xl text-app-soft hover:text-red-500 cursor-pointer transition">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button onClick={() => handleDelete(b)} title="Delete booking"
+                          className="p-1.5 rounded-xl text-app-soft hover:text-red-500 cursor-pointer transition">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

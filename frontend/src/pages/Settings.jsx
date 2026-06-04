@@ -23,7 +23,7 @@ const INDIAN_BANKS = [
 ];
 
 // Searchable bank dropdown
-function BankSearchInput({ value, onChange, className }) {
+function BankSearchInput({ value, onChange, className, style }) {
   const [query, setQuery]   = useState(value || "");
   const [open, setOpen]     = useState(false);
   const wrapRef             = useRef(null);
@@ -50,6 +50,7 @@ function BankSearchInput({ value, onChange, className }) {
         onFocus={() => query && setOpen(true)}
         placeholder="e.g. State Bank of India"
         className={className}
+        style={style}
         autoComplete="off"
       />
       {open && matches.length > 0 && (
@@ -230,6 +231,11 @@ function OrgBillingSection({ org, updateOrg }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = async () => {
+    const missing = BILLING_REQUIRED.filter(k => !form[k]?.trim());
+    if (missing.length) {
+      toast.error("Please fill all required fields (marked *) before saving.");
+      return;
+    }
     setSaving(true);
     try {
       const { data } = await api.patch("/org/me/billing", form);
@@ -311,7 +317,10 @@ function OrgBillingSection({ org, updateOrg }) {
                   <BankSearchInput
                     value={form[key]}
                     onChange={v => set(key, v)}
-                    className={`input w-full text-sm${BILLING_REQUIRED.includes(key) && !form[key]?.trim() ? " border-yellow-400/60" : ""}`}
+                    className="input w-full text-sm"
+                    style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
+                      ? { borderColor: "rgba(245,158,11,0.6)" }
+                      : {}}
                   />
                 ) : (
                   <input
@@ -466,8 +475,10 @@ export default function Settings() {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr,1.5fr]">
+      <div className={`grid grid-cols-1 gap-6 ${user?.role === "admin" ? "xl:grid-cols-[1fr,1.4fr]" : ""}`}>
+        {/* ── Left column: Personal Profile ── */}
         <section className="card p-6 space-y-5">
+          {/* Avatar + identity */}
           <div className="flex items-center gap-4">
             {profilePreview ? (
               <img src={profilePreview} alt={form.name} className="h-20 w-20 rounded-[1.5rem] object-cover border" style={{ borderColor: "var(--app-border)" }} />
@@ -483,28 +494,9 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role Access</div>
-            <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
-            <div>
-              <label className="label">Role</label>
-              <CustomSelect
-                value={form.role}
-                onChange={(v) => setValue("role")({ target: { value: v } })}
-                options={[
-                  { value: "admin", label: "Admin" },
-                  { value: "manager", label: "Manager" },
-                  { value: "agent", label: "Sales Agent" },
-                ]}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="card p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Profile form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="label">Full Name</label>
                 <input className="input" value={form.name} onChange={setValue("name")} />
@@ -513,27 +505,47 @@ export default function Settings() {
                 <label className="label">Phone</label>
                 <input className="input" value={form.phone} onChange={setValue("phone")} />
               </div>
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="label">Email</label>
                 <input className="input text-app-soft" style={{ background: "var(--app-surface-low)" }} value={user?.email || ""} disabled />
               </div>
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="label flex items-center gap-2"><Camera className="h-4 w-4 text-orange-500" /> Profile Picture URL</label>
                 <input className="input" value={form.avatar} onChange={setValue("avatar")} placeholder="https://example.com/avatar.jpg" />
               </div>
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Or Upload Profile Picture</label>
                 <label className="btn-secondary inline-flex cursor-pointer rounded-xl">
                   <ImagePlus className="h-4 w-4" /> Choose Image
                   <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" className="hidden" onChange={handleAvatarUpload} />
                 </label>
-                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB. The image is stored directly in your CRM profile.</p>
+                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB. Stored directly in your CRM profile.</p>
               </div>
             </div>
 
+            {/* Role */}
+            <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role Access</div>
+              <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
+              <div>
+                <label className="label">Role</label>
+                <CustomSelect
+                  value={form.role}
+                  onChange={(v) => setValue("role")({ target: { value: v } })}
+                  options={[
+                    { value: "admin", label: "Admin" },
+                    { value: "manager", label: "Manager" },
+                    { value: "agent", label: "Sales Agent" },
+                  ]}
+                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                />
+              </div>
+            </div>
+
+            {/* Change password */}
             <div className="rounded-[1.25rem] p-5 stitch-surface-muted space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-app"><KeyRound className="h-4 w-4 text-orange-500" /> Change Password</div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="label">Current Password</label>
                   <div className="relative">
@@ -565,12 +577,12 @@ export default function Settings() {
             </div>
           </form>
         </section>
-      </div>
 
-      {/* Organisation & Billing Details - admin only */}
-      {user?.role === "admin" && (
-        <OrgBillingSection org={org} updateOrg={updateOrg} />
-      )}
+        {/* ── Right column: Org & Billing (admin only) ── */}
+        {user?.role === "admin" && (
+          <OrgBillingSection org={org} updateOrg={updateOrg} />
+        )}
+      </div>
 
       {/* Auto-assign toggle - admin + super_admin */}
       {(user?.role === "admin" || user?.role === "super_admin") && (
