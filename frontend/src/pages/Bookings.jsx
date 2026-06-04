@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { BookMarked, Plus, FileText, X, Check, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { BookMarked, Plus, FileText, X, Check, IndianRupee, Trash2, ExternalLink } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { AppSelect, AppDatePicker } from "../components/UI";
@@ -449,7 +449,11 @@ export default function Bookings() {
                   <tr key={b._id} style={{ borderBottom: "1px solid var(--app-border)" }}
                     className="hover:bg-black/2 dark:hover:bg-white/2 transition">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-app text-sm">{b.customerName}</p>
+                      <p
+                        className="font-semibold text-sm cursor-pointer hover:text-orange-500 transition-colors"
+                        style={{ color: "var(--app-text)" }}
+                        onClick={() => setModal(b)}
+                      >{b.customerName}</p>
                       {b.jointBuyerName && <p className="text-xs text-app-soft">{b.jointBuyerName}</p>}
                     </td>
                     <td className="px-4 py-3 text-sm text-app-soft">{b.developerId?.name || "-"}</td>
@@ -493,10 +497,6 @@ export default function Bookings() {
                             <ExternalLink className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <button onClick={() => setModal(b)} title="Edit"
-                          className="p-1.5 rounded-xl text-app-soft hover:text-app cursor-pointer transition">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
                         <button onClick={() => handleDelete(b)} title="Delete booking"
                           className="p-1.5 rounded-xl text-app-soft hover:text-red-500 cursor-pointer transition">
                           <Trash2 className="h-3.5 w-3.5" />
