@@ -263,6 +263,7 @@ export default function SuperAdminOrgDetail() {
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         {[
           { key: "overview",      label: "Overview" },
+          { key: "billing",       label: "Billing" },
           { key: "users",         label: `Users (${users.length})` },
           { key: "integrations",  label: "Integrations" },
           { key: "activity",      label: `Activity (${actTotal > 0 ? actTotal : "…"})` },
@@ -333,6 +334,59 @@ export default function SuperAdminOrgDetail() {
           </div>
         </div>
       )}
+
+      {/* Billing tab */}
+      {tab === "billing" && (() => {
+        const hasBilling = org.address || org.gstNo || org.pan || org.bankAccountNo;
+        const row = (label, value) => value ? (
+          <div key={label} className="flex items-start gap-2 py-2 border-b last:border-0" style={{ borderColor: "var(--app-border)" }}>
+            <p className="text-xs text-app-soft w-36 flex-shrink-0 pt-0.5">{label}</p>
+            <p className="text-xs font-semibold text-app break-all">{value}</p>
+          </div>
+        ) : null;
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Legal / Tax */}
+            <div className="card overflow-hidden">
+              <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
+                Legal &amp; Tax Details
+              </div>
+              {!hasBilling ? (
+                <p className="text-xs text-app-soft text-center py-10">Organisation has not configured billing details yet.</p>
+              ) : (
+                <div className="px-4 py-2">
+                  {row("Address",  org.address)}
+                  {row("Phone",    org.phone)}
+                  {row("Email",    org.email)}
+                  {row("GST No.",  org.gstNo)}
+                  {row("PAN",      org.pan)}
+                  {row("CIN",      org.cin)}
+                  {row("RERA No.", org.rera)}
+                  {!org.address && !org.gstNo && !org.pan && !org.cin && !org.rera && !org.phone && !org.email && (
+                    <p className="text-xs text-app-soft text-center py-6">No legal details set.</p>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Bank */}
+            <div className="card overflow-hidden">
+              <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
+                Bank Details
+              </div>
+              <div className="px-4 py-2">
+                {row("Account Name",   org.bankAccountName)}
+                {row("Account No.",    org.bankAccountNo)}
+                {row("IFSC Code",      org.bankIfsc)}
+                {row("Bank Name",      org.bankName)}
+                {row("Branch",         org.bankBranch)}
+                {!org.bankAccountName && !org.bankAccountNo && !org.bankIfsc && !org.bankName && !org.bankBranch && (
+                  <p className="text-xs text-app-soft text-center py-6">No bank details set.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Users tab */}
       {tab === "users" && (
