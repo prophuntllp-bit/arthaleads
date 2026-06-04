@@ -10,6 +10,7 @@ const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { scoreLead, scoreLabel, nextBestAction } = require("../utils/leadScorer");
 const { draftWhatsAppMessage } = require("../utils/openai");
+const AiUsage = require("../models/AiUsage");
 
 // All lead routes require authentication
 router.use(protect);
@@ -263,8 +264,21 @@ router.post("/:id/draft-message", async (req, res, next) => {
     }
 
     const agentName = req.user.name || "";
-    const message = await draftWhatsAppMessage(lead, agentName);
-    res.json({ success: true, message });
+    const result = await draftWhatsAppMessage(lead, agentName);
+    const month = new Date().toISOString().slice(0, 7);
+    AiUsage.findOneAndUpdate(
+      { orgId: req.user.orgId, month },
+      { $inc: {
+        calls: 1,
+        waDraftCalls: 1,
+        promptTokens: result._usage?.prompt_tokens || 0,
+        completionTokens: result._usage?.completion_tokens || 0,
+        totalTokens: result._usage?.total_tokens || 0,
+        waDraftTokens: result._usage?.total_tokens || 0,
+      }},
+      { upsert: true, new: true }
+    ).catch(() => {});
+    res.json({ success: true, message: result.message });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {
       return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });

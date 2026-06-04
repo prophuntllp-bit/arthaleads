@@ -7,7 +7,7 @@ import {
   ArrowLeft, Building2, Users, BarChart3, FolderOpen,
   CheckCircle2, XCircle, Clock, ExternalLink, LogIn,
   Mail, Phone, Shield, Zap, RefreshCw, HardDrive,
-  ShieldCheck, ChevronLeft, ChevronRight, Activity,
+  ShieldCheck, ChevronLeft, ChevronRight, Activity, Sparkles,
 } from "lucide-react";
 
 const PLAN_COLORS = {
@@ -82,6 +82,7 @@ function RoleBadge({ role }) {
 const fmtDate     = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const fmtDateTime = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Never";
 const fmtFull     = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtMonth    = m => { if (!m) return "—"; const [y, mo] = m.split("-"); return new Date(+y, +mo - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "numeric" }); };
 
 export default function SuperAdminOrgDetail() {
   const { id }        = useParams();
@@ -165,7 +166,7 @@ export default function SuperAdminOrgDetail() {
   if (loading) return <PageLoader />;
   if (!data)   return null;
 
-  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes } = data;
+  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes, aiUsage = [] } = data;
   const isTrialExpired = org.trialStatus === "expired";
   const effectivelyActive = org.isActive && !isTrialExpired;
   const planLabel = org.plan === "pro" ? "growth" : org.plan;
@@ -279,6 +280,7 @@ export default function SuperAdminOrgDetail() {
 
       {/* Overview tab */}
       {tab === "overview" && (
+        <div className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Lead breakdown */}
           <div className="card overflow-hidden">
@@ -332,6 +334,53 @@ export default function SuperAdminOrgDetail() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* AI Usage */}
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--app-border)" }}>
+            <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <span className="font-bold text-app text-sm">AI Usage (last 6 months)</span>
+            <span className="ml-2 text-[10px] text-app-soft border rounded-full px-2 py-0.5" style={{ borderColor: "var(--app-border)" }}>
+              Help Bot + WA Drafts
+            </span>
+          </div>
+          {aiUsage.length === 0 ? (
+            <p className="text-xs text-app-soft text-center py-10">No AI usage recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="stitch-table min-w-[480px]">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th className="text-center">Help Bot</th>
+                    <th className="text-center">WA Drafts</th>
+                    <th className="text-center">Total Calls</th>
+                    <th className="text-right">Tokens Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiUsage.map(row => {
+                    const helpCalls = (row.calls || 0) - (row.waDraftCalls || 0);
+                    return (
+                      <tr key={row.month}>
+                        <td className="font-semibold text-app">{fmtMonth(row.month)}</td>
+                        <td className="text-center text-app">{helpCalls}</td>
+                        <td className="text-center text-app">{row.waDraftCalls || 0}</td>
+                        <td className="text-center">
+                          <span className="font-bold text-indigo-500">{row.calls || 0}</span>
+                        </td>
+                        <td className="text-right">
+                          <span className="font-bold text-app">{(row.totalTokens || 0).toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         </div>
       )}
 

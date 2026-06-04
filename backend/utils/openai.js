@@ -57,7 +57,10 @@ Rules:
     temperature: 0.75,
   });
 
-  return response.choices[0]?.message?.content?.trim() || "";
+  return {
+    message: response.choices[0]?.message?.content?.trim() || "",
+    _usage: response.usage || null,
+  };
 }
 
 // ── Help Assistant ───────────────────────────────────────────────────────────
