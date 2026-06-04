@@ -38,6 +38,20 @@ const orgSchema = new mongoose.Schema(
       halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
       fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
     },
+    // ── Billing / Invoice letterhead details ───────────────────────────────────
+    address:         { type: String, default: "" },
+    phone:           { type: String, default: "" },
+    email:           { type: String, default: "" },
+    gstNo:           { type: String, default: "" },
+    pan:             { type: String, default: "" },
+    cin:             { type: String, default: "" },
+    rera:            { type: String, default: "" },
+    bankAccountName: { type: String, default: "" },
+    bankAccountNo:   { type: String, default: "" },
+    bankIfsc:        { type: String, default: "" },
+    bankName:        { type: String, default: "" },
+    bankBranch:      { type: String, default: "" },
+
     // ── Referral tracking ──────────────────────────────────────────────────────
     referralCode:    { type: String, uppercase: true, sparse: true, index: true },
     referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },

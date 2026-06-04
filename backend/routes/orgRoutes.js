@@ -91,6 +91,27 @@ router.patch("/me/attendance-settings", authorize("admin"), async (req, res, nex
   } catch (err) { next(err); }
 });
 
+// PATCH /api/org/me/billing — save invoice letterhead / billing details (admin only)
+router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
+  try {
+    const ALLOWED = ["address","phone","email","gstNo","pan","cin","rera",
+                     "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
+    const update = {};
+    for (const k of ALLOWED) {
+      if (req.body[k] !== undefined) update[k] = String(req.body[k]).trim();
+    }
+    if (!Object.keys(update).length) {
+      return res.status(400).json({ success: false, message: "No valid fields provided." });
+    }
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { $set: update }, { new: true, runValidators: false }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, org });
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/org/me/goal — set monthly closing goal (admin + manager)
 router.patch("/me/goal", authorize("admin", "manager"), async (req, res, next) => {
   try {

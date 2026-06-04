@@ -1,9 +1,164 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle } from "lucide-react";
+import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
+         Building2, FileText, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
+
+// ── Organisation Billing Section ─────────────────────────────────────────────
+const BILLING_REQUIRED = ["address", "gstNo", "pan", "bankAccountName", "bankAccountNo", "bankIfsc"];
+const BILLING_FIELDS = [
+  { section: "Organisation Identity", fields: [
+    { key: "address",   label: "Registered Address", placeholder: "291/3 Work Katta, Baner, Pune 411045", col: 2 },
+    { key: "phone",     label: "Contact Number",      placeholder: "7066880808" },
+    { key: "email",     label: "Official Email",      placeholder: "info@prophuntllp.com" },
+  ]},
+  { section: "Tax & Compliance", fields: [
+    { key: "gstNo", label: "GST Number",  placeholder: "27AAFCP1234K1Z3", mono: true },
+    { key: "pan",   label: "PAN Number",  placeholder: "AAFCP1234K",      mono: true },
+    { key: "cin",   label: "CIN",         placeholder: "U70200MH2020OPC123456", mono: true },
+    { key: "rera",  label: "RERA Reg. No.", placeholder: "A51800012345",   mono: true },
+  ]},
+  { section: "Bank Details (for invoice payment section)", fields: [
+    { key: "bankAccountName", label: "Account Name",    placeholder: "PropHunt LLP" },
+    { key: "bankAccountNo",   label: "Account Number",  placeholder: "007305014955", mono: true },
+    { key: "bankIfsc",        label: "IFSC Code",       placeholder: "ICIC0000073",  mono: true },
+    { key: "bankName",        label: "Bank Name",       placeholder: "ICICI Bank" },
+    { key: "bankBranch",      label: "Branch / Address",placeholder: "Aundh Branch, Pune", col: 2 },
+  ]},
+];
+
+function OrgBillingSection({ org, updateOrg }) {
+  const [form, setForm] = useState({
+    address: "", phone: "", email: "", gstNo: "", pan: "", cin: "", rera: "",
+    bankAccountName: "", bankAccountNo: "", bankIfsc: "", bankName: "", bankBranch: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (org) {
+      setForm({
+        address:         org.address         || "",
+        phone:           org.phone           || "",
+        email:           org.email           || "",
+        gstNo:           org.gstNo           || "",
+        pan:             org.pan             || "",
+        cin:             org.cin             || "",
+        rera:            org.rera            || "",
+        bankAccountName: org.bankAccountName || "",
+        bankAccountNo:   org.bankAccountNo   || "",
+        bankIfsc:        org.bankIfsc        || "",
+        bankName:        org.bankName        || "",
+        bankBranch:      org.bankBranch      || "",
+      });
+    }
+  }, [org]);
+
+  const filledCount  = BILLING_REQUIRED.filter(k => form[k]?.trim()).length;
+  const isComplete   = filledCount === BILLING_REQUIRED.length;
+  const completePct  = Math.round((filledCount / BILLING_REQUIRED.length) * 100);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const { data } = await api.patch("/org/me/billing", form);
+      updateOrg(data.org);
+      toast.success("Billing details saved.");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Failed to save.");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <section className="card p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+          <Building2 className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-app">Organisation &amp; Billing Details</p>
+            {isComplete
+              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                  <CheckCircle2 className="h-3 w-3" /> Complete
+                </span>
+              : <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                  <AlertCircle className="h-3 w-3" /> {filledCount}/{BILLING_REQUIRED.length} required fields
+                </span>
+            }
+          </div>
+          <p className="text-sm text-app-soft mt-0.5">
+            These details appear on every brokerage invoice sent to developers. Required fields must be filled to generate invoices.
+          </p>
+          {/* Progress bar */}
+          <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)", maxWidth: 280 }}>
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${completePct}%`, background: isComplete ? "#10b981" : "var(--app-primary)" }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Required fields banner */}
+      {!isComplete && (
+        <div className="rounded-2xl px-4 py-3 flex items-start gap-3 text-sm"
+          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
+          <p style={{ color: "#92400e" }} className="dark:text-yellow-300">
+            <strong>Required to generate invoices:</strong> Address, GST Number, PAN, and all Bank Details must be filled.
+          </p>
+        </div>
+      )}
+
+      {/* Field sections */}
+      {BILLING_FIELDS.map(({ section, fields }) => (
+        <div key={section}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-bold text-app-soft uppercase tracking-wider">{section}</span>
+            <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {fields.map(({ key, label, placeholder, mono, col }) => (
+              <div key={key} className={col === 2 ? "sm:col-span-2" : ""}>
+                <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1 block">
+                  {label}
+                  {BILLING_REQUIRED.includes(key) && (
+                    <span style={{ color: "#ef4444" }}>*</span>
+                  )}
+                </label>
+                <input
+                  value={form[key]}
+                  onChange={e => set(key, key === "gstNo" || key === "pan" || key === "cin" || key === "bankIfsc"
+                    ? e.target.value.toUpperCase()
+                    : e.target.value)}
+                  placeholder={placeholder}
+                  className={`input w-full text-sm ${mono ? "font-mono" : ""}`}
+                  style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
+                    ? { borderColor: "rgba(245,158,11,0.6)" }
+                    : {}}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div className="flex justify-end pt-1">
+        <button onClick={save} disabled={saving}
+          className="btn-primary rounded-xl px-6 py-2.5 text-sm flex items-center gap-2 disabled:opacity-50">
+          {saving
+            ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            : <FileText className="h-4 w-4" />}
+          {saving ? "Saving…" : "Save Billing Details"}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export default function Settings() {
   useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
@@ -226,6 +381,11 @@ export default function Settings() {
           </form>
         </section>
       </div>
+
+      {/* Organisation & Billing Details - admin only */}
+      {user?.role === "admin" && (
+        <OrgBillingSection org={org} updateOrg={updateOrg} />
+      )}
 
       {/* Auto-assign toggle - admin + super_admin */}
       {(user?.role === "admin" || user?.role === "super_admin") && (
