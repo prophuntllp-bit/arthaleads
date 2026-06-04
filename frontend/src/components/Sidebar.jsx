@@ -8,6 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
+  Receipt, BookMarked, FileCheck, Building2,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -31,6 +32,14 @@ const navItems = [
   { to: "/leads",       label: "Leads",        icon: Users },
   { to: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
+  {
+    label: "Bookings & Invoices", icon: Receipt,
+    children: [
+      { to: "/bookings",   label: "Bookings",   icon: BookMarked },
+      { to: "/invoices",   label: "Invoices",   icon: FileCheck  },
+      { to: "/developers", label: "Developers", icon: Building2  },
+    ],
+  },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
   { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
@@ -78,8 +87,13 @@ export default function Sidebar() {
     setPinned(next);
     try { localStorage.setItem("crm_sidebar_pinned", String(next)); } catch {}
   };
-  // Posts sub-group
-  const [postsOpen, setPostsOpen] = useState(location.pathname.startsWith("/super-admin/blog"));
+  // Nav sub-groups (keyed by item label)
+  const [openGroups, setOpenGroups] = useState(() => ({
+    Posts: location.pathname.startsWith("/super-admin/blog"),
+    "Bookings & Invoices": ["/bookings", "/invoices", "/developers"].some(
+      (p) => location.pathname.startsWith(p)
+    ),
+  }));
   // Alerts panel
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -222,9 +236,12 @@ export default function Sidebar() {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // ── Auto-expand Posts group on blog routes ────────────────────────────────
+  // ── Auto-expand nav groups based on current route ─────────────────────────
   useEffect(() => {
-    if (location.pathname.startsWith("/super-admin/blog")) setPostsOpen(true);
+    if (location.pathname.startsWith("/super-admin/blog"))
+      setOpenGroups((g) => ({ ...g, Posts: true }));
+    if (["/bookings", "/invoices", "/developers"].some((p) => location.pathname.startsWith(p)))
+      setOpenGroups((g) => ({ ...g, "Bookings & Invoices": true }));
   }, [location.pathname]);
 
   const filtered = navItems.filter((n) => !n.roles || n.roles.includes(user?.role));
@@ -383,8 +400,8 @@ export default function Sidebar() {
               const isGroupActive = item.children.some(
                 c => location.pathname === c.to || location.pathname.startsWith(c.to + "/")
               );
-              const gExpanded = item.label === "Posts" ? postsOpen : false;
-              const toggle    = item.label === "Posts" ? () => setPostsOpen(v => !v) : () => {};
+              const gExpanded = openGroups[item.label] || false;
+              const toggle    = () => setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] }));
 
               return (
                 <div key={item.label}>

@@ -10,13 +10,19 @@ const Lead = require("../models/Lead");
 router.use(protect);
 
 // POST /api/help/ask
-// Body: { question, page, leadId? }
+// Body: { question, page, leadId?, history? }
 router.post("/ask", async (req, res, next) => {
   try {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
     const page     = (req.body.page   || "").toString().slice(0, 80);
     const leadId   = (req.body.leadId || "").toString().slice(0, 30);
     const userName = (req.user?.name  || "").toString().slice(0, 80);
+    const history  = Array.isArray(req.body.history)
+      ? req.body.history.slice(-6).map((m) => ({
+          role: m.role === "user" ? "user" : "assistant",
+          text: String(m.text || "").slice(0, 800),
+        }))
+      : [];
 
     if (!question) return res.status(400).json({ success: false, message: "Please type a question." });
 
@@ -62,7 +68,7 @@ router.post("/ask", async (req, res, next) => {
     // Fetch live context from the database for this user/page
     const context = await fetchPageContext(page, req.user._id, req.user.orgId, resolvedLeadId || null);
 
-    const result = await answerHelpQuestion(question, page, userName, context);
+    const result = await answerHelpQuestion(question, page, userName, context, history);
     res.json({ success: true, ...result });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {

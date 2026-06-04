@@ -174,7 +174,7 @@ export default function HelpBot() {
   const greetingMsg = {
     role: "bot",
     text: pageInfo
-      ? `Hi ${firstName}! I can see you're on ${pageInfo.label}. I have live data ready — tap a chip below or ask me anything!`
+      ? `Hi ${firstName}! I can see you're on ${pageInfo.label}. I have live data ready - tap a chip below or ask me anything!`
       : `Hi ${firstName}! I'm Artha, your CRM assistant. How can I help you today?`,
   };
 
@@ -183,6 +183,13 @@ export default function HelpBot() {
     const q = overrideText || input.trim();
     if (!q || loading) return;
     if (!overrideText) setInput("");
+
+    // Snapshot history from current messages before adding the new user message
+    const historyToSend = messages.slice(-6).map((m) => ({
+      role: m.role === "bot" ? "assistant" : "user",
+      text: m.text || "",
+    }));
+
     setMessages((m) => [...(m.length === 0 ? [greetingMsg] : []), ...m, { role: "user", text: q }]);
     setLoading(true);
     try {
@@ -191,6 +198,7 @@ export default function HelpBot() {
         page: location.pathname,
         userName: user?.name,
         leadId: focusedLead?._id || "",
+        history: historyToSend,
       });
       setMessages((m) => [...m, {
         role: "bot",
@@ -375,13 +383,13 @@ export default function HelpBot() {
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: "var(--app-bg)" }} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-app leading-tight">Artha · Help Assistant</p>
+              <p className="text-sm font-bold text-app leading-tight">Artha - Help Assistant</p>
               {pageInfo ? (
                 <p className="text-[11px] leading-tight font-medium flex items-center gap-1" style={{ color: "#6366f1" }}>
-                  <Zap className="h-2.5 w-2.5" /> Copilot · {pageInfo.label}
+                  <Zap className="h-2.5 w-2.5" /> Copilot - {pageInfo.label}
                 </p>
               ) : (
-                <p className="text-[11px] text-green-500 leading-tight font-medium">Online · Ask me anything</p>
+                <p className="text-[11px] text-green-500 leading-tight font-medium">Online - Ask me anything</p>
               )}
             </div>
             <div className="flex items-center gap-1">
@@ -543,7 +551,7 @@ export default function HelpBot() {
                               ) : (
                                 <CheckCircle2 className="h-3 w-3" />
                               )}
-                              {isLoading ? "Working…" : `Do it — ${m.action.label}`}
+                              {isLoading ? "Working..." : `Do it - ${m.action.label}`}
                             </button>
                             <button type="button" onClick={() => cancelAction(idx)} disabled={isLoading}
                               className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
@@ -595,7 +603,7 @@ export default function HelpBot() {
               <textarea
                 value={ticketDesc}
                 onChange={(e) => setTicketDesc(e.target.value)}
-                placeholder="Describe your issue in detail…"
+                placeholder="Describe your issue in detail..."
                 maxLength={2000}
                 rows={3}
                 className="input w-full rounded-xl text-sm resize-none"
@@ -664,7 +672,7 @@ export default function HelpBot() {
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask anything about the CRM…"
+                placeholder="Ask anything about the CRM..."
                 className="input flex-1 rounded-full text-sm"
                 disabled={loading}
               />

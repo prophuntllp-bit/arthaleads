@@ -1,6 +1,9 @@
 // Fetches live CRM data to give the AI assistant real context about the user's workspace.
 const Lead       = require("../models/Lead");
 const Attendance = require("../models/Attendance");
+let User, Project;
+try { User    = require("../models/User");    } catch { User    = null; }
+try { Project = require("../models/Project"); } catch { Project = null; }
 
 function pad(n) { return String(n).padStart(2, "0"); }
 function todayStr() {
@@ -87,6 +90,42 @@ async function fetchPageContext(page, userId, orgId, leadId) {
         stages.map(s => Lead.countDocuments({ orgId, isDeleted: { $ne: true }, status: s }))
       );
       parts.push(`LIVE PIPELINE DATA:\n${stages.map((s, i) => `- ${s}: ${counts[i]} leads`).join("\n")}`);
+    }
+
+    if (cleanPage === "/projects" && Project) {
+      const projects = await Project.find({ orgId, isArchived: { $ne: true } })
+        .select("name location priceMin priceMax")
+        .sort({ createdAt: -1 }).limit(6).lean();
+      parts.push(`LIVE PROJECTS DATA:\n${projects.length
+        ? projects.map(p => `- ${p.name}${p.location ? ` (${p.location})` : ""}${p.priceMin ? `, ₹${(p.priceMin / 1e5).toFixed(0)}L - ₹${(p.priceMax / 1e5).toFixed(0)}L` : ""}`).join("\n")
+        : "No projects created yet."}`);
+    }
+
+    if (cleanPage === "/performance" && User) {
+      const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+      const agents = await User.find({ orgId, isActive: { $ne: false } })
+        .select("name role").limit(10).lean();
+      const reportable = agents.filter(a => a.role === "agent" || a.role === "manager").slice(0, 5);
+      if (reportable.length) {
+        const agentStats = await Promise.all(
+          reportable.map(async (a) => {
+            const [total, won] = await Promise.all([
+              Lead.countDocuments({ orgId, assignedTo: a._id, isDeleted: { $ne: true }, createdAt: { $gte: thirtyDaysAgo } }),
+              Lead.countDocuments({ orgId, assignedTo: a._id, isDeleted: { $ne: true }, status: "Closed Won", createdAt: { $gte: thirtyDaysAgo } }),
+            ]);
+            return `${a.name}: ${total} leads, ${won} won (last 30 days)`;
+          })
+        );
+        parts.push(`LIVE PERFORMANCE DATA (last 30 days):\n${agentStats.map(s => `- ${s}`).join("\n")}`);
+      }
+    }
+
+    if (cleanPage === "/team" && User) {
+      const members = await User.find({ orgId, isActive: { $ne: false } })
+        .select("name role email").limit(15).lean();
+      parts.push(`LIVE TEAM DATA:
+- Total active members: ${members.length}
+${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
     }
 
     if (cleanPage === "/attendance") {

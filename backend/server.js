@@ -181,6 +181,9 @@ app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 app.use("/api/tickets",    require("./routes/ticketRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);
 app.use("/api/help",        require("./routes/helpRoutes"));
+app.use("/api/developers",  require("./routes/developerRoutes"));
+app.use("/api/bookings",    require("./routes/bookingRoutes"));
+app.use("/api/invoices",    require("./routes/invoiceRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
 
