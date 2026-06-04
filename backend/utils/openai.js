@@ -149,7 +149,62 @@ CHANGE BRAND LOGO / COLOUR
 Settings -> Organisation tab -> upload your logo -> pick your brand colour -> Save.
 
 CHANGE PASSWORD
-Settings -> Profile tab -> "Change Password" section -> enter current password, new password -> Save.
+Settings -> scroll to the left column (Personal Profile) -> "Change Password" section -> enter current password, new password -> Save.
+
+CREATE A BOOKING (record a closed deal)
+Left sidebar -> Bookings & Invoices -> Bookings -> click "+ New Booking" (top-right orange button) -> fill:
+  - Customer Name (required)
+  - Developer (required - pick from dropdown or type to search)
+  - Project Name (required)
+  - Unit / Tower / Phase (optional)
+  - Booking Date (required)
+  - Consideration Value (property sale price)
+  - Brokerage % (auto-calculates brokerage amount)
+  - Brokerage Adjustment (manual override of brokerage)
+  - FOS Incentive and EOI Incentive (optional bonuses)
+  - GST type: IGST or CGST+SGST (18% applied on brokerage)
+-> click Save. The booking appears in the table and the Total Bill is shown.
+
+EDIT A BOOKING
+Bookings -> find the booking row -> click the Pencil (edit) icon in the Actions column -> change any fields -> Save.
+
+DELETE A BOOKING
+Bookings -> find the booking row -> click the Trash (delete) icon in the Actions column -> confirm. If the booking has a linked invoice, that invoice is also deleted permanently.
+
+GENERATE AN INVOICE FROM A BOOKING
+Bookings -> find the booking row with status "New" -> click the FileText icon (Generate Invoice) -> the invoice is created and the booking status changes to "Invoiced". You are taken to the Invoices page.
+
+VIEW LINKED INVOICE
+Bookings -> find a booking with status "Invoiced" or "Payment Received" -> click the ExternalLink icon (View Invoice) in the Actions column -> opens the Invoices page.
+
+VIEW ALL INVOICES
+Left sidebar -> Bookings & Invoices -> Invoices. Table shows: invoice number, customer, developer, project, amount, GST, total, status, date.
+
+CHANGE INVOICE STATUS
+Invoices -> find the invoice row -> click the status dropdown in the Status column -> pick any status: Draft, Sent, Payment Pending, Payment Received. You can go forward or backward (e.g. revert from Payment Received back to Sent).
+
+DOWNLOAD / PRINT INVOICE PDF
+Invoices -> find the invoice -> click the "Simple" or "Detailed" button (PDF icon area in Actions column). Simple = clean one-page invoice. Detailed = full breakdown with GST split, incentives, bank details. The browser print dialog opens - choose "Save as PDF".
+
+ADD / MANAGE DEVELOPERS
+Left sidebar -> Bookings & Invoices -> Developers -> click "+ Add Developer" -> enter developer company name -> Save. Developers appear in the booking form's Developer dropdown.
+
+SET UP ORG BILLING DETAILS (Admin only - required for invoices)
+Settings -> right column shows "Organisation & Billing Details" (visible to Admins only).
+Fill in:
+  - Organisation Logo (click Upload Logo - appears on invoice letterhead)
+  - Registered Address (required*)
+  - Contact Number and Official Email
+  - GST Number (required*) - auto-uppercased
+  - PAN Number (required*) - auto-uppercased
+  - CIN and RERA Reg. No. (optional)
+  - Account Name (required*), Account Number (required*), IFSC Code (required*)
+  - Bank Name - type to search from dropdown of 44 major Indian banks
+  - Branch / Address (optional)
+-> click "Save Billing Details". All required fields (marked with *) must be filled. Progress bar shows completion. These details appear on every invoice PDF.
+
+UPLOAD ORG LOGO (Admin only)
+Settings -> right column -> Organisation & Billing Details -> "Organisation Logo" section -> click "Upload Logo" or click the logo box -> pick an image (PNG, JPG, or SVG, max 5 MB) -> logo is compressed and saved automatically. It appears on every invoice letterhead. Click "Remove" to delete it.
 
 UPGRADE YOUR PLAN
 Left sidebar -> Plans -> compare Starter / Growth / Enterprise -> click "Upgrade".
@@ -233,6 +288,32 @@ NOTIFICATION NOT RECEIVED
 2. On mobile: allow notifications in your browser settings for arthaleads.com.
 3. On desktop Chrome: click the lock icon in the address bar -> Notifications -> Allow.
 
+CANNOT GENERATE INVOICE / INVOICE BUTTON NOT VISIBLE ON BOOKING
+1. The Generate Invoice button (FileText icon) only appears on bookings with status "New". If the booking is already "Invoiced" or "Payment Received", an invoice already exists - click the ExternalLink icon to view it.
+2. If you just created the booking and the button still does not appear, refresh the page.
+
+INVOICE PDF IS MISSING COMPANY DETAILS / LOGO / BANK DETAILS
+1. Go to Settings -> right column (Organisation & Billing Details) - this section is visible to Admins only.
+2. Fill in all required fields: Address, GST Number, PAN, Account Name, Account Number, IFSC Code.
+3. Upload the org logo in the "Organisation Logo" section.
+4. Click "Save Billing Details". Re-open the invoice and try downloading again.
+5. If you are not an Admin, ask your Admin to fill in the billing details in Settings.
+
+INVOICE STATUS CANNOT BE CHANGED / STUCK ON ONE STATUS
+The invoice status is a dropdown - click it directly in the Status column of the Invoices table. You can select any status including going backwards (e.g. from Payment Received back to Payment Pending or Sent).
+
+BROKERAGE AMOUNT NOT CALCULATING / WRONG TOTAL ON BOOKING
+1. Consideration Value times Brokerage % auto-fills the Brokerage Amount field. If you overrode it, the manual value is used.
+2. GST (18%) is calculated on: Brokerage Amount + FOS Incentive + EOI Incentive - Brokerage Adjustment.
+3. Check GST Type: IGST = 18% as one line; CGST+SGST = 9% + 9%. Same total tax either way.
+4. Brokerage Adjustment is a discount/deduction - it reduces the taxable base.
+
+DEVELOPER DOES NOT APPEAR IN BOOKING FORM DROPDOWN
+Go to Bookings & Invoices -> Developers -> click "+ Add Developer" -> enter the company name -> Save. Then go back to create your booking.
+
+DELETED A BOOKING BY MISTAKE (had an invoice)
+Booking deletes are permanent and also delete the linked invoice. There is no undo. You will need to create a new booking and generate a new invoice.
+
 ════════════════════════════════════════════════
 CURRENT FEATURES (v2 — live right now)
 ════════════════════════════════════════════════
@@ -264,8 +345,17 @@ Clock in/out. Total hours, late marks, half-day. Admin: set shift time, add manu
 TEAM (/team) — Admin only
 Invite agents/managers/admins. Role-based login. Deactivate/reactivate members.
 
+BOOKINGS (/bookings)
+Record every closed property deal. Fields: customer name, developer, project, unit/tower/phase, booking date, consideration value (sale price), brokerage % and amount, brokerage adjustment, FOS incentive, EOI incentive, GST type (IGST or CGST+SGST). Auto-calculates total brokerage bill including 18% GST. Statuses: New (no invoice), Invoiced, Payment Received. Actions per row: Generate Invoice (FileText icon), View Invoice (ExternalLink icon), Edit (Pencil icon), Delete (Trash icon). Stats cards at top: Total Bookings, Total Brokerage, Invoice Pending, Payment Received. Filter tabs: All, New, Invoiced, Paid.
+
+INVOICES (/invoices)
+View and manage brokerage invoices. Each invoice links to a booking. Invoice number is auto-generated per org (INV-0001, INV-0002, ...). Columns: invoice number, customer, developer, project, brokerage amount, GST, total amount, status, date. Status dropdown (full cycle, can revert): Draft -> Sent -> Payment Pending -> Payment Received. Two PDF templates: Simple (clean one-page) and Detailed (full breakdown with GST, incentives, bank details, amount in words). Invoice letterhead pulls from org billing details in Settings. paidAt date is recorded when status = Payment Received and cleared if reverted.
+
+DEVELOPERS (/developers)
+Manage the list of developer companies used in bookings. Add, edit, or delete developer entries. Developers appear in the booking form's developer dropdown.
+
 SETTINGS (/settings)
-Profile, password, org logo and brand colour, push/email notifications, API tokens, shift timing, attendance buffer.
+Two-column layout. Left column (all roles): Personal Profile - avatar display, change profile picture (URL or upload), full name, phone, email (read-only), role selector, change password, permission notes, save button. Right column (Admin only): Organisation & Billing Details - logo upload, registered address, contact number, official email, GST number, PAN, CIN, RERA, bank account name, account number, IFSC code, bank name (searchable dropdown of 44 Indian banks), branch/address. Required fields marked with (*). Progress bar shows how many required fields are filled. All billing details appear on every invoice PDF letterhead. Also: Auto Lead Assignment toggle (Admin/super_admin), Attendance shift settings.
 
 SUPPORT TICKETS
 Raise from HelpBot or Settings. Categories: billing, technical, feature-request, bug, general. Unique ticket number. Reply threads. Status: open, in-progress, resolved, closed.
