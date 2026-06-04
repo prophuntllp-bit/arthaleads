@@ -192,7 +192,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
                   onChange={v => set("developerId", v)}
                   placeholder="-- Select developer --"
                   options={developers.map(d => ({ value: d._id, label: d.name }))}
-                  triggerClassName="text-sm"
+                  triggerStyle={{ padding: "11px 16px", borderRadius: "1rem", fontSize: 14 }}
                 />
               </div>
               <div>
@@ -230,7 +230,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Booking Date</label>
-                <AppDatePicker value={form.bookingDate} onChange={v => set("bookingDate", v)} />
+                <AppDatePicker value={form.bookingDate} onChange={v => set("bookingDate", v)} triggerStyle={{ padding: "11px 16px", borderRadius: "1rem", fontSize: 14 }} />
               </div>
             </div>
 

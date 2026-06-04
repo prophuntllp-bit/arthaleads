@@ -578,7 +578,7 @@ export function AppSelect({
 // value: "YYYY-MM-DD" string | ""
 // onChange: fn("YYYY-MM-DD" | "")
 // min/max: "YYYY-MM-DD" optional constraints
-export function AppDatePicker({ value, onChange, placeholder = "Pick date", className = "", style, min, max }) {
+export function AppDatePicker({ value, onChange, placeholder = "Pick date", className = "", style, triggerStyle, min, max }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => {
     if (value) { const d = new Date(value + "T00:00:00"); return { year: d.getFullYear(), month: d.getMonth() }; }
@@ -670,6 +670,7 @@ export function AppDatePicker({ value, onChange, placeholder = "Pick date", clas
           outline: "none",
           cursor: "pointer",
           whiteSpace: "nowrap",
+          ...triggerStyle,
         }}
       >
         <Calendar style={{ width: 13, height: 13, opacity: 0.55, flexShrink: 0 }} />
