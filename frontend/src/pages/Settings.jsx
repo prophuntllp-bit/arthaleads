@@ -1,10 +1,112 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
-         Building2, FileText, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
+
+// Compress image to JPEG ≤ 400×400 before upload
+function compressImage(dataUri, maxPx = 400) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
+
+// Logo upload widget used inside OrgBillingSection
+function OrgLogoUpload({ logo, onUpdated }) {
+  const inputRef = useRef(null);
+  const [preview, setPreview] = useState(logo || "");
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { setPreview(logo || ""); }, [logo]);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Only image files supported");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const compressed = await compressImage(ev.target.result);
+        setPreview(compressed);
+        const { data } = await api.patch("/org/me/logo", { logo: compressed });
+        onUpdated(data.org);
+        toast.success("Logo updated.");
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Upload failed.");
+        setPreview(logo || "");
+      } finally { setUploading(false); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemove = async () => {
+    if (!confirm("Remove organisation logo?")) return;
+    setUploading(true);
+    try {
+      const { data } = await api.patch("/org/me/logo", { logo: "" });
+      setPreview("");
+      onUpdated(data.org);
+      toast.success("Logo removed.");
+    } catch { toast.error("Failed to remove logo."); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      {/* Preview */}
+      <div
+        onClick={() => !uploading && inputRef.current?.click()}
+        className="w-20 h-16 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition border-2"
+        style={{ background: "var(--app-surface-low)",
+          borderColor: preview ? "var(--app-primary)" : "var(--app-border)",
+          borderStyle: preview ? "solid" : "dashed" }}
+        title="Click to upload logo"
+      >
+        {uploading ? (
+          <span className="h-5 w-5 rounded-full border-2 border-orange-400 border-t-transparent animate-spin" />
+        ) : preview ? (
+          <img src={preview} alt="org logo" className="max-w-full max-h-full object-contain p-1"
+            onError={() => setPreview("")} />
+        ) : (
+          <Upload className="h-5 w-5 text-app-soft" />
+        )}
+      </div>
+
+      <div>
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
+          className="btn-secondary rounded-xl text-xs px-3 py-2 flex items-center gap-1.5 disabled:opacity-50">
+          <Upload className="h-3.5 w-3.5" /> {preview ? "Change Logo" : "Upload Logo"}
+        </button>
+        {preview && (
+          <button type="button" onClick={handleRemove} disabled={uploading}
+            className="mt-1 text-[11px] text-app-soft hover:text-red-500 transition flex items-center gap-1">
+            <X className="h-3 w-3" /> Remove
+          </button>
+        )}
+        <p className="text-[10px] text-app-soft mt-1">PNG, JPG or SVG · appears on invoice letterhead</p>
+      </div>
+
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
 
 // ── Organisation Billing Section ─────────────────────────────────────────────
 const BILLING_REQUIRED = ["address", "gstNo", "pan", "bankAccountName", "bankAccountNo", "bankIfsc"];
@@ -113,6 +215,15 @@ function OrgBillingSection({ org, updateOrg }) {
           </p>
         </div>
       )}
+
+      {/* Logo upload */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-bold text-app-soft uppercase tracking-wider">Organisation Logo</span>
+          <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
+        </div>
+        <OrgLogoUpload logo={org?.logo} onUpdated={updateOrg} />
+      </div>
 
       {/* Field sections */}
       {BILLING_FIELDS.map(({ section, fields }) => (

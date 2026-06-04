@@ -92,10 +92,15 @@ const superAdminController = {
         }
 
         if (isBase64) {
-          // Upload to Cloudinary - org ID used as stable public_id so re-uploads overwrite
-          console.log(`[updateLogo] uploading logo to Cloudinary for org ${req.params.id}`);
-          logoUrl = await uploadOrgLogo(logo, req.params.id);
-          console.log(`[updateLogo] ✅ Cloudinary URL: ${logoUrl}`);
+          // Try Cloudinary — fall back to storing base64 directly if not configured
+          try {
+            console.log(`[updateLogo] uploading logo to Cloudinary for org ${req.params.id}`);
+            logoUrl = await uploadOrgLogo(logo, req.params.id);
+            console.log(`[updateLogo] ✅ Cloudinary URL: ${logoUrl}`);
+          } catch (cloudErr) {
+            console.warn(`[updateLogo] Cloudinary unavailable, storing base64 directly:`, cloudErr.message);
+            logoUrl = logo; // store compressed base64 in MongoDB as fallback
+          }
         } else {
           // Already a hosted URL (e.g. re-submitting an existing Cloudinary URL) - store as-is
           logoUrl = logo;

@@ -1,6 +1,7 @@
 ﻿const express = require("express");
 const Organization = require("../models/Organization");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
+const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
 const router = express.Router();
 
@@ -88,6 +89,40 @@ router.patch("/me/attendance-settings", authorize("admin"), async (req, res, nex
 
     invalidateOrgCache(req.orgId);
     res.json({ success: true, settings: org.attendanceSettings });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/org/me/logo — upload org logo (admin only); tries Cloudinary, falls back to base64
+router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
+  try {
+    const { logo } = req.body;
+    if (logo === undefined) return res.status(400).json({ success: false, message: "logo field is required." });
+
+    let logoUrl = "";
+    if (logo !== "") {
+      const isBase64 = logo.startsWith("data:image/");
+      const isUrl    = logo.startsWith("https://") || logo.startsWith("http://");
+      if (!isBase64 && !isUrl) return res.status(400).json({ success: false, message: "logo must be a data-URI or HTTPS URL." });
+
+      if (isBase64) {
+        try {
+          logoUrl = await uploadOrgLogo(logo, req.orgId.toString());
+        } catch {
+          logoUrl = logo; // Cloudinary not configured — store base64 directly
+        }
+      } else {
+        logoUrl = logo;
+      }
+    } else {
+      deleteOrgLogo(req.orgId.toString()); // fire-and-forget
+    }
+
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { logo: logoUrl }, { new: true }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, org });
   } catch (err) { next(err); }
 });
 
