@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { FileText, X, Printer, ChevronDown, IndianRupee, Send, CheckCircle2, Clock, FileCheck } from "lucide-react";
+import { FileText, X, Printer, ChevronDown, IndianRupee, Send, CheckCircle2, Clock, FileCheck, RotateCcw } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
@@ -383,12 +383,8 @@ const STATUS = {
   payment_pending:  { label: "Payment Pending",  bg: "rgba(245,158,11,0.1)",  color: "#f59e0b", icon: Clock },
   payment_received: { label: "Payment Received", bg: "rgba(16,185,129,0.1)",  color: "#10b981", icon: CheckCircle2 },
 };
-const STATUS_FLOW = {
-  draft: "sent", sent: "payment_pending", payment_pending: "payment_received",
-};
-const STATUS_NEXT_LABEL = {
-  draft: "Mark as Sent", sent: "Mark Payment Pending", payment_pending: "Mark Received",
-};
+// All status options for the dropdown (any → any allowed)
+const STATUS_ORDER = ["draft", "sent", "payment_pending", "payment_received"];
 
 // ── PDF Modal ─────────────────────────────────────────────────────────────────
 function PDFModal({ inv, org, onClose }) {
@@ -539,7 +535,6 @@ export default function Invoices() {
                 {filtered.map(inv => {
                   const s = STATUS[inv.status] || STATUS.draft;
                   const SIcon = s.icon;
-                  const nextStatus = STATUS_FLOW[inv.status];
                   return (
                     <tr key={inv._id} style={{ borderBottom: "1px solid var(--app-border)" }}
                       className="hover:bg-black/2 dark:hover:bg-white/2 transition">
@@ -562,35 +557,33 @@ export default function Invoices() {
                         <p className="text-[10px] text-app-soft">Brok: {fmtINR(inv.totalBrokerage)}</p>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold"
-                          style={{ background: s.bg, color: s.color }}>
-                          <SIcon className="h-2.5 w-2.5" /> {s.label}
-                        </span>
+                        {/* Status dropdown — any status can be selected */}
+                        <div className="relative">
+                          <select
+                            value={inv.status}
+                            disabled={updating === inv._id}
+                            onChange={e => updateStatus(inv, e.target.value)}
+                            className="appearance-none pl-2 pr-6 py-1 rounded-lg text-[10px] font-bold cursor-pointer border-0 outline-none disabled:opacity-60"
+                            style={{ background: s.bg, color: s.color }}>
+                            {STATUS_ORDER.map(k => (
+                              <option key={k} value={k}>{STATUS[k].label}</option>
+                            ))}
+                          </select>
+                          {updating === inv._id
+                            ? <span className="absolute right-1.5 top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full border border-current border-t-transparent animate-spin" style={{ color: s.color }} />
+                            : <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-2.5 w-2.5 pointer-events-none" style={{ color: s.color }} />}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-app-soft whitespace-nowrap">
                         {new Date(inv.invoiceDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <button
-                            onClick={() => setViewInv(inv)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer transition"
-                            style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
-                            <Printer className="h-3 w-3" /> View PDF
-                          </button>
-                          {nextStatus && (
-                            <button
-                              onClick={() => updateStatus(inv, nextStatus)}
-                              disabled={updating === inv._id}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer transition disabled:opacity-50"
-                              style={{ background: STATUS[nextStatus].bg, color: STATUS[nextStatus].color, border: `1px solid ${STATUS[nextStatus].color}40` }}>
-                              {updating === inv._id
-                                ? <span className="h-2.5 w-2.5 rounded-full border border-current border-t-transparent animate-spin" />
-                                : <ChevronDown className="h-3 w-3" />}
-                              {STATUS_NEXT_LABEL[inv.status]}
-                            </button>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => setViewInv(inv)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer transition"
+                          style={{ background: "rgba(99,102,241,0.1)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.25)" }}>
+                          <Printer className="h-3 w-3" /> View PDF
+                        </button>
                       </td>
                     </tr>
                   );

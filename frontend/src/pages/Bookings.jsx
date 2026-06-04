@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { BookMarked, Plus, FileText, X, Check, ChevronDown, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -64,6 +64,33 @@ function Row({ label, value, bold, bigger, color }) {
       <span className={`font-${bold ? "bold" : "medium"} ${bigger ? "text-sm" : ""}`}
         style={{ color: color || (bold ? "var(--app-text)" : undefined) }}>{value}</span>
     </div>
+  );
+}
+
+// Formats number with Indian commas while typing — shows raw digits when focused
+function FormattedNumberInput({ value, onChange, placeholder, className, step }) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const raw = value === "" || value === undefined ? "" : String(value);
+  const display = focused || !raw
+    ? raw
+    : Number(raw).toLocaleString("en-IN");
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      inputMode="decimal"
+      step={step}
+      value={display}
+      onChange={e => {
+        const stripped = e.target.value.replace(/[^0-9.]/g, "");
+        onChange(stripped);
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 }
 
@@ -214,9 +241,9 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               <p className="text-xs font-bold text-app-soft uppercase tracking-wide">Brokerage Details</p>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Consideration Value (₹)</label>
-                <input type="number" min="0" value={form.considerationValue}
-                  onChange={e => set("considerationValue", e.target.value)}
-                  placeholder="7236350" className="input w-full text-sm" />
+                <FormattedNumberInput value={form.considerationValue}
+                  onChange={v => set("considerationValue", v)}
+                  placeholder="72,36,350" className="input w-full text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block flex items-center justify-between">
@@ -228,9 +255,9 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
                   </label>
                 </label>
                 {form.manualBrokerage ? (
-                  <input type="number" min="0" value={form.brokerageAmount}
-                    onChange={e => set("brokerageAmount", e.target.value)}
-                    placeholder="173100" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.brokerageAmount}
+                    onChange={v => set("brokerageAmount", v)}
+                    placeholder="1,73,100" className="input w-full text-sm" />
                 ) : (
                   <input type="number" step="0.25" min="0" max="20" value={form.brokeragePercent}
                     onChange={e => set("brokeragePercent", e.target.value)}
@@ -239,22 +266,22 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Brokerage Adjustment (-)</label>
-                <input type="number" min="0" value={form.brokerageAdjustment}
-                  onChange={e => set("brokerageAdjustment", e.target.value)}
+                <FormattedNumberInput value={form.brokerageAdjustment}
+                  onChange={v => set("brokerageAdjustment", v)}
                   placeholder="0" className="input w-full text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">FOS Incentive (₹)</label>
-                  <input type="number" min="0" value={form.fosIncentive}
-                    onChange={e => set("fosIncentive", e.target.value)}
-                    placeholder="25000" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.fosIncentive}
+                    onChange={v => set("fosIncentive", v)}
+                    placeholder="25,000" className="input w-full text-sm" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">EOI Incentive (₹)</label>
-                  <input type="number" min="0" value={form.eoiIncentive}
-                    onChange={e => set("eoiIncentive", e.target.value)}
-                    placeholder="30000" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.eoiIncentive}
+                    onChange={v => set("eoiIncentive", v)}
+                    placeholder="30,000" className="input w-full text-sm" />
                 </div>
               </div>
               <div>

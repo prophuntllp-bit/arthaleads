@@ -99,12 +99,16 @@ router.patch("/:id/status", async (req, res, next) => {
     const inv = await Invoice.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!inv) return res.status(404).json({ success: false, message: "Invoice not found." });
     inv.status = status;
-    if (status === "payment_received") inv.paidAt = new Date();
+    if (status === "payment_received") {
+      inv.paidAt = new Date();
+    } else {
+      inv.paidAt = undefined; // clear if reverting away from payment_received
+    }
     await inv.save();
 
-    if (status === "payment_received") {
-      await Booking.findByIdAndUpdate(inv.bookingId, { status: "payment_received" });
-    }
+    // Sync booking status: payment_received ↔ invoiced
+    const bookingStatus = status === "payment_received" ? "payment_received" : "invoiced";
+    await Booking.findByIdAndUpdate(inv.bookingId, { status: bookingStatus });
     res.json({ success: true, data: inv });
   } catch (e) { next(e); }
 });
