@@ -27,6 +27,11 @@ const orgSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     industry: { type: String, default: "Real Estate" },
+    // Set when the org owner completes the first-run onboarding wizard.
+    // While null, the frontend shows a blocking onboarding gate to the admin.
+    onboardingCompletedAt: { type: Date, default: null },
+    companySize: { type: String, default: "" }, // e.g. "1-5", "6-20", "21-50", "50+"
+    city:        { type: String, default: "" },
     logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents

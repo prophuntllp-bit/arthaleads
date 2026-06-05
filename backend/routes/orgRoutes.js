@@ -1,11 +1,64 @@
 ﻿const express = require("express");
 const Organization = require("../models/Organization");
+const User = require("../models/User");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
 const router = express.Router();
 
 router.use(protect);
+
+// POST /api/org/me/onboarding — first-run setup wizard (admin/owner only)
+// Saves the organisation's business + compliance details, the owner's personal
+// mobile, and stamps onboardingCompletedAt so the blocking gate dismisses.
+router.post("/me/onboarding", authorize("admin"), async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId);
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+
+    const b = req.body || {};
+    const clean = (v) => String(v ?? "").trim();
+
+    // Required business fields
+    const name     = clean(b.name) || org.name;
+    const address  = clean(b.address);
+    const orgPhone = clean(b.phone);
+    if (name.length < 2)    return res.status(400).json({ success: false, message: "Organisation name is required." });
+    if (address.length < 4) return res.status(400).json({ success: false, message: "Business address is required." });
+    if (orgPhone.replace(/\D/g, "").length < 10)
+      return res.status(400).json({ success: false, message: "A valid business phone number is required." });
+
+    // Required: owner's personal mobile
+    const personalPhone = clean(b.personalPhone);
+    if (personalPhone.replace(/\D/g, "").length < 10)
+      return res.status(400).json({ success: false, message: "Your personal mobile number is required." });
+
+    // Apply org fields
+    org.name    = name;
+    org.address = address;
+    org.phone   = orgPhone;
+    if (b.industry    !== undefined) org.industry    = clean(b.industry) || org.industry;
+    if (b.email       !== undefined) org.email       = clean(b.email);
+    if (b.city        !== undefined) org.city        = clean(b.city);
+    if (b.companySize !== undefined) org.companySize = clean(b.companySize);
+    if (b.gstNo       !== undefined) org.gstNo       = clean(b.gstNo).toUpperCase();
+    if (b.pan         !== undefined) org.pan         = clean(b.pan).toUpperCase();
+    if (b.rera        !== undefined) org.rera        = clean(b.rera);
+    org.onboardingCompletedAt = new Date();
+    await org.save();
+    invalidateOrgCache(req.orgId);
+
+    // Save the owner's personal mobile + optional name update
+    const user = await User.findById(req.user._id);
+    if (user) {
+      user.phone = personalPhone;
+      if (clean(b.fullName).length >= 2) user.name = clean(b.fullName);
+      await user.save({ validateBeforeSave: false });
+    }
+
+    res.json({ success: true, org, user });
+  } catch (err) { next(err); }
+});
 
 // GET /api/org/me - current org details
 router.get("/me", async (req, res, next) => {
