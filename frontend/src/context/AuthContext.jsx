@@ -51,6 +51,7 @@ export function AuthProvider({ children }) {
     if (token) storageSave("_at", token);
     setUser(nextUser);
     setOrg(nextOrg || null);  // in-memory state keeps the full base64 logo
+    setLoading(false);
   }, []);
 
   const clearSession = useCallback(() => {
