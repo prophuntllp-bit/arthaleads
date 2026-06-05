@@ -188,9 +188,19 @@ const authService = {
       throw new AppError("Google sign-in failed. Please try again.", 401);
     }
 
-    const { sub: googleId, email, name, picture } = payload;
+    const { sub: googleId, email, name, picture, email_verified } = payload;
 
     if (!email) throw new AppError("Google account has no email", 400);
+
+    // Reject unverified Google emails. Google issues tokens for unverified
+    // addresses in some Workspace flows; without this check an attacker holding
+    // an unverified account for victim@x.com could link to an existing CRM user
+    // by email (see "link the Google account" path below) and hijack it.
+    // userinfo returns email_verified as a boolean or the string "true"/"false".
+    const isVerified = email_verified === true || email_verified === "true";
+    if (!isVerified) {
+      throw new AppError("Your Google account email is not verified. Please verify it with Google first.", 400);
+    }
 
     // Find existing user by googleId or email
     let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");

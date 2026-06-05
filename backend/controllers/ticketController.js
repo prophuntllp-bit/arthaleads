@@ -7,11 +7,18 @@ const MAX_ATTACH_BYTES = 600 * 1024; // 600 KB per file (pre-base64)
 
 function sanitiseAttachments(raw) {
   if (!Array.isArray(raw)) return [];
-  return raw.slice(0, MAX_ATTACHMENTS).map((a) => ({
-    url:  String(a.url  || "").slice(0, 2_000_000), // ~1.5 MB base64 cap
-    name: String(a.name || "attachment").slice(0, 200),
-    size: Number(a.size || 0),
-  })).filter((a) => a.url);
+  return raw.slice(0, MAX_ATTACHMENTS).map((a) => {
+    const name = String(a.name || "attachment").slice(0, 200);
+    const size = Number(a.size || 0);
+    if (size > MAX_ATTACH_BYTES) {
+      throw new AppError(`Attachment "${name}" exceeds the 600 KB limit`, 400);
+    }
+    return {
+      url:  String(a.url || "").slice(0, 2_000_000), // ~1.5 MB base64 cap
+      name,
+      size,
+    };
+  }).filter((a) => a.url);
 }
 
 const ticketController = {

@@ -41,12 +41,16 @@ router.post("/facebook/refresh-tokens", protect, authorize("admin", "manager", "
     const META_GRAPH_VERSION = "v23.0";
     const { automationId } = req.body;
 
-    // If a specific automation ID is provided (per-card refresh), look up by _id only.
-    // This works for super_admin viewing other orgs' automations.
-    // Otherwise fall back to all active Facebook automations for the caller's org.
+    // If a specific automation ID is provided (per-card refresh), look it up by _id.
+    // Only super_admin may refresh an automation outside their own org; for a normal
+    // admin/manager we always scope by orgId so they cannot refresh — or probe for —
+    // another tenant's Facebook connection by guessing ObjectIds.
+    const base = { platform: "Facebook", isActive: true, userToken: { $exists: true, $ne: "" } };
     const query = automationId
-      ? { _id: automationId, platform: "Facebook", isActive: true, userToken: { $exists: true, $ne: "" } }
-      : { orgId: req.user.orgId, platform: "Facebook", isActive: true, userToken: { $exists: true, $ne: "" } };
+      ? (req.user.role === "super_admin"
+          ? { ...base, _id: automationId }
+          : { ...base, _id: automationId, orgId: req.user.orgId })
+      : { ...base, orgId: req.user.orgId };
 
     const automations = await Automation.find(query);
 

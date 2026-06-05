@@ -26,11 +26,22 @@ export default function Performance() {
   );
 
   const exportPDF = () => {
+    // Escape any user-controlled value before interpolating it into the HTML
+    // string written to the popup. Org name, member name/email/role are all
+    // user-editable and would otherwise allow stored XSS in the same-origin
+    // popup (full access to cookies, DOM, and the logged-in user's session).
+    const esc = (v) => String(v ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
     const now = new Date();
     const dateStr  = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
     const timeStr  = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-    const orgName  = org?.name  || "Your Organisation";
-    const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? org.logo : null;
+    const orgName  = esc(org?.name || "Your Organisation");
+    const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? encodeURI(org.logo) : null;
     const rangeLabel = dateFrom || dateTo
       ? `${dateFrom ? new Date(dateFrom).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"} → ${dateTo ? new Date(dateTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Today"}`
       : "All time · Live data";
@@ -40,7 +51,7 @@ export default function Performance() {
       const pr = m.project  || {};
       const pConv  = Math.min(p.conversionRate  || 0, 100);
       const prConv = Math.min(pr.conversionRate || 0, 100);
-      const initial = (m.name || "?")[0].toUpperCase();
+      const initial = esc((m.name || "?")[0].toUpperCase());
       const avatarColors = ["#f97316","#6366f1","#22c55e","#3b82f6","#ec4899","#f59e0b","#14b8a6"];
       const avatarBg = avatarColors[idx % avatarColors.length];
       return `
@@ -49,12 +60,12 @@ export default function Performance() {
             <div class="agent-name-area">
               <div class="agent-avatar" style="background:${avatarBg}">${initial}</div>
               <div>
-                <div class="agent-name">${m.name || "—"}</div>
-                <div class="agent-email">${m.email || ""}</div>
+                <div class="agent-name">${esc(m.name || "—")}</div>
+                <div class="agent-email">${esc(m.email || "")}</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span class="role-badge">${m.role || ""}</span>
+              <span class="role-badge">${esc(m.role || "")}</span>
               <span style="font-size:10px;color:${m.isActive !== false ? "#22c55e" : "#94a3b8"};font-weight:600;">
                 ${m.isActive !== false ? "● Active" : "○ Inactive"}
               </span>

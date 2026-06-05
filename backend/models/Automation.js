@@ -141,5 +141,8 @@ const automationSchema = new mongoose.Schema(
 
 automationSchema.index({ platform: 1, status: 1 });
 automationSchema.index({ createdAt: -1 });
+// Speeds up the Facebook webhook lookup (findFacebookAutomationByPayload), which
+// matches active Facebook automations by page on every incoming lead.
+automationSchema.index({ platform: 1, isActive: 1, pageId: 1 });
 
 module.exports = mongoose.model("Automation", automationSchema);

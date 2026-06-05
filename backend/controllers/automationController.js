@@ -23,6 +23,7 @@ function renderPopupScript(payload, targetOrigin) {
 
 const crypto = require("crypto");
 const Automation = require("../models/Automation");
+const { AppError } = require("../middlewares/errorHandler");
 
 function generateWebsiteToken() {
   // 192 bits of entropy - URL-safe hex, no need for slice

@@ -20,7 +20,15 @@ const tokenAlertCooldown = new Map(); // orgId → lastAlertTimestamp
 function verifyFbSignature(req, res, buf) {
   const sig = req.headers["x-hub-signature-256"];
   if (!process.env.FB_APP_SECRET) {
-    logger.warn("Facebook webhook: FB_APP_SECRET not configured - webhook signature verification disabled");
+    // In production a missing secret must NOT silently accept every payload —
+    // that would let anyone POST fake leads into any tenant's pipeline.
+    if (process.env.NODE_ENV === "production") {
+      logger.error("Facebook webhook: FB_APP_SECRET missing in production - rejecting request");
+      const err = new Error("Webhook signature verification is not configured");
+      err.status = 503;
+      throw err;
+    }
+    logger.warn("Facebook webhook: FB_APP_SECRET not configured - webhook signature verification disabled (dev only)");
     return; // allow in dev; configure FB_APP_SECRET in prod
   }
   if (!sig) {

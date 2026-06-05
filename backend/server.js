@@ -43,6 +43,15 @@ const app = express();
 // Trust Railway/Vercel proxy - required for express-rate-limit behind a reverse proxy
 app.set("trust proxy", 1);
 
+// ── Boot-time security assertion ──────────────────────────────────────────────
+// Without FB_APP_SECRET in production, the Facebook webhook cannot verify
+// signatures. The webhook itself now rejects requests at runtime, but surface
+// the misconfiguration loudly at boot so it's caught before leads start failing.
+if (process.env.NODE_ENV === "production" && !process.env.FB_APP_SECRET) {
+  console.error("[FATAL] FB_APP_SECRET is not set in production — Facebook webhook signature verification is disabled and the webhook will reject all requests. Set FB_APP_SECRET in the environment.");
+  logger.error("FB_APP_SECRET missing in production — Facebook webhook will reject all incoming requests until configured.");
+}
+
 // ── Connect Database ──────────────────────────────────────────────────────────
 console.log("[BOOT] Connecting to DB...");
 connectDB().then(async () => {
@@ -221,7 +230,7 @@ app.get("/health", (req, res) => {
 // ── Frontend Error Report (ErrorBoundary → Sentry) ───────────────────────────
 // Accepts render crashes from the React ErrorBoundary and forwards to Sentry.
 // No auth required - the boundary catches pre-auth crashes too.
-app.post("/api/error-report", express.json({ limit: "16kb" }), (req, res) => {
+app.post("/api/error-report", contactLimiter, express.json({ limit: "16kb" }), (req, res) => {
   const { message, stack, componentStack, url } = req.body || {};
   logger.error(`[frontend-error] ${message} | url: ${url}\n${stack}\n${componentStack}`);
   const Sentry = require("./instrument");

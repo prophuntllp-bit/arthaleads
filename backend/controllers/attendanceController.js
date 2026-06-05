@@ -249,6 +249,12 @@ const attendanceController = {
       const { userId, date, clockIn, clockOut, note } = req.body;
       if (!userId || !date) return next(new AppError("userId and date are required.", 400));
 
+      // Ensure the target user actually belongs to the caller's org. Without this,
+      // an upsert would fabricate an attendance record for any arbitrary userId
+      // (e.g. a super_admin or a user in another org) scoped to the caller's org.
+      const targetUser = await User.findOne({ _id: userId, orgId: req.user.orgId }).select("_id");
+      if (!targetUser) return next(new AppError("User not found in your organisation.", 404));
+
       const clockInDate  = clockIn  ? new Date(clockIn)  : null;
       const clockOutDate = clockOut ? new Date(clockOut) : null;
 
