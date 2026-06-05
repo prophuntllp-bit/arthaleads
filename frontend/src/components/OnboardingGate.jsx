@@ -129,9 +129,14 @@ export default function OnboardingGate() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[9997] flex items-center justify-center p-4 overflow-y-auto"
-      style={{ background: "rgba(8,8,14,0.82)", backdropFilter: "blur(10px)" }}>
+      style={{ background: "rgba(8,8,14,0.92)", backdropFilter: "blur(10px)" }}>
       <div className="my-auto w-full max-w-xl rounded-3xl shadow-2xl"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+        style={{
+          background: "var(--app-surface-high)",
+          border: "1px solid var(--app-border-strong)",
+          backdropFilter: "blur(48px) saturate(140%)",
+          WebkitBackdropFilter: "blur(48px) saturate(140%)",
+        }}>
 
         {/* Header */}
         <div className="px-7 pt-7 pb-5 border-b" style={{ borderColor: "var(--app-border)" }}>
@@ -167,7 +172,7 @@ export default function OnboardingGate() {
                       {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                     </div>
                     {!profileOnly && (
-                      <span className={`text-xs font-semibold truncate hidden sm:block ${active ? "text-app" : "text-app-soft"}`}>
+                      <span className={`text-xs font-semibold truncate hidden sm:block ${active || done ? "text-app" : "text-app-soft"}`}>
                         {s.title}
                       </span>
                     )}
@@ -273,7 +278,8 @@ export default function OnboardingGate() {
           )}
 
           {error && (
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="rounded-2xl border border-red-500/40 bg-red-500/15 px-4 py-3 text-sm font-medium"
+              style={{ color: "#ef4444" }}>
               {error}
             </div>
           )}
