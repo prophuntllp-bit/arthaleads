@@ -15,6 +15,10 @@ const INDUSTRIES = [
 ];
 const COMPANY_SIZES = ["1-5", "6-20", "21-50", "51-200", "200+"];
 
+// Make the AppSelect trigger match the height/shape of the `.input` fields
+// (.input = px-4 py-3 text-sm rounded-2xl) so selects line up with text inputs.
+const SELECT_TRIGGER_STYLE = { padding: "12px 16px", fontSize: 14, borderRadius: 16 };
+
 // Light client-side validators (server re-validates the required ones)
 const phoneOk = (v) => v.replace(/\D/g, "").length >= 10;
 
@@ -198,12 +202,13 @@ export default function OnboardingGate() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Industry</label>
-                  <AppSelect value={form.industry} onChange={set("industry")} options={INDUSTRIES} />
+                  <AppSelect value={form.industry} onChange={set("industry")} options={INDUSTRIES}
+                    triggerStyle={SELECT_TRIGGER_STYLE} />
                 </div>
                 <div>
                   <label className="label">Team Size</label>
                   <AppSelect value={form.companySize} onChange={set("companySize")}
-                    placeholder="Select…" options={COMPANY_SIZES} />
+                    placeholder="Select…" options={COMPANY_SIZES} triggerStyle={SELECT_TRIGGER_STYLE} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
