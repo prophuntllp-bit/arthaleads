@@ -23,23 +23,7 @@ const authService = {
     const existing = await User.findOne({ email: data.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    // Validate the phone-verified token issued after OTP confirmation
-    if (!data.phoneToken) throw new AppError("Phone number must be verified before creating an account", 400);
-
-    let verifiedPhone, verifiedEmail;
-    try {
-      const decoded = jwt.verify(data.phoneToken, process.env.JWT_SECRET);
-      if (decoded.type !== "phone_verify") throw new Error("Invalid token type");
-      verifiedPhone = decoded.phone;
-      verifiedEmail = decoded.email;
-    } catch {
-      throw new AppError("Phone verification expired or invalid. Please verify your phone again.", 400);
-    }
-
-    // Ensure the token matches the form values (prevent token reuse with different details)
     const normPhone = String(data.phone || "").replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
-    if (normPhone !== verifiedPhone) throw new AppError("Phone number does not match the verified number. Please verify again.", 400);
-    if ((data.email || "").toLowerCase().trim() !== verifiedEmail) throw new AppError("Email does not match the verified session. Please verify again.", 400);
 
     // Create organization first
     const orgName = data.orgName || `${data.name}'s Workspace`;
@@ -60,9 +44,7 @@ const authService = {
       }
     }
 
-    // Strip phoneToken from user data before creating the user doc
-    const { phoneToken: _pt, ...userData } = data;
-    const user = await User.create({ ...userData, phone: normPhone, orgId: org._id, role: "admin" });
+    const user = await User.create({ ...data, phone: normPhone, orgId: org._id, role: "admin" });
     const token = signToken(user._id);
 
     // Fire-and-forget welcome email - don't block the signup response
