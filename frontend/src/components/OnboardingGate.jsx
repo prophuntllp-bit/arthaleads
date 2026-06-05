@@ -9,9 +9,10 @@ import { Spinner, AppSelect } from "./UI";
 import { Building2, IdCard, UserRound, Check, ArrowRight, ArrowLeft, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
-const INDUSTRIES = [
-  "Real Estate", "Construction", "Property Management",
-  "Mortgage / Finance", "Interior Design", "Other",
+// Real-estate-specific business types (Arthaleads is a real-estate CRM)
+const BUSINESS_TYPES = [
+  "Broker / Agency", "Builder / Developer", "Channel Partner",
+  "Property Management", "Real Estate Consultant", "Other",
 ];
 const COMPANY_SIZES = ["1-5", "6-20", "21-50", "51-200", "200+"];
 
@@ -35,7 +36,9 @@ export default function OnboardingGate() {
   const [form, setForm] = useState({
     // Business
     name:        org?.name && !/'s Workspace$/.test(org.name) ? org.name : "",
-    industry:    org?.industry || "Real Estate",
+    // Only pre-select if the stored value is one of the real-estate business
+    // types; legacy default "Real Estate" falls back to the placeholder.
+    industry:    BUSINESS_TYPES.includes(org?.industry) ? org.industry : "",
     companySize: org?.companySize || "",
     phone:       org?.phone || "",
     email:       org?.email || user?.email || "",
@@ -206,9 +209,9 @@ export default function OnboardingGate() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label">Industry</label>
-                  <AppSelect value={form.industry} onChange={set("industry")} options={INDUSTRIES}
-                    triggerStyle={SELECT_TRIGGER_STYLE} />
+                  <label className="label">Business Type</label>
+                  <AppSelect value={form.industry} onChange={set("industry")} options={BUSINESS_TYPES}
+                    placeholder="Select business type…" triggerStyle={SELECT_TRIGGER_STYLE} />
                 </div>
                 <div>
                   <label className="label">Team Size</label>
