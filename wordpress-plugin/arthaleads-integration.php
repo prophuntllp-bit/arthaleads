@@ -26,8 +26,8 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-api.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-loader.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-core.php';
 
-function run_arthaleads() {
+function arthaleads_run() {
     $plugin = new Arthaleads_Core();
     $plugin->run();
 }
-run_arthaleads();
+arthaleads_run();

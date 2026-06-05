@@ -17,7 +17,12 @@ class Arthaleads_Admin {
 
     public function enqueue_assets( $hook ) {
         if ( $hook !== 'toplevel_page_arthaleads-integration' ) return;
-        // No external scripts needed — admin UI uses plain vanilla JS
+        wp_enqueue_style(
+            'arthaleads-inter-font',
+            'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+            [],
+            ARTHALEADS_VERSION
+        );
     }
 
     public function render_page() {

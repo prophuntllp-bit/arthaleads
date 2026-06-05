@@ -17,9 +17,6 @@ function arthaleads_render_admin_page() {
 
     $Status = Arthaleads_Status::to_array();
 ?>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box}
 #al-wrap{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:660px;margin:24px auto;color:#1f2937}
@@ -136,7 +133,7 @@ function arthaleads_render_admin_page() {
             $color = isset( $colors[$key] ) ? $colors[$key] : '#6b7280';
         ?>
         <div class="al-row <?php echo esc_attr( $row_cls ); ?>" id="al-row-<?php echo esc_attr( $key ); ?>">
-            <div class="al-ico" style="background:<?php echo esc_attr( $color ); ?>22"><?php echo $icon; ?></div>
+            <div class="al-ico" style="background:<?php echo esc_attr( $color ); ?>22"><?php echo esc_html( $icon ); ?></div>
             <span class="al-name"><?php echo esc_html( $name ); ?></span>
             <span class="al-badge <?php echo esc_attr( $badge_cls ); ?>" id="al-badge-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $badge_txt ); ?></span>
             <label class="al-tog">

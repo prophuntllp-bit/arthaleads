@@ -32,9 +32,9 @@ class Arthaleads_API {
         // Get current page URL from multiple sources
         $page_url = '';
         if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-            $page_url = esc_url_raw( $_SERVER['HTTP_REFERER'] );
+            $page_url = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
         } elseif ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
-            $page_url = get_site_url() . esc_url_raw( $_SERVER['REQUEST_URI'] );
+            $page_url = get_site_url() . esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
         } else {
             $page_url = get_site_url();
         }

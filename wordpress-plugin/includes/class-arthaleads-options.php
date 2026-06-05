@@ -45,7 +45,7 @@ class Arthaleads_Options {
         check_ajax_referer( 'arthaleads_nonce', 'nonce' );
         if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorized' );
 
-        $fields = isset( $_POST['fields'] ) ? (array) $_POST['fields'] : [];
+        $fields = isset( $_POST['fields'] ) ? (array) wp_unslash( $_POST['fields'] ) : [];
         $fields = array_map( 'sanitize_text_field', $fields );
 
         $existing_token = self::get( 'arthaleads_token' );
