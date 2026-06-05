@@ -21,7 +21,12 @@ function storageRemove(key) {
 // session-expired flow and kicking the user out right after they authenticated.
 // Toggled by AuthContext via setAuthInProgress().
 let _authInProgress = false;
-export function setAuthInProgress(v) { _authInProgress = v; }
+let _authCompletedAt = 0; // timestamp when last auth call finished
+
+export function setAuthInProgress(v) {
+  _authInProgress = v;
+  if (!v) _authCompletedAt = Date.now(); // record when auth finished
+}
 
 const api = axios.create({
   baseURL:         import.meta.env.VITE_API_URL || "http://localhost:5000/api",
@@ -60,6 +65,12 @@ api.interceptors.response.use(
       // the network layer a fraction too late. Without this guard the session-expired
       // toast fires 1-2 seconds after "Welcome back!" on cold Railway boots.
       if (_authInProgress) return new Promise(() => {});
+
+      // Grace period: Android WebView (Capacitor) sometimes doesn't honour
+      // AbortController for in-flight XHR, so the /auth/me 401 can arrive AFTER
+      // login() has already returned and cleared _authInProgress. Silently ignore
+      // any 401 that arrives within 3 seconds of a completed auth call.
+      if (_authCompletedAt && Date.now() - _authCompletedAt < 3000) return new Promise(() => {});
 
       // All other 401s mean the session expired — clear state, show one toast, redirect.
       // Return a never-resolving promise so component .catch() blocks never fire and
