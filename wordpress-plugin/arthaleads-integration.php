@@ -3,7 +3,7 @@
  * Plugin Name:       Arthaleads Integration
  * Plugin URI:        https://arthaleads.com
  * Description:       Automatically send WordPress contact form leads to Arthaleads CRM. Supports Contact Form 7, WPForms, Elementor, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Author:            Arthaleads
  * Author URI:        https://arthaleads.com
  * License:           GPL-2.0+
@@ -13,7 +13,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'ARTHALEADS_API_URL', 'https://api.arthaleads.com/webhook/website' );
-define( 'ARTHALEADS_VERSION', '1.0.0' );
+define( 'ARTHALEADS_VERSION', '1.0.1' );
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
@@ -173,6 +173,15 @@ function arthaleads_connection_status() {
 function arthaleads_send_lead( $data ) {
     $token = arthaleads_get_token();
     if ( empty( $token ) ) return;
+
+    // Deduplication: if the same phone was submitted in the last 60 seconds,
+    // another form hook already fired for this submission — skip to prevent duplicates.
+    $phone = sanitize_text_field( $data['phone'] ?? '' );
+    if ( $phone ) {
+        $dedup_key = 'arthaleads_dd_' . md5( $phone . $token );
+        if ( get_transient( $dedup_key ) ) return;
+        set_transient( $dedup_key, 1, 60 );
+    }
 
     $payload = wp_json_encode( array_merge( [
         'token'       => $token,

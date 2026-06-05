@@ -461,6 +461,17 @@ router.post("/website", express.json(), async (req, res) => {
 
     const orgId = automation.orgId;
 
+    // Deduplication: if the same phone number already created a lead for this org
+    // within the last 2 minutes, it's a plugin double-fire — skip silently.
+    if (phone) {
+      const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+      const recent = await Lead.findOne({ orgId, phone, createdAt: { $gte: twoMinsAgo } }).lean();
+      if (recent) {
+        logger.info(`[website webhook] duplicate skipped: ${name} | ${phone} | original: ${recent.createdAt}`);
+        return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
+      }
+    }
+
     // Respect the org's Auto Lead Assignment setting
     const org = await Organization.findById(orgId).select("autoAssign").lean();
     let assignee = null;
