@@ -17,92 +17,6 @@ import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
 import toast from "react-hot-toast";
 
-// ── Phone Prompt Modal ────────────────────────────────────────────────────────
-// Shows once per session to any logged-in user who hasn't added their phone yet.
-// Lets them save it inline without navigating to Settings.
-function PhonePromptModal() {
-  const { user, updateUserState } = useAuth();
-  const [phone, setPhone]         = useState("");
-  const [saving, setSaving]       = useState(false);
-  const [visible, setVisible]     = useState(false);
-  const [error, setError]         = useState("");
-
-  // Show after a 2-second grace period to any user without a phone number
-  useEffect(() => {
-    if (!user) return;
-    if (user.phone) return; // already has phone — never show
-    const t = setTimeout(() => setVisible(true), 2000);
-    return () => clearTimeout(t);
-  }, [user]);
-
-  if (!visible) return null;
-
-  const handleSave = async () => {
-    if (!phone || phone.replace(/\D/g, "").length < 10) {
-      setError("Please enter a valid 10-digit mobile number.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      const { data } = await api.put("/auth/me", { phone });
-      updateUserState(data.user);
-      setVisible(false);
-      toast.success("Mobile number saved!");
-    } catch {
-      setError("Failed to save. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4 sm:p-0"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)" }}>
-      <div
-        className="w-full max-w-sm rounded-3xl p-6 shadow-2xl"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
-      >
-        {/* Icon */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-2xl mx-auto mb-4"
-          style={{ background: "rgba(255,107,0,0.10)" }}>
-          <svg className="w-7 h-7 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 8V5z" />
-          </svg>
-        </div>
-
-        <h2 className="text-lg font-black text-app text-center mb-1">Add your mobile number</h2>
-        <p className="text-sm text-app-soft text-center mb-5 leading-relaxed">
-          Your team needs your contact number for follow-up alerts and coordination. Takes 5 seconds.
-        </p>
-
-        <div className="space-y-3">
-          <input
-            type="tel"
-            className="input w-full text-center text-base tracking-wider"
-            placeholder="Enter 10-digit mobile number"
-            value={phone}
-            onChange={e => { setPhone(e.target.value); setError(""); }}
-            onKeyDown={e => e.key === "Enter" && handleSave()}
-            autoFocus
-            maxLength={15}
-          />
-          {error && <p className="text-xs text-red-400 text-center">{error}</p>}
-
-          <button
-            onClick={handleSave}
-            disabled={saving || !phone}
-            className="btn-primary w-full justify-center py-3 text-sm disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Save Number"}
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Page-level code splitting ─────────────────────────────────────────────────
 // Each page is loaded only when first visited - reduces initial bundle ~50%
 const PageFallback = () => (
@@ -562,8 +476,6 @@ function RequireAuth() {
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}
       <NotificationBanner />
-      {/* Phone number prompt - shows once per session to users missing a phone */}
-      <PhonePromptModal />
       {/* Floating AI help assistant + guided tours - on every CRM page */}
       <HelpBot />
       {/* Blocking overlays - rendered on top of everything */}
