@@ -35,7 +35,7 @@ No copy-pasting. No missed leads. Every enquiry goes straight into your CRM pipe
 
 = Features =
 
-* Works with all major WordPress form plugins (7 supported)
+* Works with all major WordPress form plugins (8 supported)
 * Captures name, phone, email, and message from any form
 * Shows the form source (website name) as the lead source label in CRM
 * Duplicate submissions within 60 seconds are automatically ignored
@@ -59,7 +59,7 @@ Arthaleads is a CRM platform built for real estate teams. It manages leads, foll
 
 = Which form plugins are supported? =
 
-Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms. More plugins will be added based on demand.
+Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, Fluent Forms, and MetForm. More plugins will be added based on demand.
 
 = Do I need an Arthaleads account? =
 
