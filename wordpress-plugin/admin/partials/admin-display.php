@@ -74,7 +74,7 @@ function arthaleads_render_admin_page() {
     <div class="al-card">
         <div class="al-head">
             <div class="al-logo" style="background:none;padding:0;overflow:hidden">
-                <img src="<?php echo esc_url( plugin_dir_url( __FILE__ ) . '../assets/logo.png' ); ?>" alt="Arthaleads" width="50" height="50" style="display:block;border-radius:12px;object-fit:cover">
+                <img src="<?php echo esc_url( plugin_dir_url( __FILE__ ) . '../assets/logo.svg' ); ?>" alt="Arthaleads" width="50" height="50" style="display:block;border-radius:12px;object-fit:contain">
             </div>
             <div style="flex:1">
                 <h1 class="al-title">Arthaleads</h1>
