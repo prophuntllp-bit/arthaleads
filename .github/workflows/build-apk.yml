@@ -33,6 +33,8 @@ jobs:
       - name: Build web app
         working-directory: frontend
         run: npm run build
+        env:
+          VITE_API_URL: https://api.arthaleads.com/api
 
       - name: Inject google-services.json
         working-directory: frontend/android/app
