@@ -12,6 +12,7 @@ out  = here / "arthaleads-integration.zip"
 # Only these top-level items go into the ZIP — nothing else
 INCLUDE = [
     "arthaleads-integration.php",
+    "index.php",
     "uninstall.php",
     "readme.txt",
     "admin",
