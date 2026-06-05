@@ -1,32 +1,36 @@
 """
-Run from anywhere — creates arthaleads-integration.zip in the wordpress-plugin folder.
-    python wordpress-plugin/make_zip.py
+Run from the wordpress-plugin folder:
+    python make_zip.py
 
-ZIP structure (required by WordPress.org):
-    arthaleads-integration/
-        arthaleads-integration.php
-        uninstall.php
-        readme.txt
-        admin/
-        includes/
-        languages/
+Output: arthaleads-integration.zip (gitignored)
 """
 import zipfile, pathlib
 
 here = pathlib.Path(__file__).parent
 out  = here / "arthaleads-integration.zip"
 
-# Top-level names to exclude from the ZIP
-EXCLUDE = {"make_zip.py", "arthaleads-integration.zip", "build"}
+# Only these top-level items go into the ZIP — nothing else
+INCLUDE = [
+    "arthaleads-integration.php",
+    "uninstall.php",
+    "readme.txt",
+    "admin",
+    "includes",
+    "languages",
+]
 
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-    for path in sorted(here.rglob("*")):
-        if path.is_dir():
+    for name in INCLUDE:
+        p = here / name
+        if not p.exists():
             continue
-        rel = path.relative_to(here)
-        if rel.parts[0] in EXCLUDE:
-            continue
-        zf.write(path, f"arthaleads-integration/{rel.as_posix()}")
+        if p.is_file():
+            zf.write(p, f"arthaleads-integration/{name}")
+        else:
+            for path in sorted(p.rglob("*")):
+                if path.is_file():
+                    rel = path.relative_to(here)
+                    zf.write(path, f"arthaleads-integration/{rel.as_posix()}")
 
 size_kb = out.stat().st_size / 1024
 print(f"Done. {size_kb:.1f} KB  →  {out}")
