@@ -4,7 +4,7 @@ Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,13 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.2 =
+* Restored full multi-file plugin structure with separate class files for each form integration.
+* Added MetForm support (8 supported form plugins total).
+* Added per-integration toggle switches in admin settings.
+* Added Send Test Lead button for instant connection verification.
+* Added uninstall.php to clean up options on plugin deletion.
 
 = 1.0.1 =
 * Added 60-second duplicate submission guard to prevent double leads when multiple form plugins are active simultaneously.
