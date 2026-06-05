@@ -163,7 +163,7 @@ function arthaleads_render_admin_page() {
         &nbsp;·&nbsp;
         <a href="mailto:support@arthaleads.com">support@arthaleads.com</a>
         &nbsp;·&nbsp;
-        <a href="https://crm.arthaleads.com" target="_blank">Open CRM</a>
+        <a href="https://www.arthaleads.com" target="_blank">Open CRM</a>
     </p>
 </div>
 

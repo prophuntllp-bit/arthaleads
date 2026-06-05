@@ -10,7 +10,7 @@ class Arthaleads_Admin {
             'manage_options',
             'arthaleads-integration',
             [ $this, 'render_page' ],
-            'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 2L16.5 18H13.8L12.4 14H7.6L6.2 18H3.5L10 2ZM10 6.5L8.3 12H11.7Z" fill="black"/></svg>' ),
+            plugin_dir_url( __FILE__ ) . 'assets/logo.png',
             30
         );
     }
