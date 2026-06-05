@@ -31,6 +31,23 @@ export function planLabel(plan) {
   return PLAN_LABELS[plan] ?? "Starter";
 }
 
+// ── Per-seat pricing (INR) ──────────────────────────────────────────────────
+// Transparent per-team-member pricing. No setup fee. Annual is billed yearly
+// per seat at ~2 months free vs paying monthly. Enterprise is custom-quoted.
+export const PLAN_PRICING = {
+  starter:    { monthly: 999,  annual: 9990,  custom: false },
+  growth:     { monthly: 1500, annual: 15000, custom: false },
+  enterprise: { monthly: null, annual: null,  custom: true  },
+};
+
+export const formatINR = (n) => "₹" + Number(n).toLocaleString("en-IN");
+
+// Effective per-seat monthly price when billed annually (annual ÷ 12, rounded).
+export function annualMonthly(planId) {
+  const p = PLAN_PRICING[planId];
+  return p?.annual ? Math.round(p.annual / 12) : null;
+}
+
 // Human-readable upgrade target.
 // A trial user is trialing Growth-level features — the right next step is to
 // subscribe to Growth (the plan they're already using), NOT jump to Enterprise.
