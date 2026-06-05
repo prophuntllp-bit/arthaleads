@@ -10,7 +10,7 @@ class Arthaleads_Admin {
             'manage_options',
             'arthaleads-integration',
             [ $this, 'render_page' ],
-            'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FFA040"/><stop offset="100%" stop-color="#FF4800"/></linearGradient></defs><rect width="20" height="20" rx="4.5" fill="url(#g)"/><path d="M10 2.5L16 17H13.5L12.3 13.8H7.7L6.5 17H4L10 2.5ZM10 7L8.5 12H11.5Z" fill="white"/><path d="M7.5 15.8Q10.5 19 14.5 14.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>' ),
+            'data:image/svg+xml;base64,' . base64_encode( '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 2L16.5 18H13.8L12.4 14H7.6L6.2 18H3.5L10 2ZM10 6.5L8.3 12H11.7Z" fill="black"/></svg>' ),
             30
         );
     }
