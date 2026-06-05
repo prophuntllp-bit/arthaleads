@@ -35,3 +35,6 @@ frontend/android/app/release.keystore
 __pycache__/
 *.pyc
 *.pyo
+
+# ZIP artifacts — generate locally, never commit
+*.zip
