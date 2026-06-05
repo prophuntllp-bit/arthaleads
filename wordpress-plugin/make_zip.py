@@ -16,8 +16,8 @@ import zipfile, pathlib
 here = pathlib.Path(__file__).parent
 out  = here / "arthaleads-integration.zip"
 
-# Everything except this script and any existing zip
-EXCLUDE = {"make_zip.py", "arthaleads-integration.zip"}
+# Top-level names to exclude from the ZIP
+EXCLUDE = {"make_zip.py", "arthaleads-integration.zip", "build"}
 
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
     for path in sorted(here.rglob("*")):
