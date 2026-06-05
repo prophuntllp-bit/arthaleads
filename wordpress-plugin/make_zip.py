@@ -1,23 +1,24 @@
-import zipfile, os
+"""
+Run from anywhere — creates arthaleads-integration.zip in the wordpress-plugin folder.
+    python wordpress-plugin/make_zip.py
 
-src = r"E:\PROPHUNT CRM\wordpress-plugin\build\arthaleads-integration"
-dst = r"E:\PROPHUNT CRM\wordpress-plugin\arthaleads-integration.zip"
+ZIP structure (required by WordPress.org):
+    arthaleads-integration/
+        arthaleads-integration.php
+        readme.txt
+"""
+import zipfile, pathlib
 
-with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-    for root, dirs, files in os.walk(src):
-        for filename in files:
-            abs_path = os.path.join(root, filename)
-            rel_path = os.path.relpath(abs_path, os.path.dirname(src))
-            zip_entry = rel_path.replace("\\", "/")
-            zf.write(abs_path, zip_entry)
+here  = pathlib.Path(__file__).parent
+out   = here / "arthaleads-integration.zip"
+files = ["arthaleads-integration.php", "readme.txt"]
 
-size_kb = os.path.getsize(dst) / 1024
-print(f"Done. ZIP size: {size_kb:.1f} KB")
-print(f"Path: {dst}")
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    for f in files:
+        zf.write(here / f, f"arthaleads-integration/{f}")
 
-# Verify
-with zipfile.ZipFile(dst) as z:
-    names = z.namelist()
-    print(f"Total files in ZIP: {len(names)}")
-    for n in sorted(names):
+size_kb = out.stat().st_size / 1024
+print(f"Done. {size_kb:.1f} KB  →  {out}")
+with zipfile.ZipFile(out) as z:
+    for n in sorted(z.namelist()):
         print(f"  {n}")
