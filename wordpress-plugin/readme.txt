@@ -4,7 +4,7 @@ Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.9
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -92,7 +92,7 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 
 == Changelog ==
 
-= 1.0.2 =
+= 1.0.3 =
 * Restored full multi-file plugin structure with separate class files for each form integration.
 * Added MetForm support (8 supported form plugins total).
 * Added per-integration toggle switches in admin settings.
