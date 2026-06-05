@@ -22,7 +22,7 @@ function arthaleads_render_admin_page() {
 #al-wrap{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:660px;margin:24px auto;color:#1f2937}
 .al-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px 32px;margin-bottom:16px}
 .al-head{display:flex;align-items:center;gap:14px}
-.al-logo{width:50px;height:50px;background:#FF6B00;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.al-logo{width:50px;height:50px;background:linear-gradient(135deg,#FFA040 0%,#E55500 100%);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:9px}
 .al-title{font-size:20px;font-weight:800;color:#111827;margin:0 0 2px}
 .al-sub{font-size:12px;color:#6b7280;margin:0}
 .al-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;margin-left:auto;white-space:nowrap}
@@ -73,8 +73,8 @@ function arthaleads_render_admin_page() {
     <!-- Header -->
     <div class="al-card">
         <div class="al-head">
-            <div class="al-logo" style="background:none;padding:0;overflow:hidden">
-                <img src="<?php echo esc_url( plugin_dir_url( __FILE__ ) . '../assets/logo.svg' ); ?>" alt="Arthaleads" width="50" height="50" style="display:block;border-radius:12px;object-fit:contain">
+            <div class="al-logo">
+                <img src="<?php echo esc_url( plugin_dir_url( __FILE__ ) . '../assets/logo-sidebar.svg' ); ?>" alt="Arthaleads" width="32" height="32" style="display:block">
             </div>
             <div style="flex:1">
                 <h1 class="al-title">Arthaleads</h1>
