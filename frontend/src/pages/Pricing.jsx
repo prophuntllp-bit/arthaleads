@@ -386,15 +386,15 @@ export default function Pricing() {
                       {plan.cta}
                     </Link>
                   ) : (
-                    <Link
-                      to="/contact"
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center"
+                    <a
+                      href={`mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}`}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
                       style={{ border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; }}
                     >
                       {plan.cta}
-                    </Link>
+                    </a>
                   )}
                 </div>
               </div>
@@ -453,13 +453,13 @@ export default function Pricing() {
           {/* Bottom CTA */}
           <div className="text-center mt-10">
             <p className="text-sm mb-4" style={{ color: body }}>Still have questions about pricing?</p>
-            <Link
-              to="/contact"
+            <a
+              href="mailto:sales@arthaleads.com?subject=Pricing%20enquiry&body=Hi%2C%20I%27d%20like%20to%20talk%20about%20Arthaleads%20pricing%20for%20my%20team."
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:-translate-y-0.5"
               style={{ background: "#ff6b00", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
             >
               Talk to our team <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>

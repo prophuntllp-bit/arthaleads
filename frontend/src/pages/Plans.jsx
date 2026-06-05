@@ -120,7 +120,7 @@ export default function Plans() {
     window.open("https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20upgrade%20my%20Arthaleads%20plan.", "_blank");
   };
   const openEmail = () => {
-    window.location.href = "mailto:contact@arthaleads.com?subject=Plan Upgrade Request&body=Hi, I'd like to upgrade my Arthaleads plan.";
+    window.location.href = "mailto:sales@arthaleads.com?subject=Plan Upgrade Request&body=Hi, I'd like to upgrade my Arthaleads plan.";
   };
 
   return (
