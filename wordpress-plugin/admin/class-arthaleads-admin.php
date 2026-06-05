@@ -4,13 +4,14 @@ if ( ! defined( 'WPINC' ) ) die;
 class Arthaleads_Admin {
 
     public function add_menu() {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="black" fill-rule="evenodd" d="M50 3C36 3 26 14 19 36L5 90H22L33 58C37 65 45 70 52 70C59 70 64 66 67 58L78 90H95L81 36C74 14 64 3 50 3ZM50 18C56 18 62 28 65 43H35C38 28 44 18 50 18Z"/></svg>';
         add_menu_page(
             'Arthaleads',
             'Arthaleads',
             'manage_options',
             'arthaleads-integration',
             [ $this, 'render_page' ],
-            plugin_dir_url( __FILE__ ) . 'assets/logo.png',
+            'data:image/svg+xml;base64,' . base64_encode( $svg ),
             30
         );
     }
