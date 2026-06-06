@@ -209,14 +209,20 @@ function openWABusiness(waNumber, text = "", onNotInstalled) {
   }
 }
 
-// Build the default pre-filled message from lead name + logged-in agent name
+// Build the default pre-filled message from lead name + logged-in agent + org name
 function buildWAMessage(leadName) {
   try {
     const user = JSON.parse(localStorage.getItem("crm_user") || "{}");
+    const org  = JSON.parse(localStorage.getItem("crm_org")  || "{}");
     const agentName = user.name || "";
+    const orgName   = org.name  || "";
     const firstName = (leadName || "").split(" ")[0].trim();
-    const greeting = firstName ? `Hi ${firstName}! 👋` : "Hi! 👋";
-    const from = agentName ? ` I'm ${agentName} from PropHunt.` : " I'm from PropHunt.";
+    const greeting  = firstName ? `Hi ${firstName}! 👋` : "Hi! 👋";
+    const from = agentName && orgName
+      ? ` I'm ${agentName} from ${orgName}.`
+      : agentName
+        ? ` I'm ${agentName}.`
+        : orgName ? ` I'm from ${orgName}.` : "";
     return `${greeting}${from} I'm following up on your property enquiry. Are you still looking? 🏠`;
   } catch {
     return "";
@@ -292,10 +298,13 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Close on scroll so dropdown doesn't detach from button
+  // Close on scroll outside the dropdown (scrolling inside the message textarea must not close it)
   useEffect(() => {
     if (!open) return;
-    const handler = () => setOpen(false);
+    const handler = (e) => {
+      if (dropRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     window.addEventListener("scroll", handler, true);
     return () => window.removeEventListener("scroll", handler, true);
   }, [open]);
