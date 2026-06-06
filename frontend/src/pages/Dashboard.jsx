@@ -137,7 +137,8 @@ export default function Dashboard() {
     const m = String(now.getMinutes()).padStart(2, "0");
     const s = String(now.getSeconds()).padStart(2, "0");
     const ampm = now.getHours() >= 12 ? "PM" : "AM";
-    return { h, m, s, ampm };
+    const date = now.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    return { h, m, s, ampm, date };
   };
   const [clockParts, setClockParts] = useState(getClockParts);
   const [clockGlowKey, setClockGlowKey] = useState(0);
@@ -274,6 +275,31 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── Center: live clock (uses empty space between greeting & controls) ── */}
+        <div className="hidden lg:flex flex-1 flex-col items-center justify-center select-none gap-0.5">
+          <div className="flex items-baseline leading-none">
+            <span className="font-mono font-black tabular-nums" style={{ fontSize: 34, letterSpacing: "-0.03em", color: "var(--app-text)" }}>
+              {clockParts.h}
+            </span>
+            <span className="clock-colon font-mono font-light" style={{ fontSize: 30, color: "var(--app-text-soft)", margin: "0 2px" }}>:</span>
+            <span className="font-mono font-black tabular-nums" style={{ fontSize: 34, letterSpacing: "-0.03em", color: "var(--app-text)" }}>
+              {clockParts.m}
+            </span>
+            <span className="clock-colon font-mono font-light" style={{ fontSize: 22, color: "var(--app-text-soft)", margin: "0 2px", alignSelf: "flex-end", paddingBottom: 2 }}>:</span>
+            <span key={clockGlowKey} className="font-mono font-black tabular-nums clock-glow" style={{ fontSize: 22, letterSpacing: "-0.02em", color: "var(--app-primary)", alignSelf: "flex-end", paddingBottom: 2 }}>
+              {clockParts.s}
+            </span>
+            <span
+              className="rounded-md font-bold tracking-widest ml-2"
+              style={{ fontSize: 10, padding: "2px 6px", alignSelf: "flex-start", marginTop: 4, background: "color-mix(in srgb, var(--app-primary) 12%, transparent)", color: "var(--app-primary)" }}
+            >
+              {clockParts.ampm}
+            </span>
+          </div>
+          <p className="text-[11px] tracking-wide mt-0.5" style={{ color: "var(--app-text-soft)" }}>{clockParts.date}</p>
+        </div>
+
+        {/* ── Right: controls ── */}
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
@@ -287,36 +313,27 @@ export default function Dashboard() {
           <button
             ref={bellRef}
             onClick={handleOpenAlerts}
-            className="stitch-pill relative"
-            title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "Alerts"}
+            className="relative flex items-center justify-center rounded-xl transition-all duration-200"
+            title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "No new alerts"}
+            style={{
+              width: 36, height: 36, flexShrink: 0,
+              background: alertCount > 0
+                ? "color-mix(in srgb, var(--app-primary) 15%, transparent)"
+                : "var(--app-surface-high)",
+              border: `1.5px solid ${alertCount > 0 ? "color-mix(in srgb, var(--app-primary) 40%, transparent)" : "var(--app-border)"}`,
+              color: alertCount > 0 ? "var(--app-primary)" : "var(--app-text-soft)",
+            }}
           >
-            <Bell className={`h-4 w-4${alertCount > 0 ? " bell-ringing" : ""}`} />
+            <Bell className={`h-[18px] w-[18px]${alertCount > 0 ? " bell-ringing" : ""}`} />
             {alertCount > 0 && (
               <span
-                className="badge-glow absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                className="badge-glow absolute -top-1.5 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
                 style={{ background: "var(--app-primary)" }}
               >
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
           </button>
-          <span
-            key={clockGlowKey}
-            className="clock-glow hidden sm:flex items-center gap-0 font-mono tabular-nums whitespace-nowrap px-3 py-1.5 rounded-xl border select-none"
-            style={{
-              fontSize: 13,
-              background: "var(--app-surface-high)",
-              borderColor: "color-mix(in srgb, var(--app-primary) 22%, transparent)",
-              color: "var(--app-text)",
-            }}
-          >
-            <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{clockParts.h}</span>
-            <span className="clock-colon mx-0.5" style={{ fontWeight: 400, color: "var(--app-text-soft)" }}>:</span>
-            <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{clockParts.m}</span>
-            <span className="clock-colon mx-0.5" style={{ fontWeight: 400, color: "var(--app-text-soft)" }}>:</span>
-            <span style={{ fontWeight: 800, letterSpacing: "0.04em", color: "var(--app-primary)" }}>{clockParts.s}</span>
-            <span style={{ fontSize: 10, fontWeight: 600, marginLeft: 5, color: "var(--app-text-soft)", letterSpacing: "0.06em" }}>{clockParts.ampm}</span>
-          </span>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>
