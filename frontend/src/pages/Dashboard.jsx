@@ -1,5 +1,5 @@
 ﻿// Dashboard - v2
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -127,6 +127,31 @@ export default function Dashboard() {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
     return () => clearInterval(timer);
   }, []);
+
+  const bellRef = useRef(null);
+  const [alertCount, setAlertCount] = useState(() => +localStorage.getItem("crm_alert_count") || 0);
+  const [clockTime, setClockTime] = useState(() =>
+    new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
+  );
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setClockTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => setAlertCount(e.detail?.count ?? 0);
+    window.addEventListener("alerts:count", handler);
+    return () => window.removeEventListener("alerts:count", handler);
+  }, []);
+
+  const handleOpenAlerts = () => {
+    if (!bellRef.current) return;
+    const rect = bellRef.current.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent("open:alerts", { detail: { rect } }));
+  };
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -250,6 +275,26 @@ export default function Dashboard() {
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
           </button>
+          <button
+            ref={bellRef}
+            onClick={handleOpenAlerts}
+            className="stitch-pill relative"
+            title="Alerts"
+          >
+            <Bell className="h-4 w-4" />
+            {alertCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ background: "var(--app-primary)" }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
+          </button>
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-app-soft font-mono tabular-nums whitespace-nowrap px-2.5 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+            <Clock3 className="h-3.5 w-3.5 shrink-0" />
+            {clockTime}
+          </span>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>

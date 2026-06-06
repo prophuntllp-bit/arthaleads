@@ -179,6 +179,8 @@ export default function Sidebar() {
             (l) => new Date(l.createdAt).getTime() > lastSeenRef.current
           ).length;
           setAlertCount(newCount);
+          localStorage.setItem("crm_alert_count", String(newCount));
+          window.dispatchEvent(new CustomEvent("alerts:count", { detail: { count: newCount } }));
         })
         .catch(() => {});
     };
@@ -186,6 +188,35 @@ export default function Sidebar() {
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // ── Open alerts panel from external trigger (e.g. Dashboard bell) ─────────
+  useEffect(() => {
+    const handler = (e) => {
+      const rect = e.detail?.rect;
+      if (rect) {
+        const isMobile = window.innerWidth < 1024;
+        if (isMobile) {
+          setAlertDropPos({ top: rect.bottom + 6, left: undefined, right: 8 });
+        } else {
+          setAlertDropPos({ top: rect.top, left: rect.right + 8, right: undefined });
+        }
+      }
+      setAlertOpen((prev) => {
+        const newOpen = !prev;
+        if (newOpen) {
+          const now = Date.now();
+          localStorage.setItem("crm_alerts_seen", String(now));
+          lastSeenRef.current = now;
+          setAlertCount(0);
+          localStorage.setItem("crm_alert_count", "0");
+          window.dispatchEvent(new CustomEvent("alerts:count", { detail: { count: 0 } }));
+        }
+        return newOpen;
+      });
+    };
+    window.addEventListener("open:alerts", handler);
+    return () => window.removeEventListener("open:alerts", handler);
+  }, []);
 
   // ── Push notification toast ───────────────────────────────────────────────
   useEffect(() => {
@@ -268,6 +299,8 @@ export default function Sidebar() {
       localStorage.setItem("crm_alerts_seen", String(now));
       lastSeenRef.current = now;
       setAlertCount(0);
+      localStorage.setItem("crm_alert_count", "0");
+      window.dispatchEvent(new CustomEvent("alerts:count", { detail: { count: 0 } }));
     }
   };
 
@@ -368,29 +401,6 @@ export default function Sidebar() {
               }
             </button>
           )}
-        </div>
-
-        {/* ── Alerts bell ── */}
-        <div className="px-2 pb-1 flex-shrink-0">
-          <div ref={alertRef}>
-            <button
-              onClick={openAlerts}
-              title={!isExpanded ? "Alerts" : undefined}
-              className="relative w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-              style={{ paddingLeft: 14 }}
-            >
-              <Bell className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
-              <span className="ml-3" style={labelStyle}>Alerts</span>
-              {alertCount > 0 && (
-                <span
-                  className={`flex items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 ${isExpanded ? "ml-auto" : "absolute top-1.5 right-1.5"}`}
-                  style={{ background: "var(--app-primary)", width: 18, height: 18, minWidth: 18 }}
-                >
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* ── Nav items ── */}
