@@ -130,13 +130,22 @@ export default function Dashboard() {
 
   const bellRef = useRef(null);
   const [alertCount, setAlertCount] = useState(() => +localStorage.getItem("crm_alert_count") || 0);
-  const [clockTime, setClockTime] = useState(() =>
-    new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })
-  );
+
+  const getClockParts = () => {
+    const now = new Date();
+    const h = String(now.getHours() % 12 || 12).padStart(2, "0");
+    const m = String(now.getMinutes()).padStart(2, "0");
+    const s = String(now.getSeconds()).padStart(2, "0");
+    const ampm = now.getHours() >= 12 ? "PM" : "AM";
+    return { h, m, s, ampm };
+  };
+  const [clockParts, setClockParts] = useState(getClockParts);
+  const [clockGlowKey, setClockGlowKey] = useState(0);
 
   useEffect(() => {
     const tick = setInterval(() => {
-      setClockTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }));
+      setClockParts(getClockParts());
+      setClockGlowKey((k) => k + 1);
     }, 1000);
     return () => clearInterval(tick);
   }, []);
@@ -279,21 +288,34 @@ export default function Dashboard() {
             ref={bellRef}
             onClick={handleOpenAlerts}
             className="stitch-pill relative"
-            title="Alerts"
+            title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "Alerts"}
           >
-            <Bell className="h-4 w-4" />
+            <Bell className={`h-4 w-4${alertCount > 0 ? " bell-ringing" : ""}`} />
             {alertCount > 0 && (
               <span
-                className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                className="badge-glow absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white"
                 style={{ background: "var(--app-primary)" }}
               >
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
           </button>
-          <span className="hidden sm:flex items-center gap-1.5 text-xs text-app-soft font-mono tabular-nums whitespace-nowrap px-2.5 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
-            <Clock3 className="h-3.5 w-3.5 shrink-0" />
-            {clockTime}
+          <span
+            key={clockGlowKey}
+            className="clock-glow hidden sm:flex items-center gap-0 font-mono tabular-nums whitespace-nowrap px-3 py-1.5 rounded-xl border select-none"
+            style={{
+              fontSize: 13,
+              background: "var(--app-surface-high)",
+              borderColor: "color-mix(in srgb, var(--app-primary) 22%, transparent)",
+              color: "var(--app-text)",
+            }}
+          >
+            <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{clockParts.h}</span>
+            <span className="clock-colon mx-0.5" style={{ fontWeight: 400, color: "var(--app-text-soft)" }}>:</span>
+            <span style={{ fontWeight: 700, letterSpacing: "0.04em" }}>{clockParts.m}</span>
+            <span className="clock-colon mx-0.5" style={{ fontWeight: 400, color: "var(--app-text-soft)" }}>:</span>
+            <span style={{ fontWeight: 800, letterSpacing: "0.04em", color: "var(--app-primary)" }}>{clockParts.s}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, marginLeft: 5, color: "var(--app-text-soft)", letterSpacing: "0.06em" }}>{clockParts.ampm}</span>
           </span>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
