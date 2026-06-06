@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
-import { ArrowLeftRight, ChevronDown, Clock3, MapPinned, PhoneCall, RefreshCw, Trophy, Users, XCircle } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, Clock3, MapPinned, PhoneCall, RefreshCw, Trophy, XCircle } from "lucide-react";
 import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
@@ -135,21 +135,16 @@ export default function LeadPipeline() {
         <div className="flex items-center gap-2">
           {/* Member picker — admin / manager only */}
           {isAdminOrManager && members.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-              style={{ borderColor: "var(--app-border)", background: "var(--app-surface)" }}>
-              <Users className="w-3.5 h-3.5 text-app-soft flex-shrink-0" />
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className="text-xs font-semibold bg-transparent text-app border-none outline-none cursor-pointer"
-                style={{ maxWidth: 160 }}
-              >
-                <option value="">All Members</option>
-                {members.map((m) => (
-                  <option key={m._id} value={m._id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+              placeholder="All Members"
+              options={[
+                { value: "", label: "All Members" },
+                ...members.map((m) => ({ value: m._id, label: m.name })),
+              ]}
+              style={{ minWidth: 160 }}
+            />
           )}
           <button
             onClick={() => fetchLeads(true)}
