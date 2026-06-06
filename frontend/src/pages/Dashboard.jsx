@@ -275,30 +275,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── Center: live clock (uses empty space between greeting & controls) ── */}
-        <div className="hidden lg:flex flex-1 flex-col items-center justify-center select-none gap-0.5">
-          <div className="flex items-baseline leading-none">
-            <span className="font-mono font-black tabular-nums" style={{ fontSize: 34, letterSpacing: "-0.03em", color: "var(--app-text)" }}>
-              {clockParts.h}
-            </span>
-            <span className="clock-colon font-mono font-light" style={{ fontSize: 30, color: "var(--app-text-soft)", margin: "0 2px" }}>:</span>
-            <span className="font-mono font-black tabular-nums" style={{ fontSize: 34, letterSpacing: "-0.03em", color: "var(--app-text)" }}>
-              {clockParts.m}
-            </span>
-            <span className="clock-colon font-mono font-light" style={{ fontSize: 22, color: "var(--app-text-soft)", margin: "0 2px", alignSelf: "flex-end", paddingBottom: 2 }}>:</span>
-            <span key={clockGlowKey} className="font-mono font-black tabular-nums clock-glow" style={{ fontSize: 22, letterSpacing: "-0.02em", color: "var(--app-primary)", alignSelf: "flex-end", paddingBottom: 2 }}>
-              {clockParts.s}
-            </span>
-            <span
-              className="rounded-md font-bold tracking-widest ml-2"
-              style={{ fontSize: 10, padding: "2px 6px", alignSelf: "flex-start", marginTop: 4, background: "color-mix(in srgb, var(--app-primary) 12%, transparent)", color: "var(--app-primary)" }}
-            >
-              {clockParts.ampm}
-            </span>
-          </div>
-          <p className="text-[11px] tracking-wide mt-0.5" style={{ color: "var(--app-text-soft)" }}>{clockParts.date}</p>
-        </div>
-
         {/* ── Right: controls ── */}
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
@@ -334,7 +310,19 @@ export default function Dashboard() {
               </span>
             )}
           </button>
-          <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
+          {/* Clock stacked above date picker */}
+          <div className="hidden sm:flex flex-col items-end gap-0.5">
+            <div className="flex items-baseline leading-none select-none" style={{ gap: 1 }}>
+              <span className="font-mono font-black tabular-nums" style={{ fontSize: 18, letterSpacing: "-0.02em", color: "var(--app-text)" }}>{clockParts.h}</span>
+              <span className="clock-colon font-mono" style={{ fontSize: 16, color: "var(--app-text-soft)", margin: "0 1px" }}>:</span>
+              <span className="font-mono font-black tabular-nums" style={{ fontSize: 18, letterSpacing: "-0.02em", color: "var(--app-text)" }}>{clockParts.m}</span>
+              <span className="clock-colon font-mono" style={{ fontSize: 13, color: "var(--app-text-soft)", margin: "0 1px", paddingBottom: 1, alignSelf: "flex-end" }}>:</span>
+              <span key={clockGlowKey} className="font-mono font-black tabular-nums clock-glow" style={{ fontSize: 13, color: "var(--app-primary)", paddingBottom: 1, alignSelf: "flex-end" }}>{clockParts.s}</span>
+              <span className="font-bold tracking-widest ml-1" style={{ fontSize: 9, color: "var(--app-text-soft)", alignSelf: "flex-start", paddingTop: 2 }}>{clockParts.ampm}</span>
+            </div>
+            <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
+          </div>
+          <span className="sm:hidden" data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>
 
