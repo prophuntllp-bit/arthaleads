@@ -48,7 +48,7 @@ Rules:
 - Mention their specific property interest and/or location naturally
 - Ask if they're still looking or offer to help with next step
 - Sign off with your name
-- Max 3 sentences. No emojis. No placeholders. Output ONLY the message text.`;
+- Max 3 sentences. Use 1-2 relevant emojis naturally (e.g. 👋 🏠 😊 📞). No placeholders. Output ONLY the message text.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
