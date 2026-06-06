@@ -121,7 +121,9 @@ const FU_BOOKING_OPTIONS = [
   { value: "Booked",             label: "Booked",             color: "text-green-600" },
   { value: "Not Interested",     label: "Not Interested",     color: "text-red-500" },
   { value: "Not Reachable",      label: "Not Reachable",      color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-orange-500" },
+  { value: "Low Budget",         label: "Low Budget",         color: "text-orange-500" },
+  { value: "Other Location",     label: "Other Location",     color: "text-orange-600" },
+  { value: "Commercial",         label: "Commercial",         color: "text-indigo-600" },
 ];
 function FUBooking({ lead, onUpdate }) {
   const [saving, setSaving] = useState(false);
@@ -371,7 +373,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table data-tour="followup-table" className="w-full text-xs min-w-[1830px]" style={{ borderCollapse: "collapse" }}>
+              <table data-tour="followup-table" className="w-full text-xs min-w-[1960px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>
@@ -394,6 +396,7 @@ export default function FollowUps() {
                     </th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Project</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>Assigned To</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Type</th>
                     <th className="px-2.5 py-2 text-center font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 50, minWidth: 50 }}>Done</th>
                   </tr>
@@ -416,7 +419,8 @@ export default function FollowUps() {
                       <tr key={lead._id} className="group border-b transition-colors hover:bg-orange-500/5 cursor-pointer"
                         style={{ borderColor: "var(--app-border)" }}
                         onClick={() => {
-                          if (lead._type === "project" && lead.projectId) navigate(`/projects/${lead.projectId}`);
+                          if (lead._type === "project" && lead.projectId)
+                            navigate(`/projects/${lead.projectId}`, { state: { searchLead: lead.phone || lead.name } });
                           else navigate("/leads", { state: { openLeadId: lead._id } });
                         }}>
                         <td className="px-2.5 py-2">
@@ -466,6 +470,11 @@ export default function FollowUps() {
                             ? <span className="text-orange-500 font-medium truncate max-w-[120px] block">{lead.projectName || "-"}</span>
                             : <span className="text-app-soft">Main Pipeline</span>
                           }
+                        </td>
+                        <td className="px-2.5 py-2">
+                          <span className="text-app truncate max-w-[110px] block text-xs font-medium">
+                            {lead.assignedToName || lead.assignedTo?.name || <span className="text-app-soft italic">Unassigned</span>}
+                          </span>
                         </td>
                         <td className="px-2.5 py-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${

@@ -1,6 +1,6 @@
 ﻿// pages/ProjectDetail.jsx
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
@@ -275,11 +275,12 @@ export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const canManage = ["admin", "manager", "super_admin"].includes(user?.role);
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState("info");
+  const [tab, setTab]         = useState(() => location.state?.searchLead ? "leads" : "info");
   const [showEdit, setShowEdit] = useState(false);
 
   // Project delete
@@ -292,7 +293,7 @@ export default function ProjectDetail() {
   const [leadsPage, setLeadsPage]       = useState(1);
   const [leadsPages, setLeadsPages]     = useState(1);
   const [leadsLoading, setLeadsLoading] = useState(false);
-  const [search, setSearch]             = useState("");
+  const [search, setSearch]             = useState(() => location.state?.searchLead || "");
   const [importing, setImporting]       = useState(false);
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);

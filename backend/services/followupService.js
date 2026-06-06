@@ -114,7 +114,7 @@ const followupService = {
               ],
             },
             status: { $ifNull: ["$remark", ""] },
-            assignedToName: "",
+            assignedToName: { $ifNull: ["$followUpSetByName", ""] },
           }},
           { $project: { _proj: 0 } },
         ],
