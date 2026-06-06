@@ -226,7 +226,7 @@ function buildWAMessage(leadName) {
 // Green "Chat on WhatsApp" button - pre-filled message + editable before send.
 // Dropdown is portal-rendered at document.body with position:fixed so it
 // always floats above tables regardless of overflow:hidden or z-index stacking.
-export function WhatsAppLink({ phone, name, leadId, onContact }) {
+export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
   const [open, setOpen]               = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
   const [msgText, setMsgText]         = useState("");
@@ -240,7 +240,10 @@ export function WhatsAppLink({ phone, name, leadId, onContact }) {
     if (!leadId || generating) return;
     setGenerating(true);
     try {
-      const { data } = await api.post(`/leads/${leadId}/draft-message`);
+      const url = projectId
+        ? `/projects/${projectId}/leads/${leadId}/draft-message`
+        : `/leads/${leadId}/draft-message`;
+      const { data } = await api.post(url);
       if (data.message) setMsgText(data.message);
     } catch (err) {
       toast.error(err.response?.data?.message || "AI draft failed");
@@ -342,7 +345,7 @@ export function WhatsAppLink({ phone, name, leadId, onContact }) {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft">
             Message - edit before sending
           </p>
-          {leadId && (
+          {(leadId) && (
             <button
               type="button"
               onClick={handleAIDraft}

@@ -430,7 +430,12 @@ export default function FollowUps() {
                           <PhoneActions phone={lead.phone} />
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._type === "lead" ? lead._id : undefined} />
+                          <WhatsAppLink
+                            phone={lead.phone}
+                            name={lead.name}
+                            leadId={lead._id}
+                            projectId={lead._type === "project" ? lead.projectId : undefined}
+                          />
                         </td>
                         <td className="px-2.5 py-2">
                           {lead._type === "project"
