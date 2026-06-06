@@ -269,7 +269,7 @@ useEffect(() => {
           <button
             ref={bellRef}
             onClick={handleOpenAlerts}
-            className="relative flex items-center justify-center rounded-xl transition-all duration-200"
+            className="hidden lg:flex relative items-center justify-center rounded-xl transition-all duration-200"
             title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "No new alerts"}
             style={{
               width: 36, height: 36, flexShrink: 0,
