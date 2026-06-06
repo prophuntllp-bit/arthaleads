@@ -131,27 +131,7 @@ export default function Dashboard() {
   const bellRef = useRef(null);
   const [alertCount, setAlertCount] = useState(() => +localStorage.getItem("crm_alert_count") || 0);
 
-  const getClockParts = () => {
-    const now = new Date();
-    const h = String(now.getHours() % 12 || 12).padStart(2, "0");
-    const m = String(now.getMinutes()).padStart(2, "0");
-    const s = String(now.getSeconds()).padStart(2, "0");
-    const ampm = now.getHours() >= 12 ? "PM" : "AM";
-    const date = now.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-    return { h, m, s, ampm, date };
-  };
-  const [clockParts, setClockParts] = useState(getClockParts);
-  const [clockGlowKey, setClockGlowKey] = useState(0);
-
-  useEffect(() => {
-    const tick = setInterval(() => {
-      setClockParts(getClockParts());
-      setClockGlowKey((k) => k + 1);
-    }, 1000);
-    return () => clearInterval(tick);
-  }, []);
-
-  useEffect(() => {
+useEffect(() => {
     const handler = (e) => setAlertCount(e.detail?.count ?? 0);
     window.addEventListener("alerts:count", handler);
     return () => window.removeEventListener("alerts:count", handler);
@@ -310,19 +290,7 @@ export default function Dashboard() {
               </span>
             )}
           </button>
-          {/* Clock stacked above date picker */}
-          <div className="hidden sm:flex flex-col items-end gap-0.5">
-            <div className="flex items-baseline leading-none select-none" style={{ gap: 1 }}>
-              <span className="font-mono font-black tabular-nums" style={{ fontSize: 18, letterSpacing: "-0.02em", color: "var(--app-text)" }}>{clockParts.h}</span>
-              <span className="clock-colon font-mono" style={{ fontSize: 16, color: "var(--app-text-soft)", margin: "0 1px" }}>:</span>
-              <span className="font-mono font-black tabular-nums" style={{ fontSize: 18, letterSpacing: "-0.02em", color: "var(--app-text)" }}>{clockParts.m}</span>
-              <span className="clock-colon font-mono" style={{ fontSize: 13, color: "var(--app-text-soft)", margin: "0 1px", paddingBottom: 1, alignSelf: "flex-end" }}>:</span>
-              <span key={clockGlowKey} className="font-mono font-black tabular-nums clock-glow" style={{ fontSize: 13, color: "var(--app-primary)", paddingBottom: 1, alignSelf: "flex-end" }}>{clockParts.s}</span>
-              <span className="font-bold tracking-widest ml-1" style={{ fontSize: 9, color: "var(--app-text-soft)", alignSelf: "flex-start", paddingTop: 2 }}>{clockParts.ampm}</span>
-            </div>
-            <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
-          </div>
-          <span className="sm:hidden" data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
+          <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>
 
