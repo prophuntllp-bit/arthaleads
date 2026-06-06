@@ -32,6 +32,7 @@ export default function OnboardingGate() {
   const [step, setStep]       = useState(0);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
+  const [completed, setCompleted] = useState(false);
 
   const [form, setForm] = useState({
     // Business
@@ -123,6 +124,8 @@ export default function OnboardingGate() {
         if (data.user) updateUserState(data.user);
       }
       toast.success("All set! Welcome to Arthaleads 🎉");
+      setSaving(false);
+      setCompleted(true);
     } catch (err) {
       setError(err.response?.data?.message || "Could not save your details. Please try again.");
       setSaving(false);
@@ -130,6 +133,8 @@ export default function OnboardingGate() {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (completed) return null;
+
   return (
     <div className="fixed inset-0 z-[9997] flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: "rgba(8,8,14,0.92)", backdropFilter: "blur(10px)" }}>
