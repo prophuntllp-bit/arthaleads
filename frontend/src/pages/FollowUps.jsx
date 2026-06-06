@@ -257,7 +257,7 @@ export default function FollowUps() {
       </div>
 
       {/* Section tabs */}
-      <div className="px-4 lg:px-6 pt-4">
+      <div className="pt-4">
         <div data-tour="followup-tabs" className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {SECTIONS.map(s => {
             const Icon = s.icon;
@@ -280,7 +280,7 @@ export default function FollowUps() {
       </div>
 
       {/* Controls row - sort toggle + future date filters + my-only toggle */}
-      <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
+      <div className="pt-3 flex items-center gap-3 flex-wrap">
         {/* My leads only toggle — admin/manager only */}
         {isAdmin && (
           <button
@@ -361,7 +361,7 @@ export default function FollowUps() {
       </div>
 
       {/* Table */}
-      <div className="px-4 lg:px-6 pt-4 pb-6">
+      <div className="pt-4 pb-6">
         {loading ? (
           <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
         ) : leads.length === 0 ? (
