@@ -42,6 +42,7 @@ const orgSchema = new mongoose.Schema(
       bufferMinutes:  { type: Number, default: 15 },      // grace period before marked late
       halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
       fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
+      requireSelfieLocation: { type: Boolean, default: true }, // require selfie + GPS on clock-in/out
     },
     // ── Billing / Invoice letterhead details ───────────────────────────────────
     address:         { type: String, default: "" },

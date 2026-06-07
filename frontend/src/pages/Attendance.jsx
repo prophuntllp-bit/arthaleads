@@ -8,8 +8,9 @@ import toast from "react-hot-toast";
 import {
   Clock, ChevronLeft, ChevronRight, CalendarDays,
   Users, Timer, CheckCircle2, LogIn, Filter,
-  Download, PlusCircle, X, Edit3, Settings, AlertTriangle,
+  Download, PlusCircle, X, Edit3, Settings, AlertTriangle, MapPin, Camera,
 } from "lucide-react";
+import AttendanceCapture from "../components/AttendanceCapture";
 
 function pad(n) { return String(n).padStart(2, "0"); }
 
@@ -115,7 +116,43 @@ function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
 }
 
 const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
-const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480 };
+const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfieLocation: true };
+
+// Selfie thumbnail + location pin for one clock leg
+function ProofThumb({ url, loc, label, tone }) {
+  const hasLoc = loc && loc.lat != null && loc.lng != null;
+  if (!url && !hasLoc) return null;
+  return (
+    <div className="flex items-center gap-1">
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer" title={`${label} selfie`}>
+          <img src={url} alt={`${label} selfie`} className="w-7 h-7 rounded-md object-cover border"
+            style={{ borderColor: "var(--app-border)" }} />
+        </a>
+      )}
+      {hasLoc && (
+        <a href={`https://maps.google.com/?q=${loc.lat},${loc.lng}`} target="_blank" rel="noopener noreferrer"
+          title={`${label} location${loc.accuracy ? ` (±${Math.round(loc.accuracy)}m)` : ""}`}
+          className={`p-1 rounded-md ${tone}`}>
+          <MapPin className="w-3.5 h-3.5" />
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ProofCell({ a }) {
+  if (!a) return <span className="text-app-soft">-</span>;
+  const inHas  = a.clockInSelfie  || (a.clockInLoc  && a.clockInLoc.lat  != null);
+  const outHas = a.clockOutSelfie || (a.clockOutLoc && a.clockOutLoc.lat != null);
+  if (!inHas && !outHas) return <span className="text-app-soft">-</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {inHas  && <ProofThumb url={a.clockInSelfie}  loc={a.clockInLoc}  label="Clock-in"  tone="text-green-500 bg-green-500/10" />}
+      {outHas && <ProofThumb url={a.clockOutSelfie} loc={a.clockOutLoc} label="Clock-out" tone="text-red-400 bg-red-500/10" />}
+    </div>
+  );
+}
 
 export default function Attendance() {
   const { user, org } = useAuth();
@@ -129,6 +166,10 @@ export default function Attendance() {
   const [status, setStatus]             = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [clocking, setClocking]         = useState(false);
+  // Selfie + GPS capture
+  const [captureOpen, setCaptureOpen]   = useState(false);
+  const [captureMode, setCaptureMode]   = useState("in");
+  const [requireSelfieLocation, setRequireSelfieLocation] = useState(true);
 
   // Records list
   const [records, setRecords]     = useState([]);
@@ -172,6 +213,7 @@ export default function Attendance() {
     try {
       const r = await api.get("/attendance/status");
       setStatus(r.data.data);
+      if (typeof r.data.requireSelfieLocation === "boolean") setRequireSelfieLocation(r.data.requireSelfieLocation);
     } catch { /**/ }
     finally { setStatusLoading(false); }
   }, []);
@@ -225,25 +267,19 @@ export default function Attendance() {
   useEffect(() => { if (!isAdmin) setTab("records"); }, [isAdmin]);
   useEffect(() => { if (isAdmin) fetchShiftSettings(); }, [isAdmin, fetchShiftSettings]);
 
-  const handleClockIn = async () => {
-    setClocking(true);
-    try {
-      const r = await api.post("/attendance/clockin");
-      setStatus(r.data.data);
-      toast.success("Clocked in successfully!");
-      fetchTeamToday(); fetchRecords();
-    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
-    finally { setClocking(false); }
-  };
+  const handleClockIn  = () => { setCaptureMode("in");  setCaptureOpen(true); };
+  const handleClockOut = () => { setCaptureMode("out"); setCaptureOpen(true); };
 
-  const handleClockOut = async () => {
+  const submitClock = async (captureData) => {
     setClocking(true);
     try {
-      const r = await api.post("/attendance/clockout");
+      const url = captureMode === "in" ? "/attendance/clockin" : "/attendance/clockout";
+      const r = await api.post(url, captureData);
       setStatus(r.data.data);
-      toast.success("Clocked out! Great work today.");
+      setCaptureOpen(false);
+      toast.success(captureMode === "in" ? "Clocked in successfully!" : "Clocked out! Great work today.");
       fetchTeamToday(); fetchRecords();
-    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
+    } catch (e) { toast.error(e.response?.data?.message || "Attendance failed"); }
     finally { setClocking(false); }
   };
 
@@ -290,6 +326,7 @@ export default function Attendance() {
     setSettingsSaving(true);
     try {
       await api.patch("/org/me/attendance-settings", shiftSettings);
+      setRequireSelfieLocation(!!shiftSettings.requireSelfieLocation);
       toast.success("Shift settings saved");
       setSettingsModal(false);
     } catch (e) { toast.error(e.response?.data?.message || "Failed to save settings"); }
@@ -422,7 +459,7 @@ export default function Attendance() {
                 <table className="w-full text-xs min-w-[700px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                      {["Member", "Clock In", "Clock Out", "Hours", "Day Type", "Status"].map(h => (
+                      {["Member", "Clock In", "Clock Out", "Hours", "Day Type", "Proof", "Status"].map(h => (
                         <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
                     </tr>
@@ -468,12 +505,13 @@ export default function Attendance() {
                           <td className="px-5 py-3">
                             <DayTypeBadge dayType={a?.dayType} clockIn={a?.clockIn} clockOut={a?.clockOut} />
                           </td>
+                          <td className="px-5 py-3"><ProofCell a={a} /></td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
                         </tr>
                       );
                     })}
                     {teamToday.length === 0 && (
-                      <tr><td colSpan={6} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
+                      <tr><td colSpan={7} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -567,7 +605,7 @@ export default function Attendance() {
                       {[
                         "Date",
                         ...(isAdmin ? ["Member"] : []),
-                        "Clock In", "Clock Out", "Duration", "Day Type", "Status", "Note",
+                        "Clock In", "Clock Out", "Duration", "Day Type", "Proof", "Status", "Note",
                       ].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
@@ -615,6 +653,7 @@ export default function Attendance() {
                           <td className="px-4 py-3">
                             <DayTypeBadge dayType={rec.dayType} clockIn={rec.clockIn} clockOut={rec.clockOut} />
                           </td>
+                          <td className="px-4 py-3"><ProofCell a={rec} /></td>
                           <td className="px-4 py-3"><StatusBadge a={rec} /></td>
                           <td className="px-4 py-3 text-app-soft max-w-[140px] truncate">{rec.note || "-"}</td>
                           {isAdmin && (
@@ -668,6 +707,16 @@ export default function Attendance() {
           )}
         </div>
       )}
+
+      {/* ── Selfie + GPS Capture Modal ── */}
+      <AttendanceCapture
+        open={captureOpen}
+        mode={captureMode}
+        required={requireSelfieLocation}
+        submitting={clocking}
+        onClose={() => !clocking && setCaptureOpen(false)}
+        onConfirm={submitClock}
+      />
 
       {/* ── Shift Settings Modal ── */}
       {settingsModal && (
@@ -727,6 +776,23 @@ export default function Attendance() {
                     <p className="text-xs text-app-soft mt-1">Min hours for full-day count.</p>
                   </div>
                 </div>
+
+                {/* Selfie + GPS requirement toggle */}
+                <button type="button"
+                  onClick={() => setShiftSettings(s => ({ ...s, requireSelfieLocation: !s.requireSelfieLocation }))}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3 text-left"
+                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                  <Camera className="w-4 h-4 text-orange-500 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-app">Require selfie &amp; GPS</p>
+                    <p className="text-xs text-app-soft mt-0.5">Staff must take a selfie and share location on every clock-in/out.</p>
+                  </div>
+                  <span className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition"
+                    style={{ background: shiftSettings.requireSelfieLocation ? "var(--app-primary)" : "var(--app-border-strong)" }}>
+                    <span className="inline-block h-5 w-5 transform rounded-full bg-white shadow transition"
+                      style={{ transform: shiftSettings.requireSelfieLocation ? "translateX(22px)" : "translateX(2px)" }} />
+                  </span>
+                </button>
 
                 {/* Preview */}
                 <div className="rounded-2xl px-4 py-3 text-xs text-app-soft space-y-1"

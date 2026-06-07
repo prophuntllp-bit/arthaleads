@@ -3,6 +3,7 @@ const Attendance = require("../models/Attendance");
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+const { uploadAttendanceSelfie } = require("../utils/upload");
 
 function todayStr() {
   const d = new Date();
@@ -22,7 +23,38 @@ async function getOrgSettings(orgId) {
     bufferMinutes:  s.bufferMinutes  ?? 15,
     halfDayMinutes: s.halfDayMinutes ?? 240,
     fullDayMinutes: s.fullDayMinutes ?? 480,
+    requireSelfieLocation: s.requireSelfieLocation ?? true,
   };
+}
+
+// Validate + upload capture data (selfie + location) for a clock-in/out leg.
+// Returns { selfieUrl, loc }. Throws AppError when required data is missing/invalid.
+async function processCapture(body, settings, userId, date, leg) {
+  const { selfie, lat, lng, accuracy } = body || {};
+  const hasLoc = lat != null && lng != null && !isNaN(+lat) && !isNaN(+lng);
+  const hasSelfie = typeof selfie === "string" && selfie.startsWith("data:image/");
+
+  if (settings.requireSelfieLocation) {
+    if (!hasSelfie) throw new AppError("A selfie is required to record attendance.", 400);
+    if (!hasLoc)    throw new AppError("Location access is required to record attendance.", 400);
+  }
+
+  let selfieUrl = "";
+  if (hasSelfie) {
+    // Guard against oversized payloads (base64 is ~33% larger than the binary).
+    if (selfie.length > 7_000_000) throw new AppError("Selfie image is too large.", 400);
+    try {
+      selfieUrl = await uploadAttendanceSelfie(selfie, userId, date, leg);
+    } catch (err) {
+      throw new AppError("Failed to upload selfie. Please try again.", 502);
+    }
+  }
+
+  const loc = hasLoc
+    ? { lat: +lat, lng: +lng, accuracy: accuracy != null ? +accuracy : null }
+    : { lat: null, lng: null, accuracy: null };
+
+  return { selfieUrl, loc };
 }
 
 // Compute early leave flag from clock-out time vs expected end time
@@ -54,11 +86,11 @@ const attendanceController = {
   // GET /api/attendance/status - today's record for the current user
   async status(req, res, next) {
     try {
-      const record = await Attendance.findOne({
-        userId: req.user._id,
-        date: todayStr(),
-      });
-      res.json({ success: true, data: record || null });
+      const [record, settings] = await Promise.all([
+        Attendance.findOne({ userId: req.user._id, date: todayStr() }),
+        getOrgSettings(req.user.orgId),
+      ]);
+      res.json({ success: true, data: record || null, requireSelfieLocation: settings.requireSelfieLocation });
     } catch (err) { next(err); }
   },
 
@@ -74,6 +106,10 @@ const attendanceController = {
 
       // Compute late status against org shift settings
       const settings = await getOrgSettings(req.user.orgId);
+
+      // Validate + upload selfie/location before mutating the record
+      const { selfieUrl, loc } = await processCapture(req.body, settings, req.user._id, date, "in");
+
       const now = new Date();
       const clockInMins = now.getHours() * 60 + now.getMinutes();
       const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
@@ -88,6 +124,8 @@ const attendanceController = {
           clockIn: now,
           isLate,
           lateByMinutes,
+          clockInSelfie: selfieUrl,
+          clockInLoc: loc,
         });
       } else {
         record.clockIn = now;
@@ -96,6 +134,11 @@ const attendanceController = {
         record.dayType = null;
         record.isLate = isLate;
         record.lateByMinutes = lateByMinutes;
+        record.clockInSelfie = selfieUrl;
+        record.clockInLoc = loc;
+        // Reset the previous clock-out proof on a fresh clock-in
+        record.clockOutSelfie = "";
+        record.clockOutLoc = { lat: null, lng: null, accuracy: null };
         await record.save();
       }
 
@@ -119,6 +162,10 @@ const attendanceController = {
       }
 
       const settings = await getOrgSettings(req.user.orgId);
+
+      // Validate + upload selfie/location before mutating the record
+      const { selfieUrl, loc } = await processCapture(req.body, settings, req.user._id, record.date, "out");
+
       const now = new Date();
       record.clockOut = now;
       record.totalMinutes = Math.round((now - record.clockIn) / 60000);
@@ -126,6 +173,8 @@ const attendanceController = {
       const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings);
       record.isEarlyLeave = isEarlyLeave;
       record.earlyLeaveByMinutes = earlyLeaveByMinutes;
+      record.clockOutSelfie = selfieUrl;
+      record.clockOutLoc = loc;
       if (req.body.note) record.note = req.body.note;
       await record.save();
 
@@ -211,7 +260,10 @@ const attendanceController = {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
       };
 
-      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Note"];
+      const mapLink = (loc) => (loc && loc.lat != null && loc.lng != null)
+        ? `https://maps.google.com/?q=${loc.lat},${loc.lng}` : "";
+
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Clock In Location", "Clock Out Location", "Note"];
       const rows = records.map((r) => [
         r.date,
         r.userId?.name || "",
@@ -225,6 +277,8 @@ const attendanceController = {
         r.lateByMinutes ? fmtDur(r.lateByMinutes) : "",
         r.isEarlyLeave ? "Yes" : "No",
         r.earlyLeaveByMinutes ? fmtDur(r.earlyLeaveByMinutes) : "",
+        mapLink(r.clockInLoc),
+        mapLink(r.clockOutLoc),
         r.note || "",
       ]);
 

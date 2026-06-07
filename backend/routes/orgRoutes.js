@@ -114,9 +114,11 @@ router.get("/me/attendance-settings", async (req, res, next) => {
       success: true,
       settings: {
         shiftStartTime: s.shiftStartTime || "09:30",
+        shiftEndTime:   s.shiftEndTime   || "19:00",
         bufferMinutes:  s.bufferMinutes  ?? 15,
         halfDayMinutes: s.halfDayMinutes ?? 240,
         fullDayMinutes: s.fullDayMinutes ?? 480,
+        requireSelfieLocation: s.requireSelfieLocation ?? true,
       },
     });
   } catch (err) { next(err); }
@@ -125,12 +127,14 @@ router.get("/me/attendance-settings", async (req, res, next) => {
 // PATCH /api/org/me/attendance-settings — update shift/attendance config (admin only)
 router.patch("/me/attendance-settings", authorize("admin"), async (req, res, next) => {
   try {
-    const { shiftStartTime, bufferMinutes, halfDayMinutes, fullDayMinutes } = req.body;
+    const { shiftStartTime, shiftEndTime, bufferMinutes, halfDayMinutes, fullDayMinutes, requireSelfieLocation } = req.body;
     const update = {};
     if (shiftStartTime)    update["attendanceSettings.shiftStartTime"] = shiftStartTime;
+    if (shiftEndTime)      update["attendanceSettings.shiftEndTime"]   = shiftEndTime;
     if (bufferMinutes  != null) update["attendanceSettings.bufferMinutes"]  = Math.max(0, parseInt(bufferMinutes));
     if (halfDayMinutes != null) update["attendanceSettings.halfDayMinutes"] = Math.max(1, parseInt(halfDayMinutes));
     if (fullDayMinutes != null) update["attendanceSettings.fullDayMinutes"] = Math.max(1, parseInt(fullDayMinutes));
+    if (requireSelfieLocation != null) update["attendanceSettings.requireSelfieLocation"] = !!requireSelfieLocation;
 
     if (!Object.keys(update).length) {
       return res.status(400).json({ success: false, message: "No valid fields provided." });

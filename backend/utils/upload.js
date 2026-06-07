@@ -56,4 +56,23 @@ async function uploadBlogImage(dataUri) {
   return result.secure_url;
 }
 
-module.exports = { uploadOrgLogo, deleteOrgLogo, uploadBlogImage };
+/**
+ * Upload an attendance selfie (base64 data-URI) to Cloudinary.
+ * public_id is stable per user/date/leg so a re-clock overwrites the same asset.
+ * `leg` is "in" or "out". Returns the secure HTTPS URL.
+ */
+async function uploadAttendanceSelfie(dataUri, userId, date, leg) {
+  const result = await cloudinary.uploader.upload(dataUri, {
+    public_id:     `att-${userId}-${date}-${leg}`,
+    folder:        "arthaleads/attendance",
+    overwrite:     true,
+    invalidate:    true,
+    resource_type: "image",
+    transformation: [
+      { width: 600, height: 600, crop: "limit", quality: "auto:good", fetch_format: "auto" },
+    ],
+  });
+  return result.secure_url;
+}
+
+module.exports = { uploadOrgLogo, deleteOrgLogo, uploadBlogImage, uploadAttendanceSelfie };

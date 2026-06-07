@@ -16,6 +16,7 @@ import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
 import { canAccess, upgradeTarget } from "../utils/plan";
 import toast from "react-hot-toast";
+import AttendanceCapture from "./AttendanceCapture";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
@@ -119,6 +120,10 @@ export default function Sidebar() {
   const [clockStatus, setClockStatus] = useState(null);
   const [clocking,    setClocking]    = useState(false);
   const [logoError,   setLogoError]   = useState(false);
+  // Selfie + GPS capture modal
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureMode, setCaptureMode] = useState("in");
+  const [requireSelfieLocation, setRequireSelfieLocation] = useState(true);
   const clockTimer = useLiveClock(
     clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null
   );
@@ -127,28 +132,26 @@ export default function Sidebar() {
 
   const fetchClockStatus = useCallback(() => {
     if (!user || !attendanceEnabled) return;
-    api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
+    api.get("/attendance/status").then(r => {
+      setClockStatus(r.data.data);
+      if (typeof r.data.requireSelfieLocation === "boolean") setRequireSelfieLocation(r.data.requireSelfieLocation);
+    }).catch(() => {});
   }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
   useEffect(() => { setLogoError(false); }, [org?.logo]);
 
-  const handleClockIn = async () => {
-    setClocking(true);
-    try {
-      const r = await api.post("/attendance/clockin");
-      setClockStatus(r.data.data);
-      toast.success("Clocked in!");
-    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
-    finally { setClocking(false); }
-  };
+  const handleClockIn  = () => { setCaptureMode("in");  setCaptureOpen(true); };
+  const handleClockOut = () => { setCaptureMode("out"); setCaptureOpen(true); };
 
-  const handleClockOut = async () => {
+  const submitClock = async (captureData) => {
     setClocking(true);
     try {
-      const r = await api.post("/attendance/clockout");
+      const url = captureMode === "in" ? "/attendance/clockin" : "/attendance/clockout";
+      const r = await api.post(url, captureData);
       setClockStatus(r.data.data);
-      toast.success("Clocked out! Great work today.");
-    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
+      setCaptureOpen(false);
+      toast.success(captureMode === "in" ? "Clocked in!" : "Clocked out! Great work today.");
+    } catch (e) { toast.error(e.response?.data?.message || "Attendance failed"); }
     finally { setClocking(false); }
   };
 
@@ -740,6 +743,15 @@ export default function Sidebar() {
   return (
     <>
       {AlertsPortal}
+
+      <AttendanceCapture
+        open={captureOpen}
+        mode={captureMode}
+        required={requireSelfieLocation}
+        submitting={clocking}
+        onClose={() => !clocking && setCaptureOpen(false)}
+        onConfirm={submitClock}
+      />
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
