@@ -721,13 +721,15 @@ export default function Attendance() {
 
       {/* ── Shift Settings Modal ── */}
       {settingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
+          style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setSettingsModal(false); }}>
-          <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-app flex items-center gap-2">
-                <Settings className="w-4 h-4 text-orange-500" /> Shift & Attendance Settings
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]"
+            style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            {/* Header — sticky */}
+            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+              <h2 className="text-sm font-bold text-app flex items-center gap-2">
+                <Settings className="w-4 h-4 text-orange-500" /> Shift &amp; Attendance Settings
               </h2>
               <button onClick={() => setSettingsModal(false)}
                 className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft cursor-pointer">
@@ -735,19 +737,19 @@ export default function Attendance() {
               </button>
             </div>
             {settingsLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
-              <form onSubmit={handleSaveSettings} className="flex flex-col gap-5">
-                <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleSaveSettings} className="flex flex-col gap-3 overflow-y-auto flex-1 pr-0.5">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="label">Office Start Time</label>
                     <input type="time" className="input" value={shiftSettings.shiftStartTime}
                       onChange={e => setShiftSettings(s => ({ ...s, shiftStartTime: e.target.value }))} required />
-                    <p className="text-xs text-app-soft mt-1">Expected clock-in time.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Expected clock-in time.</p>
                   </div>
                   <div>
                     <label className="label">Office End Time</label>
                     <input type="time" className="input" value={shiftSettings.shiftEndTime || "19:00"}
                       onChange={e => setShiftSettings(s => ({ ...s, shiftEndTime: e.target.value }))} required />
-                    <p className="text-xs text-app-soft mt-1">Expected clock-out time.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Expected clock-out time.</p>
                   </div>
                 </div>
 
@@ -755,35 +757,34 @@ export default function Attendance() {
                   <label className="label">Grace / Buffer Period (minutes)</label>
                   <input type="number" className="input" min={0} max={120} value={shiftSettings.bufferMinutes}
                     onChange={e => setShiftSettings(s => ({ ...s, bufferMinutes: parseInt(e.target.value) || 0 }))} required />
-                  <p className="text-xs text-app-soft mt-1">
-                    Clock-ins within this window after start time are not marked late.
-                    E.g. start 9:30 + 15 min grace → late after 9:45.
-                  </p>
+                  <p className="text-[11px] text-app-soft mt-0.5">Late after start time + buffer. E.g. 9:30 + 15 min → late after 9:45.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="label">Half Day (hours)</label>
+                    <label className="label">Half Day (hrs)</label>
                     <input type="number" className="input" min={1} max={24} step={0.5}
                       value={(shiftSettings.halfDayMinutes / 60).toFixed(1)}
                       onChange={e => setShiftSettings(s => ({ ...s, halfDayMinutes: Math.round(parseFloat(e.target.value) * 60) }))} required />
-                    <p className="text-xs text-app-soft mt-1">Min hours for half-day count.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Min hours for half-day.</p>
                   </div>
                   <div>
-                    <label className="label">Full Day (hours)</label>
+                    <label className="label">Full Day (hrs)</label>
                     <input type="number" className="input" min={1} max={24} step={0.5}
                       value={(shiftSettings.fullDayMinutes / 60).toFixed(1)}
                       onChange={e => setShiftSettings(s => ({ ...s, fullDayMinutes: Math.round(parseFloat(e.target.value) * 60) }))} required />
-                    <p className="text-xs text-app-soft mt-1">Min hours for full-day count.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Min hours for full-day.</p>
                   </div>
                 </div>
 
                 {/* Selfie + GPS toggle */}
-                <div className="flex items-center justify-between rounded-2xl px-4 py-3"
+                <div className="flex items-center gap-3 justify-between rounded-2xl px-3 py-2.5"
                   style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  <div>
-                    <p className="text-xs font-semibold text-app flex items-center gap-1.5"><Camera className="w-3.5 h-3.5 text-orange-500" /> Require selfie &amp; GPS</p>
-                    <p className="text-[11px] text-app-soft mt-0.5">Team must take a photo and share location when clocking in/out.</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-app flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" /> Require selfie &amp; GPS
+                    </p>
+                    <p className="text-[11px] text-app-soft mt-0.5 leading-tight">Staff must take a photo &amp; share location on clock-in/out.</p>
                   </div>
                   <button type="button"
                     onClick={() => setRequireSelfie(v => !v)}
@@ -794,18 +795,16 @@ export default function Attendance() {
                 </div>
 
                 {/* Preview */}
-                <div className="rounded-2xl px-4 py-3 text-xs text-app-soft space-y-1"
+                <div className="rounded-2xl px-3 py-2.5 text-xs text-app-soft space-y-0.5"
                   style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  <p className="font-semibold text-app mb-2">Preview</p>
+                  <p className="font-semibold text-app mb-1.5">Preview</p>
                   <p>Shift: <strong>{shiftSettings.shiftStartTime}</strong> to <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
                   <p>On time: clock-in by <strong>{shiftSettings.shiftStartTime}</strong> + {shiftSettings.bufferMinutes} min grace</p>
                   <p>Early leave: clock-out before <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
-                  <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> worked</p>
-                  <p>Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong> worked</p>
-                  <p>Short day: &lt; {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h worked</p>
+                  <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> · Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong></p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-1">
+                <div className="flex justify-end gap-3 pt-1 flex-shrink-0">
                   <button type="button" className="btn-secondary" onClick={() => setSettingsModal(false)}>Cancel</button>
                   <button type="submit" className="btn-primary" disabled={settingsSaving}>
                     {settingsSaving ? <Spinner size="sm" /> : null} Save Settings
@@ -819,10 +818,10 @@ export default function Attendance() {
 
       {/* ── Admin Entry Modal ── */}
       {entryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
+          style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setEntryModal(false); }}>
-          <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-app flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-orange-500" /> Manual Attendance Entry
@@ -832,7 +831,7 @@ export default function Attendance() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleAdminEntry} className="flex flex-col gap-4">
+            <form onSubmit={handleAdminEntry} className="flex flex-col gap-3 overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="label">Member</label>
                 <AppSelect
