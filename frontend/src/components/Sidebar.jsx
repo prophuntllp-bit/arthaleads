@@ -122,7 +122,7 @@ export default function Sidebar() {
   const [logoError,        setLogoError]        = useState(false);
   const [captureOpen,      setCaptureOpen]      = useState(false);
   const [captureMode,      setCaptureMode]      = useState("clockin");
-  const [requireSelfie,    setRequireSelfie]    = useState(false);
+  const [requireSelfie,    setRequireSelfie]    = useState(true);
   const clockTimer = useLiveClock(
     clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null
   );
@@ -133,7 +133,7 @@ export default function Sidebar() {
     if (!user || !attendanceEnabled) return;
     api.get("/attendance/status").then(r => {
       setClockStatus(r.data.data);
-      setRequireSelfie(r.data.requireSelfie ?? false);
+      setRequireSelfie(r.data.requireSelfie ?? true);
     }).catch(() => {});
   }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);

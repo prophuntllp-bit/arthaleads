@@ -10,6 +10,10 @@ function storageGet(key) {
   try { return sessionStorage.getItem(key); } catch {}
   return null;
 }
+function storageSet(key, value) {
+  try { localStorage.setItem(key, value); return; } catch {}
+  try { sessionStorage.setItem(key, value); } catch {}
+}
 function storageRemove(key) {
   try { localStorage.removeItem(key); } catch {}
   try { sessionStorage.removeItem(key); } catch {}
@@ -35,7 +39,7 @@ export function setAuthInProgress(v) {
 let _memToken = null;
 export function setToken(token) {
   _memToken = token || null;
-  if (token) storageSave("_at", token);
+  if (token) storageSet("_at", token);
   else storageRemove("_at");
 }
 

@@ -65,7 +65,7 @@ router.get("/me/attendance-settings", async (req, res, next) => {
         bufferMinutes:  s.bufferMinutes  ?? 15,
         halfDayMinutes: s.halfDayMinutes ?? 240,
         fullDayMinutes: s.fullDayMinutes ?? 480,
-        requireSelfie:  s.requireSelfie  ?? false,
+        requireSelfie:  s.requireSelfie  ?? true,
       },
     });
   } catch (err) { next(err); }

@@ -23,7 +23,7 @@ async function getOrgSettings(orgId) {
     bufferMinutes:  s.bufferMinutes  ?? 15,
     halfDayMinutes: s.halfDayMinutes ?? 240,
     fullDayMinutes: s.fullDayMinutes ?? 480,
-    requireSelfie:  s.requireSelfie  ?? false,
+    requireSelfie:  s.requireSelfie  ?? true,
   };
 }
 

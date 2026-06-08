@@ -116,7 +116,7 @@ function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
 }
 
 const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
-const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: false };
+const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: true };
 
 function ProofCell({ selfie, lat, lng }) {
   if (!selfie && lat == null) return <span className="text-app-soft">—</span>;
@@ -154,7 +154,7 @@ export default function Attendance() {
   // Selfie/location capture
   const [captureOpen,   setCaptureOpen]   = useState(false);
   const [captureMode,   setCaptureMode]   = useState("clockin");
-  const [requireSelfie, setRequireSelfie] = useState(false);
+  const [requireSelfie, setRequireSelfie] = useState(true);
 
   // Records list
   const [records, setRecords]     = useState([]);
@@ -198,7 +198,7 @@ export default function Attendance() {
     try {
       const r = await api.get("/attendance/status");
       setStatus(r.data.data);
-      setRequireSelfie(r.data.requireSelfie ?? false);
+      setRequireSelfie(r.data.requireSelfie ?? true);
     } catch { /**/ }
     finally { setStatusLoading(false); }
   }, []);
@@ -242,7 +242,7 @@ export default function Attendance() {
       const r = await api.get("/org/me/attendance-settings");
       const s = { ...DEFAULT_SETTINGS, ...r.data.settings };
       setShiftSettings(s);
-      setRequireSelfie(s.requireSelfie ?? false);
+      setRequireSelfie(s.requireSelfie ?? true);
     } catch { /**/ }
     finally { setSettingsLoading(false); }
   }, []);
