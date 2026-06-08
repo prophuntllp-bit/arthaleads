@@ -1,4 +1,7 @@
 ﻿// server.js - Production-ready CRM entry point (v3)
+// Deploy marker: 2026-06-05 — ship onboarding route + auth/signup fixes after
+// Railway CLI pin (5.3.0 regression). Touches backend/** so Railway's watch
+// path doesn't skip the build.
 // ⚠️  Sentry MUST be the very first import - before express, mongoose, everything
 require("./instrument");
 

@@ -405,3 +405,38 @@
     }
   }
 }
+
+/* ── Dashboard bell ring animation ─────────────────────────────────────── */
+@keyframes bell-ring {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  10%, 30%      { transform: rotate(-18deg); }
+  20%, 40%      { transform: rotate(18deg); }
+}
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--app-primary); opacity: 1; }
+  50%      { box-shadow: 0 0 0 6px transparent; opacity: 0.8; }
+}
+.bell-ringing {
+  animation: bell-ring 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+.badge-glow {
+  animation: badge-glow 1.5s ease-in-out infinite;
+}
+
+/* ── Dashboard digital clock ────────────────────────────────────────────── */
+@keyframes clock-glow-pulse {
+  0%   { text-shadow: 0 0 0px color-mix(in srgb, var(--app-primary) 0%, transparent); }
+  25%  { text-shadow: 0 0 12px color-mix(in srgb, var(--app-primary) 80%, transparent); }
+  100% { text-shadow: 0 0 0px color-mix(in srgb, var(--app-primary) 0%, transparent); }
+}
+@keyframes colon-blink {
+  0%, 49%  { opacity: 1; }
+  50%, 99% { opacity: 0.2; }
+}
+.clock-glow {
+  animation: clock-glow-pulse 1s ease-out forwards;
+}
+.clock-colon {
+  animation: colon-blink 1s step-start infinite;
+}

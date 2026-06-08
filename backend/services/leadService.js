@@ -465,6 +465,8 @@ const leadService = {
 
     if (user.role === "agent" || query.myOnly === "true") {
       andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
+    } else if (query.userId && (user.role === "admin" || user.role === "manager")) {
+      andConditions.push({ $or: [{ assignedTo: query.userId }, { createdBy: query.userId }] });
     }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;

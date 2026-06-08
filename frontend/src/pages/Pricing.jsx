@@ -5,6 +5,7 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import { PLAN_PRICING, formatINR, annualMonthly } from "../utils/plan";
 
 const PLANS = [
   {
@@ -94,7 +95,8 @@ const PLANS = [
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature. No credit card is required, and you can upgrade or cancel anytime."],
-  ["How is pricing calculated?", "Pricing is tailored to your team size and the plan you choose. Use the team-size slider above to see which plan fits, then contact us for exact numbers - there are no hidden fees."],
+  ["How is pricing calculated?", "Pricing is per team member, per month. You pay only for the seats you add - ₹999/user on Starter and ₹1,500/user on Growth, with no setup fee and no hidden charges. Enterprise is custom-quoted for large or multi-branch organisations."],
+  ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. You can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
   ["Do you offer annual billing discounts?", "Yes. Switching to annual billing gives you roughly two months free compared to paying monthly. Toggle the billing switch above to see the effective saving."],
@@ -172,7 +174,7 @@ export default function Pricing() {
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">team size</span>
           </h1>
           <p className="text-base max-w-lg mx-auto" style={{ color: body }}>
-            No hidden fees. Pricing tailored to your team - contact us for exact numbers.
+            Simple per-seat pricing. No setup fee, no hidden charges — pay only for the team members you add.
           </p>
         </div>
       </section>
@@ -324,11 +326,33 @@ export default function Pricing() {
                   </div>
 
                   {/* Pricing */}
-                  <div className="flex items-center gap-2 mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                    <span className="text-sm" style={{ color: body }}>
-                      {annual ? "Annual billing - " : "Monthly billing - "}pricing on request
-                    </span>
-                  </div>
+                  {(() => {
+                    const price = PLAN_PRICING[plan.id] || {};
+                    return (
+                      <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
+                        {price.custom ? (
+                          <>
+                            <span className="text-3xl font-black" style={{ color: heading }}>Custom</span>
+                            <p className="text-xs mt-1" style={{ color: taglineClr }}>Tailored quote for your organisation</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-3xl font-black" style={{ color: heading }}>
+                                {formatINR(annual ? annualMonthly(plan.id) : price.monthly)}
+                              </span>
+                              <span className="text-sm" style={{ color: body }}>/ user / month</span>
+                            </div>
+                            <p className="text-xs mt-1" style={{ color: taglineClr }}>
+                              {annual
+                                ? `Billed annually — ${formatINR(price.annual)}/user/yr · no setup fee`
+                                : "Billed monthly · no setup fee"}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Feature groups */}
                   <div className="flex flex-col gap-4 flex-1 mb-6">
@@ -362,15 +386,15 @@ export default function Pricing() {
                       {plan.cta}
                     </Link>
                   ) : (
-                    <Link
-                      to="/contact"
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center"
+                    <a
+                      href={`mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}`}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
                       style={{ border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }}
                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; }}
                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; }}
                     >
                       {plan.cta}
-                    </Link>
+                    </a>
                   )}
                 </div>
               </div>
@@ -429,13 +453,13 @@ export default function Pricing() {
           {/* Bottom CTA */}
           <div className="text-center mt-10">
             <p className="text-sm mb-4" style={{ color: body }}>Still have questions about pricing?</p>
-            <Link
-              to="/contact"
+            <a
+              href="mailto:sales@arthaleads.com?subject=Pricing%20enquiry&body=Hi%2C%20I%27d%20like%20to%20talk%20about%20Arthaleads%20pricing%20for%20my%20team."
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 hover:-translate-y-0.5"
               style={{ background: "#ff6b00", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
             >
               Talk to our team <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>

@@ -2,8 +2,9 @@
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import toast from "react-hot-toast";
+import api from "../services/api";
 
 export function StatusBadge({ status }) {
   return (
@@ -208,14 +209,20 @@ function openWABusiness(waNumber, text = "", onNotInstalled) {
   }
 }
 
-// Build the default pre-filled message from lead name + logged-in agent name
+// Build the default pre-filled message from lead name + logged-in agent + org name
 function buildWAMessage(leadName) {
   try {
     const user = JSON.parse(localStorage.getItem("crm_user") || "{}");
+    const org  = JSON.parse(localStorage.getItem("crm_org")  || "{}");
     const agentName = user.name || "";
+    const orgName   = org.name  || "";
     const firstName = (leadName || "").split(" ")[0].trim();
-    const greeting = firstName ? `Hi ${firstName}! 👋` : "Hi! 👋";
-    const from = agentName ? ` I'm ${agentName} from PropHunt.` : " I'm from PropHunt.";
+    const greeting  = firstName ? `Hi ${firstName}! 👋` : "Hi! 👋";
+    const from = agentName && orgName
+      ? ` I'm ${agentName} from ${orgName}.`
+      : agentName
+        ? ` I'm ${agentName}.`
+        : orgName ? ` I'm from ${orgName}.` : "";
     return `${greeting}${from} I'm following up on your property enquiry. Are you still looking? 🏠`;
   } catch {
     return "";
@@ -225,13 +232,31 @@ function buildWAMessage(leadName) {
 // Green "Chat on WhatsApp" button - pre-filled message + editable before send.
 // Dropdown is portal-rendered at document.body with position:fixed so it
 // always floats above tables regardless of overflow:hidden or z-index stacking.
-export function WhatsAppLink({ phone, name, onContact }) {
+export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
   const [open, setOpen]               = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
   const [msgText, setMsgText]         = useState("");
   const [dropPos, setDropPos]         = useState({ top: 0, left: 0 });
+  const [generating, setGenerating]   = useState(false);
   const btnRef  = useRef(null);
   const dropRef = useRef(null);
+
+  const handleAIDraft = async (e) => {
+    e.stopPropagation();
+    if (!leadId || generating) return;
+    setGenerating(true);
+    try {
+      const url = projectId
+        ? `/projects/${projectId}/leads/${leadId}/draft-message`
+        : `/leads/${leadId}/draft-message`;
+      const { data } = await api.post(url);
+      if (data.message) setMsgText(data.message);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "AI draft failed");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   // Build default message and compute dropdown position each time it opens
   const handleToggle = () => {
@@ -273,10 +298,13 @@ export function WhatsAppLink({ phone, name, onContact }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Close on scroll so dropdown doesn't detach from button
+  // Close on scroll outside the dropdown (scrolling inside the message textarea must not close it)
   useEffect(() => {
     if (!open) return;
-    const handler = () => setOpen(false);
+    const handler = (e) => {
+      if (dropRef.current?.contains(e.target)) return;
+      setOpen(false);
+    };
     window.addEventListener("scroll", handler, true);
     return () => window.removeEventListener("scroll", handler, true);
   }, [open]);
@@ -310,20 +338,38 @@ export function WhatsAppLink({ phone, name, onContact }) {
         left: dropPos.left,
         width: 288,
         zIndex: 99999,
-        background: "var(--app-surface)",
-        border: "1px solid var(--app-border)",
+        background: "var(--app-surface-high)",
+        backdropFilter: "blur(24px) saturate(140%)",
+        border: "1px solid var(--app-border-strong, var(--app-border))",
         borderRadius: 12,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.14)",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.40), 0 2px 8px rgba(0,0,0,0.20)",
         overflow: "hidden",
-        maxHeight: "min(320px, 90dvh)",
+        maxHeight: "min(340px, 90dvh)",
         overflowY: "auto",
       }}
     >
       {/* Pre-filled message editor */}
       <div className="px-3 pt-3 pb-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft mb-1.5">
-          Message - edit before sending
-        </p>
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft">
+            Message - edit before sending
+          </p>
+          {(leadId) && (
+            <button
+              type="button"
+              onClick={handleAIDraft}
+              disabled={generating}
+              title="AI draft"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold transition disabled:opacity-50"
+              style={{ background: "rgba(255,107,0,0.10)", color: "var(--app-primary)" }}
+            >
+              {generating
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <Sparkles className="h-3 w-3" />}
+              {generating ? "Drafting…" : "AI Draft"}
+            </button>
+          )}
+        </div>
         <textarea
           value={msgText}
           onChange={(e) => setMsgText(e.target.value)}

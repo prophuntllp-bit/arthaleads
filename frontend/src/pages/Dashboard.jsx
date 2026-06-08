@@ -1,5 +1,5 @@
 ﻿// Dashboard - v2
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -127,6 +127,21 @@ export default function Dashboard() {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
     return () => clearInterval(timer);
   }, []);
+
+  const bellRef = useRef(null);
+  const [alertCount, setAlertCount] = useState(() => +localStorage.getItem("crm_alert_count") || 0);
+
+useEffect(() => {
+    const handler = (e) => setAlertCount(e.detail?.count ?? 0);
+    window.addEventListener("alerts:count", handler);
+    return () => window.removeEventListener("alerts:count", handler);
+  }, []);
+
+  const handleOpenAlerts = () => {
+    if (!bellRef.current) return;
+    const rect = bellRef.current.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent("open:alerts", { detail: { rect } }));
+  };
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -240,6 +255,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── Right: controls ── */}
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
@@ -249,6 +265,30 @@ export default function Dashboard() {
           <button className="stitch-pill whitespace-nowrap" onClick={toggleTheme}>
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
+          </button>
+          <button
+            ref={bellRef}
+            onClick={handleOpenAlerts}
+            className="hidden lg:flex relative items-center justify-center rounded-xl transition-all duration-200"
+            title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "No new alerts"}
+            style={{
+              width: 36, height: 36, flexShrink: 0,
+              background: alertCount > 0
+                ? "color-mix(in srgb, var(--app-primary) 15%, transparent)"
+                : "var(--app-surface-high)",
+              border: `1.5px solid ${alertCount > 0 ? "color-mix(in srgb, var(--app-primary) 40%, transparent)" : "var(--app-border)"}`,
+              color: alertCount > 0 ? "var(--app-primary)" : "var(--app-text-soft)",
+            }}
+          >
+            <Bell className={`h-[18px] w-[18px]${alertCount > 0 ? " bell-ringing" : ""}`} />
+            {alertCount > 0 && (
+              <span
+                className="badge-glow absolute -top-1.5 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ background: "var(--app-primary)" }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
           </button>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>

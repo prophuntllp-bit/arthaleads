@@ -332,6 +332,26 @@ export default function SuperAdminOrgDetail() {
                   </p>
                 </div>
               ))}
+              {/* Onboarding fields */}
+              <div className="pt-2 mt-1 border-t space-y-3" style={{ borderColor: "var(--app-border)" }}>
+                {[
+                  { label: "Industry",   value: org.industry   || "—" },
+                  { label: "Team Size",  value: org.companySize || "—" },
+                  { label: "City",       value: org.city        || "—" },
+                  { label: "Onboarded",  value: org.onboardingCompletedAt ? fmtDate(org.onboardingCompletedAt) : "Pending" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <p className="text-xs text-app-soft w-28 flex-shrink-0">{label}</p>
+                    <p className={`text-xs font-semibold ${
+                      label === "Onboarded" && !org.onboardingCompletedAt
+                        ? "text-amber-500"
+                        : "text-app"
+                    }`}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

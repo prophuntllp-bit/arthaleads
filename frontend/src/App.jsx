@@ -8,6 +8,7 @@ import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
 import HelpBot from "./components/HelpBot";
+import OnboardingGate from "./components/OnboardingGate";
 import CookieBanner from "./components/CookieBanner";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -467,6 +468,13 @@ function RequireAuth() {
         && org?.trialEndsAt
         && new Date() > new Date(org.trialEndsAt));
 
+  // First-run onboarding gate: org owners must complete workspace setup, and any
+  // team member missing their personal mobile must add it before continuing.
+  const needsOnboarding = user.role !== "super_admin" && (
+    (user.role === "admin" && org && !org.onboardingCompletedAt) ||
+    !user.phone
+  );
+
   return (
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
@@ -481,6 +489,7 @@ function RequireAuth() {
       {/* Blocking overlays - rendered on top of everything */}
       {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
       {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
+      {!isInactive && !trialExpired && needsOnboarding && <OnboardingGate />}
     </div>
   );
 }
