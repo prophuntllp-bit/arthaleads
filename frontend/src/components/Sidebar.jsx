@@ -384,29 +384,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* ── Alerts bell ── */}
-        <div className="px-2 pb-1 flex-shrink-0">
-          <div ref={alertRef}>
-            <button
-              onClick={openAlerts}
-              title={!isExpanded ? "Alerts" : undefined}
-              className="relative w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-              style={{ paddingLeft: 14 }}
-            >
-              <Bell className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
-              <span className="ml-3" style={labelStyle}>Alerts</span>
-              {alertCount > 0 && (
-                <span
-                  className={`flex items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 ${isExpanded ? "ml-auto" : "absolute top-1.5 right-1.5"}`}
-                  style={{ background: "var(--app-primary)", width: 18, height: 18, minWidth: 18 }}
-                >
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
         {/* ── Nav items ── */}
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
           {filtered.map((item) => {
@@ -817,10 +794,11 @@ export default function Sidebar() {
 
               {/* Bell */}
               <div ref={mobileBellRef}>
-                <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts">
-                  <Bell className="w-5 h-5" />
+                <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts"
+                  style={{ color: alertCount > 0 ? "var(--app-primary)" : undefined }}>
+                  <Bell className={`w-5 h-5${alertCount > 0 ? " bell-ringing" : ""}`} />
                   {alertCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white animate-pulse"
+                    <span className="badge-glow absolute -top-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
                       style={{ background: "var(--app-primary)" }}>
                       {alertCount > 9 ? "9+" : alertCount}
                     </span>

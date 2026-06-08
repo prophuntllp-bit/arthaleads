@@ -721,13 +721,13 @@ export default function Attendance() {
 
       {/* ── Shift Settings Modal ── */}
       {settingsModal && (
-        <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end justify-center sm:p-4 p-0"
           style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setSettingsModal(false); }}>
-          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]"
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[90vh] sm:mx-0 mx-3"
             style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-            {/* Header — sticky */}
-            <div className="flex items-center justify-between mb-4 flex-shrink-0">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
               <h2 className="text-sm font-bold text-app flex items-center gap-2">
                 <Settings className="w-4 h-4 text-orange-500" /> Shift &amp; Attendance Settings
               </h2>
@@ -737,7 +737,7 @@ export default function Attendance() {
               </button>
             </div>
             {settingsLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
-              <form onSubmit={handleSaveSettings} className="flex flex-col gap-3 overflow-y-auto flex-1 pr-0.5">
+              <form onSubmit={handleSaveSettings} className="flex flex-col gap-3 overflow-y-auto flex-1 px-4 py-3">
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="label">Office Start Time</label>
@@ -777,22 +777,23 @@ export default function Attendance() {
                   </div>
                 </div>
 
-                {/* Selfie + GPS toggle */}
-                <div className="flex items-center gap-3 justify-between rounded-2xl px-3 py-2.5"
+                {/* Selfie + GPS toggle — use label+checkbox for reliable mobile tap */}
+                <label className="flex items-center gap-3 justify-between rounded-2xl px-3 py-3 cursor-pointer select-none"
                   style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-app flex items-center gap-1.5">
                       <Camera className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" /> Require selfie &amp; GPS
                     </p>
                     <p className="text-[11px] text-app-soft mt-0.5 leading-tight">Staff must take a photo &amp; share location on clock-in/out.</p>
                   </div>
-                  <button type="button"
-                    onClick={() => setRequireSelfie(v => !v)}
-                    className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${requireSelfie ? "bg-orange-500" : "bg-gray-300 dark:bg-gray-600"}`}
-                    style={{ cursor: "pointer" }}>
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${requireSelfie ? "translate-x-5" : "translate-x-0.5"}`} />
-                  </button>
-                </div>
+                  <div
+                    onClick={(e) => { e.preventDefault(); setRequireSelfie(v => !v); }}
+                    role="switch" aria-checked={requireSelfie}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${requireSelfie ? "bg-orange-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                    style={{ cursor: "pointer", minWidth: 44 }}>
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${requireSelfie ? "translate-x-[23px]" : "translate-x-1"}`} />
+                  </div>
+                </label>
 
                 {/* Preview */}
                 <div className="rounded-2xl px-3 py-2.5 text-xs text-app-soft space-y-0.5"
@@ -804,7 +805,7 @@ export default function Attendance() {
                   <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> · Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong></p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-1 flex-shrink-0">
+                <div className="flex justify-end gap-3 pb-1 flex-shrink-0">
                   <button type="button" className="btn-secondary" onClick={() => setSettingsModal(false)}>Cancel</button>
                   <button type="submit" className="btn-primary" disabled={settingsSaving}>
                     {settingsSaving ? <Spinner size="sm" /> : null} Save Settings
