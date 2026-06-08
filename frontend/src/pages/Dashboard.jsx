@@ -152,19 +152,23 @@ useEffect(() => {
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
+  const [analyticsRetrying, setAnalyticsRetrying] = useState(false);
 
   const fetchAnalytics = (retryCount = 0) => {
     setLoading(true);
-    setAnalyticsError(false);
+    if (retryCount === 0) { setAnalyticsError(false); setAnalyticsRetrying(false); }
     api.get("/leads/analytics", { params: { dateRange } })
-      .then((response) => setData(response.data.data))
+      .then((response) => { setData(response.data.data); setAnalyticsRetrying(false); })
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
-        if (retryCount < 1) {
-          // Auto-retry once after 3s (handles Railway cold-start / transient DB reconnect)
-          setTimeout(() => fetchAnalytics(1), 3000);
+        // Retry schedule: 5s, 12s, 25s — covers Railway cold-start (20-30s) and redeploys
+        const delays = [5000, 12000, 25000];
+        if (retryCount < delays.length) {
+          setAnalyticsRetrying(true);
+          setTimeout(() => fetchAnalytics(retryCount + 1), delays[retryCount]);
         } else {
           setAnalyticsError(true);
+          setAnalyticsRetrying(false);
         }
       })
       .finally(() => setLoading(false));
@@ -294,18 +298,28 @@ useEffect(() => {
         </div>
       </header>
 
-      {analyticsError && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+      {(analyticsError || analyticsRetrying) && (
+        <div className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
+          analyticsRetrying
+            ? "border-orange-500/20 bg-orange-500/5"
+            : "border-red-500/20 bg-red-500/5"
+        }`}>
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
-            <p className="text-sm text-red-400">Couldn't load dashboard data. Check your connection.</p>
+            <AlertTriangle className={`h-4 w-4 shrink-0 ${analyticsRetrying ? "text-orange-400" : "text-red-400"}`} />
+            <p className={`text-sm ${analyticsRetrying ? "text-orange-400" : "text-red-400"}`}>
+              {analyticsRetrying
+                ? "Server is waking up, retrying…"
+                : "Couldn't load dashboard data. Check your connection."}
+            </p>
           </div>
-          <button
-            className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
-            onClick={() => fetchAnalytics()}
-          >
-            Retry
-          </button>
+          {analyticsError && (
+            <button
+              className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+              onClick={() => fetchAnalytics()}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
