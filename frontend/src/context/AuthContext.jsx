@@ -1,6 +1,6 @@
 // context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import api, { setAuthInProgress } from "../services/api";
+import api, { setAuthInProgress, setToken } from "../services/api";
 import axios from "axios";
 
 const AuthContext = createContext(null);
@@ -45,10 +45,9 @@ export function AuthProvider({ children }) {
       : null;
     storageSave("crm_user", JSON.stringify(nextUser));
     storageSave("crm_org",  JSON.stringify(orgForStorage));
-    // Bearer token fallback for cross-domain environments where the httpOnly cookie
-    // is rejected by the browser (backend on api.arthaleads.com, frontend on arthaleads.com).
-    // storageSave falls back to sessionStorage if localStorage is unavailable (Private Mode).
-    if (token) storageSave("_at", token);
+    // Keep in-memory token in sync so requests work even when localStorage
+    // reads fail (Samsung Android storage restrictions, privacy extensions).
+    if (token) setToken(token);
     setUser(nextUser);
     setOrg(nextOrg || null);  // in-memory state keeps the full base64 logo
     setLoading(false);
@@ -57,7 +56,7 @@ export function AuthProvider({ children }) {
   const clearSession = useCallback(() => {
     storageRemove("crm_user");
     storageRemove("crm_org");
-    storageRemove("_at");
+    setToken(null); // clears both _memToken and storage
     setUser(null);
     setOrg(null);
   }, []);

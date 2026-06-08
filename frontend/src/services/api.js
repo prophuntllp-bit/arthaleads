@@ -28,16 +28,27 @@ export function setAuthInProgress(v) {
   if (!v) _authCompletedAt = Date.now(); // record when auth finished
 }
 
+// ── In-memory token cache ─────────────────────────────────────────────────────
+// Mirrors whatever is in localStorage/_at but survives cases where
+// localStorage.getItem fails (Samsung Android storage restrictions, certain
+// privacy extensions). Set by AuthContext.persist() after every successful auth.
+let _memToken = null;
+export function setToken(token) {
+  _memToken = token || null;
+  if (token) storageSave("_at", token);
+  else storageRemove("_at");
+}
+
 const api = axios.create({
   baseURL:         import.meta.env.VITE_API_URL || "http://localhost:5000/api",
   timeout:         45000,     // 45s - handles Railway cold-start (~20-30s)
   withCredentials: true,      // send httpOnly cookie on every request (XSS-safe auth)
 });
 
-// Bearer token fallback — check localStorage first, sessionStorage second.
-// Covers: cross-domain cookie rejection, iOS Private Mode, and ITP eviction.
+// Bearer token — prefer in-memory copy, fall back to localStorage/sessionStorage.
+// Covers: cross-domain cookie rejection, iOS Private Mode, storage restrictions.
 api.interceptors.request.use((config) => {
-  const t = storageGet("_at");
+  const t = _memToken || storageGet("_at");
   if (t) config.headers.Authorization = `Bearer ${t}`;
   return config;
 });
@@ -66,11 +77,11 @@ api.interceptors.response.use(
       // toast fires 1-2 seconds after "Welcome back!" on cold Railway boots.
       if (_authInProgress) return new Promise(() => {});
 
-      // Grace period: Android WebView (Capacitor) sometimes doesn't honour
+      // Grace period: Android WebView / Samsung Chrome sometimes doesn't honour
       // AbortController for in-flight XHR, so the /auth/me 401 can arrive AFTER
       // login() has already returned and cleared _authInProgress. Silently ignore
-      // any 401 that arrives within 3 seconds of a completed auth call.
-      if (_authCompletedAt && Date.now() - _authCompletedAt < 3000) return new Promise(() => {});
+      // any 401 that arrives within 8 seconds of a completed auth call.
+      if (_authCompletedAt && Date.now() - _authCompletedAt < 8000) return new Promise(() => {});
 
       // All other 401s mean the session expired — clear state, show one toast, redirect.
       // Return a never-resolving promise so component .catch() blocks never fire and

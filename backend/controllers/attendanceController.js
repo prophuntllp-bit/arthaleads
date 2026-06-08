@@ -3,6 +3,7 @@ const Attendance = require("../models/Attendance");
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+const { uploadAttendanceSelfie } = require("../utils/upload");
 
 function todayStr() {
   const d = new Date();
@@ -22,6 +23,7 @@ async function getOrgSettings(orgId) {
     bufferMinutes:  s.bufferMinutes  ?? 15,
     halfDayMinutes: s.halfDayMinutes ?? 240,
     fullDayMinutes: s.fullDayMinutes ?? 480,
+    requireSelfie:  s.requireSelfie  ?? false,
   };
 }
 
@@ -54,11 +56,11 @@ const attendanceController = {
   // GET /api/attendance/status - today's record for the current user
   async status(req, res, next) {
     try {
-      const record = await Attendance.findOne({
-        userId: req.user._id,
-        date: todayStr(),
-      });
-      res.json({ success: true, data: record || null });
+      const [record, settings] = await Promise.all([
+        Attendance.findOne({ userId: req.user._id, date: todayStr() }),
+        getOrgSettings(req.user.orgId),
+      ]);
+      res.json({ success: true, data: record || null, requireSelfie: settings.requireSelfie });
     } catch (err) { next(err); }
   },
 
@@ -80,6 +82,19 @@ const attendanceController = {
       const isLate = clockInMins > lateThreshold;
       const lateByMinutes = isLate ? clockInMins - lateThreshold : null;
 
+      // Handle selfie upload and geo fields
+      let { selfie, lat, lng } = req.body;
+      let clockInSelfie = "";
+      if (selfie && selfie.startsWith("data:")) {
+        try {
+          clockInSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), date, "in");
+        } catch (e) {
+          console.error("[attendance] selfie upload failed:", e.message);
+        }
+      }
+      const clockInLat = lat != null ? Number(lat) : null;
+      const clockInLng = lng != null ? Number(lng) : null;
+
       if (!record) {
         record = await Attendance.create({
           userId: req.user._id,
@@ -88,6 +103,9 @@ const attendanceController = {
           clockIn: now,
           isLate,
           lateByMinutes,
+          clockInSelfie,
+          clockInLat,
+          clockInLng,
         });
       } else {
         record.clockIn = now;
@@ -96,6 +114,9 @@ const attendanceController = {
         record.dayType = null;
         record.isLate = isLate;
         record.lateByMinutes = lateByMinutes;
+        record.clockInSelfie = clockInSelfie;
+        record.clockInLat = clockInLat;
+        record.clockInLng = clockInLng;
         await record.save();
       }
 
@@ -127,6 +148,21 @@ const attendanceController = {
       record.isEarlyLeave = isEarlyLeave;
       record.earlyLeaveByMinutes = earlyLeaveByMinutes;
       if (req.body.note) record.note = req.body.note;
+
+      // Handle selfie upload and geo fields
+      let { selfie, lat, lng } = req.body;
+      let clockOutSelfie = "";
+      if (selfie && selfie.startsWith("data:")) {
+        try {
+          clockOutSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), record.date, "out");
+        } catch (e) {
+          console.error("[attendance] selfie upload failed:", e.message);
+        }
+      }
+      record.clockOutSelfie = clockOutSelfie;
+      record.clockOutLat = lat != null ? Number(lat) : null;
+      record.clockOutLng = lng != null ? Number(lng) : null;
+
       await record.save();
 
       res.json({ success: true, data: record });

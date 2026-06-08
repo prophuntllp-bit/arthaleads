@@ -56,4 +56,26 @@ async function uploadBlogImage(dataUri) {
   return result.secure_url;
 }
 
-module.exports = { uploadOrgLogo, deleteOrgLogo, uploadBlogImage };
+/**
+ * Upload a clock-in or clock-out selfie (base64 data-URI) to Cloudinary.
+ * @param {string} dataUri  - base64 data-URI of the image
+ * @param {string} userId   - the user's _id (string)
+ * @param {string} date     - "YYYY-MM-DD"
+ * @param {string} leg      - "in" or "out"
+ * Returns the secure HTTPS URL of the uploaded image.
+ */
+async function uploadAttendanceSelfie(dataUri, userId, date, leg) {
+  const result = await cloudinary.uploader.upload(dataUri, {
+    public_id:     `att-${userId}-${date}-${leg}`,
+    folder:        "arthaleads/attendance",
+    overwrite:     true,
+    invalidate:    true,
+    resource_type: "image",
+    transformation: [
+      { width: 600, height: 600, crop: "limit", quality: "auto:good", fetch_format: "auto" },
+    ],
+  });
+  return result.secure_url;
+}
+
+module.exports = { uploadOrgLogo, deleteOrgLogo, uploadBlogImage, uploadAttendanceSelfie };
