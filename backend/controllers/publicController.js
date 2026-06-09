@@ -106,6 +106,7 @@ async function submitLead(req, res, next) {
 
     res.status(201).json({ success: true, message: "Your details have been submitted. We'll be in touch soon!" });
   } catch (err) {
+    console.error("[PUBLIC] submitLead error:", err.message, err.stack);
     next(err);
   }
 }

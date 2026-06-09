@@ -51,7 +51,10 @@ export default function PublicLeadForm() {
       await axios.post(`${API}/api/public/form/${token}`, form);
       setSubmitted(true);
     } catch (err) {
-      setErrors({ _form: err.response?.data?.message || "Submission failed. Please try again." });
+      const msg = err.response?.data?.message
+        || (err.response ? `Server error ${err.response.status}` : err.message)
+        || "Submission failed. Please try again.";
+      setErrors({ _form: msg });
     } finally {
       setSubmitting(false);
     }
