@@ -227,6 +227,29 @@ export default function Sidebar() {
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, [user]);
 
+  // ── Sync alertCount to localStorage + Dashboard bell badge ───────────────
+  useEffect(() => {
+    localStorage.setItem("crm_alert_count", String(alertCount));
+    window.dispatchEvent(new CustomEvent("alerts:count", { detail: { count: alertCount } }));
+  }, [alertCount]);
+
+  // ── Listen for "open:alerts" fired by page-level bell buttons ────────────
+  useEffect(() => {
+    const handler = (e) => {
+      const rect = e.detail?.rect;
+      if (rect) {
+        setAlertDropPos({ top: rect.bottom + 6, right: 8 });
+      }
+      setAlertOpen(true);
+      const now = Date.now();
+      localStorage.setItem("crm_alerts_seen", String(now));
+      lastSeenRef.current = now;
+      setAlertCount(0);
+    };
+    window.addEventListener("open:alerts", handler);
+    return () => window.removeEventListener("open:alerts", handler);
+  }, []);
+
   // ── Close alerts on outside click ────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
