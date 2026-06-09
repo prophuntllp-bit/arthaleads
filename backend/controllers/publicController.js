@@ -82,7 +82,7 @@ async function submitLead(req, res, next) {
       name: name.trim(),
       phone: phone.trim(),
       email: email?.trim() || "",
-      budget: budget ? Number(budget) : 0,
+      budget: { min: budget ? Number(budget) : 0, max: budget ? Number(budget) : 0, currency: "INR" },
       propertyType: propertyType || "Apartment",
       source: "QR Code",
       orgId: org._id,
