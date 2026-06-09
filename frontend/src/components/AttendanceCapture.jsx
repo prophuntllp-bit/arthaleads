@@ -3,22 +3,22 @@ import { createPortal } from "react-dom";
 import { Camera, MapPin, X, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Spinner } from "./UI";
 
-// Detect mobile OS for actionable permission re-enable instructions
+function isAndroid() { return /Android/i.test(navigator.userAgent || ""); }
+function isIOS()     { return /iPhone|iPad|iPod/i.test(navigator.userAgent || ""); }
+
 function getCamPermissionHint() {
-  const ua = navigator.userAgent || "";
-  if (/iPhone|iPad|iPod/i.test(ua))
-    return "Go to iPhone Settings → Safari → Camera → Allow.";
-  if (/Android/i.test(ua))
-    return "Tap the lock icon in Chrome's address bar → Permissions → Camera → Allow.";
+  if (isIOS())     return "Go to iPhone Settings → Safari → Camera → Allow.";
+  if (isAndroid()) return "Tap the lock icon in Chrome's address bar → Permissions → Camera → Allow.";
   return "Click the camera icon in your browser's address bar to allow access.";
 }
 function getLocPermissionHint() {
-  const ua = navigator.userAgent || "";
-  if (/iPhone|iPad|iPod/i.test(ua))
-    return "Go to iPhone Settings → Safari → Location → Allow.";
-  if (/Android/i.test(ua))
-    return "Tap the lock icon in Chrome's address bar → Permissions → Location → Allow.";
-  return "Click the lock icon in your browser's address bar to allow location.";
+  if (isIOS())     return "Go to iPhone Settings → Privacy → Location Services → Safari → While Using App.";
+  if (isAndroid()) return "First enable Location in Android Settings → Location (device toggle). Then tap the lock icon in Chrome's address bar → Permissions → Location → Allow.";
+  return "Click the lock icon in your browser's address bar → Permissions → Location → Allow.";
+}
+function getLocUnavailableMsg() {
+  if (isAndroid()) return "Location is off. Enable it in Android Settings → Location, then tap Retry.";
+  return "Location unavailable. Check that Location is enabled in your device settings, then retry.";
 }
 
 export default function AttendanceCapture({ open, mode, required, submitting, onClose, onConfirm }) {
@@ -95,9 +95,9 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
           setLocBlocked(true);
           setLocError(getLocPermissionHint());
         } else if (err.code === 2) {
-          setLocError("Location unavailable. Move to a spot with better signal and retry.");
+          setLocError(getLocUnavailableMsg());
         } else {
-          setLocError("Location timed out. Retry or move to a better signal area.");
+          setLocError("Location timed out. Make sure Location is enabled in your device settings, then retry.");
         }
         setLocLoading(false);
       },
@@ -241,7 +241,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
                 </span>
               ) : (
                 <span className="text-xs leading-snug" style={{ color: "var(--app-text)" }}>
-                  <span className="font-semibold text-red-500">Location denied. </span>
+                  <span className="font-semibold text-red-500">{locBlocked ? "Location blocked. " : "Location error. "}</span>
                   {locError}
                 </span>
               )}
@@ -267,7 +267,9 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
               <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> Permissions required
             </p>
             <p className="text-[11px] text-amber-700 leading-snug">
-              Camera and location are blocked. Enable both in your browser settings, then tap Retry camera and Retry location above.
+              {isAndroid()
+                ? "1. Enable Location in Android Settings → Location. 2. Tap the lock icon in Chrome's address bar → allow Camera and Location. Then tap Retry."
+                : "Enable Camera and Location in your browser or device settings, then tap Retry camera and Retry above."}
             </p>
             <p className="text-[11px] text-amber-700 leading-snug mt-1 font-medium">
               You can still clock in — your admin will see that selfie &amp; location were unavailable.
