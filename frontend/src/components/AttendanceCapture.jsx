@@ -3,14 +3,34 @@ import { createPortal } from "react-dom";
 import { Camera, MapPin, X, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Spinner } from "./UI";
 
+// Detect mobile OS for actionable permission re-enable instructions
+function getCamPermissionHint() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/i.test(ua))
+    return "Go to iPhone Settings → Safari → Camera → Allow.";
+  if (/Android/i.test(ua))
+    return "Tap the lock icon in Chrome's address bar → Permissions → Camera → Allow.";
+  return "Click the camera icon in your browser's address bar to allow access.";
+}
+function getLocPermissionHint() {
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/i.test(ua))
+    return "Go to iPhone Settings → Safari → Location → Allow.";
+  if (/Android/i.test(ua))
+    return "Tap the lock icon in Chrome's address bar → Permissions → Location → Allow.";
+  return "Click the lock icon in your browser's address bar to allow location.";
+}
+
 export default function AttendanceCapture({ open, mode, required, submitting, onClose, onConfirm }) {
-  const videoRef   = useRef(null);
-  const canvasRef  = useRef(null);
-  const streamRef  = useRef(null);
+  const videoRef  = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
 
   const [camError,   setCamError]   = useState("");
+  const [camBlocked, setCamBlocked] = useState(false); // NotAllowedError — cannot retry, must go to settings
   const [locError,   setLocError]   = useState("");
-  const [captured,   setCaptured]   = useState(null);  // base64 jpeg
+  const [locBlocked, setLocBlocked] = useState(false);
+  const [captured,   setCaptured]   = useState(null);
   const [lat,        setLat]        = useState(null);
   const [lng,        setLng]        = useState(null);
   const [accuracy,   setAccuracy]   = useState(null);
@@ -27,6 +47,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
   const startCamera = useCallback(async () => {
     stopStream();
     setCamError("");
+    setCamBlocked(false);
     setCamReady(false);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -42,21 +63,25 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
         };
       }
     } catch (err) {
-      const msg = err.name === "NotAllowedError"
-        ? "Camera permission was denied. Enable it in your browser settings."
-        : err.name === "NotFoundError"
-        ? "No camera found on this device."
-        : "Camera could not be started. Please try again.";
-      setCamError(msg);
+      if (err.name === "NotAllowedError") {
+        setCamBlocked(true);
+        setCamError(getCamPermissionHint());
+      } else if (err.name === "NotFoundError") {
+        setCamError("No camera found on this device. You can still clock in with location only.");
+      } else {
+        setCamError("Camera could not be started. Please try again.");
+      }
     }
   }, [stopStream]);
 
   const fetchLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocError("Geolocation is not supported by your browser.");
+      setLocBlocked(true);
       return;
     }
     setLocError("");
+    setLocBlocked(false);
     setLocLoading(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -66,12 +91,14 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
         setLocLoading(false);
       },
       (err) => {
-        const msg = err.code === 1
-          ? "Location denied"
-          : err.code === 2
-          ? "Location unavailable"
-          : "Location timed out";
-        setLocError(msg);
+        if (err.code === 1) {
+          setLocBlocked(true);
+          setLocError(getLocPermissionHint());
+        } else if (err.code === 2) {
+          setLocError("Location unavailable. Move to a spot with better signal and retry.");
+        } else {
+          setLocError("Location timed out. Retry or move to a better signal area.");
+        }
         setLocLoading(false);
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
@@ -79,7 +106,12 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
   }, []);
 
   useEffect(() => {
-    if (!open) { stopStream(); setCaptured(null); setLat(null); setLng(null); setAccuracy(null); setCamError(""); setLocError(""); return; }
+    if (!open) {
+      stopStream();
+      setCaptured(null); setLat(null); setLng(null); setAccuracy(null);
+      setCamError(""); setCamBlocked(false); setLocError(""); setLocBlocked(false);
+      return;
+    }
     startCamera();
     fetchLocation();
     return () => stopStream();
@@ -93,7 +125,6 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
     canvas.width  = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d");
-    // Mirror horizontally (selfie mode)
     ctx.translate(size, 0);
     ctx.scale(-1, 1);
     const ox = (video.videoWidth  - size) / 2;
@@ -122,16 +153,17 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
   if (!open) return null;
 
   const title = mode === "clockin" ? "Clock In" : "Clock Out";
+  const bothDenied = camBlocked && locBlocked;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.65)" }}
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-4 p-0"
+      style={{ background: "rgba(0,0,0,0.75)" }}
       onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
-      <div className="w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden"
+      <div className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-y-auto"
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0">
           <h2 className="text-base font-bold text-app flex items-center gap-2">
             <Camera className="w-4 h-4 text-orange-500" />
             {title}
@@ -145,7 +177,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
         </div>
 
         {/* Camera area */}
-        <div className="px-5">
+        <div className="px-4">
           <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black">
             {captured ? (
               <img src={captured} alt="selfie" className="w-full h-full object-cover" />
@@ -163,13 +195,16 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
             <canvas ref={canvasRef} className="hidden" />
 
             {camError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 bg-black/80">
-                <AlertTriangle className="w-8 h-8 text-amber-400" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-5"
+                style={{ background: "rgba(0,0,0,0.88)" }}>
+                <AlertTriangle className="w-8 h-8 text-amber-400 flex-shrink-0" />
                 <p className="text-white text-xs text-center leading-relaxed">{camError}</p>
-                <button onClick={startCamera}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 transition cursor-pointer">
-                  <RefreshCw className="w-3.5 h-3.5" /> Retry camera
-                </button>
+                {!camBlocked && (
+                  <button onClick={startCamera}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-orange-400 hover:text-orange-300 transition cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry camera
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -184,68 +219,100 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
             ) : (
               <button onClick={takePhoto} disabled={!camReady || !!camError}
                 className="flex items-center gap-2 px-5 py-2 rounded-2xl text-sm font-semibold text-white transition disabled:opacity-40 cursor-pointer"
-                style={{ background: !camReady || camError ? "var(--app-surface-low)" : "var(--app-primary)" }}>
-                <Camera className="w-4 h-4" /> Capture
+                style={{ background: !camReady || camError ? "var(--app-surface-high)" : "var(--app-primary)" }}>
+                <Camera className="w-4 h-4" style={{ color: !camReady || camError ? "var(--app-text-soft)" : "white" }} />
+                <span style={{ color: !camReady || camError ? "var(--app-text-soft)" : "white" }}>Capture</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Location row */}
-        <div className="px-5 mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className={`w-4 h-4 flex-shrink-0 ${lat !== null ? "text-green-500" : locError ? "text-red-400" : "text-app-soft"}`} />
-            {locLoading ? (
-              <span className="text-xs text-app-soft flex items-center gap-1.5"><Spinner size="sm" /> Getting location…</span>
-            ) : lat !== null ? (
-              <span className="text-xs text-green-500 font-semibold">
-                {lat.toFixed(4)}, {lng.toFixed(4)} {accuracy ? `(±${accuracy}m)` : ""}
-              </span>
-            ) : (
-              <span className="text-xs text-red-400">{locError || "Fetching location…"}</span>
-            )}
+        <div className="px-4 mt-3">
+          <div className="flex items-start justify-between gap-2 rounded-xl px-3 py-2.5"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              <MapPin className={`w-4 h-4 flex-shrink-0 mt-0.5 ${lat !== null ? "text-green-500" : locError ? "text-red-400" : "text-app-soft"}`} />
+              {locLoading ? (
+                <span className="text-xs text-app-soft flex items-center gap-1.5"><Spinner size="sm" /> Getting location…</span>
+              ) : lat !== null ? (
+                <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+                  {lat.toFixed(4)}, {lng.toFixed(4)}{accuracy ? ` ±${accuracy}m` : ""}
+                </span>
+              ) : (
+                <span className="text-xs leading-snug" style={{ color: "var(--app-text)" }}>
+                  <span className="font-semibold text-red-500">Location denied. </span>
+                  {locError}
+                </span>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              {lat !== null ? (
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+              ) : !locLoading && (
+                <button onClick={fetchLocation}
+                  className="text-xs font-semibold text-orange-500 hover:text-orange-400 transition cursor-pointer whitespace-nowrap">
+                  Retry
+                </button>
+              )}
+            </div>
           </div>
-          {(locError || lat === null) && !locLoading && (
-            <button onClick={fetchLocation}
-              className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition cursor-pointer">
-              Retry
-            </button>
-          )}
-          {lat !== null && (
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
-          )}
         </div>
 
-        {/* Warning when required and not ready */}
-        {required && (!captured || lat === null) && (
-          <div className="mx-5 mt-3 flex items-start gap-2 rounded-xl px-3 py-2 text-xs text-red-400"
-            style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
-            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-            Your organisation requires a selfie and location to record attendance. Please allow access.
+        {/* Warning when both permissions denied — solid, readable background */}
+        {bothDenied && (
+          <div className="mx-4 mt-3 rounded-xl px-3 py-2.5"
+            style={{ background: "#FEF3C7", border: "1px solid #FCD34D" }}>
+            <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5 mb-1">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" /> Permissions required
+            </p>
+            <p className="text-[11px] text-amber-700 leading-snug">
+              Camera and location are blocked. Enable both in your browser settings, then tap Retry camera and Retry location above.
+            </p>
+            <p className="text-[11px] text-amber-700 leading-snug mt-1 font-medium">
+              You can still clock in — your admin will see that selfie &amp; location were unavailable.
+            </p>
+          </div>
+        )}
+
+        {/* Warning when only one is missing (and required) */}
+        {required && !bothDenied && (!captured || lat === null) && (
+          <div className="mx-4 mt-3 rounded-xl px-3 py-2.5"
+            style={{ background: "#FFF7ED", border: "1px solid #FDBA74" }}>
+            <p className="text-[11px] text-orange-700 leading-snug flex items-start gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-orange-500" />
+              Your organisation requires a selfie and location for attendance.
+              {!captured && !camBlocked && " Take a photo first."}
+              {lat === null && !locBlocked && !locLoading && " Allow location access."}
+            </p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="px-5 pb-5 pt-4 flex items-center justify-between gap-3">
-          {!required && (
-            <button onClick={handleSkip} disabled={submitting}
-              className="text-xs text-app-soft hover:text-app transition cursor-pointer disabled:opacity-40">
-              Skip
-            </button>
-          )}
-          <div className={`flex items-center gap-2 ${!required ? "" : "w-full"}`}>
-            {required && (
+        <div className="px-4 pb-4 pt-3 flex items-center gap-3 flex-shrink-0">
+          {!required ? (
+            <>
+              <button onClick={handleSkip} disabled={submitting}
+                className="btn-secondary text-xs py-2 px-4 cursor-pointer disabled:opacity-40 flex-shrink-0">
+                Skip
+              </button>
+              <button onClick={handleConfirm} disabled={!canConfirm}
+                className="btn-primary text-xs py-2 px-5 flex items-center gap-2 flex-1 justify-center cursor-pointer">
+                {submitting ? <><Spinner size="sm" /> {title}…</> : <><CheckCircle2 className="w-3.5 h-3.5" /> {title}</>}
+              </button>
+            </>
+          ) : (
+            <>
               <button onClick={onClose} disabled={submitting}
-                className="btn-secondary text-xs py-2 px-4 cursor-pointer">
+                className="btn-secondary text-xs py-2 px-4 cursor-pointer disabled:opacity-40 flex-shrink-0">
                 Cancel
               </button>
-            )}
-            <button onClick={handleConfirm}
-              disabled={required ? !canConfirm : submitting}
-              className="btn-primary text-xs py-2 px-5 flex items-center gap-2 flex-1 justify-center cursor-pointer">
-              {submitting ? <><Spinner size="sm" /> {title}…</> : <><CheckCircle2 className="w-3.5 h-3.5" /> {title}</>}
-            </button>
-          </div>
+              <button onClick={handleConfirm} disabled={!canConfirm}
+                className="btn-primary text-xs py-2 px-5 flex items-center gap-2 flex-1 justify-center cursor-pointer">
+                {submitting ? <><Spinner size="sm" /> {title}…</> : <><CheckCircle2 className="w-3.5 h-3.5" /> {title}</>}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,
