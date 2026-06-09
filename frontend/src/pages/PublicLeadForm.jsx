@@ -48,7 +48,11 @@ export default function PublicLeadForm() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSubmitting(true);
     try {
-      await axios.post(`${API}/api/public/form/${token}`, form);
+      // Use URLSearchParams (application/x-www-form-urlencoded) — a CORS "simple
+      // request" that skips the OPTIONS preflight entirely.
+      const params = new URLSearchParams();
+      Object.entries(form).forEach(([k, v]) => { if (v !== "") params.append(k, v); });
+      await axios.post(`${API}/api/public/form/${token}`, params);
       setSubmitted(true);
     } catch (err) {
       const msg = err.response?.data?.message
