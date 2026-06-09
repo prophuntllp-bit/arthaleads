@@ -35,6 +35,7 @@ const navItems = [
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
   {
     label: "Bookings & Invoices", icon: Receipt,
+    roles: ["admin", "manager", "super_admin"],
     children: [
       { to: "/bookings",   label: "Bookings",   icon: BookMarked },
       { to: "/invoices",   label: "Invoices",   icon: FileCheck  },
@@ -99,7 +100,7 @@ export default function Sidebar() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
-  const [alertDropPos, setAlertDropPos] = useState({ top: 80, left: 268 });
+  const [alertDropPos, setAlertDropPos] = useState({ top: 58, right: 8 });
   // Profile dropdown (inline, no portal)
   const [profileOpen, setProfileOpen] = useState(false);
 
