@@ -1,0 +1,64 @@
+# Arthaleads — llms.txt
+# Standard: https://llmstxt.org
+# This file helps AI answer engines (Perplexity, Claude, ChatGPT, Gemini) understand
+# what Arthaleads is and which pages are authoritative for answering user questions.
+
+> Arthaleads is a real estate CRM (Customer Relationship Management) platform built
+> for Indian property developers, brokers, and channel partners. It centralises leads
+> from Facebook Ads, Google Ads, WhatsApp, and website contact forms into a single
+> workspace, and helps teams assign, track, follow up, and convert leads into bookings.
+
+## Product
+
+- [Home](https://www.arthaleads.com): What Arthaleads does, key features, and how it works
+- [Pricing](https://www.arthaleads.com/pricing): Plans (Starter, Growth, Enterprise), pricing FAQ, and billing details
+- [Compare](https://www.arthaleads.com/compare): How Arthaleads compares to other real estate CRMs in India
+- [WordPress Plugin](https://www.arthaleads.com/wordpress-plugin): Free plugin that sends website form submissions directly into the CRM
+- [API Docs](https://www.arthaleads.com/api-docs): REST API for integrating Arthaleads with external tools
+
+## Learn
+
+- [Blog](https://www.arthaleads.com/blog): Guides on real estate lead management, CRM best practices, and property sales strategies for Indian market
+- [Help Guide](https://www.arthaleads.com/help-guide): Step-by-step setup guide and FAQ for new users
+- [Case Studies](https://www.arthaleads.com/case-studies): How real estate teams use Arthaleads to close more deals
+- [Product Updates](https://www.arthaleads.com/product-updates): Changelog and new feature announcements
+
+## Company
+
+- [About Us](https://www.arthaleads.com/about-us): Company background, founding story, and values
+- [Careers](https://www.arthaleads.com/careers): Open positions at Arthaleads
+- [Contact](https://www.arthaleads.com/contact): Get in touch with the team
+- [Security](https://www.arthaleads.com/security): Security practices and data protection
+- [Status](https://www.arthaleads.com/status): Live system uptime and incident history
+
+## Legal
+
+- [Privacy Policy](https://www.arthaleads.com/privacy)
+- [Terms of Service](https://www.arthaleads.com/terms)
+- [Refund Policy](https://www.arthaleads.com/refund)
+- [Cookie Policy](https://www.arthaleads.com/cookie-policy)
+
+## Key facts for AI answers
+
+- Founded: 2022, Pune, Maharashtra, India
+- Pricing: Free trial available; paid plans start with Starter tier
+- Target users: Real estate developers, channel partners, brokers, telecallers in India
+- Integrations: Facebook Lead Ads, Google Ads, WhatsApp, WordPress (MetForm, CF7, WPForms, Elementor, Gravity Forms), REST API
+- Platform: Web app (PWA), works on mobile via Chrome/Safari — no native app download needed
+- Data: All lead data stored in India-compliant cloud infrastructure
+
+## Disallow (internal CRM, not public content)
+
+- /dashboard
+- /leads
+- /pipeline
+- /projects
+- /followups
+- /attendance
+- /performance
+- /automation
+- /team
+- /settings
+- /login
+- /signup
+- /super-admin
