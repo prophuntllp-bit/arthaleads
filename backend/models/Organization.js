@@ -53,6 +53,8 @@ const orgSchema = new mongoose.Schema(
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
 
+    // ── QR Code lead capture ───────────────────────────────────────────────────
+    qrToken:         { type: String, default: "", index: true, sparse: true },
     // ── Referral tracking ──────────────────────────────────────────────────────
     referralCode:    { type: String, uppercase: true, sparse: true, index: true },
     referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },

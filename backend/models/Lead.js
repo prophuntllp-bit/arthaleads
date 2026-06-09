@@ -104,7 +104,7 @@ const leadSchema = new mongoose.Schema(
     // ── Lead Source ───────────────────────────────────────────────────────────
     source: {
       type: String,
-      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"],
+      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"],
       default: "Manual",
     },
 

@@ -6,7 +6,8 @@ import { PageLoader, EmptyState } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, FolderKanban, MapPin, Pencil, Plus, Users } from "lucide-react";
+import { Building2, FolderKanban, MapPin, Pencil, Plus, QrCode, Users } from "lucide-react";
+import QrModal from "../components/QrModal";
 
 function fmtPrice(n) {
   if (!n) return null;
@@ -25,6 +26,7 @@ export default function Projects() {
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editProj, setEditProj] = useState(null);
+  const [qrProj, setQrProj]     = useState(null); // project whose QR is open
 
   useEffect(() => {
     api.get("/projects")
@@ -132,12 +134,21 @@ export default function Projects() {
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="font-bold text-app leading-tight">{proj.name}</h3>
                   {canManage && (
-                    <button
-                      onClick={(e) => openEdit(e, proj)}
-                      className="flex-shrink-0 rounded-xl p-1.5 transition hover:bg-orange-500/10"
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-app-soft" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setQrProj(proj); }}
+                        className="rounded-xl p-1.5 transition hover:bg-orange-500/10"
+                        title="QR Code"
+                      >
+                        <QrCode className="h-3.5 w-3.5 text-app-soft" />
+                      </button>
+                      <button
+                        onClick={(e) => openEdit(e, proj)}
+                        className="rounded-xl p-1.5 transition hover:bg-orange-500/10"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-app-soft" />
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -207,6 +218,15 @@ export default function Projects() {
           onClose={() => { setShowForm(false); setEditProj(null); }}
           project={editProj}
           onSaved={handleSaved}
+        />
+      )}
+
+      {qrProj && (
+        <QrModal
+          type="project"
+          id={qrProj._id}
+          name={qrProj.name}
+          onClose={() => setQrProj(null)}
         />
       )}
     </div>

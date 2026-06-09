@@ -1,0 +1,18 @@
+{
+	"appId": "com.arthaleads.crm",
+	"appName": "Arthaleads",
+	"webDir": "dist",
+	"server": {
+		"url": "https://arthaleads.com",
+		"cleartext": false
+	},
+	"plugins": {
+		"PushNotifications": {
+			"presentationOptions": [
+				"badge",
+				"sound",
+				"alert"
+			]
+		}
+	}
+}
