@@ -156,10 +156,10 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
   const bothDenied = camBlocked && locBlocked;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-4 p-0"
+    <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center md:p-4 p-0"
       style={{ background: "rgba(0,0,0,0.75)" }}
       onClick={(e) => { if (e.target === e.currentTarget && !submitting) onClose(); }}>
-      <div className="w-full sm:max-w-sm sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[95vh] overflow-y-auto"
+      <div className="w-full md:max-w-sm md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-y-auto"
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
 
         {/* Header */}
@@ -178,7 +178,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
 
         {/* Camera area */}
         <div className="px-4">
-          <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black">
+          <div className="relative w-full rounded-2xl overflow-hidden bg-black" style={{ aspectRatio: "1/1", maxHeight: "56vmin" }}>
             {captured ? (
               <img src={captured} alt="selfie" className="w-full h-full object-cover" />
             ) : (

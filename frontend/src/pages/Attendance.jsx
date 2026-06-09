@@ -119,19 +119,29 @@ const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", n
 const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: true };
 
 function ProofCell({ selfie, lat, lng }) {
+  const [imgOk, setImgOk] = useState(true);
   if (!selfie && lat == null) return <span className="text-app-soft">—</span>;
   return (
     <div className="flex items-center gap-2">
       {selfie && (
-        <a href={selfie} target="_blank" rel="noreferrer">
-          <img src={selfie} alt="selfie" className="w-7 h-7 rounded-lg object-cover border hover:opacity-80 transition"
-            style={{ borderColor: "var(--app-border)" }} />
+        <a href={selfie} target="_blank" rel="noreferrer" title="View selfie">
+          {imgOk ? (
+            <img src={selfie} alt="selfie"
+              className="w-10 h-10 rounded-xl object-cover border hover:opacity-80 transition flex-shrink-0"
+              style={{ borderColor: "var(--app-border)" }}
+              onError={() => setImgOk(false)} />
+          ) : (
+            <span className="w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 hover:opacity-80 transition"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+              <Camera className="w-4 h-4 text-orange-400" />
+            </span>
+          )}
         </a>
       )}
       {lat != null && (
         <a href={`https://maps.google.com/?q=${lat},${lng}`} target="_blank" rel="noreferrer"
-          className="text-blue-500 hover:text-blue-400 transition">
-          <MapPin className="w-3.5 h-3.5" />
+          className="text-blue-500 hover:text-blue-400 transition" title="View on map">
+          <MapPin className="w-4 h-4" />
         </a>
       )}
     </div>
