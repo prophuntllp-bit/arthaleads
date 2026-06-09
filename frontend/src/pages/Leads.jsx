@@ -33,7 +33,8 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
+import QrModal from "../components/QrModal";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -383,6 +384,7 @@ export default function Leads() {
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [editLead, setEditLead] = useState(null);
   const [detailLead, setDetailLead] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -1023,6 +1025,17 @@ export default function Leads() {
                 <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
             </div>
+            {/* QR Form */}
+            {["admin", "manager", "super_admin"].includes(user?.role) && (
+              <button
+                className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
+                style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+                title="QR Lead Form"
+                onClick={() => setShowQrModal(true)}
+              >
+                <QrCode className="h-3.5 w-3.5 shrink-0" />
+              </button>
+            )}
             {/* Add Lead */}
             <button
               data-tour="add-lead-btn"
@@ -1655,6 +1668,10 @@ export default function Leads() {
           }
         }}
       />
+
+      {showQrModal && (
+        <QrModal type="org" id={null} name="Organisation QR Form" onClose={() => setShowQrModal(false)} />
+      )}
 
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(

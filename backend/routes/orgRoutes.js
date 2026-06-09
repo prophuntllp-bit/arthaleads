@@ -109,4 +109,24 @@ router.patch("/me/goal", authorize("admin", "manager"), async (req, res, next) =
   } catch (err) { next(err); }
 });
 
+// POST /api/org/me/qr-token — generate / regenerate org-level QR token (admin only)
+router.post("/me/qr-token", authorize("admin", "super_admin"), async (req, res, next) => {
+  try {
+    const crypto = require("crypto");
+    const token = crypto.randomBytes(16).toString("hex");
+    const org = await Organization.findByIdAndUpdate(req.orgId, { qrToken: token }, { new: true });
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    res.json({ success: true, qrToken: org.qrToken });
+  } catch (err) { next(err); }
+});
+
+// GET /api/org/me/qr-token — fetch current org QR token (admin/manager)
+router.get("/me/qr-token", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("qrToken").lean();
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    res.json({ success: true, qrToken: org.qrToken || "" });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

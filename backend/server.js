@@ -186,6 +186,7 @@ app.use("/api/bookings",    require("./routes/bookingRoutes"));
 app.use("/api/invoices",    require("./routes/invoiceRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
+app.use("/api/public",     contactLimiter, require("./routes/publicRoutes"));
 
 // ── Dynamic Sitemap (served at /sitemap.xml) ──────────────────────────────────
 app.get("/sitemap.xml", blogController.getSitemap);

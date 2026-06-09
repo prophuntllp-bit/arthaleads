@@ -346,6 +346,7 @@ function NotificationBanner() {
   );
 }
 
+const PublicLeadForm = lazy(() => import("./pages/PublicLeadForm"));
 const Landing        = lazy(() => import("./pages/Landing"));
 const Login          = lazy(() => import("./pages/Login"));
 const Signup         = lazy(() => import("./pages/Signup"));
@@ -653,6 +654,7 @@ export default function App() {
         <Route path="/careers"              element={<Careers />} />
         <Route path="/contact"              element={<Contact />} />
         <Route path="/share-target"         element={<ShareTarget />} />
+        <Route path="/form/:token"          element={<PublicLeadForm />} />
 
         {/* Public routes - redirect to dashboard if already logged in */}
         <Route element={<RedirectIfAuth />}>

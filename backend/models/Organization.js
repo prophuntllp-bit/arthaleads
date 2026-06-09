@@ -37,6 +37,8 @@ const orgSchema = new mongoose.Schema(
       halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
       fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
     },
+    // ── QR Code lead capture ───────────────────────────────────────────────────
+    qrToken:         { type: String, default: "", index: true, sparse: true },
     // ── Referral tracking ──────────────────────────────────────────────────────
     referralCode:    { type: String, uppercase: true, sparse: true, index: true },
     referredBy:      { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
