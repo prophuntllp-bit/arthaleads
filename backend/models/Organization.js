@@ -26,7 +26,10 @@ const orgSchema = new mongoose.Schema(
       default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
     },
     isActive: { type: Boolean, default: true },
-    industry: { type: String, default: "Real Estate" },
+    industry:    { type: String, default: "Real Estate" },
+    companySize: { type: String, default: "" },
+    city:        { type: String, default: "" },
+    onboardingCompletedAt: { type: Date, default: null },
     logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents

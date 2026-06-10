@@ -1,5 +1,6 @@
 ﻿const express = require("express");
 const Organization = require("../models/Organization");
+const User = require("../models/User");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
@@ -27,6 +28,48 @@ router.put("/me", authorize("admin"), async (req, res, next) => {
     await org.save();
     invalidateOrgCache(req.orgId); // bust cache so next request sees updated name/industry
     res.json({ success: true, org });
+  } catch (err) { next(err); }
+});
+
+// POST /api/org/me/onboarding — first-run setup wizard (admin only)
+// Saves org business details + user personal profile in one shot and marks
+// onboarding complete so the blocking gate dismisses permanently.
+router.post("/me/onboarding", authorize("admin"), async (req, res, next) => {
+  try {
+    const {
+      name, industry, companySize, phone, email, city, address,
+      gstNo, pan, rera,
+      fullName, personalPhone,
+    } = req.body;
+
+    // Build org update — only touch fields that were actually sent
+    const orgUpdate = { onboardingCompletedAt: new Date() };
+    if (name)        orgUpdate.name        = name.trim();
+    if (industry)    orgUpdate.industry    = industry;
+    if (companySize) orgUpdate.companySize = companySize;
+    if (phone)       orgUpdate.phone       = phone.trim();
+    if (email)       orgUpdate.email       = email.trim();
+    if (city)        orgUpdate.city        = city.trim();
+    if (address)     orgUpdate.address     = address.trim();
+    if (gstNo)       orgUpdate.gstNo       = gstNo.trim().toUpperCase();
+    if (pan)         orgUpdate.pan         = pan.trim().toUpperCase();
+    if (rera)        orgUpdate.rera        = rera.trim();
+
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { $set: orgUpdate }, { new: true, runValidators: true }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    invalidateOrgCache(req.orgId);
+
+    // Update the admin's personal profile
+    const userUpdate = {};
+    if (fullName)     userUpdate.name  = fullName.trim();
+    if (personalPhone) userUpdate.phone = personalPhone.trim();
+    const user = Object.keys(userUpdate).length
+      ? await User.findByIdAndUpdate(req.user._id, { $set: userUpdate }, { new: true })
+      : await User.findById(req.user._id);
+
+    res.json({ success: true, org, user });
   } catch (err) { next(err); }
 });
 
