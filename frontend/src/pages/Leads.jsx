@@ -33,8 +33,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
-import QrModal from "../components/QrModal";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -390,7 +389,6 @@ export default function Leads() {
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [showQrModal, setShowQrModal] = useState(false);
   const [editLead, setEditLead] = useState(null);
   const [detailLead, setDetailLead] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -778,12 +776,11 @@ export default function Leads() {
   };
 
   // ── Standard CRM import (Name/Phone/Email columns) ───────────────────────────
-  // Normalise any column header to a plain lowercase key for fuzzy matching.
-  // "Lead Name", "lead_name", "LEAD NAME" → "leadname"
-  const normKey = (s) => String(s).toLowerCase().replace(/[\s_\-().#]/g, "");
+  // Normalise header: lowercase, strip all punctuation/spaces → "leadname", "phonenumber" etc.
+  const normKey = (s) => String(s).toLowerCase().replace(/[\s_\-().#\/\\]/g, "");
 
-  // Build a lookup: normKey(header) → original header, from the first row of the sheet.
-  // Then col(row, ...candidates) returns the first matching value.
+  // Build a header-lookup closure for one row. Tries aliases in priority order,
+  // returns the first non-empty value found (or "").
   const makeColPicker = (row) => {
     const map = {};
     for (const h of Object.keys(row)) map[normKey(h)] = h;
@@ -796,39 +793,73 @@ export default function Leads() {
     };
   };
 
-  const parseImportRow = (row) => {
+  // Content-based column inference: scan up to 10 rows to find which header
+  // matches name / phone / email by the shape of values when alias lookup fails.
+  const inferColByContent = (rows, type) => {
+    const headers = Object.keys(rows[0]);
+    const sample = rows.slice(0, Math.min(10, rows.length));
+    const score = (header) => {
+      let hits = 0;
+      for (const r of sample) {
+        const v = String(r[header] ?? "").trim();
+        if (!v) continue;
+        if (type === "name"  && /^[A-Za-z\s'.\-]{2,60}$/.test(v) && !/\d/.test(v)) hits++;
+        if (type === "phone" && /^\+?[\d\s\-()]{8,16}$/.test(v.replace(/\s/g, ""))) hits++;
+        if (type === "email" && v.includes("@") && v.includes(".")) hits++;
+      }
+      return hits;
+    };
+    // Pick the header with the highest hit count (min 2 hits to avoid false positives)
+    let best = null, bestScore = 1;
+    for (const h of headers) {
+      const s = score(h);
+      if (s > bestScore) { bestScore = s; best = h; }
+    }
+    return best; // null if nothing found
+  };
+
+  const parseImportRow = (row, inferredCols = {}) => {
     const col = makeColPicker(row);
 
-    // ── Name — accept any common variant ──────────────────────────────────────
     const name = col(
       "Lead Name","LeadName","Full Name","FullName","Name","Customer Name","CustomerName",
-      "Contact Name","ContactName","Client Name","ClientName","User Name","UserName","Prospect"
-    );
+      "Contact Name","ContactName","Client Name","ClientName","User Name","UserName",
+      "Prospect","Party","Buyer","Person","Contact","Customer"
+    ) || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
 
-    // ── Phone — accept mobile/contact variants ────────────────────────────────
     const phone = col(
       "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
-      "Contact","Contact Number","ContactNumber","Cell","WhatsApp","Whatsapp Number","WhatsappNumber"
-    );
+      "Contact Number","ContactNumber","Cell","WhatsApp","Whatsapp Number","WhatsappNumber",
+      "Mob","Tel","Telephone"
+    ) || (inferredCols.phone ? String(row[inferredCols.phone] ?? "").trim() : "");
 
-    // ── Email ─────────────────────────────────────────────────────────────────
-    const email = col("Email","Email Address","EmailAddress","Email ID","EmailID","Mail");
+    const email = col(
+      "Email","Email Address","EmailAddress","Email ID","EmailID","Mail","E-mail","E Mail"
+    ) || (inferredCols.email ? String(row[inferredCols.email] ?? "").trim() : "");
 
-    // ── Budget — single field (treat as max) or split min/max ─────────────────
-    const budgetRaw = col("Budget","Budget Range","BudgetRange","Budget (INR)");
-    const budgetMin = Number(col("Budget Min","BudgetMin","Min Budget","MinBudget") || 0);
-    const budgetMax = Number(col("Budget Max","BudgetMax","Max Budget","MaxBudget") || budgetRaw || 0);
+    const agentName = col("Agent","Assigned To","AssignedTo","Assigned Agent","AssignedAgent","Salesperson","Sales Person");
+    const assignedAgent = agentName
+      ? agents.find((a) => a.name?.toLowerCase() === agentName.toLowerCase())
+      : undefined;
 
-    // ── Agent ─────────────────────────────────────────────────────────────────
-    const agentName = col("Agent","Assigned To","AssignedTo","Assigned Agent","AssignedAgent","Agent Name","AgentName");
-    const assignedAgent = agents.find((a) => a.name?.toLowerCase() === agentName.toLowerCase());
+    // Budget: try split min/max first, then single Budget field
+    const budgetSingle = col("Budget","Budget Range","BudgetRange");
+    const budgetMin = Number(col("Budget Min","BudgetMin","Min Budget","MinBudget")) || 0;
+    const budgetMax = Number(col("Budget Max","BudgetMax","Max Budget","MaxBudget") || budgetSingle) || 0;
 
-    // ── Follow-up date (column may have spaces) ───────────────────────────────
-    const fuDateRaw = col("Follow Up Date","FollowUpDate","Follow-Up Date","Followup Date","FollowupDate","Follow Up","Followup");
+    // Follow-up date: handle Excel serial numbers and string dates
+    const fuRaw = col("Follow Up Date","FollowUpDate","Follow-Up Date","Followup Date","FollowupDate","Next Followup","NextFollowup");
     let followUpDate = null;
-    if (fuDateRaw) {
-      const d = new Date(fuDateRaw);
-      if (!isNaN(d.getTime())) followUpDate = d.toISOString();
+    if (fuRaw) {
+      const n = Number(fuRaw);
+      if (!isNaN(n) && n > 40000) {
+        // Excel serial date → JS date
+        const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+        followUpDate = d.toISOString();
+      } else {
+        const parsed = new Date(fuRaw);
+        if (!isNaN(parsed)) followUpDate = parsed.toISOString();
+      }
     }
 
     return {
@@ -836,14 +867,14 @@ export default function Leads() {
       phone,
       email,
       source:            col("Source","Lead Source","LeadSource") || "Manual",
-      status:            col("Status","Lead Status","LeadStatus")  || "New",
+      status:            col("Status","Lead Status","LeadStatus") || "New",
       priority:          col("Priority","Lead Priority","LeadPriority") || "Medium",
-      propertyType:      col("PropertyType","Property Type","Requirements","Requirement","Config","Configuration","BHK Type") || "Apartment",
-      bhk:               col("BHK","BHK Type","BHKType","Unit Type","UnitType") || "N/A",
-      purpose:           col("Purpose","Buying Purpose","BuyingPurpose","Intent") || "Buy",
-      preferredLocation: col("PreferredLocation","Preferred Location","Area","Location","City","Locality","Micro Market","MicroMarket"),
+      propertyType:      col("Property Type","PropertyType","Requirements","Requirement","Property","Type") || "Apartment",
+      bhk:               col("BHK","Bhk","Configuration","Config") || "N/A",
+      purpose:           col("Purpose","Requirement Type","RequirementType","Intent") || "Buy",
+      preferredLocation: col("Area","Location","Preferred Location","PreferredLocation","City","Locality"),
       followUpDate,
-      followUpNote:      col("FollowUpNote","Follow Up Note","FollowupNote","Note","Notes","Remarks","Remark"),
+      followUpNote:      col("Follow Up Note","FollowUpNote","Remark","Remarks","Note","Notes","Comment"),
       assignedTo:        assignedAgent?._id || null,
       budget: { min: budgetMin, max: budgetMax, currency: "INR" },
     };
@@ -998,8 +1029,34 @@ export default function Leads() {
         toast(`Facebook format detected - ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {
         // Standard CRM import format
-        leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
-        if (!leadsToImport.length) { toast.error("No valid leads found in the uploaded file"); return; }
+        // First pass: try alias-based matching
+        let parsed = rows.map((r) => parseImportRow(r, {}));
+        const firstPassValid = parsed.filter((e) => e.name && e.phone);
+
+        if (!firstPassValid.length) {
+          // Second pass: infer columns by cell-value content (handles any header name)
+          const inferredCols = {
+            name:  inferColByContent(rows, "name"),
+            phone: inferColByContent(rows, "phone"),
+            email: inferColByContent(rows, "email"),
+          };
+          if (inferredCols.name || inferredCols.phone) {
+            parsed = rows.map((r) => parseImportRow(r, inferredCols));
+            const inferred = parsed.filter((e) => e.name && e.phone);
+            if (inferred.length) {
+              const detectedNames = Object.entries(inferredCols)
+                .filter(([, v]) => v)
+                .map(([k, v]) => `${k}="${v}"`)
+                .join(", ");
+              toast(`Auto-detected columns: ${detectedNames}`, { icon: "🔍" });
+              leadsToImport = inferred;
+            }
+          }
+        } else {
+          leadsToImport = firstPassValid;
+        }
+
+        if (!leadsToImport?.length) { toast.error("No valid leads found — check that your file has name and phone columns"); return; }
       }
 
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
@@ -1078,17 +1135,6 @@ export default function Leads() {
                 <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
             </div>
-            {/* QR Form */}
-            {["admin", "manager", "super_admin"].includes(user?.role) && (
-              <button
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
-                style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                title="QR Lead Form"
-                onClick={() => setShowQrModal(true)}
-              >
-                <QrCode className="h-3.5 w-3.5 shrink-0" />
-              </button>
-            )}
             {/* Add Lead */}
             <button
               data-tour="add-lead-btn"
@@ -1489,7 +1535,7 @@ export default function Leads() {
                       </div>
                     </td>
                     <td><PhoneActions phone={lead.phone} onContact={() => handleContact(lead)} /></td>
-                    <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /></td>
+                    <td><WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} /></td>
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} />
@@ -1735,10 +1781,6 @@ export default function Leads() {
           }
         }}
       />
-
-      {showQrModal && (
-        <QrModal type="org" id={null} name="Organisation QR Form" onClose={() => setShowQrModal(false)} />
-      )}
 
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
