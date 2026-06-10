@@ -201,7 +201,7 @@ export default function HelpBot() {
 
   const handleGoto = (path) => { setOpen(false); navigate(path); };
 
-  const cleanText = (t) => (t || "").replace(/—/g, "-").replace(/–/g, "-");
+  const cleanText = (t) => (t || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/—/g, "-").replace(/–/g, "-");
 
   const firstName = user?.name?.split(" ")[0]?.trim() || "there";
   const pageInfo = PAGE_COPILOT[location.pathname.split("?")[0]] || null;

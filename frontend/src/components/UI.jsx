@@ -707,9 +707,9 @@ export function AppDatePicker({ value, onChange, placeholder = "Pick date", clas
         onClick={toggleOpen}
         className="inline-flex items-center gap-2 transition-colors w-full"
         style={{
-          padding: "5px 10px",
-          borderRadius: 10,
-          fontSize: 13,
+          padding: "12px 16px",
+          borderRadius: 16,
+          fontSize: 14,
           border: open ? "1px solid var(--app-primary)" : "1px solid var(--app-border)",
           background: "var(--app-surface-low)",
           color: value ? "var(--app-text)" : "var(--app-text-soft)",
