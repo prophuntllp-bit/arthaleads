@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arthaleads Brand Guidelines 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --orange:       #FF6B00;
+    --orange-deep:  #A04100;
+    --orange-light: #FFF0E6;
+    --orange-mid:   #FFD4B0;
+    --cream:        #F0EDE8;
+    --white:        #FFFFFF;
+    --ink:          #18181B;
+    --ink-soft:     #71717A;
+    --ink-faint:    #A1A1AA;
+    --border:       rgba(160,65,0,0.12);
+    --surface:      rgba(255,255,255,0.72);
+  }
+
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #F0EDE8;
+    color: #18181B;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  /* ── Cover ── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: linear-gradient(135deg, #FF6B00 0%, #A04100 100%);
+    margin: 0 -24px;
+    padding: 80px 64px;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .cover::before {
+    content: "";
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .cover::after {
+    content: "";
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 350px; height: 350px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+  }
+  .cover-logo {
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-logo span { color: rgba(255,255,255,0.6); }
+  .cover-sub {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 48px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover h1 {
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+    max-width: 600px;
+  }
+  .cover p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.72);
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover-version {
+    position: absolute;
+    bottom: 40px; right: 64px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    font-weight: 500;
+    z-index: 1;
+  }
+
+  /* ── Section headers ── */
+  .section {
+    margin-top: 72px;
+    page-break-inside: avoid;
+  }
+  .section-number {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.20em;
+    text-transform: uppercase;
+    color: #FF6B00;
+    margin-bottom: 6px;
+  }
+  .section h2 {
+    font-size: 28px;
+    font-weight: 900;
+    color: #18181B;
+    margin-bottom: 6px;
+  }
+  .section-rule {
+    width: 48px;
+    height: 3px;
+    background: linear-gradient(90deg, #FF6B00, #A04100);
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    backdrop-filter: blur(12px);
+  }
+  .card-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .card-grid-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* ── Logo section ── */
+  .logo-display {
+    background: linear-gradient(135deg, #FF6B00, #A04100);
+    border-radius: 20px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .logo-text {
+    font-size: 36px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -1px;
+  }
+  .logo-text span { color: rgba(255,255,255,0.55); }
+
+  .logo-light {
+    background: #FFFFFF;
+    border: 1px solid rgba(160,65,0,0.12);
+  }
+  .logo-light .logo-text { color: #18181B; }
+  .logo-light .logo-text span { color: #FF6B00; }
+
+  .logo-cream {
+    background: #F0EDE8;
+    border: 1px solid rgba(160,65,0,0.12);
+  }
+  .logo-cream .logo-text { color: #18181B; }
+  .logo-cream .logo-text span { color: #FF6B00; }
+
+  /* ── Color swatches ── */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .swatch {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.06);
+  }
+  .swatch-color {
+    height: 80px;
+  }
+  .swatch-info {
+    padding: 12px;
+    background: #fff;
+  }
+  .swatch-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #18181B;
+    margin-bottom: 2px;
+  }
+  .swatch-hex {
+    font-size: 11px;
+    color: #71717A;
+    font-family: monospace;
+  }
+  .swatch-role {
+    font-size: 10px;
+    color: #A1A1AA;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  /* ── Typography specimens ── */
+  .type-sample {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 12px;
+  }
+  .type-meta {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #FF6B00;
+    margin-bottom: 8px;
+  }
+
+  /* ── Spacing scale ── */
+  .spacing-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(160,65,0,0.08);
+  }
+  .spacing-bar {
+    background: linear-gradient(90deg, #FF6B00, #FFD4B0);
+    border-radius: 4px;
+    height: 8px;
+    flex-shrink: 0;
+  }
+  .spacing-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #18181B;
+    width: 60px;
+    flex-shrink: 0;
+  }
+  .spacing-use {
+    font-size: 11px;
+    color: #71717A;
+  }
+
+  /* ── UI Component demos ── */
+  .btn-demo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: default;
+    margin: 6px;
+  }
+  .btn-primary-demo {
+    background: linear-gradient(135deg, #A04100, #FF6B00);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(255,107,0,0.30);
+  }
+  .btn-secondary-demo {
+    background: rgba(255,255,255,0.72);
+    border: 1px solid rgba(160,65,0,0.18);
+    color: #18181B;
+  }
+  .btn-ghost-demo {
+    background: transparent;
+    border: none;
+    color: #71717A;
+  }
+  .btn-danger-demo {
+    background: linear-gradient(135deg, #b91c1c, #ef4444);
+    color: #fff;
+  }
+
+  .input-demo {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(160,65,0,0.18);
+    border-radius: 14px;
+    font-size: 13px;
+    background: rgba(255,255,255,0.45);
+    color: #18181B;
+    outline: none;
+    font-family: inherit;
+    margin-bottom: 10px;
+  }
+  .input-demo:focus {
+    border-color: rgba(255,107,0,0.45);
+    box-shadow: 0 0 0 4px rgba(255,107,0,0.10);
+    background: rgba(255,255,255,0.72);
+  }
+
+  .card-demo {
+    background: rgba(255,255,255,0.58);
+    border: 1px solid rgba(160,65,0,0.12);
+    border-radius: 24px;
+    padding: 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(160,65,0,0.10);
+    margin-bottom: 12px;
+  }
+
+  .badge-demo {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 4px;
+  }
+
+  /* ── Do / Don't ── */
+  .do-dont-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .do-box {
+    background: rgba(34,197,94,0.08);
+    border: 1.5px solid rgba(34,197,94,0.25);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .dont-box {
+    background: rgba(239,68,68,0.06);
+    border: 1.5px solid rgba(239,68,68,0.20);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .do-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #16a34a;
+    margin-bottom: 10px;
+  }
+  .dont-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #dc2626;
+    margin-bottom: 10px;
+  }
+  .do-dont-item {
+    font-size: 12px;
+    color: #18181B;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .do-dont-item:last-child { border-bottom: none; }
+
+  /* ── Voice & Tone table ── */
+  .tone-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .tone-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .tone-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; }
+    .cover { margin: 0; min-height: auto; padding: 60px 48px; }
+    .page { padding: 0 0 40px; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-logo">Artha<span>leads</span></div>
+  <div class="cover-sub">Brand Guidelines</div>
+  <h1>The Visual Identity of Indian Real Estate's Favourite Platform</h1>
+  <p>This document defines how Arthaleads looks, speaks, and presents itself — across every screen, print, and conversation.</p>
+  <div class="cover-version">Version 2.0 · June 2026</div>
+</div>
+
+<div class="page">
+
+  <!-- ── 01 BRAND IDENTITY ── -->
+  <div class="section">
+    <div class="section-number">01</div>
+    <h2>Brand Identity</h2>
+    <div class="section-rule"></div>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card">
+        <div class="type-meta">Mission</div>
+        <p style="font-size:15px;font-weight:700;color:#18181B;line-height:1.4;">Help every Indian real estate professional close more deals by giving them the tools that actually fit how they work.</p>
+      </div>
+      <div class="card">
+        <div class="type-meta">Vision</div>
+        <p style="font-size:15px;font-weight:700;color:#18181B;line-height:1.4;">Become the default operating system for every real estate team in India — from solo brokers to large developer sales teams.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="type-meta">Brand Personality</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px;">
+        <div style="text-align:center;padding:16px;background:#FFF0E6;border-radius:14px;">
+          <div style="font-size:22px;margin-bottom:6px;">🎯</div>
+          <div style="font-weight:800;font-size:13px;color:#A04100;">Focused</div>
+          <div style="font-size:11px;color:#71717A;margin-top:4px;">Built for one thing and does it extremely well</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:#FFF0E6;border-radius:14px;">
+          <div style="font-size:22px;margin-bottom:6px;">⚡</div>
+          <div style="font-weight:800;font-size:13px;color:#A04100;">Fast</div>
+          <div style="font-size:11px;color:#71717A;margin-top:4px;">Live in 30 minutes, results from day one</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:#FFF0E6;border-radius:14px;">
+          <div style="font-size:22px;margin-bottom:6px;">🤝</div>
+          <div style="font-weight:800;font-size:13px;color:#A04100;">Human</div>
+          <div style="font-size:11px;color:#71717A;margin-top:4px;">Warm, direct, and respectful — like a trusted colleague</div>
+        </div>
+        <div style="text-align:center;padding:16px;background:#FFF0E6;border-radius:14px;">
+          <div style="font-size:22px;margin-bottom:6px;">🇮🇳</div>
+          <div style="font-weight:800;font-size:13px;color:#A04100;">India-First</div>
+          <div style="font-size:11px;color:#71717A;margin-top:4px;">Built in Pune, designed for Indian real estate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 02 LOGO ── -->
+  <div class="section">
+    <div class="section-number">02</div>
+    <h2>Logo & Wordmark</h2>
+    <div class="section-rule"></div>
+
+    <div class="card-grid card-grid-3" style="margin-bottom:24px;">
+      <div>
+        <div class="logo-display">
+          <div class="logo-text">Artha<span style="color:rgba(255,255,255,0.5);">leads</span></div>
+        </div>
+        <p style="font-size:11px;color:#71717A;text-align:center;">Primary — on orange/dark</p>
+      </div>
+      <div>
+        <div class="logo-display logo-light">
+          <div class="logo-text">Artha<span>leads</span></div>
+        </div>
+        <p style="font-size:11px;color:#71717A;text-align:center;">Light background</p>
+      </div>
+      <div>
+        <div class="logo-display logo-cream">
+          <div class="logo-text">Artha<span>leads</span></div>
+        </div>
+        <p style="font-size:11px;color:#71717A;text-align:center;">Cream / warm background</p>
+      </div>
+    </div>
+
+    <div class="do-dont-grid">
+      <div class="do-box">
+        <div class="do-label">✓ Do</div>
+        <div class="do-dont-item"><span>✓</span> Always write "Arthaleads" — one word, capital A only</div>
+        <div class="do-dont-item"><span>✓</span> Use orange (#FF6B00) for the "leads" portion on light backgrounds</div>
+        <div class="do-dont-item"><span>✓</span> Maintain clear space equal to the cap-height of the A around the logo</div>
+        <div class="do-dont-item"><span>✓</span> Use white wordmark on orange or dark backgrounds</div>
+        <div class="do-dont-item"><span>✓</span> Use the icon A mark at small sizes (below 24px text)</div>
+      </div>
+      <div class="dont-box">
+        <div class="dont-label">✗ Don't</div>
+        <div class="do-dont-item"><span>✗</span> Never write "ArthaLeads", "Artha Leads", or "artha leads"</div>
+        <div class="do-dont-item"><span>✗</span> Never add "CRM" to the logo or wordmark</div>
+        <div class="do-dont-item"><span>✗</span> Never stretch, skew, or rotate the wordmark</div>
+        <div class="do-dont-item"><span>✗</span> Never use the logo on clashing or low-contrast backgrounds</div>
+        <div class="do-dont-item"><span>✗</span> Never change the font or letter-spacing</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 03 COLOUR PALETTE ── -->
+  <div class="section">
+    <div class="section-number">03</div>
+    <h2>Colour Palette</h2>
+    <div class="section-rule"></div>
+
+    <p style="color:#71717A;font-size:13px;margin-bottom:24px;">Light mode is the primary experience. Orange is the hero colour — it signals action, energy, and trust. All surfaces use a warm cream base with glassmorphism overlays.</p>
+
+    <div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#A04100;">Primary Palette</div>
+    <div class="swatch-grid" style="margin-bottom:28px;">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#FF6B00;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Orange</div>
+          <div class="swatch-hex">#FF6B00</div>
+          <div class="swatch-role">Brand Primary · CTAs · Active states</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#A04100;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Orange Deep</div>
+          <div class="swatch-hex">#A04100</div>
+          <div class="swatch-role">Gradients · Deep shadows · Borders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#FFD4B0;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Orange Mid</div>
+          <div class="swatch-hex">#FFD4B0</div>
+          <div class="swatch-role">Tints · Hover backgrounds · Tags</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#FFF0E6;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Orange Light</div>
+          <div class="swatch-hex">#FFF0E6</div>
+          <div class="swatch-role">Feature card backgrounds · Highlights</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#A04100;">Neutral / Surface Palette</div>
+    <div class="swatch-grid" style="margin-bottom:28px;">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#F0EDE8;border:1px solid #e5e2dd;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Warm Cream</div>
+          <div class="swatch-hex">#F0EDE8</div>
+          <div class="swatch-role">App background · Page base</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:rgba(255,255,255,0.72);border:1px solid #e5e7eb;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Glass White</div>
+          <div class="swatch-hex">rgba(255,255,255, 0.72)</div>
+          <div class="swatch-role">Cards · Modals · Surfaces</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#FFFFFF;border:1px solid #e5e7eb;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Pure White</div>
+          <div class="swatch-hex">#FFFFFF</div>
+          <div class="swatch-role">Solid cards · Input fields · Invoices</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#F9FAFB;border:1px solid #e5e7eb;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Off White</div>
+          <div class="swatch-hex">#F9FAFB</div>
+          <div class="swatch-role">Alternate section backgrounds</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#A04100;">Text / Ink Palette</div>
+    <div class="swatch-grid" style="margin-bottom:28px;">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#18181B;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink</div>
+          <div class="swatch-hex">#18181B</div>
+          <div class="swatch-role">Primary headings · Body text</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#71717A;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Soft</div>
+          <div class="swatch-hex">#71717A</div>
+          <div class="swatch-role">Secondary text · Captions · Meta</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#A1A1AA;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Ink Faint</div>
+          <div class="swatch-hex">#A1A1AA</div>
+          <div class="swatch-role">Placeholders · Disabled · Borders</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#111827;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Dark (Public)</div>
+          <div class="swatch-hex">#111827</div>
+          <div class="swatch-role">Marketing page headings · Dark cards</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#A04100;">Semantic / Status Colours</div>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-color" style="background:#22c55e;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Success Green</div>
+          <div class="swatch-hex">#22C55E</div>
+          <div class="swatch-role">Closed Won · Active · Confirmed</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#f59e0b;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Amber</div>
+          <div class="swatch-hex">#F59E0B</div>
+          <div class="swatch-role">Follow-up due today · Warnings</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#ef4444;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Danger Red</div>
+          <div class="swatch-hex">#EF4444</div>
+          <div class="swatch-role">Overdue · Errors · Destructive actions</div>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-color" style="background:#3b82f6;"></div>
+        <div class="swatch-info">
+          <div class="swatch-name">Info Blue</div>
+          <div class="swatch-hex">#3B82F6</div>
+          <div class="swatch-role">Informational · Links · Starter plan</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 04 TYPOGRAPHY ── -->
+  <div class="section">
+    <div class="section-number">04</div>
+    <h2>Typography</h2>
+    <div class="section-rule"></div>
+
+    <div class="card" style="margin-bottom:24px;">
+      <div class="type-meta">Primary Typeface — Inter (Variable)</div>
+      <div style="font-size:42px;font-weight:900;color:#18181B;line-height:1.1;">Inter</div>
+      <div style="font-size:14px;color:#71717A;margin-top:8px;">Self-hosted via @fontsource-variable/inter · No Google Fonts dependency · Works offline · Weights 300–900</div>
+      <div style="margin-top:16px;display:flex;gap:20px;flex-wrap:wrap;">
+        <span style="font-weight:300;font-size:13px;color:#18181B;">Light 300</span>
+        <span style="font-weight:400;font-size:13px;color:#18181B;">Regular 400</span>
+        <span style="font-weight:500;font-size:13px;color:#18181B;">Medium 500</span>
+        <span style="font-weight:600;font-size:13px;color:#18181B;">Semibold 600</span>
+        <span style="font-weight:700;font-size:13px;color:#18181B;">Bold 700</span>
+        <span style="font-weight:800;font-size:13px;color:#18181B;">Extrabold 800</span>
+        <span style="font-weight:900;font-size:13px;color:#18181B;">Black 900</span>
+      </div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Display — Font size 52–64px · Weight 900 · Line height 1.1</div>
+      <div style="font-size:48px;font-weight:900;color:#18181B;line-height:1.1;">Close More Deals. Faster.</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 52px · font-weight: 900 · letter-spacing: -1px · Used on: Cover pages, Hero sections</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Heading 1 — 36–40px · Weight 900</div>
+      <div style="font-size:36px;font-weight:900;color:#18181B;">Built for Indian Real Estate</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 36px · font-weight: 900 · Used on: Page titles, Section headers</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Heading 2 — 24–28px · Weight 800</div>
+      <div style="font-size:26px;font-weight:800;color:#18181B;">AI Lead Scoring & Hot Today</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 26px · font-weight: 800 · Used on: Feature titles, Modal headers</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Heading 3 — 18–20px · Weight 700</div>
+      <div style="font-size:18px;font-weight:700;color:#18181B;">Every lead scored 0–100 automatically</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 18px · font-weight: 700 · Used on: Card titles, Sub-sections</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Body — 14–15px · Weight 400–500</div>
+      <div style="font-size:14px;font-weight:400;color:#18181B;line-height:1.65;">Arthaleads is a real estate CRM built from the ground up for Indian property brokers, channel partners, agencies, and developers. Every feature is designed for how Indian real estate teams actually work — not adapted from a generic tool.</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 14px · font-weight: 400 · line-height: 1.65 · Used on: Paragraphs, descriptions</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-meta">Caption / Kicker — 10–11px · Weight 700 · Uppercase · Tracked</div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.22em;color:#71717A;">Lead Management · 14 New Today</div>
+      <div style="font-size:11px;color:#A1A1AA;margin-top:8px;font-family:monospace;">font-size: 10px · font-weight: 700 · text-transform: uppercase · letter-spacing: 0.22em</div>
+    </div>
+  </div>
+
+  <!-- ── 05 SPACING & RADIUS ── -->
+  <div class="section">
+    <div class="section-number">05</div>
+    <h2>Spacing & Border Radius</h2>
+    <div class="section-rule"></div>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="type-meta" style="margin-bottom:12px;">Spacing Scale</div>
+        <div class="spacing-row">
+          <div class="spacing-label">4px</div>
+          <div class="spacing-bar" style="width:4px;"></div>
+          <div class="spacing-use">Icon gap, tight elements</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">8px</div>
+          <div class="spacing-bar" style="width:8px;"></div>
+          <div class="spacing-use">Badge padding, chip spacing</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">12px</div>
+          <div class="spacing-bar" style="width:12px;"></div>
+          <div class="spacing-use">Button padding (vertical)</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">16px</div>
+          <div class="spacing-bar" style="width:16px;"></div>
+          <div class="spacing-use">Card padding, input padding</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">24px</div>
+          <div class="spacing-bar" style="width:24px;"></div>
+          <div class="spacing-use">Card padding large, section gap</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">32px</div>
+          <div class="spacing-bar" style="width:32px;"></div>
+          <div class="spacing-use">Page padding, grid gap</div>
+        </div>
+        <div class="spacing-row">
+          <div class="spacing-label">48–64px</div>
+          <div class="spacing-bar" style="width:48px;"></div>
+          <div class="spacing-use">Section spacing, hero padding</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="type-meta" style="margin-bottom:16px;">Border Radius Scale</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:#FF6B00;border-radius:8px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">8px</div><div style="font-size:11px;color:#71717A;">Badges, tags, chips</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:#FF6B00;border-radius:14px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">14px</div><div style="font-size:11px;color:#71717A;">Buttons, inputs, small cards</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:#FF6B00;border-radius:20px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">20px</div><div style="font-size:11px;color:#71717A;">Cards, panels, dropdowns</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:#FF6B00;border-radius:24px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">24px</div><div style="font-size:11px;color:#71717A;">Main cards, top bars</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;background:#FF6B00;border-radius:32px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">32px</div><div style="font-size:11px;color:#71717A;">Modals, auth cards</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:20px;height:20px;background:#FF6B00;border-radius:999px;flex-shrink:0;"></div>
+            <div><div style="font-weight:700;font-size:12px;">999px</div><div style="font-size:11px;color:#71717A;">Pills, scrollbar thumbs, full-round</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 06 DESIGN SYSTEM — UI COMPONENTS ── -->
+  <div class="section">
+    <div class="section-number">06</div>
+    <h2>UI Components</h2>
+    <div class="section-rule"></div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="type-meta" style="margin-bottom:12px;">Buttons</div>
+      <div>
+        <div class="btn-demo btn-primary-demo">Primary Button</div>
+        <div class="btn-demo btn-secondary-demo">Secondary Button</div>
+        <div class="btn-demo btn-ghost-demo">Ghost Button</div>
+        <div class="btn-demo btn-danger-demo">Danger Button</div>
+      </div>
+      <div style="margin-top:14px;font-size:11px;color:#71717A;">
+        <b>Primary:</b> Orange gradient (#A04100 → #FF6B00) · white text · 8px shadow · hover lifts 1px<br>
+        <b>Secondary:</b> Glass surface · orange border on hover · dark text<br>
+        <b>Ghost:</b> No background · soft text · surface background on hover<br>
+        <b>Danger:</b> Red gradient · white text · for destructive actions only
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="type-meta" style="margin-bottom:12px;">Inputs & Forms</div>
+      <input class="input-demo" placeholder="Search leads by name, phone or email..." />
+      <input class="input-demo" placeholder="Enter GST number..." style="border-color:rgba(255,107,0,0.45);box-shadow:0 0 0 4px rgba(255,107,0,0.10);background:rgba(255,255,255,0.72);" />
+      <div style="font-size:11px;color:#71717A;">
+        Default border: rgba(160,65,0, 0.18) · Focused border: rgba(255,107,0, 0.45) · Focus ring: rgba(255,107,0, 0.10) at 4px spread
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="type-meta" style="margin-bottom:12px;">Cards</div>
+      <div class="card-demo">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.2em;color:#71717A;margin-bottom:4px;">Total Leads</div>
+        <div style="font-size:28px;font-weight:900;color:#FF6B00;">94</div>
+        <div style="font-size:11px;color:#71717A;margin-top:4px;">↓ 91% vs last month</div>
+      </div>
+      <div style="font-size:11px;color:#71717A;">
+        Background: rgba(255,255,255, 0.58) · Backdrop blur: 20px saturate(160%) · Border: rgba(160,65,0, 0.12) · Border radius: 24px · Shadow: 0 8px 32px rgba(160,65,0, 0.10)
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="type-meta" style="margin-bottom:12px;">Badges & Status Pills</div>
+      <div>
+        <span class="badge-demo" style="background:rgba(34,197,94,0.12);color:#16a34a;">Closed Won</span>
+        <span class="badge-demo" style="background:rgba(239,68,68,0.10);color:#dc2626;">Overdue</span>
+        <span class="badge-demo" style="background:rgba(245,158,11,0.12);color:#d97706;">Follow-up Today</span>
+        <span class="badge-demo" style="background:rgba(59,130,246,0.10);color:#2563eb;">Contacted</span>
+        <span class="badge-demo" style="background:rgba(255,107,0,0.10);color:#FF6B00;">Hot Lead</span>
+        <span class="badge-demo" style="background:rgba(168,85,247,0.10);color:#9333ea;">Site Visit</span>
+        <span class="badge-demo" style="background:rgba(113,113,122,0.10);color:#52525b;">New</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 07 GLASSMORPHISM DESIGN LANGUAGE ── -->
+  <div class="section">
+    <div class="section-number">07</div>
+    <h2>Design Language — Glassmorphism</h2>
+    <div class="section-rule"></div>
+
+    <p style="color:#71717A;font-size:13px;margin-bottom:24px;">Arthaleads uses a warm glassmorphism style throughout the app. All surfaces are semi-transparent frosted glass on a warm cream background with subtle orange gradient radials. This creates depth without heaviness.</p>
+
+    <div class="card-grid card-grid-2" style="margin-bottom:24px;">
+      <div class="card">
+        <div class="type-meta">Light Mode (Primary)</div>
+        <div style="padding:16px;background:#F0EDE8;border-radius:14px;margin:12px 0;">
+          <div style="background:rgba(255,255,255,0.58);border:1px solid rgba(160,65,0,0.12);border-radius:16px;padding:14px;backdrop-filter:blur(20px);">
+            <div style="font-size:12px;font-weight:700;color:#18181B;">Glass Card on Cream</div>
+            <div style="font-size:11px;color:#71717A;margin-top:4px;">Warm cream base · frosted white overlay</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#71717A;">
+          Page BG: #F0EDE8 + orange radial gradients<br>
+          Surface: rgba(255,255,255, 0.58)<br>
+          Blur: blur(20px) saturate(160%)
+        </div>
+      </div>
+      <div class="card">
+        <div class="type-meta">Dark Mode (Secondary)</div>
+        <div style="padding:16px;background:#111113;border-radius:14px;margin:12px 0;">
+          <div style="background:rgba(30,29,32,0.75);border:1px solid rgba(255,255,255,0.10);border-radius:16px;padding:14px;backdrop-filter:blur(24px);">
+            <div style="font-size:12px;font-weight:700;color:#ededed;">Glass Card on Dark</div>
+            <div style="font-size:11px;color:#969696;margin-top:4px;">Deep charcoal base · dark glass overlay</div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#71717A;">
+          Page BG: #111113 + orange radials (lower opacity)<br>
+          Surface: rgba(30,29,32, 0.75)<br>
+          Blur: blur(24px) saturate(170%)
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="type-meta" style="margin-bottom:12px;">Gradient Recipes</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="height:48px;border-radius:12px;background:linear-gradient(135deg,#FF6B00,#A04100);margin-bottom:6px;"></div>
+          <div style="font-size:11px;font-weight:700;color:#18181B;">Primary CTA Gradient</div>
+          <div style="font-size:10px;color:#71717A;font-family:monospace;">135deg · #FF6B00 → #A04100</div>
+        </div>
+        <div>
+          <div style="height:48px;border-radius:12px;background:linear-gradient(135deg,#FF6B00,#ffaa00);margin-bottom:6px;"></div>
+          <div style="font-size:11px;font-weight:700;color:#18181B;">Warm Accent Gradient</div>
+          <div style="font-size:10px;color:#71717A;font-family:monospace;">135deg · #FF6B00 → #FFAA00</div>
+        </div>
+        <div>
+          <div style="height:48px;border-radius:12px;background:linear-gradient(90deg,transparent,rgba(255,107,0,0.4),transparent);margin-bottom:6px;border:1px solid rgba(160,65,0,0.1);"></div>
+          <div style="font-size:11px;font-weight:700;color:#18181B;">Shimmer Line</div>
+          <div style="font-size:10px;color:#71717A;font-family:monospace;">90deg · transparent → orange 0.4 → transparent</div>
+        </div>
+        <div>
+          <div style="height:48px;border-radius:12px;background:radial-gradient(ellipse 80% 60% at 15% 10%, rgba(255,107,0,0.18) 0%, transparent 55%), #F0EDE8;margin-bottom:6px;"></div>
+          <div style="font-size:11px;font-weight:700;color:#18181B;">Page Background Radial</div>
+          <div style="font-size:10px;color:#71717A;font-family:monospace;">Radial orange glow on cream base</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 08 VOICE & TONE ── -->
+  <div class="section">
+    <div class="section-number">08</div>
+    <h2>Voice & Tone</h2>
+    <div class="section-rule"></div>
+
+    <p style="color:#71717A;font-size:13px;margin-bottom:20px;">Arthaleads speaks like a confident, experienced colleague in real estate — not a salesperson, not a tech company. Direct, warm, and India-aware.</p>
+
+    <div class="tone-row">
+      <div class="tone-card">
+        <div class="tone-label" style="color:#FF6B00;">✓ Arthaleads Voice</div>
+        <p style="font-size:13px;color:#18181B;">"Close more deals. Every lead captured. Every follow-up on time."</p>
+      </div>
+      <div class="tone-card">
+        <div class="tone-label" style="color:#ef4444;">✗ Not Our Voice</div>
+        <p style="font-size:13px;color:#71717A;">"Leverage our AI-powered SaaS solution to optimise your lead conversion funnel."</p>
+      </div>
+    </div>
+    <div class="tone-row">
+      <div class="tone-card">
+        <div class="tone-label" style="color:#FF6B00;">✓ Arthaleads Voice</div>
+        <p style="font-size:13px;color:#18181B;">"Your team is working. Nothing is falling through the cracks."</p>
+      </div>
+      <div class="tone-card">
+        <div class="tone-label" style="color:#ef4444;">✗ Not Our Voice</div>
+        <p style="font-size:13px;color:#71717A;">"Experience seamless workflow automation with intelligent lead assignment capabilities."</p>
+      </div>
+    </div>
+    <div class="tone-row">
+      <div class="tone-card">
+        <div class="tone-label" style="color:#FF6B00;">✓ Arthaleads Voice</div>
+        <p style="font-size:13px;color:#18181B;">"That Facebook lead from last night? Already assigned and followed up."</p>
+      </div>
+      <div class="tone-card">
+        <div class="tone-label" style="color:#ef4444;">✗ Not Our Voice</div>
+        <p style="font-size:13px;color:#71717A;">"Real-time multi-channel lead ingestion with automated assignment protocols."</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <div class="type-meta" style="margin-bottom:12px;">Writing Rules</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>Short sentences.</b> One idea per sentence. Indian brokers are busy.</div>
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>Active voice.</b> "The system assigns leads" not "Leads are assigned by the system."</div>
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>Real examples.</b> Use "94 leads", "₹4.3 Cr pipeline", "15 agents" — not "many leads."</div>
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>India context.</b> Write "₹" not "$". Reference GST, RERA, Pune, Mumbai naturally.</div>
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>No jargon.</b> "Auto-assign leads" not "utilise intelligent routing algorithms."</div>
+        <div style="padding:10px;background:#FFF0E6;border-radius:10px;font-size:12px;"><b>Outcomes first.</b> Lead with what the user achieves, not how the feature works.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 09 PRODUCT NAMING ── -->
+  <div class="section">
+    <div class="section-number">09</div>
+    <h2>Product & Feature Naming</h2>
+    <div class="section-rule"></div>
+
+    <div class="card-grid card-grid-2">
+      <div class="do-box">
+        <div class="do-label">✓ Correct Usage</div>
+        <div class="do-dont-item"><span>✓</span> Arthaleads</div>
+        <div class="do-dont-item"><span>✓</span> Hot Today (widget name)</div>
+        <div class="do-dont-item"><span>✓</span> AI Copilot</div>
+        <div class="do-dont-item"><span>✓</span> Pipeline (not "funnel")</div>
+        <div class="do-dont-item"><span>✓</span> Site Visit (capitalised as stage name)</div>
+        <div class="do-dont-item"><span>✓</span> Closed Won / Closed Lost</div>
+        <div class="do-dont-item"><span>✓</span> Growth plan (lowercase p)</div>
+        <div class="do-dont-item"><span>✓</span> Admin / Manager / Agent (capitalised roles)</div>
+      </div>
+      <div class="dont-box">
+        <div class="dont-label">✗ Incorrect Usage</div>
+        <div class="do-dont-item"><span>✗</span> ArthaLeads / Artha Leads / artha leads</div>
+        <div class="do-dont-item"><span>✗</span> Arthaleads CRM (never add CRM to the name)</div>
+        <div class="do-dont-item"><span>✗</span> Hot Leads Widget (wrong — it's "Hot Today")</div>
+        <div class="do-dont-item"><span>✗</span> Sales funnel (use "pipeline")</div>
+        <div class="do-dont-item"><span>✗</span> customer / client (use "lead" before conversion)</div>
+        <div class="do-dont-item"><span>✗</span> Pro plan (plan was renamed, use "Growth")</div>
+        <div class="do-dont-item"><span>✗</span> users / staff (use "agents" or "team members")</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 10 CONTACT ── -->
+  <div class="section">
+    <div class="section-number">10</div>
+    <h2>Contact & Social</h2>
+    <div class="section-rule"></div>
+
+    <div class="card-grid card-grid-3">
+      <div class="card" style="text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">🌐</div>
+        <div style="font-weight:800;font-size:13px;color:#18181B;margin-bottom:4px;">Website</div>
+        <div style="font-size:13px;color:#FF6B00;font-weight:600;">arthaleads.com</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">💬</div>
+        <div style="font-weight:800;font-size:13px;color:#18181B;margin-bottom:4px;">WhatsApp & Phone</div>
+        <div style="font-size:13px;color:#FF6B00;font-weight:600;">+91 80801 97945</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:28px;margin-bottom:8px;">✉️</div>
+        <div style="font-weight:800;font-size:13px;color:#18181B;margin-bottom:4px;">Email</div>
+        <div style="font-size:13px;color:#FF6B00;font-weight:600;">contact@arthaleads.com</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;padding:32px;background:linear-gradient(135deg,#FF6B00,#A04100);border-radius:24px;text-align:center;color:#fff;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:8px;">Arthaleads</div>
+      <div style="font-size:13px;opacity:0.75;margin-bottom:4px;">Close More Deals. Faster.</div>
+      <div style="font-size:11px;opacity:0.55;">Built in Pune · Made for Indian Real Estate · Version 2.0 · June 2026</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
