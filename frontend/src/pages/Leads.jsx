@@ -778,27 +778,74 @@ export default function Leads() {
   };
 
   // ── Standard CRM import (Name/Phone/Email columns) ───────────────────────────
+  // Normalise any column header to a plain lowercase key for fuzzy matching.
+  // "Lead Name", "lead_name", "LEAD NAME" → "leadname"
+  const normKey = (s) => String(s).toLowerCase().replace(/[\s_\-().#]/g, "");
+
+  // Build a lookup: normKey(header) → original header, from the first row of the sheet.
+  // Then col(row, ...candidates) returns the first matching value.
+  const makeColPicker = (row) => {
+    const map = {};
+    for (const h of Object.keys(row)) map[normKey(h)] = h;
+    return (...candidates) => {
+      for (const c of candidates) {
+        const orig = map[normKey(c)];
+        if (orig !== undefined && String(row[orig] ?? "").trim() !== "") return String(row[orig]).trim();
+      }
+      return "";
+    };
+  };
+
   const parseImportRow = (row) => {
-    const assignedAgent = agents.find((agent) => agent.name?.toLowerCase() === String(row.AssignedTo || "").trim().toLowerCase());
+    const col = makeColPicker(row);
+
+    // ── Name — accept any common variant ──────────────────────────────────────
+    const name = col(
+      "Lead Name","LeadName","Full Name","FullName","Name","Customer Name","CustomerName",
+      "Contact Name","ContactName","Client Name","ClientName","User Name","UserName","Prospect"
+    );
+
+    // ── Phone — accept mobile/contact variants ────────────────────────────────
+    const phone = col(
+      "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
+      "Contact","Contact Number","ContactNumber","Cell","WhatsApp","Whatsapp Number","WhatsappNumber"
+    );
+
+    // ── Email ─────────────────────────────────────────────────────────────────
+    const email = col("Email","Email Address","EmailAddress","Email ID","EmailID","Mail");
+
+    // ── Budget — single field (treat as max) or split min/max ─────────────────
+    const budgetRaw = col("Budget","Budget Range","BudgetRange","Budget (INR)");
+    const budgetMin = Number(col("Budget Min","BudgetMin","Min Budget","MinBudget") || 0);
+    const budgetMax = Number(col("Budget Max","BudgetMax","Max Budget","MaxBudget") || budgetRaw || 0);
+
+    // ── Agent ─────────────────────────────────────────────────────────────────
+    const agentName = col("Agent","Assigned To","AssignedTo","Assigned Agent","AssignedAgent","Agent Name","AgentName");
+    const assignedAgent = agents.find((a) => a.name?.toLowerCase() === agentName.toLowerCase());
+
+    // ── Follow-up date (column may have spaces) ───────────────────────────────
+    const fuDateRaw = col("Follow Up Date","FollowUpDate","Follow-Up Date","Followup Date","FollowupDate","Follow Up","Followup");
+    let followUpDate = null;
+    if (fuDateRaw) {
+      const d = new Date(fuDateRaw);
+      if (!isNaN(d.getTime())) followUpDate = d.toISOString();
+    }
+
     return {
-      name: String(row.Name || row.name || "").trim(),
-      phone: String(row.Phone || row.phone || "").trim(),
-      email: String(row.Email || row.email || "").trim(),
-      source: String(row.Source || row.source || "Manual").trim() || "Manual",
-      status: String(row.Status || row.status || "New").trim() || "New",
-      priority: String(row.Priority || row.priority || "Medium").trim() || "Medium",
-      propertyType: String(row.PropertyType || row.propertyType || "Apartment").trim() || "Apartment",
-      bhk: String(row.BHK || row.bhk || "N/A").trim() || "N/A",
-      purpose: String(row.Purpose || row.purpose || "Buy").trim() || "Buy",
-      preferredLocation: String(row.PreferredLocation || row.preferredLocation || "").trim(),
-      followUpDate: row.FollowUpDate ? new Date(row.FollowUpDate).toISOString() : null,
-      followUpNote: String(row.FollowUpNote || row.followUpNote || "").trim(),
-      assignedTo: assignedAgent?._id || null,
-      budget: {
-        min: Number(row.BudgetMin || row.budgetMin || 0),
-        max: Number(row.BudgetMax || row.budgetMax || 0),
-        currency: "INR",
-      },
+      name,
+      phone,
+      email,
+      source:            col("Source","Lead Source","LeadSource") || "Manual",
+      status:            col("Status","Lead Status","LeadStatus")  || "New",
+      priority:          col("Priority","Lead Priority","LeadPriority") || "Medium",
+      propertyType:      col("PropertyType","Property Type","Requirements","Requirement","Config","Configuration","BHK Type") || "Apartment",
+      bhk:               col("BHK","BHK Type","BHKType","Unit Type","UnitType") || "N/A",
+      purpose:           col("Purpose","Buying Purpose","BuyingPurpose","Intent") || "Buy",
+      preferredLocation: col("PreferredLocation","Preferred Location","Area","Location","City","Locality","Micro Market","MicroMarket"),
+      followUpDate,
+      followUpNote:      col("FollowUpNote","Follow Up Note","FollowupNote","Note","Notes","Remarks","Remark"),
+      assignedTo:        assignedAgent?._id || null,
+      budget: { min: budgetMin, max: budgetMax, currency: "INR" },
     };
   };
 
