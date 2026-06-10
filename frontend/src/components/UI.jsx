@@ -48,26 +48,23 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
       style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col`}
-        style={{ background: "var(--app-surface)", maxHeight: "92vh" }}
+        className={`w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
       >
-        {/* Sticky header */}
-        <div
-          className="flex flex-shrink-0 items-center justify-between px-6 py-4 rounded-t-3xl sm:rounded-t-3xl"
-          style={{ borderBottom: "1px solid var(--app-border)" }}
-        >
-          <h2 className="text-lg font-semibold text-app">{title}</h2>
-          <button onClick={onClose} className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
-            <X className="w-5 h-5 text-app-soft" />
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <h2 className="text-base font-bold text-app">{title}</h2>
+          <button onClick={onClose} className="text-app-soft hover:text-app transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 p-6">{children}</div>
+        <div className="overflow-y-auto p-6" style={{ maxHeight: "75vh" }}>{children}</div>
       </div>
     </div>
   );
