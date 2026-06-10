@@ -5,7 +5,6 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
-import { PLAN_PRICING, formatINR, annualMonthly } from "../utils/plan";
 
 const PLANS = [
   {
@@ -95,17 +94,16 @@ const PLANS = [
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature. No credit card is required, and you can upgrade or cancel anytime."],
-  ["How is pricing calculated?", "Pricing is per team member, per month. You pay only for the seats you add - ₹999/user on Starter and ₹1,500/user on Growth, with no setup fee and no hidden charges. Enterprise is custom-quoted for large or multi-branch organisations."],
+  ["How is pricing calculated?", "Pricing is per team member, per month. You pay only for the seats you add — no setup fee and no hidden charges. Enterprise is custom-quoted for large or multi-branch organisations. Reach out to our team for a quote."],
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. You can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
-  ["Do you offer annual billing discounts?", "Yes. Switching to annual billing gives you roughly two months free compared to paying monthly. Toggle the billing switch above to see the effective saving."],
+  ["Do you offer annual billing discounts?", "Yes. Annual billing gives you roughly two months free compared to paying monthly. Contact our team for the exact annual pricing for your plan."],
   ["Which payment methods do you accept?", "We accept all major credit/debit cards, UPI, and net banking for Indian businesses. Enterprise customers can also pay via invoice."],
 ];
 
 export default function Pricing() {
   const { isDark } = usePublicTheme();
-  const [annual, setAnnual]   = useState(true);
   const [members, setMembers] = useState(5);
   const [hovered, setHovered] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
@@ -148,7 +146,6 @@ export default function Pricing() {
   const altBtnBdr  = isDark ? "rgba(255,255,255,0.10)" : "#d1d5db";
   const trialBg    = isDark ? "rgba(34,197,94,0.1)" : "#f0fdf4";
   const trialBdr   = isDark ? "rgba(34,197,94,0.25)" : "#bbf7d0";
-  const toggleTrack= isDark ? "rgba(255,255,255,0.10)" : "#e5e7eb";
 
   // Interactive: which plan does the chosen team size land in?
   const recommended = useMemo(() => {
@@ -156,6 +153,8 @@ export default function Pricing() {
     if (members <= 20) return "growth";
     return "enterprise";
   }, [members]);
+
+  const annual = false; // kept for CTA logic compatibility
 
   return (
     <div className="min-h-screen" style={{ background: bg, color: heading, fontFamily: "Inter, sans-serif" }}>
@@ -181,32 +180,6 @@ export default function Pricing() {
 
       {/* Interactive controls */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
-        {/* Billing toggle */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <span className="text-sm font-semibold" style={{ color: annual ? body : heading }}>Monthly</span>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={annual}
-            aria-label="Toggle annual billing"
-            onClick={() => setAnnual((v) => !v)}
-            className="relative w-14 h-7 rounded-full transition-colors duration-200 cursor-pointer flex-shrink-0"
-            style={{ background: annual ? "#ff6b00" : toggleTrack }}
-          >
-            <span
-              className="absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200"
-              style={{ transform: annual ? "translateX(28px)" : "translateX(0)" }}
-            />
-          </button>
-          <span className="text-sm font-semibold" style={{ color: annual ? heading : body }}>
-            Annual
-          </span>
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold"
-            style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>
-            Save ~2 months
-          </span>
-        </div>
-
         {/* Team-size slider */}
         <div className="rounded-2xl border p-5 sm:p-6 mb-10"
           style={{ background: cardBg, borderColor: cardBdr }}>
@@ -325,34 +298,6 @@ export default function Pricing() {
                     <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
                   </div>
 
-                  {/* Pricing */}
-                  {(() => {
-                    const price = PLAN_PRICING[plan.id] || {};
-                    return (
-                      <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
-                        {price.custom ? (
-                          <>
-                            <span className="text-3xl font-black" style={{ color: heading }}>Custom</span>
-                            <p className="text-xs mt-1" style={{ color: taglineClr }}>Tailored quote for your organisation</p>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="text-3xl font-black" style={{ color: heading }}>
-                                {formatINR(annual ? annualMonthly(plan.id) : price.monthly)}
-                              </span>
-                              <span className="text-sm" style={{ color: body }}>/ user / month</span>
-                            </div>
-                            <p className="text-xs mt-1" style={{ color: taglineClr }}>
-                              {annual
-                                ? `Billed annually — ${formatINR(price.annual)}/user/yr · no setup fee`
-                                : "Billed monthly · no setup fee"}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })()}
 
                   {/* Feature groups */}
                   <div className="flex flex-col gap-4 flex-1 mb-6">
