@@ -20,7 +20,8 @@ const signToken = (id) =>
 
 const authService = {
   async signup(data) {
-    const existing = await User.findOne({ email: data.email });
+    const normalizedEmail = (data.email || "").toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) throw new AppError("Email already registered", 409);
 
     const normPhone = String(data.phone || "").replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
@@ -44,7 +45,13 @@ const authService = {
       }
     }
 
-    const user = await User.create({ ...data, phone: normPhone, orgId: org._id, role: "admin" });
+    let user;
+    try {
+      user = await User.create({ ...data, email: normalizedEmail, phone: normPhone, orgId: org._id, role: "admin" });
+    } catch (err) {
+      if (err.code === 11000) throw new AppError("Email already registered", 409);
+      throw err;
+    }
     const token = signToken(user._id);
 
     // Fire-and-forget welcome email - don't block the signup response
@@ -72,6 +79,9 @@ const authService = {
     const user = await User.findOne(userQuery)
       .select("+password +loginAttempts +lockoutUntil");
 
+    // Reject deactivated accounts before touching attempt counters
+    if (user && !user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
     // ── Brute-force lockout check ─────────────────────────────────────────────
     if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
       const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
@@ -97,8 +107,6 @@ const authService = {
       }
       throw new AppError("Invalid email/phone or password", 401);
     }
-
-    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
 
     // ── Successful login - reset lockout fields ───────────────────────────────
     user.loginAttempts = 0;
@@ -188,13 +196,24 @@ const authService = {
     let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");
 
     if (user) {
-      // If found by email but no googleId yet, link the Google account
+      // Always check isActive before doing anything else with the account
+      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
       if (!user.googleId) {
+        // Only auto-link Google to accounts that have no password set (e.g. admin-invited
+        // team members). Accounts that already have a password require the owner to
+        // explicitly link Google from their profile settings — silent linking is a
+        // known account-takeover vector if a Google account shares the same email.
+        const userWithPwd = await User.findById(user._id).select("+password");
+        if (userWithPwd?.password) {
+          throw new AppError(
+            "An account with this email already exists. Please sign in with your email and password.",
+            400
+          );
+        }
         user.googleId = googleId;
         if (picture && !user.avatar) user.avatar = picture;
-        await user.save({ validateBeforeSave: false });
       }
-      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
     } else {
       // New Google user - create their own org and make them admin
       const orgName = `${name}'s Workspace`;
@@ -372,17 +391,13 @@ const authService = {
     const user = await User.findOne({ email: email.toLowerCase().trim() })
       .select("+passwordResetToken +passwordResetExpires");
 
-    // Always respond with success to prevent email enumeration attacks
+    // Always respond with success to prevent email enumeration attacks —
+    // including Google-only accounts (returning a distinct error would confirm
+    // the address is registered and reveal the auth method used).
     if (!user) return;
 
-    // Google-only accounts have no password - block reset
     const hasPassword = await User.findById(user._id).select("+password");
-    if (!hasPassword?.password) {
-      throw new AppError(
-        "This account uses Google Sign-In. Please sign in with Google instead.",
-        400
-      );
-    }
+    if (!hasPassword?.password) return; // Google-only: respond silently
 
     // Generate a 32-byte random token, store the SHA-256 hash in DB
     const rawToken   = crypto.randomBytes(32).toString("hex");

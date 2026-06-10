@@ -192,6 +192,11 @@ const authController = {
       const { phone, email } = req.body;
       if (!phone || !email) return next(new AppError("Phone and email are required", 400));
 
+      // Basic email format check before sending an OTP to it
+      if (!email.includes("@") || !email.includes(".")) {
+        return next(new AppError("Enter a valid email address", 400));
+      }
+
       const norm = normPhone(phone);
       if (norm.length !== 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));
 
@@ -252,7 +257,9 @@ const authController = {
       });
 
       // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
-      const [local, domain] = email.split("@");
+      const atIdx = email.lastIndexOf("@");
+      const local  = email.slice(0, atIdx);
+      const domain = email.slice(atIdx + 1);
       const masked = local.length <= 2 ? `${local[0]}***@${domain}` : `${local[0]}${local[1]}***@${domain}`;
       res.json({ success: true, maskedEmail: masked });
     } catch (err) {

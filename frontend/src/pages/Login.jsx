@@ -22,6 +22,10 @@ export default function Login() {
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setErr("Google sign-in failed. Please try again.");
+        return;
+      }
       setErr("");
       setGLoading(true);
       try {
@@ -50,6 +54,7 @@ export default function Login() {
       try {
         await login(form.email, form.password);
         toast.success("Welcome back!");
+        setLoading(false);
         navigate("/dashboard");
         return;
       } catch (e) {

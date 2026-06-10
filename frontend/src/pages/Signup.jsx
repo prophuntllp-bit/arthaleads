@@ -22,6 +22,10 @@ export default function Signup() {
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setError("Google sign-up failed. Please try again.");
+        return;
+      }
       setError("");
       setGLoading(true);
       try {
