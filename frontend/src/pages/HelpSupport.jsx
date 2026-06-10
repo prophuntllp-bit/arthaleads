@@ -36,7 +36,7 @@ const supportCards = [
     title: "WhatsApp Help",
     detail: "+91 80801 97945",
     note: "Quick help for day-to-day sales team questions.",
-    href: "https://wa.me/918080197945",
+    href: "https://wa.me/918080197945?text=Hi%2C+I+need+help+with+Arthaleads+CRM.",
   },
 ];
 
@@ -52,7 +52,7 @@ const faqs = [
 const quickActions = [
   { title: "Need onboarding support?", body: "Ask your admin to add your profile, assign your role, and share your login credentials. Once added, sign in at arthaleads.com and you are ready to go.", action: { label: "Go to Sign In", href: "/login" } },
   { title: "Need missing lead data?", body: "Use the Import option on the Leads screen to upload a CSV. Export the current list first as a backup before doing bulk updates. Supported format: Name, Phone, Email, Source, Status.", action: { label: "Go to Leads", href: "/leads" } },
-  { title: "Need admin access?", body: "Admins control roles and permissions. If you need elevated access, contact your system owner or reach out via WhatsApp support.", action: { label: "WhatsApp Support", href: "https://wa.me/918080197945", external: true } },
+  { title: "Need admin access?", body: "Admins control roles and permissions. If you need elevated access, contact your system owner or reach out via WhatsApp support.", action: { label: "WhatsApp Support", href: "https://wa.me/918080197945?text=Hi%2C+I+need+help+with+Arthaleads+CRM.", external: true } },
   { title: "How do I connect Facebook Lead Ads?", body: "Go to Automation in the sidebar, click Connect Facebook, approve the popup, then select your Page and Lead Ad Form. Leads will flow in automatically after setup.", action: { label: "Go to Automation", href: "/automation" } },
 ];
 
