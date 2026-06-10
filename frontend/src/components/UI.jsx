@@ -47,25 +47,27 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
   if (!open) return null;
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-         onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className={`relative rounded-[1.75rem] w-full ${widths[size]} max-h-[90vh] overflow-y-auto modal-glass`}>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col`}
+        style={{ background: "var(--app-surface)", maxHeight: "92vh" }}
+      >
+        {/* Sticky header */}
         <div
-          className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 rounded-t-[1.75rem]"
-          style={{
-            borderBottom: "1px solid var(--app-border)",
-            background: "var(--app-surface)",
-            backdropFilter: "var(--glass-blur-heavy)",
-            WebkitBackdropFilter: "var(--glass-blur-heavy)",
-          }}
+          className="flex flex-shrink-0 items-center justify-between px-6 py-4 rounded-t-3xl sm:rounded-t-3xl"
+          style={{ borderBottom: "1px solid var(--app-border)" }}
         >
           <h2 className="text-lg font-semibold text-app">{title}</h2>
           <button onClick={onClose} className="p-2 rounded-xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
             <X className="w-5 h-5 text-app-soft" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 p-6">{children}</div>
       </div>
     </div>
   );
