@@ -121,7 +121,7 @@ export default function Projects() {
                 {canManage && (
                   <button
                     onClick={(e) => openEdit(e, proj)}
-                    className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-xl text-white opacity-0 group-hover:opacity-100 transition"
+                    className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-xl text-white opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition"
                     style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
                   >
                     <Pencil className="h-3.5 w-3.5" />

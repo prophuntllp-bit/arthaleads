@@ -16,6 +16,7 @@ import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
 import { canAccess, upgradeTarget } from "../utils/plan";
 import toast from "react-hot-toast";
+import AttendanceCapture from "./AttendanceCapture";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
@@ -34,6 +35,7 @@ const navItems = [
   { to: "/projects",    label: "Projects",     icon: FolderKanban },
   {
     label: "Bookings & Invoices", icon: Receipt,
+    roles: ["admin", "manager", "super_admin"],
     children: [
       { to: "/bookings",   label: "Bookings",   icon: BookMarked },
       { to: "/invoices",   label: "Invoices",   icon: FileCheck  },
@@ -98,7 +100,7 @@ export default function Sidebar() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [alertCount, setAlertCount] = useState(0);
-  const [alertDropPos, setAlertDropPos] = useState({ top: 80, left: 268 });
+  const [alertDropPos, setAlertDropPos] = useState({ top: 58, right: 8 });
   // Profile dropdown (inline, no portal)
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -116,9 +118,12 @@ export default function Sidebar() {
   const lastSeenRef     = useRef(parseInt(localStorage.getItem("crm_alerts_seen") || "0", 10));
 
   // ── Clock In / Out ────────────────────────────────────────────────────────
-  const [clockStatus, setClockStatus] = useState(null);
-  const [clocking,    setClocking]    = useState(false);
-  const [logoError,   setLogoError]   = useState(false);
+  const [clockStatus,      setClockStatus]      = useState(null);
+  const [clocking,         setClocking]         = useState(false);
+  const [logoError,        setLogoError]        = useState(false);
+  const [captureOpen,      setCaptureOpen]      = useState(false);
+  const [captureMode,      setCaptureMode]      = useState("clockin");
+  const [requireSelfie,    setRequireSelfie]    = useState(true);
   const clockTimer = useLiveClock(
     clockStatus?.clockIn && !clockStatus?.clockOut ? clockStatus.clockIn : null
   );
@@ -127,29 +132,39 @@ export default function Sidebar() {
 
   const fetchClockStatus = useCallback(() => {
     if (!user || !attendanceEnabled) return;
-    api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
+    api.get("/attendance/status").then(r => {
+      setClockStatus(r.data.data);
+      setRequireSelfie(r.data.requireSelfie ?? true);
+    }).catch(() => {});
   }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
   useEffect(() => { setLogoError(false); }, [org?.logo]);
 
-  const handleClockIn = async () => {
+  const submitClock = async (captureData) => {
     setClocking(true);
+    const isIn = captureMode === "clockin";
     try {
-      const r = await api.post("/attendance/clockin");
+      const body = {};
+      if (captureData?.selfie) body.selfie = captureData.selfie;
+      if (captureData?.lat != null) { body.lat = captureData.lat; body.lng = captureData.lng; body.accuracy = captureData.accuracy; }
+      const r = await api.post(`/attendance/${isIn ? "clockin" : "clockout"}`, body);
       setClockStatus(r.data.data);
-      toast.success("Clocked in!");
-    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
+      toast.success(isIn ? "Clocked in!" : "Clocked out! Great work today.");
+      setCaptureOpen(false);
+    } catch (e) {
+      toast.error(e.response?.data?.message || (isIn ? "Clock in failed" : "Clock out failed"));
+    }
     finally { setClocking(false); }
   };
 
-  const handleClockOut = async () => {
-    setClocking(true);
-    try {
-      const r = await api.post("/attendance/clockout");
-      setClockStatus(r.data.data);
-      toast.success("Clocked out! Great work today.");
-    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
-    finally { setClocking(false); }
+  const handleClockIn = () => {
+    if (requireSelfie) { setCaptureMode("clockin"); setCaptureOpen(true); }
+    else submitClock({});
+  };
+
+  const handleClockOut = () => {
+    if (requireSelfie) { setCaptureMode("clockout"); setCaptureOpen(true); }
+    else submitClock({});
   };
 
   // ── Scroll lock when mobile sidebar open ─────────────────────────────────
@@ -211,6 +226,29 @@ export default function Sidebar() {
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
   }, [user]);
+
+  // ── Sync alertCount to localStorage + Dashboard bell badge ───────────────
+  useEffect(() => {
+    localStorage.setItem("crm_alert_count", String(alertCount));
+    window.dispatchEvent(new CustomEvent("alerts:count", { detail: { count: alertCount } }));
+  }, [alertCount]);
+
+  // ── Listen for "open:alerts" fired by page-level bell buttons ────────────
+  useEffect(() => {
+    const handler = (e) => {
+      const rect = e.detail?.rect;
+      if (rect) {
+        setAlertDropPos({ top: rect.bottom + 6, right: 8 });
+      }
+      setAlertOpen(true);
+      const now = Date.now();
+      localStorage.setItem("crm_alerts_seen", String(now));
+      lastSeenRef.current = now;
+      setAlertCount(0);
+    };
+    window.addEventListener("open:alerts", handler);
+    return () => window.removeEventListener("open:alerts", handler);
+  }, []);
 
   // ── Close alerts on outside click ────────────────────────────────────────
   useEffect(() => {
@@ -368,29 +406,6 @@ export default function Sidebar() {
               }
             </button>
           )}
-        </div>
-
-        {/* ── Alerts bell ── */}
-        <div className="px-2 pb-1 flex-shrink-0">
-          <div ref={alertRef}>
-            <button
-              onClick={openAlerts}
-              title={!isExpanded ? "Alerts" : undefined}
-              className="relative w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-              style={{ paddingLeft: 14 }}
-            >
-              <Bell className="w-4.5 h-4.5 flex-shrink-0" style={{ width: 18, height: 18 }} />
-              <span className="ml-3" style={labelStyle}>Alerts</span>
-              {alertCount > 0 && (
-                <span
-                  className={`flex items-center justify-center rounded-full text-[9px] font-bold text-white flex-shrink-0 ${isExpanded ? "ml-auto" : "absolute top-1.5 right-1.5"}`}
-                  style={{ background: "var(--app-primary)", width: 18, height: 18, minWidth: 18 }}
-                >
-                  {alertCount > 9 ? "9+" : alertCount}
-                </span>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* ── Nav items ── */}
@@ -733,8 +748,16 @@ export default function Sidebar() {
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2.5 flex items-center justify-between border-b sidebar-glass mobile-topbar"
-        style={{ borderColor: "var(--app-border)", minHeight: 52 }}
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 px-3 py-2.5 flex items-center justify-between mobile-topbar"
+        style={{
+          minHeight: 52,
+          background: "var(--app-surface)",
+          backdropFilter: "blur(20px) saturate(160%)",
+          WebkitBackdropFilter: "blur(20px) saturate(160%)",
+          borderBottom: "1px solid var(--app-border)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+        }}
       >
         {/* Search overlay mode */}
         {mobileSearchOpen ? (
@@ -795,10 +818,11 @@ export default function Sidebar() {
 
               {/* Bell */}
               <div ref={mobileBellRef}>
-                <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts">
-                  <Bell className="w-5 h-5" />
+                <button onClick={openAlerts} className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5" title="New lead alerts"
+                  style={{ color: alertCount > 0 ? "var(--app-primary)" : undefined }}>
+                  <Bell className={`w-5 h-5${alertCount > 0 ? " bell-ringing" : ""}`} />
                   {alertCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white animate-pulse"
+                    <span className="badge-glow absolute -top-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
                       style={{ background: "var(--app-primary)" }}>
                       {alertCount > 9 ? "9+" : alertCount}
                     </span>
@@ -864,6 +888,15 @@ export default function Sidebar() {
           <NavContent isExpanded={expanded} showPin={true} />
         </div>
       </aside>
+
+      <AttendanceCapture
+        open={captureOpen}
+        mode={captureMode}
+        required={requireSelfie}
+        submitting={clocking}
+        onClose={() => setCaptureOpen(false)}
+        onConfirm={submitClock}
+      />
     </>
   );
 }

@@ -3,6 +3,7 @@ const Attendance = require("../models/Attendance");
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+const { uploadAttendanceSelfie } = require("../utils/upload");
 
 function todayStr() {
   const d = new Date();
@@ -18,9 +19,23 @@ async function getOrgSettings(orgId) {
   const s = org?.attendanceSettings || {};
   return {
     shiftStartTime: s.shiftStartTime || "09:30",
+    shiftEndTime:   s.shiftEndTime   || "19:00",
     bufferMinutes:  s.bufferMinutes  ?? 15,
     halfDayMinutes: s.halfDayMinutes ?? 240,
     fullDayMinutes: s.fullDayMinutes ?? 480,
+    requireSelfie:  s.requireSelfie  ?? true,
+  };
+}
+
+// Compute early leave flag from clock-out time vs expected end time
+function computeEarlyLeave(clockOutDate, settings) {
+  if (!clockOutDate) return { isEarlyLeave: false, earlyLeaveByMinutes: null };
+  const clockOutMins = clockOutDate.getHours() * 60 + clockOutDate.getMinutes();
+  const endMins = parseHHMM(settings.shiftEndTime);
+  const isEarlyLeave = clockOutMins < endMins;
+  return {
+    isEarlyLeave,
+    earlyLeaveByMinutes: isEarlyLeave ? endMins - clockOutMins : null,
   };
 }
 
@@ -41,11 +56,11 @@ const attendanceController = {
   // GET /api/attendance/status - today's record for the current user
   async status(req, res, next) {
     try {
-      const record = await Attendance.findOne({
-        userId: req.user._id,
-        date: todayStr(),
-      });
-      res.json({ success: true, data: record || null });
+      const [record, settings] = await Promise.all([
+        Attendance.findOne({ userId: req.user._id, date: todayStr() }),
+        getOrgSettings(req.user.orgId),
+      ]);
+      res.json({ success: true, data: record || null, requireSelfie: settings.requireSelfie });
     } catch (err) { next(err); }
   },
 
@@ -67,6 +82,19 @@ const attendanceController = {
       const isLate = clockInMins > lateThreshold;
       const lateByMinutes = isLate ? clockInMins - lateThreshold : null;
 
+      // Handle selfie upload and geo fields
+      let { selfie, lat, lng } = req.body;
+      let clockInSelfie = "";
+      if (selfie && selfie.startsWith("data:")) {
+        try {
+          clockInSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), date, "in");
+        } catch (e) {
+          console.error("[attendance] selfie upload failed:", e.message);
+        }
+      }
+      const clockInLat = lat != null ? Number(lat) : null;
+      const clockInLng = lng != null ? Number(lng) : null;
+
       if (!record) {
         record = await Attendance.create({
           userId: req.user._id,
@@ -75,6 +103,9 @@ const attendanceController = {
           clockIn: now,
           isLate,
           lateByMinutes,
+          clockInSelfie,
+          clockInLat,
+          clockInLng,
         });
       } else {
         record.clockIn = now;
@@ -83,6 +114,9 @@ const attendanceController = {
         record.dayType = null;
         record.isLate = isLate;
         record.lateByMinutes = lateByMinutes;
+        record.clockInSelfie = clockInSelfie;
+        record.clockInLat = clockInLat;
+        record.clockInLng = clockInLng;
         await record.save();
       }
 
@@ -110,7 +144,25 @@ const attendanceController = {
       record.clockOut = now;
       record.totalMinutes = Math.round((now - record.clockIn) / 60000);
       record.dayType = computeDayType(record.totalMinutes, settings);
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings);
+      record.isEarlyLeave = isEarlyLeave;
+      record.earlyLeaveByMinutes = earlyLeaveByMinutes;
       if (req.body.note) record.note = req.body.note;
+
+      // Handle selfie upload and geo fields
+      let { selfie, lat, lng } = req.body;
+      let clockOutSelfie = "";
+      if (selfie && selfie.startsWith("data:")) {
+        try {
+          clockOutSelfie = await uploadAttendanceSelfie(selfie, String(req.user._id), record.date, "out");
+        } catch (e) {
+          console.error("[attendance] selfie upload failed:", e.message);
+        }
+      }
+      record.clockOutSelfie = clockOutSelfie;
+      record.clockOutLat = lat != null ? Number(lat) : null;
+      record.clockOutLng = lng != null ? Number(lng) : null;
+
       await record.save();
 
       res.json({ success: true, data: record });
@@ -195,7 +247,7 @@ const attendanceController = {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
       };
 
-      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Note"];
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Note"];
       const rows = records.map((r) => [
         r.date,
         r.userId?.name || "",
@@ -207,6 +259,8 @@ const attendanceController = {
         r.dayType || "",
         r.isLate ? "Yes" : "No",
         r.lateByMinutes ? fmtDur(r.lateByMinutes) : "",
+        r.isEarlyLeave ? "Yes" : "No",
+        r.earlyLeaveByMinutes ? fmtDur(r.earlyLeaveByMinutes) : "",
         r.note || "",
       ]);
 
@@ -231,6 +285,12 @@ const attendanceController = {
       const { userId, date, clockIn, clockOut, note } = req.body;
       if (!userId || !date) return next(new AppError("userId and date are required.", 400));
 
+      // Ensure the target user actually belongs to the caller's org. Without this,
+      // an upsert would fabricate an attendance record for any arbitrary userId
+      // (e.g. a super_admin or a user in another org) scoped to the caller's org.
+      const targetUser = await User.findOne({ _id: userId, orgId: req.user.orgId }).select("_id");
+      if (!targetUser) return next(new AppError("User not found in your organisation.", 404));
+
       const clockInDate  = clockIn  ? new Date(clockIn)  : null;
       const clockOutDate = clockOut ? new Date(clockOut) : null;
 
@@ -254,10 +314,11 @@ const attendanceController = {
         lateByMinutes = isLate ? clockInMins - lateThreshold : null;
       }
       const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;
+      const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(clockOutDate, settings);
 
       const record = await Attendance.findOneAndUpdate(
         { userId, orgId: req.user.orgId, date },
-        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, dayType, note: note || "" } },
+        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, isEarlyLeave, earlyLeaveByMinutes, dayType, note: note || "" } },
         { upsert: true, new: true, runValidators: false }
       ).populate("userId", "name email role");
 

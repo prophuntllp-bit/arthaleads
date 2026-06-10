@@ -8,8 +8,9 @@ const invoiceSchema = new mongoose.Schema(
     createdBy: { type: OID, ref: "User" },
     bookingId: { type: OID, ref: "Booking", required: true },
 
-    invoiceNumber: { type: Number, index: true },
-    invoiceDate:   { type: Date, default: Date.now },
+    invoiceNumber:       { type: Number, index: true },
+    customInvoiceNumber: { type: String, trim: true, default: "" },
+    invoiceDate:         { type: Date, default: Date.now },
 
     // Developer snapshot at time of generation
     developerId:          { type: OID, ref: "Developer" },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
-import { FormField, Modal, Spinner } from "./UI";
+import { FormField, Modal, Spinner, AppDatePicker } from "./UI";
 import CustomSelect from "./CustomSelect";
 import {
   BHK_OPTIONS,
@@ -164,7 +164,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
           <input className="input" type="number" min="0" value={form.budgetMax} onChange={setValue("budgetMax")} />
         </FormField>
         <FormField label="Follow-up Date">
-          <input className="input" type="date" value={form.followUpDate} onChange={setValue("followUpDate")} />
+          <AppDatePicker value={form.followUpDate} onChange={setField("followUpDate")} />
         </FormField>
         <FormField label="Assign To">
           <CustomSelect

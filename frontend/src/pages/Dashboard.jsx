@@ -38,7 +38,6 @@ import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
-import OrgSetupWizard, { shouldShowOrgSetupWizard } from "../components/OrgSetupWizard";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
@@ -119,7 +118,7 @@ function fmtResponseTime(ms) {
 
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
-  const { user, org } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [greeting, setGreeting] = useState(getGreeting());
   const [searchQuery, setSearchQuery] = useState("");
@@ -138,12 +137,14 @@ export default function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
-  const [showOrgSetup, setShowOrgSetup] = useState(() => shouldShowOrgSetupWizard(org));
 
   const fetchAnalytics = (retryCount = 0) => {
     setLoading(true);
     setAnalyticsError(false);
-    api.get("/leads/analytics", { params: { dateRange } })
+    const rangeParams = dateRange && typeof dateRange === "object"
+      ? { from: dateRange.from, to: dateRange.to }
+      : { dateRange };
+    api.get("/leads/analytics", { params: rangeParams })
       .then((response) => setData(response.data.data))
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
@@ -198,7 +199,6 @@ export default function Dashboard() {
 
   return (
     <div className="stitch-page space-y-6">
-      {showOrgSetup && <OrgSetupWizard onClose={() => setShowOrgSetup(false)} />}
       <header className="stitch-topbar">
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -615,7 +615,7 @@ function GoalMetricsRow({ goal, current, avgResponseMs, role, onGoalUpdate }) {
           </>
         ) : (
           <span className="text-xs text-app-soft flex-1">
-            {canEdit ? "No goal set — click the pencil to set a monthly closing target." : "No monthly goal set."}
+            {canEdit ? "No goal set. Click the pencil to set a monthly closing target." : "No monthly goal set."}
           </span>
         )}
 
@@ -976,7 +976,7 @@ function HotLeadsWidget({ navigate }) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-bold text-app">Hot Today</h3>
-          <p className="text-[11px] text-app-soft">Highest-scored leads — prioritize these first</p>
+          <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Sparkles className="h-3 w-3 text-indigo-400" />

@@ -57,7 +57,7 @@ async function runDailyReminder() {
 
   const leads = await Lead.find({
     followUpDate: { $gte: start, $lte: end },
-    isArchived: false,
+    isArchived: { $ne: true },
     isDeleted: { $ne: true },
   }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
 
@@ -103,7 +103,7 @@ async function runUpcomingReminder() {
 
   const leads = await Lead.find({
     followUpDate: { $gte: windowStart, $lt: windowEnd },
-    isArchived: false,
+    isArchived: { $ne: true },
     isDeleted: { $ne: true },
   }).select("name phone assignedTo followUpDate followUpSetBy orgId").lean();
 

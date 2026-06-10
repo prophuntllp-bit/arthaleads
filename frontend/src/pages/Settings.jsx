@@ -1,9 +1,358 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { Camera, Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
+
+// ── Indian Banks list ─────────────────────────────────────────────────────────
+const INDIAN_BANKS = [
+  "Axis Bank","AU Small Finance Bank","Bandhan Bank","Bank of Baroda","Bank of India",
+  "Bank of Maharashtra","Canara Bank","Central Bank of India","City Union Bank",
+  "CSB Bank","DCB Bank","Dhanlaxmi Bank","Equitas Small Finance Bank",
+  "ESAF Small Finance Bank","Federal Bank","Fincare Small Finance Bank",
+  "HDFC Bank","ICICI Bank","IDBI Bank","IDFC First Bank","Indian Bank",
+  "Indian Overseas Bank","IndusInd Bank","J&K Bank","Jana Small Finance Bank",
+  "Karnataka Bank","Karur Vysya Bank","Kotak Mahindra Bank","Lakshmi Vilas Bank",
+  "Nainital Bank","North East Small Finance Bank","Punjab & Sind Bank",
+  "Punjab National Bank","RBL Bank","Saraswat Bank","South Indian Bank",
+  "State Bank of India","Suryoday Small Finance Bank","Tamilnad Mercantile Bank",
+  "UCO Bank","Ujjivan Small Finance Bank","Union Bank of India","Utkarsh Small Finance Bank",
+  "YES Bank",
+];
+
+// Searchable bank dropdown
+function BankSearchInput({ value, onChange, className, style }) {
+  const [query, setQuery]   = useState(value || "");
+  const [open, setOpen]     = useState(false);
+  const wrapRef             = useRef(null);
+
+  useEffect(() => { setQuery(value || ""); }, [value]);
+
+  const matches = query.trim()
+    ? INDIAN_BANKS.filter(b => b.toLowerCase().includes(query.toLowerCase()))
+    : [];
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!wrapRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={() => query && setOpen(true)}
+        placeholder="e.g. State Bank of India"
+        className={className}
+        style={style}
+        autoComplete="off"
+      />
+      {open && matches.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-2xl shadow-xl overflow-hidden overflow-y-auto"
+          style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: 220 }}>
+          {matches.map(bank => (
+            <button
+              key={bank}
+              type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(bank); setQuery(bank); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/5 transition text-app"
+            >
+              {bank}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Compress image to JPEG ≤ 400×400 before upload
+function compressImage(dataUri, maxPx = 400) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
+
+// Logo upload widget used inside OrgBillingSection
+function OrgLogoUpload({ logo, onUpdated }) {
+  const inputRef = useRef(null);
+  const [preview, setPreview] = useState(logo || "");
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { setPreview(logo || ""); }, [logo]);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast.error("Only image files supported");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const compressed = await compressImage(ev.target.result);
+        setPreview(compressed);
+        const { data } = await api.patch("/org/me/logo", { logo: compressed });
+        onUpdated(data.org);
+        toast.success("Logo updated.");
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Upload failed.");
+        setPreview(logo || "");
+      } finally { setUploading(false); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemove = async () => {
+    if (!confirm("Remove organisation logo?")) return;
+    setUploading(true);
+    try {
+      const { data } = await api.patch("/org/me/logo", { logo: "" });
+      setPreview("");
+      onUpdated(data.org);
+      toast.success("Logo removed.");
+    } catch { toast.error("Failed to remove logo."); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <div className="flex items-center gap-4">
+      {/* Preview */}
+      <div
+        onClick={() => !uploading && inputRef.current?.click()}
+        className="w-20 h-16 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition border-2"
+        style={{ background: "var(--app-surface-low)",
+          borderColor: preview ? "var(--app-primary)" : "var(--app-border)",
+          borderStyle: preview ? "solid" : "dashed" }}
+        title="Click to upload logo"
+      >
+        {uploading ? (
+          <span className="h-5 w-5 rounded-full border-2 border-orange-400 border-t-transparent animate-spin" />
+        ) : preview ? (
+          <img src={preview} alt="org logo" className="max-w-full max-h-full object-contain p-1"
+            onError={() => setPreview("")} />
+        ) : (
+          <Upload className="h-5 w-5 text-app-soft" />
+        )}
+      </div>
+
+      <div>
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
+          className="btn-secondary rounded-xl text-xs px-3 py-2 flex items-center gap-1.5 disabled:opacity-50">
+          <Upload className="h-3.5 w-3.5" /> {preview ? "Change Logo" : "Upload Logo"}
+        </button>
+        {preview && (
+          <button type="button" onClick={handleRemove} disabled={uploading}
+            className="mt-1 text-[11px] text-app-soft hover:text-red-500 transition flex items-center gap-1">
+            <X className="h-3 w-3" /> Remove
+          </button>
+        )}
+        <p className="text-[10px] text-app-soft mt-1">PNG, JPG or SVG · appears on invoice letterhead</p>
+      </div>
+
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
+// ── Organisation Billing Section ─────────────────────────────────────────────
+const BILLING_REQUIRED = ["address", "gstNo", "pan", "bankAccountName", "bankAccountNo", "bankIfsc"];
+const BILLING_FIELDS = [
+  { section: "Organisation Identity", fields: [
+    { key: "address",   label: "Registered Address", placeholder: "e.g. Plot No. 12, Sector 5, Mumbai 400001", col: 2 },
+    { key: "phone",     label: "Contact Number",      placeholder: "e.g. 9800000000" },
+    { key: "email",     label: "Official Email",      placeholder: "e.g. accounts@yourcompany.com" },
+  ]},
+  { section: "Tax & Compliance", fields: [
+    { key: "gstNo", label: "GST Number",    placeholder: "e.g. 27XXXXX0000X1ZX", mono: true },
+    { key: "pan",   label: "PAN Number",    placeholder: "e.g. XXXXX0000X",      mono: true },
+    { key: "cin",   label: "CIN",           placeholder: "e.g. U70200MH2020OPC000000", mono: true },
+    { key: "rera",  label: "RERA Reg. No.", placeholder: "e.g. A51800000000",    mono: true },
+  ]},
+  { section: "Bank Details (for invoice payment section)", fields: [
+    { key: "bankAccountName", label: "Account Name",     placeholder: "e.g. Your Company Name" },
+    { key: "bankAccountNo",   label: "Account Number",   placeholder: "e.g. 000000000000", mono: true },
+    { key: "bankIfsc",        label: "IFSC Code",        placeholder: "e.g. SBIN0000000",  mono: true },
+    { key: "bankName",        label: "Bank Name",        placeholder: "e.g. State Bank of India", bankSearch: true },
+    { key: "bankBranch",      label: "Branch / Address", placeholder: "e.g. MG Road Branch, Mumbai", col: 2 },
+  ]},
+];
+
+function OrgBillingSection({ org, updateOrg }) {
+  const [form, setForm] = useState({
+    address: "", phone: "", email: "", gstNo: "", pan: "", cin: "", rera: "",
+    bankAccountName: "", bankAccountNo: "", bankIfsc: "", bankName: "", bankBranch: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (org) {
+      setForm({
+        address:         org.address         || "",
+        phone:           org.phone           || "",
+        email:           org.email           || "",
+        gstNo:           org.gstNo           || "",
+        pan:             org.pan             || "",
+        cin:             org.cin             || "",
+        rera:            org.rera            || "",
+        bankAccountName: org.bankAccountName || "",
+        bankAccountNo:   org.bankAccountNo   || "",
+        bankIfsc:        org.bankIfsc        || "",
+        bankName:        org.bankName        || "",
+        bankBranch:      org.bankBranch      || "",
+      });
+    }
+  }, [org]);
+
+  const filledCount  = BILLING_REQUIRED.filter(k => form[k]?.trim()).length;
+  const isComplete   = filledCount === BILLING_REQUIRED.length;
+  const completePct  = Math.round((filledCount / BILLING_REQUIRED.length) * 100);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const save = async () => {
+    const missing = BILLING_REQUIRED.filter(k => !form[k]?.trim());
+    if (missing.length) {
+      toast.error("Please fill all required fields (marked *) before saving.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data } = await api.patch("/org/me/billing", form);
+      updateOrg(data.org);
+      toast.success("Billing details saved.");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Failed to save.");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <section className="card p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+          <Building2 className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-app">Organisation &amp; Billing Details</p>
+            {isComplete
+              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.12)", color: "#10b981" }}>
+                  <CheckCircle2 className="h-3 w-3" /> Complete
+                </span>
+              : <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                  <AlertCircle className="h-3 w-3" /> {filledCount}/{BILLING_REQUIRED.length} required fields
+                </span>
+            }
+          </div>
+          <p className="text-sm text-app-soft mt-0.5">
+            These details appear on every brokerage invoice sent to developers. Required fields must be filled to generate invoices.
+          </p>
+          {/* Progress bar */}
+          <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-border)", maxWidth: 280 }}>
+            <div className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${completePct}%`, background: isComplete ? "#10b981" : "var(--app-primary)" }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Required fields banner */}
+      {!isComplete && (
+        <div className="rounded-2xl px-4 py-3 flex items-start gap-3 text-sm"
+          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#f59e0b" }} />
+          <p style={{ color: "#92400e" }} className="dark:text-yellow-300">
+            <strong>Required to generate invoices:</strong> Address, GST Number, PAN, and all Bank Details must be filled.
+          </p>
+        </div>
+      )}
+
+      {/* Logo upload */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-bold text-app-soft uppercase tracking-wider">Organisation Logo</span>
+          <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
+        </div>
+        <OrgLogoUpload logo={org?.logo} onUpdated={updateOrg} />
+      </div>
+
+      {/* Field sections */}
+      {BILLING_FIELDS.map(({ section, fields }) => (
+        <div key={section}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-bold text-app-soft uppercase tracking-wider">{section}</span>
+            <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {fields.map(({ key, label, placeholder, mono, col, bankSearch }) => (
+              <div key={key} className={col === 2 ? "sm:col-span-2" : ""}>
+                <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1 block">
+                  {label}
+                  {BILLING_REQUIRED.includes(key) && (
+                    <span style={{ color: "#ef4444" }}>*</span>
+                  )}
+                </label>
+                {bankSearch ? (
+                  <BankSearchInput
+                    value={form[key]}
+                    onChange={v => set(key, v)}
+                    className="input w-full text-sm"
+                    style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
+                      ? { borderColor: "rgba(245,158,11,0.6)" }
+                      : {}}
+                  />
+                ) : (
+                  <input
+                    value={form[key]}
+                    onChange={e => set(key, ["gstNo","pan","cin","bankIfsc"].includes(key)
+                      ? e.target.value.toUpperCase()
+                      : e.target.value)}
+                    placeholder={placeholder}
+                    className={`input w-full text-sm ${mono ? "font-mono" : ""}`}
+                    style={BILLING_REQUIRED.includes(key) && !form[key]?.trim()
+                      ? { borderColor: "rgba(245,158,11,0.6)" }
+                      : {}}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div className="flex justify-end pt-1">
+        <button onClick={save} disabled={saving}
+          className="btn-primary rounded-xl px-6 py-2.5 text-sm flex items-center gap-2 disabled:opacity-50">
+          {saving
+            ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            : <FileText className="h-4 w-4" />}
+          {saving ? "Saving…" : "Save Billing Details"}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export default function Settings() {
   useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
@@ -126,8 +475,10 @@ export default function Settings() {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr,1.5fr]">
+      <div className={`grid grid-cols-1 gap-6 ${user?.role === "admin" ? "xl:grid-cols-[1fr,1.4fr]" : ""}`}>
+        {/* ── Left column: Personal Profile ── */}
         <section className="card p-6 space-y-5">
+          {/* Avatar + identity */}
           <div className="flex items-center gap-4">
             {profilePreview ? (
               <img src={profilePreview} alt={form.name} className="h-20 w-20 rounded-[1.5rem] object-cover border" style={{ borderColor: "var(--app-border)" }} />
@@ -143,28 +494,9 @@ export default function Settings() {
             </div>
           </div>
 
-          <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
-            <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role Access</div>
-            <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
-            <div>
-              <label className="label">Role</label>
-              <CustomSelect
-                value={form.role}
-                onChange={(v) => setValue("role")({ target: { value: v } })}
-                options={[
-                  { value: "admin", label: "Admin" },
-                  { value: "manager", label: "Manager" },
-                  { value: "agent", label: "Sales Agent" },
-                ]}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="card p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Profile form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="label">Full Name</label>
                 <input className="input" value={form.name} onChange={setValue("name")} />
@@ -173,27 +505,43 @@ export default function Settings() {
                 <label className="label">Phone</label>
                 <input className="input" value={form.phone} onChange={setValue("phone")} />
               </div>
-              <div className="md:col-span-2">
+              <div className="sm:col-span-2">
                 <label className="label">Email</label>
                 <input className="input text-app-soft" style={{ background: "var(--app-surface-low)" }} value={user?.email || ""} disabled />
               </div>
-              <div className="md:col-span-2">
-                <label className="label flex items-center gap-2"><Camera className="h-4 w-4 text-orange-500" /> Profile Picture URL</label>
-                <input className="input" value={form.avatar} onChange={setValue("avatar")} placeholder="https://example.com/avatar.jpg" />
-              </div>
-              <div className="md:col-span-2">
-                <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Or Upload Profile Picture</label>
+              <div className="sm:col-span-2">
+                <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Profile Picture</label>
                 <label className="btn-secondary inline-flex cursor-pointer rounded-xl">
                   <ImagePlus className="h-4 w-4" /> Choose Image
                   <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" className="hidden" onChange={handleAvatarUpload} />
                 </label>
-                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB. The image is stored directly in your CRM profile.</p>
+                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB.</p>
               </div>
             </div>
 
+            {/* Role */}
+            <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role Access</div>
+              <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
+              <div>
+                <label className="label">Role</label>
+                <CustomSelect
+                  value={form.role}
+                  onChange={(v) => setValue("role")({ target: { value: v } })}
+                  options={[
+                    { value: "admin", label: "Admin" },
+                    { value: "manager", label: "Manager" },
+                    { value: "agent", label: "Sales Agent" },
+                  ]}
+                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                />
+              </div>
+            </div>
+
+            {/* Change password */}
             <div className="rounded-[1.25rem] p-5 stitch-surface-muted space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-app"><KeyRound className="h-4 w-4 text-orange-500" /> Change Password</div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="label">Current Password</label>
                   <div className="relative">
@@ -225,6 +573,11 @@ export default function Settings() {
             </div>
           </form>
         </section>
+
+        {/* ── Right column: Org & Billing (admin only) ── */}
+        {user?.role === "admin" && (
+          <OrgBillingSection org={org} updateOrg={updateOrg} />
+        )}
       </div>
 
       {/* Auto-assign toggle - admin + super_admin */}

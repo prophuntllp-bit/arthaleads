@@ -82,7 +82,7 @@ async function submitLead(req, res, next) {
       name: name.trim(),
       phone: phone.trim(),
       email: email?.trim() || "",
-      budget: budget ? Number(budget) : 0,
+      budget: { min: budget ? Number(budget) : 0, max: budget ? Number(budget) : 0, currency: "INR" },
       propertyType: propertyType || "Apartment",
       source: "QR Code",
       orgId: org._id,
@@ -106,6 +106,7 @@ async function submitLead(req, res, next) {
 
     res.status(201).json({ success: true, message: "Your details have been submitted. We'll be in touch soon!" });
   } catch (err) {
+    console.error("[PUBLIC] submitLead error:", err.message, err.stack);
     next(err);
   }
 }

@@ -1,6 +1,8 @@
 ﻿const express = require("express");
 const Organization = require("../models/Organization");
+const User = require("../models/User");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
+const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
 const router = express.Router();
 
@@ -29,24 +31,45 @@ router.put("/me", authorize("admin"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// PATCH /api/org/me/profile - update org contact & billing details (admin only)
-router.patch("/me/profile", authorize("admin"), async (req, res, next) => {
+// POST /api/org/me/onboarding — first-run setup wizard (admin only)
+// Saves org business details + user personal profile in one shot and marks
+// onboarding complete so the blocking gate dismisses permanently.
+router.post("/me/onboarding", authorize("admin"), async (req, res, next) => {
   try {
-    const ALLOWED = ["phone","email","address","gstNo","pan","cin","rera",
-                     "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
-    const update = {};
-    for (const key of ALLOWED) {
-      if (req.body[key] !== undefined) update[key] = req.body[key];
-    }
-    if (!Object.keys(update).length) {
-      return res.status(400).json({ success: false, message: "No valid fields provided." });
-    }
+    const {
+      name, industry, companySize, phone, email, city, address,
+      gstNo, pan, rera,
+      fullName, personalPhone,
+    } = req.body;
+
+    // Build org update — only touch fields that were actually sent
+    const orgUpdate = { onboardingCompletedAt: new Date() };
+    if (name)        orgUpdate.name        = name.trim();
+    if (industry)    orgUpdate.industry    = industry;
+    if (companySize) orgUpdate.companySize = companySize;
+    if (phone)       orgUpdate.phone       = phone.trim();
+    if (email)       orgUpdate.email       = email.trim();
+    if (city)        orgUpdate.city        = city.trim();
+    if (address)     orgUpdate.address     = address.trim();
+    if (gstNo)       orgUpdate.gstNo       = gstNo.trim().toUpperCase();
+    if (pan)         orgUpdate.pan         = pan.trim().toUpperCase();
+    if (rera)        orgUpdate.rera        = rera.trim();
+
     const org = await Organization.findByIdAndUpdate(
-      req.orgId, { $set: update }, { new: true, runValidators: false }
+      req.orgId, { $set: orgUpdate }, { new: true, runValidators: true }
     );
     if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
     invalidateOrgCache(req.orgId);
-    res.json({ success: true, org });
+
+    // Update the admin's personal profile
+    const userUpdate = {};
+    if (fullName)     userUpdate.name  = fullName.trim();
+    if (personalPhone) userUpdate.phone = personalPhone.trim();
+    const user = Object.keys(userUpdate).length
+      ? await User.findByIdAndUpdate(req.user._id, { $set: userUpdate }, { new: true })
+      : await User.findById(req.user._id);
+
+    res.json({ success: true, org, user });
   } catch (err) { next(err); }
 });
 
@@ -81,9 +104,11 @@ router.get("/me/attendance-settings", async (req, res, next) => {
       success: true,
       settings: {
         shiftStartTime: s.shiftStartTime || "09:30",
+        shiftEndTime:   s.shiftEndTime   || "19:00",
         bufferMinutes:  s.bufferMinutes  ?? 15,
         halfDayMinutes: s.halfDayMinutes ?? 240,
         fullDayMinutes: s.fullDayMinutes ?? 480,
+        requireSelfie:  s.requireSelfie  ?? true,
       },
     });
   } catch (err) { next(err); }
@@ -92,12 +117,14 @@ router.get("/me/attendance-settings", async (req, res, next) => {
 // PATCH /api/org/me/attendance-settings — update shift/attendance config (admin only)
 router.patch("/me/attendance-settings", authorize("admin"), async (req, res, next) => {
   try {
-    const { shiftStartTime, bufferMinutes, halfDayMinutes, fullDayMinutes } = req.body;
+    const { shiftStartTime, shiftEndTime, bufferMinutes, halfDayMinutes, fullDayMinutes, requireSelfie } = req.body;
     const update = {};
     if (shiftStartTime)    update["attendanceSettings.shiftStartTime"] = shiftStartTime;
+    if (shiftEndTime)      update["attendanceSettings.shiftEndTime"]   = shiftEndTime;
     if (bufferMinutes  != null) update["attendanceSettings.bufferMinutes"]  = Math.max(0, parseInt(bufferMinutes));
     if (halfDayMinutes != null) update["attendanceSettings.halfDayMinutes"] = Math.max(1, parseInt(halfDayMinutes));
     if (fullDayMinutes != null) update["attendanceSettings.fullDayMinutes"] = Math.max(1, parseInt(fullDayMinutes));
+    if (requireSelfie  != null) update["attendanceSettings.requireSelfie"]  = Boolean(requireSelfie);
 
     if (!Object.keys(update).length) {
       return res.status(400).json({ success: false, message: "No valid fields provided." });
@@ -109,6 +136,61 @@ router.patch("/me/attendance-settings", authorize("admin"), async (req, res, nex
 
     invalidateOrgCache(req.orgId);
     res.json({ success: true, settings: org.attendanceSettings });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/org/me/logo — upload org logo (admin only); tries Cloudinary, falls back to base64
+router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
+  try {
+    const { logo } = req.body;
+    if (logo === undefined) return res.status(400).json({ success: false, message: "logo field is required." });
+
+    let logoUrl = "";
+    if (logo !== "") {
+      const isBase64 = logo.startsWith("data:image/");
+      const isUrl    = logo.startsWith("https://") || logo.startsWith("http://");
+      if (!isBase64 && !isUrl) return res.status(400).json({ success: false, message: "logo must be a data-URI or HTTPS URL." });
+
+      if (isBase64) {
+        try {
+          logoUrl = await uploadOrgLogo(logo, req.orgId.toString());
+        } catch {
+          logoUrl = logo; // Cloudinary not configured — store base64 directly
+        }
+      } else {
+        logoUrl = logo;
+      }
+    } else {
+      deleteOrgLogo(req.orgId.toString()); // fire-and-forget
+    }
+
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { logo: logoUrl }, { new: true }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, org });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/org/me/billing — save invoice letterhead / billing details (admin only)
+router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
+  try {
+    const ALLOWED = ["address","phone","email","gstNo","pan","cin","rera",
+                     "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
+    const update = {};
+    for (const k of ALLOWED) {
+      if (req.body[k] !== undefined) update[k] = String(req.body[k]).trim();
+    }
+    if (!Object.keys(update).length) {
+      return res.status(400).json({ success: false, message: "No valid fields provided." });
+    }
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { $set: update }, { new: true, runValidators: false }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found." });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, org });
   } catch (err) { next(err); }
 });
 

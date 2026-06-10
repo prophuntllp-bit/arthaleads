@@ -8,6 +8,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState({
     search: initialFilters.search || "",
     status: initialFilters.status || "",
@@ -46,7 +47,9 @@ export function useLeads(mode = "normal", initialFilters = {}) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, page, limit, endpoint]);
+  }, [filters, page, limit, endpoint, refreshKey]);
+
+  const refetch = () => setRefreshKey((k) => k + 1);
 
   const setFilter = (key, value) => {
     setPage(1);
@@ -92,6 +95,7 @@ export function useLeads(mode = "normal", initialFilters = {}) {
     loading,
     upsertLead,
     removeLead,
+    refetch,
     limit,
     changeLimit,
     LIMIT: limit,

@@ -3,6 +3,7 @@ const router    = express.Router();
 const { protect } = require("../middlewares/auth");
 const Booking   = require("../models/Booking");
 const Developer = require("../models/Developer");
+const Invoice   = require("../models/Invoice");
 
 router.use(protect);
 
@@ -126,12 +127,14 @@ router.put("/:id", async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// DELETE /api/bookings/:id
+// DELETE /api/bookings/:id — also deletes linked invoice if present
 router.delete("/:id", async (req, res, next) => {
   try {
     const b = await Booking.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!b) return res.status(404).json({ success: false, message: "Booking not found." });
-    if (b.invoiceId) return res.status(400).json({ success: false, message: "Cannot delete a booking that has an invoice." });
+    if (b.invoiceId) {
+      await Invoice.findByIdAndDelete(b.invoiceId);
+    }
     await b.deleteOne();
     res.json({ success: true });
   } catch (e) { next(e); }

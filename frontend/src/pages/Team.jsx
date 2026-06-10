@@ -195,7 +195,7 @@ export default function Team() {
                   {users.length}/{memberLimit} members · {planLabel(org?.plan)}
                 </span>
               )}
-              <button className="btn-primary rounded-xl" onClick={openCreate} disabled={atLimit}
+              <button data-tour="invite-btn" className="btn-primary rounded-xl" onClick={openCreate} disabled={atLimit}
                 title={atLimit ? `${planLabel(org?.plan)} plan limit reached. Upgrade to add more members.` : undefined}>
                 <Plus className="h-4 w-4" /> Add Team Member
               </button>

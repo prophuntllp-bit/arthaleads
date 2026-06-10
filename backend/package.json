@@ -27,6 +27,7 @@
     "nodemailer": "^8.0.7",
     "openai": "^6.41.0",
     "resend": "^6.12.2",
+    "firebase-admin": "^12.7.0",
     "web-push": "^3.6.7",
     "winston": "^3.17.0"
   },

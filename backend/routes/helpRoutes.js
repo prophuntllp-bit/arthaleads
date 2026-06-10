@@ -5,7 +5,8 @@ const mongoose = require("mongoose");
 const { protect } = require("../middlewares/auth");
 const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
-const Lead = require("../models/Lead");
+const Lead     = require("../models/Lead");
+const AiUsage  = require("../models/AiUsage");
 
 router.use(protect);
 
@@ -69,6 +70,22 @@ router.post("/ask", async (req, res, next) => {
     const context = await fetchPageContext(page, req.user._id, req.user.orgId, resolvedLeadId || null);
 
     const result = await answerHelpQuestion(question, page, userName, context, history);
+
+    // Fire-and-forget: increment monthly AI usage counter for this org
+    const month = new Date().toISOString().slice(0, 7); // "2026-06"
+    AiUsage.findOneAndUpdate(
+      { orgId: req.user.orgId, month },
+      {
+        $inc: {
+          calls:            1,
+          promptTokens:     result._usage?.prompt_tokens     || 0,
+          completionTokens: result._usage?.completion_tokens || 0,
+          totalTokens:      result._usage?.total_tokens      || 0,
+        },
+      },
+      { upsert: true, new: true }
+    ).catch(() => {});
+
     res.json({ success: true, ...result });
   } catch (err) {
     if (err.message?.includes("OPENAI_API_KEY")) {

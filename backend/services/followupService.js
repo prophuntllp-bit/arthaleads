@@ -18,7 +18,7 @@ const followupService = {
 
     const baseLeadFilter = {
       orgId: user.orgId,
-      isArchived: false,
+      isArchived: { $ne: true },
       isDeleted: { $ne: true },
     };
 
@@ -114,7 +114,7 @@ const followupService = {
               ],
             },
             status: { $ifNull: ["$remark", ""] },
-            assignedToName: "",
+            assignedToName: { $ifNull: ["$followUpSetByName", ""] },
           }},
           { $project: { _proj: 0 } },
         ],

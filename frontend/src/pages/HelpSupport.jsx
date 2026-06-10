@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { AppSelect } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 
 // ── Static data ──────────────────────────────────────────────────────────────
@@ -19,9 +20,9 @@ const supportCards = [
   {
     icon: PhoneCall,
     title: "Call Support",
-    detail: "+91 70668 80808",
+    detail: "+91 80801 97945",
     note: "For urgent CRM access or lead routing issues.",
-    href: "tel:+917066880808",
+    href: "tel:+918080197945",
   },
   {
     icon: Mail,
@@ -33,9 +34,9 @@ const supportCards = [
   {
     icon: MessageSquareMore,
     title: "WhatsApp Help",
-    detail: "+91 744 743 0431",
+    detail: "+91 80801 97945",
     note: "Quick help for day-to-day sales team questions.",
-    href: "https://wa.me/917447430431",
+    href: "https://wa.me/918080197945?text=Hi%2C+I+need+help+with+Arthaleads+CRM.",
   },
 ];
 
@@ -51,7 +52,7 @@ const faqs = [
 const quickActions = [
   { title: "Need onboarding support?", body: "Ask your admin to add your profile, assign your role, and share your login credentials. Once added, sign in at arthaleads.com and you are ready to go.", action: { label: "Go to Sign In", href: "/login" } },
   { title: "Need missing lead data?", body: "Use the Import option on the Leads screen to upload a CSV. Export the current list first as a backup before doing bulk updates. Supported format: Name, Phone, Email, Source, Status.", action: { label: "Go to Leads", href: "/leads" } },
-  { title: "Need admin access?", body: "Admins control roles and permissions. If you need elevated access, contact your system owner or reach out via WhatsApp support.", action: { label: "WhatsApp Support", href: "https://wa.me/917447430431", external: true } },
+  { title: "Need admin access?", body: "Admins control roles and permissions. If you need elevated access, contact your system owner or reach out via WhatsApp support.", action: { label: "WhatsApp Support", href: "https://wa.me/918080197945?text=Hi%2C+I+need+help+with+Arthaleads+CRM.", external: true } },
   { title: "How do I connect Facebook Lead Ads?", body: "Go to Automation in the sidebar, click Connect Facebook, approve the popup, then select your Page and Lead Ad Form. Leads will flow in automatically after setup.", action: { label: "Go to Automation", href: "/automation" } },
 ];
 
@@ -527,17 +528,19 @@ function RaiseTicketModal({ onClose, onSuccess }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5 uppercase tracking-wide">Category</label>
-              <select className="input w-full" value={form.category}
-                onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+              <AppSelect
+                value={form.category}
+                onChange={v => setForm(f => ({ ...f, category: v }))}
+                options={CATEGORIES.map(c => ({ value: c.value, label: c.label }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5 uppercase tracking-wide">Priority</label>
-              <select className="input w-full" value={form.priority}
-                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-              </select>
+              <AppSelect
+                value={form.priority}
+                onChange={v => setForm(f => ({ ...f, priority: v }))}
+                options={PRIORITIES.map(p => ({ value: p.value, label: p.label }))}
+              />
             </div>
           </div>
 

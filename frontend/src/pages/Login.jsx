@@ -1,148 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Eye, EyeOff, ShieldCheck, Phone, Mail } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
-import api from "../services/api";
-
-// ── Phone OTP panel - OTP sent to registered email (no SMS/reCAPTCHA needed) ──
-function PhoneOtpPanel({ onLoginSuccess }) {
-  const [phone, setPhone]         = useState("");
-  const [otp, setOtp]             = useState("");
-  const [step, setStep]           = useState("phone"); // "phone" | "otp"
-  const [loading, setLoading]     = useState(false);
-  const [resendTimer, setTimer]   = useState(0);
-  const [err, setErr]             = useState("");
-  const [maskedEmail, setMasked]  = useState("");
-  const timerRef                  = useRef(null);
-
-  useEffect(() => () => clearInterval(timerRef.current), []);
-
-  const startCountdown = () => {
-    setTimer(30);
-    timerRef.current = setInterval(() => {
-      setTimer((t) => { if (t <= 1) { clearInterval(timerRef.current); return 0; } return t - 1; });
-    }, 1000);
-  };
-
-  const sendOtp = async () => {
-    setErr("");
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10) { setErr("Enter a valid 10-digit mobile number."); return; }
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/otp/send", { phone: digits });
-      setMasked(data.email || "");
-      setStep("otp");
-      startCountdown();
-      toast.success("OTP sent to your registered email!");
-    } catch (e) {
-      setErr(e.response?.data?.message || "Failed to send OTP. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    setErr("");
-    if (otp.length !== 6) { setErr("Enter the 6-digit OTP."); return; }
-    setLoading(true);
-    try {
-      const { data } = await api.post("/auth/otp/verify", { phone, otp });
-      onLoginSuccess(data);
-    } catch (e) {
-      setErr(e.response?.data?.message || "Invalid or expired OTP. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {step === "phone" && (
-        <>
-          <div>
-            <label className="label">Mobile Number</label>
-            <input
-              className="input"
-              type="tel"
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); setErr(""); }}
-              placeholder="10-digit mobile number"
-              onKeyDown={(e) => e.key === "Enter" && sendOtp()}
-              autoFocus
-              maxLength={15}
-            />
-            <p className="mt-1 text-[11px] text-app-soft">We'll send a 6-digit OTP to your registered email address.</p>
-          </div>
-          {err && <p className="text-sm text-red-400 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5">{err}</p>}
-          <button
-            onClick={sendOtp}
-            disabled={loading || !phone}
-            className="btn-primary w-full justify-center py-3 disabled:opacity-50"
-          >
-            {loading ? <><Spinner size="sm" /> Sending OTP…</> : "Send OTP"}
-          </button>
-        </>
-      )}
-
-      {step === "otp" && (
-        <>
-          <div className="rounded-2xl bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-600 text-center">
-            OTP sent to your email <span className="font-bold">{maskedEmail}</span>
-            <p className="text-xs text-green-500/80 mt-1">Check your inbox (and spam folder)</p>
-          </div>
-          <div>
-            <label className="label">Enter 6-digit OTP</label>
-            <input
-              className="input text-center text-xl tracking-[0.35em] font-bold"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "")); setErr(""); }}
-              onKeyDown={(e) => e.key === "Enter" && verifyOtp()}
-              autoFocus
-              placeholder="------"
-            />
-          </div>
-          {err && <p className="text-sm text-red-400 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5">{err}</p>}
-          <button
-            onClick={verifyOtp}
-            disabled={loading || otp.length < 6}
-            className="btn-primary w-full justify-center py-3 disabled:opacity-50"
-          >
-            {loading ? <><Spinner size="sm" /> Verifying…</> : "Verify & Sign In"}
-          </button>
-          <div className="flex items-center justify-between text-xs">
-            <button
-              onClick={() => { setStep("phone"); setOtp(""); setErr(""); clearInterval(timerRef.current); setTimer(0); }}
-              className="text-app-soft hover:text-app transition"
-            >
-              ← Change number
-            </button>
-            {resendTimer > 0 ? (
-              <span className="text-app-soft">Resend in {resendTimer}s</span>
-            ) : (
-              <button onClick={sendOtp} disabled={loading} className="text-orange-500 hover:underline font-semibold disabled:opacity-50">
-                Resend OTP
-              </button>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ── Main Login page ───────────────────────────────────────────────────────────
 export default function Login() {
   useEffect(() => { document.title = "Sign In - Arthaleads Real Estate CRM"; }, []);
-  const { login, googleLogin, persistAuth } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab]         = useState("email"); // "email" | "phone"
   const [form, setForm]       = useState({ email: "", password: "" });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -154,6 +22,10 @@ export default function Login() {
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setErr("Google sign-in failed. Please try again.");
+        return;
+      }
       setErr("");
       setGLoading(true);
       try {
@@ -173,37 +45,37 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     setLoading(true);
-    const RETRY_DELAYS = [6000, 10000, 15000];
+    // Retry only for genuine cold-start network errors (no response at all).
+    // CORS failures also appear as network errors but won't resolve on retry —
+    // we limit to 2 retries so Samsung users don't wait 30+ seconds for a CORS
+    // block that will never resolve.
+    const RETRY_DELAYS = [6000, 12000];
     for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       try {
         await login(form.email, form.password);
         toast.success("Welcome back!");
+        setLoading(false);
         navigate("/dashboard");
         return;
       } catch (e) {
         const isNetworkErr = !e.response && e.request;
         if (isNetworkErr && attempt < RETRY_DELAYS.length) {
           const secs = RETRY_DELAYS[attempt] / 1000;
-          setErr(`Server is warming up… retrying in ${secs}s`);
+          setErr(`Connecting to server… retrying in ${secs}s`);
           await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
           setErr("");
           continue;
         }
         setErr(
           e.response?.data?.message ||
-          (isNetworkErr ? "Could not reach the server. Check your connection and try again." : "Login failed. Please check your email/phone and password.")
+          (isNetworkErr
+            ? "Could not reach the server. Please check your internet connection and try again. If on mobile data, try switching to Wi-Fi."
+            : "Login failed. Please check your email/phone and password.")
         );
         break;
       }
     }
     setLoading(false);
-  };
-
-  // Called by PhoneOtpPanel after backend verifies OTP + returns auth data
-  const handlePhoneSuccess = (data) => {
-    persistAuth(data);  // stores user+org in context & localStorage
-    toast.success("Welcome back!");
-    navigate("/dashboard");
   };
 
   return (
@@ -278,33 +150,12 @@ export default function Login() {
               <ShieldCheck className="h-5 w-5 text-orange-500" />
               <div>
                 <p className="text-sm font-semibold text-app">Secure access</p>
-                <p className="text-xs text-app-soft">Protected with role-based access and OTP verification.</p>
+                <p className="text-xs text-app-soft">Protected with role-based access controls.</p>
               </div>
             </div>
 
-            {/* Tab switcher */}
-            <div className="flex gap-1 p-1 rounded-2xl mb-5" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <button
-                onClick={() => { setTab("email"); setErr(""); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  tab === "email" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5" /> Email
-              </button>
-              <button
-                onClick={() => { setTab("phone"); setErr(""); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  tab === "phone" ? "bg-orange-500 text-white shadow-sm" : "text-app-soft hover:text-app"
-                }`}
-              >
-                <Phone className="w-3.5 h-3.5" /> Phone OTP
-              </button>
-            </div>
-
             {/* Email/Password form */}
-            {tab === "email" && (
-              <form onSubmit={submit} className="space-y-4" autoComplete="off">
+            <form onSubmit={submit} className="space-y-4" autoComplete="off">
                 <div>
                   <label className="label">Email or Phone</label>
                   <input
@@ -364,11 +215,6 @@ export default function Login() {
                   </Link>
                 </div>
               </form>
-            )}
-
-            {tab === "phone" && (
-              <PhoneOtpPanel onLoginSuccess={handlePhoneSuccess} />
-            )}
 
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />

@@ -192,6 +192,11 @@ const authController = {
       const { phone, email } = req.body;
       if (!phone || !email) return next(new AppError("Phone and email are required", 400));
 
+      // Basic email format check before sending an OTP to it
+      if (!email.includes("@") || !email.includes(".")) {
+        return next(new AppError("Enter a valid email address", 400));
+      }
+
       const norm = normPhone(phone);
       if (norm.length !== 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));
 
@@ -252,7 +257,9 @@ const authController = {
       });
 
       // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
-      const [local, domain] = email.split("@");
+      const atIdx = email.lastIndexOf("@");
+      const local  = email.slice(0, atIdx);
+      const domain = email.slice(atIdx + 1);
       const masked = local.length <= 2 ? `${local[0]}***@${domain}` : `${local[0]}${local[1]}***@${domain}`;
       res.json({ success: true, maskedEmail: masked });
     } catch (err) {
@@ -273,7 +280,21 @@ const authController = {
       if (Date.now() > new Date(record.expiresAt).getTime()) return next(new AppError("OTP has expired. Please request a new one.", 400));
 
       const hash = crypto.createHash("sha256").update(String(otp)).digest("hex");
-      if (hash !== record.otpHash) return next(new AppError("Invalid OTP. Please check and try again.", 400));
+      if (hash !== record.otpHash) {
+        // Count this failure. A 6-digit OTP is only 1,000,000 combinations, so the
+        // IP rate limiter alone is bypassable with rotating proxies. Cap guesses per
+        // OTP to 5 — after that the record is destroyed and a new OTP is required.
+        const updated = await SignupOtp.findOneAndUpdate(
+          { phone: norm },
+          { $inc: { attempts: 1 } },
+          { new: true }
+        );
+        if (updated && updated.attempts >= 5) {
+          await SignupOtp.deleteOne({ phone: norm });
+          return next(new AppError("Too many incorrect attempts. Please request a new OTP.", 429));
+        }
+        return next(new AppError("Invalid OTP. Please check and try again.", 400));
+      }
 
       // Issue a short-lived phone-verified token (15 min) — included in signup body
       const phoneToken = jwt.sign(
@@ -330,8 +351,8 @@ const authController = {
     try {
       const { token } = req.params;
       const { password } = req.body;
-      if (!password || password.length < 6) {
-        return next(new AppError("Password must be at least 6 characters", 400));
+      if (!password || password.length < 8) {
+        return next(new AppError("Password must be at least 8 characters", 400));
       }
       const data = await authService.resetPassword(token, password);
       sendAuthResponse(res, 200, data);

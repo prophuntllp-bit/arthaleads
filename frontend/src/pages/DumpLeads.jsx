@@ -165,12 +165,13 @@ export default function DumpLeads() {
   };
 
   // ── Export ──────────────────────────────────────────────────────────────────
-  const exportRows = async (type) => {
+  // Pass `overrideSource` to export a specific set (e.g. all leads, bypassing selection)
+  const exportRows = async (type, overrideSource) => {
     try {
-      // If leads are selected, export only those; otherwise export all
-      const source = selectedIds.size > 0
-        ? leads.filter((l) => selectedIds.has(l._id + (l._type || "")))
-        : leads;
+      const source = overrideSource
+        ?? (selectedIds.size > 0
+          ? leads.filter((l) => selectedIds.has(l._id + (l._type || "")))
+          : leads);
 
       const rows = source.map((lead) => ({
         Name: lead.name,
@@ -608,10 +609,7 @@ export default function DumpLeads() {
                   className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app-soft transition hover:bg-black/5 dark:hover:bg-white/5"
                   onClick={() => {
                     setShowExportMenu(false);
-                    // temporarily clear selection to export all
-                    const saved = new Set(selectedIds);
-                    setSelectedIds(new Set());
-                    setTimeout(() => { exportRows(item.key); setSelectedIds(saved); }, 0);
+                    exportRows(item.key, leads);
                   }}
                 >
                   <Download className="h-4 w-4" /> {item.label}

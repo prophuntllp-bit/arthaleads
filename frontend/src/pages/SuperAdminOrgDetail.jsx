@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { PageLoader, Spinner } from "../components/UI";
+import { PageLoader, Spinner, AppSelect } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   ArrowLeft, Building2, Users, BarChart3, FolderOpen,
   CheckCircle2, XCircle, Clock, ExternalLink, LogIn,
   Mail, Phone, Shield, Zap, RefreshCw, HardDrive,
-  ShieldCheck, ChevronLeft, ChevronRight, Activity,
+  ShieldCheck, ChevronLeft, ChevronRight, Activity, Sparkles,
 } from "lucide-react";
 
 const PLAN_COLORS = {
@@ -82,6 +82,7 @@ function RoleBadge({ role }) {
 const fmtDate     = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";
 const fmtDateTime = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Never";
 const fmtFull     = d => d ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtMonth    = m => { if (!m) return "—"; const [y, mo] = m.split("-"); return new Date(+y, +mo - 1, 1).toLocaleDateString("en-IN", { month: "short", year: "numeric" }); };
 
 export default function SuperAdminOrgDetail() {
   const { id }        = useParams();
@@ -165,7 +166,7 @@ export default function SuperAdminOrgDetail() {
   if (loading) return <PageLoader />;
   if (!data)   return null;
 
-  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes } = data;
+  const { org, users, leadByStatus, totalLeads, projectCount, automations, storageBytes, aiUsage = [] } = data;
   const isTrialExpired = org.trialStatus === "expired";
   const effectivelyActive = org.isActive && !isTrialExpired;
   const planLabel = org.plan === "pro" ? "growth" : org.plan;
@@ -263,6 +264,7 @@ export default function SuperAdminOrgDetail() {
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
         {[
           { key: "overview",      label: "Overview" },
+          { key: "billing",       label: "Billing" },
           { key: "users",         label: `Users (${users.length})` },
           { key: "integrations",  label: "Integrations" },
           { key: "activity",      label: `Activity (${actTotal > 0 ? actTotal : "…"})` },
@@ -278,6 +280,7 @@ export default function SuperAdminOrgDetail() {
 
       {/* Overview tab */}
       {tab === "overview" && (
+        <div className="space-y-5">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Lead breakdown */}
           <div className="card overflow-hidden">
@@ -329,10 +332,130 @@ export default function SuperAdminOrgDetail() {
                   </p>
                 </div>
               ))}
+              {/* Onboarding fields */}
+              <div className="pt-2 mt-1 border-t space-y-3" style={{ borderColor: "var(--app-border)" }}>
+                {[
+                  { label: "Industry",   value: org.industry   || "—" },
+                  { label: "Team Size",  value: org.companySize || "—" },
+                  { label: "City",       value: org.city        || "—" },
+                  { label: "Onboarded",  value: org.onboardingCompletedAt ? fmtDate(org.onboardingCompletedAt) : "Pending" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <p className="text-xs text-app-soft w-28 flex-shrink-0">{label}</p>
+                    <p className={`text-xs font-semibold ${
+                      label === "Onboarded" && !org.onboardingCompletedAt
+                        ? "text-amber-500"
+                        : "text-app"
+                    }`}>
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
+
+        {/* AI Usage */}
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "var(--app-border)" }}>
+            <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <span className="font-bold text-app text-sm">AI Usage (last 6 months)</span>
+            <span className="ml-2 text-[10px] text-app-soft border rounded-full px-2 py-0.5" style={{ borderColor: "var(--app-border)" }}>
+              Help Bot + WA Drafts
+            </span>
+          </div>
+          {aiUsage.length === 0 ? (
+            <p className="text-xs text-app-soft text-center py-10">No AI usage recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="stitch-table min-w-[480px]">
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th className="text-center">Help Bot</th>
+                    <th className="text-center">WA Drafts</th>
+                    <th className="text-center">Total Calls</th>
+                    <th className="text-right">Tokens Used</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiUsage.map(row => {
+                    const helpCalls = (row.calls || 0) - (row.waDraftCalls || 0);
+                    return (
+                      <tr key={row.month}>
+                        <td className="font-semibold text-app">{fmtMonth(row.month)}</td>
+                        <td className="text-center text-app">{helpCalls}</td>
+                        <td className="text-center text-app">{row.waDraftCalls || 0}</td>
+                        <td className="text-center">
+                          <span className="font-bold text-indigo-500">{row.calls || 0}</span>
+                        </td>
+                        <td className="text-right">
+                          <span className="font-bold text-app">{(row.totalTokens || 0).toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        </div>
       )}
+
+      {/* Billing tab */}
+      {tab === "billing" && (() => {
+        const hasBilling = org.address || org.gstNo || org.pan || org.bankAccountNo;
+        const row = (label, value) => value ? (
+          <div key={label} className="flex items-start gap-2 py-2 border-b last:border-0" style={{ borderColor: "var(--app-border)" }}>
+            <p className="text-xs text-app-soft w-36 flex-shrink-0 pt-0.5">{label}</p>
+            <p className="text-xs font-semibold text-app break-all">{value}</p>
+          </div>
+        ) : null;
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Legal / Tax */}
+            <div className="card overflow-hidden">
+              <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
+                Legal &amp; Tax Details
+              </div>
+              {!hasBilling ? (
+                <p className="text-xs text-app-soft text-center py-10">Organisation has not configured billing details yet.</p>
+              ) : (
+                <div className="px-4 py-2">
+                  {row("Address",  org.address)}
+                  {row("Phone",    org.phone)}
+                  {row("Email",    org.email)}
+                  {row("GST No.",  org.gstNo)}
+                  {row("PAN",      org.pan)}
+                  {row("CIN",      org.cin)}
+                  {row("RERA No.", org.rera)}
+                  {!org.address && !org.gstNo && !org.pan && !org.cin && !org.rera && !org.phone && !org.email && (
+                    <p className="text-xs text-app-soft text-center py-6">No legal details set.</p>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Bank */}
+            <div className="card overflow-hidden">
+              <div className="px-4 py-3 border-b font-bold text-app text-sm" style={{ borderColor: "var(--app-border)" }}>
+                Bank Details
+              </div>
+              <div className="px-4 py-2">
+                {row("Account Name",   org.bankAccountName)}
+                {row("Account No.",    org.bankAccountNo)}
+                {row("IFSC Code",      org.bankIfsc)}
+                {row("Bank Name",      org.bankName)}
+                {row("Branch",         org.bankBranch)}
+                {!org.bankAccountName && !org.bankAccountNo && !org.bankIfsc && !org.bankName && !org.bankBranch && (
+                  <p className="text-xs text-app-soft text-center py-6">No bank details set.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Users tab */}
       {tab === "users" && (
@@ -467,16 +590,14 @@ export default function SuperAdminOrgDetail() {
         <div>
           {/* Filter + refresh */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <select
-              className="input text-sm px-3 py-2 w-52"
+            <AppSelect
               value={actAction}
-              onChange={e => { setActAction(e.target.value); setActPage(1); }}
-            >
-              <option value="">All Actions</option>
-              {ALL_ACTIONS.map(a => (
-                <option key={a} value={a}>{ACTION_LABELS[a]?.label}</option>
-              ))}
-            </select>
+              onChange={v => { setActAction(v); setActPage(1); }}
+              placeholder="All Actions"
+              options={[{ value: "", label: "All Actions" }, ...ALL_ACTIONS.map(a => ({ value: a, label: ACTION_LABELS[a]?.label }))]}
+              className="w-52"
+              triggerClassName="text-sm"
+            />
             {actAction && (
               <button onClick={() => { setActAction(""); setActPage(1); }}
                 className="text-xs text-app-soft hover:text-app transition cursor-pointer">

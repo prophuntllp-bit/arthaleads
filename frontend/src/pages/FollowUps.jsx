@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge } from "../components/UI";
+import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge, AppDatePicker } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -121,7 +121,9 @@ const FU_BOOKING_OPTIONS = [
   { value: "Booked",             label: "Booked",             color: "text-green-600" },
   { value: "Not Interested",     label: "Not Interested",     color: "text-red-500" },
   { value: "Not Reachable",      label: "Not Reachable",      color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-orange-500" },
+  { value: "Low Budget",         label: "Low Budget",         color: "text-orange-500" },
+  { value: "Other Location",     label: "Other Location",     color: "text-orange-600" },
+  { value: "Commercial",         label: "Commercial",         color: "text-indigo-600" },
 ];
 function FUBooking({ lead, onUpdate }) {
   const [saving, setSaving] = useState(false);
@@ -255,8 +257,8 @@ export default function FollowUps() {
       </div>
 
       {/* Section tabs */}
-      <div className="px-4 lg:px-6 pt-4">
-        <div className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+      <div className="pt-4">
+        <div data-tour="followup-tabs" className="flex gap-2 p-1 rounded-2xl w-full max-w-lg" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {SECTIONS.map(s => {
             const Icon = s.icon;
             const isActive = section === s.key;
@@ -278,7 +280,7 @@ export default function FollowUps() {
       </div>
 
       {/* Controls row - sort toggle + future date filters + my-only toggle */}
-      <div className="px-4 lg:px-6 pt-3 flex items-center gap-3 flex-wrap">
+      <div className="pt-3 flex items-center gap-3 flex-wrap">
         {/* My leads only toggle — admin/manager only */}
         {isAdmin && (
           <button
@@ -340,21 +342,11 @@ export default function FollowUps() {
           <>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">From</label>
-              <input
-                type="date"
-                className="input text-xs py-1.5 px-3"
-                value={from}
-                onChange={e => { setFrom(e.target.value); setPage(1); }}
-              />
+              <AppDatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} className="w-36" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">To</label>
-              <input
-                type="date"
-                className="input text-xs py-1.5 px-3"
-                value={to}
-                onChange={e => { setTo(e.target.value); setPage(1); }}
-              />
+              <AppDatePicker value={to} onChange={v => { setTo(v); setPage(1); }} className="w-36" />
             </div>
             {(from || to) && (
               <button
@@ -369,7 +361,7 @@ export default function FollowUps() {
       </div>
 
       {/* Table */}
-      <div className="px-4 lg:px-6 pt-4 pb-6">
+      <div className="pt-4 pb-6">
         {loading ? (
           <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
         ) : leads.length === 0 ? (
@@ -381,7 +373,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[1830px]" style={{ borderCollapse: "collapse" }}>
+              <table data-tour="followup-table" className="w-full text-xs min-w-[1960px]" style={{ borderCollapse: "collapse" }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>
@@ -404,6 +396,7 @@ export default function FollowUps() {
                     </th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Project</th>
+                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>Assigned To</th>
                     <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Type</th>
                     <th className="px-2.5 py-2 text-center font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 50, minWidth: 50 }}>Done</th>
                   </tr>
@@ -426,7 +419,8 @@ export default function FollowUps() {
                       <tr key={lead._id} className="group border-b transition-colors hover:bg-orange-500/5 cursor-pointer"
                         style={{ borderColor: "var(--app-border)" }}
                         onClick={() => {
-                          if (lead._type === "project" && lead.projectId) navigate(`/projects/${lead.projectId}`);
+                          if (lead._type === "project" && lead.projectId)
+                            navigate(`/projects/${lead.projectId}`, { state: { searchLead: lead.phone || lead.name } });
                           else navigate("/leads", { state: { openLeadId: lead._id } });
                         }}>
                         <td className="px-2.5 py-2">
@@ -436,7 +430,12 @@ export default function FollowUps() {
                           <PhoneActions phone={lead.phone} />
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <WhatsAppLink phone={lead.phone} name={lead.name} />
+                          <WhatsAppLink
+                            phone={lead.phone}
+                            name={lead.name}
+                            leadId={lead._id}
+                            projectId={lead._type === "project" ? lead.projectId : undefined}
+                          />
                         </td>
                         <td className="px-2.5 py-2">
                           {lead._type === "project"
@@ -478,6 +477,11 @@ export default function FollowUps() {
                           }
                         </td>
                         <td className="px-2.5 py-2">
+                          <span className="text-app truncate max-w-[110px] block text-xs font-medium">
+                            {lead.assignedToName || lead.assignedTo?.name || <span className="text-app-soft italic">Unassigned</span>}
+                          </span>
+                        </td>
+                        <td className="px-2.5 py-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${
                             lead._type === "project"
                               ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
@@ -489,7 +493,7 @@ export default function FollowUps() {
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <button onClick={handleMarkDone}
                             title="Mark follow-up as done - removes from list"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-0 group-hover:opacity-100">
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         </td>

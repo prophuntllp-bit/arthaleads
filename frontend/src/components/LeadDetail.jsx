@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { useCopilot } from "../context/CopilotContext";
+import { Pencil, RefreshCw, Sparkles } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
@@ -23,7 +24,15 @@ function Info({ label, value }) {
   );
 }
 
-export default function LeadDetail({ open, onClose, lead, onUpdated }) {
+export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
+  const { setFocusedLead } = useCopilot();
+
+  useEffect(() => {
+    if (open && lead) setFocusedLead(lead);
+    else setFocusedLead(null);
+    return () => setFocusedLead(null);
+  }, [open, lead?._id]);
+
   const [tab, setTab] = useState("info");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -147,7 +156,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
                   <div className="mb-2 flex items-center gap-2">
                     <Sparkles className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
                     <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">AI Drafted Message</span>
-                    <span className="text-[10px] text-app-soft ml-1">— edit before sending</span>
+                    <span className="text-[10px] text-app-soft ml-1">(edit before sending)</span>
                     <button type="button" onClick={() => setAiDraft(null)} className="ml-auto text-xs text-app-soft hover:text-app transition cursor-pointer">✕</button>
                   </div>
                   <textarea
@@ -177,10 +186,23 @@ export default function LeadDetail({ open, onClose, lead, onUpdated }) {
                 </div>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start gap-2">
               <SourceBadge source={lead.source} />
               <PriorityBadge priority={lead.priority} />
               <StatusBadge status={lead.status} />
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onEdit(lead); }}
+                  title="Edit lead"
+                  className="p-1.5 rounded-xl transition-colors"
+                  style={{ color: "var(--app-text-soft)" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.10)"; e.currentTarget.style.color = "var(--app-primary)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--app-text-soft)"; }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
 import api from "../services/api";
-import { PageLoader } from "../components/UI";
+import { PageLoader, AppSelect, AppDatePicker } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
@@ -15,26 +15,43 @@ export default function Performance() {
   const [members,    setMembers]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [dateFrom,   setDateFrom]   = useState("");
-  const [dateTo,     setDateTo]     = useState("");
+  const [dateFrom,        setDateFrom]        = useState("");
+  const [dateTo,          setDateTo]          = useState("");
+  const [filterMemberId,  setFilterMemberId]  = useState("");
   const dateFilterMounted = useRef(false);
 
+  const displayMembers = useMemo(
+    () => filterMemberId ? members.filter((m) => m._id === filterMemberId) : members,
+    [members, filterMemberId]
+  );
+
   const exportPDF = () => {
+    // Escape any user-controlled value before interpolating it into the HTML
+    // string written to the popup. Org name, member name/email/role are all
+    // user-editable and would otherwise allow stored XSS in the same-origin
+    // popup (full access to cookies, DOM, and the logged-in user's session).
+    const esc = (v) => String(v ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
     const now = new Date();
     const dateStr  = now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
     const timeStr  = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-    const orgName  = org?.name  || "Your Organisation";
-    const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? org.logo : null;
+    const orgName  = esc(org?.name || "Your Organisation");
+    const orgLogo  = org?.logo && !org.logo.startsWith("data:") ? encodeURI(org.logo) : null;
     const rangeLabel = dateFrom || dateTo
       ? `${dateFrom ? new Date(dateFrom).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Start"} → ${dateTo ? new Date(dateTo).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Today"}`
       : "All time · Live data";
 
-    const agentCards = members.map((m, idx) => {
+    const agentCards = displayMembers.map((m, idx) => {
       const p  = m.pipeline || {};
       const pr = m.project  || {};
       const pConv  = Math.min(p.conversionRate  || 0, 100);
       const prConv = Math.min(pr.conversionRate || 0, 100);
-      const initial = (m.name || "?")[0].toUpperCase();
+      const initial = esc((m.name || "?")[0].toUpperCase());
       const avatarColors = ["#f97316","#6366f1","#22c55e","#3b82f6","#ec4899","#f59e0b","#14b8a6"];
       const avatarBg = avatarColors[idx % avatarColors.length];
       return `
@@ -43,12 +60,12 @@ export default function Performance() {
             <div class="agent-name-area">
               <div class="agent-avatar" style="background:${avatarBg}">${initial}</div>
               <div>
-                <div class="agent-name">${m.name || "—"}</div>
-                <div class="agent-email">${m.email || ""}</div>
+                <div class="agent-name">${esc(m.name || "—")}</div>
+                <div class="agent-email">${esc(m.email || "")}</div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span class="role-badge">${m.role || ""}</span>
+              <span class="role-badge">${esc(m.role || "")}</span>
               <span style="font-size:10px;color:${m.isActive !== false ? "#22c55e" : "#94a3b8"};font-weight:600;">
                 ${m.isActive !== false ? "● Active" : "○ Inactive"}
               </span>
@@ -194,7 +211,7 @@ export default function Performance() {
     <div class="report-title">Team Performance Report</div>
     <div class="report-meta">
       Generated ${dateStr} at ${timeStr}<br>
-      ${members.length} team member${members.length !== 1 ? "s" : ""} · ${rangeLabel}
+      ${displayMembers.length} team member${displayMembers.length !== 1 ? "s" : ""} · ${rangeLabel}
     </div>
   </div>
 </div>
@@ -223,7 +240,7 @@ export default function Performance() {
 
   <div class="section-title">
     <span>Agent Performance Breakdown</span>
-    <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">${members.length} member${members.length !== 1 ? "s" : ""}</span>
+    <span style="font-weight:500;color:#94a3b8;text-transform:none;letter-spacing:0">${displayMembers.length} member${displayMembers.length !== 1 ? "s" : ""}</span>
   </div>
 
   ${agentCards}
@@ -266,12 +283,12 @@ export default function Performance() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo]);
 
-  const totals = useMemo(() => members.reduce((acc, m) => {
+  const totals = useMemo(() => displayMembers.reduce((acc, m) => {
     acc.totalAssigned += m.totalAssigned || 0;
     acc.closedWon     += m.closedWon     || 0;
     acc.siteVisits    += m.siteVisits    || 0;
     return acc;
-  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [members]);
+  }, { totalAssigned: 0, closedWon: 0, siteVisits: 0 }), [displayMembers]);
 
   if (!canAccess(org, "growth")) {
     return <UpgradeWall org={org} feature="Analytics & Reports" description="View team performance, conversion rates, booking metrics and individual agent tracking." />;
@@ -292,24 +309,34 @@ export default function Performance() {
             </p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+            {/* Agent filter */}
+            {members.length > 1 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>Agent</span>
+                <AppSelect
+                  value={filterMemberId}
+                  onChange={setFilterMemberId}
+                  placeholder="All Members"
+                  options={[{ value: "", label: "All Members" }, ...members.map(m => ({ value: m._id, label: m.name }))]}
+                  className="min-w-[140px]"
+                  triggerClassName="text-xs py-1.5"
+                />
+                {filterMemberId && (
+                  <button
+                    onClick={() => setFilterMemberId("")}
+                    className="text-xs font-medium text-orange-400 hover:text-orange-500 transition"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
             {/* Date range filter */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>From</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
-                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
-              />
+              <AppDatePicker value={dateFrom} onChange={setDateFrom} className="w-36" />
               <span className="text-xs font-medium shrink-0" style={{ color: "var(--app-text-soft)" }}>To</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="rounded-xl px-2.5 py-1.5 text-xs border focus:outline-none focus:ring-1 focus:ring-orange-400"
-                style={{ borderColor: "var(--app-border)", color: "var(--app-text)", background: "var(--app-surface)" }}
-              />
+              <AppDatePicker value={dateTo} onChange={setDateTo} className="w-36" />
               {(dateFrom || dateTo) && (
                 <button
                   onClick={() => { setDateFrom(""); setDateTo(""); }}
@@ -353,7 +380,7 @@ export default function Performance() {
 
       {/* Member cards */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {members.map((member) => {
+        {displayMembers.map((member) => {
           const focused  = location.state?.focusUserId === member._id;
           const pipeline = member.pipeline || {};
           const project  = member.project  || {};
@@ -453,9 +480,9 @@ export default function Performance() {
         })}
       </section>
 
-      {!members.length && (
+      {!displayMembers.length && (
         <section className="card p-6 text-sm text-app-soft flex items-center gap-3">
-          <BarChart3 className="h-4 w-4" /> No performance data available yet.
+          <BarChart3 className="h-4 w-4" /> {filterMemberId ? "No data for this agent." : "No performance data available yet."}
         </section>
       )}
     </div>

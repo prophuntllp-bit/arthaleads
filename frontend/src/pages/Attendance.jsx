@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Spinner, EmptyState } from "../components/UI";
+import { Spinner, EmptyState, AppSelect, AppDatePicker } from "../components/UI";
 import UpgradeWall from "../components/UpgradeWall";
+import AttendanceCapture from "../components/AttendanceCapture";
 import { canAccess } from "../utils/plan";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   Clock, ChevronLeft, ChevronRight, CalendarDays,
   Users, Timer, CheckCircle2, LogIn, Filter,
-  Download, PlusCircle, X, Edit3, Settings, AlertTriangle,
+  Download, PlusCircle, X, Edit3, Settings, AlertTriangle, MapPin, Camera,
 } from "lucide-react";
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -104,21 +105,62 @@ function LateBadge({ isLate, lateByMinutes }) {
   );
 }
 
+function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
+  if (!isEarlyLeave) return null;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
+      <AlertTriangle className="w-2.5 h-2.5" />
+      Early {earlyLeaveByMinutes ? `-${fmtDuration(earlyLeaveByMinutes)}` : ""}
+    </span>
+  );
+}
+
 const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
-const DEFAULT_SETTINGS = { shiftStartTime: "09:30", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480 };
+const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: true };
+
+function ProofCell({ selfie, lat, lng }) {
+  const [imgOk, setImgOk] = useState(true);
+  if (!selfie && lat == null) return <span className="text-app-soft">—</span>;
+  return (
+    <div className="flex items-center gap-2">
+      {selfie && (
+        <a href={selfie} target="_blank" rel="noreferrer" title="View selfie">
+          {imgOk ? (
+            <img src={selfie} alt="selfie"
+              className="w-10 h-10 rounded-xl object-cover border hover:opacity-80 transition flex-shrink-0"
+              style={{ borderColor: "var(--app-border)" }}
+              onError={() => setImgOk(false)} />
+          ) : (
+            <span className="w-10 h-10 rounded-xl border flex items-center justify-center flex-shrink-0 hover:opacity-80 transition"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
+              <Camera className="w-4 h-4 text-orange-400" />
+            </span>
+          )}
+        </a>
+      )}
+      {lat != null && (
+        <a href={`https://maps.google.com/?q=${lat},${lng}`} target="_blank" rel="noreferrer"
+          className="text-blue-500 hover:text-blue-400 transition" title="View on map">
+          <MapPin className="w-4 h-4" />
+        </a>
+      )}
+    </div>
+  );
+}
 
 export default function Attendance() {
   const { user, org } = useAuth();
-  if (!canAccess(org, "growth")) {
-    return <UpgradeWall org={org} feature="Attendance Tracking"
-      description="Track your team's clock-in/out times, view daily summaries, and monitor attendance history." />;
-  }
   const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   // Today's own status
   const [status, setStatus]             = useState(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [clocking, setClocking]         = useState(false);
+
+  // Selfie/location capture
+  const [captureOpen,   setCaptureOpen]   = useState(false);
+  const [captureMode,   setCaptureMode]   = useState("clockin");
+  const [requireSelfie, setRequireSelfie] = useState(true);
 
   // Records list
   const [records, setRecords]     = useState([]);
@@ -162,6 +204,7 @@ export default function Attendance() {
     try {
       const r = await api.get("/attendance/status");
       setStatus(r.data.data);
+      setRequireSelfie(r.data.requireSelfie ?? true);
     } catch { /**/ }
     finally { setStatusLoading(false); }
   }, []);
@@ -203,7 +246,9 @@ export default function Attendance() {
     setSettingsLoading(true);
     try {
       const r = await api.get("/org/me/attendance-settings");
-      setShiftSettings({ ...DEFAULT_SETTINGS, ...r.data.settings });
+      const s = { ...DEFAULT_SETTINGS, ...r.data.settings };
+      setShiftSettings(s);
+      setRequireSelfie(s.requireSelfie ?? true);
     } catch { /**/ }
     finally { setSettingsLoading(false); }
   }, []);
@@ -215,26 +260,30 @@ export default function Attendance() {
   useEffect(() => { if (!isAdmin) setTab("records"); }, [isAdmin]);
   useEffect(() => { if (isAdmin) fetchShiftSettings(); }, [isAdmin, fetchShiftSettings]);
 
-  const handleClockIn = async () => {
+  const submitClock = async (captureData) => {
     setClocking(true);
+    const isIn = captureMode === "clockin";
     try {
-      const r = await api.post("/attendance/clockin");
+      const body = {};
+      if (captureData?.selfie) body.selfie = captureData.selfie;
+      if (captureData?.lat != null) { body.lat = captureData.lat; body.lng = captureData.lng; body.accuracy = captureData.accuracy; }
+      const r = await api.post(`/attendance/${isIn ? "clockin" : "clockout"}`, body);
       setStatus(r.data.data);
-      toast.success("Clocked in successfully!");
+      toast.success(isIn ? "Clocked in successfully!" : "Clocked out! Great work today.");
+      setCaptureOpen(false);
       fetchTeamToday(); fetchRecords();
-    } catch (e) { toast.error(e.response?.data?.message || "Clock in failed"); }
+    } catch (e) { toast.error(e.response?.data?.message || (isIn ? "Clock in failed" : "Clock out failed")); }
     finally { setClocking(false); }
   };
 
-  const handleClockOut = async () => {
-    setClocking(true);
-    try {
-      const r = await api.post("/attendance/clockout");
-      setStatus(r.data.data);
-      toast.success("Clocked out! Great work today.");
-      fetchTeamToday(); fetchRecords();
-    } catch (e) { toast.error(e.response?.data?.message || "Clock out failed"); }
-    finally { setClocking(false); }
+  const handleClockIn = () => {
+    if (requireSelfie) { setCaptureMode("clockin"); setCaptureOpen(true); }
+    else { setCaptureMode("clockin"); submitClock({}); }
+  };
+
+  const handleClockOut = () => {
+    if (requireSelfie) { setCaptureMode("clockout"); setCaptureOpen(true); }
+    else { setCaptureMode("clockout"); submitClock({}); }
   };
 
   const handleExport = async () => {
@@ -279,7 +328,8 @@ export default function Attendance() {
     e.preventDefault();
     setSettingsSaving(true);
     try {
-      await api.patch("/org/me/attendance-settings", shiftSettings);
+      const payload = { ...shiftSettings, requireSelfie };
+      await api.patch("/org/me/attendance-settings", payload);
       toast.success("Shift settings saved");
       setSettingsModal(false);
     } catch (e) { toast.error(e.response?.data?.message || "Failed to save settings"); }
@@ -301,6 +351,11 @@ export default function Attendance() {
     return { totalMins, daysPresent, lateCount, fullDays, halfDays, avgMins };
   })();
 
+  if (!canAccess(org, "growth")) {
+    return <UpgradeWall org={org} feature="Attendance Tracking"
+      description="Track your team's clock-in/out times, view daily summaries, and monitor attendance history." />;
+  }
+
   return (
     <div className="stitch-page">
 
@@ -313,7 +368,7 @@ export default function Attendance() {
           <div>
             <h1 className="text-lg font-bold text-app leading-none">Attendance</h1>
             <p className="text-xs text-app-soft mt-0.5">
-              Shift: {shiftSettings.shiftStartTime} · {shiftSettings.bufferMinutes}m grace ·{" "}
+              Shift: {shiftSettings.shiftStartTime} - {shiftSettings.shiftEndTime} · {shiftSettings.bufferMinutes}m grace ·{" "}
               {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h half · {(shiftSettings.fullDayMinutes / 60).toFixed(1)}h full
             </p>
           </div>
@@ -362,7 +417,7 @@ export default function Attendance() {
 
       {/* ── Today's own status cards ── */}
       {!statusLoading && status && (
-        <div className="px-4 lg:px-6 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Clock In",  value: fmtTime(status.clockIn),  color: "text-green-500" },
             { label: "Clock Out", value: fmtTime(status.clockOut), color: "text-red-400" },
@@ -378,7 +433,7 @@ export default function Attendance() {
       )}
 
       {/* ── Tabs ── */}
-      <div className="px-4 lg:px-6 pt-4">
+      <div className="pt-4">
         <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {isAdmin && (
             <button onClick={() => setTab("team")}
@@ -397,7 +452,7 @@ export default function Attendance() {
 
       {/* ── Team Today tab ── */}
       {tab === "team" && isAdmin && (
-        <div className="px-4 lg:px-6 pt-4 pb-6">
+        <div className="pt-4 pb-6">
           {teamLoading ? (
             <div className="flex justify-center py-16"><Spinner size="lg" /></div>
           ) : (
@@ -412,7 +467,7 @@ export default function Attendance() {
                 <table className="w-full text-xs min-w-[700px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                      {["Member", "Clock In", "Clock Out", "Hours", "Day Type", "Status"].map(h => (
+                      {["Member", "Clock In", "Clock Out", "Hours", "Day Type", "Status", "Proof"].map(h => (
                         <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
                     </tr>
@@ -443,8 +498,12 @@ export default function Attendance() {
                             ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3">
-                            {a?.clockOut ? <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
-                              : <span className="text-app-soft">-</span>}
+                            {a?.clockOut ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-red-400 font-semibold">{fmtTime(a.clockOut)}</span>
+                                <EarlyLeaveBadge isEarlyLeave={a?.isEarlyLeave} earlyLeaveByMinutes={a?.earlyLeaveByMinutes} />
+                              </div>
+                            ) : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-5 py-3 font-bold text-app">
                             {isOut ? fmtDuration(a.totalMinutes)
@@ -455,11 +514,14 @@ export default function Attendance() {
                             <DayTypeBadge dayType={a?.dayType} clockIn={a?.clockIn} clockOut={a?.clockOut} />
                           </td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
+                          <td className="px-5 py-3">
+                            <ProofCell selfie={a?.clockInSelfie} lat={a?.clockInLat} lng={a?.clockInLng} />
+                          </td>
                         </tr>
                       );
                     })}
                     {teamToday.length === 0 && (
-                      <tr><td colSpan={6} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
+                      <tr><td colSpan={7} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -471,7 +533,7 @@ export default function Attendance() {
 
       {/* ── Records tab ── */}
       {tab === "records" && (
-        <div className="px-4 lg:px-6 pt-4 pb-6">
+        <div className="pt-4 pb-6">
 
           {/* Summary strip */}
           {summary && (
@@ -484,7 +546,7 @@ export default function Attendance() {
                 { label: "Half Days",     value: summary.halfDays,                color: "text-amber-500" },
                 { label: "Late",          value: summary.lateCount,               color: "text-red-500" },
               ].map(({ label, value, color }) => (
-                <div key={label} className="card px-3 py-3 text-center">
+                <div key={label} className="card px-4 py-3 text-center">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">{label}</p>
                   <p className={`text-sm font-bold ${color}`}>{value}</p>
                 </div>
@@ -497,24 +559,23 @@ export default function Attendance() {
             <Filter className="w-4 h-4 text-app-soft flex-shrink-0" />
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">From</label>
-              <input type="date" className="input text-xs py-1.5 px-3" value={from}
-                onChange={e => { setFrom(e.target.value); setPage(1); }} />
+              <AppDatePicker value={from} onChange={v => { setFrom(v); setPage(1); }} className="w-36" />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs text-app-soft font-medium">To</label>
-              <input type="date" className="input text-xs py-1.5 px-3" value={to}
-                onChange={e => { setTo(e.target.value); setPage(1); }} />
+              <AppDatePicker value={to} onChange={v => { setTo(v); setPage(1); }} className="w-36" />
             </div>
             {isAdmin && teamMembers.length > 0 && (
               <div className="flex items-center gap-2">
                 <label className="text-xs text-app-soft font-medium">Member</label>
-                <select className="input text-xs py-1.5 px-3" value={filterUser}
-                  onChange={e => { setFilterUser(e.target.value); setPage(1); }}>
-                  <option value="">All members</option>
-                  {teamMembers.map(m => (
-                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={filterUser}
+                  onChange={v => { setFilterUser(v); setPage(1); }}
+                  placeholder="All members"
+                  options={[{ value: "", label: "All members" }, ...teamMembers.map(m => ({ value: m._id, label: `${m.name} (${m.role})` }))]}
+                  className="w-44"
+                  triggerClassName="text-xs py-1.5"
+                />
               </div>
             )}
             <span className="text-xs text-app-soft">{total} record{total !== 1 ? "s" : ""}</span>
@@ -554,7 +615,7 @@ export default function Attendance() {
                       {[
                         "Date",
                         ...(isAdmin ? ["Member"] : []),
-                        "Clock In", "Clock Out", "Duration", "Day Type", "Status", "Note",
+                        "Clock In", "Clock Out", "Duration", "Day Type", "Status", "Note", "Proof",
                       ].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
@@ -589,11 +650,14 @@ export default function Attendance() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            {rec.clockOut
-                              ? <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
-                              : isIn
-                                ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
-                                : <span className="text-app-soft">-</span>}
+                            {rec.clockOut ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-red-400 font-semibold">{fmtTime(rec.clockOut)}</span>
+                                <EarlyLeaveBadge isEarlyLeave={rec.isEarlyLeave} earlyLeaveByMinutes={rec.earlyLeaveByMinutes} />
+                              </div>
+                            ) : isIn
+                              ? <span className="text-green-500 font-bold"><LiveTimer since={rec.clockIn} /></span>
+                              : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-4 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
                           <td className="px-4 py-3">
@@ -601,6 +665,9 @@ export default function Attendance() {
                           </td>
                           <td className="px-4 py-3"><StatusBadge a={rec} /></td>
                           <td className="px-4 py-3 text-app-soft max-w-[140px] truncate">{rec.note || "-"}</td>
+                          <td className="px-4 py-3">
+                            <ProofCell selfie={rec.clockInSelfie} lat={rec.clockInLat} lng={rec.clockInLng} />
+                          </td>
                           {isAdmin && (
                             <td className="px-3 py-3">
                               <button
@@ -653,15 +720,27 @@ export default function Attendance() {
         </div>
       )}
 
+      {/* ── Capture Modal ── */}
+      <AttendanceCapture
+        open={captureOpen}
+        mode={captureMode}
+        required={requireSelfie}
+        submitting={clocking}
+        onClose={() => setCaptureOpen(false)}
+        onConfirm={submitClock}
+      />
+
       {/* ── Shift Settings Modal ── */}
       {settingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end justify-center sm:p-4 p-0"
+          style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setSettingsModal(false); }}>
-          <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-app flex items-center gap-2">
-                <Settings className="w-4 h-4 text-orange-500" /> Shift & Attendance Settings
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[90vh] sm:mx-0 mx-3"
+            style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
+              <h2 className="text-sm font-bold text-app flex items-center gap-2">
+                <Settings className="w-4 h-4 text-orange-500" /> Shift &amp; Attendance Settings
               </h2>
               <button onClick={() => setSettingsModal(false)}
                 className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft cursor-pointer">
@@ -669,52 +748,75 @@ export default function Attendance() {
               </button>
             </div>
             {settingsLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
-              <form onSubmit={handleSaveSettings} className="flex flex-col gap-5">
-                <div>
-                  <label className="label">Office Start Time</label>
-                  <input type="time" className="input" value={shiftSettings.shiftStartTime}
-                    onChange={e => setShiftSettings(s => ({ ...s, shiftStartTime: e.target.value }))} required />
-                  <p className="text-xs text-app-soft mt-1">The time employees are expected to clock in by.</p>
+              <form onSubmit={handleSaveSettings} className="flex flex-col gap-3 overflow-y-auto flex-1 px-4 py-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="label">Office Start Time</label>
+                    <input type="time" className="input" value={shiftSettings.shiftStartTime}
+                      onChange={e => setShiftSettings(s => ({ ...s, shiftStartTime: e.target.value }))} required />
+                    <p className="text-[11px] text-app-soft mt-0.5">Expected clock-in time.</p>
+                  </div>
+                  <div>
+                    <label className="label">Office End Time</label>
+                    <input type="time" className="input" value={shiftSettings.shiftEndTime || "19:00"}
+                      onChange={e => setShiftSettings(s => ({ ...s, shiftEndTime: e.target.value }))} required />
+                    <p className="text-[11px] text-app-soft mt-0.5">Expected clock-out time.</p>
+                  </div>
                 </div>
 
                 <div>
                   <label className="label">Grace / Buffer Period (minutes)</label>
                   <input type="number" className="input" min={0} max={120} value={shiftSettings.bufferMinutes}
                     onChange={e => setShiftSettings(s => ({ ...s, bufferMinutes: parseInt(e.target.value) || 0 }))} required />
-                  <p className="text-xs text-app-soft mt-1">
-                    Clock-ins within this window after start time are not marked late.
-                    E.g. start 9:30 + 15 min grace → late after 9:45.
-                  </p>
+                  <p className="text-[11px] text-app-soft mt-0.5">Late after start time + buffer. E.g. 9:30 + 15 min → late after 9:45.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="label">Half Day (hours)</label>
+                    <label className="label">Half Day (hrs)</label>
                     <input type="number" className="input" min={1} max={24} step={0.5}
                       value={(shiftSettings.halfDayMinutes / 60).toFixed(1)}
                       onChange={e => setShiftSettings(s => ({ ...s, halfDayMinutes: Math.round(parseFloat(e.target.value) * 60) }))} required />
-                    <p className="text-xs text-app-soft mt-1">Min hours for half-day count.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Min hours for half-day.</p>
                   </div>
                   <div>
-                    <label className="label">Full Day (hours)</label>
+                    <label className="label">Full Day (hrs)</label>
                     <input type="number" className="input" min={1} max={24} step={0.5}
                       value={(shiftSettings.fullDayMinutes / 60).toFixed(1)}
                       onChange={e => setShiftSettings(s => ({ ...s, fullDayMinutes: Math.round(parseFloat(e.target.value) * 60) }))} required />
-                    <p className="text-xs text-app-soft mt-1">Min hours for full-day count.</p>
+                    <p className="text-[11px] text-app-soft mt-0.5">Min hours for full-day.</p>
                   </div>
                 </div>
 
-                {/* Preview */}
-                <div className="rounded-2xl px-4 py-3 text-xs text-app-soft space-y-1"
+                {/* Selfie + GPS toggle — use label+checkbox for reliable mobile tap */}
+                <label className="flex items-center gap-3 justify-between rounded-2xl px-3 py-3 cursor-pointer select-none"
                   style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  <p className="font-semibold text-app mb-2">Preview</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-app flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" /> Require selfie &amp; GPS
+                    </p>
+                    <p className="text-[11px] text-app-soft mt-0.5 leading-tight">Staff must take a photo &amp; share location on clock-in/out.</p>
+                  </div>
+                  <div
+                    onClick={(e) => { e.preventDefault(); setRequireSelfie(v => !v); }}
+                    role="switch" aria-checked={requireSelfie}
+                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${requireSelfie ? "bg-orange-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                    style={{ cursor: "pointer", minWidth: 44 }}>
+                    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${requireSelfie ? "translate-x-[23px]" : "translate-x-1"}`} />
+                  </div>
+                </label>
+
+                {/* Preview */}
+                <div className="rounded-2xl px-3 py-2.5 text-xs text-app-soft space-y-0.5"
+                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                  <p className="font-semibold text-app mb-1.5">Preview</p>
+                  <p>Shift: <strong>{shiftSettings.shiftStartTime}</strong> to <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
                   <p>On time: clock-in by <strong>{shiftSettings.shiftStartTime}</strong> + {shiftSettings.bufferMinutes} min grace</p>
-                  <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> worked</p>
-                  <p>Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong> worked</p>
-                  <p>Short day: &lt; {(shiftSettings.halfDayMinutes / 60).toFixed(1)}h worked</p>
+                  <p>Early leave: clock-out before <strong>{shiftSettings.shiftEndTime || "19:00"}</strong></p>
+                  <p>Half day: &ge; <strong>{(shiftSettings.halfDayMinutes / 60).toFixed(1)}h</strong> · Full day: &ge; <strong>{(shiftSettings.fullDayMinutes / 60).toFixed(1)}h</strong></p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-1">
+                <div className="flex justify-end gap-3 pb-1 flex-shrink-0">
                   <button type="button" className="btn-secondary" onClick={() => setSettingsModal(false)}>Cancel</button>
                   <button type="submit" className="btn-primary" disabled={settingsSaving}>
                     {settingsSaving ? <Spinner size="sm" /> : null} Save Settings
@@ -728,10 +830,10 @@ export default function Attendance() {
 
       {/* ── Admin Entry Modal ── */}
       {entryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
+        <div className="fixed inset-0 z-50 flex sm:items-center items-end sm:justify-center justify-center sm:p-4 p-0"
+          style={{ background: "rgba(0,0,0,0.6)" }}
           onClick={(e) => { if (e.target === e.currentTarget) setEntryModal(false); }}>
-          <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+          <div className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl sm:p-6 p-4 shadow-2xl flex flex-col sm:max-h-[88vh] max-h-[92vh]" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-app flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-orange-500" /> Manual Attendance Entry
@@ -741,21 +843,19 @@ export default function Attendance() {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleAdminEntry} className="flex flex-col gap-4">
+            <form onSubmit={handleAdminEntry} className="flex flex-col gap-3 overflow-y-auto flex-1 pr-0.5">
               <div>
                 <label className="label">Member</label>
-                <select className="input" required value={entryForm.userId}
-                  onChange={e => setEntryForm(f => ({ ...f, userId: e.target.value }))}>
-                  <option value="">Select member</option>
-                  {teamMembers.map(m => (
-                    <option key={m._id} value={m._id}>{m.name} ({m.role})</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={entryForm.userId}
+                  onChange={v => setEntryForm(f => ({ ...f, userId: v }))}
+                  placeholder="Select member"
+                  options={[{ value: "", label: "Select member" }, ...teamMembers.map(m => ({ value: m._id, label: `${m.name} (${m.role})` }))]}
+                />
               </div>
               <div>
                 <label className="label">Date</label>
-                <input type="date" className="input" required value={entryForm.date}
-                  onChange={e => setEntryForm(f => ({ ...f, date: e.target.value }))} />
+                <AppDatePicker value={entryForm.date} onChange={v => setEntryForm(f => ({ ...f, date: v }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

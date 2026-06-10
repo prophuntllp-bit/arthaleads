@@ -20,7 +20,15 @@ const tokenAlertCooldown = new Map(); // orgId → lastAlertTimestamp
 function verifyFbSignature(req, res, buf) {
   const sig = req.headers["x-hub-signature-256"];
   if (!process.env.FB_APP_SECRET) {
-    logger.warn("Facebook webhook: FB_APP_SECRET not configured - webhook signature verification disabled");
+    // In production a missing secret must NOT silently accept every payload —
+    // that would let anyone POST fake leads into any tenant's pipeline.
+    if (process.env.NODE_ENV === "production") {
+      logger.error("Facebook webhook: FB_APP_SECRET missing in production - rejecting request");
+      const err = new Error("Webhook signature verification is not configured");
+      err.status = 503;
+      throw err;
+    }
+    logger.warn("Facebook webhook: FB_APP_SECRET not configured - webhook signature verification disabled (dev only)");
     return; // allow in dev; configure FB_APP_SECRET in prod
   }
   if (!sig) {
@@ -460,6 +468,17 @@ router.post("/website", express.json(), async (req, res) => {
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     const orgId = automation.orgId;
+
+    // Deduplication: if the same phone number already created a lead for this org
+    // within the last 2 minutes, it's a plugin double-fire — skip silently.
+    if (phone) {
+      const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+      const recent = await Lead.findOne({ orgId, phone, createdAt: { $gte: twoMinsAgo } }).lean();
+      if (recent) {
+        logger.info(`[website webhook] duplicate skipped: ${name} | ${phone} | original: ${recent.createdAt}`);
+        return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
+      }
+    }
 
     // Respect the org's Auto Lead Assignment setting
     const org = await Organization.findById(orgId).select("autoAssign").lean();

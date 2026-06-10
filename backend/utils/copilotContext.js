@@ -1,9 +1,11 @@
 // Fetches live CRM data to give the AI assistant real context about the user's workspace.
 const Lead       = require("../models/Lead");
 const Attendance = require("../models/Attendance");
-let User, Project;
+let User, Project, Booking, Invoice;
 try { User    = require("../models/User");    } catch { User    = null; }
 try { Project = require("../models/Project"); } catch { Project = null; }
+try { Booking = require("../models/Booking"); } catch { Booking = null; }
+try { Invoice = require("../models/Invoice"); } catch { Invoice = null; }
 
 function pad(n) { return String(n).padStart(2, "0"); }
 function todayStr() {
@@ -126,6 +128,36 @@ async function fetchPageContext(page, userId, orgId, leadId) {
       parts.push(`LIVE TEAM DATA:
 - Total active members: ${members.length}
 ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
+    }
+
+    if ((cleanPage === "/bookings" || cleanPage === "/invoices") && Booking && Invoice) {
+      const [totalBookings, newBookings, invoicedBookings, paidBookings] = await Promise.all([
+        Booking.countDocuments({ orgId }),
+        Booking.countDocuments({ orgId, status: "new" }),
+        Booking.countDocuments({ orgId, status: "invoiced" }),
+        Booking.countDocuments({ orgId, status: "payment_received" }),
+      ]);
+      const aggResult = await Booking.aggregate([
+        { $match: { orgId: typeof orgId === "string" ? require("mongoose").Types.ObjectId.createFromHexString(orgId) : orgId } },
+        { $group: { _id: null, totalBrokerage: { $sum: "$totalBill" } } },
+      ]);
+      const totalBrokerage = aggResult[0]?.totalBrokerage || 0;
+
+      const recentBookings = await Booking.find({ orgId })
+        .sort({ createdAt: -1 }).limit(3)
+        .select("customerName developerName projectName status totalBill").lean();
+
+      const [draftInvoices, pendingInvoices] = await Promise.all([
+        Invoice.countDocuments({ orgId, status: "draft" }),
+        Invoice.countDocuments({ orgId, status: { $in: ["sent", "payment_pending"] } }),
+      ]);
+
+      parts.push(`LIVE BOOKINGS & INVOICES DATA:
+- Total bookings: ${totalBookings} (New: ${newBookings}, Invoiced: ${invoicedBookings}, Paid: ${paidBookings})
+- Total brokerage value: ₹${totalBrokerage.toLocaleString("en-IN")}
+- Draft invoices: ${draftInvoices}
+- Invoices awaiting payment: ${pendingInvoices}
+- Recent bookings: ${recentBookings.length ? recentBookings.map(b => `${b.customerName} / ${b.developerName} (${b.status}, ₹${(b.totalBill || 0).toLocaleString("en-IN")})`).join(" | ") : "none yet"}`);
     }
 
     if (cleanPage === "/attendance") {

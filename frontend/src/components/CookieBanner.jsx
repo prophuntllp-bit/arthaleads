@@ -18,7 +18,7 @@ export default function CookieBanner() {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-[9999] flex items-center justify-between gap-4 px-4 py-3 sm:px-6"
-      style={{ background: "var(--app-surface)", borderTop: "1px solid var(--app-border)" }}
+      style={{ background: "var(--app-bg)", borderTop: "1px solid var(--app-border)", boxShadow: "0 -4px 24px rgba(0,0,0,0.12)" }}
     >
       <p className="text-xs text-app-soft leading-snug max-w-2xl">
         We use essential cookies to keep you logged in and analytics cookies to improve the product.

@@ -3,14 +3,14 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, AppDatePicker } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
   RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
   Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
-  Send, Paperclip, Image, FileText, Loader2,
+  Send, Paperclip, FileText, Loader2,
 } from "lucide-react";
 
 function PlanBadge({ plan }) {
@@ -239,6 +239,9 @@ function LogoUploader({ org, onUpdated }) {
   const inputRef  = useRef(null);
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(org.logo || "");
+
+  // Sync preview when org.logo prop changes (e.g. org admin uploaded via Settings)
+  useEffect(() => { setPreview(org.logo || ""); }, [org.logo]);
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
@@ -574,13 +577,7 @@ function TrialExtender({ org, onUpdated }) {
             ) : (
               <div key="other" className="px-4 py-3 space-y-2 border-t" style={{ borderColor: "var(--app-border)" }}>
                 <p className="text-[11px] font-semibold text-app-soft">Custom end date</p>
-                <input
-                  type="date"
-                  min={minDate}
-                  value={custom}
-                  onChange={(e) => setCustom(e.target.value)}
-                  className="input w-full text-xs py-1.5 px-2"
-                />
+                <AppDatePicker value={custom} onChange={setCustom} min={minDate} />
                 <button
                   onClick={handleCustomSubmit}
                   disabled={!custom || saving}
@@ -825,7 +822,7 @@ function AdminAttachChip({ a }) {
       className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition"
       style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
       {isImg
-        ? <Image className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+        ? <ImageIcon className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
         : <FileText className="h-3.5 w-3.5 text-app-soft" />}
       <span className="text-app max-w-[120px] truncate">{a.name || "attachment"}</span>
     </a>
@@ -1097,19 +1094,19 @@ function TicketDetailModal({ ticket: initialTicket, onClose, onUpdated }) {
           <div className="w-72 flex-shrink-0 overflow-y-auto p-5 space-y-5">
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Status</label>
-              <select className="input w-full" value={status} onChange={e => setStatus(e.target.value)}>
-                {TICKET_STATUSES.filter(s => s.value !== "all").map(s => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
+              <AppSelect
+                value={status}
+                onChange={setStatus}
+                options={TICKET_STATUSES.filter(s => s.value !== "all").map(s => ({ value: s.value, label: s.label }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">Priority</label>
-              <select className="input w-full" value={priority} onChange={e => setPriority(e.target.value)}>
-                {["low", "medium", "high", "urgent"].map(p => (
-                  <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-                ))}
-              </select>
+              <AppSelect
+                value={priority}
+                onChange={setPriority}
+                options={["low","medium","high","urgent"].map(p => ({ value: p, label: p.charAt(0).toUpperCase() + p.slice(1) }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-app-soft uppercase tracking-wide mb-1.5">
@@ -1468,6 +1465,7 @@ export default function SuperAdmin() {
                   <th>Plan</th>
                   <th className="text-center">Users</th>
                   <th className="text-center">Leads</th>
+                  <th className="text-center">AI Calls</th>
                   <th>Logo</th>
                   <th>Brand Colour</th>
                   <th>Change Plan</th>
@@ -1478,7 +1476,7 @@ export default function SuperAdmin() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
+                    <td colSpan={10} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
                   </tr>
                 ) : filtered.map((org) => {
                   const isTrialExpired = !!org.trialExpired;
@@ -1499,6 +1497,12 @@ export default function SuperAdmin() {
                       <td><PlanBadge plan={org.plan} /></td>
                       <td className="text-center font-bold text-app">{org.userCount}</td>
                       <td className="text-center font-bold text-app">{org.leadCount}</td>
+                      <td className="text-center">
+                        <span className="font-bold text-app">{org.aiCallsMonth || 0}</span>
+                        {org.aiCallsMonth > 0 && (
+                          <p className="text-[10px] text-app-soft">{(org.aiTokensMonth || 0).toLocaleString()} tok</p>
+                        )}
+                      </td>
                       <td>
                         <LogoUploader org={org} onUpdated={handleOrgUpdated} />
                       </td>

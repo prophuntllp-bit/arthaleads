@@ -5,6 +5,7 @@ import api from "../services/api";
 import { STATUS_OPTIONS } from "../utils/constants";
 import { PhoneActions, WhatsAppLink, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
+import { useAuth } from "../context/AuthContext";
 
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
@@ -24,11 +25,16 @@ function fmtDate(d) {
 
 export default function LeadPipeline() {
   useEffect(() => { document.title = "Sales Pipeline - Arthaleads CRM"; }, []);
+  const { user } = useAuth();
+  const isAdminOrManager = user?.role === "admin" || user?.role === "manager";
+
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [expanded, setExpanded] = useState(new Set());
+  const [members, setMembers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState(""); // "" = all members
   const timerRef = useRef(null);
 
   const toggleExpand = (id) => setExpanded(prev => {
@@ -56,10 +62,12 @@ export default function LeadPipeline() {
     }
   };
 
-  const fetchLeads = useCallback(async (silent = false) => {
+  const fetchLeads = useCallback(async (silent = false, userId = selectedUserId) => {
     if (silent) setRefreshing(true); else setLoading(true);
     try {
-      const { data } = await api.get("/leads/unified", { params: { limit: 5000, page: 1 } });
+      const params = { limit: 5000, page: 1 };
+      if (userId) params.userId = userId;
+      const { data } = await api.get("/leads/unified", { params });
       setLeads(data.leads || []);
       setLastUpdated(new Date());
     } catch {
@@ -68,14 +76,21 @@ export default function LeadPipeline() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedUserId]);
+
+  // Fetch team members for the member picker (admin/manager only)
+  useEffect(() => {
+    if (!isAdminOrManager) return;
+    api.get("/auth/users").then(({ data }) => setMembers(data.users || data || [])).catch(() => {});
+  }, [isAdminOrManager]);
 
   // Initial load + live auto-refresh every 30s
   useEffect(() => {
-    fetchLeads(false);
-    timerRef.current = setInterval(() => fetchLeads(true), REFRESH_INTERVAL);
+    clearInterval(timerRef.current);
+    fetchLeads(false, selectedUserId);
+    timerRef.current = setInterval(() => fetchLeads(true, selectedUserId), REFRESH_INTERVAL);
     return () => clearInterval(timerRef.current);
-  }, [fetchLeads]);
+  }, [fetchLeads, selectedUserId]);
 
   const grouped = useMemo(() => {
     return STATUS_OPTIONS.reduce((acc, status) => {
@@ -107,7 +122,7 @@ export default function LeadPipeline() {
   return (
     <div className="stitch-page space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-app">Lead Pipeline</h1>
           {lastUpdated && (
@@ -117,19 +132,34 @@ export default function LeadPipeline() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => fetchLeads(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
-          style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Refreshing…" : "Refresh"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Member picker — admin / manager only */}
+          {isAdminOrManager && members.length > 0 && (
+            <CustomSelect
+              value={selectedUserId}
+              onChange={setSelectedUserId}
+              placeholder="All Members"
+              options={[
+                { value: "", label: "All Members" },
+                ...members.map((m) => ({ value: m._id, label: m.name })),
+              ]}
+              style={{ minWidth: 160 }}
+            />
+          )}
+          <button
+            onClick={() => fetchLeads(true)}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition hover:border-orange-400 hover:text-orange-500 disabled:opacity-50"
+            style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
-      {/* Kanban board — horizontal scroll, each column scrolls independently */}
-      <div className="overflow-x-auto pb-3 -mx-4 px-4">
+      {/* Kanban board */}
+      <div data-tour="pipeline-board" className="overflow-x-auto pb-3 -mx-4 px-4">
         <div className="flex gap-3" style={{ minWidth: "max-content" }}>
           {STATUS_OPTIONS.map((status) => {
             const meta = STAGE_META[status];

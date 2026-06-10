@@ -171,7 +171,10 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
   const btnRef = useRef(null);
   const popoverRef = useRef(null);
 
-  const selectedLabel = PRESETS.find((p) => p.value === value)?.label || "Date Range";
+  const isCustomObj = value && typeof value === "object" && value.preset === "custom";
+  const selectedLabel = isCustomObj
+    ? "Custom Range"
+    : PRESETS.find((p) => p.value === value)?.label || "Date Range";
 
   // Sync calendar display with preset
   useEffect(() => {
@@ -229,11 +232,18 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
   };
 
   const handleUpdate = () => {
-    onChange(pending);
+    if (pending === "custom" && rangeStart) {
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      onChange({ preset: "custom", from: fmt(rangeStart), to: fmt(rangeEnd || rangeStart) });
+    } else {
+      onChange(pending);
+    }
     setOpen(false);
   };
 
-  const displayDates = presetDates(value);
+  const displayDates = isCustomObj
+    ? { start: value.from ? new Date(value.from) : null, end: value.to ? new Date(value.to) : null }
+    : presetDates(value);
 
   const openPicker = () => {
     if (btnRef.current) {
@@ -251,7 +261,7 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
         });
       }
     }
-    setPending(value);
+    setPending(isCustomObj ? "custom" : value);
     setOpen((o) => !o);
   };
 

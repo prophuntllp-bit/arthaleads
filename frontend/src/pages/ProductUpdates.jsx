@@ -7,6 +7,48 @@ import { useSEO } from "../utils/useSEO";
 
 const updates = [
   {
+    date: "June 2026",
+    title: "QR Code Lead Capture — Org & Project Level",
+    desc: "Every organisation and every project now has its own unique QR code. Put it on site hoardings, brochures, visiting cards, or property expo stalls. When a prospect scans it, they fill a short form on their phone and the lead lands directly in your CRM with source tagged. Download, print, or regenerate the QR from the Leads or Projects page.",
+    tags: ["Lead Capture", "New Feature"],
+  },
+  {
+    date: "June 2026",
+    title: "AI Lead Scoring & Hot Today Widget",
+    desc: "Every lead is now automatically scored 0–100 by AI based on pipeline stage, budget match, urgency, response speed, follow-up count, and engagement history. The Hot Today widget on your dashboard surfaces your top leads to call each morning — so agents always start with the highest-conversion opportunities. No more guessing who to call first.",
+    tags: ["AI", "New Feature"],
+  },
+  {
+    date: "June 2026",
+    title: "AI WhatsApp Draft",
+    desc: "Agents can now generate a personalised WhatsApp message for any lead in one click. The AI uses the lead's name, property interest, budget, and last interaction to write a context-aware message. Review, edit if needed, and send. Saves 10–15 minutes per agent per day and improves response quality.",
+    tags: ["AI", "WhatsApp", "New Feature"],
+  },
+  {
+    date: "May 2026",
+    title: "Booking & Invoice Engine",
+    desc: "Close a deal and convert it to a formal booking in one click. The booking engine auto-calculates brokerage and GST (CGST/SGST/IGST split). Generate a fully branded PDF invoice with your company logo, address, RERA number, PAN, GST number, and bank details — all pulled from your Settings. Invoice is ready in under 2 minutes. No Excel, no manual calculation.",
+    tags: ["Bookings", "Invoices", "New Feature"],
+  },
+  {
+    date: "May 2026",
+    title: "Attendance with Selfie Verification",
+    desc: "Field agents clock in and clock out directly from their phone. Admins can require a selfie on clock-in to confirm location presence. The admin dashboard shows real-time team attendance — who is in, who is out, total hours worked. Download a full monthly attendance report as CSV in one click. No paper registers, no WhatsApp check-ins.",
+    tags: ["Attendance", "Team", "New Feature"],
+  },
+  {
+    date: "May 2026",
+    title: "AI Copilot — Live CRM Assistant",
+    desc: "Every page now has an AI Copilot button. Ask it live questions like 'How many overdue follow-ups do I have?', 'Who are my hottest leads right now?', or 'What is our conversion rate this month?' — and get instant answers pulled from your actual CRM data. It also offers guided tours for every feature, so new team members can get up to speed without training.",
+    tags: ["AI", "New Feature"],
+  },
+  {
+    date: "May 2026",
+    title: "Invoice Letterhead — Logo, Billing & Bank Details",
+    desc: "Admins can now upload their company logo and fill in full billing details — address, phone, email, GST number, PAN, CIN, RERA number, bank account name, account number, IFSC, bank name, and branch — all from the Settings page. Every invoice generated automatically uses this letterhead, giving clients a professional, branded document.",
+    tags: ["Invoices", "Settings", "Improvement"],
+  },
+  {
     date: "May 2026",
     title: "WordPress Plugin v1.0.2 - 8 Form Builders Supported",
     desc: "The Arthaleads WordPress plugin now captures leads from MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms. All custom form fields are captured automatically - name, phone, project interest, and any field you add.",

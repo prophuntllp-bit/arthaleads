@@ -66,8 +66,12 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Compare plain password with hashed
+// Compare plain password with hashed.
+// Returns false when no password is set (Google-only accounts) or the password
+// field wasn't selected — bcrypt.compare would otherwise throw
+// "Illegal arguments: string, undefined" and surface as a raw 500 to the user.
 userSchema.methods.comparePassword = async function (plain) {
+  if (!plain || !this.password) return false;
   return bcrypt.compare(plain, this.password);
 };
 

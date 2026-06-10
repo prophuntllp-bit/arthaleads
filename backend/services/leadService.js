@@ -149,7 +149,7 @@ const leadService = {
       dateRange, from, to,
     } = query;
 
-    const filter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
+    const filter = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
     const andConditions = [];
 
     // Agents always see only their own leads; myOnly lets admin/manager opt in to same scope
@@ -460,11 +460,13 @@ const leadService = {
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
 
     // ── Lead filter ────────────────────────────────────────────────────────────
-    const leadFilter = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
+    const leadFilter = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
     const andConditions = [];
 
     if (user.role === "agent" || query.myOnly === "true") {
       andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
+    } else if (query.userId && (user.role === "admin" || user.role === "manager")) {
+      andConditions.push({ $or: [{ assignedTo: query.userId }, { createdBy: query.userId }] });
     }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
@@ -496,7 +498,7 @@ const leadService = {
     // Analytics only covers pipeline leads (Lead model).
     // Project leads (ProjectLead) are manually-imported bulk contacts and
     // should not inflate dashboard counts / source charts.
-    const baseMatch = { orgId: user.orgId, isArchived: false, isDeleted: { $ne: true } };
+    const baseMatch = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
     if (user.role === "agent") {
       baseMatch.assignedTo = user._id;
     }
@@ -514,7 +516,7 @@ const leadService = {
     const lastMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 0, 23, 59, 59, 999);
     const next48hEnd     = new Date(todayEnd.getTime() + 48 * 60 * 60 * 1000);
 
-    // ── Single $facet aggregation - 1 round-trip instead of 8 ────────────────
+    // Single $facet aggregation — allowDiskUse prevents OOM on large orgs
     const [result] = await Lead.aggregate([
       { $match: baseMatch },
       {
@@ -650,7 +652,7 @@ const leadService = {
           ],
         },
       },
-    ]);
+    ], { allowDiskUse: true });
 
     const orgDoc = await Organization.findById(user.orgId, "monthlyClosingGoal");
     const orgGoal = orgDoc?.monthlyClosingGoal ?? 0;
@@ -726,7 +728,7 @@ const leadService = {
 
     const filter = {
       orgId:      user.orgId,
-      isArchived: false,
+      isArchived: { $ne: true },
       isDeleted:  { $ne: true },
       status:     { $nin: ["Closed Won", "Closed Lost"] },
       followUpDate: { $ne: null, $lte: todayEnd },
@@ -760,7 +762,7 @@ const leadService = {
   // ── Automation Alerts - recent leads from all sources ────────────────────
   async getAlerts(user) {
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const filter = { orgId: user.orgId, isDeleted: { $ne: true }, isArchived: false, createdAt: { $gte: since } };
+    const filter = { orgId: user.orgId, isDeleted: { $ne: true }, isArchived: { $ne: true }, createdAt: { $gte: since } };
     if (user.role === "agent") {
       filter.assignedTo = user._id;
     }
@@ -774,7 +776,7 @@ const leadService = {
   async transferToProject(leadId, toProjectId, user) {
     const lead = await Lead.findOne({ _id: leadId, orgId: user.orgId });
     if (!lead) throw new AppError("Lead not found", 404);
-    const project = await Project.findOne({ _id: toProjectId, isArchived: false, orgId: user.orgId });
+    const project = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
     const pl = await ProjectLead.create({
       project:    toProjectId,

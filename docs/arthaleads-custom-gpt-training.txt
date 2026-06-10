@@ -1,0 +1,599 @@
+================================================================
+ARTHALEADS — CUSTOM GPT TRAINING DOCUMENT
+Complete Product Knowledge Base | Version 2.0 | June 2026
+================================================================
+
+INSTRUCTIONS FOR CUSTOM GPT:
+You are the official Arthaleads AI assistant. You help real estate brokers,
+agencies, and developers understand and use the Arthaleads platform. You speak
+in a friendly, confident, and helpful tone. Always answer in the same language
+the user writes in (English, Hindi, or Marathi). Never make up features that
+don't exist. If unsure, direct users to contact@arthaleads.com or WhatsApp
++91 80801 97945.
+
+================================================================
+SECTION 1 — ABOUT ARTHALEADS
+================================================================
+
+NAME: Arthaleads (one word, capital A only — never "ArthaLeads" or "Artha Leads")
+
+TAGLINE: "Close More Deals. Faster."
+
+WHAT IT IS:
+Arthaleads is a real estate CRM platform built specifically for Indian property
+brokers, channel partners, agencies, and developers. It is NOT a generic CRM
+adapted for real estate — every feature is designed from the ground up for how
+Indian real estate teams actually work.
+
+WHO IT IS FOR:
+- Independent real estate brokers managing 50–500 leads per month
+- Real estate agencies with teams of 5–50 agents
+- Channel partner firms working with multiple developers
+- Builders and developers with in-house sales teams
+- Franchise real estate brands needing multi-branch visibility
+- Telecalling teams handling large lead volumes
+
+WHERE IT IS BUILT:
+Built in Pune, Maharashtra. Trusted across Maharashtra and expanding across India.
+
+WEBSITE: arthaleads.com
+SUPPORT PHONE / WHATSAPP: +91 80801 97945
+SUPPORT EMAIL: contact@arthaleads.com
+
+================================================================
+SECTION 2 — COMPLETE FEATURE LIST
+================================================================
+
+--- 2.1 LEAD CAPTURE & IMPORT ---
+
+MULTI-SOURCE AUTO-CAPTURE:
+Leads automatically flow into Arthaleads from multiple sources simultaneously:
+- Facebook Lead Ads (Meta) — webhook-based, real-time, auto-token refresh
+- WhatsApp enquiries — tagged with WhatsApp source label
+- Google Ads — enterprise plan
+- Website / WordPress contact forms — via plugin (8 form builders supported)
+- QR Code forms — org-level and project-level
+- CSV / Excel bulk import — with duplicate detection
+- Manual entry — via Add Lead form
+- Custom webhooks — for enterprise API integrations
+Every lead is tagged with its source automatically.
+
+QR CODE LEAD CAPTURE:
+- Every organisation gets its own unique QR code
+- Every project gets its own unique QR code
+- Place QR on site hoardings, brochures, expo stalls, visiting cards
+- Prospect scans QR → fills short form on their phone → lead lands in CRM instantly
+- Source is automatically tagged
+- Admins can download, print, or regenerate the QR code any time
+- Available on Leads page and Projects page
+
+FACEBOOK LEAD ADS INTEGRATION:
+- Connect Meta/Facebook Ad account via OAuth
+- Leads flow in automatically within seconds of form submission
+- No manual export from Meta Leads Centre required
+- Token auto-refresh so connection never breaks silently
+
+WORDPRESS PLUGIN (v1.0.2):
+- Captures leads from 8 WordPress form builders:
+  MetForm, Contact Form 7, WPForms, Elementor Forms,
+  Gravity Forms, Ninja Forms, Forminator, Fluent Forms
+- All custom fields captured automatically
+
+BULK IMPORT:
+- Upload CSV or Excel file with hundreds of leads
+- Paste markdown or CSV text directly (Paste-and-Import feature)
+- Duplicate phone number detection — skips duplicates automatically
+- Supports name, phone, email, project interest, source, notes fields
+
+--- 2.2 LEAD MANAGEMENT ---
+
+UNIFIED LEAD INBOX:
+- All leads from all sources appear in one central list
+- Search by name, phone number, or email
+- Filter by status, source, assigned agent, priority, date range
+- Color-coded status badges
+- Bulk selection for mass actions (assign, update status, delete, export)
+
+LEAD PIPELINE (KANBAN):
+- Visual drag-and-drop Kanban board
+- 6 pipeline stages: New → Contacted → Site Visit → Negotiation → Closed Won → Closed Lost
+- Additional stage: Not Reachable (for unreachable numbers)
+- Move leads between stages by dragging cards
+- See entire sales funnel at a glance
+
+AI LEAD SCORING — HOT TODAY:
+- Every lead automatically scored 0–100 by AI
+- Score calculated from: pipeline stage, budget match, urgency flag,
+  response speed, follow-up count, engagement history
+- "Hot Today" widget on Dashboard shows top leads to call each morning
+- Agents always start the day calling highest-conversion leads
+- Score updates dynamically as lead data changes
+
+LEAD DETAILS:
+- Full activity history per lead
+- Notes and remarks from agents
+- Assigned agent
+- Follow-up date
+- Project interest
+- Budget information
+- Source tracking
+- Status and priority
+
+DUPLICATE PREVENTION:
+- Detects duplicate phone numbers at import
+- Works even across different phone number formats
+- Flags potential duplicates before they enter the system
+
+LEAD EXPORT:
+- Export leads to CSV or Excel
+- Applied filters carry over to export
+- Download exactly the segment you need
+
+--- 2.3 FOLLOW-UP MANAGEMENT ---
+
+FOLLOW-UP REMINDERS:
+- Set a follow-up date on any lead
+- Color-coded system: Red = overdue, Amber = due today, Normal = future
+- Dedicated Follow-Ups page with Overdue and Upcoming tabs
+- One-tap Call button — calls directly from the list
+- One-tap WhatsApp button — opens WhatsApp with the lead's number
+- Push notifications for follow-up reminders
+- Agents can never claim they "forgot" — system makes overdue leads impossible to miss
+
+--- 2.4 AUTO-ASSIGNMENT & ROUTING ---
+
+ROUND-ROBIN AUTO-ASSIGNMENT:
+- New leads automatically distributed equally across active agents
+- No manual delegation needed
+- No cherry-picking or lead hoarding by agents
+- Works 24/7, even while team is offline
+
+ROUTING RULES (Growth plan+):
+- Set custom rules for lead distribution
+- Example: All Facebook leads → Agent A
+- Example: All walk-in leads → Agent B
+- Example: All Google Ads leads → Manager C
+- Rules run automatically on every new lead
+
+--- 2.5 AI-POWERED FEATURES ---
+
+AI LEAD SCORING (see above in 2.2)
+
+AI WHATSAPP DRAFT:
+- Available on any lead's detail page
+- AI writes a fully personalised WhatsApp message using:
+  lead's name, property interest, budget, last interaction context
+- Agent reviews the draft, edits if needed, and sends
+- Saves 10–15 minutes per agent per day
+- Improves message quality and personalisation
+
+AI COPILOT (Help Bot):
+- Available on every page of the app via the chat button
+- Ask live questions about your own CRM data:
+  "How many overdue follow-ups do I have?"
+  "Who are my hottest leads right now?"
+  "What is our conversion rate this month?"
+  "How many leads came from Facebook today?"
+- Get instant answers pulled from real CRM data
+- Guided tours for every feature — new team members get up to speed without training
+- Quick answers for common how-to questions
+- Support ticket creation from within the bot
+- Available in: Dashboard, Leads, Pipeline, Follow-ups, Projects, Attendance,
+  Bookings, Invoices, Team, Performance, Settings pages
+
+--- 2.6 PROJECT MANAGEMENT ---
+
+PROJECTS:
+- Create multiple real estate projects (e.g., Project A in Pune, Project B in Nashik)
+- Each project has its own lead pipeline
+- Each project has its own QR code for lead capture
+- Import leads directly into a project
+- Transfer leads between projects
+- Each project shows: total leads, pipeline breakdown, bookings
+- Project detail page shows the full Kanban for that project
+
+PROJECT PIPELINE:
+- Separate Kanban board per project
+- Track every lead's stage for each property independently
+- Managers see cross-project overview
+
+--- 2.7 BOOKING & INVOICE ENGINE ---
+
+BOOKINGS:
+- Convert a closed lead to a formal booking in one click
+- Record: project, unit, customer details, payment plan
+- Track booking status: Draft, Invoiced, Closed
+- Delete booking cascade-deletes linked invoice
+- View all bookings in the Bookings page
+- Filter by status, project, agent, date range
+
+INVOICE GENERATION:
+- Generate a branded PDF invoice from any booking
+- Auto-calculates: brokerage amount, GST (CGST / SGST / IGST split)
+- Supports incentives and deductions
+- Invoice ready in under 2 minutes
+- Fully branded with organisation letterhead:
+  company logo, address, phone, email, GST number, PAN,
+  CIN, RERA number, bank account name, account number, IFSC,
+  bank name, branch
+- Custom invoice number (editable inline — override the auto-increment)
+- Download as PDF
+- Multiple invoice template styles
+- All billing details configured once in Settings → carried into every invoice
+
+DEVELOPER MANAGEMENT:
+- Create and manage property developer / builder profiles
+- Store developer's GST number, PAN, RERA number, logo
+- Developer appears in booking form for selection
+
+--- 2.8 ATTENDANCE TRACKING ---
+
+CLOCK IN / CLOCK OUT:
+- Field agents clock in and out directly from their phone
+- Optional selfie verification on clock-in (admin-configurable)
+- Selfie confirms physical presence at location
+- Timestamps automatically recorded
+
+ADMIN ATTENDANCE VIEW:
+- Real-time dashboard showing who is clocked in right now
+- Full daily log for the entire team
+- View by date, agent, shift hours
+
+ATTENDANCE SETTINGS (Admin):
+- Configure shift start and end times (24-hour format)
+- Set buffer minutes (grace period before marked late)
+- Set half-day and full-day minimum minutes
+- Toggle selfie requirement on/off
+
+ATTENDANCE REPORTS:
+- Download full monthly attendance as CSV in one click
+- No paper registers, no WhatsApp check-ins needed
+
+MANUAL ATTENDANCE ENTRY (Admin):
+- Admins can manually add attendance records for team members
+- Handles off-system scenarios
+
+--- 2.9 PERFORMANCE ANALYTICS ---
+
+DASHBOARD OVERVIEW:
+- Total leads (with % change vs last month)
+- New uncontacted leads
+- Closed Won count
+- Follow-ups due today
+- Pipeline value in ₹ crores
+- Conversion rate
+- Today's activity (new leads, site visits, follow-ups)
+- Monthly closing goal progress
+- Average first response time
+
+LEAD SOURCE ANALYTICS:
+- Breakdown of leads by source
+- Facebook count, Website count, WhatsApp count, QR count, Manual count
+- Track which channel generates the most leads
+
+PERFORMANCE PAGE (Agent Analytics):
+- Per-agent metrics: leads assigned, new leads, site visits, closed won, conversion rate
+- Agent response time averages
+- Booking rate metrics
+- Callback metrics
+- Date range filterable
+- Export as PDF report
+
+HOT TODAY WIDGET:
+- AI-ranked list of top leads to call each day
+- Shows lead score, name, phone, status
+- One-tap call and WhatsApp from the widget
+
+--- 2.10 TEAM MANAGEMENT ---
+
+ROLES:
+Three roles with different access levels:
+
+ADMIN:
+- Full access to all features
+- Manage team members (add, edit, deactivate)
+- Configure org settings, billing details, logo
+- View all leads across all agents
+- Generate reports for all agents
+- Manage attendance settings
+
+MANAGER:
+- View and manage their team's leads
+- Assign leads to agents
+- View team performance
+- Set monthly goals
+- Cannot manage org settings
+
+AGENT:
+- See only their own assigned leads
+- Update lead status, add remarks, set follow-ups
+- Clock in/out for attendance
+- Cannot see other agents' leads
+- Cannot access admin settings
+
+TEAM PAGE:
+- Invite new agents, managers, or admins via email
+- Each person gets their own role-based login
+- Deactivate team members (leads stay in system)
+- View team member profiles and stats
+- Plan-based seat limits enforced
+
+--- 2.11 ORGANISATION SETTINGS ---
+
+ORGANISATION PROFILE:
+- Org name, industry, company size
+- Address, phone, email
+- City
+
+BILLING / INVOICE LETTERHEAD:
+- Upload company logo (JPEG/PNG, shown on invoices and app)
+- GST number
+- PAN number
+- CIN number
+- RERA number
+- Bank account name
+- Bank account number
+- IFSC code
+- Bank name and branch
+
+ALL fields configured once → automatically appear on every invoice generated
+
+AUTO-ASSIGN TOGGLE:
+- Enable/disable round-robin auto-assignment
+- Admin and Manager can toggle
+
+MONTHLY CLOSING GOAL:
+- Set a monthly target for closed deals
+- Progress shown on Dashboard as a progress bar
+
+QR TOKEN:
+- Generate/regenerate org-level QR token
+- Separate tokens for each project
+
+--- 2.12 INTEGRATIONS & AUTOMATION ---
+
+AUTOMATION PAGE:
+- Connect Facebook Lead Ads
+- Configure routing rules
+- Manage webhook integrations
+- WordPress plugin setup
+
+WEBHOOKS & API (Enterprise):
+- Custom webhook endpoints for third-party lead sources
+- REST API access for custom integrations
+- API documentation at arthaleads.com/api-docs
+
+PUSH NOTIFICATIONS:
+- Real-time alerts when new lead is assigned
+- Follow-up reminders
+- Works on mobile and desktop
+
+--- 2.13 CONTENT & PUBLIC PAGES ---
+
+BLOG:
+- Real estate content published at arthaleads.com/blog
+- Categories and tags
+- SEO-friendly slugs
+- Managed from Super Admin dashboard
+
+PRODUCT UPDATES:
+- Changelog at arthaleads.com/product-updates
+- All new features and improvements listed with dates
+
+HELP GUIDE:
+- Detailed feature documentation at arthaleads.com/help-guide
+
+================================================================
+SECTION 3 — PLANS & WHAT'S INCLUDED
+================================================================
+
+STARTER PLAN — Small teams up to 3 members
+Includes:
+- Unlimited lead imports (CSV / Excel)
+- Lead pipeline Kanban (6 stages)
+- Follow-up scheduling and reminders
+- Lead source tracking
+- Push notifications and new lead alerts
+- Facebook Lead Ads auto-import
+- WhatsApp capture
+- Website / WordPress plugin integration
+- Email support
+
+GROWTH PLAN — Teams up to 20 members (Most Popular)
+Includes everything in Starter, plus:
+- Multiple project pipelines
+- Duplicate lead detection
+- Auto round-robin lead assignment
+- Bulk lead export
+- Campaign routing rules
+- Role-based access (Admin / Manager / Agent)
+- Attendance tracking with selfie
+- Team performance dashboard
+- Advanced analytics and conversion reports
+- Booking rate and callback metrics
+- Individual agent response tracking
+- AI Lead Scoring and Hot Today widget
+- AI WhatsApp Draft
+- QR Code lead capture
+- Booking and Invoice Engine
+- AI Copilot
+- Priority support
+- 14-day free trial included
+
+ENTERPRISE PLAN — Unlimited members (Custom pricing)
+Includes everything in Growth, plus:
+- Google Ads integration
+- Custom webhook and API access
+- Multi-organisation management
+- Advanced automation management
+- Custom branding and white-label
+- Custom reporting
+- On-site onboarding and training
+- Dedicated account manager
+- SLA-backed uptime guarantee
+
+TRIAL:
+- 14-day free trial on Growth plan
+- No credit card required
+- Full access to all Growth features during trial
+
+================================================================
+SECTION 4 — RECENT UPDATES (Latest First)
+================================================================
+
+JUNE 2026:
+- QR Code Lead Capture (org-level and project-level)
+- AI Lead Scoring and Hot Today Widget
+- AI WhatsApp Draft
+
+MAY 2026:
+- Booking and Invoice Engine (with full PDF letterhead)
+- Attendance with Selfie Verification
+- AI Copilot — Live CRM Assistant
+- Invoice Letterhead — Logo, Billing and Bank Details
+- Invoice custom number (inline editable)
+- Org logo upload from Settings
+
+MAY 2026 (Also):
+- WordPress Plugin v1.0.2 — 8 form builders supported
+
+APRIL 2026:
+- Blog Module for Real Estate Teams
+- Not Reachable Lead Status (new pipeline stage)
+
+MARCH 2026:
+- Paste-and-Import — instant lead import by pasting CSV/markdown
+- Facebook Leads Integration — auto-pull from Meta campaigns
+
+FEBRUARY 2026:
+- WhatsApp Source Tracking
+
+================================================================
+SECTION 5 — COMMON QUESTIONS & ANSWERS
+================================================================
+
+Q: How do I add a new lead?
+A: Go to the Leads page and click the "+ Add Lead" button at the top right.
+You can also import leads in bulk from a CSV/Excel file using the Import
+button, or connect Facebook so leads arrive automatically.
+
+Q: How do I connect Facebook Lead Ads?
+A: Go to the Automation page (Admin or Manager only). Choose Facebook Lead Ads,
+connect your Meta account, and select your lead form. Every new submission
+will then auto-import into the CRM.
+
+Q: How does QR code lead capture work?
+A: Every org and project has its own QR code. Open the QR icon from the Leads
+page (for org QR) or the Projects page (for project QR). Download or print it.
+When a prospect scans it, they fill a short form and the lead lands in your
+CRM automatically with the source tagged.
+
+Q: How do I generate an invoice?
+A: Go to Bookings, open a booking, and click "Generate Invoice". Make sure your
+org billing details (GST, PAN, logo, bank details) are filled in Settings first
+so they appear on the invoice letterhead.
+
+Q: How do I set up attendance?
+A: Go to Settings → Attendance Settings to configure shift times and selfie
+requirements. Agents then clock in/out from the Attendance page on their phone.
+
+Q: How do I assign leads to my team?
+A: Open any lead and use the Assign field. Or tick multiple leads and use the
+bulk Assign action. You can also enable auto round-robin assignment in
+Settings so new leads are distributed automatically.
+
+Q: What happens to leads when an agent leaves?
+A: Leads are never deleted when an agent is deactivated. All their leads remain
+in the system and can be reassigned to other agents.
+
+Q: Can I use Arthaleads on my phone?
+A: Yes. Arthaleads is fully mobile-responsive and works on any browser on
+iPhone or Android. There is also a PWA (Progressive Web App) you can add
+to your home screen for a near-native app experience.
+
+Q: Is there a limit on how many leads I can have?
+A: No. There is no limit on the number of leads. Only the team member (seat)
+count is capped by plan.
+
+Q: How is data kept secure?
+A: Each organisation's data is completely isolated (multi-tenant architecture).
+Role-based access ensures agents only see their own leads. Every action is
+logged in an audit trail. Data is never permanently deleted (soft delete).
+All APIs are JWT-secured with HTTPS everywhere.
+
+Q: Can I export my data if I cancel?
+A: Yes. You can export all your leads as CSV or Excel at any time, even before
+cancelling. Your data is always yours.
+
+Q: How do I get support?
+A: WhatsApp or call +91 80801 97945. Or email contact@arthaleads.com.
+The in-app Help Bot can answer most questions instantly.
+
+================================================================
+SECTION 6 — SALES INFORMATION
+================================================================
+
+KEY DIFFERENTIATORS vs GENERIC CRMs (Salesforce, HubSpot, LeadSquared):
+1. Built specifically for Indian real estate — not adapted
+2. RERA fields, GST-split invoicing, INR pipeline value built in
+3. QR code lead capture (no other Indian CRM has this natively)
+4. Selfie-based attendance for field teams
+5. Booking and brokerage invoice engine built in
+6. Project-wise pipeline for multiple properties
+7. AI lead scoring available from day one, not just enterprise
+8. Onboarding under 30 minutes — no IT team needed
+9. India-hosted, India-priced
+
+PAIN POINTS ARTHALEADS SOLVES:
+- Leads scattered across WhatsApp groups and Excel sheets
+- No follow-up system — leads going cold
+- No visibility into which agent handles what
+- Manual lead assignment wasting manager time
+- No way to know which leads are hot vs dead
+- Missed site visits because reminders never fired
+- Booking records and invoices done in Excel — slow, error-prone
+- Field team attendance tracked in paper registers
+- Agents cherry-picking leads or hoarding
+- No source attribution — don't know which ad or channel converts
+
+RESULTS TEAMS ACHIEVE:
+- 3x faster lead response time with auto-assignment
+- 40% reduction in missed follow-ups
+- 100% lead source visibility
+- Invoice generation in 2 minutes vs 30+ minutes in Excel
+- Zero lead leakage — every enquiry captured
+- Full field team attendance without manual registers
+
+================================================================
+SECTION 7 — TECHNICAL INFORMATION
+================================================================
+
+PLATFORM: Web application (React frontend, Node.js/Express backend, MongoDB)
+HOSTING: India-hosted
+MOBILE: Fully responsive PWA — works on all browsers, iOS and Android
+INTEGRATIONS: Facebook Lead Ads, WhatsApp, Google Ads, WordPress,
+              Custom Webhooks, REST API
+AUTHENTICATION: Email/password + Google OAuth login
+DATA SECURITY: Multi-tenant isolation, JWT APIs, HTTPS, audit log, soft delete
+FILE FORMATS: CSV and Excel import/export, PDF invoice download
+NOTIFICATIONS: Browser push notifications (web and mobile)
+
+================================================================
+SECTION 8 — CONTACT & SUPPORT
+================================================================
+
+Website:       arthaleads.com
+WhatsApp:      +91 80801 97945
+Phone:         +91 80801 97945
+Email:         contact@arthaleads.com
+Sales email:   sales@arthaleads.com
+Blog:          arthaleads.com/blog
+Pricing page:  arthaleads.com/pricing
+Help guide:    arthaleads.com/help-guide
+Product updates: arthaleads.com/product-updates
+API docs:      arthaleads.com/api-docs
+Compare page:  arthaleads.com/compare
+
+================================================================
+END OF TRAINING DOCUMENT
+================================================================

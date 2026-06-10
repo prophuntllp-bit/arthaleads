@@ -21,7 +21,6 @@ const signupSchema = Joi.object({
   email:        Joi.string().email().required(),
   password:     passwordSchema.required(),
   phone:        Joi.string().min(10).max(15).required(),
-  phoneToken:   Joi.string().required(), // short-lived JWT issued after OTP verification
   referralCode: Joi.string().length(6).uppercase().alphanum().optional().allow("", null),
 });
 

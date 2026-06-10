@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Zap, Users, Star, MessageCircle, Mail, ArrowRight, Lock, Shield, Facebook, Bell, Layers } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { canAccess, planLabel, planLevel, upgradeTarget } from "../utils/plan";
+import { canAccess, planLabel, planLevel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
 
 const PLANS = [
   {
@@ -120,7 +120,7 @@ export default function Plans() {
     window.open("https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20upgrade%20my%20Arthaleads%20plan.", "_blank");
   };
   const openEmail = () => {
-    window.location.href = "mailto:contact@arthaleads.com?subject=Plan Upgrade Request&body=Hi, I'd like to upgrade my Arthaleads plan.";
+    window.location.href = "mailto:sales@arthaleads.com?subject=Plan Upgrade Request&body=Hi, I'd like to upgrade my Arthaleads plan.";
   };
 
   return (
@@ -233,11 +233,35 @@ export default function Plans() {
                 </div>
 
                 {/* User limit */}
-                <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-1 rounded-lg mb-4"
+                <div className="inline-flex items-center gap-1.5 self-start px-2.5 py-1 rounded-lg mb-3"
                   style={{ background: `${plan.color}10`, border: `1px solid ${plan.color}20` }}>
                   <Users className="w-3 h-3" style={{ color: plan.color }} />
                   <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
                 </div>
+
+                {/* Price */}
+                {(() => {
+                  const price = PLAN_PRICING[plan.id] || {};
+                  if (price.custom) {
+                    return (
+                      <div className="mb-4">
+                        <span className="text-2xl font-black text-app">Custom</span>
+                        <p className="text-[11px] text-app-soft mt-0.5">Tailored quote · contact sales</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="mb-4">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-black text-app">{formatINR(price.monthly)}</span>
+                        <span className="text-xs text-app-soft">/ user / mo</span>
+                      </div>
+                      <p className="text-[11px] text-app-soft mt-0.5">
+                        or {formatINR(price.annual)}/user/yr · save ~2 months · no setup fee
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Features */}
                 <div className="flex flex-col gap-3 flex-1 mb-5">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Spinner } from "../components/UI";
+import { Spinner, AppSelect } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { ShieldCheck, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
@@ -83,16 +83,14 @@ export default function SuperAdminAudit() {
 
       {/* Filter */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <select
-          className="input text-sm px-3 py-2 w-52"
+        <AppSelect
           value={action}
-          onChange={e => setAction(e.target.value)}
-        >
-          <option value="">All Actions</option>
-          {ALL_ACTIONS.map(a => (
-            <option key={a} value={a}>{ACTION_LABELS[a]?.label}</option>
-          ))}
-        </select>
+          onChange={v => setAction(v)}
+          placeholder="All Actions"
+          options={[{ value: "", label: "All Actions" }, ...ALL_ACTIONS.map(a => ({ value: a, label: ACTION_LABELS[a]?.label }))]}
+          className="w-52"
+          triggerClassName="text-sm"
+        />
         {action && (
           <button onClick={() => setAction("")}
             className="text-xs text-app-soft hover:text-app transition">

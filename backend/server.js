@@ -1,4 +1,7 @@
 ﻿// server.js - Production-ready CRM entry point (v3)
+// Deploy marker: 2026-06-05 — ship onboarding route + auth/signup fixes after
+// Railway CLI pin (5.3.0 regression). Touches backend/** so Railway's watch
+// path doesn't skip the build.
 // ⚠️  Sentry MUST be the very first import - before express, mongoose, everything
 require("./instrument");
 
@@ -42,6 +45,15 @@ const app = express();
 
 // Trust Railway/Vercel proxy - required for express-rate-limit behind a reverse proxy
 app.set("trust proxy", 1);
+
+// ── Boot-time security assertion ──────────────────────────────────────────────
+// Without FB_APP_SECRET in production, the Facebook webhook cannot verify
+// signatures. The webhook itself now rejects requests at runtime, but surface
+// the misconfiguration loudly at boot so it's caught before leads start failing.
+if (process.env.NODE_ENV === "production" && !process.env.FB_APP_SECRET) {
+  console.error("[FATAL] FB_APP_SECRET is not set in production — Facebook webhook signature verification is disabled and the webhook will reject all requests. Set FB_APP_SECRET in the environment.");
+  logger.error("FB_APP_SECRET missing in production — Facebook webhook will reject all incoming requests until configured.");
+}
 
 // ── Connect Database ──────────────────────────────────────────────────────────
 console.log("[BOOT] Connecting to DB...");
@@ -91,13 +103,32 @@ connectDB().then(async () => {
 app.use(helmet());
 
 // CORS - allow multiple frontend origins from env
-const allowedOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
+// Auto-expand every entry to include both www. and non-www variants so Samsung
+// Android PWA installs always match regardless of which form the app was
+// installed from (arthaleads.com vs www.arthaleads.com).
+const _rawOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
   .split(",").map((o) => o.trim());
+
+const allowedOrigins = new Set(_rawOrigins);
+for (const o of _rawOrigins) {
+  try {
+    const { protocol, hostname, port } = new URL(o);
+    const p = port ? `:${port}` : "";
+    if (hostname.startsWith("www.")) {
+      allowedOrigins.add(`${protocol}//${hostname.slice(4)}${p}`);
+    } else {
+      allowedOrigins.add(`${protocol}//www.${hostname}${p}`);
+    }
+  } catch {}
+}
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS blocked: ${origin}`));
+    if (!origin || allowedOrigins.has(origin)) return cb(null, true);
+    // Use cb(null, false) — returns a proper 403 with CORS headers so the
+    // browser logs a clear CORS error rather than a generic 500 network failure.
+    logger.warn(`CORS blocked: ${origin}`);
+    cb(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -203,7 +234,7 @@ app.get("/health", (req, res) => {
 // ── Frontend Error Report (ErrorBoundary → Sentry) ───────────────────────────
 // Accepts render crashes from the React ErrorBoundary and forwards to Sentry.
 // No auth required - the boundary catches pre-auth crashes too.
-app.post("/api/error-report", express.json({ limit: "16kb" }), (req, res) => {
+app.post("/api/error-report", contactLimiter, express.json({ limit: "16kb" }), (req, res) => {
   const { message, stack, componentStack, url } = req.body || {};
   logger.error(`[frontend-error] ${message} | url: ${url}\n${stack}\n${componentStack}`);
   const Sentry = require("./instrument");

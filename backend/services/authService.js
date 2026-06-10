@@ -20,26 +20,11 @@ const signToken = (id) =>
 
 const authService = {
   async signup(data) {
-    const existing = await User.findOne({ email: data.email });
+    const normalizedEmail = (data.email || "").toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) throw new AppError("Email already registered", 409);
 
-    // Validate the phone-verified token issued after OTP confirmation
-    if (!data.phoneToken) throw new AppError("Phone number must be verified before creating an account", 400);
-
-    let verifiedPhone, verifiedEmail;
-    try {
-      const decoded = jwt.verify(data.phoneToken, process.env.JWT_SECRET);
-      if (decoded.type !== "phone_verify") throw new Error("Invalid token type");
-      verifiedPhone = decoded.phone;
-      verifiedEmail = decoded.email;
-    } catch {
-      throw new AppError("Phone verification expired or invalid. Please verify your phone again.", 400);
-    }
-
-    // Ensure the token matches the form values (prevent token reuse with different details)
     const normPhone = String(data.phone || "").replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
-    if (normPhone !== verifiedPhone) throw new AppError("Phone number does not match the verified number. Please verify again.", 400);
-    if ((data.email || "").toLowerCase().trim() !== verifiedEmail) throw new AppError("Email does not match the verified session. Please verify again.", 400);
 
     // Create organization first
     const orgName = data.orgName || `${data.name}'s Workspace`;
@@ -60,9 +45,13 @@ const authService = {
       }
     }
 
-    // Strip phoneToken from user data before creating the user doc
-    const { phoneToken: _pt, ...userData } = data;
-    const user = await User.create({ ...userData, phone: normPhone, orgId: org._id, role: "admin" });
+    let user;
+    try {
+      user = await User.create({ ...data, email: normalizedEmail, phone: normPhone, orgId: org._id, role: "admin" });
+    } catch (err) {
+      if (err.code === 11000) throw new AppError("Email already registered", 409);
+      throw err;
+    }
     const token = signToken(user._id);
 
     // Fire-and-forget welcome email - don't block the signup response
@@ -90,6 +79,9 @@ const authService = {
     const user = await User.findOne(userQuery)
       .select("+password +loginAttempts +lockoutUntil");
 
+    // Reject deactivated accounts before touching attempt counters
+    if (user && !user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
     // ── Brute-force lockout check ─────────────────────────────────────────────
     if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
       const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
@@ -116,8 +108,6 @@ const authService = {
       throw new AppError("Invalid email/phone or password", 401);
     }
 
-    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
-
     // ── Successful login - reset lockout fields ───────────────────────────────
     user.loginAttempts = 0;
     user.lockoutUntil  = null;
@@ -126,7 +116,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
       : null;
     return { token, user, org };
   },
@@ -188,21 +178,42 @@ const authService = {
       throw new AppError("Google sign-in failed. Please try again.", 401);
     }
 
-    const { sub: googleId, email, name, picture } = payload;
+    const { sub: googleId, email, name, picture, email_verified } = payload;
 
     if (!email) throw new AppError("Google account has no email", 400);
+
+    // Reject unverified Google emails. Google issues tokens for unverified
+    // addresses in some Workspace flows; without this check an attacker holding
+    // an unverified account for victim@x.com could link to an existing CRM user
+    // by email (see "link the Google account" path below) and hijack it.
+    // userinfo returns email_verified as a boolean or the string "true"/"false".
+    const isVerified = email_verified === true || email_verified === "true";
+    if (!isVerified) {
+      throw new AppError("Your Google account email is not verified. Please verify it with Google first.", 400);
+    }
 
     // Find existing user by googleId or email
     let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");
 
     if (user) {
-      // If found by email but no googleId yet, link the Google account
+      // Always check isActive before doing anything else with the account
+      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
       if (!user.googleId) {
+        // Only auto-link Google to accounts that have no password set (e.g. admin-invited
+        // team members). Accounts that already have a password require the owner to
+        // explicitly link Google from their profile settings — silent linking is a
+        // known account-takeover vector if a Google account shares the same email.
+        const userWithPwd = await User.findById(user._id).select("+password");
+        if (userWithPwd?.password) {
+          throw new AppError(
+            "An account with this email already exists. Please sign in with your email and password.",
+            400
+          );
+        }
         user.googleId = googleId;
         if (picture && !user.avatar) user.avatar = picture;
-        await user.save({ validateBeforeSave: false });
       }
-      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
     } else {
       // New Google user - create their own org and make them admin
       const orgName = `${name}'s Workspace`;
@@ -231,7 +242,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
       : null;
     return { token, user, org };
   },
@@ -240,7 +251,7 @@ const authService = {
     const user = await User.findById(userId);
     if (!user) throw new AppError("User not found", 404);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
       : null;
     return { user, org };
   },
@@ -380,17 +391,13 @@ const authService = {
     const user = await User.findOne({ email: email.toLowerCase().trim() })
       .select("+passwordResetToken +passwordResetExpires");
 
-    // Always respond with success to prevent email enumeration attacks
+    // Always respond with success to prevent email enumeration attacks —
+    // including Google-only accounts (returning a distinct error would confirm
+    // the address is registered and reveal the auth method used).
     if (!user) return;
 
-    // Google-only accounts have no password - block reset
     const hasPassword = await User.findById(user._id).select("+password");
-    if (!hasPassword?.password) {
-      throw new AppError(
-        "This account uses Google Sign-In. Please sign in with Google instead.",
-        400
-      );
-    }
+    if (!hasPassword?.password) return; // Google-only: respond silently
 
     // Generate a 32-byte random token, store the SHA-256 hash in DB
     const rawToken   = crypto.randomBytes(32).toString("hex");
@@ -428,7 +435,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org   = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
       : null;
     return { token, user, org };
   },
@@ -454,7 +461,7 @@ const authService = {
 
     const token = signToken(user._id);
     const org = user.orgId
-      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign").lean()
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
       : null;
     return { token, user, org };
   },
@@ -482,7 +489,7 @@ const authService = {
 
     // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
     const [pipelineFacet] = await Lead.aggregate([
-      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: false, ...dateMatch } },
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: { $ne: true }, ...dateMatch } },
       { $facet: {
         assigned:   [{ $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
         closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],

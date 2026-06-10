@@ -94,6 +94,40 @@ const PAGE_COPILOT = {
       "How do I deactivate a team member?",
     ],
   },
+  "/bookings": {
+    label: "Bookings",
+    chips: [
+      "How many bookings are pending invoices?",
+      "How do I create a new booking?",
+      "How do I generate an invoice from a booking?",
+      "How do I delete a booking?",
+    ],
+  },
+  "/invoices": {
+    label: "Invoices",
+    chips: [
+      "How many invoices are awaiting payment?",
+      "How do I download an invoice as PDF?",
+      "How do I change the invoice status?",
+      "Why is my invoice missing company details?",
+    ],
+  },
+  "/developers": {
+    label: "Developers",
+    chips: [
+      "How do I add a developer?",
+      "Why doesn't my developer appear in the booking form?",
+    ],
+  },
+  "/settings": {
+    label: "Settings",
+    chips: [
+      "How do I fill in org billing details for invoices?",
+      "How do I upload the company logo?",
+      "How do I change my password?",
+      "What are the required fields for invoice generation?",
+    ],
+  },
 };
 
 export default function HelpBot() {
@@ -167,7 +201,7 @@ export default function HelpBot() {
 
   const handleGoto = (path) => { setOpen(false); navigate(path); };
 
-  const cleanText = (t) => (t || "").replace(/—/g, "-").replace(/–/g, "-");
+  const cleanText = (t) => (t || "").replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1").replace(/—/g, "-").replace(/–/g, "-");
 
   const firstName = user?.name?.split(" ")[0]?.trim() || "there";
   const pageInfo = PAGE_COPILOT[location.pathname.split("?")[0]] || null;

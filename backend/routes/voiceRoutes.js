@@ -32,7 +32,7 @@ router.get("/leads", async (req, res) => {
     const { campaign_id, limit = 20, page = 1, status, phone } = req.query;
 
     const escRx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const filter = { orgId: req.voiceOrgId, isDeleted: { $ne: true }, isArchived: false };
+    const filter = { orgId: req.voiceOrgId, isDeleted: { $ne: true }, isArchived: { $ne: true } };
 
     if (campaign_id && campaign_id !== "preview") {
       const safe = escRx(campaign_id);

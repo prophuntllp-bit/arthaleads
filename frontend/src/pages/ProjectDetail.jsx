@@ -1,8 +1,8 @@
 ﻿// pages/ProjectDetail.jsx
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
 import TransferModal from "../components/TransferModal";
@@ -154,28 +154,32 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                   label: "- None -",           color: "" },
-  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
-  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
-  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
-  { value: "Site Visit Done",    label: "Site Visit Done",     color: "text-teal-600" },
-  { value: "Booked",             label: "Booked",              color: "text-green-600" },
-  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
-  { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" },
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" },
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" },
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" },
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" },
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" },
+  { value: "Booked",             label: "Booked",              color: "#16a34a" },
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" },
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" },
 ];
 
-// Filter pills shown above the leads table (same values minus the empty one)
+// Filter pills shown above the leads table
 const STATUS_FILTERS = [
-  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",             text: "text-app-soft" },
+  { value: "",                  label: "All",               bg: "bg-gray-100 dark:bg-white/10",              text: "text-app-soft" },
   { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",           text: "text-blue-600 dark:text-blue-400" },
-  { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",         text: "text-amber-600 dark:text-amber-400" },
-  { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",       text: "text-violet-600 dark:text-violet-400" },
-  { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",           text: "text-teal-600 dark:text-teal-400" },
-  { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",         text: "text-green-600 dark:text-green-400" },
   { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",             text: "text-red-500 dark:text-red-400" },
   { value: "Not Reachable",     label: "Not Reachable",     bg: "bg-gray-100 dark:bg-white/10",              text: "text-gray-500 dark:text-gray-400" },
   { value: "Low Budget",        label: "Low Budget",        bg: "bg-pink-100 dark:bg-pink-500/20",           text: "text-pink-600 dark:text-pink-400" },
+  { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",         text: "text-amber-600 dark:text-amber-400" },
+  { value: "Site Visit Booked", label: "Site Visit Booked", bg: "bg-violet-100 dark:bg-violet-500/20",       text: "text-violet-600 dark:text-violet-400" },
+  { value: "Site Visit Done",   label: "Site Visit Done",   bg: "bg-teal-100 dark:bg-teal-500/20",           text: "text-teal-600 dark:text-teal-400" },
+  { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",         text: "text-green-600 dark:text-green-400" },
+  { value: "Other Location",    label: "Other Location",    bg: "bg-orange-100 dark:bg-orange-500/20",       text: "text-orange-600 dark:text-orange-400" },
+  { value: "Commercial",        label: "Commercial",        bg: "bg-indigo-100 dark:bg-indigo-500/20",       text: "text-indigo-600 dark:text-indigo-400" },
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -197,8 +201,8 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
     <CustomSelect
       value={value || ""}
       onChange={save}
-      options={BOOKING_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-      style={{ minWidth: 120, maxWidth: 145 }}
+      options={BOOKING_OPTIONS.map((o) => ({ value: o.value, label: o.label, color: o.color }))}
+      style={{ minWidth: 120, maxWidth: 160 }}
     />
   );
 }
@@ -271,11 +275,12 @@ export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const canManage = ["admin", "manager", "super_admin"].includes(user?.role);
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState("info");
+  const [tab, setTab]         = useState(() => location.state?.searchLead ? "leads" : "info");
   const [showEdit, setShowEdit] = useState(false);
 
   // Project delete
@@ -288,7 +293,7 @@ export default function ProjectDetail() {
   const [leadsPage, setLeadsPage]       = useState(1);
   const [leadsPages, setLeadsPages]     = useState(1);
   const [leadsLoading, setLeadsLoading] = useState(false);
-  const [search, setSearch]             = useState("");
+  const [search, setSearch]             = useState(() => location.state?.searchLead || "");
   const [importing, setImporting]       = useState(false);
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);
@@ -1073,7 +1078,7 @@ export default function ProjectDetail() {
                             <NameCell name={lead.name} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
-                          <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
+                          <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
                           <td className="text-sm text-app-soft">{lead.email || "-"}</td>
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>
@@ -1123,7 +1128,7 @@ export default function ProjectDetail() {
                             )}
                           </td>
                           <td>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                               <button
                                 className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                 onClick={() => setEditingLead(lead)}
@@ -1231,7 +1236,7 @@ export default function ProjectDetail() {
                     value={prospBulkStatusBook}
                     onChange={setProspBulkStatusBook}
                     placeholder="Set status…"
-                    options={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))}
+                    options={BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color }))}
                     style={{ minWidth: 140 }}
                   />
                   <button
@@ -1297,7 +1302,7 @@ export default function ProjectDetail() {
             {[
               { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",           text: "text-app-soft" },
               { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",         text: "text-blue-600 dark:text-blue-400" },
-              { value: "Site Visit Booked", label: "Site Visit",        bg: "bg-violet-100 dark:bg-violet-500/20",     text: "text-violet-600 dark:text-violet-400" },
+              { value: "Site Visit Booked", label: "Site Visit Booked", bg: "bg-violet-100 dark:bg-violet-500/20",     text: "text-violet-600 dark:text-violet-400" },
               { value: "Call Back",         label: "Call Back",         bg: "bg-amber-100 dark:bg-amber-500/20",       text: "text-amber-600 dark:text-amber-400" },
               { value: "Booked",            label: "Booked",            bg: "bg-green-100 dark:bg-green-500/20",       text: "text-green-600 dark:text-green-400" },
               { value: "Not Interested",    label: "Not Interested",    bg: "bg-red-100 dark:bg-red-500/20",           text: "text-red-500 dark:text-red-400" },
@@ -1325,23 +1330,9 @@ export default function ProjectDetail() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-semibold text-app-soft">Follow-up date:</span>
             <div className="flex items-center gap-2">
-              <input
-                type="date"
-                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
-                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                value={prospDateFrom}
-                onChange={(e) => { setProspDateFrom(e.target.value); setProspPage(1); }}
-                title="From date"
-              />
+              <AppDatePicker value={prospDateFrom} onChange={v => { setProspDateFrom(v); setProspPage(1); }} className="w-36" />
               <span className="text-xs text-app-soft">to</span>
-              <input
-                type="date"
-                className="rounded-xl border px-3 py-1.5 text-xs focus:outline-none focus:border-orange-400"
-                style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                value={prospDateTo}
-                onChange={(e) => { setProspDateTo(e.target.value); setProspPage(1); }}
-                title="To date"
-              />
+              <AppDatePicker value={prospDateTo} onChange={v => { setProspDateTo(v); setProspPage(1); }} className="w-36" />
               {(prospDateFrom || prospDateTo) && (
                 <button
                   className="rounded-xl px-2.5 py-1 text-xs font-semibold text-orange-500 hover:bg-orange-500/10 transition border"
@@ -1407,7 +1398,7 @@ export default function ProjectDetail() {
                               <NameCell name={lead.name} bold />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
-                            <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
+                            <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
                             <td>
                               <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleProspUpdate} />
                             </td>
@@ -1437,7 +1428,7 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                                 <button
                                   className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                   onClick={() => setEditingLead(lead)}
@@ -1599,7 +1590,7 @@ export default function ProjectDetail() {
                               <NameCell name={lead.name} bold />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
-                            <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
+                            <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
                             <td>
                               <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleSvdUpdate} />
                             </td>
@@ -1629,7 +1620,7 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                                 <button
                                   className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                   onClick={() => setEditingLead(lead)}

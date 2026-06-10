@@ -26,30 +26,36 @@ const orgSchema = new mongoose.Schema(
       default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
     },
     isActive: { type: Boolean, default: true },
-    industry: { type: String, default: "Real Estate" },
+    industry:    { type: String, default: "Real Estate" },
+    companySize: { type: String, default: "" },
+    city:        { type: String, default: "" },
+    onboardingCompletedAt: { type: Date, default: null },
     logo:       { type: String, default: "" },  // base64 data-URI or hosted URL
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
     monthlyClosingGoal: { type: Number, default: 0, min: 0 },
-    // ── Org profile / billing ────────────────────────────────────────────────
-    phone:          { type: String, default: "" },
-    email:          { type: String, default: "" },
-    address:        { type: String, default: "" },
-    gstNo:          { type: String, default: "" },
-    pan:            { type: String, default: "" },
-    cin:            { type: String, default: "" },
-    rera:           { type: String, default: "" },
+    attendanceSettings: {
+      shiftStartTime: { type: String, default: "09:30" }, // "HH:MM" 24-hour
+      shiftEndTime:   { type: String, default: "19:00" }, // expected clock-out time
+      bufferMinutes:  { type: Number, default: 15 },      // grace period before marked late
+      halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
+      fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
+      requireSelfie:  { type: Boolean, default: true },   // require selfie on clock-in/out
+    },
+    // ── Billing / Invoice letterhead details ───────────────────────────────────
+    address:         { type: String, default: "" },
+    phone:           { type: String, default: "" },
+    email:           { type: String, default: "" },
+    gstNo:           { type: String, default: "" },
+    pan:             { type: String, default: "" },
+    cin:             { type: String, default: "" },
+    rera:            { type: String, default: "" },
     bankAccountName: { type: String, default: "" },
     bankAccountNo:   { type: String, default: "" },
     bankIfsc:        { type: String, default: "" },
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
-    attendanceSettings: {
-      shiftStartTime: { type: String, default: "09:30" }, // "HH:MM" 24-hour
-      bufferMinutes:  { type: Number, default: 15 },      // grace period before marked late
-      halfDayMinutes: { type: Number, default: 240 },     // min minutes for half-day (4h)
-      fullDayMinutes: { type: Number, default: 480 },     // min minutes for full-day (8h)
-    },
+
     // ── QR Code lead capture ───────────────────────────────────────────────────
     qrToken:         { type: String, default: "", index: true, sparse: true },
     // ── Referral tracking ──────────────────────────────────────────────────────

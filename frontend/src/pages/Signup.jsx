@@ -1,18 +1,10 @@
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall, CheckCircle2, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 import { useGoogleLogin } from "@react-oauth/google";
-import api from "../services/api";
-
-// phone step states
-const IDLE     = "idle";     // user hasn't clicked "Send OTP" yet
-const SENDING  = "sending";  // waiting for send OTP response
-const SENT     = "sent";     // OTP sent, waiting for user to enter code
-const VERIFYING= "verifying";// waiting for verify OTP response
-const VERIFIED = "verified"; // phone is confirmed ✓
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -25,28 +17,15 @@ export default function Signup() {
   const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "", phone: "" });
   const [referralCode] = useState(() => searchParams.get("ref") || "");
 
-  // Phone OTP verification states
-  const [phoneStep, setPhoneStep] = useState(IDLE);
-  const [maskedEmail, setMaskedEmail] = useState("");
-  const [otp, setOtp]       = useState("");
-  const [otpError, setOtpError] = useState("");
-  const [phoneToken, setPhoneToken] = useState("");
-  const otpRef = useRef(null);
-
-  const set = (key) => (e) => {
-    setForm((f) => ({ ...f, [key]: e.target.value }));
-    // If the user edits phone after verification, reset the verification
-    if (key === "phone") {
-      setPhoneStep(IDLE);
-      setPhoneToken("");
-      setOtp("");
-      setOtpError("");
-    }
-  };
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setError("Google sign-up failed. Please try again.");
+        return;
+      }
       setError("");
       setGLoading(true);
       try {
@@ -62,60 +41,15 @@ export default function Signup() {
     onError: () => setError("Google sign-up failed. Please try again."),
   });
 
-  // Step 1 - send OTP to the email the user typed
-  const handleSendOtp = async () => {
-    setOtpError("");
-    const phone = form.phone.trim();
-    const email = form.email.trim();
-    if (!email) { setOtpError("Enter your email first so we know where to send the OTP."); return; }
-    if (phone.replace(/\D/g, "").length < 10) { setOtpError("Enter a valid 10-digit mobile number first."); return; }
-
-    setPhoneStep(SENDING);
-    try {
-      const { data } = await api.post("/auth/signup/send-otp", { phone, email });
-      setMaskedEmail(data.maskedEmail);
-      setPhoneStep(SENT);
-      setTimeout(() => otpRef.current?.focus(), 80);
-    } catch (err) {
-      setPhoneStep(IDLE);
-      setOtpError(err.response?.data?.message || "Failed to send OTP. Please try again.");
-    }
-  };
-
-  // Step 2 - verify the OTP the user entered
-  const handleVerifyOtp = async () => {
-    setOtpError("");
-    if (otp.length !== 6) { setOtpError("Enter the 6-digit code from your email."); return; }
-
-    setPhoneStep(VERIFYING);
-    try {
-      const { data } = await api.post("/auth/signup/verify-otp", { phone: form.phone, otp });
-      setPhoneToken(data.phoneToken);
-      setPhoneStep(VERIFIED);
-      toast.success("Phone verified ✓");
-    } catch (err) {
-      setPhoneStep(SENT);
-      setOtpError(err.response?.data?.message || "Invalid or expired OTP. Please try again.");
-    }
-  };
-
-  const handleResend = () => {
-    setOtp("");
-    setOtpError("");
-    setPhoneStep(IDLE);
-    setTimeout(handleSendOtp, 50);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(form.password);
     if (form.password.length < 8 || !pwdOk) { setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character"); return; }
-    if (phoneStep !== VERIFIED) { setError("Please verify your phone number before creating your account."); return; }
 
     setLoading(true);
     try {
-      await signup({ ...form, phoneToken, ...(referralCode ? { referralCode } : {}) });
+      await signup({ ...form, ...(referralCode ? { referralCode } : {}) });
       toast.success("Account created! Welcome to Arthaleads.");
       navigate("/dashboard");
     } catch (err) {
@@ -220,101 +154,19 @@ export default function Signup() {
                 <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="your@email.com" autoComplete="username" required />
               </div>
 
-              {/* ── Phone + OTP verification ───────────────────────────────────── */}
               <div>
                 <label className="label">Mobile Number</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      className={`input pr-8 ${phoneStep === VERIFIED ? "border-green-500/60 focus:border-green-500" : ""}`}
-                      type="tel"
-                      value={form.phone}
-                      onChange={set("phone")}
-                      placeholder="10-digit mobile number"
-                      autoComplete="tel"
-                      required
-                      minLength={10}
-                      disabled={phoneStep === VERIFIED}
-                      style={phoneStep === VERIFIED ? { opacity: 0.85 } : {}}
-                    />
-                    {phoneStep === VERIFIED && (
-                      <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none" />
-                    )}
-                  </div>
-
-                  {phoneStep !== VERIFIED && (
-                    <button
-                      type="button"
-                      onClick={handleSendOtp}
-                      disabled={phoneStep === SENDING || phoneStep === VERIFYING}
-                      className="btn-secondary shrink-0 px-4 text-xs font-semibold rounded-xl disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {phoneStep === SENDING ? <><Spinner size="sm" /> Sending…</> : phoneStep === SENT ? "Resend" : "Send OTP"}
-                    </button>
-                  )}
-
-                  {phoneStep === VERIFIED && (
-                    <button
-                      type="button"
-                      onClick={() => { setPhoneStep(IDLE); setPhoneToken(""); setOtp(""); setOtpError(""); }}
-                      className="btn-secondary shrink-0 px-3 text-xs rounded-xl"
-                      title="Change number"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* OTP input - shown while in SENT or VERIFYING state */}
-                {(phoneStep === SENT || phoneStep === VERIFYING) && (
-                  <div className="mt-2 rounded-2xl border p-4 space-y-3" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                    <p className="text-xs text-app-soft">
-                      OTP sent to <span className="font-semibold text-app">{maskedEmail}</span>. Enter the 6-digit code below.
-                    </p>
-                    <div className="flex gap-2">
-                      <input
-                        ref={otpRef}
-                        className="input flex-1 tracking-[0.25em] font-semibold text-center text-base"
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        value={otp}
-                        onChange={(e) => { setOtp(e.target.value.replace(/\D/g, "").slice(0, 6)); setOtpError(""); }}
-                        placeholder="• • • • • •"
-                        autoComplete="one-time-code"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyOtp}
-                        disabled={phoneStep === VERIFYING || otp.length !== 6}
-                        className="btn-primary shrink-0 px-4 text-xs disabled:opacity-50"
-                      >
-                        {phoneStep === VERIFYING ? <><Spinner size="sm" /> Verifying…</> : "Verify"}
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      className="text-xs text-orange-500 hover:underline"
-                    >
-                      Didn't receive it? Resend OTP
-                    </button>
-                  </div>
-                )}
-
-                {/* Verified badge */}
-                {phoneStep === VERIFIED && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-green-500">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Phone number verified
-                  </p>
-                )}
-
-                {/* OTP-step errors */}
-                {otpError && (
-                  <p className="mt-1.5 text-xs text-red-400">{otpError}</p>
-                )}
+                <input
+                  className="input"
+                  type="tel"
+                  value={form.phone}
+                  onChange={set("phone")}
+                  placeholder="10-digit mobile number"
+                  autoComplete="tel"
+                  required
+                  minLength={10}
+                />
               </div>
-              {/* ── end phone OTP ─────────────────────────────────────────────── */}
 
               <div>
                 <label className="label">Password</label>
@@ -348,8 +200,7 @@ export default function Signup() {
               <button
                 type="submit"
                 className="btn-primary w-full justify-center py-3 mt-2 disabled:opacity-50"
-                disabled={loading || phoneStep !== VERIFIED}
-                title={phoneStep !== VERIFIED ? "Verify your phone number first" : undefined}
+                disabled={loading}
               >
                 {loading ? (
                   <><Spinner size="sm" /><span>Creating account…</span></>
@@ -357,12 +208,6 @@ export default function Signup() {
                   "Create Account"
                 )}
               </button>
-
-              {phoneStep !== VERIFIED && (
-                <p className="text-center text-xs text-app-soft -mt-1">
-                  Verify your mobile number above to enable account creation.
-                </p>
-              )}
             </form>
 
             <div className="my-5 flex items-center gap-3">

@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { BookMarked, Plus, FileText, X, Check, ChevronDown, IndianRupee, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { BookMarked, Plus, FileText, X, Check, IndianRupee, Trash2, ExternalLink } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { AppSelect, AppDatePicker } from "../components/UI";
 import { useNavigate } from "react-router-dom";
 
 const UNIT_TYPES = ["Flat", "Plot", "Villa", "Shop", "Office", "Other"];
@@ -64,6 +65,33 @@ function Row({ label, value, bold, bigger, color }) {
       <span className={`font-${bold ? "bold" : "medium"} ${bigger ? "text-sm" : ""}`}
         style={{ color: color || (bold ? "var(--app-text)" : undefined) }}>{value}</span>
     </div>
+  );
+}
+
+// Formats number with Indian commas while typing — shows raw digits when focused
+function FormattedNumberInput({ value, onChange, placeholder, className, step }) {
+  const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
+  const raw = value === "" || value === undefined ? "" : String(value);
+  const display = focused || !raw
+    ? raw
+    : Number(raw).toLocaleString("en-IN");
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      inputMode="decimal"
+      step={step}
+      value={display}
+      onChange={e => {
+        const stripped = e.target.value.replace(/[^0-9.]/g, "");
+        onChange(stripped);
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 }
 
@@ -159,14 +187,13 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               <p className="text-xs font-bold text-app-soft uppercase tracking-wide pt-1">Unit Details</p>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Developer *</label>
-                <div className="relative">
-                  <select value={form.developerId} onChange={e => set("developerId", e.target.value)}
-                    className="input w-full text-sm appearance-none pr-8 cursor-pointer">
-                    <option value="">-- Select developer --</option>
-                    {developers.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
-                </div>
+                <AppSelect
+                  value={form.developerId}
+                  onChange={v => set("developerId", v)}
+                  placeholder="-- Select developer --"
+                  options={developers.map(d => ({ value: d._id, label: d.name }))}
+                  triggerStyle={{ padding: "11px 16px", borderRadius: "1rem", fontSize: 14 }}
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Project Name *</label>
@@ -181,13 +208,12 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">Unit Type</label>
-                  <div className="relative">
-                    <select value={form.unitType} onChange={e => set("unitType", e.target.value)}
-                      className="input w-full text-sm appearance-none pr-7 cursor-pointer">
-                      {UNIT_TYPES.map(t => <option key={t}>{t}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-app-soft pointer-events-none" />
-                  </div>
+                  <AppSelect
+                    value={form.unitType}
+                    onChange={v => set("unitType", v)}
+                    options={UNIT_TYPES}
+                    triggerClassName="text-sm"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -204,8 +230,7 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Booking Date</label>
-                <input type="date" value={form.bookingDate} onChange={e => set("bookingDate", e.target.value)}
-                  className="input w-full text-sm" />
+                <AppDatePicker value={form.bookingDate} onChange={v => set("bookingDate", v)} triggerStyle={{ padding: "11px 16px", borderRadius: "1rem", fontSize: 14 }} />
               </div>
             </div>
 
@@ -214,9 +239,9 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               <p className="text-xs font-bold text-app-soft uppercase tracking-wide">Brokerage Details</p>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Consideration Value (₹)</label>
-                <input type="number" min="0" value={form.considerationValue}
-                  onChange={e => set("considerationValue", e.target.value)}
-                  placeholder="7236350" className="input w-full text-sm" />
+                <FormattedNumberInput value={form.considerationValue}
+                  onChange={v => set("considerationValue", v)}
+                  placeholder="72,36,350" className="input w-full text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block flex items-center justify-between">
@@ -228,9 +253,9 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
                   </label>
                 </label>
                 {form.manualBrokerage ? (
-                  <input type="number" min="0" value={form.brokerageAmount}
-                    onChange={e => set("brokerageAmount", e.target.value)}
-                    placeholder="173100" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.brokerageAmount}
+                    onChange={v => set("brokerageAmount", v)}
+                    placeholder="1,73,100" className="input w-full text-sm" />
                 ) : (
                   <input type="number" step="0.25" min="0" max="20" value={form.brokeragePercent}
                     onChange={e => set("brokeragePercent", e.target.value)}
@@ -239,22 +264,22 @@ function BookingModal({ booking, developers, onClose, onSaved }) {
               </div>
               <div>
                 <label className="text-xs font-semibold text-app-soft mb-1 block">Brokerage Adjustment (-)</label>
-                <input type="number" min="0" value={form.brokerageAdjustment}
-                  onChange={e => set("brokerageAdjustment", e.target.value)}
+                <FormattedNumberInput value={form.brokerageAdjustment}
+                  onChange={v => set("brokerageAdjustment", v)}
                   placeholder="0" className="input w-full text-sm" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">FOS Incentive (₹)</label>
-                  <input type="number" min="0" value={form.fosIncentive}
-                    onChange={e => set("fosIncentive", e.target.value)}
-                    placeholder="25000" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.fosIncentive}
+                    onChange={v => set("fosIncentive", v)}
+                    placeholder="25,000" className="input w-full text-sm" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-app-soft mb-1 block">EOI Incentive (₹)</label>
-                  <input type="number" min="0" value={form.eoiIncentive}
-                    onChange={e => set("eoiIncentive", e.target.value)}
-                    placeholder="30000" className="input w-full text-sm" />
+                  <FormattedNumberInput value={form.eoiIncentive}
+                    onChange={v => set("eoiIncentive", v)}
+                    placeholder="30,000" className="input w-full text-sm" />
                 </div>
               </div>
               <div>
@@ -331,7 +356,10 @@ export default function Bookings() {
   };
 
   const handleDelete = async (b) => {
-    if (!confirm("Delete this booking?")) return;
+    const msg = b.invoiceId
+      ? "Delete this booking and its linked invoice? This cannot be undone."
+      : "Delete this booking? This cannot be undone.";
+    if (!confirm(msg)) return;
     try {
       await api.delete(`/bookings/${b._id}`);
       setBookings(x => x.filter(b2 => b2._id !== b._id));
@@ -358,7 +386,7 @@ export default function Bookings() {
           <p className="text-sm text-app-soft mt-0.5">Track every closed deal and generate brokerage invoices</p>
         </div>
         <button onClick={() => setModal("new")}
-          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer">
+          className="btn-primary rounded-2xl px-4 py-2 text-sm flex items-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0">
           <Plus className="h-4 w-4" /> New Booking
         </button>
       </div>
@@ -371,10 +399,10 @@ export default function Bookings() {
           { label: "Invoice Pending", value: countPending,      color: "#f59e0b" },
           { label: "Payment Received",value: countPaid,         color: "#10b981" },
         ].map(s => (
-          <div key={s.label} className="card rounded-2xl p-3"
+          <div key={s.label} className="card rounded-2xl p-4"
             style={{ border: "1px solid var(--app-border)" }}>
             <p className="text-xs text-app-soft">{s.label}</p>
-            <p className="text-xl font-black mt-0.5" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xl font-black mt-1" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -421,7 +449,11 @@ export default function Bookings() {
                   <tr key={b._id} style={{ borderBottom: "1px solid var(--app-border)" }}
                     className="hover:bg-black/2 dark:hover:bg-white/2 transition">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-app text-sm">{b.customerName}</p>
+                      <p
+                        className="font-semibold text-sm cursor-pointer hover:text-orange-500 transition-colors"
+                        style={{ color: "var(--app-text)" }}
+                        onClick={() => setModal(b)}
+                      >{b.customerName}</p>
                       {b.jointBuyerName && <p className="text-xs text-app-soft">{b.jointBuyerName}</p>}
                     </td>
                     <td className="px-4 py-3 text-sm text-app-soft">{b.developerId?.name || "-"}</td>
@@ -465,16 +497,10 @@ export default function Bookings() {
                             <ExternalLink className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <button onClick={() => setModal(b)} title="Edit"
-                          className="p-1.5 rounded-xl text-app-soft hover:text-app cursor-pointer transition">
-                          <Pencil className="h-3.5 w-3.5" />
+                        <button onClick={() => handleDelete(b)} title="Delete booking"
+                          className="p-1.5 rounded-xl text-app-soft hover:text-red-500 cursor-pointer transition">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
-                        {!b.invoiceId && (
-                          <button onClick={() => handleDelete(b)} title="Delete"
-                            className="p-1.5 rounded-xl text-app-soft hover:text-red-500 cursor-pointer transition">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

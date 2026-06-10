@@ -110,7 +110,7 @@ export default function BlogManager() {
       </div>
 
       {/* Filters + Search */}
-      <div className="px-4 lg:px-6 pt-4 flex flex-wrap items-center gap-3">
+      <div className="pt-4 flex flex-wrap items-center gap-3">
         {/* Status filter */}
         <div className="flex gap-1.5 p-1 rounded-xl" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
           {[
@@ -142,7 +142,7 @@ export default function BlogManager() {
       </div>
 
       {/* Posts */}
-      <div className="px-4 lg:px-6 pt-4 pb-6">
+      <div className="pt-4 pb-6">
         {loading ? (
           <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
         ) : posts.length === 0 ? (

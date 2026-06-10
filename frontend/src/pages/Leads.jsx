@@ -33,8 +33,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
-import QrModal from "../components/QrModal";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -105,15 +104,17 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
 
 // ── Inline booking select ─────────────────────────────────────────────────────
 const BOOKING_OPTIONS = [
-  { value: "",                   label: "- None -",           color: "" },
-  { value: "Interested",         label: "Interested",          color: "text-blue-600" },
-  { value: "Call Back",          label: "Call Back",           color: "text-amber-600" },
-  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "text-violet-600" },
-  { value: "Site Visit Done",    label: "Site Visit Done",     color: "text-teal-600" },
-  { value: "Booked",             label: "Booked",              color: "text-green-600" },
-  { value: "Not Interested",     label: "Not Interested",      color: "text-red-500" },
-  { value: "Not Reachable",      label: "Not Reachable",       color: "text-gray-500" },
-  { value: "Low Budget",         label: "Low Budget",          color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" }, // blue
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" }, // red
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" }, // gray
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" }, // pink
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" }, // amber
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" }, // violet
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" }, // teal
+  { value: "Booked",             label: "Booked",              color: "#16a34a" }, // green
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" }, // orange
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" }, // indigo
 ];
 
 function InlineBooking({ value, leadId, projectId, onSaved }) {
@@ -136,7 +137,7 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
       value={value || ""}
       onChange={save}
       placeholder="- None -"
-      options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      options={BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
       style={{ minWidth: 130, fontWeight: 600 }}
     />
   );
@@ -260,13 +261,17 @@ function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
 }
 
 const PROJ_BOOKING_OPTIONS = [
-  { value: "", label: "- None -", color: "" },
-  { value: "Interested", label: "Interested", color: "text-blue-600" },
-  { value: "Call Back", label: "Call Back", color: "text-amber-600" },
-  { value: "Site Visit Booked", label: "Site Visit Booked", color: "text-violet-600" },
-  { value: "Booked", label: "Booked", color: "text-green-600" },
-  { value: "Not Interested", label: "Not Interested", color: "text-red-500" },
-  { value: "Low Budget",    label: "Low Budget",     color: "text-pink-600" },
+  { value: "",                   label: "- None -",           color: null },
+  { value: "Interested",         label: "Interested",          color: "#2563eb" },
+  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" },
+  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" },
+  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" },
+  { value: "Call Back",          label: "Call Back",           color: "#d97706" },
+  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" },
+  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" },
+  { value: "Booked",             label: "Booked",              color: "#16a34a" },
+  { value: "Other Location",     label: "Other Location",      color: "#ea580c" },
+  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" },
 ];
 
 function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
@@ -285,7 +290,7 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
       value={value || ""}
       onChange={save}
       placeholder="- None -"
-      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label }))}
+      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
       style={{ minWidth: 125, fontWeight: 600 }}
     />
   );
@@ -367,7 +372,7 @@ export default function Leads() {
   const {
     leads, total, loading, page, setPage,
     filters, setFilter,
-    upsertLead, removeLead, pages, limit, changeLimit,
+    upsertLead, removeLead, refetch, pages, limit, changeLimit,
   } = useLeads("unified", {
     search: location.state?.presetSearch || "",
     status: location.state?.presetStatus || "",
@@ -384,7 +389,6 @@ export default function Leads() {
 
   const [agents, setAgents] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [showQrModal, setShowQrModal] = useState(false);
   const [editLead, setEditLead] = useState(null);
   const [detailLead, setDetailLead] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -772,27 +776,107 @@ export default function Leads() {
   };
 
   // ── Standard CRM import (Name/Phone/Email columns) ───────────────────────────
-  const parseImportRow = (row) => {
-    const assignedAgent = agents.find((agent) => agent.name?.toLowerCase() === String(row.AssignedTo || "").trim().toLowerCase());
+  // Normalise header: lowercase, strip all punctuation/spaces → "leadname", "phonenumber" etc.
+  const normKey = (s) => String(s).toLowerCase().replace(/[\s_\-().#\/\\]/g, "");
+
+  // Build a header-lookup closure for one row. Tries aliases in priority order,
+  // returns the first non-empty value found (or "").
+  const makeColPicker = (row) => {
+    const map = {};
+    for (const h of Object.keys(row)) map[normKey(h)] = h;
+    return (...candidates) => {
+      for (const c of candidates) {
+        const orig = map[normKey(c)];
+        if (orig !== undefined && String(row[orig] ?? "").trim() !== "") return String(row[orig]).trim();
+      }
+      return "";
+    };
+  };
+
+  // Content-based column inference: scan up to 10 rows to find which header
+  // matches name / phone / email by the shape of values when alias lookup fails.
+  const inferColByContent = (rows, type) => {
+    const headers = Object.keys(rows[0]);
+    const sample = rows.slice(0, Math.min(10, rows.length));
+    const score = (header) => {
+      let hits = 0;
+      for (const r of sample) {
+        const v = String(r[header] ?? "").trim();
+        if (!v) continue;
+        if (type === "name"  && /^[A-Za-z\s'.\-]{2,60}$/.test(v) && !/\d/.test(v)) hits++;
+        if (type === "phone" && /^\+?[\d\s\-()]{8,16}$/.test(v.replace(/\s/g, ""))) hits++;
+        if (type === "email" && v.includes("@") && v.includes(".")) hits++;
+      }
+      return hits;
+    };
+    // Pick the header with the highest hit count (min 2 hits to avoid false positives)
+    let best = null, bestScore = 1;
+    for (const h of headers) {
+      const s = score(h);
+      if (s > bestScore) { bestScore = s; best = h; }
+    }
+    return best; // null if nothing found
+  };
+
+  const parseImportRow = (row, inferredCols = {}) => {
+    const col = makeColPicker(row);
+
+    const name = col(
+      "Lead Name","LeadName","Full Name","FullName","Name","Customer Name","CustomerName",
+      "Contact Name","ContactName","Client Name","ClientName","User Name","UserName",
+      "Prospect","Party","Buyer","Person","Contact","Customer"
+    ) || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
+
+    const phone = col(
+      "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
+      "Contact Number","ContactNumber","Cell","WhatsApp","Whatsapp Number","WhatsappNumber",
+      "Mob","Tel","Telephone"
+    ) || (inferredCols.phone ? String(row[inferredCols.phone] ?? "").trim() : "");
+
+    const email = col(
+      "Email","Email Address","EmailAddress","Email ID","EmailID","Mail","E-mail","E Mail"
+    ) || (inferredCols.email ? String(row[inferredCols.email] ?? "").trim() : "");
+
+    const agentName = col("Agent","Assigned To","AssignedTo","Assigned Agent","AssignedAgent","Salesperson","Sales Person");
+    const assignedAgent = agentName
+      ? agents.find((a) => a.name?.toLowerCase() === agentName.toLowerCase())
+      : undefined;
+
+    // Budget: try split min/max first, then single Budget field
+    const budgetSingle = col("Budget","Budget Range","BudgetRange");
+    const budgetMin = Number(col("Budget Min","BudgetMin","Min Budget","MinBudget")) || 0;
+    const budgetMax = Number(col("Budget Max","BudgetMax","Max Budget","MaxBudget") || budgetSingle) || 0;
+
+    // Follow-up date: handle Excel serial numbers and string dates
+    const fuRaw = col("Follow Up Date","FollowUpDate","Follow-Up Date","Followup Date","FollowupDate","Next Followup","NextFollowup");
+    let followUpDate = null;
+    if (fuRaw) {
+      const n = Number(fuRaw);
+      if (!isNaN(n) && n > 40000) {
+        // Excel serial date → JS date
+        const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+        followUpDate = d.toISOString();
+      } else {
+        const parsed = new Date(fuRaw);
+        if (!isNaN(parsed)) followUpDate = parsed.toISOString();
+      }
+    }
+
     return {
-      name: String(row.Name || row.name || "").trim(),
-      phone: String(row.Phone || row.phone || "").trim(),
-      email: String(row.Email || row.email || "").trim(),
-      source: String(row.Source || row.source || "Manual").trim() || "Manual",
-      status: String(row.Status || row.status || "New").trim() || "New",
-      priority: String(row.Priority || row.priority || "Medium").trim() || "Medium",
-      propertyType: String(row.PropertyType || row.propertyType || "Apartment").trim() || "Apartment",
-      bhk: String(row.BHK || row.bhk || "N/A").trim() || "N/A",
-      purpose: String(row.Purpose || row.purpose || "Buy").trim() || "Buy",
-      preferredLocation: String(row.PreferredLocation || row.preferredLocation || "").trim(),
-      followUpDate: row.FollowUpDate ? new Date(row.FollowUpDate).toISOString() : null,
-      followUpNote: String(row.FollowUpNote || row.followUpNote || "").trim(),
-      assignedTo: assignedAgent?._id || null,
-      budget: {
-        min: Number(row.BudgetMin || row.budgetMin || 0),
-        max: Number(row.BudgetMax || row.budgetMax || 0),
-        currency: "INR",
-      },
+      name,
+      phone,
+      email,
+      source:            col("Source","Lead Source","LeadSource") || "Manual",
+      status:            col("Status","Lead Status","LeadStatus") || "New",
+      priority:          col("Priority","Lead Priority","LeadPriority") || "Medium",
+      propertyType:      col("Property Type","PropertyType","Requirements","Requirement","Property","Type") || "Apartment",
+      bhk:               col("BHK","Bhk","Configuration","Config") || "N/A",
+      purpose:           col("Purpose","Requirement Type","RequirementType","Intent") || "Buy",
+      preferredLocation: col("Area","Location","Preferred Location","PreferredLocation","City","Locality"),
+      followUpDate,
+      followUpNote:      col("Follow Up Note","FollowUpNote","Remark","Remarks","Note","Notes","Comment"),
+      assignedTo:        assignedAgent?._id || null,
+      budget: { min: budgetMin, max: budgetMax, currency: "INR" },
     };
   };
 
@@ -945,13 +1029,39 @@ export default function Leads() {
         toast(`Facebook format detected - ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {
         // Standard CRM import format
-        leadsToImport = rows.map(parseImportRow).filter((entry) => entry.name && entry.phone);
-        if (!leadsToImport.length) { toast.error("No valid leads found in the uploaded file"); return; }
+        // First pass: try alias-based matching
+        let parsed = rows.map((r) => parseImportRow(r, {}));
+        const firstPassValid = parsed.filter((e) => e.name && e.phone);
+
+        if (!firstPassValid.length) {
+          // Second pass: infer columns by cell-value content (handles any header name)
+          const inferredCols = {
+            name:  inferColByContent(rows, "name"),
+            phone: inferColByContent(rows, "phone"),
+            email: inferColByContent(rows, "email"),
+          };
+          if (inferredCols.name || inferredCols.phone) {
+            parsed = rows.map((r) => parseImportRow(r, inferredCols));
+            const inferred = parsed.filter((e) => e.name && e.phone);
+            if (inferred.length) {
+              const detectedNames = Object.entries(inferredCols)
+                .filter(([, v]) => v)
+                .map(([k, v]) => `${k}="${v}"`)
+                .join(", ");
+              toast(`Auto-detected columns: ${detectedNames}`, { icon: "🔍" });
+              leadsToImport = inferred;
+            }
+          }
+        } else {
+          leadsToImport = firstPassValid;
+        }
+
+        if (!leadsToImport?.length) { toast.error("No valid leads found — check that your file has name and phone columns"); return; }
       }
 
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
       toast.success(data.message || `${leadsToImport.length} lead(s) imported`);
-      window.location.reload();
+      refetch();
     } catch (e) {
       toast.error(e.response?.data?.message || e.message || "Import failed");
     } finally {
@@ -1010,7 +1120,7 @@ export default function Leads() {
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
             </label>
             {/* Export — compact icon button */}
-            <div ref={exportMenuRef}>
+            <div ref={exportMenuRef} data-tour="export-btn">
               <button
                 ref={exportBtnRef}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
@@ -1025,17 +1135,6 @@ export default function Leads() {
                 <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
             </div>
-            {/* QR Form */}
-            {["admin", "manager", "super_admin"].includes(user?.role) && (
-              <button
-                className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
-                style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                title="QR Lead Form"
-                onClick={() => setShowQrModal(true)}
-              >
-                <QrCode className="h-3.5 w-3.5 shrink-0" />
-              </button>
-            )}
             {/* Add Lead */}
             <button
               data-tour="add-lead-btn"
@@ -1049,17 +1148,18 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Row 2: filters */}
+        {/* Row 2: filters — 3-col × 3-row grid on sm+ */}
         {(() => {
           const activeFilterCount = [
             filters.status, filters.source, filters.priority, filters.siteFilter,
+            filters.assignedTo,
             filters.myOnly === "true" ? "t" : null, selectedProject ? "t" : null,
           ].filter(Boolean).length;
           return (
             <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
-              {/* Search row — always visible */}
-              <div data-tour="leads-search" className="flex items-center gap-2">
-                <div className="relative flex-1 min-w-0 sm:max-w-[55%]">
+              {/* Mobile: search + filters toggle always visible */}
+              <div className="flex items-center gap-2 sm:hidden">
+                <div className="relative flex-1 min-w-0">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
                   <input
                     style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
@@ -1068,19 +1168,8 @@ export default function Leads() {
                     onChange={(e) => setFilter("search", e.target.value)}
                   />
                 </div>
-                {/* Domain filter — always on sm+, hidden on mobile (shown in expanded panel) */}
-                <div className="relative hidden sm:block sm:flex-1" style={{ flexShrink: 0, minWidth: 120, maxWidth: 220 }}>
-                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                  <input
-                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                    placeholder="Domain…"
-                    value={filters.siteFilter || ""}
-                    onChange={(e) => setFilter("siteFilter", e.target.value)}
-                  />
-                </div>
-                {/* Filters toggle — mobile only */}
                 <button
-                  className="sm:hidden inline-flex items-center gap-1.5 rounded-full text-xs font-semibold relative transition-all flex-shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold relative transition-all flex-shrink-0"
                   style={{ padding: "5px 12px", border: "1px solid var(--app-border)", background: showFilters ? "var(--app-primary)" : "var(--app-surface-low)", color: showFilters ? "#fff" : "var(--app-text-soft)" }}
                   onClick={() => setShowFilters(f => !f)}
                 >
@@ -1094,86 +1183,107 @@ export default function Leads() {
                 </button>
               </div>
 
-              {/* Expandable filter controls — 2-col grid on mobile, flex-wrap on desktop */}
-              <div className={`${showFilters ? "block" : "hidden"} sm:block`}>
-                <div className="grid grid-cols-2 gap-2 sm:grid sm:grid-cols-3 sm:gap-2">
-                  {/* Domain — mobile only (shown in panel here; desktop has it in search row) */}
-                  <div className="relative sm:hidden">
-                    <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
-                    <input
-                      style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
-                      placeholder="Domain…"
-                      value={filters.siteFilter || ""}
-                      onChange={(e) => setFilter("siteFilter", e.target.value)}
-                    />
-                  </div>
-                  {projects.length > 0 && (
-                    <CustomSelect
-                      value={selectedProject?._id || ""}
-                      onChange={(v) => {
-                        const p = projects.find((x) => x._id === v) || null;
-                        setSelectedProject(p); setProjPage(1); setProjSearch("");
-                      }}
-                      placeholder="All Projects"
-                      options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
-                      style={{ width: "100%" }}
-                    />
-                  )}
-                  {[
-                    { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
-                    { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
-                    { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
-                  ].map(({ key, placeholder, opts }) => (
-                    <CustomSelect
-                      key={key}
-                      value={filters[key]}
-                      onChange={(v) => setFilter(key, v)}
-                      placeholder={placeholder}
-                      options={opts}
-                      style={{ width: "100%" }}
-                    />
-                  ))}
+              {/* Filter grid: 3-col on sm+; 2-col expandable on mobile */}
+              <div className={`${showFilters ? "grid" : "hidden"} grid-cols-2 gap-2 sm:grid sm:grid-cols-3`} data-tour="leads-search">
+                {/* R1C1: Search — sm+ only */}
+                <div className="relative hidden sm:block">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                  <input
+                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                    placeholder="Search name, phone…"
+                    value={filters.search}
+                    onChange={(e) => setFilter("search", e.target.value)}
+                  />
+                </div>
+                {/* R1C2: Domain */}
+                <div className="relative">
+                  <Globe className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
+                  <input
+                    style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
+                    placeholder="Domain…"
+                    value={filters.siteFilter || ""}
+                    onChange={(e) => setFilter("siteFilter", e.target.value)}
+                  />
+                </div>
+                {/* R1C3: Agent filter — admin/manager only */}
+                {isAdmin && agents.length > 0 && (
                   <CustomSelect
-                    value={filters.dateRange}
-                    onChange={(v) => setFilter("dateRange", v)}
-                    placeholder="Date range"
-                    options={DATE_RANGE_OPTIONS}
+                    value={filters.assignedTo || ""}
+                    onChange={(v) => setFilter("assignedTo", v)}
+                    placeholder="All Agents"
+                    options={agents.map((a) => ({ value: a._id, label: a.name }))}
                     style={{ width: "100%" }}
                   />
-                  {/* My Leads — spans both columns on mobile */}
-                  {isAdmin && (
-                    <div className="col-span-2 sm:col-auto">
-                      <button
-                        onClick={toggleMyOnly}
-                        className="w-full inline-flex items-center justify-between gap-2 rounded-xl text-xs font-semibold transition-all"
-                        style={{ padding: "7px 12px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 shrink-0" />
-                          <span>My Leads</span>
-                        </div>
-                        <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
-                          <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                  {/* Clear — spans both columns on mobile */}
-                  {(Object.values(filters).some(Boolean) || selectedProject) && (
-                    <div className="col-span-2 sm:col-auto">
-                      <button
-                        className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
-                        onClick={() => {
-                          ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly"].forEach((k) => setFilter(k, ""));
-                          setSelectedProject(null);
-                          try { localStorage.removeItem("leads_myOnly"); } catch {}
-                        }}
-                      >
-                        <X className="h-3 w-3" /> Clear all filters
-                      </button>
-                    </div>
-                  )}
-                </div>
+                )}
+                {/* R2C1: Projects */}
+                {projects.length > 0 && (
+                  <CustomSelect
+                    value={selectedProject?._id || ""}
+                    onChange={(v) => {
+                      const p = projects.find((x) => x._id === v) || null;
+                      setSelectedProject(p); setProjPage(1); setProjSearch("");
+                    }}
+                    placeholder="All Projects"
+                    options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
+                    style={{ width: "100%" }}
+                  />
+                )}
+                {/* Status, Source, Priority */}
+                {[
+                  { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
+                  { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
+                  { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
+                ].map(({ key, placeholder, opts }) => (
+                  <CustomSelect
+                    key={key}
+                    value={filters[key]}
+                    onChange={(v) => setFilter(key, v)}
+                    placeholder={placeholder}
+                    options={opts}
+                    style={{ width: "100%" }}
+                  />
+                ))}
+                {/* Date range */}
+                <CustomSelect
+                  value={filters.dateRange}
+                  onChange={(v) => setFilter("dateRange", v)}
+                  placeholder="Date range"
+                  options={DATE_RANGE_OPTIONS}
+                  style={{ width: "100%" }}
+                />
+                {/* My Leads — admin/manager only */}
+                {isAdmin && (
+                  <div className="col-span-2 sm:col-auto">
+                    <button
+                      onClick={toggleMyOnly}
+                      className="w-full inline-flex items-center justify-between gap-2 rounded-xl text-xs font-semibold transition-all"
+                      style={{ padding: "7px 12px", border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 shrink-0" />
+                        <span>My Leads</span>
+                      </div>
+                      <span style={{ display: "inline-flex", alignItems: "center", width: 32, height: 18, borderRadius: 9, padding: "0 2px", background: filters.myOnly === "true" ? "var(--app-primary, #f97316)" : "rgba(128,128,128,0.25)", transition: "background 0.2s", flexShrink: 0 }}>
+                        <span style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.3)", transform: filters.myOnly === "true" ? "translateX(14px)" : "translateX(0)", transition: "transform 0.2s", display: "block" }} />
+                      </span>
+                    </button>
+                  </div>
+                )}
+                {/* Clear */}
+                {(Object.values(filters).some(Boolean) || selectedProject) && (
+                  <div className="col-span-2 sm:col-auto">
+                    <button
+                      className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
+                      onClick={() => {
+                        ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly", "assignedTo"].forEach((k) => setFilter(k, ""));
+                        setSelectedProject(null);
+                        try { localStorage.removeItem("leads_myOnly"); } catch {}
+                      }}
+                    >
+                      <X className="h-3 w-3" /> Clear all filters
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -1250,7 +1360,7 @@ export default function Leads() {
                           <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineBooking value={lead.booking} leadId={lead._id} projectId={selectedProject._id} onSaved={handleProjLeadUpdated} /></td>
                           <td>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                               <button
                                 className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
                                 onClick={() => setTransferMeta({ lead, leadType: "project", projectId: selectedProject._id })}
@@ -1418,8 +1528,8 @@ export default function Leads() {
                         <div className="stitch-surface-muted flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border text-sm font-bold text-orange-500">
                           {lead.name?.slice(0, 1)?.toUpperCase()}
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-app max-w-[140px]">{lead.name}</p>
+                        <div className="min-w-0 cursor-pointer group" onClick={() => setDetailLead(lead)}>
+                          <p className="truncate text-sm font-semibold text-app max-w-[140px] group-hover:text-orange-500 transition-colors">{lead.name}</p>
                           <p className="truncate text-xs text-app-soft max-w-[140px]">{lead.email || "No email"}</p>
                         </div>
                       </div>
@@ -1511,9 +1621,6 @@ export default function Leads() {
                     <td className="whitespace-nowrap text-sm text-app-soft">{lead.assignedToName || lead.assignedTo?.name || "-"}</td>
                     <td>
                       <div className="flex justify-end gap-1.5 opacity-50 transition-opacity group-hover:opacity-100">
-                        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-white/5 hover:text-app" onClick={() => setDetailLead(lead)} title="View">
-                          <Eye className="h-4 w-4" />
-                        </button>
                         <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-amber-500/10 hover:text-amber-400" onClick={() => { setEditLead(lead); setShowForm(true); }} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -1599,7 +1706,13 @@ export default function Leads() {
       </section>
 
       <LeadForm open={showForm} onClose={() => { setShowForm(false); setEditLead(null); }} onSaved={handleSaved} lead={editLead} agents={agents} />
-      <LeadDetail open={!!detailLead} onClose={() => setDetailLead(null)} lead={detailLead} onUpdated={handleDetailUpdated} />
+      <LeadDetail
+        open={!!detailLead}
+        onClose={() => setDetailLead(null)}
+        lead={detailLead}
+        onUpdated={handleDetailUpdated}
+        onEdit={(lead) => { setDetailLead(null); setEditLead(lead); setShowForm(true); }}
+      />
       <ConfirmDialog
         open={!!deletingId}
         onClose={() => setDeletingId(null)}
@@ -1668,10 +1781,6 @@ export default function Leads() {
           }
         }}
       />
-
-      {showQrModal && (
-        <QrModal type="org" id={null} name="Organisation QR Form" onClose={() => setShowQrModal(false)} />
-      )}
 
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(

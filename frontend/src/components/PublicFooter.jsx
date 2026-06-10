@@ -39,7 +39,6 @@ export default function PublicFooter() {
             <h4 style={{ color: heading }} className="font-semibold text-sm mb-4">Product</h4>
             <div className="space-y-2.5">
               {[
-                ["Features",           "/#features"],
                 ["Pricing",            "/pricing"],
                 ["WordPress Plugin",   "/wordpress-plugin"],
                 ["API Docs",           "/api-docs"],

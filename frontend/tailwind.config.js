@@ -4,12 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Brand palette — matches the app's orange theme (--app-primary #ff6b00).
+        // Previously stale blue values; any `text-brand-600` etc. now renders on-brand.
         brand: {
-          50: "#eef4ff",
-          100: "#d9e7ff",
-          500: "#5b7cff",
-          600: "#3f63f6",
-          700: "#2f4bd0"
+          50:  "#fff4ec",
+          100: "#ffe3cf",
+          500: "#ff6b00",
+          600: "#e85d00",
+          700: "#a04100"
         }
       },
       fontFamily: {
