@@ -38,6 +38,7 @@ import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
+import OrgSetupWizard, { shouldShowOrgSetupWizard } from "../components/OrgSetupWizard";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
@@ -118,7 +119,7 @@ function fmtResponseTime(ms) {
 
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
-  const { user } = useAuth();
+  const { user, org } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const [greeting, setGreeting] = useState(getGreeting());
   const [searchQuery, setSearchQuery] = useState("");
@@ -137,6 +138,7 @@ export default function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
+  const [showOrgSetup, setShowOrgSetup] = useState(() => shouldShowOrgSetupWizard(org));
 
   const fetchAnalytics = (retryCount = 0) => {
     setLoading(true);
@@ -196,6 +198,7 @@ export default function Dashboard() {
 
   return (
     <div className="stitch-page space-y-6">
+      {showOrgSetup && <OrgSetupWizard onClose={() => setShowOrgSetup(false)} />}
       <header className="stitch-topbar">
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">

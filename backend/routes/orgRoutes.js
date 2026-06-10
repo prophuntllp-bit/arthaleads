@@ -29,6 +29,27 @@ router.put("/me", authorize("admin"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// PATCH /api/org/me/profile - update org contact & billing details (admin only)
+router.patch("/me/profile", authorize("admin"), async (req, res, next) => {
+  try {
+    const ALLOWED = ["phone","email","address","gstNo","pan","cin","rera",
+                     "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
+    const update = {};
+    for (const key of ALLOWED) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+    if (!Object.keys(update).length) {
+      return res.status(400).json({ success: false, message: "No valid fields provided." });
+    }
+    const org = await Organization.findByIdAndUpdate(
+      req.orgId, { $set: update }, { new: true, runValidators: false }
+    );
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    invalidateOrgCache(req.orgId);
+    res.json({ success: true, org });
+  } catch (err) { next(err); }
+});
+
 // PATCH /api/org/me/auto-assign - toggle round-robin auto-assignment (admin + super_admin)
 router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, res, next) => {
   try {
