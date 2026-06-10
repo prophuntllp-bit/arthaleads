@@ -1378,12 +1378,6 @@ export default function Automation() {
 }
 
 /* ─── Lead Routing Rules ───────────────────────────────────────────────────── */
-const SALES_AGENTS = [
-  { id: "69d4ea3a01817aba627ef9b9", name: "Saurabh Sir" },
-  { id: "69d4ea9601817aba627ef9c6", name: "Sandeep Sir" },
-  { id: "69d35698556a7da63c6ca61f", name: "Sheetal Powar" },
-];
-
 const MATCH_FIELD_LABELS = {
   form_id:     "Form ID",
   campaign_id: "Campaign ID",
@@ -1396,9 +1390,17 @@ function LeadRoutingSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ label: "", matchField: "form_id", matchValue: "", assignTo: SALES_AGENTS[0].id });
+  const [agents, setAgents] = useState([]);
+  const [form, setForm] = useState({ label: "", matchField: "form_id", matchValue: "", assignTo: "" });
 
   useEffect(() => {
+    api.get("/auth/agents")
+      .then(({ data }) => {
+        const list = data.agents || [];
+        setAgents(list);
+        if (list.length) setForm((f) => ({ ...f, assignTo: list[0]._id }));
+      })
+      .catch(() => {});
     api.get("/routing-rules")
       .then(({ data }) => setRules(data.rules || []))
       .catch(() => {})
@@ -1414,7 +1416,7 @@ function LeadRoutingSection() {
     try {
       const { data } = await api.post("/routing-rules", form);
       setRules((prev) => [data.rule, ...prev]);
-      setForm({ label: "", matchField: "form_id", matchValue: "", assignTo: SALES_AGENTS[0].id });
+      setForm({ label: "", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "" });
       setShowForm(false);
       toast.success("Routing rule added");
     } catch (err) {
@@ -1479,7 +1481,7 @@ function LeadRoutingSection() {
               <CustomSelect
                 value={form.assignTo}
                 onChange={(v) => setForm((f) => ({ ...f, assignTo: v }))}
-                options={SALES_AGENTS.map((a) => ({ value: a.id, label: a.name }))}
+                options={agents.map((a) => ({ value: a._id, label: a.name }))}
                 style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
               />
             </div>
@@ -1555,7 +1557,7 @@ function LeadRoutingSection() {
           ))}
 
           <p className="text-xs text-app-soft text-center pt-1">
-            All other leads (no match) → round-robin between Saurabh Sir, Sandeep Sir, Sheetal Powar
+            All other leads (no match) → assigned via round-robin to your team
           </p>
         </div>
       )}

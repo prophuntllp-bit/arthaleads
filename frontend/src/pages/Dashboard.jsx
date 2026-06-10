@@ -1,5 +1,5 @@
 ﻿// Dashboard - v2
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
@@ -127,21 +127,6 @@ export default function Dashboard() {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
     return () => clearInterval(timer);
   }, []);
-
-  const bellRef = useRef(null);
-  const [alertCount, setAlertCount] = useState(() => +localStorage.getItem("crm_alert_count") || 0);
-
-useEffect(() => {
-    const handler = (e) => setAlertCount(e.detail?.count ?? 0);
-    window.addEventListener("alerts:count", handler);
-    return () => window.removeEventListener("alerts:count", handler);
-  }, []);
-
-  const handleOpenAlerts = () => {
-    if (!bellRef.current) return;
-    const rect = bellRef.current.getBoundingClientRect();
-    window.dispatchEvent(new CustomEvent("open:alerts", { detail: { rect } }));
-  };
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -152,23 +137,22 @@ useEffect(() => {
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
-  const [analyticsRetrying, setAnalyticsRetrying] = useState(false);
 
   const fetchAnalytics = (retryCount = 0) => {
     setLoading(true);
-    if (retryCount === 0) { setAnalyticsError(false); setAnalyticsRetrying(false); }
-    api.get("/leads/analytics", { params: { dateRange } })
-      .then((response) => { setData(response.data.data); setAnalyticsRetrying(false); })
+    setAnalyticsError(false);
+    const rangeParams = dateRange && typeof dateRange === "object"
+      ? { from: dateRange.from, to: dateRange.to }
+      : { dateRange };
+    api.get("/leads/analytics", { params: rangeParams })
+      .then((response) => setData(response.data.data))
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
-        // Retry schedule: 5s, 12s, 25s — covers Railway cold-start (20-30s) and redeploys
-        const delays = [5000, 12000, 25000];
-        if (retryCount < delays.length) {
-          setAnalyticsRetrying(true);
-          setTimeout(() => fetchAnalytics(retryCount + 1), delays[retryCount]);
+        if (retryCount < 1) {
+          // Auto-retry once after 3s (handles Railway cold-start / transient DB reconnect)
+          setTimeout(() => fetchAnalytics(1), 3000);
         } else {
           setAnalyticsError(true);
-          setAnalyticsRetrying(false);
         }
       })
       .finally(() => setLoading(false));
@@ -259,7 +243,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* ── Right: controls ── */}
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
@@ -270,56 +253,22 @@ useEffect(() => {
             {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
             <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
           </button>
-          <button
-            ref={bellRef}
-            onClick={handleOpenAlerts}
-            className="hidden lg:flex relative items-center justify-center rounded-xl transition-all duration-200"
-            title={alertCount > 0 ? `${alertCount} new alert${alertCount > 1 ? "s" : ""}` : "No new alerts"}
-            style={{
-              width: 36, height: 36, flexShrink: 0,
-              background: alertCount > 0
-                ? "color-mix(in srgb, var(--app-primary) 15%, transparent)"
-                : "var(--app-surface-high)",
-              border: `1.5px solid ${alertCount > 0 ? "color-mix(in srgb, var(--app-primary) 40%, transparent)" : "var(--app-border)"}`,
-              color: alertCount > 0 ? "var(--app-primary)" : "var(--app-text-soft)",
-            }}
-          >
-            <Bell className={`h-[18px] w-[18px]${alertCount > 0 ? " bell-ringing" : ""}`} />
-            {alertCount > 0 && (
-              <span
-                className="badge-glow absolute -top-1.5 -right-1.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
-                style={{ background: "var(--app-primary)" }}
-              >
-                {alertCount > 9 ? "9+" : alertCount}
-              </span>
-            )}
-          </button>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
       </header>
 
-      {(analyticsError || analyticsRetrying) && (
-        <div className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 ${
-          analyticsRetrying
-            ? "border-orange-500/20 bg-orange-500/5"
-            : "border-red-500/20 bg-red-500/5"
-        }`}>
+      {analyticsError && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className={`h-4 w-4 shrink-0 ${analyticsRetrying ? "text-orange-400" : "text-red-400"}`} />
-            <p className={`text-sm ${analyticsRetrying ? "text-orange-400" : "text-red-400"}`}>
-              {analyticsRetrying
-                ? "Server is waking up, retrying…"
-                : "Couldn't load dashboard data. Check your connection."}
-            </p>
+            <AlertTriangle className="h-4 w-4 shrink-0 text-red-400" />
+            <p className="text-sm text-red-400">Couldn't load dashboard data. Check your connection.</p>
           </div>
-          {analyticsError && (
-            <button
-              className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
-              onClick={() => fetchAnalytics()}
-            >
-              Retry
-            </button>
-          )}
+          <button
+            className="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+            onClick={() => fetchAnalytics()}
+          >
+            Retry
+          </button>
         </div>
       )}
 

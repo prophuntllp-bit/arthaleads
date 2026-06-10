@@ -822,7 +822,7 @@ function AdminAttachChip({ a }) {
       className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium hover:opacity-80 transition"
       style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
       {isImg
-        ? <Image className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
+        ? <ImageIcon className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />
         : <FileText className="h-3.5 w-3.5 text-app-soft" />}
       <span className="text-app max-w-[120px] truncate">{a.name || "attachment"}</span>
     </a>

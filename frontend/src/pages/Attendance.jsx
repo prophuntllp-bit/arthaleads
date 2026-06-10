@@ -150,10 +150,6 @@ function ProofCell({ selfie, lat, lng }) {
 
 export default function Attendance() {
   const { user, org } = useAuth();
-  if (!canAccess(org, "growth")) {
-    return <UpgradeWall org={org} feature="Attendance Tracking"
-      description="Track your team's clock-in/out times, view daily summaries, and monitor attendance history." />;
-  }
   const isAdmin = ["admin", "manager", "super_admin"].includes(user?.role);
 
   // Today's own status
@@ -354,6 +350,11 @@ export default function Attendance() {
     const avgMins     = daysPresent ? Math.round(totalMins / daysPresent) : 0;
     return { totalMins, daysPresent, lateCount, fullDays, halfDays, avgMins };
   })();
+
+  if (!canAccess(org, "growth")) {
+    return <UpgradeWall org={org} feature="Attendance Tracking"
+      description="Track your team's clock-in/out times, view daily summaries, and monitor attendance history." />;
+  }
 
   return (
     <div className="stitch-page">

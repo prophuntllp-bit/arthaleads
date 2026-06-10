@@ -72,6 +72,11 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const [saving, setSaving]       = useState(false);
   const imgFileRef = useRef(null);
 
+  // Re-sync form whenever the modal opens or the project prop changes
+  useEffect(() => {
+    if (open) setForm(toForm(project));
+  }, [open, project]);
+
   // Assign agents
   const [allAgents, setAllAgents]         = useState([]);
   const [agentDropOpen, setAgentDropOpen] = useState(false);
