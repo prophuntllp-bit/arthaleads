@@ -44,10 +44,28 @@ export function PageLoader() {
 }
 
 export function Modal({ open, onClose, title, children, size = "md" }) {
+  // Escape-to-close + lock body scroll while open (hooks must run every render)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-2 sm:p-4">
+    <div
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-2 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={typeof title === "string" ? title : "Dialog"}
+    >
       {/* Backdrop — separate element so backdrop-filter is never clipped by a parent */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -60,7 +78,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
       >
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{title}</h2>
-          <button onClick={onClose} className="text-app-soft hover:text-app transition-colors">
+          <button onClick={onClose} aria-label="Close dialog" className="text-app-soft hover:text-app transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>

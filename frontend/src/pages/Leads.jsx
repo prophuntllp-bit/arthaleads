@@ -372,7 +372,7 @@ export default function Leads() {
   const {
     leads, total, loading, page, setPage,
     filters, setFilter,
-    upsertLead, removeLead, pages, limit, changeLimit,
+    upsertLead, removeLead, refetch, pages, limit, changeLimit,
   } = useLeads("unified", {
     search: location.state?.presetSearch || "",
     status: location.state?.presetStatus || "",
@@ -1061,7 +1061,7 @@ export default function Leads() {
 
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
       toast.success(data.message || `${leadsToImport.length} lead(s) imported`);
-      window.location.reload();
+      refetch();
     } catch (e) {
       toast.error(e.response?.data?.message || e.message || "Import failed");
     } finally {
@@ -1360,7 +1360,7 @@ export default function Leads() {
                           <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
                           <td><ProjInlineBooking value={lead.booking} leadId={lead._id} projectId={selectedProject._id} onSaved={handleProjLeadUpdated} /></td>
                           <td>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                               <button
                                 className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
                                 onClick={() => setTransferMeta({ lead, leadType: "project", projectId: selectedProject._id })}

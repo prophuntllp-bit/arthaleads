@@ -1128,7 +1128,7 @@ export default function ProjectDetail() {
                             )}
                           </td>
                           <td>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                               <button
                                 className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                 onClick={() => setEditingLead(lead)}
@@ -1428,7 +1428,7 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                                 <button
                                   className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                   onClick={() => setEditingLead(lead)}
@@ -1620,7 +1620,7 @@ export default function ProjectDetail() {
                               {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
                             </td>
                             <td>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
                                 <button
                                   className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
                                   onClick={() => setEditingLead(lead)}

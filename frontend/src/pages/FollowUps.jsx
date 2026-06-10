@@ -493,7 +493,7 @@ export default function FollowUps() {
                         <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <button onClick={handleMarkDone}
                             title="Mark follow-up as done - removes from list"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-0 group-hover:opacity-100">
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-green-500 hover:bg-green-500/10 transition opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         </td>

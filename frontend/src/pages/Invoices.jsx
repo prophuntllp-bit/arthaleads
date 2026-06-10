@@ -607,7 +607,7 @@ export default function Invoices() {
                             <span className="font-black text-app text-base">
                               #{inv.customInvoiceNumber || inv.invoiceNumber}
                             </span>
-                            <Pencil className="h-3 w-3 text-app-soft opacity-0 group-hover:opacity-100 transition" />
+                            <Pencil className="h-3 w-3 text-app-soft opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition" />
                           </button>
                         )}
                       </td>

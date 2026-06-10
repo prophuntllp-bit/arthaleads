@@ -10,7 +10,9 @@
     --app-surface-low: rgba(255, 255, 255, 0.38);
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
-    --app-text-soft: #71717a;
+    /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
+       especially at the 10–11px sizes used in kickers and table headers. */
+    --app-text-soft: #5f5f66;
     /* Brand-colour tokens — overridden at runtime by applyBrandColor() in App.jsx */
     --app-primary:           #ff6b00;
     --app-primary-deep:      #a04100;
@@ -46,6 +48,27 @@
 
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }
+
+  /* ── Accessibility: visible keyboard focus ──
+     Many components set outline:none for the mouse; restore a clear ring for
+     keyboard users only (:focus-visible never triggers on plain mouse clicks). */
+  :focus-visible {
+    outline: 2px solid var(--app-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ── Accessibility: honour prefers-reduced-motion ──
+     Users who request reduced motion get near-instant transitions/animations
+     instead of blobs, pulses, and slides. WCAG 2.3.3. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 
   body {
     /* HARDCODED font - self-hosted via @fontsource-variable/inter, never change this */
