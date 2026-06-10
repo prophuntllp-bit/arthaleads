@@ -74,6 +74,34 @@ export const QUICK_ANSWERS = [
     goto: "/team",
     tour: "team",
   },
+  {
+    id: "qr-lead",
+    q: "How does QR code lead capture work?",
+    a: "Every org and project has its own QR code. Click the QR icon on the Leads or Projects page to view it. When a prospect scans it, they fill a public form that drops straight into your CRM — no manual entry needed. You can download, print or regenerate the QR any time.",
+    goto: "/leads",
+    tour: "qrLead",
+  },
+  {
+    id: "attendance",
+    q: "How do I clock in and out?",
+    a: "Open the Attendance page and tap Clock In — you may need to take a selfie if your admin requires it. Tap Clock Out when you're done. Your shift hours are tracked automatically. Admins can view the full team's daily log and download reports.",
+    goto: "/attendance",
+    tour: "attendance",
+  },
+  {
+    id: "bookings",
+    q: "How do I create a booking and generate an invoice?",
+    a: "Go to the Bookings page and click 'New Booking'. Fill in the project, unit, customer details and payment plan. Once created, open the booking and click 'Generate Invoice' to produce a PDF letterhead with your org's branding.",
+    goto: "/bookings",
+    tour: "bookings",
+  },
+  {
+    id: "projects",
+    q: "How do I manage projects and link leads to them?",
+    a: "The Projects page lists all your real-estate projects. Open a project to see its own lead pipeline. You can add leads directly from a project, or assign a lead to a project from the lead detail panel.",
+    goto: "/projects",
+    tour: "projects",
+  },
 ];
 
 // Guided tours. Each step targets an element by data-tour attribute (preferred)
@@ -171,6 +199,34 @@ export const TOURS = {
     path: "/team",
     steps: [
       { target: '[data-tour="invite-btn"]', title: "Add team members", body: "Click 'Add Team Member' to invite an agent, manager or admin. Each person gets their own role-based login and can start handling leads right away." },
+    ],
+  },
+  qrLead: {
+    label: "QR Lead Capture tour",
+    path: "/leads",
+    steps: [
+      { target: '[data-tour="add-lead-btn"]', title: "QR Code lead capture", body: "Click the QR icon near the top of the Leads page to open your org QR code. Print or share it — when a prospect scans it they fill a public form that lands straight in your CRM." },
+    ],
+  },
+  attendance: {
+    label: "Attendance tour",
+    path: "/attendance",
+    steps: [
+      { target: '[data-tour="clock-in-btn"]', title: "Clock in", body: "Tap Clock In to start your shift. If your admin requires it, take a quick selfie to confirm your identity. Clock Out the same way when you're done." },
+    ],
+  },
+  bookings: {
+    label: "Bookings tour",
+    path: "/bookings",
+    steps: [
+      { target: '[data-tour="new-booking-btn"]', title: "Create a booking", body: "Click 'New Booking' to record a sale. Fill in the project, unit, customer and payment schedule. You can then generate a branded PDF invoice straight from the booking detail." },
+    ],
+  },
+  projects: {
+    label: "Projects tour",
+    path: "/projects",
+    steps: [
+      { target: '[data-tour="add-project-btn"]', title: "Add a project", body: "Click 'New Project' to create a property project. Each project gets its own lead pipeline, QR code and booking list so you can track every unit separately." },
     ],
   },
 };

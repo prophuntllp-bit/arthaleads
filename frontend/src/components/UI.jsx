@@ -46,27 +46,28 @@ export function PageLoader() {
 export function Modal({ open, onClose, title, children, size = "md" }) {
   if (!open) return null;
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-2 sm:p-4">
+      {/* Backdrop — separate element so backdrop-filter is never clipped by a parent */}
       <div
-        className={`w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
+        className="absolute inset-0 bg-black/50"
+        style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+        onClick={onClose}
+      />
+      <div
+        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{title}</h2>
           <button onClick={onClose} className="text-app-soft hover:text-app transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
-        {/* Scrollable body */}
         <div className="overflow-y-auto p-6" style={{ maxHeight: "75vh" }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
