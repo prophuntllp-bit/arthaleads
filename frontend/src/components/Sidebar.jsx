@@ -82,8 +82,9 @@ function useWallClock() {
     const iv = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(iv);
   }, []);
-  const day  = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  const time = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }).toUpperCase();
+  const opts = { timeZone: "Asia/Kolkata" };
+  const day  = now.toLocaleDateString("en-IN", { ...opts, day: "2-digit", month: "short", year: "numeric" });
+  const time = now.toLocaleTimeString("en-IN", { ...opts, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }).toUpperCase();
   return `${day} | ${time}`;
 }
 
