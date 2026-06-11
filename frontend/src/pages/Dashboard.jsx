@@ -128,7 +128,8 @@ function DashboardClock() {
   });
 
   return (
-    <div className="hidden lg:flex flex-col items-center gap-1.5 px-4 shrink-0">
+    <div className="hidden lg:flex flex-col items-center justify-center gap-1.5 pl-6 ml-2 flex-shrink-0 self-stretch border-l"
+      style={{ borderColor: "var(--app-border)" }}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
         {Array.from({ length: 12 }, (_, i) => {
@@ -259,26 +260,26 @@ export default function Dashboard() {
   return (
     <div className="stitch-page space-y-6">
       <header className="stitch-topbar">
-        <div className="flex flex-1 flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search: mobile only — desktop search is in the topbar */}
-            <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-              <input
-                className="input rounded-full pl-11 pr-4"
-                placeholder="Search leads by name, phone or email…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchQuery.trim()) {
-                    navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
-                  }
-                }}
-              />
-            </div>
-            <div className="hidden h-4 w-px lg:block" style={{ background: "var(--app-border)" }} />
-            {/* Platform pills: always visible */}
+        {/* Left: pills + date range on top row, greeting below */}
+        <div className="flex flex-1 flex-col gap-3 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
+              {/* Search: mobile only */}
+              <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+                <input
+                  className="input rounded-full pl-11 pr-4"
+                  placeholder="Search leads by name, phone or email…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchQuery.trim()) {
+                      navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
+                    }
+                  }}
+                />
+              </div>
+              {/* Platform pills */}
               {activePlatforms.map((platform) => {
                 const cfg = PLATFORM_CONFIG[platform];
                 if (!cfg) return null;
@@ -291,10 +292,14 @@ export default function Dashboard() {
                 );
               })}
             </div>
+            {/* Date range — top-right of left column */}
+            <span data-tour="date-range" className="flex-shrink-0">
+              <DateRangePicker value={dateRange} onChange={setDateRange} compact />
+            </span>
           </div>
 
           <div>
-            <p className="stitch-kicker mb-1 sm:mb-2">Overview</p>
+            <p className="stitch-kicker mb-1">Overview</p>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
             <p className="mt-1 max-w-2xl text-sm text-app-soft hidden sm:block">
               Track source performance, team momentum, and recent lead movement across all your active channels in real time.
@@ -302,10 +307,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-nowrap items-center gap-2">
-          <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
-        </div>
-
+        {/* Right: live clock — separated by a border */}
         <DashboardClock />
       </header>
 
