@@ -203,11 +203,13 @@ const automationService = {
       redirect_uri: this.getFacebookRedirectUri(),
       state,
       response_type: "code",
+      // leads_retrieval is intentionally omitted — the server-side App Token
+      // (FB_APP_ID|FB_APP_SECRET) handles all lead fetching, so users never
+      // need to grant that advanced permission personally.
       scope: [
         "pages_show_list",
         "pages_manage_metadata",
         "pages_read_engagement",
-        "leads_retrieval",
       ].join(","),
     });
 

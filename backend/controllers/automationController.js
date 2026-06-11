@@ -153,7 +153,18 @@ const automationController = {
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
 
     try {
-      const { code, state } = req.query;
+      console.log(`[facebookCallback] query params: ${JSON.stringify(req.query)}`);
+      const { code, state, error, error_description } = req.query;
+
+      // Facebook returns ?error= when the user denies or the app lacks App Review approval
+      if (error) {
+        const fbMsg = error_description
+          ? decodeURIComponent(error_description.replace(/\+/g, " "))
+          : error;
+        console.warn(`[facebookCallback] Facebook returned error: ${error} — ${fbMsg}`);
+        throw new Error(`Facebook declined the connection: ${fbMsg}`);
+      }
+
       if (!code || !state) throw new Error("Missing Facebook callback data");
 
       const statePayload = automationService.verifyFacebookState(state);
