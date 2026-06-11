@@ -127,7 +127,7 @@ export default function Tasks() {
 
   useEffect(() => {
     if (!canManage) return;
-    api.get("/auth/agents").then(({ data }) => setTeamMembers(data.agents || [])).catch(() => {});
+    api.get("/auth/agents").then(({ data }) => setTeamMembers(data.agents || [])).catch(() => toast.error("Failed to load team members"));
   }, [canManage]);
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditTask(null); setShowForm(true); };

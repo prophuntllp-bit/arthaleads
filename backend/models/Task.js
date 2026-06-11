@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const taskSchema = new Schema(
   {
-    org:             { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    orgId:           { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
     title:           { type: String, required: true, trim: true, maxlength: 200 },
     description:     { type: String, trim: true, default: "" },
     priority:        { type: String, enum: ["critical", "high", "medium", "low"], default: "medium" },
@@ -24,8 +24,8 @@ const taskSchema = new Schema(
   { timestamps: true }
 );
 
-taskSchema.index({ org: 1, dueDate: 1 });
-taskSchema.index({ org: 1, assignedTo: 1 });
-taskSchema.index({ org: 1, status: 1 });
+taskSchema.index({ orgId: 1, dueDate: 1 });
+taskSchema.index({ orgId: 1, assignedTo: 1 });
+taskSchema.index({ orgId: 1, status: 1 });
 
 module.exports = mongoose.model("Task", taskSchema);

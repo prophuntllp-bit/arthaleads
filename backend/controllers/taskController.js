@@ -7,7 +7,7 @@ const taskController = {
       const { status, priority, assignedTo, projectId, from, to, myOnly } = req.query;
       const user = req.user;
 
-      const filter = { org: user.org };
+      const filter = { orgId: user.orgId };
 
       // Agents can only see their own tasks
       if (user.role === "agent" || myOnly === "true") {
@@ -28,18 +28,10 @@ const taskController = {
 
       const tasks = await Task.find(filter).sort({ dueDate: 1 }).lean();
 
-      // Compute summary counts
-      const now = new Date();
-      const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
+      const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
       const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
 
-      const summary = {
-        today:     0,
-        upcoming:  0,
-        overdue:   0,
-        completed: 0,
-        all:       tasks.length,
-      };
+      const summary = { today: 0, upcoming: 0, overdue: 0, completed: 0, all: tasks.length };
 
       for (const t of tasks) {
         if (t.status === "completed") { summary.completed++; continue; }
@@ -60,7 +52,7 @@ const taskController = {
       const user = req.user;
 
       const task = await Task.create({
-        org:            user.org,
+        orgId:          user.orgId,
         title,
         description,
         priority,
@@ -82,7 +74,7 @@ const taskController = {
   // PATCH /api/tasks/:id  — admin/manager only
   async update(req, res, next) {
     try {
-      const task = await Task.findOne({ _id: req.params.id, org: req.user.org });
+      const task = await Task.findOne({ _id: req.params.id, orgId: req.user.orgId });
       if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
       const allowed = ["title", "description", "priority", "dueDate", "assignedTo", "assignedToName", "lead", "leadName", "project", "projectName"];
@@ -97,7 +89,7 @@ const taskController = {
   // DELETE /api/tasks/:id  — admin/manager only
   async remove(req, res, next) {
     try {
-      const task = await Task.findOneAndDelete({ _id: req.params.id, org: req.user.org });
+      const task = await Task.findOneAndDelete({ _id: req.params.id, orgId: req.user.orgId });
       if (!task) return res.status(404).json({ success: false, message: "Task not found" });
       res.json({ success: true });
     } catch (err) { next(err); }
@@ -106,7 +98,7 @@ const taskController = {
   // PATCH /api/tasks/:id/complete  — all roles
   async complete(req, res, next) {
     try {
-      const task = await Task.findOne({ _id: req.params.id, org: req.user.org });
+      const task = await Task.findOne({ _id: req.params.id, orgId: req.user.orgId });
       if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
       task.status         = "completed";
