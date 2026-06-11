@@ -165,7 +165,6 @@ export default function DumpLeads() {
   };
 
   // ── Export ──────────────────────────────────────────────────────────────────
-  // Pass `overrideSource` to export a specific set (e.g. all leads, bypassing selection)
   const exportRows = async (type, overrideSource) => {
     try {
       const source = overrideSource
@@ -189,7 +188,7 @@ export default function DumpLeads() {
         AddedOn: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
       }));
 
-      const suffix = selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
+      const suffix = !overrideSource && selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
       const dateStr = new Date().toISOString().slice(0, 10);
 
       if (type === "json") {
