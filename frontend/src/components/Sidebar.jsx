@@ -458,15 +458,17 @@ export default function Sidebar() {
                     onMouseLeave={!open ? scheduleFlyoutClose : undefined}
                     title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                      isGroupActive || isFlyoutOpen
+                      isGroupActive
                         ? "font-semibold"
                         : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                     style={{
                       paddingLeft: 14,
-                      ...((isGroupActive || isFlyoutOpen) ? {
+                      ...(isGroupActive ? {
                         color: "var(--app-primary)",
                         background: "rgba(var(--app-primary-rgb),0.10)",
+                      } : isFlyoutOpen ? {
+                        background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.05)",
                       } : {}),
                     }}
                   >
@@ -779,55 +781,71 @@ export default function Sidebar() {
 
   // ── Flyout portal ─────────────────────────────────────────────────────────
   const FlyoutPortal = flyout ? createPortal(
-    <div
-      ref={flyoutRef}
-      onMouseEnter={cancelFlyoutClose}
-      onMouseLeave={scheduleFlyoutClose}
-      style={{
-        position: "fixed",
-        top: flyout.top,
-        left: flyout.left,
-        zIndex: 9999,
-        minWidth: 200,
-        background: isDark ? "rgb(24,23,28)" : "#fff",
-        border: "1px solid var(--app-border)",
-        boxShadow: "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
-        borderRadius: "1rem",
-        overflow: "hidden",
-        paddingTop: 6,
-        paddingBottom: 6,
-      }}
-    >
-      <p className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest border-b"
-        style={{ color: "var(--text-soft, #888)", borderColor: "var(--app-border)" }}>
-        {flyout.label}
-      </p>
-      <div className="px-1.5 pt-1">
-        {flyout.children.map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={endMatch !== undefined ? endMatch : true}
-            onClick={() => setFlyout(null)}
-            {...(noActive ? { isActive: () => false } : {})}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                isActive
-                  ? "font-semibold"
-                  : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
-              }`
-            }
-            style={({ isActive }) => isActive ? {
-              color: "var(--app-primary)",
-              background: "rgba(var(--app-primary-rgb),0.10)",
-            } : {}}
-          >
-            <CIcon style={{ width: 15, height: 15, flexShrink: 0 }} />
-            {label}
-          </NavLink>
-        ))}
+    <>
+      {/* Invisible bridge strip between sidebar button and flyout panel */}
+      <div
+        style={{
+          position: "fixed",
+          top: flyout.top,
+          left: flyout.left - 10,
+          width: 12,
+          height: 48,
+          zIndex: 9998,
+        }}
+        onMouseEnter={cancelFlyoutClose}
+        onMouseLeave={scheduleFlyoutClose}
+      />
+      <div
+        ref={flyoutRef}
+        onMouseEnter={cancelFlyoutClose}
+        onMouseLeave={scheduleFlyoutClose}
+        style={{
+          position: "fixed",
+          top: flyout.top,
+          left: flyout.left,
+          zIndex: 9999,
+          minWidth: 210,
+          background: isDark ? "rgb(24,23,28)" : "#fff",
+          border: "1px solid var(--app-border)",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
+          borderRadius: "1rem",
+          overflow: "hidden",
+          paddingTop: 6,
+          paddingBottom: 6,
+          animation: "flyout-in 120ms ease",
+        }}
+      >
+        <p className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest border-b"
+          style={{ color: "var(--app-soft, #888)", borderColor: "var(--app-border)" }}>
+          {flyout.label}
+        </p>
+        <div className="px-1.5 pt-1">
+          {flyout.children.map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={endMatch !== undefined ? endMatch : true}
+              onClick={() => setFlyout(null)}
+              {...(noActive ? { isActive: () => false } : {})}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                  isActive
+                    ? "font-semibold"
+                    : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                }`
+              }
+              style={({ isActive }) => isActive ? {
+                color: "var(--app-primary)",
+                background: "rgba(var(--app-primary-rgb),0.10)",
+              } : {}}
+            >
+              <CIcon style={{ width: 15, height: 15, flexShrink: 0 }} />
+              {label}
+            </NavLink>
+          ))}
+        </div>
       </div>
-    </div>,
+    </>,
     document.body
   ) : null;
 
