@@ -6,9 +6,11 @@ import toast from "react-hot-toast";
 import { useSEO } from "../utils/useSEO";
 import {
   Plus, Pencil, Trash2, CheckCircle2, Calendar, User,
-  FolderKanban, Users, Clock, AlertCircle, ChevronDown,
+  FolderKanban, Users, Clock, AlertCircle,
 } from "lucide-react";
 import { Modal, Spinner, EmptyState } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
+import DateTimePicker from "../components/DateTimePicker";
 
 const PRIORITY_META = {
   critical: { label: "Critical", bg: "bg-red-100 dark:bg-red-500/20",    text: "text-red-600 dark:text-red-400",    dot: "bg-red-500" },
@@ -258,20 +260,18 @@ export default function Tasks() {
             {myOnly ? "My Tasks" : "All Tasks"}
           </button>
         )}
-        <div className="relative">
-          <select
-            value={priorityFilter}
-            onChange={e => setPriorityFilter(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-1.5 rounded-xl text-xs font-semibold border border-app-border bg-app-surface text-app-soft hover:text-app transition cursor-pointer"
-          >
-            <option value="">All Priorities</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-app-soft pointer-events-none" />
-        </div>
+        <CustomSelect
+          value={priorityFilter}
+          onChange={v => setPriorityFilter(v)}
+          placeholder="All Priorities"
+          options={[
+            { value: "critical", label: "Critical" },
+            { value: "high",     label: "High" },
+            { value: "medium",   label: "Medium" },
+            { value: "low",      label: "Low" },
+          ]}
+          style={{ minWidth: 140 }}
+        />
       </div>
 
       {/* Task table */}
@@ -400,43 +400,38 @@ export default function Tasks() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5">Assign To <span className="text-red-500">*</span></label>
-              <select
-                className="input w-full"
+              <CustomSelect
                 value={form.assignedTo}
-                onChange={e => {
-                  const m = teamMembers.find(x => (x._id || x.id) === e.target.value);
-                  setForm(f => ({ ...f, assignedTo: e.target.value, assignedToName: m?.name || "" }));
+                onChange={v => {
+                  const m = teamMembers.find(x => (x._id || x.id) === v);
+                  setForm(f => ({ ...f, assignedTo: v, assignedToName: m?.name || "" }));
                 }}
-              >
-                <option value="">Select member</option>
-                {teamMembers.map(m => (
-                  <option key={m._id || m.id} value={m._id || m.id}>{m.name}</option>
-                ))}
-              </select>
+                placeholder="Select member"
+                options={teamMembers.map(m => ({ value: m._id || m.id, label: m.name }))}
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5">Priority <span className="text-red-500">*</span></label>
-              <select
-                className="input w-full"
+              <CustomSelect
                 value={form.priority}
-                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-              >
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
+                onChange={v => setForm(f => ({ ...f, priority: v }))}
+                placeholder="Select priority"
+                options={[
+                  { value: "critical", label: "Critical" },
+                  { value: "high",     label: "High" },
+                  { value: "medium",   label: "Medium" },
+                  { value: "low",      label: "Low" },
+                ]}
+              />
             </div>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-app-soft mb-1.5">Due Date & Time <span className="text-red-500">*</span></label>
-            <input
-              type="datetime-local"
-              className="input w-full"
+            <DateTimePicker
               value={form.dueDate}
-              onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+              onChange={v => setForm(f => ({ ...f, dueDate: v }))}
             />
           </div>
 
