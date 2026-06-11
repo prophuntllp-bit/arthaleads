@@ -46,6 +46,14 @@
     --app-card-solid: #1e1d20;
   }
 
+  /* ── Mobile: reduce blur values to prevent GPU rendering glitches on Android ── */
+  @media (max-width: 640px) {
+    :root, :root.dark {
+      --glass-blur: blur(4px) saturate(130%);
+      --glass-blur-heavy: blur(6px) saturate(140%);
+    }
+  }
+
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }
 

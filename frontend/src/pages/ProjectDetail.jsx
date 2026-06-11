@@ -1330,9 +1330,9 @@ export default function ProjectDetail() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-xs font-semibold text-app-soft">Follow-up date:</span>
             <div className="flex items-center gap-2">
-              <AppDatePicker value={prospDateFrom} onChange={v => { setProspDateFrom(v); setProspPage(1); }} className="w-36" />
+              <AppDatePicker value={prospDateFrom} onChange={v => { setProspDateFrom(v); setProspPage(1); }} className="w-28 sm:w-36" />
               <span className="text-xs text-app-soft">to</span>
-              <AppDatePicker value={prospDateTo} onChange={v => { setProspDateTo(v); setProspPage(1); }} className="w-36" />
+              <AppDatePicker value={prospDateTo} onChange={v => { setProspDateTo(v); setProspPage(1); }} className="w-28 sm:w-36" />
               {(prospDateFrom || prospDateTo) && (
                 <button
                   className="rounded-xl px-2.5 py-1 text-xs font-semibold text-orange-500 hover:bg-orange-500/10 transition border"
