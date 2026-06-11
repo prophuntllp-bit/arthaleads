@@ -369,7 +369,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                   <div className="px-4 pb-4 pt-3 space-y-3" style={{ background: "var(--app-surface-low)" }}>
                     <p className="text-xs text-app-soft leading-relaxed">
                       In your <strong className="text-app">Facebook Business Manager → System users</strong>, create a System User, assign your Page to it, then click <strong className="text-app">Generate Token</strong>.
-                      Select the <em>Arthaleads</em> app and enable: <code className="bg-black/20 px-1 rounded">leads_retrieval</code>, <code className="bg-black/20 px-1 rounded">pages_show_list</code>, <code className="bg-black/20 px-1 rounded">pages_read_engagement</code>. This token never expires.
+                      Select the <em>Arthaleads</em> app and enable: <code className="bg-black/20 px-1 rounded">leads_retrieval</code>, <code className="bg-black/20 px-1 rounded">pages_show_list</code>, <code className="bg-black/20 px-1 rounded">pages_read_engagement</code>, <code className="bg-black/20 px-1 rounded">pages_manage_metadata</code>. This token never expires.
                     </p>
                     <input
                       className="input text-xs font-mono"
