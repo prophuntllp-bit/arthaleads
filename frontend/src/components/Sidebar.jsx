@@ -118,6 +118,8 @@ export default function Sidebar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileSearchQ, setMobileSearchQ]       = useState("");
   const mobileSearchRef = useRef(null);
+  const [flyout, setFlyout] = useState(null);
+  const flyoutRef = useRef(null);
 
   useEffect(() => {
     if (mobileSearchOpen) setTimeout(() => mobileSearchRef.current?.focus(), 60);
@@ -146,6 +148,13 @@ export default function Sidebar() {
   }, [user, attendanceEnabled]);
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
   useEffect(() => { setLogoError(false); }, [org?.logo]);
+  useEffect(() => { setFlyout(null); }, [location.pathname, location.search]);
+  useEffect(() => {
+    if (!flyout) return;
+    const close = (e) => { if (!flyoutRef.current?.contains(e.target)) setFlyout(null); };
+    document.addEventListener("mousedown", close, true);
+    return () => document.removeEventListener("mousedown", close, true);
+  }, [flyout]);
 
   const submitClock = async (captureData) => {
     setClocking(true);
@@ -419,25 +428,44 @@ export default function Sidebar() {
         <nav className="flex-1 px-2 space-y-0.5 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", minHeight: 0 }}>
           {filtered.map((item) => {
             if (item.children) {
-              const isGroupActive = item.children.some(
-                c => location.pathname === c.to || location.pathname.startsWith(c.to + "/")
+              const filteredChildren = item.children.filter(c => !c.roles || c.roles.includes(user?.role));
+              const isGroupActive = filteredChildren.some(
+                c => location.pathname === new URL(c.to, window.location.origin).pathname ||
+                     location.pathname.startsWith(new URL(c.to, window.location.origin).pathname + "/")
               );
               const gExpanded = openGroups[item.label] || false;
-              const toggle    = () => setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] }));
+              const isFlyoutOpen = flyout?.label === item.label;
+
+              const handleGroupClick = (e) => {
+                if (open) {
+                  // Mobile drawer: use accordion
+                  setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] }));
+                } else {
+                  // Desktop: use flyout
+                  if (isFlyoutOpen) { setFlyout(null); return; }
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setFlyout({
+                    label: item.label,
+                    top: Math.min(rect.top, window.innerHeight - (filteredChildren.length * 44 + 60)),
+                    left: rect.right + 8,
+                    children: filteredChildren,
+                  });
+                }
+              };
 
               return (
                 <div key={item.label}>
                   <button
-                    onClick={toggle}
+                    onClick={handleGroupClick}
                     title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
-                      isGroupActive
+                      isGroupActive || isFlyoutOpen
                         ? "font-semibold"
                         : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
                     }`}
                     style={{
                       paddingLeft: 14,
-                      ...(isGroupActive ? {
+                      ...((isGroupActive || isFlyoutOpen) ? {
                         color: "var(--app-primary)",
                         background: "rgba(var(--app-primary-rgb),0.10)",
                       } : {}),
@@ -447,15 +475,16 @@ export default function Sidebar() {
                     <span className="ml-3 flex-1 text-left" style={labelStyle}>{item.label}</span>
                     <ChevronDown
                       className={`flex-shrink-0 transition-transform ${gExpanded ? "rotate-180" : ""}`}
-                      style={{ width: 14, height: 14, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms" }}
+                      style={{ width: 14, height: 14, opacity: open && isExpanded ? 1 : 0, transition: "opacity 150ms" }}
                     />
                   </button>
-                  {gExpanded && isExpanded && (
+                  {/* Mobile accordion only */}
+                  {open && gExpanded && isExpanded && (
                     <div
                       className="ml-5 mt-0.5 space-y-0.5 border-l pl-2.5"
                       style={{ borderColor: "var(--app-border)" }}
                     >
-                      {item.children.filter(c => !c.roles || c.roles.includes(user?.role)).map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
+                      {filteredChildren.map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
                         <NavLink
                           key={to}
                           to={to}
@@ -749,10 +778,63 @@ export default function Sidebar() {
 
   // Profile menu is now rendered inline inside NavContent (mobile-safe)
 
+  // ── Flyout portal ─────────────────────────────────────────────────────────
+  const FlyoutPortal = flyout ? createPortal(
+    <div
+      ref={flyoutRef}
+      style={{
+        position: "fixed",
+        top: flyout.top,
+        left: flyout.left,
+        zIndex: 9999,
+        minWidth: 200,
+        background: isDark ? "rgb(24,23,28)" : "#fff",
+        border: "1px solid var(--app-border)",
+        boxShadow: "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
+        borderRadius: "1rem",
+        overflow: "hidden",
+        paddingTop: 6,
+        paddingBottom: 6,
+      }}
+    >
+      <p className="px-4 py-2 text-[11px] font-bold uppercase tracking-widest border-b"
+        style={{ color: "var(--text-soft, #888)", borderColor: "var(--app-border)" }}>
+        {flyout.label}
+      </p>
+      <div className="px-1.5 pt-1">
+        {flyout.children.map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={endMatch !== undefined ? endMatch : true}
+            onClick={() => setFlyout(null)}
+            {...(noActive ? { isActive: () => false } : {})}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                isActive
+                  ? "font-semibold"
+                  : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+              }`
+            }
+            style={({ isActive }) => isActive ? {
+              color: "var(--app-primary)",
+              background: "rgba(var(--app-primary-rgb),0.10)",
+            } : {}}
+          >
+            <CIcon style={{ width: 15, height: 15, flexShrink: 0 }} />
+            {label}
+          </NavLink>
+        ))}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       {AlertsPortal}
+      {FlyoutPortal}
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
