@@ -43,19 +43,33 @@ export function PageLoader() {
   );
 }
 
+// Module-level stack so only the topmost open Modal responds to Escape.
+// A single listener handles all nested modals — no double-close on one keypress.
+const _modalStack = [];
+function _escHandler(e) {
+  if (e.key === "Escape" && _modalStack.length > 0) {
+    _modalStack[_modalStack.length - 1]();
+  }
+}
+
 export function Modal({ open, onClose, title, children, size = "md" }) {
-  // Escape-to-close + lock body scroll while open (hooks must run every render)
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
-    document.addEventListener("keydown", onKey);
+    const closer = () => onCloseRef.current?.();
+    _modalStack.push(closer);
+    if (_modalStack.length === 1) document.addEventListener("keydown", _escHandler);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKey);
+      const idx = _modalStack.indexOf(closer);
+      if (idx !== -1) _modalStack.splice(idx, 1);
+      if (_modalStack.length === 0) document.removeEventListener("keydown", _escHandler);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };

@@ -16,6 +16,17 @@ export default function QrModal({ type, id, name, onClose }) {
 
   const formUrl = token ? `${FORM_BASE}/form/${token}` : "";
 
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
   // Fetch existing token (or generate on first open)
   const fetchOrCreate = async (force = false) => {
     try {

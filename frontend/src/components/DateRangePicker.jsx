@@ -253,7 +253,7 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
       if (mobile) {
         const top = Math.min(rect.bottom + 8, window.innerHeight - 320);
         setPopoverPos({ top: Math.max(top, 8), left: 8, right: 8 });
-        setMobileShowCalendar(value === "custom");
+        setMobileShowCalendar(isCustomObj);
       } else {
         setPopoverPos({
           top: rect.bottom + 8,

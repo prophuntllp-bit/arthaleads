@@ -237,7 +237,7 @@ function ImageUploadArea({ value, onChange, placeholder = "Upload image or paste
       {value ? (
         <div className="relative rounded-xl overflow-hidden border group" style={{ borderColor: "var(--app-border)" }}>
           <img src={value} alt="" className="w-full max-h-52 object-cover" onError={e => { e.target.style.display = "none"; }} />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
+          <div className="absolute inset-0 bg-black/40 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition flex items-center justify-center gap-2">
             <button onClick={() => fileRef.current?.click()}
               className="px-3 py-1.5 rounded-lg bg-white text-gray-800 text-xs font-semibold flex items-center gap-1">
               <RefreshCw className="w-3 h-3" /> Replace
@@ -395,7 +395,7 @@ function Block({ block, onChange, onDelete, onAddAfter, onMoveUp, onMoveDown, is
                 className="flex-1 bg-transparent text-base text-app outline-none border-b border-transparent focus:border-orange-300 py-0.5 transition"
                 placeholder="List item…" />
               {(block.items || []).length > 1 && (
-                <button onClick={() => removeItem(idx)} className="opacity-0 group-hover:opacity-100 p-1 text-app-soft hover:text-red-400">
+                <button onClick={() => removeItem(idx)} className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1 text-app-soft hover:text-red-400">
                   <X className="w-3 h-3" />
                 </button>
               )}
@@ -416,13 +416,13 @@ function Block({ block, onChange, onDelete, onAddAfter, onMoveUp, onMoveDown, is
 
       {/* Add block below */}
       <button onClick={() => onAddAfter(block.id)}
-        className="mt-1.5 flex items-center gap-1 text-[11px] text-app-soft hover:text-orange-500 opacity-0 group-hover:opacity-100 transition">
+        className="mt-1.5 flex items-center gap-1 text-[11px] text-app-soft hover:text-orange-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
         <Plus className="w-3 h-3" /> Add block
       </button>
 
       {/* Delete block */}
       <button onClick={() => onDelete(block.id)}
-        className="absolute right-0 top-0 p-1.5 rounded-lg text-app-soft hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition">
+        className="absolute right-0 top-0 p-1.5 rounded-lg text-app-soft hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
         <Trash2 className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -918,7 +918,7 @@ export default function BlogEditor() {
                         <button
                           onClick={() => deleteCategory(c._id)}
                           disabled={deletingCatId === c._id}
-                          className="p-1 rounded text-app-soft hover:text-red-400 transition opacity-0 group-hover:opacity-100"
+                          className="p-1 rounded text-app-soft hover:text-red-400 transition opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                           title="Delete category"
                         >
                           {deletingCatId === c._id
