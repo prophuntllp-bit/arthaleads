@@ -1387,23 +1387,26 @@ const MATCH_FIELD_LABELS = {
 
 function LeadRoutingSection() {
   const [rules, setRules] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [agents, setAgents] = useState([]);
   const [form, setForm] = useState({ label: "", matchField: "form_id", matchValue: "", assignTo: "" });
 
   useEffect(() => {
-    api.get("/auth/agents")
-      .then(({ data }) => {
-        const list = data.agents || [];
-        setAgents(list);
-        if (list.length) setForm((f) => ({ ...f, assignTo: list[0]._id }));
+    Promise.all([
+      api.get("/routing-rules"),
+      api.get("/auth/agents"),
+    ])
+      .then(([rulesRes, agentsRes]) => {
+        const agentList = agentsRes.data.agents || [];
+        setRules(rulesRes.data.rules || []);
+        setAgents(agentList);
+        if (agentList.length > 0) {
+          setForm((f) => ({ ...f, assignTo: f.assignTo || agentList[0]._id }));
+        }
       })
-      .catch(() => {});
-    api.get("/routing-rules")
-      .then(({ data }) => setRules(data.rules || []))
-      .catch(() => {})
+      .catch(() => { toast.error("Failed to load routing data"); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -1411,6 +1414,9 @@ function LeadRoutingSection() {
     e.preventDefault();
     if (!form.label.trim() || !form.matchValue.trim()) {
       toast.error("Please fill in all fields"); return;
+    }
+    if (!form.assignTo) {
+      toast.error("No agents available to assign to"); return;
     }
     setSaving(true);
     try {

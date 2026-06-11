@@ -148,9 +148,9 @@ export default function Dashboard() {
       .then((response) => setData(response.data.data))
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
-        if (retryCount < 1) {
-          // Auto-retry once after 3s (handles Railway cold-start / transient DB reconnect)
-          setTimeout(() => fetchAnalytics(1), 3000);
+        const delays = [5000, 12000, 25000];
+        if (retryCount < delays.length) {
+          setTimeout(() => fetchAnalytics(retryCount + 1), delays[retryCount]);
         } else {
           setAnalyticsError(true);
         }

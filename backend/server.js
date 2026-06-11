@@ -139,6 +139,7 @@ app.use(cors({
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_GENERAL) || 200,
+  keyGenerator: (req) => req.user?._id?.toString() || req.ip,
   message: { success: false, message: "Too many requests, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
