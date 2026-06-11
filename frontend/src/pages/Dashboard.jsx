@@ -91,15 +91,65 @@ function getGreeting() {
   return "Good night";
 }
 
+// Typewriter hook — reveals `text` char-by-char; `done` becomes true when finished
+function useTypewriter(text, speed = 20, startDelay = 0) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!text) return;
+    setDisplayed("");
+    setDone(false);
+    let i = 0;
+    const kick = () => {
+      const iv = setInterval(() => {
+        i++;
+        setDisplayed(text.slice(0, i));
+        if (i >= text.length) { clearInterval(iv); setDone(true); }
+      }, speed);
+      return iv;
+    };
+    let iv;
+    if (startDelay > 0) {
+      const t = setTimeout(() => { iv = kick(); }, startDelay);
+      return () => { clearTimeout(t); clearInterval(iv); };
+    }
+    iv = kick();
+    return () => clearInterval(iv);
+  }, [text, speed, startDelay]);
+  return { displayed, done };
+}
+
+const INSIGHT_THEMES = [
+  { bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.22)",  accent: "#22c55e",  arrow: "▲" },
+  { bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.22)", accent: "#f97316",  arrow: "→" },
+];
+
+function InsightCard({ text, index, startDelay }) {
+  const { displayed, done } = useTypewriter(text, 20, startDelay);
+  const theme = INSIGHT_THEMES[index % INSIGHT_THEMES.length];
+  return (
+    <div className="rounded-xl px-3 py-2.5 transition-all duration-500"
+      style={{ background: theme.bg, border: `1px solid ${theme.border}`, opacity: displayed ? 1 : 0 }}>
+      <div className="flex items-start gap-2">
+        <span className="text-[9px] font-black mt-0.5 flex-shrink-0" style={{ color: theme.accent }}>{theme.arrow}</span>
+        <p className="text-[11px] leading-snug text-app">
+          {displayed}
+          {!done && <span className="ai-cursor" style={{ background: theme.accent }} />}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // Generates a session-cached AI insight summary from live analytics data
 // Only visible to admin and manager roles
 function SmartInsightsWidget({ data }) {
   const { user } = useAuth();
   const [insights, setInsights] = useState(null);
   const [error, setError]       = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [cardDelays, setCardDelays] = useState([]);
 
-  // Role guard — agents don't see org-wide AI insights
   const allowed = user?.role === "admin" || user?.role === "manager" || user?.role === "super_admin";
   if (!allowed) return null;
 
@@ -109,15 +159,19 @@ function SmartInsightsWidget({ data }) {
     if (!force) {
       try {
         const cached = sessionStorage.getItem(cacheKey);
-        if (cached) { setInsights(JSON.parse(cached)); return; }
+        if (cached) {
+          const bullets = JSON.parse(cached);
+          setInsights(bullets);
+          setCardDelays(bullets.map((_, i) => i === 0 ? 0 : bullets[0].length * 20 + 200));
+          return;
+        }
       } catch {}
     }
-    setRefreshing(true);
+    setAiLoading(true);
+    setInsights(null);
     setError(false);
     try {
-      // Use only the fields that actually exist in the analytics response
-      const topSource = Object.entries(data.bySource || {})
-        .sort((a, b) => b[1] - a[1])[0];
+      const topSource = Object.entries(data.bySource || {}).sort((a, b) => b[1] - a[1])[0];
       const summary = [
         `Total leads all-time: ${data.allTimeTotal ?? 0}`,
         `New leads this period: ${data.totalLeads ?? 0}`,
@@ -129,8 +183,6 @@ function SmartInsightsWidget({ data }) {
         `Pipeline value: ₹${data.pipelineValue ? (data.pipelineValue / 1e5).toFixed(0) + "L" : "0"}`,
       ].join(". ");
 
-      // Pass page as empty string so backend does NOT inject its own live context
-      // (which would conflict with the frontend analytics numbers)
       const { data: res } = await api.post("/help/ask", {
         question: `You are analysing a real estate CRM. Use ONLY these numbers (do not use any other data): ${summary}. Give exactly 2 short bullet insights — one positive highlight, one actionable improvement. Each on its own line starting with "•". No intro, no sign-off. Max 15 words per bullet.`,
         page: "",
@@ -143,45 +195,62 @@ function SmartInsightsWidget({ data }) {
         .slice(0, 2);
 
       setInsights(bullets);
+      setCardDelays(bullets.map((_, i) => i === 0 ? 0 : bullets[0].length * 20 + 200));
       try { sessionStorage.setItem(cacheKey, JSON.stringify(bullets)); } catch {}
     } catch {
       setError(true);
     } finally {
-      setRefreshing(false);
+      setAiLoading(false);
     }
   };
 
   useEffect(() => { generate(); }, [!!data]);
 
   return (
-    <div className="w-full rounded-xl p-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.05)", border: "1px solid rgba(var(--app-primary-rgb),0.14)" }}>
-      <div className="flex items-center justify-between mb-1.5">
+    <div className="w-full rounded-xl overflow-hidden"
+      style={{ background: "rgba(var(--app-primary-rgb),0.04)", border: "1px solid rgba(var(--app-primary-rgb),0.16)" }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2"
+        style={{ borderBottom: "1px solid rgba(var(--app-primary-rgb),0.12)", background: "rgba(var(--app-primary-rgb),0.06)" }}>
         <div className="flex items-center gap-1.5">
-          <Sparkles style={{ width: 11, height: 11, color: "var(--app-primary)", flexShrink: 0 }} />
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--app-primary)" }}>AI Insights</span>
+          <Sparkles className="ai-sparkle" style={{ width: 11, height: 11, color: "#f97316", flexShrink: 0 }} />
+          <span className="text-[10px] font-black uppercase tracking-widest"
+            style={{ background: "linear-gradient(90deg,#f97316,#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Artha AI
+          </span>
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+            style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", border: "1px solid rgba(249,115,22,0.25)" }}>
+            LIVE
+          </span>
         </div>
-        <button onClick={() => generate(true)} disabled={refreshing}
-          className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5">
-          <Zap style={{ width: 9, height: 9 }} />
-          {refreshing ? "…" : "Refresh"}
+        <button onClick={() => generate(true)} disabled={aiLoading}
+          className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg"
+          style={{ background: "rgba(var(--app-primary-rgb),0.08)" }}>
+          <Zap style={{ width: 8, height: 8 }} />
+          {aiLoading ? "…" : "Refresh"}
         </button>
       </div>
 
-      {refreshing && !insights && (
-        <div className="flex items-center gap-1.5 py-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
-          <span className="text-[11px] text-app-soft">Analysing your pipeline…</span>
-        </div>
-      )}
-      {error && (
-        <p className="text-[11px] text-app-soft">Could not generate insights right now.</p>
-      )}
-      {insights && insights.map((line, i) => (
-        <div key={i} className="flex items-start gap-1.5 mt-1 first:mt-0">
-          <span className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: "var(--app-primary)" }} />
-          <p className="text-[11px] text-app leading-snug">{line}</p>
-        </div>
-      ))}
+      {/* Body */}
+      <div className="px-3 py-2 flex flex-col gap-2">
+        {aiLoading && (
+          <>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
+              <span className="text-[10px] text-app-soft">Artha AI is analysing your pipeline…</span>
+            </div>
+            <div className="ai-shimmer-bar h-8 rounded-lg" />
+            <div className="ai-shimmer-bar h-8 rounded-lg" style={{ animationDelay: "0.3s" }} />
+          </>
+        )}
+        {error && (
+          <p className="text-[11px] text-app-soft py-1">Could not generate insights right now.</p>
+        )}
+        {insights && insights.map((line, i) => (
+          <InsightCard key={i} text={line} index={i} startDelay={cardDelays[i] ?? 0} />
+        ))}
+      </div>
     </div>
   );
 }
