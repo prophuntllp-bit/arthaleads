@@ -177,6 +177,19 @@ export default function HelpBot() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, ticketPanel]);
 
+  // Allow external callers (e.g. Dashboard AI widget) to open the bot and ask a question
+  const handleAskRef = useRef(null);
+  useEffect(() => { handleAskRef.current = handleAsk; });
+  useEffect(() => {
+    const handler = (e) => {
+      setOpen(true);
+      const q = e.detail?.question;
+      if (q) setTimeout(() => handleAskRef.current?.(null, q), 320);
+    };
+    window.addEventListener("helpbot:ask", handler);
+    return () => window.removeEventListener("helpbot:ask", handler);
+  }, []);
+
   const [showCommonQ, setShowCommonQ] = useState(false);
 
   // First-login tour offer

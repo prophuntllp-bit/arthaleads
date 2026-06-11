@@ -90,6 +90,68 @@ function getGreeting() {
   return "Good night";
 }
 
+const AI_CHIPS = [
+  "What should I focus on today?",
+  "Who are my hottest leads?",
+  "Any overdue follow-ups?",
+];
+
+function AskArthaWidget() {
+  const [q, setQ] = useState("");
+
+  const fire = (question) => {
+    if (!question.trim()) return;
+    window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: question.trim() } }));
+    setQ("");
+  };
+
+  return (
+    <div className="w-full mt-1" style={{ minWidth: 200 }}>
+      {/* Header */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className="flex items-center justify-center w-5 h-5 rounded-lg flex-shrink-0"
+          style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+          <Sparkles style={{ width: 11, height: 11, color: "var(--app-primary)" }} />
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-app-soft">Ask Artha AI</span>
+      </div>
+
+      {/* Input */}
+      <form onSubmit={(e) => { e.preventDefault(); fire(q); }}
+        className="flex items-center gap-1.5 rounded-xl overflow-hidden"
+        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Ask about your leads…"
+          className="flex-1 bg-transparent text-xs text-app placeholder:text-app-soft py-2 pl-3 pr-1 outline-none min-w-0"
+        />
+        <button type="submit" disabled={!q.trim()}
+          className="flex-shrink-0 mr-1.5 flex items-center justify-center w-6 h-6 rounded-lg transition-all disabled:opacity-30"
+          style={{ background: q.trim() ? "var(--app-primary)" : "transparent" }}>
+          <ArrowRight style={{ width: 11, height: 11, color: q.trim() ? "#fff" : "var(--app-text-soft)" }} />
+        </button>
+      </form>
+
+      {/* Quick chips */}
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {AI_CHIPS.map((chip) => (
+          <button key={chip} type="button"
+            onClick={() => fire(chip)}
+            className="text-[10px] px-2 py-0.5 rounded-full transition-all hover:opacity-80"
+            style={{
+              background: "rgba(var(--app-primary-rgb),0.08)",
+              color: "var(--app-primary)",
+              border: "1px solid rgba(var(--app-primary-rgb),0.18)",
+            }}>
+            {chip}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DashboardClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -306,17 +368,20 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Middle: date range + new lead (stacked) */}
-        <div className="flex flex-row lg:flex-col items-center lg:items-end justify-end lg:justify-center gap-2 flex-shrink-0">
-          <span data-tour="date-range">
-            <DateRangePicker value={dateRange} onChange={setDateRange} compact />
-          </span>
-          <button type="button" data-tour="new-lead"
-            onClick={() => navigate("/leads", { state: { openAddLead: true } })}
-            className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
-            <Plus className="w-3.5 h-3.5 shrink-0" />
-            <span>New Lead</span>
-          </button>
+        {/* Middle: date range + new lead + AI ask (stacked) */}
+        <div className="flex flex-col justify-center gap-2 flex-shrink-0" style={{ minWidth: 220 }}>
+          <div className="flex items-center gap-2">
+            <span data-tour="date-range">
+              <DateRangePicker value={dateRange} onChange={setDateRange} compact />
+            </span>
+            <button type="button" data-tour="new-lead"
+              onClick={() => navigate("/leads", { state: { openAddLead: true } })}
+              className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap flex-shrink-0">
+              <Plus className="w-3.5 h-3.5 shrink-0" />
+              <span>New Lead</span>
+            </button>
+          </div>
+          <AskArthaWidget />
         </div>
 
         {/* Right: live clock panel */}
