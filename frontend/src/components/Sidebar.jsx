@@ -633,75 +633,103 @@ export default function Sidebar() {
         {/* ── Bottom: profile (mobile only; desktop uses topbar) ── */}
         {showProfile && <div className="mt-auto px-2 pb-3 flex-shrink-0 space-y-0.5 border-t" style={{ borderColor: "var(--app-border)", paddingTop: 6 }}>
 
-          {/* ── Inline profile menu (expands upward, works on all devices) ── */}
+          {/* ── Inline profile menu (expands upward, mobile drawer) ── */}
           {profileOpen && isExpanded && (
             <div
               className="mx-2 mb-1 rounded-2xl overflow-hidden"
               style={{ border: "1px solid var(--app-border)", background: isDark ? "rgb(30,29,32)" : "#fff" }}
             >
-              {/* User info */}
+              {/* User card: two-column (avatar left, info right) */}
               <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-                <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm overflow-hidden"
-                  style={{ background: "rgba(var(--app-primary-rgb), 0.12)", color: "var(--app-primary)" }}>
+                <div className="rounded-full overflow-hidden flex items-center justify-center font-bold text-base flex-shrink-0"
+                  style={{ width: 44, height: 44, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)", border: "2px solid rgba(var(--app-primary-rgb),0.2)" }}>
                   {user?.avatar
                     ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                     : user?.name?.[0]?.toUpperCase()}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-app truncate">{user?.name}</p>
-                  <p className="text-xs text-app-soft capitalize">{user?.role?.replace("_", " ")}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-app leading-tight truncate">{user?.name}</p>
+                  <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize"
+                    style={{ background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)" }}>
+                    {user?.role?.replace("_", " ")}
+                  </span>
+                  <div className="mt-1.5 space-y-0.5">
+                    {user?.phone && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-app-soft">
+                        <Phone style={{ width: 10, height: 10, flexShrink: 0 }} />
+                        <span>{user.phone}</span>
+                      </div>
+                    )}
+                    {user?.email && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-app-soft">
+                        <Mail style={{ width: 10, height: 10, flexShrink: 0 }} />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Clock in/out — Growth+ only */}
-              {attendanceEnabled && <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
-                {isClockedOut ? (
-                  <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl" style={{ background: "var(--app-surface-low)" }}>
-                    <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
-                    Done for today
-                  </div>
-                ) : isClockedIn ? (
-                  <button onClick={() => { handleClockOut(); setProfileOpen(false); }} disabled={clocking}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 disabled:opacity-60 font-semibold">
-                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                    <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
-                  </button>
-                ) : (
-                  <button onClick={() => { handleClockIn(); setProfileOpen(false); }} disabled={clocking}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-green-600 hover:bg-green-500/10 disabled:opacity-60 font-semibold">
-                    <LogInIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                    Clock In
-                  </button>
-                )}
-              </div>}
+              {attendanceEnabled && (
+                <div className="px-3 pt-3 pb-1">
+                  {isClockedOut ? (
+                    <div className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-semibold text-app-soft"
+                      style={{ background: "var(--app-surface-low)" }}>
+                      <Clock style={{ width: 13, height: 13 }} />
+                      Done for today
+                    </div>
+                  ) : isClockedIn ? (
+                    <button onClick={() => { handleClockOut(); setProfileOpen(false); }} disabled={clocking}
+                      className="w-full py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      style={{ background: "rgba(239,68,68,0.10)", color: "#ef4444" }}>
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                      {clockTimer || "Active"} · Clock Out
+                    </button>
+                  ) : (
+                    <button onClick={() => { handleClockIn(); setProfileOpen(false); }} disabled={clocking}
+                      className="w-full py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                      style={{ background: "#22c55e", color: "#fff" }}>
+                      <LogInIcon style={{ width: 13, height: 13 }} />
+                      Clock IN
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Live date & time */}
+              <div className="mx-3 mb-2 mt-2 px-3 py-1.5 rounded-xl flex items-center gap-2"
+                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-app-soft flex-shrink-0">Date &amp; Time</p>
+                <p className="text-[10px] font-bold text-app tabular-nums truncate">{wallClock}</p>
+              </div>
 
               {/* Actions */}
-              <div className="px-2 py-1.5">
+              <div className="px-2 pb-1">
                 <button onClick={() => { navigate("/settings"); setProfileOpen(false); }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-                  <User style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  <User style={{ width: 13, height: 13, flexShrink: 0 }} />
                   My Profile
                 </button>
                 <button onClick={() => { navigate("/referrals"); setProfileOpen(false); }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-                  <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  <Gift style={{ width: 13, height: 13, flexShrink: 0, color: "#ff6b00" }} />
                   Referrals
                 </button>
                 <button onClick={() => { toggleTheme(); setProfileOpen(false); }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
                   {isDark
-                    ? <MoonStar style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
-                    : <SunMedium style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />}
+                    ? <MoonStar style={{ width: 13, height: 13, flexShrink: 0, color: "var(--app-primary)" }} />
+                    : <SunMedium style={{ width: 13, height: 13, flexShrink: 0, color: "var(--app-primary)" }} />}
                   {isDark ? "Dark Mode" : "Light Mode"}
                 </button>
               </div>
 
               {/* Sign out */}
-              <div className="px-2 pb-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+              <div className="px-3 pb-3 border-t pt-1.5" style={{ borderColor: "var(--app-border)" }}>
                 <button onClick={() => { handleLogout(); setProfileOpen(false); }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left mt-1">
-                  <LogOut style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left">
+                  <LogOut style={{ width: 13, height: 13, flexShrink: 0 }} />
                   Sign Out
                 </button>
               </div>
