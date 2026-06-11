@@ -829,7 +829,7 @@ export default function ProjectDetail() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-2xl p-1 w-fit stitch-surface-muted">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl p-1 stitch-surface-muted sm:flex sm:w-fit">
         {[
           { key: "info",          label: "Info",                                                                    activeClass: "",                     activeBg: "var(--app-primary)" },
           { key: "leads",         label: `Leads (${leadsTotal})`,                                                  activeClass: "",                     activeBg: "var(--app-primary)" },
@@ -839,7 +839,7 @@ export default function ProjectDetail() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`rounded-xl px-5 py-2 text-sm font-semibold transition ${
+            className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition text-center sm:px-5 sm:py-2 ${
               tab === key
                 ? activeClass ? `${activeClass} text-white shadow-sm` : "text-white shadow-sm"
                 : "text-app-soft hover:text-app"
@@ -988,17 +988,17 @@ export default function ProjectDetail() {
           </div>
 
           {/* Status filter pills */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-1.5">
             {STATUS_FILTERS.map((f) => {
               const active = bookingFilter === f.value;
               return (
                 <button
                   key={f.value}
                   onClick={() => { setBookingFilter(f.value); setLeadsPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all text-center sm:rounded-full sm:py-1 ${
                     active
                       ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
-                      : "bg-gray-100 dark:bg-white/5 text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
+                      : "bg-gray-100 dark:bg-white/5 text-app-soft border border-orange-400/50 hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
                   }`}
                 >
                   {f.label}
