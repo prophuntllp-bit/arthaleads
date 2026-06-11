@@ -87,7 +87,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
+        className={`relative w-full ${widths[size]} rounded-3xl shadow-2xl overflow-hidden`}
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
       >
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
