@@ -1010,13 +1010,6 @@ export default function Sidebar() {
             <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
             Referrals
           </button>
-          <button onClick={() => { toggleTheme(); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-            {isDark
-              ? <MoonStar style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
-              : <SunMedium style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />}
-            {isDark ? "Dark Mode" : "Light Mode"}
-          </button>
         </div>
 
         {/* Sign out */}
