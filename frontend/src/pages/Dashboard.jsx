@@ -202,8 +202,8 @@ export default function Dashboard() {
       <header className="stitch-topbar">
         <div className="flex flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            {/* Search: hidden on mobile/tablet, visible on desktop */}
-            <div className="relative min-w-[260px] flex-1 max-w-xl hidden md:block">
+            {/* Search: mobile only — desktop search is in the topbar */}
+            <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
               <input
                 className="input rounded-full pl-11 pr-4"
