@@ -47,7 +47,7 @@ const navItems = [
     label: "Tasks", icon: ClipboardList,
     children: [
       { to: "/tasks",     label: "Manage Tasks", icon: List },
-      { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"] },
+      { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"], noActive: true },
     ],
   },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
@@ -455,12 +455,13 @@ export default function Sidebar() {
                       className="ml-5 mt-0.5 space-y-0.5 border-l pl-2.5"
                       style={{ borderColor: "var(--app-border)" }}
                     >
-                      {item.children.filter(c => !c.roles || c.roles.includes(user?.role)).map(({ to, label, icon: CIcon, end: endMatch }) => (
+                      {item.children.filter(c => !c.roles || c.roles.includes(user?.role)).map(({ to, label, icon: CIcon, end: endMatch, noActive }) => (
                         <NavLink
                           key={to}
                           to={to}
                           end={endMatch !== undefined ? endMatch : true}
                           onClick={() => setOpen(false)}
+                          {...(noActive ? { isActive: () => false } : {})}
                           className={({ isActive }) =>
                             `flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                               isActive
