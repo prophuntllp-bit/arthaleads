@@ -337,7 +337,7 @@ export default function Sidebar() {
       if (isMobile) {
         setAlertDropPos({ top: rect.bottom + 6, left: undefined, right: 8 });
       } else {
-        setAlertDropPos({ top: rect.top, left: rect.right + 8, right: undefined });
+        setAlertDropPos({ top: rect.bottom + 6, left: undefined, right: window.innerWidth - rect.right });
       }
     }
     setAlertOpen(newOpen);
