@@ -275,7 +275,7 @@ export default function DateRangePicker({ value, onChange, label, compact = fals
       >
         <CalendarDays className="h-4 w-4 text-orange-500" />
         <span className={compact ? "hidden sm:inline" : ""}>{label || selectedLabel}</span>
-        {displayDates.start && displayDates.end && (
+        {!compact && displayDates.start && displayDates.end && (
           <span className="text-[10px] opacity-60 hidden sm:inline">
             {toIST(displayDates.start)} – {toIST(displayDates.end)}
           </span>

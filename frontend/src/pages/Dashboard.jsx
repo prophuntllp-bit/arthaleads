@@ -154,9 +154,16 @@ function AskArthaWidget() {
 
 function DashboardClock() {
   const [now, setNow] = useState(() => new Date());
+  const [clockStatus, setClockStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(iv);
+  }, []);
+
+  useEffect(() => {
+    api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
   }, []);
 
   const tParts = new Intl.DateTimeFormat("en-IN", {
@@ -190,6 +197,23 @@ function DashboardClock() {
     timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric",
   });
 
+  const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
+  const isClockedOut = !!(clockStatus?.clockIn && clockStatus?.clockOut);
+
+  const handleClock = async () => {
+    setBusy(true);
+    try {
+      const endpoint = isClockedIn ? "/attendance/clockout" : "/attendance/clockin";
+      const r = await api.post(endpoint, {});
+      setClockStatus(r.data.data);
+      toast.success(isClockedIn ? "Clocked out! Great work today." : "Clocked in!");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Attendance action failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="hidden lg:flex flex-col items-center justify-center gap-2 flex-shrink-0 border-l"
       style={{ borderColor: "var(--app-border)", paddingLeft: 28, paddingRight: 8, minWidth: 160 }}>
@@ -215,6 +239,25 @@ function DashboardClock() {
       </svg>
       <p className="text-sm font-bold tabular-nums text-app leading-none">{digitalTime}</p>
       <p className="text-[10px] text-app-soft leading-none">{dateStr}</p>
+
+      {/* Clock In / Out button */}
+      {isClockedOut ? (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-app-soft"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <Check className="w-3 h-3 flex-shrink-0" />
+          Done for today
+        </div>
+      ) : (
+        <button onClick={handleClock} disabled={busy}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all disabled:opacity-60"
+          style={isClockedIn
+            ? { background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
+            : { background: "#22c55e", color: "#fff", border: "1px solid #16a34a" }}>
+          {isClockedIn
+            ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" /> Clock Out</>
+            : <><Clock3 className="w-3 h-3 flex-shrink-0" /> Clock IN</>}
+        </button>
+      )}
     </div>
   );
 }
