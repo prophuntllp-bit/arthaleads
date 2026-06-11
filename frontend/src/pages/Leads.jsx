@@ -10,6 +10,7 @@ import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
 import CustomSelect from "../components/CustomSelect";
 import TransferModal from "../components/TransferModal";
+import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -33,7 +34,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 
@@ -397,6 +398,7 @@ export default function Leads() {
   const [transferMeta, setTransferMeta] = useState(null);
   const [importing, setImporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showOrgQr, setShowOrgQr] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const exportMenuRef = useRef(null);
   const exportBtnRef = useRef(null);
@@ -1135,6 +1137,15 @@ export default function Leads() {
                 <Download className="h-3.5 w-3.5 shrink-0" />
               </button>
             </div>
+            {/* QR Code */}
+            <button
+              className="inline-flex items-center justify-center h-8 w-8 rounded-full transition-colors hover:opacity-80"
+              style={{ border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}
+              title="Lead capture QR code"
+              onClick={() => setShowOrgQr(true)}
+            >
+              <QrCode className="h-3.5 w-3.5 shrink-0" />
+            </button>
             {/* Add Lead */}
             <button
               data-tour="add-lead-btn"
@@ -1781,6 +1792,10 @@ export default function Leads() {
           }
         }}
       />
+
+      {showOrgQr && (
+        <QrModal type="org" name="Leads Capture Form" onClose={() => setShowOrgQr(false)} />
+      )}
 
       {/* ── Floating Bulk Action Bar ─────────────────────────────────────────── */}
       {selectedIds.size > 0 && createPortal(
