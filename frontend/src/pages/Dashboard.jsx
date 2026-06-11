@@ -92,10 +92,16 @@ function getGreeting() {
 }
 
 // Generates a session-cached AI insight summary from live analytics data
+// Only visible to admin and manager roles
 function SmartInsightsWidget({ data }) {
-  const [insights, setInsights] = useState(null); // null=loading, []= no key, string[]=bullets
+  const { user } = useAuth();
+  const [insights, setInsights] = useState(null);
   const [error, setError]       = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Role guard — agents don't see org-wide AI insights
+  const allowed = user?.role === "admin" || user?.role === "manager" || user?.role === "super_admin";
+  if (!allowed) return null;
 
   const generate = async (force = false) => {
     if (!data) return;
@@ -109,18 +115,25 @@ function SmartInsightsWidget({ data }) {
     setRefreshing(true);
     setError(false);
     try {
+      // Use only the fields that actually exist in the analytics response
+      const topSource = Object.entries(data.bySource || {})
+        .sort((a, b) => b[1] - a[1])[0];
       const summary = [
-        `Total leads: ${data.allTimeTotal ?? "-"}`,
-        `New this period: ${data.totalLeads ?? "-"}`,
-        `Overdue follow-ups: ${data.overdueCount ?? "-"}`,
-        `Closed Won: ${data.byStatus?.["Closed Won"] ?? 0}`,
-        `Hot leads (score ≥60): ${(data.hotLeads || []).length}`,
-        `Top source: ${Object.entries(data.bySource || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "N/A"}`,
+        `Total leads all-time: ${data.allTimeTotal ?? 0}`,
+        `New leads this period: ${data.totalLeads ?? 0}`,
+        `This month new leads: ${data.thisMonthLeads ?? 0}, last month: ${data.lastMonthLeads ?? 0}`,
+        `Closed Won this month: ${data.thisMonthClosedWon ?? 0}`,
+        `Conversion rate: ${data.conversionRate ?? 0}%`,
+        `Follow-ups due today: ${data.todayFollowUps ?? 0}`,
+        `Top lead source: ${topSource ? `${topSource[0]} (${topSource[1]} leads)` : "N/A"}`,
+        `Pipeline value: ₹${data.pipelineValue ? (data.pipelineValue / 1e5).toFixed(0) + "L" : "0"}`,
       ].join(". ");
 
+      // Pass page as empty string so backend does NOT inject its own live context
+      // (which would conflict with the frontend analytics numbers)
       const { data: res } = await api.post("/help/ask", {
-        question: `Based on this CRM data: ${summary} — give me exactly 2 short, actionable insights (one positive, one thing to fix). Each on a new line starting with a bullet "•". No intro text, no sign-off. Plain text only.`,
-        page: "/dashboard",
+        question: `You are analysing a real estate CRM. Use ONLY these numbers (do not use any other data): ${summary}. Give exactly 2 short bullet insights — one positive highlight, one actionable improvement. Each on its own line starting with "•". No intro, no sign-off. Max 15 words per bullet.`,
+        page: "",
       });
 
       const bullets = (res.answer || "")
@@ -139,8 +152,6 @@ function SmartInsightsWidget({ data }) {
   };
 
   useEffect(() => { generate(); }, [!!data]);
-
-  if (!process.env.REACT_APP_OPENAI_CONFIGURED && insights === null && !refreshing && !error) return null;
 
   return (
     <div className="w-full rounded-xl p-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.05)", border: "1px solid rgba(var(--app-primary-rgb),0.14)" }}>
