@@ -445,7 +445,10 @@ export default function Leads() {
 
   // Clear preset state from location so back-navigation doesn't re-apply filters
   useEffect(() => {
-    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday || location.state?.presetSearch) {
+    if (location.state?.openAddLead) {
+      setShowForm(true);
+    }
+    if (location.state?.presetStatus || location.state?.presetSource || location.state?.presetFollowUpToday || location.state?.presetSearch || location.state?.openAddLead) {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, []);

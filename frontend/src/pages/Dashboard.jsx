@@ -5,6 +5,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveCo
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  Plus,
   ArrowRight,
   Bell,
   Calendar,
@@ -128,8 +129,8 @@ function DashboardClock() {
   });
 
   return (
-    <div className="hidden lg:flex flex-col items-center justify-center gap-1.5 pl-6 ml-2 flex-shrink-0 self-stretch border-l"
-      style={{ borderColor: "var(--app-border)" }}>
+    <div className="hidden lg:flex flex-col items-center justify-center gap-1.5 flex-shrink-0 self-stretch border-l"
+      style={{ borderColor: "var(--app-border)", paddingLeft: 28, minWidth: 160 }}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
         {Array.from({ length: 12 }, (_, i) => {
@@ -292,10 +293,17 @@ export default function Dashboard() {
                 );
               })}
             </div>
-            {/* Date range — top-right of left column */}
-            <span data-tour="date-range" className="flex-shrink-0">
-              <DateRangePicker value={dateRange} onChange={setDateRange} compact />
-            </span>
+            {/* Date range + New Lead — top-right of left column */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span data-tour="date-range">
+                <DateRangePicker value={dateRange} onChange={setDateRange} compact />
+              </span>
+              <button type="button" data-tour="new-lead" onClick={() => navigate("/leads", { state: { openAddLead: true } })}
+                className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span>New Lead</span>
+              </button>
+            </div>
           </div>
 
           <div>
