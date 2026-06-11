@@ -120,6 +120,7 @@ export default function Sidebar() {
   const mobileSearchRef = useRef(null);
   const [flyout, setFlyout] = useState(null);
   const flyoutRef = useRef(null);
+  const flyoutCloseTimer = useRef(null);
 
   useEffect(() => {
     if (mobileSearchOpen) setTimeout(() => mobileSearchRef.current?.focus(), 60);
@@ -149,12 +150,25 @@ export default function Sidebar() {
   useEffect(() => { fetchClockStatus(); }, [fetchClockStatus]);
   useEffect(() => { setLogoError(false); }, [org?.logo]);
   useEffect(() => { setFlyout(null); }, [location.pathname, location.search]);
-  useEffect(() => {
-    if (!flyout) return;
-    const close = (e) => { if (!flyoutRef.current?.contains(e.target)) setFlyout(null); };
-    document.addEventListener("mousedown", close, true);
-    return () => document.removeEventListener("mousedown", close, true);
-  }, [flyout]);
+
+  const openFlyoutForItem = (item, filteredChildren, e) => {
+    if (flyoutCloseTimer.current) clearTimeout(flyoutCloseTimer.current);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setFlyout({
+      label: item.label,
+      top: Math.min(rect.top, window.innerHeight - (filteredChildren.length * 44 + 72)),
+      left: rect.right + 8,
+      children: filteredChildren,
+    });
+  };
+
+  const scheduleFlyoutClose = () => {
+    flyoutCloseTimer.current = setTimeout(() => setFlyout(null), 180);
+  };
+
+  const cancelFlyoutClose = () => {
+    if (flyoutCloseTimer.current) clearTimeout(flyoutCloseTimer.current);
+  };
 
   const submitClock = async (captureData) => {
     setClocking(true);
@@ -436,27 +450,12 @@ export default function Sidebar() {
               const gExpanded = openGroups[item.label] || false;
               const isFlyoutOpen = flyout?.label === item.label;
 
-              const handleGroupClick = (e) => {
-                if (open) {
-                  // Mobile drawer: use accordion
-                  setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] }));
-                } else {
-                  // Desktop: use flyout
-                  if (isFlyoutOpen) { setFlyout(null); return; }
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setFlyout({
-                    label: item.label,
-                    top: Math.min(rect.top, window.innerHeight - (filteredChildren.length * 44 + 60)),
-                    left: rect.right + 8,
-                    children: filteredChildren,
-                  });
-                }
-              };
-
               return (
                 <div key={item.label}>
                   <button
-                    onClick={handleGroupClick}
+                    onClick={open ? () => setOpenGroups((g) => ({ ...g, [item.label]: !g[item.label] })) : undefined}
+                    onMouseEnter={!open ? (e) => openFlyoutForItem(item, filteredChildren, e) : undefined}
+                    onMouseLeave={!open ? scheduleFlyoutClose : undefined}
                     title={!isExpanded ? item.label : undefined}
                     className={`w-full flex items-center px-3 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                       isGroupActive || isFlyoutOpen
@@ -474,8 +473,8 @@ export default function Sidebar() {
                     <item.icon className="flex-shrink-0" style={{ width: 18, height: 18 }} />
                     <span className="ml-3 flex-1 text-left" style={labelStyle}>{item.label}</span>
                     <ChevronDown
-                      className={`flex-shrink-0 transition-transform ${gExpanded ? "rotate-180" : ""}`}
-                      style={{ width: 14, height: 14, opacity: open && isExpanded ? 1 : 0, transition: "opacity 150ms" }}
+                      className={`flex-shrink-0 transition-transform ${(open ? gExpanded : isFlyoutOpen) ? "rotate-180" : ""}`}
+                      style={{ width: 14, height: 14, opacity: isExpanded ? 1 : 0, transition: "opacity 150ms" }}
                     />
                   </button>
                   {/* Mobile accordion only */}
@@ -782,6 +781,8 @@ export default function Sidebar() {
   const FlyoutPortal = flyout ? createPortal(
     <div
       ref={flyoutRef}
+      onMouseEnter={cancelFlyoutClose}
+      onMouseLeave={scheduleFlyoutClose}
       style={{
         position: "fixed",
         top: flyout.top,
