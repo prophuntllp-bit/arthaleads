@@ -34,6 +34,7 @@ import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
 import OnboardingChecklist from "../components/OnboardingChecklist";
+import AttendanceCapture from "../components/AttendanceCapture";
 
 const STATUS_CHART_COLORS = ["#6366f1", "#f59e0b", "#8b5cf6", "#f97316", "#22c55e", "#ef4444"];
 const SOURCE_CHART_COLORS = ["#3b82f6", "#ef4444", "#22c55e", "#06b6d4", "#f59e0b", "#8b5cf6", "#ec4899", "#f97316", "#14b8a6", "#6b7280"];
@@ -176,8 +177,11 @@ function SmartInsightsWidget({ data }) {
 
 function DashboardClock() {
   const [now, setNow] = useState(() => new Date());
-  const [clockStatus, setClockStatus] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [clockStatus,   setClockStatus]   = useState(null);
+  const [requireSelfie, setRequireSelfie] = useState(true);
+  const [captureOpen,   setCaptureOpen]   = useState(false);
+  const [captureMode,   setCaptureMode]   = useState("clockin");
+  const [submitting,    setSubmitting]    = useState(false);
 
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 1000);
@@ -185,7 +189,9 @@ function DashboardClock() {
   }, []);
 
   useEffect(() => {
-    api.get("/attendance/status").then(r => setClockStatus(r.data.data)).catch(() => {});
+    api.get("/attendance/status")
+      .then(r => { setClockStatus(r.data.data); setRequireSelfie(r.data.requireSelfie ?? true); })
+      .catch(() => {});
   }, []);
 
   const tParts = new Intl.DateTimeFormat("en-IN", {
@@ -222,65 +228,82 @@ function DashboardClock() {
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
   const isClockedOut = !!(clockStatus?.clockIn && clockStatus?.clockOut);
 
-  const handleClock = async () => {
-    setBusy(true);
+  const openCapture = (mode) => { setCaptureMode(mode); setCaptureOpen(true); };
+
+  const submitClock = async (captureData) => {
+    setSubmitting(true);
+    const isIn = captureMode === "clockin";
     try {
-      const endpoint = isClockedIn ? "/attendance/clockout" : "/attendance/clockin";
-      const r = await api.post(endpoint, {});
+      const body = {};
+      if (captureData?.selfie) body.selfie = captureData.selfie;
+      if (captureData?.lat != null) { body.lat = captureData.lat; body.lng = captureData.lng; body.accuracy = captureData.accuracy; }
+      const r = await api.post(`/attendance/${isIn ? "clockin" : "clockout"}`, body);
       setClockStatus(r.data.data);
-      toast.success(isClockedIn ? "Clocked out! Great work today." : "Clocked in!");
+      toast.success(isIn ? "Clocked in!" : "Clocked out! Great work today.");
+      setCaptureOpen(false);
     } catch (e) {
-      toast.error(e.response?.data?.message || "Attendance action failed");
+      toast.error(e.response?.data?.message || (isIn ? "Clock in failed" : "Clock out failed"));
     } finally {
-      setBusy(false);
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="hidden lg:flex flex-col items-center justify-center gap-2 flex-shrink-0 border-l"
-      style={{ borderColor: "var(--app-border)", paddingLeft: 28, paddingRight: 8, minWidth: 160 }}>
-      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
-        {Array.from({ length: 12 }, (_, i) => {
-          const a = (i * 30 - 90) * (Math.PI / 180);
-          const isQ = i % 3 === 0;
-          const outer = r - 3;
-          const inner = outer - (isQ ? 6 : 3);
-          return (
-            <line key={i}
-              x1={cx + Math.cos(a) * outer} y1={cy + Math.sin(a) * outer}
-              x2={cx + Math.cos(a) * inner} y2={cy + Math.sin(a) * inner}
-              stroke="var(--app-text-soft)" strokeWidth={isQ ? 2 : 1} strokeLinecap="round"
-            />
-          );
-        })}
-        {mkHand(hourAngle,   r * 0.50, 3,   "var(--app-text)")}
-        {mkHand(minuteAngle, r * 0.70, 2,   "var(--app-text)")}
-        {mkHand(secondAngle, r * 0.76, 1.2, "#f97316")}
-        <circle cx={cx} cy={cy} r={3.5} fill="#f97316" />
-      </svg>
-      <p className="text-sm font-bold tabular-nums text-app leading-none">{digitalTime}</p>
-      <p className="text-[10px] text-app-soft leading-none">{dateStr}</p>
+    <>
+      <div className="hidden lg:flex flex-col items-center justify-center gap-2 flex-shrink-0 border-l"
+        style={{ borderColor: "var(--app-border)", paddingLeft: 28, paddingRight: 8, minWidth: 160 }}>
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+          <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
+          {Array.from({ length: 12 }, (_, i) => {
+            const a = (i * 30 - 90) * (Math.PI / 180);
+            const isQ = i % 3 === 0;
+            const outer = r - 3;
+            const inner = outer - (isQ ? 6 : 3);
+            return (
+              <line key={i}
+                x1={cx + Math.cos(a) * outer} y1={cy + Math.sin(a) * outer}
+                x2={cx + Math.cos(a) * inner} y2={cy + Math.sin(a) * inner}
+                stroke="var(--app-text-soft)" strokeWidth={isQ ? 2 : 1} strokeLinecap="round"
+              />
+            );
+          })}
+          {mkHand(hourAngle,   r * 0.50, 3,   "var(--app-text)")}
+          {mkHand(minuteAngle, r * 0.70, 2,   "var(--app-text)")}
+          {mkHand(secondAngle, r * 0.76, 1.2, "#f97316")}
+          <circle cx={cx} cy={cy} r={3.5} fill="#f97316" />
+        </svg>
+        <p className="text-sm font-bold tabular-nums text-app leading-none">{digitalTime}</p>
+        <p className="text-[10px] text-app-soft leading-none">{dateStr}</p>
 
-      {/* Clock In / Out button */}
-      {isClockedOut ? (
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-app-soft"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          <Check className="w-3 h-3 flex-shrink-0" />
-          Done for today
-        </div>
-      ) : (
-        <button onClick={handleClock} disabled={busy}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all disabled:opacity-60"
-          style={isClockedIn
-            ? { background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
-            : { background: "#22c55e", color: "#fff", border: "1px solid #16a34a" }}>
-          {isClockedIn
-            ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" /> Clock Out</>
-            : <><Clock3 className="w-3 h-3 flex-shrink-0" /> Clock IN</>}
-        </button>
-      )}
-    </div>
+        {isClockedOut ? (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-semibold text-app-soft w-full justify-center"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <Check className="w-3 h-3 flex-shrink-0" />
+            Done for today
+          </div>
+        ) : (
+          <button
+            onClick={() => openCapture(isClockedIn ? "clockout" : "clockin")}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+            style={isClockedIn
+              ? { background: "rgba(239,68,68,0.10)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }
+              : { background: "#22c55e", color: "#fff", border: "1px solid #16a34a" }}>
+            {isClockedIn
+              ? <><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse flex-shrink-0" /> Clock Out</>
+              : <><Clock3 className="w-3 h-3 flex-shrink-0" /> Clock IN</>}
+          </button>
+        )}
+      </div>
+
+      <AttendanceCapture
+        open={captureOpen}
+        mode={captureMode}
+        required={requireSelfie}
+        submitting={submitting}
+        onClose={() => setCaptureOpen(false)}
+        onConfirm={submitClock}
+      />
+    </>
   );
 }
 
