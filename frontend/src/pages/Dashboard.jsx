@@ -261,8 +261,8 @@ function DashboardClock() {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col items-center justify-center gap-2 flex-shrink-0 border-l"
-        style={{ borderColor: "var(--app-border)", paddingLeft: 28, paddingRight: 8, minWidth: 160 }}>
+      <div className="hidden lg:flex flex-col items-center justify-center gap-2 border-l"
+        style={{ flex: "0 0 20%", width: "20%", borderColor: "var(--app-border)", paddingLeft: 20, paddingRight: 4 }}>
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
           <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
           {Array.from({ length: 12 }, (_, i) => {
@@ -425,8 +425,8 @@ export default function Dashboard() {
       <header className="rounded-[1.75rem] p-4 sm:p-5 flex flex-col gap-3 lg:flex-row lg:items-stretch"
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
 
-        {/* Left: platform pills + greeting */}
-        <div className="flex flex-col gap-3 flex-1 min-w-0">
+        {/* Left 40%: platform pills + greeting */}
+        <div className="flex flex-col gap-3 min-w-0" style={{ flex: "0 0 40%", width: "40%" }}>
           {/* Pills row */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Search: mobile only */}
@@ -467,8 +467,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Middle: date range + new lead + AI insights (stacked) */}
-        <div className="flex flex-col justify-center gap-2 flex-shrink-0" style={{ minWidth: 240 }}>
+        {/* Middle 40%: date range + new lead + AI insights (stacked) */}
+        <div className="flex flex-col justify-center gap-2 border-l" style={{ flex: "0 0 40%", width: "40%", borderColor: "var(--app-border)", paddingLeft: 20 }}>
           <div className="flex items-center gap-2">
             <span data-tour="date-range">
               <DateRangePicker value={dateRange} onChange={setDateRange} compact />
