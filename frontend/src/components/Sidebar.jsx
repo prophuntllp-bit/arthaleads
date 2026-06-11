@@ -111,10 +111,14 @@ export default function Sidebar() {
   // Profile dropdown (inline, no portal)
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const alertRef        = useRef(null);
-  const mobileBellRef   = useRef(null);
+  const alertRef         = useRef(null);
+  const mobileBellRef    = useRef(null);
   const mobileSidebarRef = useRef(null);
-  const profileBtnRef   = useRef(null);
+  const profileBtnRef    = useRef(null);
+  const desktopBellRef   = useRef(null);
+  const desktopProfileBtnRef = useRef(null);
+  const [desktopProfileOpen, setDesktopProfileOpen] = useState(false);
+  const [desktopProfilePos,  setDesktopProfilePos]  = useState({ top: 58, right: 16 });
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileSearchQ, setMobileSearchQ]       = useState("");
   const mobileSearchRef = useRef(null);
@@ -283,7 +287,7 @@ export default function Sidebar() {
   // ── Close alerts on outside click ────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
-      const inDesktop  = alertRef.current?.contains(e.target);
+      const inDesktop  = alertRef.current?.contains(e.target) || desktopBellRef.current?.contains(e.target);
       const inMobile   = mobileBellRef.current?.contains(e.target);
       const inDropdown = document.getElementById("alerts-portal-dropdown")?.contains(e.target);
       if (!inDesktop && !inMobile && !inDropdown) setAlertOpen(false);
@@ -292,13 +296,19 @@ export default function Sidebar() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Close profile dropdown on outside click ───────────────────────────────
-  // Use "click" (not "mousedown") so any button inside the menu fires its
-  // onClick FIRST before this handler removes the menu from the DOM.
+  // ── Close profile dropdowns on outside click ─────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       if (profileBtnRef.current?.contains(e.target)) return;
       setProfileOpen(false);
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+  useEffect(() => {
+    const handler = (e) => {
+      if (desktopProfileBtnRef.current?.contains(e.target)) return;
+      setDesktopProfileOpen(false);
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
@@ -341,6 +351,13 @@ export default function Sidebar() {
 
   const openProfileMenu = (e) => { e?.stopPropagation(); setProfileOpen(v => !v); };
 
+  const openDesktopProfileMenu = (e) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDesktopProfilePos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+    setDesktopProfileOpen(v => !v);
+  };
+
   // ── Derived clock state ───────────────────────────────────────────────────
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
   const isClockedOut = !!(clockStatus?.clockIn && clockStatus?.clockOut);
@@ -361,7 +378,7 @@ export default function Sidebar() {
   // SHARED NAV CONTENT (rendered inside both mobile drawer and desktop sidebar)
   // `isExpanded` controls whether labels are visible
   // ──────────────────────────────────────────────────────────────────────────
-  const NavContent = ({ isExpanded, showPin = false }) => {
+  const NavContent = ({ isExpanded, showPin = false, showProfile = true }) => {
     // Label fade style - fade in/out when sidebar expands/collapses
     const labelStyle = {
       opacity:    isExpanded ? 1 : 0,
@@ -599,8 +616,8 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* ── Bottom: profile ── */}
-        <div className="mt-auto px-2 pb-3 flex-shrink-0 space-y-0.5 border-t" style={{ borderColor: "var(--app-border)", paddingTop: 6 }}>
+        {/* ── Bottom: profile (mobile only; desktop uses topbar) ── */}
+        {showProfile && <div className="mt-auto px-2 pb-3 flex-shrink-0 space-y-0.5 border-t" style={{ borderColor: "var(--app-border)", paddingTop: 6 }}>
 
           {/* ── Inline profile menu (expands upward, works on all devices) ── */}
           {profileOpen && isExpanded && (
@@ -708,7 +725,7 @@ export default function Sidebar() {
               style={{ width: 14, height: 14, opacity: isExpanded ? 0.6 : 0, transition: "opacity 150ms",
                 transform: profileOpen ? "rotate(0deg)" : "rotate(180deg)" }} />
           </button>
-        </div>
+        </div>}
       </div>
     );
   };
@@ -849,11 +866,169 @@ export default function Sidebar() {
     document.body
   ) : null;
 
+  // ── Desktop topbar portal ─────────────────────────────────────────────────
+  const DesktopTopbarPortal = createPortal(
+    <div
+      className="hidden lg:flex items-center justify-between px-4"
+      style={{
+        position:   "fixed",
+        top:        0,
+        left:       pinned ? 240 : 64,
+        right:      0,
+        height:     52,
+        zIndex:     20,
+        background: "var(--app-surface)",
+        backdropFilter:         "blur(20px) saturate(160%)",
+        WebkitBackdropFilter:   "blur(20px) saturate(160%)",
+        borderBottom:           "1px solid var(--app-border)",
+        boxShadow:              "0 2px 12px rgba(0,0,0,0.06)",
+        transition:             "left 220ms cubic-bezier(0.4,0,0.2,1)",
+      }}
+    >
+      <div />
+      <div className="flex items-center gap-1">
+        {/* Bell */}
+        <div ref={desktopBellRef}>
+          <button
+            onClick={openAlerts}
+            className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+            title="New lead alerts"
+          >
+            <Bell style={{ width: 18, height: 18 }} />
+            {alertCount > 0 && (
+              <span
+                className="absolute top-1 right-1 flex items-center justify-center rounded-full font-bold text-white"
+                style={{ width: 16, height: 16, fontSize: 9, background: "var(--app-primary)" }}
+              >
+                {alertCount > 9 ? "9+" : alertCount}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Profile button */}
+        <button
+          ref={desktopProfileBtnRef}
+          onClick={openDesktopProfileMenu}
+          className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-1"
+        >
+          <div
+            className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden"
+            style={{ width: 30, height: 30, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}
+          >
+            {user?.avatar
+              ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+              : user?.name?.[0]?.toUpperCase()}
+          </div>
+          <span className="text-sm font-semibold text-app leading-none">{user?.name}</span>
+          <ChevronDown
+            className={`flex-shrink-0 text-app-soft transition-transform ${desktopProfileOpen ? "rotate-180" : ""}`}
+            style={{ width: 13, height: 13 }}
+          />
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+
+  // ── Desktop profile dropdown portal ──────────────────────────────────────
+  const DesktopProfilePortal = desktopProfileOpen ? createPortal(
+    <>
+      <div style={{ position: "fixed", inset: 0, zIndex: 9997 }} onClick={() => setDesktopProfileOpen(false)} />
+      <div
+        style={{
+          position:     "fixed",
+          top:          desktopProfilePos.top,
+          right:        desktopProfilePos.right,
+          zIndex:       9999,
+          width:        248,
+          background:   isDark ? "rgb(30,29,32)" : "#fff",
+          border:       "1px solid var(--app-border)",
+          borderRadius: "1rem",
+          overflow:     "hidden",
+          boxShadow:    "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
+        }}
+      >
+        {/* User info */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
+          <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm overflow-hidden"
+            style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+            {user?.avatar
+              ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+              : user?.name?.[0]?.toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app truncate">{user?.name}</p>
+            <p className="text-xs text-app-soft capitalize">{user?.role?.replace("_", " ")}</p>
+          </div>
+        </div>
+
+        {/* Clock in/out */}
+        {attendanceEnabled && (
+          <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
+            {isClockedOut ? (
+              <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl" style={{ background: "var(--app-surface-low)" }}>
+                <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
+                Done for today
+              </div>
+            ) : isClockedIn ? (
+              <button onClick={() => { handleClockOut(); setDesktopProfileOpen(false); }} disabled={clocking}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 disabled:opacity-60 font-semibold">
+                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
+              </button>
+            ) : (
+              <button onClick={() => { handleClockIn(); setDesktopProfileOpen(false); }} disabled={clocking}
+                className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-green-600 hover:bg-green-500/10 disabled:opacity-60 font-semibold">
+                <LogInIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                Clock In
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="px-2 py-1.5">
+          <button onClick={() => { navigate("/settings"); setDesktopProfileOpen(false); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            <User style={{ width: 15, height: 15, flexShrink: 0 }} />
+            My Profile
+          </button>
+          <button onClick={() => { navigate("/referrals"); setDesktopProfileOpen(false); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
+            Referrals
+          </button>
+          <button onClick={() => { toggleTheme(); setDesktopProfileOpen(false); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            {isDark
+              ? <MoonStar style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />
+              : <SunMedium style={{ width: 15, height: 15, flexShrink: 0, color: "var(--app-primary)" }} />}
+            {isDark ? "Dark Mode" : "Light Mode"}
+          </button>
+        </div>
+
+        {/* Sign out */}
+        <div className="px-2 pb-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+          <button onClick={() => { handleLogout(); setDesktopProfileOpen(false); }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left mt-1">
+            <LogOut style={{ width: 15, height: 15, flexShrink: 0 }} />
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
+  ) : null;
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       {AlertsPortal}
       {FlyoutPortal}
+      {DesktopTopbarPortal}
+      {DesktopProfilePortal}
 
       {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
@@ -994,7 +1169,7 @@ export default function Sidebar() {
             zIndex:     30,
           }}
         >
-          <NavContent isExpanded={expanded} showPin={true} />
+          <NavContent isExpanded={expanded} showPin={true} showProfile={false} />
         </div>
       </aside>
 

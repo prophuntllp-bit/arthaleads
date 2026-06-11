@@ -481,7 +481,7 @@ function RequireAuth() {
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
       <Sidebar />
-      <main className="flex-1 min-w-0 pt-16 lg:pt-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto">
         <Outlet />
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}
