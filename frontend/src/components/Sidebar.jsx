@@ -43,7 +43,13 @@ const navItems = [
     ],
   },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
-  { to: "/tasks",       label: "Tasks",        icon: ClipboardList },
+  {
+    label: "Tasks", icon: ClipboardList,
+    children: [
+      { to: "/tasks",     label: "Manage Tasks", icon: List },
+      { to: "/tasks?new=1", label: "Add Task",   icon: Plus, roles: ["admin", "manager", "super_admin"] },
+    ],
+  },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
   { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
   { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "super_admin"] },
@@ -449,7 +455,7 @@ export default function Sidebar() {
                       className="ml-5 mt-0.5 space-y-0.5 border-l pl-2.5"
                       style={{ borderColor: "var(--app-border)" }}
                     >
-                      {item.children.map(({ to, label, icon: CIcon, end: endMatch }) => (
+                      {item.children.filter(c => !c.roles || c.roles.includes(user?.role)).map(({ to, label, icon: CIcon, end: endMatch }) => (
                         <NavLink
                           key={to}
                           to={to}

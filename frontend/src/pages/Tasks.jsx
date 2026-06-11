@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -51,6 +51,8 @@ export default function Tasks() {
 
   const { user } = useAuth();
   const canManage = user?.role === "admin" || user?.role === "manager";
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const [tasks, setTasks]         = useState([]);
   const [summary, setSummary]     = useState({ today: 0, upcoming: 0, overdue: 0, completed: 0, all: 0 });
@@ -112,6 +114,14 @@ export default function Tasks() {
   }, [myOnly, priorityFilter, activeCard]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
+
+  // Auto-open Add Task modal when navigated via sidebar "Add Task" link
+  useEffect(() => {
+    if (canManage && searchParams.get("new") === "1") {
+      setForm(EMPTY_FORM); setEditTask(null); setShowForm(true);
+      navigate("/tasks", { replace: true });
+    }
+  }, [searchParams, canManage, navigate]);
 
   useEffect(() => {
     if (!canManage) return;
