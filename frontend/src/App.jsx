@@ -285,6 +285,7 @@ const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
 const FollowUps      = lazy(() => import("./pages/FollowUps"));
+const Tasks          = lazy(() => import("./pages/Tasks"));
 const Attendance     = lazy(() => import("./pages/Attendance"));
 const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -608,6 +609,7 @@ export default function App() {
           <Route path="/projects"      element={<Projects />} />
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
+          <Route path="/tasks"         element={<Tasks />} />
           <Route path="/attendance"    element={<Attendance />} />
           <Route path="/bookings"      element={<Bookings />} />
           <Route path="/invoices"      element={<Invoices />} />
