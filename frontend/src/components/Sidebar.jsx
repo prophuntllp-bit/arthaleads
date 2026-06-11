@@ -885,7 +885,25 @@ export default function Sidebar() {
         transition:             "left 220ms cubic-bezier(0.4,0,0.2,1)",
       }}
     >
-      <div />
+      {/* Search */}
+      <div className="relative" style={{ width: 320 }}>
+        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-soft" style={{ width: 15, height: 15 }} />
+        <input
+          placeholder="Search leads by name, phone…"
+          className="w-full rounded-xl pl-9 pr-3 py-2 text-sm text-app"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
+          onFocus={(e) => { e.target.style.borderColor = "var(--app-primary)"; }}
+          onBlur={(e)  => { e.target.style.borderColor = "var(--app-border)"; }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.target.value.trim()) {
+              navigate("/leads", { state: { presetSearch: e.target.value.trim() } });
+              e.target.value = "";
+              e.target.blur();
+            }
+          }}
+        />
+      </div>
+
       <div className="flex items-center gap-1">
         {/* Theme toggle */}
         <button
@@ -920,17 +938,17 @@ export default function Sidebar() {
         <button
           ref={desktopProfileBtnRef}
           onClick={openDesktopProfileMenu}
-          className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-1"
+          title={user?.name}
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-1"
         >
           <div
             className="flex-shrink-0 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden"
-            style={{ width: 30, height: 30, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}
+            style={{ width: 32, height: 32, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}
           >
             {user?.avatar
               ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               : user?.name?.[0]?.toUpperCase()}
           </div>
-          <span className="text-sm font-semibold text-app leading-none">{user?.name}</span>
           <ChevronDown
             className={`flex-shrink-0 text-app-soft transition-transform ${desktopProfileOpen ? "rotate-180" : ""}`}
             style={{ width: 13, height: 13 }}
