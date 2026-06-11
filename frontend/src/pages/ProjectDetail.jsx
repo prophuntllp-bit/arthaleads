@@ -1262,34 +1262,23 @@ export default function ProjectDetail() {
                 <button
                   onClick={() => setExportDropOpen((v) => !v)}
                   disabled={exportingProsp}
-                  className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:bg-black/5 dark:hover:bg-white/10 disabled:opacity-50 cursor-pointer"
-                  style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
+                  className="btn-primary flex items-center gap-2"
                   title="Export prospective leads"
                 >
-                  {exportingProsp ? <Spinner size="sm" /> : <Download className="h-3.5 w-3.5" />}
+                  {exportingProsp ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
                   Export
-                  <ChevronDown className="h-3 w-3 opacity-60" />
+                  <ChevronDown className="h-3 w-3 opacity-80" />
                 </button>
                 {exportDropOpen && (
-                  <div
-                    className="absolute right-0 top-full z-50 mt-1.5 w-44 rounded-2xl border shadow-xl overflow-hidden"
-                    style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
-                  >
-                    <button
-                      onClick={() => exportProspective("xlsx")}
-                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-                      style={{ color: "var(--app-text)" }}
-                    >
-                      <FileSpreadsheet className="h-4 w-4 text-green-500" />
-                      Excel (.xlsx)
+                  <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl overflow-hidden shadow-lg py-1"
+                    style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                    <button onClick={() => exportProspective("xlsx")}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
+                      <FileSpreadsheet className="h-4 w-4 text-app-soft" /> Export Excel
                     </button>
-                    <button
-                      onClick={() => exportProspective("csv")}
-                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-                      style={{ color: "var(--app-text)" }}
-                    >
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      CSV (.csv)
+                    <button onClick={() => exportProspective("csv")}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
+                      <FileText className="h-4 w-4 text-app-soft" /> Export CSV
                     </button>
                   </div>
                 )}
