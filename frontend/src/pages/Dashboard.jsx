@@ -17,23 +17,18 @@ import {
   IndianRupee,
   MapPin,
   MessageCircle,
-  MoonStar,
   Pencil,
   Phone,
-  Plus,
   Search,
   Sparkles,
-  SunMedium,
   Target,
   TrendingUp,
   Users,
   X,
   Zap,
 } from "lucide-react";
-import LeadForm from "../components/LeadForm";
 import { useAuth } from "../context/AuthContext";
 import { StatCard, PageLoader } from "../components/UI";
-import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
@@ -185,7 +180,6 @@ function fmtResponseTime(ms) {
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
   const [greeting, setGreeting] = useState(getGreeting());
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -199,7 +193,6 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showAddLead, setShowAddLead] = useState(false);
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
@@ -310,15 +303,6 @@ export default function Dashboard() {
         </div>
 
         <div className="flex flex-nowrap items-center gap-2">
-          <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
-            className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
-            <Plus className="w-3.5 h-3.5 shrink-0" />
-            <span>New Lead</span>
-          </button>
-          <button className="stitch-pill whitespace-nowrap" onClick={toggleTheme}>
-            {isDark ? <MoonStar className="h-4 w-4 text-orange-500" /> : <SunMedium className="h-4 w-4 text-orange-500" />}
-            <span className="hidden sm:inline">{theme === "dark" ? "Dark" : "Light"}</span>
-          </button>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
 
@@ -553,12 +537,6 @@ export default function Dashboard() {
         <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
 
-      <LeadForm
-        open={showAddLead}
-        onClose={() => setShowAddLead(false)}
-        onSaved={() => { setShowAddLead(false); setRefreshKey((k) => k + 1); }}
-        agents={agents}
-      />
     </div>
   );
 }
