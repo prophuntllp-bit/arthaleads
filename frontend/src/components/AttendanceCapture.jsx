@@ -236,7 +236,7 @@ export default function AttendanceCapture({ open, mode, required, submitting, on
               {locLoading ? (
                 <span className="text-xs text-app-soft flex items-center gap-1.5"><Spinner size="sm" /> Getting location…</span>
               ) : lat !== null ? (
-                <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+                <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>
                   {lat.toFixed(4)}, {lng.toFixed(4)}{accuracy ? ` ±${accuracy}m` : ""}
                 </span>
               ) : (
