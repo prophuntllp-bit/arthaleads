@@ -1298,7 +1298,7 @@ export default function ProjectDetail() {
           </div>
 
           {/* Status filter pills - all scoped to isProspective leads only */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             {[
               { value: "",                  label: "All Prospective",   bg: "bg-gray-100 dark:bg-white/10",           text: "text-app-soft" },
               { value: "Interested",        label: "Interested",        bg: "bg-blue-100 dark:bg-blue-500/20",         text: "text-blue-600 dark:text-blue-400" },
@@ -1314,10 +1314,10 @@ export default function ProjectDetail() {
                 <button
                   key={f.value}
                   onClick={() => { setProspBookingFilter(f.value); setProspPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all text-center sm:rounded-full sm:py-1 ${
                     active
                       ? `${f.bg} ${f.text} ring-2 ring-current ring-offset-1`
-                      : "bg-gray-100 dark:bg-white/5 text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
+                      : "bg-gray-100 dark:bg-white/5 text-app-soft border border-orange-400/50 hover:text-app hover:bg-black/5 dark:hover:bg-white/10"
                   }`}
                 >
                   {f.label}
