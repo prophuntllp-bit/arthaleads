@@ -128,6 +128,23 @@ const PAGE_COPILOT = {
       "What are the required fields for invoice generation?",
     ],
   },
+  "/tasks": {
+    label: "Tasks",
+    chips: [
+      "How many tasks are pending?",
+      "Which tasks are overdue?",
+      "How do I assign a task to a team member?",
+      "How do I mark a task as complete?",
+    ],
+  },
+  "/dump-leads": {
+    label: "Dump Leads",
+    chips: [
+      "What are dump leads?",
+      "How do I restore a dump lead?",
+      "How do I permanently delete a dump lead?",
+    ],
+  },
 };
 
 export default function HelpBot() {

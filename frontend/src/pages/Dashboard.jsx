@@ -94,6 +94,72 @@ function getGreeting() {
   return "Good night";
 }
 
+function DashboardClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const tParts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(now);
+  const h = parseInt(tParts.find(p => p.type === "hour")?.value || "0");
+  const m = parseInt(tParts.find(p => p.type === "minute")?.value || "0");
+  const s = parseInt(tParts.find(p => p.type === "second")?.value || "0");
+
+  const hourAngle   = ((h % 12) + m / 60) * 30;
+  const minuteAngle = (m + s / 60) * 6;
+  const secondAngle = s * 6;
+  const SIZE = 80;
+  const cx = SIZE / 2, cy = SIZE / 2, r = SIZE / 2 - 3;
+
+  const mkHand = (angleDeg, length, width, color) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
+    return (
+      <line x1={cx} y1={cy}
+        x2={cx + Math.cos(rad) * length} y2={cy + Math.sin(rad) * length}
+        stroke={color} strokeWidth={width} strokeLinecap="round"
+      />
+    );
+  };
+
+  const digitalTime = now.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true,
+  }).toUpperCase();
+  const dateStr = now.toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric",
+  });
+
+  return (
+    <div className="hidden lg:flex flex-col items-center gap-1.5 px-4 shrink-0">
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+        <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
+        {Array.from({ length: 12 }, (_, i) => {
+          const a = (i * 30 - 90) * (Math.PI / 180);
+          const isQ = i % 3 === 0;
+          const outer = r - 3;
+          const inner = outer - (isQ ? 6 : 3);
+          return (
+            <line key={i}
+              x1={cx + Math.cos(a) * outer} y1={cy + Math.sin(a) * outer}
+              x2={cx + Math.cos(a) * inner} y2={cy + Math.sin(a) * inner}
+              stroke="var(--app-text-soft)" strokeWidth={isQ ? 2 : 1} strokeLinecap="round"
+            />
+          );
+        })}
+        {mkHand(hourAngle,   r * 0.50, 3,   "var(--app-text)")}
+        {mkHand(minuteAngle, r * 0.70, 2,   "var(--app-text)")}
+        {mkHand(secondAngle, r * 0.76, 1.2, "#f97316")}
+        <circle cx={cx} cy={cy} r={3.5} fill="#f97316" />
+      </svg>
+      <p className="text-sm font-bold tabular-nums text-app leading-none">{digitalTime}</p>
+      <p className="text-[10px] text-app-soft leading-none">{dateStr}</p>
+    </div>
+  );
+}
+
 function fmtINR(val) {
   if (!val) return "₹0";
   if (val >= 1e7) return `₹${(val / 1e7).toFixed(1)}Cr`;
@@ -242,6 +308,8 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+
+        <DashboardClock />
 
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}

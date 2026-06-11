@@ -6,6 +6,7 @@ const { protect } = require("../middlewares/auth");
 const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
 const Lead     = require("../models/Lead");
+const Task     = require("../models/Task");
 const AiUsage  = require("../models/AiUsage");
 
 router.use(protect);
@@ -148,6 +149,36 @@ router.post("/action", async (req, res, next) => {
       lead.assignedName = agentName || "";
       await lead.save();
       return res.json({ success: true, message: `${lead.name} assigned to ${agentName || "the agent"}.`, data: { leadId, agentId } });
+    }
+
+    // ── Complete a task ───────────────────────────────────────────────────────
+    if (type === "complete_task") {
+      const { taskId, note } = params;
+      if (!mongoose.isValidObjectId(taskId)) return res.status(400).json({ success: false, message: "Invalid task." });
+      const task = await Task.findOne({ _id: taskId, orgId: req.user.orgId });
+      if (!task) return res.status(404).json({ success: false, message: "Task not found." });
+      task.status         = "completed";
+      task.completedAt    = new Date();
+      task.completionNote = note || "";
+      await task.save();
+      return res.json({ success: true, message: `Task "${task.title}" marked as completed.`, data: { taskId } });
+    }
+
+    // ── Add note to lead ──────────────────────────────────────────────────────
+    if (type === "add_lead_note") {
+      const { leadId, note } = params;
+      if (!note?.trim()) return res.status(400).json({ success: false, message: "Note text required." });
+      const lead = await validateLead(leadId);
+      if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
+      const noteEntry = {
+        text:      note.trim(),
+        addedBy:   req.user._id,
+        addedName: req.user.name,
+        addedAt:   new Date(),
+      };
+      lead.notes = [...(lead.notes || []), noteEntry];
+      await lead.save();
+      return res.json({ success: true, message: `Note added to ${lead.name}'s profile.`, data: { leadId } });
     }
 
     return res.status(400).json({ success: false, message: "Unknown action type." });

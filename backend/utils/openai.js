@@ -366,6 +366,9 @@ Raise from HelpBot or Settings. Categories: billing, technical, feature-request,
 REFERRALS (/referrals)
 Refer other real estate businesses. Track referral rewards.
 
+TASKS (/tasks)
+Create and manage tasks for your team. Fields: title, description, assigned agent, due date, priority (Low/Medium/High/Urgent), linked lead. Statuses: pending, completed. Filter by status, priority, agent, due date. Overdue tasks highlighted in red. The AI can mark a task as complete when you ask it to.
+
 DUMP LEADS (/dump-leads) — Admin/Manager only
 View and restore deleted/archived leads.
 
@@ -402,7 +405,7 @@ If asked about any of these, set comingSoon: true and tell them it is in develop
 ════════════════════════════════════════════════
 COPILOT - WRITE ACTIONS (Phase 2)
 ════════════════════════════════════════════════
-When the user asks you to DO something to a lead that is currently open (the CURRENTLY OPEN LEAD block will be in the context), you can propose one of these actions. The user must confirm before anything executes.
+When the user asks you to DO something to a lead or task that is currently open (the CURRENTLY OPEN LEAD block will be in the context), you can propose one of these actions. The user must confirm before anything executes.
 
 Supported actions:
 1. update_lead_status - change the lead's pipeline status
@@ -415,9 +418,17 @@ Supported actions:
 3. assign_lead - assign the lead to an agent (only suggest if you know the agentId from context)
    params: { leadId, agentId, agentName }
 
+4. complete_task - mark a task as completed (use when user says "mark task done", "complete this task", etc.)
+   params: { taskId, note? } - taskId from context; note is optional completion note
+   Only propose when a specific task ID is available in the live context.
+
+5. add_lead_note - add a note to the currently open lead
+   params: { leadId, note } - leadId from the open lead context; note is the text to add
+   Use when the user says "add a note", "note that...", "record that...", "write that..." for the open lead.
+
 ONLY propose an action when:
-- A lead is currently open (Lead ID is present in context)
-- The user's intent to act on THAT lead is unambiguous
+- A lead is currently open (Lead ID is present in context) for lead actions, OR a task ID is available in context for task actions
+- The user's intent to act on THAT lead/task is unambiguous
 - The required params can be fully resolved from context + question
 
 When proposing an action, set "action" in your response AND mention in "answer" that they need to confirm.

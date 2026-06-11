@@ -1,11 +1,12 @@
 // Fetches live CRM data to give the AI assistant real context about the user's workspace.
 const Lead       = require("../models/Lead");
 const Attendance = require("../models/Attendance");
-let User, Project, Booking, Invoice;
+let User, Project, Booking, Invoice, Task;
 try { User    = require("../models/User");    } catch { User    = null; }
 try { Project = require("../models/Project"); } catch { Project = null; }
 try { Booking = require("../models/Booking"); } catch { Booking = null; }
 try { Invoice = require("../models/Invoice"); } catch { Invoice = null; }
+try { Task    = require("../models/Task");    } catch { Task    = null; }
 
 function pad(n) { return String(n).padStart(2, "0"); }
 function todayStr() {
@@ -158,6 +159,27 @@ ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
 - Draft invoices: ${draftInvoices}
 - Invoices awaiting payment: ${pendingInvoices}
 - Recent bookings: ${recentBookings.length ? recentBookings.map(b => `${b.customerName} / ${b.developerName} (${b.status}, ₹${(b.totalBill || 0).toLocaleString("en-IN")})`).join(" | ") : "none yet"}`);
+    }
+
+    if (cleanPage === "/tasks" && Task) {
+      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
+      const [total, pending, completed, overdue, dueToday, overdueTasks] = await Promise.all([
+        Task.countDocuments({ orgId }),
+        Task.countDocuments({ orgId, status: "pending" }),
+        Task.countDocuments({ orgId, status: "completed" }),
+        Task.countDocuments({ orgId, status: "pending", dueDate: { $lt: startOfDay } }),
+        Task.countDocuments({ orgId, status: "pending", dueDate: { $gte: startOfDay, $lte: endOfDay } }),
+        Task.find({ orgId, status: "pending", dueDate: { $lt: startOfDay } })
+          .sort({ dueDate: 1 }).limit(3).select("title assignedToName dueDate priority").lean(),
+      ]);
+      parts.push(`LIVE TASKS DATA:
+- Total tasks: ${total}
+- Pending: ${pending}
+- Completed: ${completed}
+- Overdue: ${overdue}
+- Due today: ${dueToday}
+- Top overdue: ${overdueTasks.length ? overdueTasks.map(t => `"${t.title}" (${t.assignedToName || "unassigned"}, due ${new Date(t.dueDate).toLocaleDateString("en-IN")}, ${t.priority})`).join(" | ") : "none"}`);
     }
 
     if (cleanPage === "/attendance") {
