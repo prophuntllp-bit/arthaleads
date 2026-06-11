@@ -68,7 +68,7 @@ export default function Compare() {
 
   useSEO({
     title:       "Arthaleads vs LeadRat, Sell.do & Kylas | Real Estate CRM Comparison",
-    description: "Compare Arthaleads with LeadRat, Sell.do, and Kylas. See how India's real estate CRMs stack up on lead management, automation, analytics, and value.",
+    description: "Compare Arthaleads with LeadRat, Sell.do, and Kylas. See how India’s real estate CRMs stack up on lead management, automation, analytics, and value.",
     canonical:   "https://www.arthaleads.com/compare",
   });
 

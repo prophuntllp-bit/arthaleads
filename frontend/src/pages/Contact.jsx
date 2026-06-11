@@ -14,7 +14,7 @@ export default function Contact() {
 
   useSEO({
     title:       "Contact Arthaleads | Real Estate CRM Support & Sales – India",
-    description: "Get in touch with the Arthaleads team. Questions about our real estate lead management CRM, pricing, or integrations? We're here to help.",
+    description: "Get in touch with the Arthaleads team. Questions about our real estate lead management CRM, pricing, or integrations? We’re here to help.",
     canonical:   "https://www.arthaleads.com/contact",
   });
 

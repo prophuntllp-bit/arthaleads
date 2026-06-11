@@ -4,7 +4,7 @@ import { useSEO } from "../utils/useSEO";
 export default function Privacy() {
   useSEO({
     title:       "Privacy Policy | Arthaleads Real Estate CRM",
-    description: "Read the Arthaleads privacy policy. Learn how we collect, use, and protect your data on India's leading real estate lead management CRM platform.",
+    description: "Read the Arthaleads privacy policy. Learn how we collect, use, and protect your data on India’s leading real estate lead management CRM platform.",
     canonical:   "https://www.arthaleads.com/privacy",
   });
 

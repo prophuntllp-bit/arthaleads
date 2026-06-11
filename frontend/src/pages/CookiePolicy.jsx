@@ -100,7 +100,7 @@ function CookiePreferences() {
 export default function CookiePolicy() {
   useSEO({
     title:       "Cookie Policy | Arthaleads Real Estate CRM",
-    description: "Learn how Arthaleads uses cookies. Manage your cookie preferences for analytics and marketing. Compliant with India's DPDP Act 2023.",
+    description: "Learn how Arthaleads uses cookies. Manage your cookie preferences for analytics and marketing. Compliant with India’s DPDP Act 2023.",
     canonical:   "https://www.arthaleads.com/cookie-policy",
   });
 

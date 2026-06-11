@@ -692,7 +692,7 @@ export default function Careers() {
 
   useSEO({
     title:       "Careers at Arthaleads | Join India's Real Estate CRM Team",
-    description: "Build the future of real estate technology at Arthaleads. We're hiring engineers, designers and growth talent to grow India's leading CRM for real estate lead management.",
+    description: "Build the future of real estate technology at Arthaleads. We’re hiring engineers, designers and growth talent to grow India’s leading CRM for real estate lead management.",
     canonical:   "https://www.arthaleads.com/careers",
   });
 

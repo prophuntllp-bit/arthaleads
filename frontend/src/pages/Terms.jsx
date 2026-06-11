@@ -4,7 +4,7 @@ import { useSEO } from "../utils/useSEO";
 export default function Terms() {
   useSEO({
     title:       "Terms of Service | Arthaleads Real Estate CRM",
-    description: "Read the Arthaleads terms of service. Understand the usage terms for India's leading real estate CRM and lead management platform.",
+    description: "Read the Arthaleads terms of service. Understand the usage terms for India’s leading real estate CRM and lead management platform.",
     canonical:   "https://www.arthaleads.com/terms",
   });
 
