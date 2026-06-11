@@ -1,3 +1,30 @@
+## UI Component Standards
+
+### Form inputs (.input class)
+All form fields use the `.input` CSS class which applies: `px-4 py-3 text-sm rounded-2xl` = padding 12px 16px, font-size 14px, border-radius 1rem (16px), full width.
+
+### CustomSelect in forms/modals
+Always pass `style` to match `.input` height — NEVER use default compact sizing in a form context:
+```jsx
+<CustomSelect
+  style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
+/>
+```
+Default CustomSelect padding (`5px 10px`) is only for inline/table use.
+
+### DateTimePicker in forms/modals
+Always pass `triggerClassName` and `triggerStyle` to match `.input` height:
+```jsx
+<DateTimePicker
+  triggerClassName="w-full"
+  triggerStyle={{ padding: "12px 16px", borderRadius: "1rem", fontSize: 14, minWidth: 0 }}
+/>
+```
+Default DateTimePicker trigger padding (`4px 8px`) is only for inline/table use.
+
+### Mobile sidebar
+The mobile drawer sidebar uses `.sidebar-glass` which has a CSS override below 1024px to be fully solid (no glass transparency). Do NOT add glass/blur to the mobile sidebar.
+
 ## Git Workflow
 
 Always commit and push directly to the `main` branch. Do not use feature branches unless the user explicitly asks for one.
