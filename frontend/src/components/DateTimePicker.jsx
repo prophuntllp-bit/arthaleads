@@ -41,7 +41,7 @@ function parseToState(isoStr) {
   };
 }
 
-export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-yyyy  --:-- --" }) {
+export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-yyyy  --:-- --", triggerClassName = "", triggerStyle = {} }) {
   const today  = new Date();
   const [open, setOpen]     = useState(false);
   const [st, setSt]         = useState(() => parseToState(value));
@@ -146,13 +146,14 @@ export default function DateTimePicker({ value, onChange, placeholder = "dd-mm-y
         ref={btnRef}
         type="button"
         onClick={openPicker}
-        className="rounded-lg border text-xs transition focus:outline-none focus:border-orange-400 text-left whitespace-nowrap"
+        className={`rounded-lg border text-xs transition focus:outline-none focus:border-orange-400 text-left whitespace-nowrap ${triggerClassName}`}
         style={{
           padding: "4px 8px",
           borderColor: "var(--app-border)",
           background: "var(--app-surface-low)",
           color: value ? "var(--app-text)" : "#94a3b8",
           minWidth: 175,
+          ...triggerStyle,
         }}
       >
         {fmtDisplay(value) || placeholder}

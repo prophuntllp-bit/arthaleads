@@ -408,6 +408,7 @@ export default function Tasks() {
                 }}
                 placeholder="Select member"
                 options={teamMembers.map(m => ({ value: m._id || m.id, label: m.name }))}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
               />
             </div>
 
@@ -423,6 +424,7 @@ export default function Tasks() {
                   { value: "medium",   label: "Medium" },
                   { value: "low",      label: "Low" },
                 ]}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
               />
             </div>
           </div>
@@ -432,6 +434,8 @@ export default function Tasks() {
             <DateTimePicker
               value={form.dueDate}
               onChange={v => setForm(f => ({ ...f, dueDate: v }))}
+              triggerClassName="w-full"
+              triggerStyle={{ padding: "12px 16px", borderRadius: "1rem", fontSize: 14, minWidth: 0 }}
             />
           </div>
 
