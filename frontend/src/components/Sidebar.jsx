@@ -1052,10 +1052,10 @@ export default function Sidebar() {
         )}
 
         {/* ── Live date & time ── */}
-        <div className="mx-3 mb-2 mt-2 px-3 py-1.5 rounded-xl flex items-center justify-between"
+        <div className="mx-3 mb-2 mt-2 px-3 py-1.5 rounded-xl flex items-center gap-2"
           style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-app-soft">Date &amp; Time</p>
-          <p className="text-[11px] font-bold text-app tabular-nums">{wallClock}</p>
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-app-soft flex-shrink-0">Date &amp; Time</p>
+          <p className="text-[10px] font-bold text-app tabular-nums truncate">{wallClock}</p>
         </div>
 
         {/* ── Quick links ── */}
