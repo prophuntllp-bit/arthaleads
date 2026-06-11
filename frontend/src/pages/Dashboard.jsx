@@ -90,64 +90,86 @@ function getGreeting() {
   return "Good night";
 }
 
-const AI_CHIPS = [
-  "What should I focus on today?",
-  "Who are my hottest leads?",
-  "Any overdue follow-ups?",
-];
+// Generates a session-cached AI insight summary from live analytics data
+function SmartInsightsWidget({ data }) {
+  const [insights, setInsights] = useState(null); // null=loading, []= no key, string[]=bullets
+  const [error, setError]       = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-function AskArthaWidget() {
-  const [q, setQ] = useState("");
+  const generate = async (force = false) => {
+    if (!data) return;
+    const cacheKey = "artha_insights_" + new Date().toISOString().slice(0, 10);
+    if (!force) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) { setInsights(JSON.parse(cached)); return; }
+      } catch {}
+    }
+    setRefreshing(true);
+    setError(false);
+    try {
+      const summary = [
+        `Total leads: ${data.allTimeTotal ?? "-"}`,
+        `New this period: ${data.totalLeads ?? "-"}`,
+        `Overdue follow-ups: ${data.overdueCount ?? "-"}`,
+        `Closed Won: ${data.byStatus?.["Closed Won"] ?? 0}`,
+        `Hot leads (score ≥60): ${(data.hotLeads || []).length}`,
+        `Top source: ${Object.entries(data.bySource || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? "N/A"}`,
+      ].join(". ");
 
-  const fire = (question) => {
-    if (!question.trim()) return;
-    window.dispatchEvent(new CustomEvent("helpbot:ask", { detail: { question: question.trim() } }));
-    setQ("");
+      const { data: res } = await api.post("/help/ask", {
+        question: `Based on this CRM data: ${summary} — give me exactly 2 short, actionable insights (one positive, one thing to fix). Each on a new line starting with a bullet "•". No intro text, no sign-off. Plain text only.`,
+        page: "/dashboard",
+      });
+
+      const bullets = (res.answer || "")
+        .split("\n")
+        .map(l => l.replace(/^[•\-*]\s*/, "").trim())
+        .filter(Boolean)
+        .slice(0, 2);
+
+      setInsights(bullets);
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(bullets)); } catch {}
+    } catch {
+      setError(true);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
+  useEffect(() => { generate(); }, [!!data]);
+
+  if (!process.env.REACT_APP_OPENAI_CONFIGURED && insights === null && !refreshing && !error) return null;
+
   return (
-    <div className="w-full mt-1" style={{ minWidth: 200 }}>
-      {/* Header */}
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="flex items-center justify-center w-5 h-5 rounded-lg flex-shrink-0"
-          style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
-          <Sparkles style={{ width: 11, height: 11, color: "var(--app-primary)" }} />
-        </span>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-app-soft">Ask Artha AI</span>
-      </div>
-
-      {/* Input */}
-      <form onSubmit={(e) => { e.preventDefault(); fire(q); }}
-        className="flex items-center gap-1.5 rounded-xl overflow-hidden"
-        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ask about your leads…"
-          className="flex-1 bg-transparent text-xs text-app placeholder:text-app-soft py-2 pl-3 pr-1 outline-none min-w-0"
-        />
-        <button type="submit" disabled={!q.trim()}
-          className="flex-shrink-0 mr-1.5 flex items-center justify-center w-6 h-6 rounded-lg transition-all disabled:opacity-30"
-          style={{ background: q.trim() ? "var(--app-primary)" : "transparent" }}>
-          <ArrowRight style={{ width: 11, height: 11, color: q.trim() ? "#fff" : "var(--app-text-soft)" }} />
+    <div className="w-full rounded-xl p-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.05)", border: "1px solid rgba(var(--app-primary-rgb),0.14)" }}>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-1.5">
+          <Sparkles style={{ width: 11, height: 11, color: "var(--app-primary)", flexShrink: 0 }} />
+          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--app-primary)" }}>AI Insights</span>
+        </div>
+        <button onClick={() => generate(true)} disabled={refreshing}
+          className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5">
+          <Zap style={{ width: 9, height: 9 }} />
+          {refreshing ? "…" : "Refresh"}
         </button>
-      </form>
-
-      {/* Quick chips */}
-      <div className="flex flex-wrap gap-1 mt-1.5">
-        {AI_CHIPS.map((chip) => (
-          <button key={chip} type="button"
-            onClick={() => fire(chip)}
-            className="text-[10px] px-2 py-0.5 rounded-full transition-all hover:opacity-80"
-            style={{
-              background: "rgba(var(--app-primary-rgb),0.08)",
-              color: "var(--app-primary)",
-              border: "1px solid rgba(var(--app-primary-rgb),0.18)",
-            }}>
-            {chip}
-          </button>
-        ))}
       </div>
+
+      {refreshing && !insights && (
+        <div className="flex items-center gap-1.5 py-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
+          <span className="text-[11px] text-app-soft">Analysing your pipeline…</span>
+        </div>
+      )}
+      {error && (
+        <p className="text-[11px] text-app-soft">Could not generate insights right now.</p>
+      )}
+      {insights && insights.map((line, i) => (
+        <div key={i} className="flex items-start gap-1.5 mt-1 first:mt-0">
+          <span className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0" style={{ background: "var(--app-primary)" }} />
+          <p className="text-[11px] text-app leading-snug">{line}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -411,8 +433,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Middle: date range + new lead + AI ask (stacked) */}
-        <div className="flex flex-col justify-center gap-2 flex-shrink-0" style={{ minWidth: 220 }}>
+        {/* Middle: date range + new lead + AI insights (stacked) */}
+        <div className="flex flex-col justify-center gap-2 flex-shrink-0" style={{ minWidth: 240 }}>
           <div className="flex items-center gap-2">
             <span data-tour="date-range">
               <DateRangePicker value={dateRange} onChange={setDateRange} compact />
@@ -424,7 +446,7 @@ export default function Dashboard() {
               <span>New Lead</span>
             </button>
           </div>
-          <AskArthaWidget />
+          <SmartInsightsWidget data={data} />
         </div>
 
         {/* Right: live clock panel */}
