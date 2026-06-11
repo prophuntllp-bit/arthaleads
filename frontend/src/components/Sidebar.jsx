@@ -887,6 +887,17 @@ export default function Sidebar() {
     >
       <div />
       <div className="flex items-center gap-1">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {isDark
+            ? <MoonStar className="w-5 h-5" style={{ color: "var(--app-primary)" }} />
+            : <SunMedium className="w-5 h-5" style={{ color: "var(--app-primary)" }} />}
+        </button>
+
         {/* Bell */}
         <div ref={desktopBellRef}>
           <button
