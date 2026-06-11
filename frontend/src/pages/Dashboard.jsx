@@ -129,8 +129,8 @@ function DashboardClock() {
   });
 
   return (
-    <div className="hidden lg:flex flex-col items-center justify-center gap-1.5 flex-shrink-0 self-stretch border-l"
-      style={{ borderColor: "var(--app-border)", paddingLeft: 28, minWidth: 160 }}>
+    <div className="hidden lg:flex flex-col items-center justify-center gap-2 flex-shrink-0 border-l"
+      style={{ borderColor: "var(--app-border)", paddingLeft: 28, paddingRight: 8, minWidth: 160 }}>
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
         <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
         {Array.from({ length: 12 }, (_, i) => {
@@ -260,52 +260,43 @@ export default function Dashboard() {
 
   return (
     <div className="stitch-page space-y-6">
-      <header className="stitch-topbar">
-        {/* Left: pills + date range on top row, greeting below */}
-        <div className="flex flex-1 flex-col gap-3 min-w-0">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Search: mobile only */}
-              <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-                <input
-                  className="input rounded-full pl-11 pr-4"
-                  placeholder="Search leads by name, phone or email…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && searchQuery.trim()) {
-                      navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
-                    }
-                  }}
-                />
-              </div>
-              {/* Platform pills */}
-              {activePlatforms.map((platform) => {
-                const cfg = PLATFORM_CONFIG[platform];
-                if (!cfg) return null;
-                const count = data?.bySource?.[cfg.sourceKey] || 0;
-                return (
-                  <div key={platform} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
-                    <PlatformLogo platform={platform} size={13} />
-                    {count}
-                  </div>
-                );
-              })}
+      {/* Dashboard banner — custom flex, NOT stitch-topbar so we control the layout */}
+      <header className="rounded-[1.75rem] p-4 sm:p-5 flex flex-col gap-3 lg:flex-row lg:items-stretch"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
+
+        {/* Left: platform pills + greeting */}
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
+          {/* Pills row */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search: mobile only */}
+            <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+              <input
+                className="input rounded-full pl-11 pr-4"
+                placeholder="Search leads by name, phone or email…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
+                  }
+                }}
+              />
             </div>
-            {/* Date range + New Lead — top-right of left column */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span data-tour="date-range">
-                <DateRangePicker value={dateRange} onChange={setDateRange} compact />
-              </span>
-              <button type="button" data-tour="new-lead" onClick={() => navigate("/leads", { state: { openAddLead: true } })}
-                className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>New Lead</span>
-              </button>
-            </div>
+            {activePlatforms.map((platform) => {
+              const cfg = PLATFORM_CONFIG[platform];
+              if (!cfg) return null;
+              const count = data?.bySource?.[cfg.sourceKey] || 0;
+              return (
+                <div key={platform} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-bold ${cfg.pillTone}`}>
+                  <PlatformLogo platform={platform} size={13} />
+                  {count}
+                </div>
+              );
+            })}
           </div>
 
+          {/* Greeting */}
           <div>
             <p className="stitch-kicker mb-1">Overview</p>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-app">{greeting}, {user?.name?.split(" ")[0]}</h1>
@@ -315,7 +306,20 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right: live clock — separated by a border */}
+        {/* Middle: date range + new lead (stacked) */}
+        <div className="flex flex-row lg:flex-col items-center lg:items-end justify-end lg:justify-center gap-2 flex-shrink-0">
+          <span data-tour="date-range">
+            <DateRangePicker value={dateRange} onChange={setDateRange} compact />
+          </span>
+          <button type="button" data-tour="new-lead"
+            onClick={() => navigate("/leads", { state: { openAddLead: true } })}
+            className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
+            <Plus className="w-3.5 h-3.5 shrink-0" />
+            <span>New Lead</span>
+          </button>
+        </div>
+
+        {/* Right: live clock panel */}
         <DashboardClock />
       </header>
 
