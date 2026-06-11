@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -73,6 +73,18 @@ function useLiveClock(since) {
   const m = Math.floor((secs % 3600) / 60);
   const s = secs % 60;
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+// Live wall clock — updates every second
+function useWallClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const iv = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(iv);
+  }, []);
+  const day  = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  const time = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }).toUpperCase();
+  return `${day} | ${time}`;
 }
 
 export default function Sidebar() {
@@ -361,6 +373,7 @@ export default function Sidebar() {
   // ── Derived clock state ───────────────────────────────────────────────────
   const isClockedIn  = !!(clockStatus?.clockIn && !clockStatus?.clockOut);
   const isClockedOut = !!(clockStatus?.clockIn && clockStatus?.clockOut);
+  const wallClock    = useWallClock();
 
   // ── Trial info ────────────────────────────────────────────────────────────
   const showTrial = org && org.plan === "trial" && org.trialEndsAt && user?.role !== "super_admin";
@@ -969,73 +982,100 @@ export default function Sidebar() {
           top:          desktopProfilePos.top,
           right:        desktopProfilePos.right,
           zIndex:       9999,
-          width:        248,
+          width:        270,
           background:   isDark ? "rgb(30,29,32)" : "#fff",
           border:       "1px solid var(--app-border)",
-          borderRadius: "1rem",
+          borderRadius: "1.25rem",
           overflow:     "hidden",
           boxShadow:    "0 16px 48px rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.10)",
         }}
       >
-        {/* User info */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "var(--app-border)" }}>
-          <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm overflow-hidden"
-            style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+        {/* ── User card ── */}
+        <div className="flex flex-col items-center px-5 pt-5 pb-4 border-b" style={{ borderColor: "var(--app-border)" }}>
+          {/* Avatar */}
+          <div className="rounded-full overflow-hidden flex items-center justify-center font-bold text-2xl mb-3 flex-shrink-0"
+            style={{ width: 72, height: 72, background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)", border: "3px solid rgba(var(--app-primary-rgb),0.2)" }}>
             {user?.avatar
               ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
               : user?.name?.[0]?.toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-app truncate">{user?.name}</p>
-            <p className="text-xs text-app-soft capitalize">{user?.role?.replace("_", " ")}</p>
+          {/* Name + role */}
+          <p className="text-base font-bold text-app text-center leading-tight">{user?.name}</p>
+          <span className="mt-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize"
+            style={{ background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)" }}>
+            {user?.role?.replace("_", " ")}
+          </span>
+          {/* Contact info */}
+          <div className="mt-3 w-full space-y-1.5">
+            {user?.phone && (
+              <div className="flex items-center gap-2 text-xs text-app-soft">
+                <Phone style={{ width: 12, height: 12, flexShrink: 0 }} />
+                <span>{user.phone}</span>
+              </div>
+            )}
+            {user?.email && (
+              <div className="flex items-center gap-2 text-xs text-app-soft">
+                <Mail style={{ width: 12, height: 12, flexShrink: 0 }} />
+                <span className="truncate">{user.email}</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Clock in/out */}
+        {/* ── Clock In / Out ── */}
         {attendanceEnabled && (
-          <div className="px-2 py-1.5 border-b" style={{ borderColor: "var(--app-border)" }}>
+          <div className="px-4 pt-4 pb-2">
             {isClockedOut ? (
-              <div className="flex items-center gap-2.5 px-3 py-2 text-xs text-app-soft rounded-xl" style={{ background: "var(--app-surface-low)" }}>
-                <Clock style={{ width: 14, height: 14, flexShrink: 0 }} />
+              <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold text-app-soft"
+                style={{ background: "var(--app-surface-low)" }}>
+                <Clock style={{ width: 15, height: 15 }} />
                 Done for today
               </div>
             ) : isClockedIn ? (
               <button onClick={() => { handleClockOut(); setDesktopProfileOpen(false); }} disabled={clocking}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-red-500 hover:bg-red-500/10 disabled:opacity-60 font-semibold">
-                <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
-                <span className="flex-1 text-left truncate">{clockTimer || "Active"}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-red-400">Clock Out</span>
+                className="w-full py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: "rgba(239,68,68,0.10)", color: "#ef4444" }}>
+                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                {clockTimer || "Active"} · Clock Out
               </button>
             ) : (
               <button onClick={() => { handleClockIn(); setDesktopProfileOpen(false); }} disabled={clocking}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-xs rounded-xl transition-all text-green-600 hover:bg-green-500/10 disabled:opacity-60 font-semibold">
-                <LogInIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
-                Clock In
+                className="w-full py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: "#22c55e", color: "#fff" }}>
+                <LogInIcon style={{ width: 15, height: 15 }} />
+                Clock IN
               </button>
             )}
           </div>
         )}
 
-        {/* Actions */}
-        <div className="px-2 py-1.5">
+        {/* ── Live date & time ── */}
+        <div className="mx-4 mb-3 px-3 py-2 rounded-xl text-center"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-app-soft mb-0.5">Current Date &amp; Time</p>
+          <p className="text-sm font-bold text-app tabular-nums">{wallClock}</p>
+        </div>
+
+        {/* ── Quick links ── */}
+        <div className="px-2 pb-1">
           <button onClick={() => { navigate("/settings"); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-            <User style={{ width: 15, height: 15, flexShrink: 0 }} />
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            <User style={{ width: 14, height: 14, flexShrink: 0 }} />
             My Profile
           </button>
           <button onClick={() => { navigate("/referrals"); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
-            <Gift style={{ width: 15, height: 15, flexShrink: 0, color: "#ff6b00" }} />
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            <Gift style={{ width: 14, height: 14, flexShrink: 0, color: "#ff6b00" }} />
             Referrals
           </button>
         </div>
 
-        {/* Sign out */}
-        <div className="px-2 pb-1.5 border-t" style={{ borderColor: "var(--app-border)" }}>
+        {/* ── Sign out ── */}
+        <div className="px-4 pb-4 border-t pt-2" style={{ borderColor: "var(--app-border)" }}>
           <button onClick={() => { handleLogout(); setDesktopProfileOpen(false); }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left mt-1">
-            <LogOut style={{ width: 15, height: 15, flexShrink: 0 }} />
-            Sign Out
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-xl transition-all text-red-500 hover:bg-red-500/10 text-left">
+            <LogOut style={{ width: 14, height: 14, flexShrink: 0 }} />
+            Log Out
           </button>
         </div>
       </div>
