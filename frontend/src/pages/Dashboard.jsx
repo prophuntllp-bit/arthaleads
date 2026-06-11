@@ -309,8 +309,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <DashboardClock />
-
         <div className="flex flex-nowrap items-center gap-2">
           <button type="button" data-tour="new-lead" onClick={() => setShowAddLead(true)}
             className="btn-primary flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap">
@@ -323,6 +321,8 @@ export default function Dashboard() {
           </button>
           <span data-tour="date-range"><DateRangePicker value={dateRange} onChange={setDateRange} compact /></span>
         </div>
+
+        <DashboardClock />
       </header>
 
       {analyticsError && (
