@@ -130,34 +130,37 @@ async function autoRefreshPageToken(auto) {
 }
 
 // Try all active Facebook tokens until one successfully fetches the lead.
-// Step 2 always tries the App Token (AppId|AppSecret) — works for any page that
-// authorized the app and never expires, so customers who connected once never need
-// to reconnect as long as they haven't revoked the app.
+// App Token (AppId|AppSecret) is tried FIRST — it never expires and works for
+// every page that has subscribed the app via subscribePageWebhook. Individual
+// user account suspensions, password changes, or token revocations do not affect it.
 async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
   const primaryAutomationId = primaryAutomation?._id;
 
-  // 1️⃣ Try the primary (stored page) token first
-  try {
-    const result = await getFacebookLeadFields(leadgenId, primaryToken);
-    return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
-  } catch (err) {
-    if (err.isAuthError) {
-      logger.warn(`Facebook webhook: primary token expired for lead ${leadgenId}, trying App Token then fallbacks`);
-    } else {
-      logger.warn(`Facebook webhook: primary token failed for lead ${leadgenId} (${err.message}), trying App Token`);
-    }
-  }
-
-  // 2️⃣ Try the App Access Token — approved apps can fetch leads from any authorized page,
-  //    and this token never expires (derived from FB_APP_ID + FB_APP_SECRET).
+  // 1️⃣ Try the App Access Token first — permanent, never expires, works for all
+  //    pages that called subscribed_apps at connect time. This is the scalable path
+  //    for a multi-tenant CRM: no per-user token required after initial setup.
   if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
     const appToken = `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`;
     try {
       const result = await getFacebookLeadFields(leadgenId, appToken);
-      logger.info(`Facebook webhook: App Token succeeded for lead ${leadgenId} — page token was stale but app access is intact`);
       return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
     } catch (appErr) {
       logger.warn(`Facebook webhook: App Token failed for lead ${leadgenId}: ${appErr.message}`);
+    }
+  }
+
+  // 2️⃣ Try the stored page access token as first fallback
+  if (primaryToken) {
+    try {
+      const result = await getFacebookLeadFields(leadgenId, primaryToken);
+      logger.info(`Facebook webhook: stored page token succeeded for lead ${leadgenId}`);
+      return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+    } catch (err) {
+      if (err.isAuthError) {
+        logger.warn(`Facebook webhook: stored page token expired for lead ${leadgenId}, trying auto-refresh`);
+      } else {
+        logger.warn(`Facebook webhook: stored page token failed for lead ${leadgenId} (${err.message})`);
+      }
     }
   }
 

@@ -107,4 +107,44 @@ router.post("/facebook/refresh-tokens", protect, authorize("admin", "manager", "
   }
 });
 
+// POST /api/automations/facebook/resubscribe-all  (super_admin only)
+// Re-subscribes every active Facebook automation's page to the current FB_APP_ID.
+// Call this ONCE after updating FB_APP_ID / FB_APP_SECRET in Railway env vars.
+// Uses each automation's stored page access token — no user action required.
+// Returns a per-automation result so you know which ones need manual reconnect.
+router.post("/facebook/resubscribe-all", protect, authorize("super_admin"), async (req, res, next) => {
+  try {
+    if (!process.env.FB_APP_ID || !process.env.FB_APP_SECRET) {
+      return res.status(500).json({ success: false, message: "FB_APP_ID / FB_APP_SECRET not configured." });
+    }
+
+    const automationService = require("../services/automationService");
+    const automations = await Automation.find({
+      platform: "Facebook",
+      isActive: true,
+      pageId: { $exists: true, $ne: "" },
+      accessToken: { $exists: true, $ne: "" },
+    });
+
+    const results = [];
+    for (const auto of automations) {
+      try {
+        await automationService.subscribePageWebhook(auto.pageId, auto.accessToken);
+        results.push({ id: auto._id, name: auto.name, pageId: auto.pageId, status: "ok" });
+      } catch (err) {
+        // Page token may be expired — user will need to reconnect once
+        results.push({ id: auto._id, name: auto.name, pageId: auto.pageId, status: "failed", reason: err.message });
+      }
+    }
+
+    const ok    = results.filter((r) => r.status === "ok").length;
+    const failed = results.filter((r) => r.status === "failed").length;
+    res.json({
+      success: true,
+      message: `Resubscribed ${ok} page(s) to new app. ${failed} failed (stored token expired — those users need to reconnect once).`,
+      results,
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
