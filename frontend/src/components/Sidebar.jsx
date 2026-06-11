@@ -893,13 +893,12 @@ export default function Sidebar() {
             onClick={openAlerts}
             className="relative p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 transition-all"
             title="New lead alerts"
+            style={{ color: alertCount > 0 ? "var(--app-primary)" : undefined }}
           >
-            <Bell style={{ width: 18, height: 18 }} />
+            <Bell className={`w-5 h-5${alertCount > 0 ? " bell-ringing" : ""}`} />
             {alertCount > 0 && (
-              <span
-                className="absolute top-1 right-1 flex items-center justify-center rounded-full font-bold text-white"
-                style={{ width: 16, height: 16, fontSize: 9, background: "var(--app-primary)" }}
-              >
+              <span className="badge-glow absolute -top-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold text-white"
+                style={{ background: "var(--app-primary)" }}>
                 {alertCount > 9 ? "9+" : alertCount}
               </span>
             )}
