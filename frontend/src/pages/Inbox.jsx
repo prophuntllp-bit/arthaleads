@@ -2,11 +2,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bot, Check, CheckCheck, ExternalLink,
-  MessageCircle, RefreshCw, Send, User, X,
+  RefreshCw, Send, User, X,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import WhatsAppSettings from "../components/WhatsAppSettings";
+import WhatsAppIcon from "../components/WhatsAppIcon";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(date) {
@@ -205,10 +206,10 @@ export default function Inbox() {
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
             style={{ background: "rgba(37,211,102,0.12)" }}>
-            <MessageCircle className="w-5 h-5" style={{ color: "#25D366" }} />
+            <WhatsAppIcon className="w-5 h-5" style={{ color: "#25D366" }} />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-app">WhatsApp Inbox</h1>
+            <h1 className="text-lg font-bold text-app">WhatsApp Conversations</h1>
             <p className="text-xs text-app-soft">Connect your number to start receiving and sending messages</p>
           </div>
         </div>
@@ -231,7 +232,7 @@ export default function Inbox() {
         <div className="flex items-center justify-between gap-2 px-4 py-3"
           style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 shrink-0" style={{ color: "#25D366" }} />
+            <WhatsAppIcon className="w-5 h-5 shrink-0" style={{ color: "#25D366" }} />
             <span className="text-sm font-bold text-app">Inbox</span>
           </div>
           <button onClick={() => fetchConvs()} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition">
@@ -258,7 +259,7 @@ export default function Inbox() {
             </div>
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-center px-6">
-              <MessageCircle className="w-8 h-8 text-app-soft opacity-40" />
+              <WhatsAppIcon className="w-8 h-8 text-app-soft opacity-40" />
               <p className="text-sm text-app-soft">No conversations yet</p>
             </div>
           ) : (
@@ -272,7 +273,7 @@ export default function Inbox() {
       {/* ── Right panel: chat thread ── */}
       {!activeId ? (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center gap-3 text-center">
-          <MessageCircle className="w-12 h-12 text-app-soft opacity-20" />
+          <WhatsAppIcon className="w-12 h-12 text-app-soft opacity-20" />
           <p className="text-sm text-app-soft">Select a conversation to start chatting</p>
         </div>
       ) : (

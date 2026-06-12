@@ -8,8 +8,9 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, MessageCircle,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
 } from "lucide-react";
+import WhatsAppIcon from "./WhatsAppIcon";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
@@ -43,7 +44,7 @@ const navItems = [
     ],
   },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
-  { to: "/inbox",       label: "Inbox",        icon: MessageCircle },
+  { to: "/inbox",       label: "Conversations", icon: WhatsAppIcon },
   {
     label: "Tasks", icon: ClipboardList,
     children: [
