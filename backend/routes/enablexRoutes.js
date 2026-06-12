@@ -110,20 +110,10 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
     if (!org?.enablex?.appId || !org?.enablex?.apiKey) {
       return res.status(400).json({ success: false, message: "Save your EnableX credentials first." });
     }
-    // Verify credentials: GET a non-existent call ID — EnableX returns 404 for a
-    // missing call ID (auth passed) vs 401/403 for wrong credentials.
-    try {
-      await axios.get(`${ENABLEX_BASE}/call/credential_check`, basicAuth(org));
-    } catch (err) {
-      const status = err.response?.status;
-      if (status === 401 || status === 403) {
-        const msg = err.response?.data?.message || "Invalid APP ID or APP KEY.";
-        return res.status(400).json({ success: false, message: `Verification failed: ${msg}` });
-      }
-      // 404 = call not found but auth worked — credentials are valid
-    }
+    // EnableX has no lightweight ping endpoint — just verify credentials are
+    // present and enable the integration. Real validation happens on first call.
     await Organization.findByIdAndUpdate(req.user.orgId, { $set: { "enablex.enabled": true } });
-    res.json({ success: true, message: "EnableX credentials verified and enabled." });
+    res.json({ success: true, message: "EnableX credentials saved and enabled." });
   } catch (err) {
     const msg = err.response?.data?.message || err.message;
     res.status(400).json({ success: false, message: `Verification failed: ${msg}` });
