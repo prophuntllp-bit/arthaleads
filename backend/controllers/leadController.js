@@ -1,4 +1,5 @@
 ﻿const leadService = require("../services/leadService");
+const { invalidateAnalyticsCache } = require("../services/leadService");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { AppError } = require("../middlewares/errorHandler");
 const Lead = require("../models/Lead");
@@ -7,6 +8,7 @@ const leadController = {
   async create(req, res, next) {
     try {
       const lead = await leadService.create(req.body, req.user);
+      invalidateAnalyticsCache(req.user.orgId);
       res.status(201).json({ success: true, data: lead });
       // Send push notification for new manual lead - scoped to this org
       sendPushToAll({
@@ -50,6 +52,7 @@ const leadController = {
   async update(req, res, next) {
     try {
       const lead = await leadService.update(req.params.id, req.body, req.user);
+      invalidateAnalyticsCache(req.user.orgId);
       res.json({ success: true, data: lead });
     } catch (err) {
       next(err);
@@ -59,6 +62,7 @@ const leadController = {
   async delete(req, res, next) {
     try {
       await leadService.delete(req.params.id, req.user);
+      invalidateAnalyticsCache(req.user.orgId);
       res.json({ success: true, message: "Lead deleted successfully" });
     } catch (err) {
       next(err);
@@ -95,6 +99,7 @@ const leadController = {
   async bulkImport(req, res, next) {
     try {
       const imported = await leadService.bulkImport(req.body.leads, req.user);
+      invalidateAnalyticsCache(req.user.orgId);
       res.status(201).json({
         success: true,
         count: imported.length,

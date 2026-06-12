@@ -8,6 +8,27 @@ const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 
+// ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
+// Prevents repeated heavy 18-facet aggregations on every dashboard load.
+// Agents get their own cache key since their data is scoped to assignedTo.
+const _analyticsCache = new Map();
+const ANALYTICS_TTL = 60_000; // 60 seconds
+
+function _analyticsKey(user, query) {
+  const range = query.dateRange || `${query.from || ""}_${query.to || ""}`;
+  const scope = user.role === "agent" ? String(user._id) : String(user.orgId);
+  return `${scope}:${range}`;
+}
+
+// Call this from lead write paths to bust the cache for the org immediately.
+function invalidateAnalyticsCache(orgId) {
+  for (const key of _analyticsCache.keys()) {
+    if (key.startsWith(String(orgId) + ":") || key.includes(String(orgId))) {
+      _analyticsCache.delete(key);
+    }
+  }
+}
+
 // Escape special regex characters in user-supplied search strings to prevent ReDoS
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -494,6 +515,11 @@ const leadService = {
   },
 
   async getAnalytics(user, query = {}) {
+    // ── Cache check ───────────────────────────────────────────────────────────
+    const cacheKey = _analyticsKey(user, query);
+    const cached = _analyticsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
+
     // ── Base match (NO date filter - applied per-facet below) ─────────────────
     // Analytics only covers pipeline leads (Lead model).
     // Project leads (ProjectLead) are manually-imported bulk contacts and
@@ -661,7 +687,7 @@ const leadService = {
     const sourceMap   = toMap(result.bySource);
     const allTimeStatus = toMap(result.allTimeByStatus);
 
-    return {
+    const analyticsData = {
       // All-time counts — used for the top stat cards so orgs with older leads don't see 0
       allTimeTotal:       result.allTimeTotal[0]?.count || 0,
       allTimeClosedWon:   allTimeStatus["Closed Won"]   || 0,
@@ -700,6 +726,9 @@ const leadService = {
         : null,
       monthlyClosingGoal: orgGoal,
     };
+
+    _analyticsCache.set(cacheKey, { data: analyticsData, expiresAt: Date.now() + ANALYTICS_TTL });
+    return analyticsData;
   },
 
   // ── Restore (undo soft delete) ────────────────────────────────────────────
@@ -865,3 +894,4 @@ const leadService = {
 };
 
 module.exports = leadService;
+module.exports.invalidateAnalyticsCache = invalidateAnalyticsCache;
