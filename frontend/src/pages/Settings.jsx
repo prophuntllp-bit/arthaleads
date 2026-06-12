@@ -1,7 +1,8 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
-         Building2, FileText, AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, MessageCircle } from "lucide-react";
+import WhatsAppSettings from "../components/WhatsAppSettings";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
@@ -615,6 +616,23 @@ export default function Settings() {
               />
             </button>
           </div>
+        </section>
+      )}
+
+      {/* ── WhatsApp Integration ─────────────────────────────────────────────── */}
+      {(user?.role === "admin" || user?.role === "super_admin") && (
+        <section className="card p-4 sm:p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(37,211,102,0.12)" }}>
+              <MessageCircle className="w-5 h-5" style={{ color: "#25D366" }} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-app">WhatsApp Integration</h2>
+              <p className="text-xs text-app-soft">Connect your WhatsApp Business number via Meta Cloud API</p>
+            </div>
+          </div>
+          <WhatsAppSettings />
         </section>
       )}
 

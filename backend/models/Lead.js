@@ -158,6 +158,7 @@ const leadSchema = new mongoose.Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt:  { type: Date, default: null },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    whatsappConversationId: { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", default: null },
   },
   { timestamps: true }
 );

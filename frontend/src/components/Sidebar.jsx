@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, MessageCircle,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -43,6 +43,7 @@ const navItems = [
     ],
   },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
+  { to: "/inbox",       label: "Inbox",        icon: MessageCircle },
   {
     label: "Tasks", icon: ClipboardList,
     children: [
