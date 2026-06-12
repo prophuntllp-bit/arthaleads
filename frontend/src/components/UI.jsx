@@ -243,12 +243,10 @@ export function PhoneActions({ phone, lead, onContact }) {
           style={{
             position: "fixed", top: hoverPos.top, left: hoverPos.left,
             zIndex: 9998, width: 190,
-            background: "rgba(var(--app-surface-rgb, 255,255,255), 0.55)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(var(--app-border-rgb, 0,0,0), 0.10)",
+            background: "var(--app-surface)",
+            border: "1px solid var(--app-border)",
             borderRadius: "0.875rem",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
             padding: "10px 14px",
             pointerEvents: "none",
           }}
