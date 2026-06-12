@@ -307,6 +307,7 @@ const Careers         = lazy(() => import("./pages/Careers"));
 const ShareTarget     = lazy(() => import("./pages/ShareTarget"));
 const Plans           = lazy(() => import("./pages/Plans"));
 const Refund          = lazy(() => import("./pages/Refund"));
+const Calls           = lazy(() => import("./pages/Calls"));
 const CookiePolicy    = lazy(() => import("./pages/CookiePolicy"));
 const Security        = lazy(() => import("./pages/Security"));
 const Status          = lazy(() => import("./pages/Status"));
@@ -611,6 +612,7 @@ export default function App() {
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
           <Route path="/conversations"  element={<Inbox />} />
+          <Route path="/calls"          element={<Calls />} />
           <Route path="/tasks"         element={<Tasks />} />
           <Route path="/attendance"    element={<Attendance />} />
           <Route path="/bookings"      element={<Bookings />} />

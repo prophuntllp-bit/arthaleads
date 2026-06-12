@@ -73,6 +73,55 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
 // ── Authenticated routes ─────────────────────────────────────────────────────
 router.use(protect);
 
+// GET /api/calls — paginated list of all call activities across all leads
+router.get("/", async (req, res, next) => {
+  try {
+    const { page = 1, limit = 30, status } = req.query;
+    const skip   = (Number(page) - 1) * Number(limit);
+    const orgId  = req.user.orgId;
+
+    const mongoose = require("mongoose");
+    const matchActivity = { "activities.type": "called" };
+    if (status && status !== "all") matchActivity["activities.meta.status"] = status;
+
+    const [rows, total] = await Promise.all([
+      Lead.aggregate([
+        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
+        { $unwind: "$activities" },
+        { $match: { "activities.type": "called", ...(status && status !== "all" ? { "activities.meta.status": status } : {}) } },
+        { $sort:  { "activities.createdAt": -1 } },
+        { $skip:  skip },
+        { $limit: Number(limit) },
+        { $project: {
+          _id:         0,
+          leadId:      "$_id",
+          leadName:    "$name",
+          leadPhone:   "$phone",
+          activityId:  "$activities._id",
+          description: "$activities.description",
+          performedBy: "$activities.performedByName",
+          createdAt:   "$activities.createdAt",
+          meta:        "$activities.meta",
+        }},
+      ]),
+      Lead.aggregate([
+        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
+        { $unwind: "$activities" },
+        { $match: { "activities.type": "called", ...(status && status !== "all" ? { "activities.meta.status": status } : {}) } },
+        { $count: "total" },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      calls:   rows,
+      total:   total[0]?.total || 0,
+      page:    Number(page),
+      pages:   Math.ceil((total[0]?.total || 0) / Number(limit)),
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/calls/settings
 router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
   try {
