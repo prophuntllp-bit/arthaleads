@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import {
-  Check, Copy, ExternalLink, Loader2, MessageCircle, Wifi, WifiOff, X,
+  Check, Copy, ExternalLink, Loader2, Wifi, WifiOff, X,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import WhatsAppIcon from "./WhatsAppIcon";
 
 const PROVIDERS = [
   {
@@ -151,7 +152,7 @@ export default function WhatsAppSettings({ onConnected } = {}) {
   };
 
   return (
-    <div className="space-y-5 max-w-xl">
+    <div className="space-y-5">
 
       {/* Status badge */}
       <div className="flex items-center gap-3 rounded-2xl px-4 py-3"
@@ -163,24 +164,24 @@ export default function WhatsAppSettings({ onConnected } = {}) {
           : <WifiOff className="w-4 h-4 text-app-soft shrink-0" />}
         <div className="flex-1">
           <p className="text-sm font-semibold text-app">{connected ? "WhatsApp Connected" : "WhatsApp not connected"}</p>
-          <p className="text-xs text-app-soft">{connected ? `Connected via ${prov.name}. AI bot is active.` : "Pick a provider below and follow the steps to connect."}</p>
+          <p className="text-sm text-app-soft">{connected ? `Connected via ${prov.name}. AI bot is active.` : "Pick a provider below and follow the steps to connect."}</p>
         </div>
         {connected && (
-          <button onClick={disconnect} className="text-xs text-red-400 hover:text-red-500 font-semibold flex items-center gap-1 shrink-0">
-            <X className="w-3 h-3" /> Disconnect
+          <button onClick={disconnect} className="text-sm text-red-400 hover:text-red-500 font-semibold flex items-center gap-1 shrink-0">
+            <X className="w-3.5 h-3.5" /> Disconnect
           </button>
         )}
       </div>
 
       {/* ── Step 1: Choose provider ──────────────────────────────────────────── */}
-      <div className="card p-4 space-y-3">
+      <div className="card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
             style={{ background: "var(--app-primary)" }}>1</span>
-          <h3 className="text-sm font-bold text-app">Choose your WhatsApp provider</h3>
+          <h3 className="text-base font-bold text-app">Choose your WhatsApp provider</h3>
         </div>
-        <p className="text-xs text-app-soft pl-8">All options let you send and receive WhatsApp messages. BSPs (AiSensy, Wati, Interakt) handle Meta verification for you — no developer setup needed.</p>
-        <div className="pl-8 grid grid-cols-2 gap-2">
+        <p className="text-sm text-app-soft pl-8">All options let you send and receive WhatsApp messages. BSPs (AiSensy, Wati, Interakt) handle Meta verification for you — no developer setup needed.</p>
+        <div className="pl-8 grid grid-cols-2 gap-3">
           {PROVIDERS.map(p => (
             <button key={p.id} onClick={() => setProvider(p.id)}
               className="text-left rounded-xl p-3 transition-all"
@@ -189,110 +190,105 @@ export default function WhatsAppSettings({ onConnected } = {}) {
                 : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-                <span className="text-xs font-bold text-app">{p.name}</span>
-                {provider === p.id && <Check className="w-3 h-3 ml-auto" style={{ color: p.color }} />}
+                <span className="text-sm font-bold text-app">{p.name}</span>
+                {provider === p.id && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: p.color }} />}
               </div>
-              <p className="text-[10px] text-app-soft">{p.tagline}</p>
-              <p className="text-[10px] font-semibold mt-0.5" style={{ color: p.color }}>{p.pricing}</p>
+              <p className="text-xs text-app-soft">{p.tagline}</p>
+              <p className="text-xs font-semibold mt-0.5" style={{ color: p.color }}>{p.pricing}</p>
             </button>
           ))}
         </div>
         <div className="pl-8 flex flex-wrap gap-2">
           <a href={prov.signupUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold text-white transition"
             style={{ background: prov.color }}>
-            <MessageCircle className="w-3.5 h-3.5" />
+            <WhatsAppIcon className="w-4 h-4" />
             Create {prov.name} account
-            <ExternalLink className="w-3 h-3 opacity-70" />
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </a>
           <a href={prov.dashboardUrl} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-app-soft hover:text-app transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold text-app-soft hover:text-app transition"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            Open dashboard <ExternalLink className="w-3 h-3 opacity-70" />
+            Open dashboard <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </a>
         </div>
       </div>
 
       {/* ── Step 2: Webhook ──────────────────────────────────────────────────── */}
-      <div className="card p-4 space-y-3">
+      <div className="card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
             style={{ background: "var(--app-primary)" }}>2</span>
-          <h3 className="text-sm font-bold text-app">Set your Webhook URL in {prov.name}</h3>
+          <h3 className="text-base font-bold text-app">Set your Webhook URL in {prov.name}</h3>
         </div>
-        <p className="text-xs text-app-soft pl-8">
+        <p className="text-sm text-app-soft pl-8">
           In your {prov.name} dashboard → {prov.webhookPath}, paste this URL so incoming messages reach your inbox:
         </p>
         <div className="pl-8">
           <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            <code className="flex-1 text-[11px] text-orange-500 truncate">{webhookUrl}</code>
+            <code className="flex-1 text-xs text-orange-500 truncate">{webhookUrl}</code>
             <button onClick={copyWebhook}
-              className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg text-app-soft hover:text-app transition"
+              className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg text-app-soft hover:text-app transition"
               style={{ background: "var(--app-border)" }}>
-              <Copy className="w-3 h-3" /> Copy
+              <Copy className="w-3.5 h-3.5" /> Copy
             </button>
           </div>
         </div>
       </div>
 
       {/* ── Step 3: Credentials ──────────────────────────────────────────────── */}
-      <div className="card p-4 space-y-4">
+      <div className="card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
             style={{ background: "var(--app-primary)" }}>3</span>
-          <h3 className="text-sm font-bold text-app">Enter your {prov.name} credentials</h3>
+          <h3 className="text-base font-bold text-app">Enter your {prov.name} credentials</h3>
         </div>
 
         {prov.testNote && (
-          <div className="ml-8 rounded-xl px-3 py-2 text-xs text-amber-700"
+          <div className="ml-8 rounded-xl px-3 py-2 text-sm text-amber-700"
             style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}>
             {prov.testNote}
           </div>
         )}
 
         <div className="pl-8 space-y-3">
-          {/* API Key (all providers) */}
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">{prov.apiKeyLabel}</label>
             <input className="input w-full" type="password"
               placeholder={hasKey ? "Saved — enter new key to replace" : prov.apiKeyPlaceholder}
               value={apiKey} onChange={e => setApiKey(e.target.value)} />
-            <p className="text-[10px] text-app-soft mt-1">{prov.apiKeyHelp}</p>
+            <p className="text-xs text-app-soft mt-1">{prov.apiKeyHelp}</p>
           </div>
 
-          {/* Wati: custom endpoint */}
           {prov.fields.includes("accountEndpoint") && (
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">{prov.endpointLabel}</label>
               <input className="input w-full" type="url"
                 placeholder={prov.endpointPlaceholder}
                 value={accountEndpoint} onChange={e => setAccountEndpoint(e.target.value)} />
-              <p className="text-[10px] text-app-soft mt-1">{prov.endpointHelp}</p>
+              <p className="text-xs text-app-soft mt-1">{prov.endpointHelp}</p>
             </div>
           )}
 
-          {/* Meta: phone number ID */}
           {prov.fields.includes("phoneNumberId") && (
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Phone Number ID</label>
               <input className="input w-full" placeholder="e.g. 123456789012345"
                 value={phoneNumberId} onChange={e => setPhoneNumberId(e.target.value)} />
-              <p className="text-[10px] text-app-soft mt-1">Meta Business Manager → WhatsApp → Phone Numbers → Phone Number ID</p>
+              <p className="text-xs text-app-soft mt-1">Meta Business Manager → WhatsApp → Phone Numbers → Phone Number ID</p>
             </div>
           )}
 
-          {/* Meta: webhook verify token */}
           {prov.fields.includes("webhookVerifyToken") && (
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Webhook Verify Token</label>
               <input className="input w-full" placeholder="A secret string you choose (e.g. artha-webhook-2024)"
                 value={webhookVerifyToken} onChange={e => setWebhookVerifyToken(e.target.value)} />
-              <p className="text-[10px] text-app-soft mt-1">Set the same string in Meta dashboard when configuring the webhook</p>
+              <p className="text-xs text-app-soft mt-1">Set the same string in Meta dashboard when configuring the webhook</p>
             </div>
           )}
 
-          {/* Test phone */}
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">Your WhatsApp number (to receive test message)</label>
             <input className="input w-full" type="tel" placeholder="e.g. 919876543210 (with country code, no +)"
@@ -302,7 +298,7 @@ export default function WhatsAppSettings({ onConnected } = {}) {
           <button onClick={connectAndTest} disabled={testing || (!apiKey.trim() && !hasKey)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition disabled:opacity-40 text-white"
             style={{ background: prov.color }}>
-            {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+            {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
             {testing ? "Connecting…" : connected ? "Reconnect & Test" : "Connect & Test"}
           </button>
         </div>
@@ -310,8 +306,8 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
       {/* ── Bot settings ─────────────────────────────────────────────────────── */}
       {(connected || hasKey) && (
-        <div className="card p-4 space-y-4">
-          <h3 className="text-sm font-bold text-app">AI Bot Settings</h3>
+        <div className="card p-5 space-y-4">
+          <h3 className="text-base font-bold text-app">AI Bot Settings</h3>
           <div className="space-y-3">
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Bot Name</label>
