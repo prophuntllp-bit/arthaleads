@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Bot, Check, CheckCheck, ChevronRight, ExternalLink,
-  MessageCircle, Phone, RefreshCw, Send, User, Wifi, WifiOff, X,
+  Bot, Check, CheckCheck, ExternalLink,
+  MessageCircle, RefreshCw, Send, User, X,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import WhatsAppSettings from "../components/WhatsAppSettings";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(date) {
@@ -197,21 +198,21 @@ export default function Inbox() {
     setConversations(prev => prev.map(c => c._id === activeId ? { ...c, ...data.conversation } : c));
   };
 
-  // ── Not connected state ───────────────────────────────────────────────────
+  // ── Not connected: show setup inline, no redirect ────────────────────────
   if (connected === false) {
     return (
-      <div className="stitch-page flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(37,211,102,0.12)" }}>
-          <MessageCircle className="w-8 h-8" style={{ color: "#25D366" }} />
+      <div className="stitch-page max-w-2xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(37,211,102,0.12)" }}>
+            <MessageCircle className="w-5 h-5" style={{ color: "#25D366" }} />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-app">WhatsApp Inbox</h1>
+            <p className="text-xs text-app-soft">Connect your number to start receiving and sending messages</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-app mb-2">WhatsApp not connected</h2>
-          <p className="text-sm text-app-soft max-w-xs">Connect your WhatsApp Business number in Settings to start using the Inbox.</p>
-        </div>
-        <button onClick={() => navigate("/settings")}
-          className="btn-primary px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2">
-          Go to Settings <ChevronRight className="w-4 h-4" />
-        </button>
+        <WhatsAppSettings onConnected={() => setConnected(true)} />
       </div>
     );
   }

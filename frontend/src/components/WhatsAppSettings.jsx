@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 const AISENSY_SIGNUP = "https://aisensy.com/?ref=arthaleads";
 const AISENSY_DASHBOARD = "https://app.aisensy.com";
 
-export default function WhatsAppSettings() {
+export default function WhatsAppSettings({ onConnected } = {}) {
   const [connected, setConnected]   = useState(false);
   const [hasKey, setHasKey]         = useState(false);
   const [apiKey, setApiKey]         = useState("");
@@ -49,6 +49,7 @@ export default function WhatsAppSettings() {
       setHasKey(true);
       setStep(2);
       toast.success("WhatsApp connected! Check your phone for the test message.");
+      onConnected?.();
     } catch (e) {
       toast.error(e.response?.data?.message || "Connection failed. Check your API key.");
     } finally { setTesting(false); }
