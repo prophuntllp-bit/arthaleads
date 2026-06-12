@@ -652,7 +652,7 @@ const leadService = {
           ],
         },
       },
-    ], { allowDiskUse: true });
+    ], { allowDiskUse: true, maxTimeMS: 25000 });
 
     const orgDoc = await Organization.findById(user.orgId, "monthlyClosingGoal");
     const orgGoal = orgDoc?.monthlyClosingGoal ?? 0;

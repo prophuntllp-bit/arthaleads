@@ -433,6 +433,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
   const [refreshKey, setRefreshKey] = useState(0);
@@ -441,19 +442,21 @@ export default function Dashboard() {
   const [analyticsError, setAnalyticsError] = useState(false);
 
   const fetchAnalytics = (retryCount = 0) => {
-    setLoading(true);
+    if (retryCount === 0) setLoading(true);
+    else setRetrying(true);
     setAnalyticsError(false);
     const rangeParams = dateRange && typeof dateRange === "object"
       ? { from: dateRange.from, to: dateRange.to }
       : { dateRange };
-    api.get("/leads/analytics", { params: rangeParams })
-      .then((response) => setData(response.data.data))
+    api.get("/leads/analytics", { params: rangeParams, timeout: 30000 })
+      .then((response) => { setData(response.data.data); setRetrying(false); })
       .catch((err) => {
         console.error("[analytics]", err?.response?.status, err?.message);
-        const delays = [5000, 12000, 25000];
+        const delays = [6000, 15000, 30000];
         if (retryCount < delays.length) {
           setTimeout(() => fetchAnalytics(retryCount + 1), delays[retryCount]);
         } else {
+          setRetrying(false);
           setAnalyticsError(true);
         }
       })
@@ -483,7 +486,7 @@ export default function Dashboard() {
       .catch(() => setConnectedPlatforms([])); // agents/errors → fall back to bySource
   }, []);
 
-  if (loading) return <PageLoader />;
+  if (loading || retrying) return <PageLoader />;
 
   const statusChartData = Object.entries(data?.byStatus || {}).map(([name, value]) => ({ name, value }));
   const sourceChartData = Object.entries(data?.bySource || {})

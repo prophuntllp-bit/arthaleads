@@ -181,6 +181,8 @@ leadSchema.index({ orgId: 1, isDeleted: 1 });
 leadSchema.index({ orgId: 1, followUpDate: 1, isArchived: 1 });
 // "alerts: new leads by org + date" (sidebar alert polling)
 leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
+// "recent activity feed sort" (analytics dashboard recentActivity facet)
+leadSchema.index({ orgId: 1, updatedAt: -1, isArchived: 1 });
 // phone dedup check
 leadSchema.index({ orgId: 1, phone: 1 });
 // domain filter
