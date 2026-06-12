@@ -13,7 +13,7 @@ const PROVIDERS = [
     pricing: "Free tier · ₹999/mo starter",
     color: "#25D366",
     fields: ["apiKey"],
-    signupUrl: "https://aisensy.com/?ref=arthaleads",
+    signupUrl: "https://wa.aisensy.com/short/ad5a3s",
     dashboardUrl: "https://app.aisensy.com",
     webhookPath: "Settings → API → Webhook URL",
     apiKeyLabel: "AiSensy API Key",
