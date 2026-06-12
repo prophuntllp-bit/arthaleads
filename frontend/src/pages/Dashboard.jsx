@@ -495,7 +495,7 @@ export default function Dashboard() {
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
 
         {/* Left 40%: platform pills + greeting */}
-        <div className="flex flex-col gap-3 min-w-0" style={{ flex: "0 0 40%", width: "40%" }}>
+        <div className="flex flex-col gap-3 min-w-0 w-full lg:w-[40%] lg:flex-[0_0_40%]">
           {/* Pills row */}
           <div className="flex flex-wrap items-center gap-2">
             {/* Search: mobile only */}
@@ -537,8 +537,9 @@ export default function Dashboard() {
         </div>
 
         {/* Middle 40%: date range + new lead + AI insights (stacked) */}
-        <div className="flex flex-col justify-center gap-2 border-l" style={{ flex: "0 0 40%", width: "40%", borderColor: "var(--app-border)", paddingLeft: 20 }}>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col justify-center gap-2 w-full lg:w-[40%] lg:flex-[0_0_40%] lg:border-l"
+          style={{ borderColor: "var(--app-border)", paddingLeft: 0 }}>
+          <div className="flex items-center gap-2 lg:pl-5">
             <span data-tour="date-range">
               <DateRangePicker value={dateRange} onChange={setDateRange} compact />
             </span>
@@ -549,7 +550,7 @@ export default function Dashboard() {
               <span>New Lead</span>
             </button>
           </div>
-          <div className="hidden lg:block">
+          <div className="lg:pl-5">
             <SmartInsightsWidget data={data} />
           </div>
         </div>
