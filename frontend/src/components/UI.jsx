@@ -163,16 +163,35 @@ export function toWaNumber(phone = "") {
 
 // Orange call icon + phone number - tap to dial
 export function PhoneActions({ phone, lead, onContact }) {
-  const [dialOpen, setDialOpen] = useState(false);
-  const [dialPos,  setDialPos]  = useState({});
-  const [calling,  setCalling]  = useState(false);
-  const ref = useRef(null);
+  const [dialOpen,  setDialOpen]  = useState(false);
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const [dialPos,   setDialPos]   = useState({});
+  const [hoverPos,  setHoverPos]  = useState({});
+  const [calling,   setCalling]   = useState(false);
+  const ref       = useRef(null);
+  const hoverTimer = useRef(null);
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
+
+  const onMouseEnter = () => {
+    hoverTimer.current = setTimeout(() => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) return;
+      setHoverPos({ top: rect.bottom + 6, left: Math.min(rect.left, window.innerWidth - 200) });
+      setHoverOpen(true);
+    }, 250);
+  };
+
+  const onMouseLeave = () => {
+    clearTimeout(hoverTimer.current);
+    setHoverOpen(false);
+  };
 
   const openDial = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    clearTimeout(hoverTimer.current);
+    setHoverOpen(false);
     const rect = ref.current.getBoundingClientRect();
     setDialPos({
       top:  rect.bottom + 6,
@@ -205,6 +224,8 @@ export function PhoneActions({ phone, lead, onContact }) {
       <button
         ref={ref}
         onClick={openDial}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
         disabled={calling}
         className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap disabled:opacity-60"
       >
@@ -213,6 +234,30 @@ export function PhoneActions({ phone, lead, onContact }) {
           : <Phone   className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />}
         {phone}
       </button>
+
+      {/* ── Hover card — name only, glassy ── */}
+      {hoverOpen && !dialOpen && createPortal(
+        <div
+          onMouseEnter={() => clearTimeout(hoverTimer.current)}
+          onMouseLeave={() => setHoverOpen(false)}
+          style={{
+            position: "fixed", top: hoverPos.top, left: hoverPos.left,
+            zIndex: 9998, width: 190,
+            background: "rgba(var(--app-surface-rgb, 255,255,255), 0.55)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(var(--app-border-rgb, 0,0,0), 0.10)",
+            borderRadius: "0.875rem",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+            padding: "10px 14px",
+            pointerEvents: "none",
+          }}
+        >
+          {lead?.name && <p className="text-sm font-semibold text-app truncate">{lead.name}</p>}
+          <p className="text-[11px] text-app-soft mt-0.5">Click to choose how to call</p>
+        </div>,
+        document.body
+      )}
 
       {/* ── Dial choice popup ── */}
       {dialOpen && createPortal(
