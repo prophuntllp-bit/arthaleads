@@ -56,6 +56,14 @@ const orgSchema = new mongoose.Schema(
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
 
+    // ── EnableX telephony ─────────────────────────────────────────────────────
+    enablex: {
+      enabled:       { type: Boolean, default: false },
+      appId:         { type: String,  default: "" },
+      apiKey:        { type: String,  default: "" },
+      virtualNumber: { type: String,  default: "" },
+    },
+
     // ── QR Code lead capture ───────────────────────────────────────────────────
     qrToken:         { type: String, default: "", index: true, sparse: true },
     // ── Referral tracking ──────────────────────────────────────────────────────

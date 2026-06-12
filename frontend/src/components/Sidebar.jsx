@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
-  Receipt, BookMarked, FileCheck, Building2,
+  Receipt, BookMarked, FileCheck, Building2, Phone,
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
@@ -42,6 +42,7 @@ const navItems = [
       { to: "/developers", label: "Developers", icon: Building2  },
     ],
   },
+  { to: "/calls",       label: "Calls",        icon: Phone },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
   { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
