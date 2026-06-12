@@ -202,7 +202,7 @@ export default function Inbox() {
   // ── Not connected: show setup inline, no redirect ────────────────────────
   if (connected === false) {
     return (
-      <div className="stitch-page max-w-2xl mx-auto">
+      <div className="stitch-page">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
             style={{ background: "rgba(37,211,102,0.12)" }}>

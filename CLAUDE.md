@@ -22,6 +22,12 @@ Always pass `triggerClassName` and `triggerStyle` to match `.input` height:
 ```
 Default DateTimePicker trigger padding (`4px 8px`) is only for inline/table use.
 
+### Page container padding
+Every page's root element must use `className="stitch-page"` — nothing else. This class already applies the correct responsive padding (`px-4 py-6 sm:px-6 lg:px-8 lg:py-8`).
+
+- NEVER add `max-w-*`, `mx-auto`, extra `px-*`, or `container` to the page root — it creates uneven side padding compared to other pages.
+- Exception: full-bleed layouts (chat panels, kanban boards) use `stitch-page !p-0` and handle their own internal padding.
+
 ### Mobile sidebar
 The mobile drawer sidebar uses `.sidebar-glass` which has a CSS override below 1024px to be fully solid (no glass transparency). Do NOT add glass/blur to the mobile sidebar.
 
