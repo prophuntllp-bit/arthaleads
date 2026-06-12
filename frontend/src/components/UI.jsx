@@ -162,18 +162,104 @@ export function toWaNumber(phone = "") {
 }
 
 // Orange call icon + phone number - tap to dial
-export function PhoneActions({ phone, onContact }) {
+export function PhoneActions({ phone, lead, onContact }) {
+  const [dialOpen, setDialOpen] = useState(false);
+  const [dialPos,  setDialPos]  = useState({});
+  const [calling,  setCalling]  = useState(false);
+  const ref = useRef(null);
+
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
+
+  const openDial = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = ref.current.getBoundingClientRect();
+    setDialPos({
+      top:  rect.bottom + 6,
+      left: Math.min(rect.left, window.innerWidth - 220),
+    });
+    setDialOpen(true);
+  };
+
+  const callIVR = async () => {
+    setDialOpen(false);
+    if (!lead?._id) return;
+    setCalling(true);
+    try {
+      await api.post("/calls/initiate", { leadId: lead._id });
+      toast.success("Call initiated — check your phone.");
+      onContact?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Call failed. Check EnableX settings.");
+    } finally { setCalling(false); }
+  };
+
+  const callPersonal = () => {
+    setDialOpen(false);
+    window.location.href = `tel:${phone}`;
+    onContact?.();
+  };
+
   return (
-    <a
-      href={`tel:${phone}`}
-      className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap"
-      title={`Call ${phone}`}
-      onClick={() => onContact?.()}
-    >
-      <Phone className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
-      {phone}
-    </a>
+    <>
+      <button
+        ref={ref}
+        onClick={openDial}
+        disabled={calling}
+        className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap disabled:opacity-60"
+      >
+        {calling
+          ? <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-orange-400" />
+          : <Phone   className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />}
+        {phone}
+      </button>
+
+      {/* ── Dial choice popup ── */}
+      {dialOpen && createPortal(
+        <>
+          <div style={{ position:"fixed", inset:0, zIndex:9998 }} onClick={() => setDialOpen(false)} />
+          <div style={{
+            position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 215,
+            background:"var(--app-surface)",
+            border:"1px solid var(--app-border)",
+            borderRadius:"1rem",
+            boxShadow:"0 8px 32px rgba(0,0,0,0.18)",
+            overflow:"hidden",
+          }}>
+            <p className="px-4 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-app-soft border-b"
+              style={{ borderColor:"var(--app-border)" }}>
+              Call {lead?.name || phone}
+            </p>
+            <div className="p-2 space-y-0.5">
+              {lead?._id && (
+                <button onClick={callIVR}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
+                  style={{ color:"#f97316" }}
+                  onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
+                  onMouseLeave={e => e.currentTarget.style.background=""}>
+                  <Phone className="w-4 h-4 shrink-0" />
+                  Call via EnableX IVR
+                </button>
+              )}
+              <button onClick={callPersonal}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-app text-left transition"
+                onMouseEnter={e => e.currentTarget.style.background="var(--app-surface-low)"}
+                onMouseLeave={e => e.currentTarget.style.background=""}>
+                <Phone className="w-4 h-4 shrink-0 text-app-soft" />
+                Dial Personal Number
+              </button>
+            </div>
+            <div className="px-3 pb-2.5">
+              <button onClick={() => setDialOpen(false)}
+                className="w-full text-center text-xs text-app-soft hover:text-app transition py-1">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+    </>
   );
 }
 
