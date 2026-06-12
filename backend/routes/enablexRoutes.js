@@ -28,8 +28,9 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
   try {
     const { orgId } = req.params;
     const event     = req.body;
-    const ownerRef  = event?.owner_ref || event?.data?.owner_ref;
-    const eventType = event?.type      || event?.event_type || "";
+    // custom_data is the field EnableX echoes back from the outbound call payload
+    const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
+    const eventType = event?.type || event?.event_type || event?.voice_event || "";
 
     if (!ownerRef?.startsWith("lead_")) return;
 
@@ -121,10 +122,9 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 });
 
 // POST /api/calls/initiate
-// Body: { leadId, agentPhone? }   agentPhone = who to bridge-call first (optional)
 router.post("/initiate", authorize("admin", "manager"), async (req, res, next) => {
   try {
-    const { leadId, agentPhone } = req.body;
+    const { leadId } = req.body;
     if (!leadId) return res.status(400).json({ success: false, message: "leadId is required." });
 
     const [org, lead] = await Promise.all([
@@ -133,30 +133,30 @@ router.post("/initiate", authorize("admin", "manager"), async (req, res, next) =
     ]);
 
     if (!org?.enablex?.enabled || !org.enablex.appId || !org.enablex.apiKey) {
-      return res.status(400).json({ success: false, message: "EnableX telephony is not configured for this organisation." });
+      return res.status(400).json({ success: false, message: "EnableX telephony is not configured. Go to Settings → Organization → Telephony." });
     }
-    if (!lead)        return res.status(404).json({ success: false, message: "Lead not found." });
-    if (!lead.phone)  return res.status(400).json({ success: false, message: "This lead has no phone number." });
+    if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
+    if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
     const ownerRef   = `lead_${leadId}_${Date.now()}`;
     const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
-    const leadPhone  = normalizePhone(lead.phone);
+    const leadPhone  = `+${normalizePhone(lead.phone)}`;
 
-    // Build recipient list: agent first (bridge), then lead
-    const toList = [
-      ...(agentPhone
-        ? [{ name: req.user.name || "Agent", number: normalizePhone(agentPhone) }]
-        : []),
-      { name: lead.name || "Lead", number: leadPhone },
-    ];
-
+    // EnableX Voice REST API — POST /voice/v1/call
+    // Docs: https://developer.enablex.io/voice/api-reference.html
     const payload = {
-      name:       `Arthaleads – ${lead.name}`,
-      owner_ref:  ownerRef,
-      from:       org.enablex.virtualNumber || undefined,
-      to:         toList,
-      record:     "record-audio",
-      webhook:    webhookUrl,
+      from:              org.enablex.virtualNumber || undefined,
+      to:                leadPhone,
+      action_on_connect: {
+        play: {
+          text:     `Hello, you have a call from ${org.name || "the sales team"}. Please hold.`,
+          language: "en-US",
+          voice:    "female",
+        },
+      },
+      record:      true,
+      custom_data: ownerRef,   // echoed back in every webhook event
+      event_url:   webhookUrl,
     };
 
     const { data } = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
@@ -165,15 +165,14 @@ router.post("/initiate", authorize("admin", "manager"), async (req, res, next) =
     // Log call initiation in lead timeline immediately
     lead.activities.push({
       type:            "called",
-      description:     `Call initiated to ${lead.name}${agentPhone ? " (bridge)" : ""}`,
+      description:     `Call initiated to ${lead.name}`,
       performedBy:     req.user._id,
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction:  "outbound",
-        status:     "initiated",
-        phone:      lead.phone,
-        agentPhone: agentPhone || null,
+        direction: "outbound",
+        status:    "initiated",
+        phone:     lead.phone,
       },
     });
     await lead.save();
