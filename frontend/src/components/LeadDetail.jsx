@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2 } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
@@ -40,6 +40,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [retrying, setRetrying] = useState(false);
   const [aiDraft, setAiDraft] = useState(null);
   const [drafting, setDrafting] = useState(false);
+  const [calling, setCalling] = useState(false);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -60,6 +61,20 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setStatus(lead?.status || "New");
     setAiDraft(null);
   }, [lead, open]);
+
+  const callLead = async () => {
+    if (!lead?._id || calling) return;
+    setCalling(true);
+    try {
+      const { data } = await api.post("/calls/initiate", { leadId: lead._id });
+      toast.success(data.message || "Call initiated — check your phone.");
+      await refreshLead();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Call failed. Check EnableX settings.");
+    } finally {
+      setCalling(false);
+    }
+  };
 
   const handleAiDraft = async () => {
     if (!lead?._id || drafting) return;
@@ -130,6 +145,19 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
                 <WhatsAppLink phone={lead.phone} name={lead.name} />
+                {lead.phone && (
+                  <button
+                    type="button"
+                    onClick={callLead}
+                    disabled={calling}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer"
+                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+                    title="Call this lead via EnableX"
+                  >
+                    {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5 text-orange-500" />}
+                    {calling ? "Calling…" : "Call"}
+                  </button>
+                )}
                 {lead.phone && !isProjectLead && (
                   <button
                     type="button"
@@ -305,14 +333,70 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         {tab === "activity" && (
           <div className="space-y-3">
             {(lead.activities || []).length === 0 && <p className="text-sm text-app-soft">No activity yet.</p>}
-            {(lead.activities || []).slice().reverse().map((item) => (
-              <div key={item._id || `${item.type}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
-                <p className="text-sm font-semibold text-app break-words">{item.description}</p>
-                <p className="mt-1 text-xs text-app-soft">
-                  {item.performedByName || item.performedBy?.name || "System"} | {fmtDate(item.createdAt)}
-                </p>
-              </div>
-            ))}
+            {(lead.activities || []).slice().reverse().map((item) => {
+              const isCall = item.type === "called";
+              const meta   = item.meta || {};
+              const sentiment = meta.sentiment;
+              const sentimentColor = sentiment === "positive" ? "#22c55e" : sentiment === "negative" ? "#ef4444" : "#a1a1aa";
+              const sentimentLabel = sentiment === "positive" ? "Positive" : sentiment === "negative" ? "Negative" : "Neutral";
+
+              return (
+                <div key={item._id || `${item.type}-${item.createdAt}`} className="rounded-[1.25rem] p-4 stitch-surface-muted overflow-hidden">
+                  <div className="flex items-start gap-2">
+                    {isCall && <Phone className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-app break-words">{item.description}</p>
+                      <p className="mt-1 text-xs text-app-soft">
+                        {item.performedByName || item.performedBy?.name || "System"} | {fmtDate(item.createdAt)}
+                        {isCall && meta.status && (
+                          <span className="ml-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                            style={{
+                              background: meta.status === "answered" ? "rgba(34,197,94,0.12)" : meta.status === "missed" ? "rgba(239,68,68,0.1)" : "rgba(161,161,170,0.12)",
+                              color: meta.status === "answered" ? "#22c55e" : meta.status === "missed" ? "#ef4444" : "#a1a1aa",
+                            }}>
+                            {meta.status}
+                          </span>
+                        )}
+                        {isCall && meta.sentiment && (
+                          <span className="ml-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                            style={{ background: `${sentimentColor}18`, color: sentimentColor }}>
+                            {sentimentLabel}
+                          </span>
+                        )}
+                      </p>
+
+                      {/* Recording player */}
+                      {isCall && meta.recordingUrl && (
+                        <div className="mt-2">
+                          <audio controls src={meta.recordingUrl} className="w-full h-8" style={{ maxWidth: "100%" }} />
+                        </div>
+                      )}
+
+                      {/* AI Summary */}
+                      {isCall && meta.summary && (
+                        <div className="mt-2 rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">AI Summary</span>
+                          </div>
+                          <p className="text-xs text-app leading-relaxed">{meta.summary}</p>
+                        </div>
+                      )}
+
+                      {/* Transcript (collapsible) */}
+                      {isCall && meta.transcript && (
+                        <details className="mt-2">
+                          <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition select-none">
+                            <AlignLeft className="w-3 h-3" /> View Transcript
+                          </summary>
+                          <p className="mt-1.5 text-xs text-app-soft leading-relaxed whitespace-pre-wrap">{meta.transcript}</p>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

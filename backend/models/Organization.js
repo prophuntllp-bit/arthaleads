@@ -70,6 +70,14 @@ const orgSchema = new mongoose.Schema(
       botSystemPrompt:    { type: String, default: "" },
     },
 
+    // ── EnableX Telephony Integration ─────────────────────────────────────────
+    enablex: {
+      enabled:       { type: Boolean, default: false },
+      appId:         { type: String,  default: "" },
+      apiKey:        { type: String,  default: "" },  // APP KEY from EnableX dashboard
+      virtualNumber: { type: String,  default: "" },  // virtual phone number to call from
+    },
+
     // ── QR Code lead capture ───────────────────────────────────────────────────
     qrToken:         { type: String, default: "", index: true, sparse: true },
     // ── Referral tracking ──────────────────────────────────────────────────────

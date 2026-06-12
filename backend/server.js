@@ -213,6 +213,7 @@ app.use("/api/referrals",    require("./routes/referralRoutes"));
 app.use("/api/super-admin", require("./routes/superAdminRoutes"));
 app.use("/api/tickets",    require("./routes/ticketRoutes"));
 app.use("/api/whatsapp",   require("./routes/whatsappRoutes"));
+app.use("/api/calls",     require("./routes/enablexRoutes"));
 app.use("/api/blog",        blogLimiter, blogRoutes);
 app.use("/api/help",        require("./routes/helpRoutes"));
 app.use("/api/developers",  require("./routes/developerRoutes"));
