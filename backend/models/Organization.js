@@ -56,17 +56,13 @@ const orgSchema = new mongoose.Schema(
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
 
-    // ── WhatsApp Business Integration (Meta Cloud API) ────────────────────────
+    // ── WhatsApp Integration (via AiSensy) ────────────────────────────────────
     whatsapp: {
-      enabled:           { type: Boolean, default: false },
-      phoneNumberId:     { type: String, default: "" },
-      accessToken:       { type: String, default: "" },  // permanent system-user token
-      businessAccountId: { type: String, default: "" },
-      verifyToken:       { type: String, default: "" },  // org-specific webhook verify token
-      webhookVerified:   { type: Boolean, default: false },
-      botEnabled:        { type: Boolean, default: true },
-      botName:           { type: String, default: "Artha Assistant" },
-      botSystemPrompt:   { type: String, default: "" },
+      enabled:         { type: Boolean, default: false },
+      apiKey:          { type: String, default: "" },   // AiSensy API key
+      botEnabled:      { type: Boolean, default: true },
+      botName:         { type: String, default: "Artha Assistant" },
+      botSystemPrompt: { type: String, default: "" },
     },
 
     // ── QR Code lead capture ───────────────────────────────────────────────────

@@ -2,21 +2,31 @@ const express = require("express");
 const axios   = require("axios");
 const router  = express.Router();
 const { protect, authorize } = require("../middlewares/auth");
-const Organization  = require("../models/Organization");
+const Organization   = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
 const Lead           = require("../models/Lead");
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── AiSensy send helper ───────────────────────────────────────────────────────
 
-async function sendMetaMessage(phoneNumberId, accessToken, to, body) {
+async function sendAiSensyMessage(apiKey, orgName, to, body) {
   const res = await axios.post(
-    `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
-    { messaging_product: "whatsapp", to, type: "text", text: { body } },
-    { headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" } }
+    "https://backend.aisensy.com/direct-apis/t1/messages",
+    {
+      apiKey,
+      campaignName: "direct_reply",
+      destination:  to,
+      userName:     orgName,
+      source:       "Arthaleads CRM",
+      message:      body,
+      templateParams: [],
+    },
+    { headers: { "Content-Type": "application/json" } }
   );
-  return res.data?.messages?.[0]?.id || null;
+  return res.data?.msgId || null;
 }
+
+// ── AI bot reply ──────────────────────────────────────────────────────────────
 
 async function triggerBotReply(org, conversation, inboundText) {
   try {
@@ -26,14 +36,15 @@ async function triggerBotReply(org, conversation, inboundText) {
 
     let leadContext = "";
     if (conversation.leadId) {
-      const lead = await Lead.findById(conversation.leadId).select("name status source budget preferredLocation").lean();
-      if (lead) leadContext = `Lead name: ${lead.name}. Status: ${lead.status}. Source: ${lead.source || "N/A"}. Budget: ${lead.budget || "N/A"}. Location preference: ${lead.preferredLocation || "N/A"}.`;
+      const lead = await Lead.findById(conversation.leadId)
+        .select("name status source budget preferredLocation").lean();
+      if (lead) leadContext = `Customer name: ${lead.name}. Status: ${lead.status}. Source: ${lead.source || "N/A"}. Budget: ${lead.budget || "N/A"}. Preferred location: ${lead.preferredLocation || "N/A"}.`;
     }
 
-    const botName = org.whatsapp?.botName || "Artha Assistant";
+    const botName      = org.whatsapp?.botName      || "Artha Assistant";
     const customPrompt = org.whatsapp?.botSystemPrompt || "";
     const systemPrompt = customPrompt ||
-      `You are ${botName}, a helpful real estate assistant for ${org.name}. Your job is to handle customer inquiries via WhatsApp, answer questions about properties, and help schedule viewings.\n\nRules:\n- Keep replies SHORT (2-3 sentences max — this is WhatsApp)\n- Be warm, professional, and helpful in the tone of Indian real estate\n- If the customer asks to speak to a human agent, reply normally then append exactly [HUMAN_TAKEOVER] at the very end\n- Never invent prices or availability — say "our team will confirm shortly"\n- Do not use markdown, bold, or bullet points\n${leadContext ? `\nContext about this customer: ${leadContext}` : ""}`;
+      `You are ${botName}, a friendly real estate assistant for ${org.name} (India). Reply via WhatsApp.\n\nRules:\n- Keep replies SHORT — 1 to 3 sentences maximum\n- Be warm and professional\n- Never invent prices or availability — say our team will confirm shortly\n- Do not use markdown or bullet points\n- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end\n${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -55,201 +66,146 @@ async function triggerBotReply(org, conversation, inboundText) {
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
     if (reply) {
-      const waMsgId = await sendMetaMessage(
-        org.whatsapp.phoneNumberId, org.whatsapp.accessToken,
-        conversation.contactPhone, reply
-      );
+      const msgId = await sendAiSensyMessage(org.whatsapp.apiKey, org.name, conversation.contactPhone, reply);
       await WaMessage.create({
-        orgId: org._id,
-        conversationId: conversation._id,
-        waMsgId,
-        direction: "outbound",
-        sender: "bot",
-        senderName: botName,
-        body: reply,
-        status: "sent",
-        timestamp: new Date(),
+        orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
+        direction: "outbound", sender: "bot", senderName: botName,
+        body: reply, status: "sent", timestamp: new Date(),
       });
       await WaConversation.findByIdAndUpdate(conversation._id, {
-        lastMessageAt: new Date(),
-        lastMessagePreview: reply.slice(0, 80),
+        lastMessageAt: new Date(), lastMessagePreview: reply.slice(0, 80),
       });
     }
 
     if (takeover) {
-      await WaConversation.findByIdAndUpdate(conversation._id, {
-        botEnabled: false,
-        status: "open",
-      });
+      await WaConversation.findByIdAndUpdate(conversation._id, { botEnabled: false, status: "open" });
     }
   } catch (err) {
-    console.error("[WhatsApp Bot] reply error:", err?.response?.data || err.message);
+    console.error("[WhatsApp Bot] error:", err?.response?.data || err.message);
   }
 }
 
-// ── Public: Meta Webhook Verification (GET) ───────────────────────────────────
-router.get("/webhook", async (req, res) => {
-  const mode      = req.query["hub.mode"];
-  const token     = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-  if (mode !== "subscribe") return res.sendStatus(403);
+// ── Public: AiSensy Webhook receiver ─────────────────────────────────────────
+// Configure this URL in your AiSensy dashboard → API → Webhook:
+//   https://yourapp.com/api/whatsapp/webhook
 
-  // Find the org whose verifyToken matches
-  const org = await Organization.findOne({ "whatsapp.verifyToken": token }).lean();
-  if (!org) return res.sendStatus(403);
-
-  res.status(200).send(challenge);
-});
-
-// ── Public: Meta Webhook Receiver (POST) ──────────────────────────────────────
 router.post("/webhook", async (req, res) => {
-  // Always respond 200 immediately so Meta doesn't retry
-  res.sendStatus(200);
+  res.sendStatus(200); // always respond immediately
 
   try {
-    const body = req.body;
-    if (body.object !== "whatsapp_business_account") return;
+    const payload = req.body;
 
-    for (const entry of (body.entry || [])) {
-      for (const change of (entry.changes || [])) {
-        const val = change.value;
-        if (!val || change.field !== "messages") continue;
+    // AiSensy webhook payload shape:
+    // { waId, phone, name, message, type, msgId, timeStamp, source, apiKey }
+    const phone    = payload.phone  || payload.waId;
+    const name     = payload.name   || phone;
+    const msgText  = payload.message || "";
+    const msgId    = payload.msgId  || payload.id;
+    const msgType  = payload.type   || "text";
+    const inApiKey = payload.apiKey || req.headers["x-aisensy-api-key"] || "";
 
-        const phoneNumberId = val.metadata?.phone_number_id;
-        if (!phoneNumberId) continue;
+    if (!phone || !msgText) return;
 
-        const org = await Organization.findOne({ "whatsapp.phoneNumberId": phoneNumberId }).lean();
-        if (!org || !org.whatsapp?.enabled) continue;
+    // Find the org by API key
+    const org = await Organization.findOne({ "whatsapp.apiKey": inApiKey }).lean();
+    if (!org || !org.whatsapp?.enabled) return;
 
-        // ── Status updates (delivered / read) ──
-        for (const status of (val.statuses || [])) {
-          await WaMessage.findOneAndUpdate(
-            { waMsgId: status.id },
-            { status: status.status }
-          );
-        }
+    // Find or create conversation
+    let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
+    if (!conv) {
+      const cleaned = phone.replace(/^91/, "");
+      const lead = await Lead.findOne({
+        orgId: org._id,
+        phone: { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
+      }).lean();
 
-        // ── Incoming messages ──
-        for (const msg of (val.messages || [])) {
-          const contactWaId = msg.from;
-          const contactName = val.contacts?.find(c => c.wa_id === contactWaId)?.profile?.name || contactWaId;
-          const msgText = msg.text?.body || msg.caption || `[${msg.type}]`;
-          const timestamp = new Date(parseInt(msg.timestamp) * 1000);
+      conv = await WaConversation.create({
+        orgId: org._id, leadId: lead?._id || null,
+        contactPhone: phone, contactName: lead?.name || name,
+        waContactId: phone,
+        botEnabled: org.whatsapp?.botEnabled ?? true,
+        status: org.whatsapp?.botEnabled ? "bot" : "open",
+      });
 
-          // Find or create conversation
-          let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: contactWaId });
-          if (!conv) {
-            // Try to match with a Lead by phone
-            const cleaned = contactWaId.replace(/^91/, "");
-            const lead = await Lead.findOne({
-              orgId: org._id,
-              phone: { $in: [contactWaId, `+${contactWaId}`, cleaned, `0${cleaned}`] },
-            }).lean();
-
-            conv = await WaConversation.create({
-              orgId: org._id,
-              leadId: lead?._id || null,
-              contactPhone: contactWaId,
-              contactName: lead?.name || contactName,
-              waContactId: contactWaId,
-              botEnabled: org.whatsapp?.botEnabled ?? true,
-              status: org.whatsapp?.botEnabled ? "bot" : "open",
-            });
-
-            if (lead && !lead.whatsappConversationId) {
-              await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
-            }
-          } else if (!conv.contactName && contactName) {
-            conv.contactName = contactName;
-          }
-
-          // Dedup — skip if waMsgId already stored
-          const exists = await WaMessage.findOne({ waMsgId: msg.id });
-          if (exists) continue;
-
-          await WaMessage.create({
-            orgId: org._id,
-            conversationId: conv._id,
-            waMsgId: msg.id,
-            direction: "inbound",
-            sender: "customer",
-            senderName: contactName,
-            body: msgText,
-            mediaType: msg.type === "text" ? "text" : msg.type,
-            status: "delivered",
-            timestamp,
-          });
-
-          await WaConversation.findByIdAndUpdate(conv._id, {
-            lastMessageAt: timestamp,
-            lastMessagePreview: msgText.slice(0, 80),
-            contactName: conv.contactName || contactName,
-            $inc: { unreadCount: 1 },
-          });
-
-          // Trigger bot if enabled
-          if (conv.botEnabled) {
-            await triggerBotReply(org, conv, msgText);
-          }
-        }
+      if (lead?._id) {
+        await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
       }
+    }
+
+    // Dedup
+    if (msgId && await WaMessage.findOne({ waMsgId: msgId })) return;
+
+    await WaMessage.create({
+      orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
+      direction: "inbound", sender: "customer", senderName: name,
+      body: msgText, mediaType: msgType === "text" ? "text" : msgType,
+      status: "delivered", timestamp: new Date(),
+    });
+
+    await WaConversation.findByIdAndUpdate(conv._id, {
+      lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
+      contactName: conv.contactName || name,
+      $inc: { unreadCount: 1 },
+    });
+
+    if (conv.botEnabled) {
+      await triggerBotReply(org, conv, msgText);
     }
   } catch (err) {
     console.error("[WhatsApp Webhook] error:", err.message);
   }
 });
 
-// ── All routes below require auth ─────────────────────────────────────────────
+// ── All routes below require authentication ───────────────────────────────────
 router.use(protect);
 
-// ── Settings ─────────────────────────────────────────────────────────────────
+// ── Settings ──────────────────────────────────────────────────────────────────
 
 router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res) => {
   const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
   if (!org) return res.status(404).json({ message: "Org not found" });
-  // Never return accessToken to frontend
-  const { accessToken, ...safe } = org.whatsapp || {};
-  res.json({ whatsapp: safe, connected: !!(org.whatsapp?.phoneNumberId && org.whatsapp?.enabled) });
+  const { apiKey, ...safe } = org.whatsapp || {};
+  res.json({
+    whatsapp: { ...safe, hasApiKey: !!apiKey },
+    connected: !!(apiKey && org.whatsapp?.enabled),
+  });
 });
 
 router.patch("/settings", authorize("admin", "super_admin"), async (req, res) => {
   try {
-    const { phoneNumberId, accessToken, businessAccountId, verifyToken, botEnabled, botName, botSystemPrompt, enabled } = req.body;
+    const { apiKey, botEnabled, botName, botSystemPrompt, enabled } = req.body;
     const update = {};
-    if (phoneNumberId     !== undefined) update["whatsapp.phoneNumberId"]     = phoneNumberId;
-    if (businessAccountId !== undefined) update["whatsapp.businessAccountId"] = businessAccountId;
-    if (verifyToken       !== undefined) update["whatsapp.verifyToken"]       = verifyToken;
     if (botEnabled        !== undefined) update["whatsapp.botEnabled"]        = botEnabled;
     if (botName           !== undefined) update["whatsapp.botName"]           = botName;
     if (botSystemPrompt   !== undefined) update["whatsapp.botSystemPrompt"]   = botSystemPrompt;
     if (enabled           !== undefined) update["whatsapp.enabled"]           = enabled;
-    // Only update token if provided (non-empty string)
-    if (accessToken) update["whatsapp.accessToken"] = accessToken;
+    if (apiKey)                          update["whatsapp.apiKey"]            = apiKey;
 
     const org = await Organization.findByIdAndUpdate(req.orgId, { $set: update }, { new: true }).select("whatsapp");
-    const { accessToken: _t, ...safe } = org.whatsapp.toObject();
-    res.json({ whatsapp: safe });
+    const { apiKey: _k, ...safe } = org.whatsapp.toObject();
+    res.json({ whatsapp: { ...safe, hasApiKey: !!_k } });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Test the connection by fetching the phone number info from Meta
+// Verify the API key works by sending a test message to a provided number
 router.post("/settings/test", authorize("admin", "super_admin"), async (req, res) => {
   try {
-    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
-    if (!org?.whatsapp?.phoneNumberId || !org?.whatsapp?.accessToken) {
-      return res.status(400).json({ message: "Phone Number ID and Access Token required" });
-    }
-    const { data } = await axios.get(
-      `https://graph.facebook.com/v20.0/${org.whatsapp.phoneNumberId}`,
-      { headers: { Authorization: `Bearer ${org.whatsapp.accessToken}` } }
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    if (!org?.whatsapp?.apiKey) return res.status(400).json({ message: "API key required" });
+
+    const testTo = req.body.testPhone;
+    if (!testTo) return res.status(400).json({ message: "Provide a testPhone number to send a test message to" });
+
+    await sendAiSensyMessage(
+      org.whatsapp.apiKey, org.name, testTo,
+      `Hi! This is a test message from ${org.name} CRM. Your WhatsApp is now connected successfully! 🎉`
     );
-    // Mark webhook as verified
-    await Organization.findByIdAndUpdate(req.orgId, { "whatsapp.enabled": true, "whatsapp.webhookVerified": true });
-    res.json({ ok: true, displayPhone: data.display_phone_number, name: data.verified_name });
+    await Organization.findByIdAndUpdate(req.orgId, { "whatsapp.enabled": true });
+    res.json({ ok: true });
   } catch (err) {
-    res.status(400).json({ message: "Connection failed. Check your credentials.", detail: err?.response?.data?.error?.message });
+    res.status(400).json({ message: "Test failed. Check your API key.", detail: err?.response?.data?.message || err.message });
   }
 });
 
@@ -265,8 +221,7 @@ router.get("/conversations", async (req, res) => {
     const [conversations, total] = await Promise.all([
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(+limit)
+        .skip((page - 1) * limit).limit(+limit)
         .populate("leadId", "name status")
         .populate("assignedTo", "name avatar")
         .lean(),
@@ -282,9 +237,8 @@ router.get("/conversations/:id", async (req, res) => {
   try {
     const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId })
       .populate("leadId", "name status source phone")
-      .populate("assignedTo", "name avatar")
-      .lean();
-    if (!conv) return res.status(404).json({ message: "Conversation not found" });
+      .populate("assignedTo", "name avatar").lean();
+    if (!conv) return res.status(404).json({ message: "Not found" });
     res.json({ conversation: conv });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -298,16 +252,10 @@ router.get("/conversations/:id/messages", async (req, res) => {
     if (!conv) return res.status(404).json({ message: "Not found" });
 
     const messages = await WaMessage.find({ conversationId: req.params.id })
-      .sort({ timestamp: -1 })
-      .skip((page - 1) * limit)
-      .limit(+limit)
-      .lean();
-
+      .sort({ timestamp: -1 }).skip((page - 1) * limit).limit(+limit).lean();
     messages.reverse();
 
-    // Reset unread count
     await WaConversation.findByIdAndUpdate(req.params.id, { unreadCount: 0 });
-
     res.json({ messages });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -318,19 +266,13 @@ router.patch("/conversations/:id", async (req, res) => {
   try {
     const { botEnabled, status, assignedTo } = req.body;
     const update = {};
-    if (botEnabled !== undefined) {
-      update.botEnabled = botEnabled;
-      update.status = botEnabled ? "bot" : "open";
-    }
-    if (status)     update.status = status;
+    if (botEnabled !== undefined) { update.botEnabled = botEnabled; update.status = botEnabled ? "bot" : "open"; }
+    if (status)     update.status     = status;
     if (assignedTo) update.assignedTo = assignedTo;
 
     const conv = await WaConversation.findOneAndUpdate(
-      { _id: req.params.id, orgId: req.orgId },
-      update,
-      { new: true }
+      { _id: req.params.id, orgId: req.orgId }, update, { new: true }
     ).populate("leadId", "name status").populate("assignedTo", "name avatar");
-
     if (!conv) return res.status(404).json({ message: "Not found" });
     res.json({ conversation: conv });
   } catch (err) {
@@ -338,7 +280,7 @@ router.patch("/conversations/:id", async (req, res) => {
   }
 });
 
-// ── Send Message ─────────────────────────────────────────────────────────────
+// ── Send message ──────────────────────────────────────────────────────────────
 
 router.post("/send", async (req, res) => {
   try {
@@ -348,24 +290,17 @@ router.post("/send", async (req, res) => {
     const conv = await WaConversation.findOne({ _id: conversationId, orgId: req.orgId });
     if (!conv) return res.status(404).json({ message: "Conversation not found" });
 
-    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
-    if (!org?.whatsapp?.enabled) return res.status(400).json({ message: "WhatsApp not connected" });
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
+      return res.status(400).json({ message: "WhatsApp not connected" });
+    }
 
-    const waMsgId = await sendMetaMessage(
-      org.whatsapp.phoneNumberId, org.whatsapp.accessToken,
-      conv.contactPhone, msgBody.trim()
-    );
+    const msgId = await sendAiSensyMessage(org.whatsapp.apiKey, org.name, conv.contactPhone, msgBody.trim());
 
     const message = await WaMessage.create({
-      orgId: req.orgId,
-      conversationId: conv._id,
-      waMsgId,
-      direction: "outbound",
-      sender: "agent",
-      senderName: req.user.name,
-      body: msgBody.trim(),
-      status: "sent",
-      timestamp: new Date(),
+      orgId: req.orgId, conversationId: conv._id, waMsgId: msgId || undefined,
+      direction: "outbound", sender: "agent", senderName: req.user.name,
+      body: msgBody.trim(), status: "sent", timestamp: new Date(),
     });
 
     await WaConversation.findByIdAndUpdate(conv._id, {
@@ -376,12 +311,11 @@ router.post("/send", async (req, res) => {
 
     res.json({ message });
   } catch (err) {
-    const detail = err?.response?.data?.error?.message;
-    res.status(500).json({ message: detail || err.message });
+    res.status(500).json({ message: err?.response?.data?.message || err.message });
   }
 });
 
-// ── Unread count across all conversations ─────────────────────────────────────
+// ── Unread count ──────────────────────────────────────────────────────────────
 
 router.get("/unread", async (req, res) => {
   try {
@@ -390,7 +324,7 @@ router.get("/unread", async (req, res) => {
       { $group: { _id: null, total: { $sum: "$unreadCount" } } },
     ]);
     res.json({ unread: result[0]?.total || 0 });
-  } catch (err) {
+  } catch {
     res.json({ unread: 0 });
   }
 });
