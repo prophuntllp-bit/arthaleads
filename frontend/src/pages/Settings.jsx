@@ -502,7 +502,7 @@ export default function Settings() {
 
       {/* ── My Profile tab ── */}
       {tab === "profile" && (
-        <section className="card p-6 space-y-5 max-w-2xl">
+        <section className="card p-6 space-y-5">
           {/* Avatar + identity */}
           <div className="flex items-center gap-4">
             {profilePreview ? (
