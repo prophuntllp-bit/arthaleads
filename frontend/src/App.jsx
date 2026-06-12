@@ -610,7 +610,7 @@ export default function App() {
           <Route path="/projects"      element={<Projects />} />
           <Route path="/projects/:id"  element={<ProjectDetail />} />
           <Route path="/followups"     element={<FollowUps />} />
-          <Route path="/inbox"         element={<Inbox />} />
+          <Route path="/conversations"  element={<Inbox />} />
           <Route path="/tasks"         element={<Tasks />} />
           <Route path="/attendance"    element={<Attendance />} />
           <Route path="/bookings"      element={<Bookings />} />
