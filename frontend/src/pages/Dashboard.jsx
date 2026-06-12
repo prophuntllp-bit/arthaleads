@@ -549,7 +549,9 @@ export default function Dashboard() {
               <span>New Lead</span>
             </button>
           </div>
-          <SmartInsightsWidget data={data} />
+          <div className="hidden lg:block">
+            <SmartInsightsWidget data={data} />
+          </div>
         </div>
 
         {/* Right: live clock panel */}
