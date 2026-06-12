@@ -12,6 +12,17 @@ const router = express.Router();
 router.get("/facebook/connect", automationController.facebookConnect);
 router.get("/facebook/callback", automationController.facebookCallback);
 
+// Meta-required compliance endpoints (public, no auth)
+router.post("/facebook/deauthorize", (req, res) => res.sendStatus(200));
+router.post("/facebook/delete", (req, res) => {
+  // Meta sends signed_request when user requests data deletion
+  // We acknowledge and provide a status URL
+  res.json({
+    url: "https://arthaleads.com/privacy",
+    confirmation_code: `del_${Date.now()}`,
+  });
+});
+
 router.use(protect, authorize("admin", "manager"));
 
 // Protected: only authenticated admin/manager can read the OAuth result
