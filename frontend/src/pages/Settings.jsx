@@ -358,6 +358,8 @@ function OrgBillingSection({ org, updateOrg }) {
 export default function Settings() {
   useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
   const { user, org, updateOrg, updateUserState, refreshUser } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const [tab, setTab]                       = useState("profile");
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
   const [autoAssign, setAutoAssign]         = useState(org?.autoAssign ?? true);
@@ -466,19 +468,41 @@ export default function Settings() {
     }
   };
 
+  const TABS = [
+    { id: "profile",      label: "My Profile",    icon: UserRound  },
+    ...(isAdmin ? [{ id: "organization", label: "Organization", icon: Building2 }] : []),
+  ];
+
   return (
     <div className="stitch-page space-y-6">
-      <section className="card p-6">
-        <p className="stitch-kicker mb-2">Profile Control</p>
-        <h1 className="text-3xl font-black tracking-tight text-app">Settings</h1>
-        <p className="mt-2 max-w-2xl text-sm text-app-soft">
-          Update your profile, refresh your password, and manage the permissions tied to your CRM identity.
-        </p>
-      </section>
 
-      <div className={`grid grid-cols-1 gap-6 ${user?.role === "admin" ? "xl:grid-cols-[1fr,1.4fr]" : ""}`}>
-        {/* ── Left column: Personal Profile ── */}
-        <section className="card p-6 space-y-5">
+      {/* Header */}
+      <div>
+        <p className="stitch-kicker mb-1">Account</p>
+        <h1 className="text-3xl font-black tracking-tight text-app">Settings</h1>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex gap-1 rounded-2xl p-1 w-fit"
+        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+            style={tab === id
+              ? { background: "var(--app-surface)", color: "var(--app-text)", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }
+              : { color: "var(--app-text-soft)" }}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── My Profile tab ── */}
+      {tab === "profile" && (
+        <section className="card p-6 space-y-5 max-w-2xl">
           {/* Avatar + identity */}
           <div className="flex items-center gap-4">
             {profilePreview ? (
@@ -495,7 +519,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Profile form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -522,21 +545,17 @@ export default function Settings() {
 
             {/* Role */}
             <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role Access</div>
-              <p className="text-sm text-app-soft">This role controls what you can see across team, analytics, and lead assignment workflows.</p>
-              <div>
-                <label className="label">Role</label>
-                <CustomSelect
-                  value={form.role}
-                  onChange={(v) => setValue("role")({ target: { value: v } })}
-                  options={[
-                    { value: "admin", label: "Admin" },
-                    { value: "manager", label: "Manager" },
-                    { value: "agent", label: "Sales Agent" },
-                  ]}
-                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-                />
-              </div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role</div>
+              <CustomSelect
+                value={form.role}
+                onChange={(v) => setValue("role")({ target: { value: v } })}
+                options={[
+                  { value: "admin",   label: "Admin" },
+                  { value: "manager", label: "Manager" },
+                  { value: "agent",   label: "Sales Agent" },
+                ]}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
             </div>
 
             {/* Change password */}
@@ -546,8 +565,8 @@ export default function Settings() {
                 <div>
                   <label className="label">Current Password</label>
                   <div className="relative">
-                    <input className="input pr-10" type={showCurrentPwd ? "text" : "password"} value={form.currentPassword} onChange={setValue("currentPassword")} placeholder="Required to set a new password" />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowCurrentPwd((v) => !v)}>
+                    <input className="input pr-10" type={showCurrentPwd ? "text" : "password"} value={form.currentPassword} onChange={setValue("currentPassword")} placeholder="Enter current password" />
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowCurrentPwd(v => !v)}>
                       {showCurrentPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
@@ -556,7 +575,7 @@ export default function Settings() {
                   <label className="label">New Password</label>
                   <div className="relative">
                     <input className="input pr-10" type={showNewPwd ? "text" : "password"} value={form.newPassword} onChange={setValue("newPassword")} placeholder="8+ chars, uppercase, number, special" />
-                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowNewPwd((v) => !v)}>
+                    <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowNewPwd(v => !v)}>
                       {showNewPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
@@ -564,76 +583,67 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] p-5 stitch-surface-muted space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-app"><UserRound className="h-4 w-4 text-orange-500" /> Permission Notes</div>
-              <p className="text-sm text-app-soft">Admins can change roles directly. Managers and agents can click the role field, but the backend will still protect restricted updates.</p>
-            </div>
-
             <div className="flex justify-end">
               <button className="btn-primary" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
             </div>
           </form>
         </section>
-
-        {/* ── Right column: Org & Billing (admin only) ── */}
-        {user?.role === "admin" && (
-          <OrgBillingSection org={org} updateOrg={updateOrg} />
-        )}
-      </div>
-
-      {/* Auto-assign toggle - admin + super_admin */}
-      {(user?.role === "admin" || user?.role === "super_admin") && (
-        <section className="card p-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
-                <Shuffle className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
-              </div>
-              <div>
-                <p className="font-semibold text-app">Auto Lead Assignment</p>
-                <p className="text-sm text-app-soft mt-1 max-w-lg">
-                  When enabled, new leads (manual, imported, or from Facebook/website) are automatically
-                  assigned to agents in round-robin rotation - always to the agent with the fewest leads.
-                  Turn off if you prefer to assign all leads manually.
-                </p>
-                <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
-                  {autoAssign ? "✅ Currently enabled - leads auto-assign on creation" : "⏸ Currently disabled - leads are unassigned until manually set"}
-                </p>
-              </div>
-            </div>
-            {/* Toggle switch */}
-            <button
-              onClick={handleAutoAssignToggle}
-              disabled={togglingAA}
-              className="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
-              style={{ background: autoAssign ? "var(--app-primary)" : "var(--app-border-strong)" }}
-              title={autoAssign ? "Disable auto-assignment" : "Enable auto-assignment"}
-            >
-              <span
-                className="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200"
-                style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }}
-              />
-            </button>
-          </div>
-        </section>
       )}
 
-      {/* ── EnableX Telephony Integration ───────────────────────────────────── */}
-      {(user?.role === "admin" || user?.role === "super_admin") && (
-        <section className="card p-4 sm:p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(249,115,22,0.12)" }}>
-              <Phone className="w-5 h-5 text-orange-500" />
+      {/* ── Organization tab (admin only) ── */}
+      {tab === "organization" && isAdmin && (
+        <div className="space-y-6">
+
+          {/* Org & Billing */}
+          <OrgBillingSection org={org} updateOrg={updateOrg} />
+
+          {/* Auto Lead Assignment */}
+          <section className="card p-6">
+            <div className="flex items-start justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+                  <Shuffle className="h-5 w-5" style={{ color: "var(--app-primary)" }} />
+                </div>
+                <div>
+                  <p className="font-semibold text-app">Auto Lead Assignment</p>
+                  <p className="text-sm text-app-soft mt-1 max-w-lg">
+                    Automatically assign new leads to agents in round-robin rotation (fewest leads first).
+                    Disable to assign all leads manually.
+                  </p>
+                  <p className="text-xs mt-2 font-medium" style={{ color: autoAssign ? "var(--app-primary)" : "var(--app-text-soft)" }}>
+                    {autoAssign ? "✅ Enabled — leads auto-assign on creation" : "⏸ Disabled — leads are unassigned until set manually"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAutoAssignToggle}
+                disabled={togglingAA}
+                className="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50"
+                style={{ background: autoAssign ? "var(--app-primary)" : "var(--app-border-strong)" }}
+              >
+                <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-200"
+                  style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }} />
+              </button>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-app">Telephony Integration</h2>
-              <p className="text-xs text-app-soft">Connect EnableX for click-to-call, recordings and AI summaries</p>
+          </section>
+
+          {/* Telephony */}
+          <section className="card p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(249,115,22,0.12)" }}>
+                <Phone className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-app">Telephony Integration</h2>
+                <p className="text-xs text-app-soft">Connect EnableX for click-to-call, recordings and AI summaries</p>
+              </div>
             </div>
-          </div>
-          <EnableXSettings />
-        </section>
+            <EnableXSettings />
+          </section>
+
+        </div>
       )}
 
     </div>
