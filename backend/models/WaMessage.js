@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const waMessageSchema = new mongoose.Schema({
   orgId:           { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
   conversationId:  { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", required: true, index: true },
-  waMsgId:         { type: String, sparse: true },  // Meta's message ID — used for dedup + status updates
+  waMsgId:         { type: String },  // provider message ID — used for dedup
   direction:       { type: String, enum: ["inbound", "outbound"], required: true },
   sender:          { type: String, enum: ["bot", "agent", "customer"], required: true },
   senderName:      { type: String, default: "" },
