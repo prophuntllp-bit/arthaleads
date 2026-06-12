@@ -43,9 +43,9 @@ const navItems = [
       { to: "/developers", label: "Developers", icon: Building2  },
     ],
   },
+  { to: "/calls",       label: "Calls",        icon: Phone },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
   { to: "/conversations", label: "Conversations", icon: WhatsAppIcon },
-  { to: "/calls",         label: "Calls",         icon: Phone },
   {
     label: "Tasks", icon: ClipboardList,
     children: [

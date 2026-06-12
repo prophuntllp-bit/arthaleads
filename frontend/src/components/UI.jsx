@@ -43,39 +43,25 @@ export function PageLoader() {
   );
 }
 
-// Module-level stack so only the topmost open Modal responds to Escape.
-// A single listener handles all nested modals — no double-close on one keypress.
-const _modalStack = [];
-function _escHandler(e) {
-  if (e.key === "Escape" && _modalStack.length > 0) {
-    _modalStack[_modalStack.length - 1]();
-  }
-}
-
 export function Modal({ open, onClose, title, children, size = "md" }) {
-  const onCloseRef = useRef(onClose);
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
-
+  // Escape-to-close + lock body scroll while open (hooks must run every render)
   useEffect(() => {
     if (!open) return;
-    const closer = () => onCloseRef.current?.();
-    _modalStack.push(closer);
-    if (_modalStack.length === 1) document.addEventListener("keydown", _escHandler);
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
+    document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      const idx = _modalStack.indexOf(closer);
-      if (idx !== -1) _modalStack.splice(idx, 1);
-      if (_modalStack.length === 0) document.removeEventListener("keydown", _escHandler);
+      document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [open]);
+  }, [open, onClose]);
 
   if (!open) return null;
   const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" };
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-2 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={typeof title === "string" ? title : "Dialog"}
@@ -87,7 +73,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} rounded-3xl shadow-2xl overflow-hidden`}
+        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
       >
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
@@ -177,45 +163,22 @@ export function toWaNumber(phone = "") {
 
 // Orange call icon + phone number - tap to dial
 export function PhoneActions({ phone, lead, onContact }) {
-  const [dialOpen,    setDialOpen]    = useState(false);
-  const [hoverOpen,   setHoverOpen]   = useState(false);
-  const [dialPos,     setDialPos]     = useState({});
-  const [hoverPos,    setHoverPos]    = useState({});
-  const [calling,     setCalling]     = useState(false);
+  const [dialOpen, setDialOpen] = useState(false);
+  const [dialPos,  setDialPos]  = useState({});
+  const [calling,  setCalling]  = useState(false);
   const ref = useRef(null);
-  const hoverTimer = useRef(null);
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
 
   const openDial = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    clearTimeout(hoverTimer.current);
-    setHoverOpen(false);
     const rect = ref.current.getBoundingClientRect();
     setDialPos({
       top:  rect.bottom + 6,
       left: Math.min(rect.left, window.innerWidth - 220),
     });
     setDialOpen(true);
-  };
-
-  const onMouseEnter = () => {
-    if (!lead) return;
-    hoverTimer.current = setTimeout(() => {
-      const rect = ref.current?.getBoundingClientRect();
-      if (!rect) return;
-      setHoverPos({
-        top:  rect.bottom + 6,
-        left: Math.min(rect.left, window.innerWidth - 240),
-      });
-      setHoverOpen(true);
-    }, 320);
-  };
-
-  const onMouseLeave = () => {
-    clearTimeout(hoverTimer.current);
-    setHoverOpen(false);
   };
 
   const callIVR = async () => {
@@ -237,26 +200,13 @@ export function PhoneActions({ phone, lead, onContact }) {
     onContact?.();
   };
 
-  const fmtBudget = (b) => {
-    if (!b?.min && !b?.max) return null;
-    const fmt = (n) => n >= 10000000 ? `₹${(n/10000000).toFixed(1)}Cr` : n >= 100000 ? `₹${(n/100000).toFixed(0)}L` : `₹${n}`;
-    if (b.min && b.max) return `${fmt(b.min)} – ${fmt(b.max)}`;
-    return b.min ? `≥${fmt(b.min)}` : `≤${fmt(b.max)}`;
-  };
-
-  const budget  = lead ? fmtBudget(lead.budget) : null;
-  const followUp = lead?.followUpDate ? new Date(lead.followUpDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short" }) : null;
-
   return (
     <>
       <button
         ref={ref}
         onClick={openDial}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
         disabled={calling}
         className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap disabled:opacity-60"
-        title={`Call ${phone}`}
       >
         {calling
           ? <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-orange-400" />
@@ -264,109 +214,42 @@ export function PhoneActions({ phone, lead, onContact }) {
         {phone}
       </button>
 
-      {/* ── Hover card ── */}
-      {hoverOpen && lead && createPortal(
-        <div
-          onMouseEnter={() => clearTimeout(hoverTimer.current)}
-          onMouseLeave={() => setHoverOpen(false)}
-          style={{ position:"fixed", top: hoverPos.top, left: hoverPos.left, zIndex: 9999, width: 230,
-            background:"var(--app-surface)", border:"1px solid var(--app-border)",
-            borderRadius:"1rem", boxShadow:"0 12px 40px rgba(0,0,0,0.18)", overflow:"hidden" }}
-        >
-          {/* Lead name + status */}
-          <div className="px-3 py-2.5 border-b" style={{ borderColor:"var(--app-border)", background:"rgba(var(--app-primary-rgb),0.04)" }}>
-            <p className="text-sm font-bold text-app truncate">{lead.name}</p>
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              {lead.status && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background:"rgba(var(--app-primary-rgb),0.10)", color:"var(--app-primary)" }}>
-                  {lead.status}
-                </span>
-              )}
-              {lead.priority && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background:"rgba(249,115,22,0.10)", color:"#f97316" }}>
-                  {lead.priority}
-                </span>
-              )}
-            </div>
-          </div>
-          {/* Detail rows */}
-          <div className="px-3 py-2 space-y-1.5">
-            {lead.source && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Source</span>
-                <span className="text-app font-medium truncate max-w-[120px]">{lead.source}</span>
-              </div>
-            )}
-            {budget && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Budget</span>
-                <span className="text-app font-medium">{budget}</span>
-              </div>
-            )}
-            {lead.propertyType && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Property</span>
-                <span className="text-app font-medium">{lead.propertyType}{lead.bhk ? ` · ${lead.bhk}` : ""}</span>
-              </div>
-            )}
-            {followUp && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Follow-up</span>
-                <span className="font-semibold" style={{ color:"var(--app-primary)" }}>{followUp}</span>
-              </div>
-            )}
-            {lead.assignedToName && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Assigned</span>
-                <span className="text-app font-medium truncate max-w-[120px]">{lead.assignedToName}</span>
-              </div>
-            )}
-            {lead.remark && lead.remark !== "Not Contacted" && (
-              <div className="flex justify-between text-xs">
-                <span className="text-app-soft">Remark</span>
-                <span className="text-app font-medium truncate max-w-[120px]">{lead.remark}</span>
-              </div>
-            )}
-          </div>
-          {/* Click hint */}
-          <div className="px-3 py-2 border-t text-[10px] text-app-soft text-center"
-            style={{ borderColor:"var(--app-border)", background:"var(--app-surface-low)" }}>
-            Click to choose how to call
-          </div>
-        </div>,
-        document.body
-      )}
-
       {/* ── Dial choice popup ── */}
       {dialOpen && createPortal(
         <>
           <div style={{ position:"fixed", inset:0, zIndex:9998 }} onClick={() => setDialOpen(false)} />
-          <div style={{ position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 210,
-            background:"var(--app-surface)", border:"1px solid var(--app-border)",
-            borderRadius:"1rem", boxShadow:"0 12px 40px rgba(0,0,0,0.20)", overflow:"hidden" }}
-          >
-            <p className="px-4 pt-3 pb-2 text-xs font-bold text-app-soft uppercase tracking-wider border-b"
+          <div style={{
+            position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 215,
+            background:"var(--app-surface)",
+            border:"1px solid var(--app-border)",
+            borderRadius:"1rem",
+            boxShadow:"0 8px 32px rgba(0,0,0,0.18)",
+            overflow:"hidden",
+          }}>
+            <p className="px-4 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-app-soft border-b"
               style={{ borderColor:"var(--app-border)" }}>
-              How to call?
+              Call {lead?.name || phone}
             </p>
-            <div className="p-2 space-y-1">
+            <div className="p-2 space-y-0.5">
               {lead?._id && (
                 <button onClick={callIVR}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition hover:bg-orange-500/10 text-left"
-                  style={{ color:"#f97316" }}>
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
+                  style={{ color:"#f97316" }}
+                  onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
+                  onMouseLeave={e => e.currentTarget.style.background=""}>
                   <Phone className="w-4 h-4 shrink-0" />
                   Call via EnableX IVR
                 </button>
               )}
               <button onClick={callPersonal}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition hover:bg-black/5 dark:hover:bg-white/5 text-app text-left">
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-app text-left transition"
+                onMouseEnter={e => e.currentTarget.style.background="var(--app-surface-low)"}
+                onMouseLeave={e => e.currentTarget.style.background=""}>
                 <Phone className="w-4 h-4 shrink-0 text-app-soft" />
                 Dial Personal Number
               </button>
             </div>
-            <div className="px-4 pb-3">
+            <div className="px-3 pb-2.5">
               <button onClick={() => setDialOpen(false)}
                 className="w-full text-center text-xs text-app-soft hover:text-app transition py-1">
                 Cancel

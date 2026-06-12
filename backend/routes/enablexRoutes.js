@@ -195,13 +195,13 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 });
 
 // POST /api/calls/initiate
-router.post("/initiate", authorize("admin", "manager"), async (req, res, next) => {
+router.post("/initiate", protect, async (req, res, next) => {
   try {
     const { leadId } = req.body;
     if (!leadId) return res.status(400).json({ success: false, message: "leadId is required." });
 
     const [org, lead] = await Promise.all([
-      Organization.findById(req.user.orgId).select("enablex").lean(),
+      Organization.findById(req.user.orgId).select("enablex name").lean(),
       Lead.findOne({ _id: leadId, orgId: req.user.orgId }),
     ]);
 
@@ -211,31 +211,33 @@ router.post("/initiate", authorize("admin", "manager"), async (req, res, next) =
     if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
     if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
+    const agentPhone = req.user.phone ? `+${normalizePhone(req.user.phone)}` : null;
+    if (!agentPhone) {
+      return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
+    }
+
     const ownerRef   = `lead_${leadId}_${Date.now()}`;
     const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
     const leadPhone  = `+${normalizePhone(lead.phone)}`;
 
-    // EnableX Voice REST API — POST /voice/v1/call
-    // Docs: https://developer.enablex.io/voice/api-reference.html
+    // EnableX calls the AGENT's phone first. When agent picks up, EnableX
+    // bridges the call to the lead. Both hear each other live.
     const payload = {
-      from:              org.enablex.virtualNumber || undefined,
-      to:                leadPhone,
+      from: org.enablex.virtualNumber || undefined,
+      to:   agentPhone,
       action_on_connect: {
-        play: {
-          text:     `Hello, you have a call from ${org.name || "the sales team"}. Please hold.`,
-          language: "en-US",
-          voice:    "female",
+        dial: {
+          to:      leadPhone,
+          timeout: 30,
         },
       },
-      // record: omitted — we capture PCM via media streaming and upload to Cloudinary ourselves
-      custom_data: ownerRef,   // echoed back in every webhook event
+      custom_data: ownerRef,
       event_url:   webhookUrl,
     };
 
     const { data } = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
     const voiceId  = data?.voice_id ?? data?.id ?? null;
 
-    // Log call initiation in lead timeline immediately
     lead.activities.push({
       type:            "called",
       description:     `Call initiated to ${lead.name}`,
@@ -246,11 +248,12 @@ router.post("/initiate", authorize("admin", "manager"), async (req, res, next) =
         direction: "outbound",
         status:    "initiated",
         phone:     lead.phone,
+        agentPhone: req.user.phone,
       },
     });
     await lead.save();
 
-    res.json({ success: true, voiceId, message: "Call initiated — check your phone." });
+    res.json({ success: true, voiceId, message: `Your phone (${req.user.phone}) will ring now — pick up to be connected to ${lead.name}.` });
   } catch (err) {
     const msg = err.response?.data?.message || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
