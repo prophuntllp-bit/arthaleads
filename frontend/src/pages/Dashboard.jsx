@@ -183,8 +183,18 @@ function SmartInsightsWidget({ data }) {
         `Pipeline value: ₹${data.pipelineValue ? (data.pipelineValue / 1e5).toFixed(0) + "L" : "0"}`,
       ].join(". ");
 
+      const ANGLES = [
+        "Focus your analysis on lead volume trends and source performance.",
+        "Focus your analysis on conversion rate improvement and revenue potential.",
+        "Focus your analysis on follow-up urgency and pipeline momentum.",
+        "Focus your analysis on what the team should prioritise this week.",
+        "Focus your analysis on pipeline value and closing opportunities.",
+        "Focus your analysis on lead quality signals and agent efficiency.",
+      ];
+      const angle = ANGLES[Math.floor(Math.random() * ANGLES.length)];
+
       const { data: res } = await api.post("/help/ask", {
-        question: `You are analysing a real estate CRM. Use ONLY these numbers (do not use any other data): ${summary}. Give exactly 2 short bullet insights — one positive highlight, one actionable improvement. Each on its own line starting with "•". No intro, no sign-off. Max 15 words per bullet.`,
+        question: `You are analysing a real estate CRM. Use ONLY these numbers (do not use any other data): ${summary}. ${angle} Give exactly 2 short bullet insights — one positive highlight, one actionable improvement. Each on its own line starting with "•". No intro, no sign-off. Max 15 words per bullet.`,
         page: "",
       });
 
@@ -196,7 +206,8 @@ function SmartInsightsWidget({ data }) {
 
       setInsights(bullets);
       setCardDelays(bullets.map((_, i) => i === 0 ? 0 : bullets[0].length * 20 + 200));
-      try { sessionStorage.setItem(cacheKey, JSON.stringify(bullets)); } catch {}
+      // Only cache the first auto-load (force=false), not manual refreshes
+      if (!force) { try { sessionStorage.setItem(cacheKey, JSON.stringify(bullets)); } catch {} }
     } catch {
       setError(true);
     } finally {
