@@ -20,7 +20,7 @@ function normalizePhone(phone) {
   return d;
 }
 
-// ── Public webhook (EnableX posts here, no JWT) ──────────────────────────────
+// ── Public webhook (EnableX + recording server post here, no JWT) ─────────────
 // Must be registered BEFORE the protect middleware below.
 router.post("/webhook/:orgId", express.json(), async (req, res) => {
   res.sendStatus(200); // acknowledge immediately
@@ -28,7 +28,8 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
   try {
     const { orgId } = req.params;
     const event     = req.body;
-    // custom_data is the field EnableX echoes back from the outbound call payload
+    // custom_data is echoed by EnableX from outbound call payload;
+    // recording server sends it back when pushing the Cloudinary URL.
     const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
     const eventType = event?.type || event?.event_type || event?.voice_event || "";
 
@@ -41,29 +42,52 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     if (actIdx < 0) return;
 
-    // ── call.completed / ivr.call.hangup ────────────────────────────────────
+    let dirty = false;
+
+    // ── Recording push from our Cloudinary recording server ─────────────────
+    // Payload: { custom_data, recording_url, duration?, transcript? }
+    const recordingUrl = event?.recording_url
+      ?? event?.data?.recording_url
+      ?? event?.data?.recording_link
+      ?? event?.recording_link
+      ?? null;
+
+    if (recordingUrl && !lead.activities[actIdx].meta?.recordingUrl) {
+      lead.activities[actIdx].meta = {
+        ...lead.activities[actIdx].meta,
+        recordingUrl,
+      };
+      dirty = true;
+
+      // Start AI transcription if transcript not already present
+      if (!lead.activities[actIdx].meta?.transcript && process.env.OPENAI_API_KEY) {
+        const dur = Number(event?.duration ?? lead.activities[actIdx].meta?.duration ?? 0);
+        if (dur > 10) {
+          transcribeAndSummarize(String(lead._id), actIdx, recordingUrl).catch(() => {});
+        }
+      }
+    }
+
+    // ── Call hangup / completion event (duration + status) ──────────────────
     if (/hangup|completed|disconnected/i.test(eventType)) {
-      const duration     = Number(event?.data?.duration ?? event?.duration ?? 0);
-      const recordingUrl = event?.data?.recording_link ?? event?.recording_link ?? null;
-      const callStatus   = duration > 5 ? "answered" : "missed";
+      const dur        = Number(event?.data?.duration ?? event?.duration ?? 0);
+      const callStatus = dur > 5 ? "answered" : "missed";
 
       lead.activities[actIdx].description = callStatus === "missed"
         ? `Missed call to ${lead.name}`
-        : `Call with ${lead.name} · ${Math.floor(duration / 60)}m ${duration % 60}s`;
+        : `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`;
 
       lead.activities[actIdx].meta = {
         ...lead.activities[actIdx].meta,
         status: callStatus,
-        duration,
-        recordingUrl: recordingUrl || null,
+        duration: dur,
       };
+      dirty = true;
+    }
+
+    if (dirty) {
       lead.markModified("activities");
       await lead.save();
-
-      // Kick off async AI transcription (won't block webhook response)
-      if (recordingUrl && duration > 10 && process.env.OPENAI_API_KEY) {
-        transcribeAndSummarize(String(lead._id), actIdx, recordingUrl).catch(() => {});
-      }
     }
   } catch (err) {
     console.error("[enablex webhook]", err.message);
@@ -203,7 +227,7 @@ router.post("/initiate", authorize("admin", "manager"), async (req, res, next) =
           voice:    "female",
         },
       },
-      record:      true,
+      // record: omitted — we capture PCM via media streaming and upload to Cloudinary ourselves
       custom_data: ownerRef,   // echoed back in every webhook event
       event_url:   webhookUrl,
     };
