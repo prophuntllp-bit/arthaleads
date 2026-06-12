@@ -56,13 +56,18 @@ const orgSchema = new mongoose.Schema(
     bankName:        { type: String, default: "" },
     bankBranch:      { type: String, default: "" },
 
-    // ── WhatsApp Integration (via AiSensy) ────────────────────────────────────
+    // ── WhatsApp Integration ───────────────────────────────────────────────────
     whatsapp: {
-      enabled:         { type: Boolean, default: false },
-      apiKey:          { type: String, default: "" },   // AiSensy API key
-      botEnabled:      { type: Boolean, default: true },
-      botName:         { type: String, default: "Artha Assistant" },
-      botSystemPrompt: { type: String, default: "" },
+      enabled:            { type: Boolean, default: false },
+      provider:           { type: String, enum: ["aisensy", "wati", "interakt", "meta"], default: "aisensy" },
+      apiKey:             { type: String, default: "" },   // API key / access token (all providers)
+      accountEndpoint:    { type: String, default: "" },   // Wati: custom endpoint URL
+      phoneNumberId:      { type: String, default: "" },   // Meta: phone number ID
+      wabaId:             { type: String, default: "" },   // Meta: WABA ID
+      webhookVerifyToken: { type: String, default: "" },   // Meta: webhook challenge token
+      botEnabled:         { type: Boolean, default: true },
+      botName:            { type: String, default: "Artha Assistant" },
+      botSystemPrompt:    { type: String, default: "" },
     },
 
     // ── QR Code lead capture ───────────────────────────────────────────────────
