@@ -217,7 +217,8 @@ router.post("/initiate", protect, async (req, res, next) => {
     }
 
     const ownerRef   = `lead_${leadId}_${Date.now()}`;
-    const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
+    // Use api.arthaleads.com — Vercel (www) has no /api proxy, so EnableX webhooks must target Railway directly
+    const webhookUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
     const leadPhone  = normalizePhone(lead.phone);   // digits only, e.g. "917020950304"
     const confRoom   = `crm_${Date.now()}`;
 
@@ -236,7 +237,15 @@ router.post("/initiate", protect, async (req, res, next) => {
     const makePayload = (to) => ({
       from: fromNumber,
       to,
-      action_on_connect: { conference: { name: confRoom } },
+      action_on_connect: {
+        conference: {
+          name:              confRoom,
+          beep:              "none",    // no entry/exit beep
+          record:            true,      // enable call recording
+          max_member:        2,
+          mute_on_entry:     false,     // ensure both parties can speak immediately
+        },
+      },
       custom_data: ownerRef,
       event_url:   webhookUrl,
     });
