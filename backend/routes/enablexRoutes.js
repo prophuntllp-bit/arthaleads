@@ -211,14 +211,14 @@ router.post("/initiate", protect, async (req, res, next) => {
     if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
     if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
-    const agentPhone = req.user.phone ? `+${normalizePhone(req.user.phone)}` : null;
+    const agentPhone = req.user.phone ? normalizePhone(req.user.phone) : null;
     if (!agentPhone) {
       return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
     }
 
     const ownerRef   = `lead_${leadId}_${Date.now()}`;
     const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
-    const leadPhone  = `+${normalizePhone(lead.phone)}`;
+    const leadPhone  = normalizePhone(lead.phone);   // digits only, e.g. "917020950304"
     const confRoom   = `crm_${Date.now()}`;
 
     if (!org.enablex.virtualNumber) {
@@ -227,7 +227,9 @@ router.post("/initiate", protect, async (req, res, next) => {
         message: "No virtual number configured. In Settings → Telephony, enter the DID number you purchased from EnableX portal (portal.enablex.io → Phone Numbers) and linked to your Voice API app.",
       });
     }
-    const fromNumber = `+${normalizePhone(org.enablex.virtualNumber)}`;
+    // EnableX requires "from" without the + prefix (their portal shows +91... but API uses digits only)
+    const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
+    console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
     // Bridge call: ring agent's phone + lead's phone simultaneously — both join same conference room.
     // "from" must be a DID purchased from EnableX and linked to a Voice API service in their portal.
