@@ -7,6 +7,7 @@ import {
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
+import CustomSelect from "../components/CustomSelect";
 
 const STATUS_TABS = [
   { id: "all",       label: "All Calls" },
@@ -104,8 +105,8 @@ function CallDetailModal({ call, onClose }) {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col"
-        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)", maxHeight: "92vh" }}
+        className="card w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col"
+        style={{ maxHeight: "92vh" }}
       >
         {/* Header */}
         <div className="p-5 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
@@ -518,17 +519,16 @@ export default function Calls() {
           {agents.length > 1 && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-app-soft" />
-              <select
+              <CustomSelect
                 value={agentId}
-                onChange={e => { setAgentId(e.target.value); setPage(1); }}
-                className="input py-2 text-sm"
-                style={{ padding: "8px 12px", minWidth: 140 }}
-              >
-                <option value="">All Agents</option>
-                {agents.map(a => (
-                  <option key={a._id} value={a._id}>{a.name}</option>
-                ))}
-              </select>
+                onChange={v => { setAgentId(v === "__all__" ? "" : v); setPage(1); }}
+                placeholder="All Agents"
+                options={[
+                  { value: "__all__", label: "All Agents" },
+                  ...agents.map(a => ({ value: a._id, label: a.name })),
+                ]}
+                style={{ minWidth: 160 }}
+              />
               {agentId && (
                 <button onClick={() => setAgentId("")} className="text-xs text-orange-400 hover:text-orange-500 font-semibold">
                   Clear
