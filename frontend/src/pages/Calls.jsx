@@ -118,14 +118,14 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
         <section>
           <div className="flex items-center gap-2 mb-2">
             <Mic className="w-3.5 h-3.5 text-orange-500" />
-            <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Recording</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-app">Recording</span>
           </div>
           <audio controls src={meta.recordingUrl} className="w-full rounded-xl" style={{ height: 36 }} />
         </section>
       ) : status === "answered" && (
-        <div className="rounded-xl p-3 flex items-center gap-2 text-xs text-app-soft"
+        <div className="rounded-xl p-3 flex items-center gap-2 text-xs text-app"
           style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          <Mic className="w-4 h-4 shrink-0 opacity-40" />
+          <Mic className="w-4 h-4 shrink-0 opacity-50" />
           Recording will appear once uploaded by the recording server.
         </div>
       )}
@@ -143,12 +143,12 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
         </section>
       ) : status === "answered" && (
         <div className="rounded-xl p-4"
-          style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.25)" }}>
+          style={{ background: "rgba(99,102,241,0.07)", border: "1px dashed rgba(99,102,241,0.25)" }}>
           <div className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles className="w-4 h-4 text-indigo-300" />
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">AI Summary</span>
+            <Sparkles className="w-4 h-4 text-indigo-500" />
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">AI Summary</span>
           </div>
-          <p className="text-xs text-app-soft">
+          <p className="text-xs text-app">
             AI summary generates automatically after the call recording is processed (calls over 10s).
           </p>
         </div>
@@ -158,7 +158,7 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
         <section>
           <div className="flex items-center gap-1.5 mb-2">
             <AlignLeft className="w-3.5 h-3.5 text-app-soft" />
-            <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Transcript</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-app">Transcript</span>
           </div>
           <div className="rounded-xl p-4 text-sm text-app leading-relaxed whitespace-pre-wrap overflow-y-auto"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", maxHeight: 180 }}>
@@ -170,7 +170,7 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
       <section>
         <div className="flex items-center gap-1.5 mb-2">
           <FileText className="w-3.5 h-3.5 text-app-soft" />
-          <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Call Notes</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-app">Call Notes</span>
         </div>
         <textarea value={notes} onChange={e => setNotes(e.target.value)}
           placeholder="Add notes about this call…" rows={3} className="input w-full resize-none text-sm" />
@@ -197,7 +197,7 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
         ) : (
           <div className="rounded-xl p-4 space-y-3"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            <p className="text-xs font-bold uppercase tracking-wider text-app-soft">Schedule Follow-up</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-app">Schedule Follow-up</p>
             <input type="text" value={followupTitle} onChange={e => setFollowupTitle(e.target.value)}
               placeholder="Task title" className="input w-full" />
             <input type="datetime-local" value={followupDate} onChange={e => setFollowupDate(e.target.value)}
