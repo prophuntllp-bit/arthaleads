@@ -216,17 +216,15 @@ router.post("/initiate", protect, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
     }
 
-    const ownerRef    = `lead_${leadId}_${Date.now()}`;
-    const webhookUrl  = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
-    const leadPhone   = `+${normalizePhone(lead.phone)}`;
-    const fromNumber  = org.enablex.virtualNumber
-      ? `+${normalizePhone(org.enablex.virtualNumber)}`
-      : undefined;
-    const confRoom    = `crm_${Date.now()}`;
+    const ownerRef   = `lead_${leadId}_${Date.now()}`;
+    const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
+    const leadPhone  = `+${normalizePhone(lead.phone)}`;
+    const confRoom   = `crm_${Date.now()}`;
 
     // Bridge call: ring agent's phone + lead's phone simultaneously — both join same conference room.
+    // "from" is intentionally omitted; EnableX uses its own caller-line per their account config.
+    // Sending a non-EnableX DID as "from" returns 405 "service_not_associated_with_number".
     const makePayload = (to) => ({
-      from: fromNumber,
       to,
       action_on_connect: { conference: { name: confRoom } },
       custom_data: ownerRef,
@@ -240,12 +238,17 @@ router.post("/initiate", protect, async (req, res, next) => {
         axios.post(`${ENABLEX_BASE}/call`, makePayload(leadPhone),  basicAuth(org)),
       ]);
       voiceId = leadResp.data?.voice_id ?? leadResp.data?.id ?? null;
-      console.info("[enablex /initiate] Bridge call initiated — agent:", agentPhone, "lead:", leadPhone, "conf:", confRoom);
+      console.info("[enablex /initiate] Bridge call OK — agent:", agentPhone, "lead:", leadPhone, "conf:", confRoom);
     } catch (enablexErr) {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
+      const errCode = errBody?.event_code;
       console.error("[enablex /initiate] EnableX rejected bridge call:", status, JSON.stringify(errBody));
-      console.error("[enablex /initiate] agentPhone:", agentPhone, "leadPhone:", leadPhone, "from:", fromNumber);
+      console.error("[enablex /initiate] agentPhone:", agentPhone, "leadPhone:", leadPhone);
+      // Attach a human-readable message for known failure modes
+      if (errCode === "6133") {
+        enablexErr.friendlyMessage = "EnableX error 6133: a phone number in your account settings is not linked to a Voice API service. Please contact EnableX support or check your account's number configuration.";
+      }
       throw enablexErr;
     }
 
@@ -267,7 +270,11 @@ router.post("/initiate", protect, async (req, res, next) => {
 
     res.json({ success: true, voiceId, message: `Calling ${lead.name}… Your phone (${req.user.phone}) will ring shortly.` });
   } catch (err) {
-    const msg = err.response?.data?.message || err.message;
+    const msg = err.friendlyMessage
+      || err.response?.data?.description
+      || err.response?.data?.msg
+      || err.response?.data?.message
+      || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
   }
 });
