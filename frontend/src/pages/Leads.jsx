@@ -12,7 +12,7 @@ import CustomSelect from "../components/CustomSelect";
 import TransferModal from "../components/TransferModal";
 import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
-import { useColumnResize } from "../hooks/useColumnResize";
+import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
@@ -1454,14 +1454,10 @@ export default function Leads() {
             </div>
           <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
             <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
-              <colgroup>
-                {canDelete && <col style={{ width: 40 }} />}
-                {Object.keys(colW).map((k) => <col key={k} style={{ width: colW[k] }} />)}
-              </colgroup>
               <thead>
                 <tr>
                   {canDelete && (
-                    <th className="px-2.5" style={{ width: 40, position: "relative" }}>
+                    <th className="px-2.5" style={{ width: 40 }}>
                       <input
                         type="checkbox"
                         checked={allSelected}
@@ -1472,34 +1468,25 @@ export default function Leads() {
                       />
                     </th>
                   )}
-                  {[
-                    ["lead", "Lead"], ["phone", "Phone"], ["whatsapp", "WhatsApp"],
-                    ["source", "Source"], ["project", "Project"], ["status", "Status"],
-                    ["priority", "Priority"], ["requirements", "Requirements"],
-                    ["budget", "Budget"], ["purpose", "Purpose"],
-                    ["remark", "Remark"], ["remark1", "Remark 1"], ["remark2", "Remark 2"],
-                    ["followup", "Follow Up"], ["followup2", "Follow Up 2"],
-                    ["booking", "Booking"], ["property", "Property"],
-                    ["assigned", "Assigned"], ["actions", "Actions"],
-                  ].map(([key, label]) => (
-                    <th key={key} style={{ width: colW[key], position: "relative", overflow: "hidden" }}>
-                      <span className="truncate block pr-2">{label}</span>
-                      {/* Resize handle - visible line on right edge, drag to resize */}
-                      <div
-                        onMouseDown={(e) => startResize(key, e)}
-                        title="Drag to resize column"
-                        style={{
-                          position: "absolute", right: 0, top: "20%", bottom: "20%",
-                          width: 3, cursor: "col-resize", zIndex: 2,
-                          borderRadius: 2,
-                          background: "var(--app-border)",
-                          transition: "background 150ms, width 150ms",
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-primary)"; e.currentTarget.style.width = "3px"; e.currentTarget.style.top = "0%"; e.currentTarget.style.bottom = "0%"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--app-border)"; e.currentTarget.style.top = "20%"; e.currentTarget.style.bottom = "20%"; }}
-                      />
-                    </th>
-                  ))}
+                  <RTh k="lead"         colW={colW} startResize={startResize}>Lead</RTh>
+                  <RTh k="phone"        colW={colW} startResize={startResize}>Phone</RTh>
+                  <RTh k="whatsapp"     colW={colW} startResize={startResize}>WhatsApp</RTh>
+                  <RTh k="source"       colW={colW} startResize={startResize}>Source</RTh>
+                  <RTh k="project"      colW={colW} startResize={startResize}>Project</RTh>
+                  <RTh k="status"       colW={colW} startResize={startResize}>Status</RTh>
+                  <RTh k="priority"     colW={colW} startResize={startResize}>Priority</RTh>
+                  <RTh k="requirements" colW={colW} startResize={startResize}>Requirements</RTh>
+                  <RTh k="budget"       colW={colW} startResize={startResize}>Budget</RTh>
+                  <RTh k="purpose"      colW={colW} startResize={startResize}>Purpose</RTh>
+                  <RTh k="remark"       colW={colW} startResize={startResize}>Remark</RTh>
+                  <RTh k="remark1"      colW={colW} startResize={startResize}>Remark 1</RTh>
+                  <RTh k="remark2"      colW={colW} startResize={startResize}>Remark 2</RTh>
+                  <RTh k="followup"     colW={colW} startResize={startResize}>Follow Up</RTh>
+                  <RTh k="followup2"    colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                  <RTh k="booking"      colW={colW} startResize={startResize}>Booking</RTh>
+                  <RTh k="property"     colW={colW} startResize={startResize}>Property</RTh>
+                  <RTh k="assigned"     colW={colW} startResize={startResize}>Assigned</RTh>
+                  <RTh k="actions"      colW={colW} startResize={startResize}>Actions</RTh>
                 </tr>
               </thead>
               <tbody>
