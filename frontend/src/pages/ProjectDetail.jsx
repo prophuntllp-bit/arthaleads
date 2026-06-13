@@ -208,11 +208,10 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Contact status cell — compact dropdown only, notes live in LeadDetail popup ──
+// ── Contact status cell — compact dropdown only ──────────────────────────────
 function RemarkCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "");
   const [saving, setSaving] = useState(false);
-  const noteCount = (lead.notes || []).length;
 
   const saveRemark = async (newRemark) => {
     setSaving(true);
@@ -224,25 +223,18 @@ function RemarkCell({ lead, projectId, onUpdated }) {
   };
 
   return (
-    <div className="flex flex-col gap-1 min-w-[120px]">
-      <div className="relative">
-        <CustomSelect
-          value={remark}
-          onChange={(val) => { setRemark(val); saveRemark(val); }}
-          placeholder="- None -"
-          options={[
-            { value: "Contacted", label: "Contacted" },
-            { value: "Not Contacted", label: "Not Contacted" },
-          ]}
-          style={{ width: "100%" }}
-        />
-        {saving && <div className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></div>}
-      </div>
-      {noteCount > 0 && (
-        <span className="text-[10px] text-orange-500 font-medium leading-none">
-          📝 {noteCount} note{noteCount !== 1 ? "s" : ""} — open lead to view
-        </span>
-      )}
+    <div className="relative min-w-[110px]">
+      <CustomSelect
+        value={remark}
+        onChange={(val) => { setRemark(val); saveRemark(val); }}
+        placeholder="- None -"
+        options={[
+          { value: "Contacted", label: "Contacted" },
+          { value: "Not Contacted", label: "Not Contacted" },
+        ]}
+        style={{ width: "100%" }}
+      />
+      {saving && <div className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></div>}
     </div>
   );
 }
@@ -278,9 +270,9 @@ export default function ProjectDetail() {
   // Column resizing (shared across all three tabs)
   const [colW, startResize] = useColumnResize("projects", {
     name: 120, phone: 130, whatsapp: 110, email: 130, source: 80,
-    contactStatus: 140, remark1: 130, remark2: 130, remark3: 130, remark4: 130,
+    contactStatus: 130, note: 180, remark1: 130, remark2: 130, remark3: 130, remark4: 130,
     followUp: 185, followUp2: 185, remark: 140, status: 150,
-    updatedBy: 110, assignedTo: 110, note: 140,
+    updatedBy: 110, assignedTo: 110,
   });
 
   // Bulk select – Leads tab
@@ -1026,7 +1018,7 @@ export default function ProjectDetail() {
                   <div ref={topSpacerRef} style={{ height: 1 }} />
                 </div>
                 <div ref={tableScrollRef} className="overflow-x-auto">
-                  <table className="stitch-table" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.email, colW.source, colW.contactStatus, colW.remark1, colW.remark2, colW.followUp, colW.followUp2, colW.remark, colW.status, colW.updatedBy, colW.assignedTo].reduce((a,b)=>a+b,0) + 128 }}>
+                  <table className="stitch-table" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.email, colW.source, colW.contactStatus, colW.note, colW.remark1, colW.remark2, colW.followUp, colW.followUp2, colW.remark, colW.status, colW.updatedBy, colW.assignedTo].reduce((a,b)=>a+b,0) + 128 }}>
                     <thead>
                       <tr>
                         <th style={{ width: 28, minWidth: 28 }} className="px-1">
@@ -1046,6 +1038,7 @@ export default function ProjectDetail() {
                         <RTh k="email"         colW={colW} startResize={startResize}>Email</RTh>
                         <RTh k="source"        colW={colW} startResize={startResize}>Source</RTh>
                         <RTh k="contactStatus" colW={colW} startResize={startResize}>Contact Status</RTh>
+                        <RTh k="note"          colW={colW} startResize={startResize}>Notes</RTh>
                         <RTh k="remark1"       colW={colW} startResize={startResize}>Remark 1</RTh>
                         <RTh k="remark2"       colW={colW} startResize={startResize}>Remark 2</RTh>
                         <RTh k="followUp"      colW={colW} startResize={startResize}>Follow Up</RTh>
@@ -1078,6 +1071,31 @@ export default function ProjectDetail() {
                           <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
                           <td>
                             <RemarkCell lead={lead} projectId={id} onUpdated={handleLeadUpdated} />
+                          </td>
+                          <td>
+                            {(() => {
+                              const notes = lead.notes || [];
+                              const latest = notes[notes.length - 1];
+                              return latest ? (
+                                <button
+                                  onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
+                                  className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10"
+                                  title={`${notes.length} note${notes.length !== 1 ? "s" : ""} — click to view all`}
+                                >
+                                  <span className="line-clamp-2 text-app">{latest.text}</span>
+                                  {notes.length > 1 && (
+                                    <span className="text-[10px] text-orange-400 font-medium mt-0.5 block">+{notes.length - 1} more</span>
+                                  )}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
+                                  className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10 text-app-soft italic"
+                                >
+                                  Add note…
+                                </button>
+                              );
+                            })()}
                           </td>
                           <td>
                             <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleLeadUpdated} />
