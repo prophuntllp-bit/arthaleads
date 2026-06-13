@@ -208,10 +208,9 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Contact remark cell (None / Contacted / Not Contacted + quick note adder) ──
+// ── Contact status cell — compact dropdown only, notes live in LeadDetail popup ──
 function RemarkCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "");
-  const [note, setNote]     = useState(""); // always empty — quick note adder (appends to notes[])
   const [saving, setSaving] = useState(false);
   const noteCount = (lead.notes || []).length;
 
@@ -224,26 +223,12 @@ function RemarkCell({ lead, projectId, onUpdated }) {
     finally { setSaving(false); }
   };
 
-  const submitNote = async () => {
-    if (!note.trim()) return;
-    setSaving(true);
-    try {
-      const res = await api.post(`/projects/${projectId}/leads/${lead._id}/notes`, { text: note.trim() });
-      setNote("");
-      onUpdated(res.data.data);
-    } catch { toast.error("Failed to save note"); }
-    finally { setSaving(false); }
-  };
-
   return (
-    <div className="flex flex-col gap-1.5 min-w-[160px]">
+    <div className="flex flex-col gap-1 min-w-[120px]">
       <div className="relative">
         <CustomSelect
           value={remark}
-          onChange={(val) => {
-            setRemark(val);
-            saveRemark(val);
-          }}
+          onChange={(val) => { setRemark(val); saveRemark(val); }}
           placeholder="- None -"
           options={[
             { value: "Contacted", label: "Contacted" },
@@ -253,20 +238,8 @@ function RemarkCell({ lead, projectId, onUpdated }) {
         />
         {saving && <div className="absolute right-2 top-1/2 -translate-y-1/2"><Spinner size="sm" /></div>}
       </div>
-      {remark === "Contacted" && (
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          onBlur={submitNote}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitNote(); } }}
-          placeholder="Write a note… (Enter to add)"
-          rows={2}
-          className="w-full rounded-xl border px-2.5 py-1.5 text-xs resize-none transition"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-        />
-      )}
       {noteCount > 0 && (
-        <span className="text-[10px] text-orange-500 font-medium">
+        <span className="text-[10px] text-orange-500 font-medium leading-none">
           📝 {noteCount} note{noteCount !== 1 ? "s" : ""} — open lead to view
         </span>
       )}
