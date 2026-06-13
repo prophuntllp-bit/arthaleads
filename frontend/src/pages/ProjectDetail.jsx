@@ -10,12 +10,18 @@ import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
+
+// Compact toolbar button styles — matches Follow Ups section height
+const COMPACT_BTN = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition disabled:opacity-60 disabled:cursor-not-allowed";
+const COMPACT_BTN_DANGER = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition disabled:opacity-60";
+const COMPACT_INPUT_CLS = "rounded-xl py-1.5 text-sm text-app";
+const COMPACT_INPUT_STYLE = { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" };
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 import CustomSelect from "../components/CustomSelect";
 import {
   ArrowLeft, ArrowRightLeft, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight,
-  Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users,
+  Download, FileSpreadsheet, FileText, ImageOff, MapPin, Pencil, Search, Trash2, Upload, Users, X as XIcon,
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
@@ -942,19 +948,28 @@ export default function ProjectDetail() {
       {/* ── LEADS TAB ── */}
       {tab === "leads" && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[220px] max-w-sm">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[200px] max-w-xs flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-app-soft" />
               <input
-                className="input rounded-full pl-11"
+                className={`${COMPACT_INPUT_CLS} w-full pl-8 ${search ? "pr-7" : "pr-3"}`}
+                style={COMPACT_INPUT_STYLE}
                 placeholder="Search by name or phone..."
                 value={search}
                 onChange={handleSearch}
+                onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
+                onBlur={e => { e.target.style.borderColor = "var(--app-border)"; }}
               />
+              {search && (
+                <button onClick={() => { setSearch(""); setLeadsPage(1); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                  <XIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             {selectedIds.size > 0 && (
-              <button className="btn-danger" onClick={() => setShowBulkConfirm(true)}>
-                <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
+              <button className={COMPACT_BTN_DANGER} style={{ background: "#ef4444" }} onClick={() => setShowBulkConfirm(true)}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete {selectedIds.size} selected
               </button>
             )}
             {/* Export leads dropdown */}
@@ -962,15 +977,16 @@ export default function ProjectDetail() {
               <button
                 onClick={() => setExportLeadsDropOpen((v) => !v)}
                 disabled={exportingLeads}
-                className="btn-primary flex items-center gap-2"
+                className={COMPACT_BTN}
+                style={{ background: "var(--app-primary)" }}
                 title="Export leads"
               >
-                {exportingLeads ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
+                {exportingLeads ? <Spinner size="sm" /> : <Download className="h-3.5 w-3.5" />}
                 Export
               </button>
               {exportLeadsDropOpen && (
                 <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl overflow-hidden shadow-lg py-1"
-                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                  style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
                   {[["xlsx", "Export Excel"], ["csv", "Export CSV"]].map(([fmt, label]) => (
                     <button key={fmt} onClick={() => exportLeads(fmt)}
                       className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
@@ -983,8 +999,8 @@ export default function ProjectDetail() {
             {canManage && (
               <>
                 <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
-                <button className="btn-primary" onClick={() => fileRef.current?.click()} disabled={importing}>
-                  {importing ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+                <button className={COMPACT_BTN} style={{ background: "var(--app-primary)" }} onClick={() => fileRef.current?.click()} disabled={importing}>
+                  {importing ? <Spinner size="sm" /> : <Upload className="h-3.5 w-3.5" />}
                   {importing ? "Importing..." : "Import"}
                 </button>
               </>
@@ -1233,8 +1249,8 @@ export default function ProjectDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               {prospSelectedIds.size > 0 && canManage && (
                 <>
-                  <button className="btn-danger" onClick={() => setShowProspBulkConfirm(true)}>
-                    <Trash2 className="h-4 w-4" /> Delete {prospSelectedIds.size}
+                  <button className={COMPACT_BTN_DANGER} style={{ background: "#ef4444" }} onClick={() => setShowProspBulkConfirm(true)}>
+                    <Trash2 className="h-3.5 w-3.5" /> Delete {prospSelectedIds.size}
                   </button>
                   <CustomSelect
                     value={prospBulkStatusBook}
@@ -1244,7 +1260,8 @@ export default function ProjectDetail() {
                     style={{ minWidth: 140 }}
                   />
                   <button
-                    className="btn-primary"
+                    className={COMPACT_BTN}
+                    style={{ background: "var(--app-primary)" }}
                     onClick={handleProspBulkStatus}
                     disabled={!prospBulkStatusBook || bulkStatusUpdating}
                   >
@@ -1253,29 +1270,39 @@ export default function ProjectDetail() {
                 </>
               )}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
                 <input
-                  className="input pl-9 py-2 text-sm w-56"
+                  className={`${COMPACT_INPUT_CLS} pl-8 ${prospSearch ? "pr-7" : "pr-3"}`}
+                  style={{ ...COMPACT_INPUT_STYLE, width: 220 }}
                   placeholder="Search name or phone…"
                   value={prospSearch}
                   onChange={(e) => { setProspSearch(e.target.value); setProspPage(1); }}
+                  onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--app-border)"; }}
                 />
+                {prospSearch && (
+                  <button onClick={() => { setProspSearch(""); setProspPage(1); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               {/* Export dropdown */}
               <div className="relative" ref={exportDropRef}>
                 <button
                   onClick={() => setExportDropOpen((v) => !v)}
                   disabled={exportingProsp}
-                  className="btn-primary flex items-center gap-2"
+                  className={COMPACT_BTN}
+                  style={{ background: "var(--app-primary)" }}
                   title="Export prospective leads"
                 >
-                  {exportingProsp ? <Spinner size="sm" /> : <Download className="h-4 w-4" />}
+                  {exportingProsp ? <Spinner size="sm" /> : <Download className="h-3.5 w-3.5" />}
                   Export
                   <ChevronDown className="h-3 w-3 opacity-80" />
                 </button>
                 {exportDropOpen && (
                   <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl overflow-hidden shadow-lg py-1"
-                    style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+                    style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
                     <button onClick={() => exportProspective("xlsx")}
                       className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
                       <FileSpreadsheet className="h-4 w-4 text-app-soft" /> Export Excel
@@ -1510,18 +1537,27 @@ export default function ProjectDetail() {
             </div>
             <div className="flex items-center gap-2">
               {svdSelectedIds.size > 0 && canManage && (
-                <button className="btn-danger" onClick={() => setShowSvdBulkConfirm(true)}>
-                  <Trash2 className="h-4 w-4" /> Delete {svdSelectedIds.size} selected
+                <button className={COMPACT_BTN_DANGER} style={{ background: "#ef4444" }} onClick={() => setShowSvdBulkConfirm(true)}>
+                  <Trash2 className="h-3.5 w-3.5" /> Delete {svdSelectedIds.size} selected
                 </button>
               )}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
                 <input
-                  className="input pl-9 py-2 text-sm w-56"
+                  className={`${COMPACT_INPUT_CLS} pl-8 ${svdSearch ? "pr-7" : "pr-3"}`}
+                  style={{ ...COMPACT_INPUT_STYLE, width: 220 }}
                   placeholder="Search name or phone…"
                   value={svdSearch}
                   onChange={(e) => { setSvdSearch(e.target.value); setSvdPage(1); }}
+                  onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
+                  onBlur={e => { e.target.style.borderColor = "var(--app-border)"; }}
                 />
+                {svdSearch && (
+                  <button onClick={() => { setSvdSearch(""); setSvdPage(1); }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                    <XIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
