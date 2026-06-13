@@ -221,10 +221,18 @@ router.post("/initiate", protect, async (req, res, next) => {
     const leadPhone  = `+${normalizePhone(lead.phone)}`;
     const confRoom   = `crm_${Date.now()}`;
 
+    if (!org.enablex.virtualNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "No virtual number configured. In Settings → Telephony, enter the DID number you purchased from EnableX portal (portal.enablex.io → Phone Numbers) and linked to your Voice API app.",
+      });
+    }
+    const fromNumber = `+${normalizePhone(org.enablex.virtualNumber)}`;
+
     // Bridge call: ring agent's phone + lead's phone simultaneously — both join same conference room.
-    // "from" is intentionally omitted; EnableX uses its own caller-line per their account config.
-    // Sending a non-EnableX DID as "from" returns 405 "service_not_associated_with_number".
+    // "from" must be a DID purchased from EnableX and linked to a Voice API service in their portal.
     const makePayload = (to) => ({
+      from: fromNumber,
       to,
       action_on_connect: { conference: { name: confRoom } },
       custom_data: ownerRef,
@@ -243,11 +251,13 @@ router.post("/initiate", protect, async (req, res, next) => {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
       const errCode = errBody?.event_code;
-      console.error("[enablex /initiate] EnableX rejected bridge call:", status, JSON.stringify(errBody));
-      console.error("[enablex /initiate] agentPhone:", agentPhone, "leadPhone:", leadPhone);
-      // Attach a human-readable message for known failure modes
-      if (errCode === "6133") {
-        enablexErr.friendlyMessage = "EnableX error 6133: a phone number in your account settings is not linked to a Voice API service. Please contact EnableX support or check your account's number configuration.";
+      console.error("[enablex /initiate] EnableX rejected:", status, JSON.stringify(errBody));
+      console.error("[enablex /initiate] from:", fromNumber, "agent:", agentPhone, "lead:", leadPhone);
+      if (errCode === "6133" || errBody?.event_name === "service_not_associated_with_number") {
+        enablexErr.friendlyMessage =
+          `The virtual number ${fromNumber} is not linked to a Voice API service in your EnableX account. ` +
+          "Please log into portal.enablex.io → Phone Numbers → select the number → assign it to your Voice API app. " +
+          "If you don't have an EnableX DID yet, you need to purchase one from their portal first.";
       }
       throw enablexErr;
     }
