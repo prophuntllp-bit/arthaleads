@@ -1098,7 +1098,7 @@ export default function ProjectDetail() {
                               ) : (
                                 <button
                                   onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
-                                  className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10 text-app-soft italic"
+                                  className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10"
                                 >
                                   Add note…
                                 </button>
