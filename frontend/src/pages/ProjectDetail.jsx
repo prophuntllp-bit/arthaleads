@@ -9,6 +9,7 @@ import LeadDetail from "../components/LeadDetail";
 import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 import CustomSelect from "../components/CustomSelect";
@@ -32,46 +33,6 @@ function NameCell({ name, bold, onOpen }) {
   );
 }
 
-// ── Column resize hook (same as Leads page) ──────────────────────────────────
-function useColumnResize(defaults) {
-  const [widths, setWidths] = useState({ ...defaults });
-  const startResize = (col, e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startW = widths[col] ?? defaults[col] ?? 100;
-    const onMove = (mv) => setWidths((prev) => ({ ...prev, [col]: Math.max(48, startW + mv.clientX - startX) }));
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  };
-  return [widths, startResize];
-}
-
-// Resizable <th> with drag handle on right edge
-function RTh({ k, colW, startResize, children, className = "", style = {} }) {
-  return (
-    <th
-      className={className}
-      style={{ width: colW[k], minWidth: 60, position: "relative", overflow: "hidden", ...style }}
-    >
-      <span className="truncate block pr-3">{children}</span>
-      <div
-        onMouseDown={(e) => startResize(k, e)}
-        title="Drag to resize"
-        style={{ position: "absolute", right: 0, top: "20%", bottom: "20%", width: 3, cursor: "col-resize", zIndex: 2, borderRadius: 2, background: "var(--app-border)", transition: "background 150ms" }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-primary)"; e.currentTarget.style.top = "0%"; e.currentTarget.style.bottom = "0%"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--app-border)"; e.currentTarget.style.top = "20%"; e.currentTarget.style.bottom = "20%"; }}
-      />
-    </th>
-  );
-}
 
 function fmtPrice(n) {
   if (!n) return null;
@@ -334,7 +295,7 @@ export default function ProjectDetail() {
   const [detailLead, setDetailLead]         = useState(null);
 
   // Column resizing (shared across all three tabs)
-  const [colW, startResize] = useColumnResize({
+  const [colW, startResize] = useColumnResize("projects", {
     name: 120, phone: 130, whatsapp: 110, email: 130, source: 80,
     contactStatus: 140, remark1: 130, remark2: 130, remark3: 130, remark4: 130,
     followUp: 185, followUp2: 185, remark: 140, status: 150,

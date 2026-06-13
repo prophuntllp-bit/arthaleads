@@ -7,6 +7,14 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User, Search, X as XIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useColumnResize, RTh } from "../hooks/useColumnResize";
+
+const FU_COL_DEFAULTS = {
+  name: 120, phone: 130, whatsapp: 110, source: 80, status: 110,
+  booking: 150, remark1: 130, remark2: 130, remark3: 130, remark4: 130,
+  note: 140, followUp: 168, followUp2: 168, project: 120, assignedTo: 110, type: 80,
+};
+const FU_TH = "px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap";
 
 // ── Route patch to correct API based on lead type ─────────────────────────────
 async function patchLead(lead, data) {
@@ -198,6 +206,8 @@ export default function FollowUps() {
       .then(({ data }) => setDetailLead(data.lead || data))
       .catch(() => toast.error("Could not load lead details"));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [colW, startResize] = useColumnResize("followups", FU_COL_DEFAULTS);
 
   const [section, setSection] = useState("present");
   const [searchQ, setSearchQ] = useState(() => searchParams.get("q") || "");
@@ -420,32 +430,32 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table data-tour="followup-table" className="w-full text-xs min-w-[1960px]" style={{ borderCollapse: "collapse" }}>
+              <table data-tour="followup-table" className="text-xs" style={{ borderCollapse: "collapse", tableLayout: "fixed", width: Object.values(colW).reduce((a, b) => a + b, 0) + 50 }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Name</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Phone</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Source</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>Status</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 150, minWidth: 150 }}>Booking</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 3</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 130, minWidth: 130 }}>Remark 4</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 140, minWidth: 140 }}>Note</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>
+                    <RTh k="name"       colW={colW} startResize={startResize} className={FU_TH}>Name</RTh>
+                    <RTh k="phone"      colW={colW} startResize={startResize} className={FU_TH}>Phone</RTh>
+                    <RTh k="whatsapp"   colW={colW} startResize={startResize} className={FU_TH}>WhatsApp</RTh>
+                    <RTh k="source"     colW={colW} startResize={startResize} className={FU_TH}>Source</RTh>
+                    <RTh k="status"     colW={colW} startResize={startResize} className={FU_TH}>Status</RTh>
+                    <RTh k="booking"    colW={colW} startResize={startResize} className={FU_TH}>Booking</RTh>
+                    <RTh k="remark1"    colW={colW} startResize={startResize} className={FU_TH}>Remark 1</RTh>
+                    <RTh k="remark2"    colW={colW} startResize={startResize} className={FU_TH}>Remark 2</RTh>
+                    <RTh k="remark3"    colW={colW} startResize={startResize} className={FU_TH}>Remark 3</RTh>
+                    <RTh k="remark4"    colW={colW} startResize={startResize} className={FU_TH}>Remark 4</RTh>
+                    <RTh k="note"       colW={colW} startResize={startResize} className={FU_TH}>Note</RTh>
+                    <RTh k="followUp"   colW={colW} startResize={startResize} className={FU_TH}>
                       <button onClick={() => { setSort(s => s === "desc" ? "asc" : "desc"); setPage(1); }}
                         className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors" title="Toggle sort order">
                         Follow-up Date
                         {sort === "desc" ? <ArrowDown className="w-3 h-3 text-orange-500" /> : <ArrowUp className="w-3 h-3 text-orange-500" />}
                       </button>
-                    </th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 168, minWidth: 168 }}>Follow Up 2</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 120, minWidth: 120 }}>Project</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 110, minWidth: 110 }}>Assigned To</th>
-                    <th className="px-2.5 py-2 text-left font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 80, minWidth: 80 }}>Type</th>
-                    <th className="px-2.5 py-2 text-center font-bold text-app-soft uppercase tracking-[0.14em] text-[10px] whitespace-nowrap" style={{ width: 50, minWidth: 50 }}>Done</th>
+                    </RTh>
+                    <RTh k="followUp2"  colW={colW} startResize={startResize} className={FU_TH}>Follow Up 2</RTh>
+                    <RTh k="project"    colW={colW} startResize={startResize} className={FU_TH}>Project</RTh>
+                    <RTh k="assignedTo" colW={colW} startResize={startResize} className={FU_TH}>Assigned To</RTh>
+                    <RTh k="type"       colW={colW} startResize={startResize} className={FU_TH}>Type</RTh>
+                    <th className={`${FU_TH} text-center`} style={{ width: 50, minWidth: 50 }}>Done</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -468,15 +478,7 @@ export default function FollowUps() {
                         <td className="px-2.5 py-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (lead._type === "project" && lead.projectId)
-                                navigate(`/projects/${lead.projectId}`, { state: { searchLead: lead.phone || lead.name } });
-                              else {
-                                api.get(`/leads/${lead._id}`)
-                                  .then(({ data }) => setDetailLead(data.lead || data))
-                                  .catch(() => toast.error("Could not load lead details"));
-                              }
-                            }}
+                            onClick={() => setDetailLead(lead)}
                             className="font-semibold text-app truncate max-w-[120px] text-left hover:text-orange-500 transition-colors cursor-pointer block"
                           >
                             {lead.name || "-"}

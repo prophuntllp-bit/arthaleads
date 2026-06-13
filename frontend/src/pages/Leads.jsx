@@ -12,6 +12,7 @@ import CustomSelect from "../components/CustomSelect";
 import TransferModal from "../components/TransferModal";
 import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
+import { useColumnResize } from "../hooks/useColumnResize";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
@@ -299,30 +300,7 @@ function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
 
 // ── Column resize hook ────────────────────────────────────────────────────────
 // Drag the right edge of any <th> to resize that column. Works by tracking
-// mouse movement delta from the drag start position.
-function useColumnResize(defaults) {
-  const [widths, setWidths] = useState({ ...defaults });
-  const startResize = (col, e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startW = widths[col] ?? defaults[col] ?? 100;
-    const onMove = (mv) => {
-      const nw = Math.max(48, startW + mv.clientX - startX);
-      setWidths((prev) => ({ ...prev, [col]: nw }));
-    };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  };
-  return [widths, startResize];
-}
+
 
 // ── Unified contact status cell (works for both regular & project leads) ─────
 function ContactStatusCell({ lead, projectId, onUpdated }) {
@@ -434,8 +412,8 @@ export default function Leads() {
   const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
   const [projLimit, setProjLimit] = useState(10);
 
-  // ── Column widths for main leads table (resizable via drag) ──────────────
-  const [colW, startResize] = useColumnResize({
+  // ── Column widths for main leads table (resizable via drag, persisted) ──────
+  const [colW, startResize] = useColumnResize("leads", {
     lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
     status: 88, priority: 82, requirements: 175, budget: 88, purpose: 72,
     remark: 128, remark1: 118, remark2: 118,
