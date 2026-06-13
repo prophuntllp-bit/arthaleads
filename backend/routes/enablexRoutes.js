@@ -48,32 +48,11 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
 
     let dirty = false;
 
-    // ── Agent answered → bridge to lead via /call/{voice_id}/connect ────────
+    // ── Agent or lead connected — bridge is automatic via action_on_connect.connect ─
+    // Just log; no second API call needed. The initial call payload wires the bridge.
     if (eventType === "connected") {
-      const meta = lead.activities[actIdx].meta;
-      if (meta.leadPhone && !meta.leadCallMade) {
-        const agentVoiceId = event.voice_id;
-        if (!agentVoiceId) {
-          console.error("[enablex webhook] connected event missing voice_id — cannot bridge");
-          return;
-        }
-        // Mark immediately to prevent duplicate bridge if webhook fires twice
-        lead.activities[actIdx].meta = { ...meta, leadCallMade: true };
-        lead.markModified("activities");
-        await lead.save();
-
-        const org     = await Organization.findById(orgId).select("enablex").lean();
-        const fromNum = normalizePhone(org.enablex.virtualNumber);
-        // Bridge the active agent call leg to the lead — real PSTN bridge, audio works
-        axios.post(
-          `${ENABLEX_BASE}/call/${agentVoiceId}/connect`,
-          { from: fromNum, to: meta.leadPhone },
-          { auth: { username: org.enablex.appId, password: org.enablex.apiKey } }
-        )
-          .then(r  => console.info("[enablex webhook] Bridge connected — lead:", meta.leadPhone, r.data))
-          .catch(e => console.error("[enablex webhook] Bridge failed:", e.response?.data || e.message));
-        return;
-      }
+      console.info("[enablex webhook] leg connected — from:", event.from, "to:", event.to);
+      return;
     }
 
     // ── Recording push from our Cloudinary recording server ─────────────────
@@ -266,15 +245,16 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
     console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
-    // Step 1: Call the agent with a TTS hold message.
-    // Step 2: When agent answers, webhook (state=connected) calls POST /call/{voice_id}/connect
-    //         to bridge the active agent leg to the lead — real PSTN bridge with working audio.
-    const holdText = `Hello, you have an outbound call request for ${lead.name}. Please hold while we connect you.`;
+    // EnableX bridge call: action_on_connect.connect tells EnableX to automatically
+    // dial the lead and bridge both legs when the agent answers — no second API call needed.
     const payload = {
       from: fromNumber,
       to:   agentPhone,
       action_on_connect: {
-        play: { text: holdText, language: "en-IN", voice: "female" },
+        connect: {
+          from: fromNumber,  // caller ID shown to lead
+          to:   leadPhone,   // lead's phone number
+        },
       },
       custom_data: ownerRef,
       event_url:   webhookUrl,
@@ -307,12 +287,11 @@ router.post("/initiate", protect, async (req, res, next) => {
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction:    "outbound",
-        status:       "initiated",
-        phone:        lead.phone,
-        leadPhone,            // normalised digits, used by webhook to bridge to lead
-        agentPhone:   req.user.phone,
-        leadCallMade: false,  // webhook sets true after /call/{id}/connect fires
+        direction:  "outbound",
+        status:     "initiated",
+        phone:      lead.phone,
+        leadPhone,            // normalised digits
+        agentPhone: req.user.phone,
       },
     });
     await lead.save();
