@@ -28,10 +28,13 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
   try {
     const { orgId } = req.params;
     const event     = req.body;
+    // Log every webhook so we can see EnableX's exact event structure
+    console.info("[enablex webhook] orgId:", orgId, "body:", JSON.stringify(event).slice(0, 500));
+
     // custom_data is echoed by EnableX from outbound call payload;
     // recording server sends it back when pushing the Cloudinary URL.
     const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
-    const eventType = event?.type || event?.event_type || event?.voice_event || "";
+    const eventType = (event?.type || event?.event_type || event?.voice_event || event?.name || "").toLowerCase();
 
     if (!ownerRef?.startsWith("lead_")) return;
 
@@ -69,8 +72,13 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     }
 
     // ── Call hangup / completion event (duration + status) ──────────────────
-    if (/hangup|completed|disconnected/i.test(eventType)) {
-      const dur        = Number(event?.data?.duration ?? event?.duration ?? 0);
+    // EnableX event names: "call_hangup", "outbound_call_hangup", "conference_end",
+    // "participant_exit", "call:completed", "disconnected", "hangup" — match broadly
+    if (/hangup|completed|disconnected|exit|end/i.test(eventType)) {
+      const dur        = Number(
+        event?.data?.duration ?? event?.duration ??
+        event?.data?.call_duration ?? event?.call_duration ?? 0
+      );
       const callStatus = dur > 5 ? "answered" : "missed";
 
       lead.activities[actIdx].description = callStatus === "missed"
@@ -232,18 +240,17 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
     console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
-    // Bridge call: ring agent's phone + lead's phone simultaneously — both join same conference room.
-    // "from" must be a DID purchased from EnableX and linked to a Voice API service in their portal.
-    const makePayload = (to) => ({
+    // Bridge call: agent = moderator (starts conference audio), lead = participant.
+    // Both join the same named conference room — EnableX mixes their audio.
+    const confPayload = (to, isModerator) => ({
       from: fromNumber,
       to,
       action_on_connect: {
         conference: {
-          name:              confRoom,
-          beep:              "none",    // no entry/exit beep
-          record:            true,      // enable call recording
-          max_member:        2,
-          mute_on_entry:     false,     // ensure both parties can speak immediately
+          name:       confRoom,
+          beep:       "none",
+          moderator:  isModerator,   // agent starts the room; lead joins as participant
+          max_member: 2,
         },
       },
       custom_data: ownerRef,
@@ -253,8 +260,8 @@ router.post("/initiate", protect, async (req, res, next) => {
     let voiceId;
     try {
       const [agentResp, leadResp] = await Promise.all([
-        axios.post(`${ENABLEX_BASE}/call`, makePayload(agentPhone), basicAuth(org)),
-        axios.post(`${ENABLEX_BASE}/call`, makePayload(leadPhone),  basicAuth(org)),
+        axios.post(`${ENABLEX_BASE}/call`, confPayload(agentPhone, true),  basicAuth(org)),
+        axios.post(`${ENABLEX_BASE}/call`, confPayload(leadPhone,  false), basicAuth(org)),
       ]);
       voiceId = leadResp.data?.voice_id ?? leadResp.data?.id ?? null;
       console.info("[enablex /initiate] Bridge call OK — agent:", agentPhone, "lead:", leadPhone, "conf:", confRoom);
