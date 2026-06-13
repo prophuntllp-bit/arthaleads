@@ -342,7 +342,7 @@ function DashboardClock() {
   return (
     <>
       <div className="hidden lg:flex flex-col items-center justify-center gap-2 border-l"
-        style={{ flex: "0 0 20%", width: "20%", borderColor: "var(--app-border)", paddingLeft: 20, paddingRight: 4 }}>
+        style={{ flex: "0 0 20%", width: "20%", borderColor: "var(--app-border)", paddingLeft: 20, paddingRight: 20 }}>
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
           <circle cx={cx} cy={cy} r={r} fill="var(--app-surface-low)" stroke="var(--app-border)" strokeWidth="1.5" />
           {Array.from({ length: 12 }, (_, i) => {
