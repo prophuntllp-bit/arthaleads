@@ -1453,7 +1453,11 @@ export default function Leads() {
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
-            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
+            <table className="stitch-table text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
+              <colgroup>
+                {canDelete && <col style={{ width: 40, minWidth: 40 }} />}
+                {Object.entries(colW).map(([k, w]) => <col key={k} style={{ width: w, minWidth: 60 }} />)}
+              </colgroup>
               <thead>
                 <tr>
                   {canDelete && (
@@ -1537,7 +1541,7 @@ export default function Leads() {
                     </td>
                     <td className="whitespace-nowrap"><StatusBadge status={lead.status} /></td>
                     <td className="whitespace-nowrap"><PriorityBadge priority={lead.priority} /></td>
-                    <td className="min-w-[180px] max-w-[220px]">
+                    <td>
                       {cleanRequirements(lead.requirements)
                         ? <p className="text-xs text-app leading-relaxed line-clamp-2" title={cleanRequirements(lead.requirements)}>{cleanRequirements(lead.requirements)}</p>
                         : <span className="text-xs text-app-soft">-</span>}
@@ -1553,20 +1557,20 @@ export default function Leads() {
                       <span className="text-xs text-app">{lead.purpose && lead.purpose !== "N/A" ? lead.purpose : <span className="text-app-soft">-</span>}</span>
                     </td>
                     {/* Remark (contact status) - same dropdown for all lead types */}
-                    <td className="min-w-[140px]">
+                    <td>
                       <ContactStatusCell
                         lead={lead}
                         projectId={lead._type === "project" ? lead.projectId : undefined}
                         onUpdated={handleInlineUpdate}
                       />
                     </td>
-                    <td className="min-w-[110px]">
+                    <td>
                       <RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark1" onSaved={handleInlineUpdate} placeholder="Remark 1…" />
                     </td>
-                    <td className="min-w-[110px]">
+                    <td>
                       <RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} field="remark2" onSaved={handleInlineUpdate} placeholder="Remark 2…" />
                     </td>
-                    <td className="min-w-[185px]">
+                    <td>
                       <InlineDate
                         value={lead.followUpDate}
                         leadId={lead._id}
@@ -1575,7 +1579,7 @@ export default function Leads() {
                         onSaved={handleInlineUpdate}
                       />
                     </td>
-                    <td className="min-w-[185px]">
+                    <td>
                       <InlineDate
                         value={lead.followUp2}
                         leadId={lead._id}
@@ -1587,7 +1591,7 @@ export default function Leads() {
                     <td>
                       <InlineBooking value={lead.booking} leadId={lead._id} projectId={lead._type === "project" ? lead.projectId : undefined} onSaved={handleInlineUpdate} />
                     </td>
-                    <td className="min-w-[160px]">
+                    <td>
                       {(lead.propertyType || lead.bhk) ? (
                         <p className="text-sm font-medium text-app">
                           {lead.propertyType || ""}{lead.bhk && lead.bhk !== "N/A" ? ` · ${lead.bhk}` : ""}
