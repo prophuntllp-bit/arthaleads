@@ -145,6 +145,15 @@ const PAGE_COPILOT = {
       "How do I permanently delete a dump lead?",
     ],
   },
+  "/calls": {
+    label: "Calls",
+    chips: [
+      "How do I call a lead?",
+      "Why is my call not bridging to the lead?",
+      "How does AI call analysis work?",
+      "How do I enable AI auto-status updates?",
+    ],
+  },
 };
 
 export default function HelpBot() {

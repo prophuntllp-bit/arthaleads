@@ -102,6 +102,41 @@ export const QUICK_ANSWERS = [
     goto: "/projects",
     tour: "projects",
   },
+  {
+    id: "calls-make",
+    q: "How do I call a lead using the CRM?",
+    a: "Open any lead and click the Call button in the header. Your phone rings first — pick up, and the CRM automatically bridges the call to the lead's number. Requires EnableX telephony to be set up in Settings.",
+    goto: "/calls",
+    tour: "callsMake",
+  },
+  {
+    id: "calls-history",
+    q: "How do I view call history and recordings?",
+    a: "Go to the Calls page in the left sidebar. Each row is one lead — click it to see all calls ever made to that lead. Click any individual call to see its recording, AI summary, transcript, and call notes. You can also see a lead's call history from the Calls tab inside any lead detail panel.",
+    goto: "/calls",
+    tour: "callsHistory",
+  },
+  {
+    id: "calls-ai",
+    q: "How does AI call analysis work?",
+    a: "After a call recording is uploaded, open the call from the Calls page and click 'Analyse Call'. The AI transcribes the recording, detects the lead's intent (Interested / Wants Site Visit / Negotiating / Not Interested), sentiment, writes a summary, lists key points, and recommends a next action. You can copy the full analysis or regenerate it.",
+    goto: "/calls",
+    tour: "callsAI",
+  },
+  {
+    id: "calls-enablex",
+    q: "How do I set up telephony / EnableX?",
+    a: "Go to Settings and scroll to the Telephony (EnableX) section. Enter your APP ID and APP KEY from portal.enablex.io, enter your virtual phone number, click Save then Test & Enable. Also paste the webhook URL into your EnableX project's Voice Webhook field so call events reach the CRM.",
+    goto: "/settings",
+    tour: "callsSetup",
+  },
+  {
+    id: "calls-autostatus",
+    q: "How does AI auto-status update work?",
+    a: "In Settings -> Telephony, turn on the 'AI Auto-Status Updates' toggle. After each call is analysed by AI, if it detects 'site visit' intent the lead is automatically moved to Site Visit stage, or 'negotiation' intent moves it to Negotiation. Each change is logged in the lead's activity with 'AI detected'. Turn the toggle OFF if the AI is making mistakes.",
+    goto: "/settings",
+    tour: "callsAutoStatus",
+  },
 ];
 
 // Guided tours. Each step targets an element by data-tour attribute (preferred)
@@ -227,6 +262,51 @@ export const TOURS = {
     path: "/projects",
     steps: [
       { target: '[data-tour="add-project-btn"]', title: "Add a project", body: "Click 'New Project' to create a property project. Each project gets its own lead pipeline, QR code and booking list so you can track every unit separately." },
+    ],
+  },
+  calls: {
+    label: "Calls tour",
+    path: "/calls",
+    primary: true,
+    steps: [
+      { target: '[data-tour="calls-stats"]',     title: "Call stats",          body: "Total calls made, answered, and missed — updated in real time as your team makes calls." },
+      { target: '[data-tour="calls-analytics"]', title: "Call analytics",      body: "14-day daily volume chart (green = answered, red = missed) and per-agent call counts with average duration." },
+      { target: '[data-tour="calls-list"]',      title: "One card per lead",   body: "Each card is one lead, not one call. If you called someone 10 times, it still shows as one row with a '10 calls' badge. Click the card to see the full history." },
+    ],
+  },
+  callsMake: {
+    label: "Make a call tour",
+    path: "/leads",
+    steps: [
+      { target: '[data-tour="leads-table"]', title: "Make a call", body: "Open any lead and click the orange Call button in the header. Your phone rings first — pick up, and the CRM automatically bridges the call to the lead. Requires EnableX to be configured in Settings." },
+    ],
+  },
+  callsHistory: {
+    label: "Call history tour",
+    path: "/calls",
+    steps: [
+      { target: '[data-tour="calls-list"]', title: "Click a lead to see history", body: "Each card shows the most recent call. Click it to open a modal with every call ever made to that lead — status, duration, recording, AI summary, and notes for each one." },
+    ],
+  },
+  callsAI: {
+    label: "AI call analysis tour",
+    path: "/calls",
+    steps: [
+      { target: '[data-tour="calls-list"]', title: "AI call analysis", body: "Click any lead with a recording, then click 'Analyse Call'. The AI returns: intent badge (Interested / Site Visit / Negotiating), sentiment, a summary, key bullet points, and a recommended next action. Takes 10-30 seconds." },
+    ],
+  },
+  callsSetup: {
+    label: "EnableX setup tour",
+    path: "/settings",
+    steps: [
+      { target: '[data-tour="telephony-settings"]', title: "Set up telephony", body: "Enter your EnableX APP ID, APP KEY, and virtual phone number here. Click Test & Enable when done. Also copy the webhook URL and paste it into your EnableX portal so call events reach the CRM." },
+    ],
+  },
+  callsAutoStatus: {
+    label: "AI auto-status tour",
+    path: "/settings",
+    steps: [
+      { target: '[data-tour="telephony-settings"]', title: "AI auto-status toggle", body: "The AI Auto-Status Updates toggle (in Telephony settings) automatically advances a lead's pipeline stage based on what the AI hears in the call. Toggle OFF any time if it makes mistakes." },
     ],
   },
 };

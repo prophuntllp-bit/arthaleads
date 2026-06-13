@@ -143,7 +143,58 @@ ADD LEADS TO A PROJECT
 Projects -> open a project -> click "Add Leads" -> search and select leads -> Confirm. Leads can belong to multiple projects.
 
 VIEW PERFORMANCE REPORT (Admin/Manager only)
-Left sidebar -> Performance. Shows per-agent stats: leads handled, conversions, call count, response time, activity score. Use the date-range filter and the agent filter dropdown to narrow down.
+Left sidebar -> Performance. Shows per-agent stats: leads handled, conversions, call count, response time, activity score. Use the date-range filter and the agent filter dropdown to narrow down. Also shows Call Analytics section: daily call volume bar chart (last 14 days, green = answered / red = missed) and per-agent answered call count with average duration.
+
+MAKE A CALL TO A LEAD (EnableX telephony required)
+Option 1 (from lead detail): Leads -> click any lead -> click the "Call" button in the lead header -> your phone rings first, pick up, then the lead's phone rings and both are bridged automatically.
+Option 2 (callback from Calls page): Calls -> click a lead card -> click a missed call in the history -> click "Call Back Now" -> your phone rings, pick up, lead is bridged.
+
+VIEW ALL CALLS (Calls page)
+Left sidebar -> Calls. Shows one card per lead (not one per call). Each card shows: lead name, phone, most recent call status badge (Answered/Missed/Initiated), last call time, agent name, duration, and a call-count badge (e.g. "8 calls") if the lead was called multiple times.
+
+VIEW CALL HISTORY FOR A LEAD (from Calls page)
+Calls -> click any lead card -> a modal opens listing every call for that lead in reverse chronological order (most recent first). Each row shows status badge, duration, icons for recording/AI/notes. Click any call row to see its full detail.
+
+VIEW CALL DETAIL (from Calls page)
+Calls -> click a lead card -> click any call in the history list -> see: status badge, sentiment, duration, date/time, agent name, recording player (if recording uploaded), AI Analysis section, call notes, follow-up scheduler, and Call Back button (for missed calls).
+
+VIEW CALLS INSIDE A LEAD PROFILE
+Leads -> click any lead -> click the "Calls" tab (4th tab, after Activity) -> shows all calls for that lead with expandable rows. Click any row to expand and see recording, AI summary, transcript, notes.
+
+ADD CALL NOTES
+After a call: Calls -> click the lead card -> click the call -> scroll to "Call Notes" section -> type notes -> click "Save Notes". Notes are saved to that call's record and appear in the lead's Calls tab.
+
+SCHEDULE A FOLLOW-UP FROM A CALL
+Calls -> click lead card -> click call -> click "Schedule Follow-up Task" -> fill: task title, due date/time, optional notes -> click "Create Task". A task is created and linked to the lead.
+
+AI CALL ANALYSIS (Analyse Call button)
+Requires: a recording URL to be uploaded by the recording server first.
+Calls -> click lead card -> click a call with a recording -> in the AI Analysis section, click "Analyse Call" -> Artha transcribes the recording with Whisper AI and analyses it with GPT -> returns:
+  - Intent badge: Interested / Wants Site Visit / Negotiating / Not Interested / Follow Up / Unclear
+  - Sentiment badge: Positive / Neutral / Negative
+  - Summary: 1-2 sentence overview
+  - Key Points: bullet list (requirements, budget, timeline)
+  - Next Action: specific recommended step for the agent
+Click "Copy" to copy the full analysis to clipboard. Click the Refresh icon to regenerate.
+
+ENABLE ENABLEX TELEPHONY (Admin only)
+Settings -> scroll to "Telephony (EnableX)" section -> Step 1: enter APP ID and APP KEY from portal.enablex.io -> enter your Virtual Phone Number (DID) -> click "Save Credentials" -> click "Test & Enable" (turns green if successful). Step 2: copy the webhook URL shown and paste it into your EnableX project's Voice -> Webhook field on portal.enablex.io.
+
+ENABLE AI AUTO-STATUS UPDATES (Admin only - EnableX must be connected)
+Settings -> Telephony section -> scroll to "AI Auto-Status Updates" -> toggle ON. When enabled, after each call is analysed by AI:
+  - If AI detects "site_visit" intent -> lead status automatically changes to "Site Visit"
+  - If AI detects "negotiation" intent -> lead status automatically changes to "Negotiation"
+  A status_changed activity is logged showing "AI detected" so you can see what triggered it.
+Toggle OFF at any time if the AI is making wrong calls.
+
+FILTER CALLS BY AGENT (Admin/Manager only)
+Calls -> use the "All Agents" dropdown (next to the filter icon) to filter calls by a specific agent. Agents only see their own calls and the filter is not shown to them.
+
+FILTER CALLS BY STATUS
+Calls -> use the tabs at the top: All Calls / Answered / Missed / Initiated.
+
+CALL STATS ON CALLS PAGE
+Top of Calls page shows three stat cards: Total Calls (total individual calls made), Answered (calls with duration > 5s), Missed (calls with duration <= 5s).
 
 RESTORE A DELETED LEAD (Admin/Manager only)
 Left sidebar -> Dump Leads -> find the lead -> click "Restore". The lead reappears in the main Leads list.
@@ -317,6 +368,38 @@ Go to Bookings & Invoices -> Developers -> click "+ Add Developer" -> enter the 
 DELETED A BOOKING BY MISTAKE (had an invoice)
 Booking deletes are permanent and also delete the linked invoice. There is no undo. You will need to create a new booking and generate a new invoice.
 
+CALL BUTTON NOT WORKING / "TELEPHONY NOT CONFIGURED" ERROR
+1. EnableX telephony must be set up first. Go to Settings -> scroll to Telephony (EnableX) section.
+2. Enter your APP ID and APP KEY from portal.enablex.io -> Save Credentials -> Test & Enable.
+3. Make sure you have a Virtual Phone Number (DID) entered - calls will show this number.
+4. If you see "Add your phone number in Settings -> My Profile" - go to Settings -> Personal Profile -> enter your mobile number -> Save. The system calls your mobile first, then bridges to the lead.
+5. If you see "The virtual number is not linked to a Voice API service" - log into portal.enablex.io -> Phone Numbers -> select the number -> assign it to your Voice API app.
+
+CALL GOES TO MY PHONE BUT LEAD DOESN'T RING (bridge not working)
+1. This is a known issue with EnableX bridge configuration. Contact EnableX support at support@enablex.io and ask: "How do I enable PSTN-to-PSTN bridge calls using action_on_connect.connect in the Voice API?"
+2. Make sure your virtual number (DID) is correctly assigned to the Voice API application in portal.enablex.io.
+3. Make sure your agent phone number in Settings -> My Profile is a 10-digit Indian mobile number (no +91 prefix needed, the system adds it).
+
+CALL RECORDING NOT SHOWING
+Recording requires a separate recording server to upload the audio file and POST the URL to the Arthaleads webhook. This is not included by default. Contact support to set up call recording for your account.
+
+AI CALL ANALYSIS NOT WORKING / "Analyse Call" BUTTON NOT SHOWING
+1. The "Analyse Call" button only appears when the call has a recording URL. No recording = no analysis.
+2. If the button is there but fails, the OpenAI API key may not be configured on the server - raise a support ticket.
+3. Analysis takes 10-30 seconds depending on call length. Wait for the spinner to finish.
+
+AI AUTO-STATUS MOVING LEADS TO WRONG STAGE
+1. Go to Settings -> Telephony -> turn OFF the "AI Auto-Status Updates" toggle immediately.
+2. Manually correct the lead statuses in the Pipeline page (drag cards) or from the lead detail panel.
+3. Review the activity log on affected leads - entries marked "AI detected" show what the AI changed.
+4. Only re-enable the toggle when you are satisfied the AI is interpreting calls correctly.
+
+CALLS PAGE SHOWING NO CALLS / "NO CALLS YET"
+1. Calls only appear after using the Call button on a lead profile. No calls have been made yet if the page is empty.
+2. If you made calls but they don't show: check the Status filter tab is set to "All Calls".
+3. If you are an Agent: you only see calls YOU made. If other agents made calls, they won't appear for you.
+4. Check that EnableX is connected and the webhook URL is correctly set in the EnableX portal so call events reach the CRM.
+
 ════════════════════════════════════════════════
 CURRENT FEATURES (v2 — live right now)
 ════════════════════════════════════════════════
@@ -339,8 +422,11 @@ Group leads under a real-estate project. Each project has its own lead list, pip
 AUTOMATION (/automation) — Admin/Manager only
 Facebook Lead Ads (one-click OAuth), WordPress plugin (webhook), Routing Rules (auto-assign by source, round-robin or specific agent).
 
+CALLS (/calls)
+EnableX telephony call log. One card per lead (groups all calls to that lead). Shows: lead name, phone, most recent call status, last call time, agent, duration, call-count badge. Click a card to open call history modal. Click a call in history to see full detail: recording player, AI Analysis (intent/sentiment/summary/key points/next action), call notes (editable), follow-up task scheduler, Call Back button for missed calls. Filter tabs: All / Answered / Missed / Initiated. Agent filter dropdown (Admin/Manager only - agents see only their own calls). Analytics section: 14-day daily volume chart + answered calls by agent table. Stats: Total Calls, Answered, Missed. Calls tab also appears inside every lead detail panel (4th tab after Activity). Auto-advances lead status New -> Contacted when an answered call is detected.
+
 PERFORMANCE (/performance) — Admin/Manager only
-Per-agent: leads handled, conversions, response time, call count, activity score. Date-range filter, agent filter.
+Per-agent: leads handled, conversions, response time, call count, activity score. Date-range filter, agent filter. Also includes Call Analytics: 14-day daily call volume chart and per-agent answered calls with average duration.
 
 ATTENDANCE (/attendance)
 Clock in/out. Total hours, late marks, half-day. Admin: set shift time, add manual entries, download CSV report.
@@ -397,7 +483,7 @@ If asked about any of these, set comingSoon: true and tell them it is in develop
 - Google Calendar Sync: two-way sync follow-up dates
 - Document Uploads on Leads: attach PDFs, photos, booking forms, KYC to a lead
 - WhatsApp Business API (Two-Way Messaging): full conversation inside the CRM
-- AI Call Summaries: auto-summarise sales calls, attach to lead activity
+- Browser Calling (WebRTC): call leads directly from the browser tab without a physical phone
 - Advanced AI Analytics: predicted conversion probability, best time to call, churn risk
 - Mobile App (iOS and Android): native apps with offline support and push notifications
 - Late Mark and Half-Day Auto-Detection: currently admins must mark manually
