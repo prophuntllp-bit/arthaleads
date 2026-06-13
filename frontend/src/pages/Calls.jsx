@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
 import CustomSelect from "../components/CustomSelect";
+import { useAuth } from "../context/AuthContext";
 
 const STATUS_TABS = [
   { id: "all",       label: "All Calls" },
@@ -570,6 +571,9 @@ function CallAnalytics({ data }) {
 export default function Calls() {
   useEffect(() => { document.title = "Calls - Arthaleads CRM"; }, []);
 
+  const { user } = useAuth();
+  const isAgent  = user?.role === "agent";
+
   const [calls,     setCalls]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [tab,       setTab]       = useState("all");
@@ -673,7 +677,7 @@ export default function Calls() {
             ))}
           </div>
 
-          {agents.length > 1 && (
+          {!isAgent && agents.length > 1 && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-app-soft" />
               <CustomSelect

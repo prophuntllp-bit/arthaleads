@@ -140,7 +140,11 @@ router.use(protect);
 // GET /api/calls — one row per lead (grouped), most-recent call shown
 router.get("/", async (req, res, next) => {
   try {
-    const { page = 1, limit = 30, status, agentId } = req.query;
+    const { page = 1, limit = 30, status } = req.query;
+    // Agents always see only their own calls; managers/admins can filter by any agent
+    const agentId = req.user.role === "agent"
+      ? String(req.user._id)
+      : (req.query.agentId || "");
     const skip  = (Number(page) - 1) * Number(limit);
     const orgId = req.user.orgId;
 
@@ -269,12 +273,13 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
 // PATCH /api/calls/settings
 router.patch("/settings", authorize("admin", "super_admin"), async (req, res, next) => {
   try {
-    const { appId, apiKey, virtualNumber, enabled } = req.body;
+    const { appId, apiKey, virtualNumber, enabled, aiAutoStatus } = req.body;
     const upd = {};
     if (appId         !== undefined) upd["enablex.appId"]         = String(appId).trim();
     if (apiKey        !== undefined && apiKey) upd["enablex.apiKey"] = String(apiKey).trim();
     if (virtualNumber !== undefined) upd["enablex.virtualNumber"] = String(virtualNumber).trim();
     if (enabled       !== undefined) upd["enablex.enabled"]       = Boolean(enabled);
+    if (aiAutoStatus  !== undefined) upd["enablex.aiAutoStatus"]  = Boolean(aiAutoStatus);
 
     const org = await Organization.findByIdAndUpdate(
       req.user.orgId, { $set: upd }, { new: true }
@@ -559,6 +564,23 @@ ${transcript.slice(0, 3000)}`,
     intent,
     sentiment,
   };
+
+  // Auto-advance lead status when aiAutoStatus is enabled for this org
+  const INTENT_STATUS_MAP = { site_visit: "Site Visit", negotiation: "Negotiation" };
+  const targetStatus = intent ? INTENT_STATUS_MAP[intent] : null;
+  if (targetStatus && lead.status !== targetStatus) {
+    const org = await Organization.findById(lead.orgId).select("enablex.aiAutoStatus").lean();
+    if (org?.enablex?.aiAutoStatus) {
+      const prev = lead.status;
+      lead.status = targetStatus;
+      lead.activities.push({
+        type:        "status_changed",
+        description: `Status changed to ${targetStatus} — AI detected "${intent}" intent from call`,
+        meta:        { from: prev, to: targetStatus, auto: true, aiTriggered: true },
+      });
+    }
+  }
+
   lead.markModified("activities");
   await lead.save();
 }

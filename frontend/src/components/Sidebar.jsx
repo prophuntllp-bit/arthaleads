@@ -931,23 +931,29 @@ export default function Sidebar() {
       }}
     >
       {/* Search */}
-      <div className="relative" style={{ width: 320 }}>
-        <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-soft" style={{ width: 15, height: 15 }} />
+      <form
+        style={{ width: 320 }}
+        className="relative"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const val = e.target.elements.globalSearch.value.trim();
+          if (!val) return;
+          navigate("/leads", { state: { presetSearch: val } });
+          e.target.reset();
+        }}
+      >
+        <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+          <Search style={{ width: 15, height: 15 }} />
+        </button>
         <input
+          name="globalSearch"
           placeholder="Search leads by name, phone…"
           className="w-full rounded-xl pl-9 pr-3 py-2 text-sm text-app"
           style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
           onFocus={(e) => { e.target.style.borderColor = "var(--app-primary)"; }}
           onBlur={(e)  => { e.target.style.borderColor = "var(--app-border)"; }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.target.value.trim()) {
-              navigate("/leads", { state: { presetSearch: e.target.value.trim() } });
-              e.target.value = "";
-              e.target.blur();
-            }
-          }}
         />
-      </div>
+      </form>
 
       <div className="flex items-center gap-1">
         {/* Theme toggle */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Eye, EyeOff, ExternalLink, Loader2, Phone, Wifi, WifiOff, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, ExternalLink, Loader2, Phone, Wifi, WifiOff, X, Sparkles } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -13,6 +13,8 @@ export default function EnableXSettings() {
   const [saving,         setSaving]         = useState(false);
   const [testing,        setTesting]        = useState(false);
   const [showApiKey,     setShowApiKey]     = useState(false);
+  const [aiAutoStatus,   setAiAutoStatus]   = useState(false);
+  const [togglingAI,     setTogglingAI]     = useState(false);
 
   const webhookUrl = orgId
     ? `${window.location.origin}/api/calls/webhook/${orgId}`
@@ -27,8 +29,21 @@ export default function EnableXSettings() {
       setAppId(s.appId  || "");
       setApiKey(s.apiKey || "");
       setVirtualNumber(s.virtualNumber || "");
+      setAiAutoStatus(!!s.aiAutoStatus);
     }).catch(() => {});
   }, []);
+
+  const toggleAiAutoStatus = async () => {
+    setTogglingAI(true);
+    const next = !aiAutoStatus;
+    try {
+      await api.patch("/calls/settings", { aiAutoStatus: next });
+      setAiAutoStatus(next);
+      toast.success(next ? "AI auto-status enabled" : "AI auto-status disabled");
+    } catch {
+      toast.error("Failed to update setting");
+    } finally { setTogglingAI(false); }
+  };
 
   const save = async () => {
     if (!appId.trim())          { toast.error("Enter your EnableX APP ID"); return; }
@@ -191,6 +206,47 @@ export default function EnableXSettings() {
               <p className="text-sm text-app">{f}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* AI Auto-Status toggle */}
+      {connected && (
+        <div className="card p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(99,102,241,0.10)" }}>
+                <Sparkles className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-app">AI Auto-Status Updates</p>
+                <p className="text-xs text-app-soft mt-0.5 max-w-xs">
+                  When AI detects intent from a call, automatically advance the lead status
+                  (e.g. "site visit" → <strong>Site Visit</strong>, "negotiation" → <strong>Negotiation</strong>).
+                  Disable if the AI makes too many mistakes.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleAiAutoStatus}
+              disabled={togglingAI}
+              className="shrink-0 mt-0.5 relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50"
+              style={{ background: aiAutoStatus ? "var(--app-primary)" : "var(--app-border)" }}
+              title={aiAutoStatus ? "Click to disable" : "Click to enable"}
+            >
+              <span
+                className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                style={{ transform: aiAutoStatus ? "translateX(1.375rem)" : "translateX(0.25rem)" }}
+              />
+            </button>
+          </div>
+          {aiAutoStatus && (
+            <div className="mt-3 ml-12 rounded-xl px-3 py-2 text-xs text-app-soft"
+              style={{ background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.15)" }}>
+              <strong className="text-app">Active:</strong> AI will update lead status after each analysed call.
+              If a lead says "book a site visit" the status moves to <strong>Site Visit</strong> automatically.
+            </div>
+          )}
         </div>
       )}
     </div>

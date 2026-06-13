@@ -76,6 +76,7 @@ const orgSchema = new mongoose.Schema(
       appId:         { type: String,  default: "" },
       apiKey:        { type: String,  default: "" },  // APP KEY from EnableX dashboard
       virtualNumber: { type: String,  default: "" },  // virtual phone number to call from
+      aiAutoStatus:  { type: Boolean, default: false }, // auto-advance lead status from AI intent
     },
 
     // ── QR Code lead capture ───────────────────────────────────────────────────
