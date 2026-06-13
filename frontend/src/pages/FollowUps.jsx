@@ -463,15 +463,27 @@ export default function FollowUps() {
                       } catch { toast.error("Failed to mark done"); }
                     };
                     return (
-                      <tr key={lead._id} className="group border-b transition-colors hover:bg-orange-500/5 cursor-pointer"
-                        style={{ borderColor: "var(--app-border)" }}
-                        onClick={() => {
-                          if (lead._type === "project" && lead.projectId)
-                            navigate(`/projects/${lead.projectId}`, { state: { searchLead: lead.phone || lead.name } });
-                          else navigate("/leads", { state: { openLeadId: lead._id } });
-                        }}>
+                      <tr key={lead._id} className="group border-b transition-colors hover:bg-orange-500/5"
+                        style={{ borderColor: "var(--app-border)" }}>
                         <td className="px-2.5 py-2">
-                          <p className="font-semibold text-app truncate max-w-[120px]">{lead.name || "-"}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (lead._type === "project" && lead.projectId)
+                                navigate(`/projects/${lead.projectId}`, { state: { searchLead: lead.phone || lead.name } });
+                              else {
+                                api.get(`/leads/${lead._id}`)
+                                  .then(({ data }) => setDetailLead(data.lead || data))
+                                  .catch(() => toast.error("Could not load lead details"));
+                              }
+                            }}
+                            className="font-semibold text-app truncate max-w-[120px] text-left hover:text-orange-500 transition-colors cursor-pointer block"
+                          >
+                            {lead.name || "-"}
+                          </button>
+                          {lead._type === "project" && (
+                            <span className="text-[10px] text-orange-400 leading-none">Project lead</span>
+                          )}
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <PhoneActions phone={lead.phone} />

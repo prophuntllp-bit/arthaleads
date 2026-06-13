@@ -17,24 +17,19 @@ import {
 } from "lucide-react";
 
 // Tap to reveal full name; default shows first name only
-function NameCell({ name, bold }) {
-  const [expanded, setExpanded] = useState(false);
-  const hasMore = name && name.trim().includes(" ");
-  const first = name?.split(" ")[0] || name || "-";
+function NameCell({ name, bold, onOpen }) {
   return (
     <button
       type="button"
-      onClick={() => setExpanded((v) => !v)}
-      className="text-left w-full focus:outline-none"
+      onClick={onOpen}
+      className="text-left w-full focus:outline-none group"
     >
-      <span className={`block text-xs leading-snug ${bold ? "font-semibold" : "font-medium"} text-app ${expanded ? "whitespace-normal break-words" : "truncate"}`}>
-        {expanded ? name : first}
+      <span className={`block text-xs leading-snug ${bold ? "font-semibold" : "font-medium"} text-app truncate group-hover:text-orange-500 transition-colors`}>
+        {name || "-"}
       </span>
-      {hasMore && (
-        <span className="text-[9px] text-orange-400 leading-none">
-          {expanded ? "tap to hide" : "tap for full"}
-        </span>
-      )}
+      <span className="text-[9px] text-orange-400 leading-none opacity-0 group-hover:opacity-100 transition-opacity">
+        tap to open
+      </span>
     </button>
   );
 }
@@ -1075,7 +1070,7 @@ export default function ProjectDetail() {
                           </td>
                           <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                            <NameCell name={lead.name} />
+                            <NameCell name={lead.name} onOpen={() => setEditingLead(lead)} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1384,7 +1379,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold />
+                              <NameCell name={lead.name} bold onOpen={() => setEditingLead(lead)} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1576,7 +1571,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold />
+                              <NameCell name={lead.name} bold onOpen={() => setEditingLead(lead)} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
