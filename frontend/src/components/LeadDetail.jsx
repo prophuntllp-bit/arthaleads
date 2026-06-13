@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2 } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
@@ -41,6 +41,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [aiDraft, setAiDraft] = useState(null);
   const [drafting, setDrafting] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [callHistory, setCallHistory]     = useState([]);
+  const [callsLoading, setCallsLoading]   = useState(false);
+  const [expandedCall, setExpandedCall]   = useState(null);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -60,7 +63,18 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     setNote("");
     setStatus(lead?.status || "New");
     setAiDraft(null);
+    setCallHistory([]);
+    setExpandedCall(null);
   }, [lead, open]);
+
+  useEffect(() => {
+    if (tab !== "calls" || !lead?._id) return;
+    setCallsLoading(true);
+    api.get(`/calls/lead/${lead._id}`)
+      .then(({ data }) => setCallHistory(data.calls || []))
+      .catch(() => toast.error("Failed to load call history"))
+      .finally(() => setCallsLoading(false));
+  }, [tab, lead?._id]);
 
   const callLead = async () => {
     if (!lead?._id || calling) return;
@@ -236,14 +250,18 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         </div>
 
         <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {["info", "notes", "activity"].map((item) => (
+          {["info", "notes", "activity", "calls"].map((item) => (
             <button
               key={item}
               className={item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"}
               onClick={() => setTab(item)}
               type="button"
             >
-              {item === "notes" ? `Notes (${lead.notes?.length || 0})` : item[0].toUpperCase() + item.slice(1)}
+              {item === "notes"
+                ? `Notes (${lead.notes?.length || 0})`
+                : item === "calls"
+                ? `Calls${callHistory.length ? ` (${callHistory.length})` : ""}`
+                : item[0].toUpperCase() + item.slice(1)}
             </button>
           ))}
           <CustomSelect
@@ -327,6 +345,135 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {tab === "calls" && (
+          <div className="space-y-3">
+            {callsLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 animate-spin text-app-soft" />
+              </div>
+            ) : callHistory.length === 0 ? (
+              <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
+                <Phone className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
+                <p className="text-sm font-semibold text-app">No calls yet</p>
+                <p className="text-xs text-app-soft mt-1">Use the Call button above to start a call with this lead.</p>
+              </div>
+            ) : callHistory.map((call) => {
+              const meta   = call.meta || {};
+              const st     = meta.status || "initiated";
+              const stColor = st === "answered" ? "#22c55e" : st === "missed" ? "#ef4444" : "#f97316";
+              const stBg    = st === "answered" ? "rgba(34,197,94,0.10)" : st === "missed" ? "rgba(239,68,68,0.10)" : "rgba(249,115,22,0.10)";
+              const isOpen  = expandedCall === call.activityId;
+              const dur     = meta.duration > 0
+                ? `${Math.floor(meta.duration / 60)}m ${meta.duration % 60}s`.replace("0m ", "")
+                : null;
+
+              return (
+                <div key={call.activityId} className="rounded-[1.25rem] overflow-hidden stitch-surface-muted">
+                  {/* Row — always visible */}
+                  <button
+                    className="w-full text-left px-4 py-3 flex items-center gap-3"
+                    onClick={() => setExpandedCall(isOpen ? null : call.activityId)}
+                    type="button"
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: stBg }}>
+                      {st === "missed"
+                        ? <PhoneMissed className="w-3.5 h-3.5" style={{ color: stColor }} />
+                        : <Phone       className="w-3.5 h-3.5" style={{ color: stColor }} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                          style={{ background: stBg, color: stColor }}>{st}</span>
+                        {dur && <span className="text-xs font-semibold text-app">{dur}</span>}
+                        {meta.recordingUrl && <Mic      className="w-3 h-3 text-orange-400" />}
+                        {meta.summary      && <Sparkles className="w-3 h-3 text-indigo-400" />}
+                        {meta.notes        && <FileText className="w-3 h-3 text-app-soft"   />}
+                      </div>
+                      <p className="text-xs text-app-soft mt-0.5">
+                        {fmtDateTime(call.createdAt)}{call.performedBy ? ` · ${call.performedBy}` : ""}
+                      </p>
+                    </div>
+                    <span className="text-xs text-app-soft font-medium">{isOpen ? "▲" : "▼"}</span>
+                  </button>
+
+                  {/* Expanded detail */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+                      {/* Call back */}
+                      {st === "missed" && (
+                        <button
+                          onClick={async () => {
+                            setCalling(true);
+                            try {
+                              await api.post("/calls/initiate", { leadId: lead._id });
+                              toast.success("Calling back — check your phone.");
+                            } catch (err) {
+                              toast.error(err.response?.data?.message || "Call failed");
+                            } finally { setCalling(false); }
+                          }}
+                          disabled={calling}
+                          className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold"
+                          style={{ background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}
+                          type="button"
+                        >
+                          {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneMissed className="w-4 h-4" />}
+                          Call Back Now
+                        </button>
+                      )}
+
+                      {/* Recording */}
+                      {meta.recordingUrl ? (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1.5 flex items-center gap-1">
+                            <Mic className="w-3 h-3" /> Recording
+                          </p>
+                          <audio controls src={meta.recordingUrl} className="w-full h-8" />
+                        </div>
+                      ) : st === "answered" && (
+                        <p className="text-xs text-app-soft mt-3 flex items-center gap-1.5">
+                          <Mic className="w-3 h-3 opacity-40" />
+                          Recording will appear once uploaded by the recording server.
+                        </p>
+                      )}
+
+                      {/* AI Summary */}
+                      {meta.summary && (
+                        <div className="rounded-xl p-3" style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Sparkles className="w-3 h-3 text-indigo-400" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">AI Summary</span>
+                          </div>
+                          <p className="text-xs text-app leading-relaxed">{meta.summary}</p>
+                        </div>
+                      )}
+
+                      {/* Transcript */}
+                      {meta.transcript && (
+                        <details>
+                          <summary className="text-xs font-semibold text-app-soft hover:text-app transition cursor-pointer flex items-center gap-1.5 select-none">
+                            <AlignLeft className="w-3 h-3" /> View Transcript
+                          </summary>
+                          <p className="mt-1.5 text-xs text-app-soft leading-relaxed whitespace-pre-wrap">{meta.transcript}</p>
+                        </details>
+                      )}
+
+                      {/* Call Notes */}
+                      {meta.notes && (
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1 flex items-center gap-1">
+                            <FileText className="w-3 h-3" /> Notes
+                          </p>
+                          <p className="text-xs text-app whitespace-pre-wrap">{meta.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
