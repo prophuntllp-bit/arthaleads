@@ -25,6 +25,7 @@ export default function EnableXSettings() {
       setHasApiKey(!!s.hasApiKey);
       setOrgId(r.data.orgId || "");
       setAppId(s.appId  || "");
+      setApiKey(s.apiKey || "");
       setVirtualNumber(s.virtualNumber || "");
     }).catch(() => {});
   }, []);
@@ -118,7 +119,7 @@ export default function EnableXSettings() {
             <div className="relative">
               <input className="input w-full pr-10" type={showApiKey ? "text" : "password"}
                 autoComplete="new-password"
-                placeholder={hasApiKey ? "Saved — enter new key to replace" : "Paste your APP KEY"}
+                placeholder="Paste your APP KEY"
                 value={apiKey} onChange={e => setApiKey(e.target.value)} />
               <button type="button" onClick={() => setShowApiKey(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">

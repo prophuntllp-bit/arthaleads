@@ -152,7 +152,7 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
     const org = await Organization.findById(req.user.orgId).select("enablex").lean();
     const { apiKey, ...safe } = org?.enablex || {};
     res.json({
-      enablex:   { ...safe, hasApiKey: !!apiKey },
+      enablex:   { ...safe, apiKey: apiKey || "", hasApiKey: !!apiKey },
       connected: !!(apiKey && org?.enablex?.enabled),
       orgId:     String(req.user.orgId),
     });
