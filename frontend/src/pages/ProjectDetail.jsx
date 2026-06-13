@@ -286,10 +286,6 @@ export default function ProjectDetail() {
   const [prospBulkStatusBook, setProspBulkStatusBook] = useState("");
   const [bulkStatusUpdating, setBulkStatusUpdating]   = useState(false);
 
-  // Bulk select – Site Visit Done tab
-  const [svdSelectedIds, setSvdSelectedIds]     = useState(new Set());
-  const [showSvdBulkConfirm, setShowSvdBulkConfirm] = useState(false);
-
   // Edit lead modal
   const [editingLead, setEditingLead] = useState(null);
 
@@ -313,14 +309,6 @@ export default function ProjectDetail() {
   const [prospTotal, setProspTotal]   = useState(0);
   const [prospPage, setProspPage]     = useState(1);
 
-  // Site Visit Done tab state
-  const [svdLeads, setSvdLeads]     = useState([]);
-  const [svdTotal, setSvdTotal]     = useState(0);
-  const [svdPage, setSvdPage]       = useState(1);
-  const [svdPages, setSvdPages]     = useState(1);
-  const [svdLoading, setSvdLoading] = useState(false);
-  const [svdSearch, setSvdSearch]   = useState("");
-  const SVD_LIMIT = 50;
   const [prospPages, setProspPages]   = useState(1);
   const [prospLoading, setProspLoading] = useState(false);
   const [prospSearch, setProspSearch] = useState("");
@@ -348,12 +336,8 @@ export default function ProjectDetail() {
   useEffect(() => {
     api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1 } })
       .then((r) => setLeadsTotal(r.data.total)).catch(() => {});
-    // Prospective excludes Site Visit Done (they live in their own tab)
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
       .then((r) => setProspTotal(r.data.total)).catch(() => {});
-    // Site Visit Done count
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
-      .then((r) => setSvdTotal(r.data.total)).catch(() => {});
   }, [id]);
 
   useEffect(() => {
@@ -386,18 +370,6 @@ export default function ProjectDetail() {
       .catch(() => toast.error("Failed to load prospective leads"))
       .finally(() => setProspLoading(false));
   }, [id, tab, prospPage, prospSearch, prospBookingFilter, prospDateFrom, prospDateTo, refreshKey]);
-
-  // Site Visit Done tab fetch
-  useEffect(() => {
-    if (tab !== "sitevisitdone") return;
-    setSvdLoading(true);
-    api.get(`/projects/${id}/leads`, {
-      params: { page: svdPage, limit: SVD_LIMIT, search: svdSearch, isProspective: true, bookingIn: "Site Visit Done" },
-    })
-      .then((r) => { setSvdLeads(r.data.leads); setSvdTotal(r.data.total); setSvdPages(r.data.pages); })
-      .catch(() => toast.error("Failed to load site visit done leads"))
-      .finally(() => setSvdLoading(false));
-  }, [id, tab, svdPage, svdSearch, refreshKey]);
 
   // Close export dropdowns on outside click
   useEffect(() => {
@@ -585,7 +557,6 @@ export default function ProjectDetail() {
   // Clear selection when page/search changes
   useEffect(() => { setSelectedIds(new Set()); }, [leadsPage, search]);
   useEffect(() => { setProspSelectedIds(new Set()); }, [prospPage, prospSearch, prospBookingFilter]);
-  useEffect(() => { setSvdSelectedIds(new Set()); }, [svdPage, svdSearch]);
 
   const allSelected = leads.length > 0 && leads.every((l) => selectedIds.has(l._id));
   const someSelected = leads.some((l) => selectedIds.has(l._id));
@@ -613,12 +584,6 @@ export default function ProjectDetail() {
     setProspSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
   };
 
-  const allSvdSelected  = svdLeads.length > 0 && svdLeads.every((l) => svdSelectedIds.has(l._id));
-  const someSvdSelected = svdLeads.some((l) => svdSelectedIds.has(l._id));
-  const toggleAllSvd = () => {
-    if (allSvdSelected) setSvdSelectedIds(new Set());
-    else setSvdSelectedIds(new Set(svdLeads.map((l) => l._id)));
-  };
   const toggleOneSvd = (lid) => {
     setSvdSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
   };
@@ -627,31 +592,19 @@ export default function ProjectDetail() {
   const handleEditLeadSaved = (updated) => {
     setLeads((prev)       => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
     setProspLeads((prev)  => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
-    setSvdLeads((prev)    => prev.map((l) => l._id === updated._id ? { ...l, ...updated } : l));
     setEditingLead(null);
   };
 
   const handleLeadUpdated = (updated) => {
     setLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-    // Refresh prospective badge count (excludes SVD)
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
+    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true } })
       .then((r) => setProspTotal(r.data.total)).catch(() => {});
-    // Refresh SVD badge count
-    api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
-      .then((r) => setSvdTotal(r.data.total)).catch(() => {});
     // If currently on prospective tab, also refresh the list
     if (tab === "prospective") {
       const params = { page: prospPage, limit: PROSP_LIMIT, search: prospSearch, isProspective: true };
       if (prospBookingFilter) params.bookingIn = prospBookingFilter;
-      if (!prospBookingFilter) params.bookingNotIn = "Site Visit Done";
       api.get(`/projects/${id}/leads`, { params })
         .then((r) => { setProspLeads(r.data.leads); setProspTotal(r.data.total); setProspPages(r.data.pages); })
-        .catch(() => {});
-    }
-    // If currently on SVD tab, also refresh the list
-    if (tab === "sitevisitdone") {
-      api.get(`/projects/${id}/leads`, { params: { page: svdPage, limit: SVD_LIMIT, search: svdSearch, isProspective: true, bookingIn: "Site Visit Done" } })
-        .then((r) => { setSvdLeads(r.data.leads); setSvdTotal(r.data.total); setSvdPages(r.data.pages); })
         .catch(() => {});
     }
   };
@@ -706,23 +659,6 @@ export default function ProjectDetail() {
       toast.error(e.response?.data?.message || "Bulk status update failed");
     } finally {
       setBulkStatusUpdating(false);
-    }
-  };
-
-  const handleSvdBulkDelete = async () => {
-    setBulkDeleting(true);
-    try {
-      const ids = [...svdSelectedIds];
-      await api.delete(`/projects/${id}/leads/bulk`, { data: { ids } });
-      setSvdLeads((prev) => prev.filter((l) => !svdSelectedIds.has(l._id)));
-      setSvdTotal((t) => t - ids.length);
-      setSvdSelectedIds(new Set());
-      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Bulk delete failed");
-    } finally {
-      setBulkDeleting(false);
-      setShowSvdBulkConfirm(false);
     }
   };
 
@@ -811,7 +747,6 @@ export default function ProjectDetail() {
           { key: "info",          label: "Info",                                                                    activeClass: "",                     activeBg: "var(--app-primary)" },
           { key: "leads",         label: `Leads (${leadsTotal})`,                                                  activeClass: "",                     activeBg: "var(--app-primary)" },
           { key: "prospective",   label: `Prospective${prospTotal > 0 ? ` (${prospTotal})` : ""}`,                activeClass: "bg-green-600",         activeBg: "" },
-          { key: "sitevisitdone", label: `Site Visit Done${svdTotal > 0 ? ` (${svdTotal})` : ""}`,               activeClass: "bg-teal-600",          activeBg: "" },
         ].map(({ key, label, activeClass, activeBg }) => (
           <button
             key={key}
@@ -1531,187 +1466,6 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* ── SITE VISIT DONE TAB ── */}
-      {tab === "sitevisitdone" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "rgba(20,184,166,0.15)" }}>
-                <Users className="h-4 w-4 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-app">Site Visit Done</p>
-                <p className="text-xs text-app-soft">Leads who have completed a site visit</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {svdSelectedIds.size > 0 && canManage && (
-                <button className={COMPACT_BTN_DANGER} style={{ background: "#ef4444" }} onClick={() => setShowSvdBulkConfirm(true)}>
-                  <Trash2 className="h-3.5 w-3.5" /> Delete {svdSelectedIds.size} selected
-                </button>
-              )}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-app-soft pointer-events-none" />
-                <input
-                  className={`${COMPACT_INPUT_CLS} pl-8 ${svdSearch ? "pr-7" : "pr-3"}`}
-                  style={{ ...COMPACT_INPUT_STYLE, width: 220 }}
-                  placeholder="Search name or phone…"
-                  value={svdSearch}
-                  onChange={(e) => { setSvdSearch(e.target.value); setSvdPage(1); }}
-                  onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
-                  onBlur={e => { e.target.style.borderColor = "var(--app-border)"; }}
-                />
-                {svdSearch && (
-                  <button onClick={() => { setSvdSearch(""); setSvdPage(1); }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
-                    <XIcon className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="card overflow-hidden">
-            {svdLoading ? (
-              <div className="flex justify-center py-16"><Spinner size="lg" /></div>
-            ) : svdLeads.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title="No site visit done leads yet"
-                desc="Leads marked as 'Site Visit Done' will appear here automatically."
-              />
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="stitch-table stitch-table-fixed" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.status, colW.followUp, colW.followUp2, colW.remark1, colW.remark2, colW.remark3, colW.remark4, colW.note, colW.updatedBy].reduce((a,b)=>a+b,0) + (canManage ? 28 : 0) + 32 + 44 }}>
-                    <colgroup>
-                      {canManage && <col style={{ width: 28, minWidth: 28 }} />}
-                      <col style={{ width: 32, minWidth: 32 }} />
-                      {["name","phone","whatsapp","status","followUp","followUp2","remark1","remark2","remark3","remark4","note","updatedBy"].map(k => (
-                        <col key={k} style={{ width: colW[k], minWidth: 60 }} />
-                      ))}
-                      <col style={{ width: 44, minWidth: 44 }} />
-                    </colgroup>
-                    <thead>
-                      <tr>
-                        {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
-                          <input type="checkbox" checked={allSvdSelected}
-                            ref={(el) => { if (el) el.indeterminate = someSvdSelected && !allSvdSelected; }}
-                            onChange={toggleAllSvd} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
-                        </th>}
-                        <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]">Name</RTh>
-                        <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
-                        <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
-                        <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
-                        <RTh k="followUp"  colW={colW} startResize={startResize}>Follow Up</RTh>
-                        <RTh k="followUp2" colW={colW} startResize={startResize}>Follow Up 2</RTh>
-                        <RTh k="remark1"   colW={colW} startResize={startResize}>Remark 1</RTh>
-                        <RTh k="remark2"   colW={colW} startResize={startResize}>Remark 2</RTh>
-                        <RTh k="remark3"   colW={colW} startResize={startResize}>Remark 3</RTh>
-                        <RTh k="remark4"   colW={colW} startResize={startResize}>Remark 4</RTh>
-                        <RTh k="note"      colW={colW} startResize={startResize}>Note</RTh>
-                        <RTh k="updatedBy" colW={colW} startResize={startResize}>Updated By</RTh>
-                        <th style={{ width: 44, minWidth: 44 }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {svdLeads.map((lead, i) => {
-                        const handleSvdUpdate = (updated) => {
-                          setSvdLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-                          // Refresh counts when booking changes
-                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingNotIn: "Site Visit Done" } })
-                            .then((r) => setProspTotal(r.data.total)).catch(() => {});
-                          api.get(`/projects/${id}/leads`, { params: { page: 1, limit: 1, isProspective: true, bookingIn: "Site Visit Done" } })
-                            .then((r) => setSvdTotal(r.data.total)).catch(() => {});
-                        };
-                        return (
-                          <tr key={lead._id} className={`group ${svdSelectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
-                            {canManage && <td className="w-6 px-1">
-                              <input type="checkbox" checked={svdSelectedIds.has(lead._id)} onChange={() => toggleOneSvd(lead._id)}
-                                className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" />
-                            </td>}
-                            <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
-                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2">
-                              <NameCell name={lead.name} bold onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
-                            </td>
-                            <td><PhoneActions phone={lead.phone} /></td>
-                            <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
-                            <td>
-                              <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineDate value={lead.followUp} leadId={lead._id} projectId={id} field="followUp" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remark2} leadId={lead._id} projectId={id} field="remark2" placeholder="Remark 2…" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remark3} leadId={lead._id} projectId={id} field="remark3" placeholder="Remark 3…" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remark4} leadId={lead._id} projectId={id} field="remark4" placeholder="Remark 4…" onSaved={handleSvdUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline onSaved={handleSvdUpdate} />
-                            </td>
-                            <td className="text-xs text-app-soft whitespace-nowrap">
-                              {lead.remarkUpdatedBy?.name || "-"}
-                              {lead.remarkUpdatedAt && <div className="text-[10px] mt-0.5 opacity-60">{fmtDate(lead.remarkUpdatedAt)}</div>}
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
-                                <button
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-blue-500/10 hover:text-blue-400"
-                                  onClick={() => setEditingLead(lead)}
-                                  title="Edit lead"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </button>
-                                <button
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
-                                  onClick={() => setTransferTarget(lead)}
-                                  title="Transfer lead"
-                                >
-                                  <ArrowRightLeft className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {svdPages > 1 && (
-                  <div className="flex items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
-                    <span className="text-xs text-app-soft">{`${(svdPage - 1) * SVD_LIMIT + 1} – ${Math.min(svdPage * SVD_LIMIT, svdTotal)} of ${svdTotal}`}</span>
-                    <div className="flex items-center gap-2">
-                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
-                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={svdPage === 1} onClick={() => setSvdPage((p) => p - 1)}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
-                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={svdPage === svdPages} onClick={() => setSvdPage((p) => p + 1)}>
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {showEdit && (
         <ProjectForm
           open={showEdit}
@@ -1760,18 +1514,6 @@ export default function ProjectDetail() {
         }
       />
 
-      <ConfirmDialog
-        open={showSvdBulkConfirm}
-        onClose={() => setShowSvdBulkConfirm(false)}
-        onConfirm={handleSvdBulkDelete}
-        loading={bulkDeleting}
-        title={`Delete ${svdSelectedIds.size} Lead${svdSelectedIds.size !== 1 ? "s" : ""}`}
-        message={
-          user?.role === "super_admin"
-            ? `Are you sure you want to permanently delete ${svdSelectedIds.size} selected lead${svdSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
-            : `Are you sure you want to delete ${svdSelectedIds.size} selected lead${svdSelectedIds.size !== 1 ? "s" : ""}? They will be moved to Dump Leads.`
-        }
-      />
 
       <ConfirmDialog
         open={showDeleteProject}
