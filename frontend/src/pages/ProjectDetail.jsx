@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
+import LeadDetail from "../components/LeadDetail";
 import TransferModal from "../components/TransferModal";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -27,10 +28,48 @@ function NameCell({ name, bold, onOpen }) {
       <span className={`block text-xs leading-snug ${bold ? "font-semibold" : "font-medium"} text-app truncate group-hover:text-orange-500 transition-colors`}>
         {name || "-"}
       </span>
-      <span className="text-[9px] text-orange-400 leading-none opacity-0 group-hover:opacity-100 transition-opacity">
-        tap to open
-      </span>
     </button>
+  );
+}
+
+// ── Column resize hook (same as Leads page) ──────────────────────────────────
+function useColumnResize(defaults) {
+  const [widths, setWidths] = useState({ ...defaults });
+  const startResize = (col, e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = widths[col] ?? defaults[col] ?? 100;
+    const onMove = (mv) => setWidths((prev) => ({ ...prev, [col]: Math.max(48, startW + mv.clientX - startX) }));
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+  return [widths, startResize];
+}
+
+// Resizable <th> with drag handle on right edge
+function RTh({ k, colW, startResize, children, className = "", style = {} }) {
+  return (
+    <th
+      className={className}
+      style={{ width: colW[k], minWidth: 60, position: "relative", overflow: "hidden", ...style }}
+    >
+      <span className="truncate block pr-3">{children}</span>
+      <div
+        onMouseDown={(e) => startResize(k, e)}
+        title="Drag to resize"
+        style={{ position: "absolute", right: 0, top: "20%", bottom: "20%", width: 3, cursor: "col-resize", zIndex: 2, borderRadius: 2, background: "var(--app-border)", transition: "background 150ms" }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--app-primary)"; e.currentTarget.style.top = "0%"; e.currentTarget.style.bottom = "0%"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--app-border)"; e.currentTarget.style.top = "20%"; e.currentTarget.style.bottom = "20%"; }}
+      />
+    </th>
   );
 }
 
@@ -292,6 +331,15 @@ export default function ProjectDetail() {
   const [importing, setImporting]       = useState(false);
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);
+  const [detailLead, setDetailLead]         = useState(null);
+
+  // Column resizing (shared across all three tabs)
+  const [colW, startResize] = useColumnResize({
+    name: 120, phone: 130, whatsapp: 110, email: 130, source: 80,
+    contactStatus: 140, remark1: 130, remark2: 130, remark3: 130, remark4: 130,
+    followUp: 185, followUp2: 185, remark: 140, status: 150,
+    updatedBy: 110, assignedTo: 110, note: 140,
+  });
 
   // Bulk select – Leads tab
   const [selectedIds, setSelectedIds]       = useState(new Set());
@@ -1040,20 +1088,20 @@ export default function ProjectDetail() {
                           />
                         </th>
                         <th style={{ width: 28, minWidth: 28 }} className="text-center px-1">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
-                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Email</th>
-                        <th style={{ width: 80, minWidth: 80 }}>Source</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Contact Status</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
-                        <th style={{ width: 140, minWidth: 140 }}>Remark</th>
-                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
-                        <th style={{ width: 110, minWidth: 110 }}>Assigned To</th>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface)" }}>Name</RTh>
+                        <RTh k="phone"         colW={colW} startResize={startResize}>Phone</RTh>
+                        <RTh k="whatsapp"      colW={colW} startResize={startResize}>WhatsApp</RTh>
+                        <RTh k="email"         colW={colW} startResize={startResize}>Email</RTh>
+                        <RTh k="source"        colW={colW} startResize={startResize}>Source</RTh>
+                        <RTh k="contactStatus" colW={colW} startResize={startResize}>Contact Status</RTh>
+                        <RTh k="remark1"       colW={colW} startResize={startResize}>Remark 1</RTh>
+                        <RTh k="remark2"       colW={colW} startResize={startResize}>Remark 2</RTh>
+                        <RTh k="followUp"      colW={colW} startResize={startResize}>Follow Up</RTh>
+                        <RTh k="followUp2"     colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                        <RTh k="remark"        colW={colW} startResize={startResize}>Remark</RTh>
+                        <RTh k="status"        colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="updatedBy"     colW={colW} startResize={startResize}>Updated By</RTh>
+                        <RTh k="assignedTo"    colW={colW} startResize={startResize}>Assigned To</RTh>
                         <th style={{ width: 72, minWidth: 72 }}></th>
                       </tr>
                     </thead>
@@ -1070,7 +1118,7 @@ export default function ProjectDetail() {
                           </td>
                           <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                            <NameCell name={lead.name} onOpen={() => setEditingLead(lead)} />
+                            <NameCell name={lead.name} onOpen={() => setDetailLead(lead)} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1350,18 +1398,18 @@ export default function ProjectDetail() {
                             onChange={toggleAllProsp} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
                         </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
-                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 4</th>
-                        <th style={{ width: 140, minWidth: 140 }}>Note</th>
-                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface)" }}>Name</RTh>
+                        <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
+                        <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
+                        <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="followUp"  colW={colW} startResize={startResize}>Follow Up</RTh>
+                        <RTh k="followUp2" colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                        <RTh k="remark1"   colW={colW} startResize={startResize}>Remark 1</RTh>
+                        <RTh k="remark2"   colW={colW} startResize={startResize}>Remark 2</RTh>
+                        <RTh k="remark3"   colW={colW} startResize={startResize}>Remark 3</RTh>
+                        <RTh k="remark4"   colW={colW} startResize={startResize}>Remark 4</RTh>
+                        <RTh k="note"      colW={colW} startResize={startResize}>Note</RTh>
+                        <RTh k="updatedBy" colW={colW} startResize={startResize}>Updated By</RTh>
                         <th style={{ width: 44, minWidth: 44 }}></th>
                       </tr>
                     </thead>
@@ -1379,7 +1427,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold onOpen={() => setEditingLead(lead)} />
+                              <NameCell name={lead.name} bold onOpen={() => setDetailLead(lead)} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1538,18 +1586,18 @@ export default function ProjectDetail() {
                             onChange={toggleAllSvd} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
                         </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
-                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 4</th>
-                        <th style={{ width: 140, minWidth: 140 }}>Note</th>
-                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface)" }}>Name</RTh>
+                        <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
+                        <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
+                        <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="followUp"  colW={colW} startResize={startResize}>Follow Up</RTh>
+                        <RTh k="followUp2" colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                        <RTh k="remark1"   colW={colW} startResize={startResize}>Remark 1</RTh>
+                        <RTh k="remark2"   colW={colW} startResize={startResize}>Remark 2</RTh>
+                        <RTh k="remark3"   colW={colW} startResize={startResize}>Remark 3</RTh>
+                        <RTh k="remark4"   colW={colW} startResize={startResize}>Remark 4</RTh>
+                        <RTh k="note"      colW={colW} startResize={startResize}>Note</RTh>
+                        <RTh k="updatedBy" colW={colW} startResize={startResize}>Updated By</RTh>
                         <th style={{ width: 44, minWidth: 44 }}></th>
                       </tr>
                     </thead>
@@ -1571,7 +1619,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold onOpen={() => setEditingLead(lead)} />
+                              <NameCell name={lead.name} bold onOpen={() => setDetailLead(lead)} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1739,6 +1787,17 @@ export default function ProjectDetail() {
           setRefreshKey((k) => k + 1);
         }}
       />
+
+      {/* Lead detail panel — opened by clicking a lead name */}
+      {detailLead && (
+        <LeadDetail
+          open={!!detailLead}
+          lead={detailLead}
+          onClose={() => setDetailLead(null)}
+          onUpdated={(updated) => { setDetailLead(updated); handleLeadUpdated(updated); }}
+          onEdit={() => { setEditingLead(detailLead); setDetailLead(null); }}
+        />
+      )}
     </div>
   );
 }
