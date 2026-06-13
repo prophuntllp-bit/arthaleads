@@ -323,11 +323,6 @@
     background: color-mix(in srgb, var(--app-surface-high) 55%, transparent);
   }
 
-  /* Sticky cells must update their background on row hover to stay in sync */
-  .stitch-table tbody tr:hover td.sticky {
-    background: color-mix(in srgb, var(--app-surface-high) 55%, var(--app-surface-solid)) !important;
-  }
-
   /* ── Auth pages ── */
   .auth-shell {
     min-height: 100vh;
