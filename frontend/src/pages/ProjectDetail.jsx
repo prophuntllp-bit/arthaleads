@@ -1040,7 +1040,7 @@ export default function ProjectDetail() {
                           />
                         </th>
                         <th style={{ width: 28, minWidth: 28 }} className="text-center px-1">#</th>
-                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-bg)" }}>Name</RTh>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface-solid)" }}>Name</RTh>
                         <RTh k="phone"         colW={colW} startResize={startResize}>Phone</RTh>
                         <RTh k="whatsapp"      colW={colW} startResize={startResize}>WhatsApp</RTh>
                         <RTh k="email"         colW={colW} startResize={startResize}>Email</RTh>
@@ -1070,7 +1070,7 @@ export default function ProjectDetail() {
                             />
                           </td>
                           <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
-                          <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-bg)" }}>
+                          <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-surface-solid)" }}>
                             <NameCell name={lead.name} onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
@@ -1395,7 +1395,7 @@ export default function ProjectDetail() {
                             onChange={toggleAllProsp} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
                         </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-bg)" }}>Name</RTh>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface-solid)" }}>Name</RTh>
                         <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
                         <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
                         <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
@@ -1423,7 +1423,7 @@ export default function ProjectDetail() {
                                 className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" />
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
-                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-bg)" }}>
+                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-surface-solid)" }}>
                               <NameCell name={lead.name} bold onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
@@ -1600,7 +1600,7 @@ export default function ProjectDetail() {
                             onChange={toggleAllSvd} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
                         </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-bg)" }}>Name</RTh>
+                        <RTh k="name" colW={colW} startResize={startResize} className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ background: "var(--app-surface-solid)" }}>Name</RTh>
                         <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
                         <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
                         <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
@@ -1632,7 +1632,7 @@ export default function ProjectDetail() {
                                 className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" />
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
-                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-bg)" }}>
+                            <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] px-2" style={{ background: "var(--app-surface-solid)" }}>
                               <NameCell name={lead.name} bold onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
