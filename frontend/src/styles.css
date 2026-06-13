@@ -7,6 +7,7 @@
     --wa-dropdown-bg: #ffffff;
     --app-bg: #f0ede8;
     --app-surface: rgba(255, 255, 255, 0.58);
+    --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
@@ -31,6 +32,7 @@
     --wa-dropdown-bg: #1e1d20;
     --app-bg: #111113;
     --app-surface: rgba(30, 29, 32, 0.75);
+    --app-surface-solid: #1e1d20;
     --app-surface-low: rgba(22, 21, 24, 0.68);
     --app-surface-high: rgba(42, 40, 46, 0.84);
     --app-text: #ededed;

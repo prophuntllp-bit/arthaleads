@@ -243,7 +243,7 @@ export function PhoneActions({ phone, lead, onContact }) {
           style={{
             position: "fixed", top: hoverPos.top, left: hoverPos.left,
             zIndex: 9998, width: 190,
-            background: "var(--app-surface)",
+            background: "var(--app-surface-solid)",
             border: "1px solid var(--app-border)",
             borderRadius: "0.875rem",
             boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
@@ -263,7 +263,7 @@ export function PhoneActions({ phone, lead, onContact }) {
           <div style={{ position:"fixed", inset:0, zIndex:9998 }} onClick={() => setDialOpen(false)} />
           <div style={{
             position:"fixed", top: dialPos.top, left: dialPos.left, zIndex:9999, width: 215,
-            background:"var(--app-surface)",
+            background:"var(--app-surface-solid)",
             border:"1px solid var(--app-border)",
             borderRadius:"1rem",
             boxShadow:"0 8px 32px rgba(0,0,0,0.18)",
