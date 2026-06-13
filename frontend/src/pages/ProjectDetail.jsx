@@ -1097,7 +1097,7 @@ export default function ProjectDetail() {
                           </td>
                           <td className="w-6 px-1 text-center text-app-soft text-xs">{(leadsPage - 1) * leadsLimit + i + 1}</td>
                           <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                            <NameCell name={lead.name} onOpen={() => setDetailLead(lead)} />
+                            <NameCell name={lead.name} onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                           </td>
                           <td><PhoneActions phone={lead.phone} /></td>
                           <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1417,7 +1417,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(prospPage - 1) * PROSP_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold onOpen={() => setDetailLead(lead)} />
+                              <NameCell name={lead.name} bold onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1618,7 +1618,7 @@ export default function ProjectDetail() {
                             </td>}
                             <td className="w-6 px-1 text-center text-app-soft text-xs">{(svdPage - 1) * SVD_LIMIT + i + 1}</td>
                             <td className="sticky left-0 z-10 shadow-[2px_0_6px_rgba(0,0,0,0.06)] w-[90px] min-w-[90px] max-w-[90px] px-2" style={{ background: "var(--app-surface)" }}>
-                              <NameCell name={lead.name} bold onOpen={() => setDetailLead(lead)} />
+                              <NameCell name={lead.name} bold onOpen={() => setDetailLead({ ...lead, _type: "project", projectId: id })} />
                             </td>
                             <td><PhoneActions phone={lead.phone} /></td>
                             <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} projectId={id} /></td>
@@ -1793,7 +1793,7 @@ export default function ProjectDetail() {
           open={!!detailLead}
           lead={detailLead}
           onClose={() => setDetailLead(null)}
-          onUpdated={(updated) => { setDetailLead(updated); handleLeadUpdated(updated); }}
+          onUpdated={(updated) => { setDetailLead({ ...updated, _type: "project", projectId: id }); handleLeadUpdated(updated); }}
           onEdit={() => { setEditingLead(detailLead); setDetailLead(null); }}
         />
       )}

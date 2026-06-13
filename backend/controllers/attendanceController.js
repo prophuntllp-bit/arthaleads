@@ -5,12 +5,27 @@ const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadAttendanceSelfie } = require("../utils/upload");
 
+// All time-of-day comparisons must use IST (UTC+5:30) because the server
+// runs in UTC. .getHours() returns UTC hours, which is wrong for India.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function toIST(date) {
+  return new Date(date.getTime() + IST_OFFSET_MS);
+}
+
+// Minutes since midnight in IST — use this everywhere instead of getHours()*60+getMinutes()
+function istMins(date) {
+  const ist = toIST(date);
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes();
+}
+
+// Today's date string in IST (safe even at UTC midnight)
 function todayStr() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const ist = toIST(new Date());
+  const y = ist.getUTCFullYear();
+  const m = String(ist.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(ist.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 // Fetch org attendance settings with sensible defaults
@@ -30,7 +45,7 @@ async function getOrgSettings(orgId) {
 // Compute early leave flag from clock-out time vs expected end time
 function computeEarlyLeave(clockOutDate, settings) {
   if (!clockOutDate) return { isEarlyLeave: false, earlyLeaveByMinutes: null };
-  const clockOutMins = clockOutDate.getHours() * 60 + clockOutDate.getMinutes();
+  const clockOutMins = istMins(clockOutDate);
   const endMins = parseHHMM(settings.shiftEndTime);
   const isEarlyLeave = clockOutMins < endMins;
   return {
@@ -74,10 +89,10 @@ const attendanceController = {
         return next(new AppError("Already clocked in today.", 400));
       }
 
-      // Compute late status against org shift settings
+      // Compute late status against org shift settings (IST)
       const settings = await getOrgSettings(req.user.orgId);
       const now = new Date();
-      const clockInMins = now.getHours() * 60 + now.getMinutes();
+      const clockInMins = istMins(now);
       const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
       const isLate = clockInMins > lateThreshold;
       const lateByMinutes = isLate ? clockInMins - lateThreshold : null;
@@ -237,8 +252,8 @@ const attendanceController = {
       // Build CSV
       const fmtTime = (d) => {
         if (!d) return "";
-        const dt = new Date(d);
-        const h = dt.getHours(), m = dt.getMinutes();
+        const ist = toIST(new Date(d));
+        const h = ist.getUTCHours(), m = ist.getUTCMinutes();
         const ampm = h >= 12 ? "PM" : "AM";
         return `${String(h % 12 || 12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${ampm}`;
       };
@@ -308,7 +323,7 @@ const attendanceController = {
       // Compute late status from the clock-in time
       let isLate = false, lateByMinutes = null;
       if (clockInDate) {
-        const clockInMins = clockInDate.getHours() * 60 + clockInDate.getMinutes();
+        const clockInMins = istMins(clockInDate);
         const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
         isLate = clockInMins > lateThreshold;
         lateByMinutes = isLate ? clockInMins - lateThreshold : null;
