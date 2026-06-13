@@ -1074,7 +1074,7 @@ export default function ProjectDetail() {
                   <div ref={topSpacerRef} style={{ height: 1 }} />
                 </div>
                 <div ref={tableScrollRef} className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1500px]">
+                  <table className="stitch-table" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.email, colW.source, colW.contactStatus, colW.remark1, colW.remark2, colW.followUp, colW.followUp2, colW.remark, colW.status, colW.updatedBy, colW.assignedTo].reduce((a,b)=>a+b,0) + 128 }}>
                     <thead>
                       <tr>
                         <th style={{ width: 28, minWidth: 28 }} className="px-1">
@@ -1389,7 +1389,7 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1400px]">
+                  <table className="stitch-table" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.status, colW.followUp, colW.followUp2, colW.remark1, colW.remark2, colW.remark3, colW.remark4, colW.note, colW.updatedBy].reduce((a,b)=>a+b,0) + (canManage ? 28 : 0) + 32 + 44 }}>
                     <thead>
                       <tr>
                         {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
@@ -1577,7 +1577,7 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1400px]">
+                  <table className="stitch-table" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.status, colW.followUp, colW.followUp2, colW.remark1, colW.remark2, colW.remark3, colW.remark4, colW.note, colW.updatedBy].reduce((a,b)=>a+b,0) + (canManage ? 28 : 0) + 32 + 44 }}>
                     <thead>
                       <tr>
                         {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
