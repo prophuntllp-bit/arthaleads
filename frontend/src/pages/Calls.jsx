@@ -3,7 +3,7 @@ import {
   Phone, PhoneOff, PhoneMissed, Mic, AlignLeft,
   Loader2, RefreshCw, Sparkles, ChevronRight, X,
   FileText, CalendarPlus, CheckCircle2, Filter,
-  ChevronLeft, PhoneCall,
+  ChevronLeft, PhoneCall, Copy, Check,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -33,6 +33,156 @@ const STATUS_STYLE = {
   missed:    { bg: "rgba(239,68,68,0.10)",  color: "#ef4444", icon: PhoneMissed },
   initiated: { bg: "rgba(249,115,22,0.10)", color: "#f97316", icon: PhoneCall   },
 };
+
+const INTENT_STYLE = {
+  interested:     { bg: "rgba(34,197,94,0.10)",   color: "#16a34a", label: "Interested"       },
+  site_visit:     { bg: "rgba(99,102,241,0.10)",  color: "#4f46e5", label: "Wants Site Visit" },
+  negotiation:    { bg: "rgba(249,115,22,0.10)",  color: "#ea580c", label: "Negotiating"      },
+  not_interested: { bg: "rgba(239,68,68,0.10)",   color: "#dc2626", label: "Not Interested"   },
+  follow_up:      { bg: "rgba(234,179,8,0.10)",   color: "#ca8a04", label: "Follow Up"        },
+  unclear:        { bg: "rgba(161,161,170,0.10)", color: "#71717a", label: "Unclear"           },
+};
+
+function AISummarySection({ initialMeta, leadId, activityId, callStatus }) {
+  const [meta,      setMeta]      = useState(initialMeta || {});
+  const [loading,   setLoading]   = useState(false);
+  const [copied,    setCopied]    = useState(false);
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(`/calls/${leadId}/${activityId}/summarize`);
+      setMeta(data.meta);
+      toast.success("AI analysis complete!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "AI analysis failed");
+    } finally { setLoading(false); }
+  };
+
+  const copyAll = () => {
+    const parts = [
+      meta.summary,
+      meta.keyPoints?.length ? "\nKey Points:\n" + meta.keyPoints.map(p => `• ${p}`).join("\n") : "",
+      meta.nextAction ? `\nNext Action: ${meta.nextAction}` : "",
+    ].filter(Boolean).join("\n");
+    navigator.clipboard.writeText(parts).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const intentStyle = meta.intent ? (INTENT_STYLE[meta.intent] || INTENT_STYLE.unclear) : null;
+  const sentStyle   = meta.sentiment ? SENTIMENT[meta.sentiment] : null;
+
+  // No recording yet
+  if (!meta.recordingUrl) {
+    if (callStatus !== "answered") return null;
+    return (
+      <div className="rounded-xl p-4 flex items-center gap-3"
+        style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.2)" }}>
+        <Sparkles className="w-5 h-5 text-indigo-300 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-indigo-500">AI Call Analysis</p>
+          <p className="text-xs text-app-soft mt-0.5">Available once recording is uploaded by the recording server.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Recording exists but no summary — show Generate button
+  if (!meta.summary) {
+    return (
+      <div className="rounded-xl p-4"
+        style={{ background: "rgba(99,102,241,0.06)", border: "2px dashed rgba(99,102,241,0.3)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(99,102,241,0.12)" }}>
+              <Sparkles className="w-5 h-5 text-indigo-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-indigo-600">AI Call Analysis</p>
+              <p className="text-xs text-app-soft">Get summary, intent & next action</p>
+            </div>
+          </div>
+          <button onClick={generate} disabled={loading}
+            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition shrink-0"
+            style={{ background: "rgba(99,102,241,1)", color: "#fff" }}>
+            {loading
+              ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysing…</>
+              : <><Sparkles className="w-4 h-4" /> Analyse Call</>}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Summary exists — rich display
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(99,102,241,0.22)" }}>
+      {/* Header bar */}
+      <div className="px-4 py-3 flex items-center justify-between gap-2"
+        style={{ background: "rgba(99,102,241,0.08)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
+          <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">AI Analysis</span>
+          {intentStyle && (
+            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+              style={{ background: intentStyle.bg, color: intentStyle.color }}>
+              {intentStyle.label}
+            </span>
+          )}
+          {sentStyle && (
+            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+              style={{ background: sentStyle.bg, color: sentStyle.color }}>
+              {sentStyle.label}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button onClick={copyAll} title="Copy summary"
+            className="text-app-soft hover:text-indigo-500 transition">
+            {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button onClick={generate} disabled={loading} title="Regenerate"
+            className="text-app-soft hover:text-indigo-500 transition">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="px-4 py-3" style={{ background: "rgba(99,102,241,0.03)" }}>
+        <p className="text-sm text-app leading-relaxed">{meta.summary}</p>
+      </div>
+
+      {/* Key points */}
+      {meta.keyPoints?.length > 0 && (
+        <div className="px-4 py-3 space-y-1.5"
+          style={{ background: "rgba(99,102,241,0.03)", borderTop: "1px solid rgba(99,102,241,0.12)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mb-2">Key Points</p>
+          {meta.keyPoints.map((point, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                style={{ background: "#6366f1" }} />
+              <p className="text-xs text-app leading-snug">{point}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Next action */}
+      {meta.nextAction && (
+        <div className="px-4 py-3 flex items-start gap-2"
+          style={{ background: "rgba(249,115,22,0.05)", borderTop: "1px solid rgba(99,102,241,0.12)" }}>
+          <span className="text-[10px] font-black uppercase tracking-wider mt-0.5 shrink-0"
+            style={{ color: "var(--app-primary)" }}>Next →</span>
+          <p className="text-xs font-semibold text-app">{meta.nextAction}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Call detail panel (shown inside the history modal) ────────────────────────
 function CallDetailPanel({ call, leadId, leadName, onBack }) {
@@ -130,29 +280,12 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
         </div>
       )}
 
-      {meta.summary ? (
-        <section>
-          <div className="rounded-xl p-4"
-            style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">AI Summary</span>
-            </div>
-            <p className="text-sm text-app leading-relaxed">{meta.summary}</p>
-          </div>
-        </section>
-      ) : status === "answered" && (
-        <div className="rounded-xl p-4"
-          style={{ background: "rgba(99,102,241,0.07)", border: "1px dashed rgba(99,102,241,0.25)" }}>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles className="w-4 h-4 text-indigo-500" />
-            <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">AI Summary</span>
-          </div>
-          <p className="text-xs text-app">
-            AI summary generates automatically after the call recording is processed (calls over 10s).
-          </p>
-        </div>
-      )}
+      <AISummarySection
+        initialMeta={meta}
+        leadId={leadId}
+        activityId={call.activityId}
+        callStatus={status}
+      />
 
       {meta.transcript && (
         <section>

@@ -454,6 +454,22 @@ router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/calls/:leadId/:activityId/summarize — on-demand AI analysis
+router.post("/:leadId/:activityId/summarize", async (req, res, next) => {
+  try {
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId });
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+    const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
+    if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
+    const recordingUrl = lead.activities[idx].meta?.recordingUrl;
+    if (!recordingUrl) return res.status(400).json({ success: false, message: "No recording available for this call." });
+    if (!process.env.OPENAI_API_KEY) return res.status(400).json({ success: false, message: "OpenAI not configured on this server." });
+    await transcribeAndSummarize(String(lead._id), idx, recordingUrl);
+    const updated = await Lead.findById(lead._id).lean();
+    res.json({ success: true, meta: updated.activities[idx]?.meta || {} });
+  } catch (err) { next(err); }
+});
+
 // POST /api/calls/:leadId/followup — create a follow-up task (all roles)
 router.post("/:leadId/followup", async (req, res, next) => {
   try {
@@ -507,21 +523,40 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl) {
   const neg      = ["not interested", "busy", "later", "no thanks", "don't call"].some(w => lower.includes(w));
   const sentiment = pos && !neg ? "positive" : neg ? "negative" : "neutral";
 
-  // Summarise with GPT-4o-mini (cheap, fast)
+  // Structured AI analysis — returns JSON with summary, keyPoints, nextAction, intent
   const gpt = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{
       role: "user",
-      content: `Summarise this real estate sales call in 2 sentences: what the lead wants, their budget/timeline if mentioned, and the next recommended action.\n\nTranscript:\n${transcript.slice(0, 3000)}`,
+      content: `You are a real estate CRM assistant. Analyse this sales call transcript and return ONLY a valid JSON object with exactly these fields:
+- "summary": 1-2 sentence overview of the call
+- "keyPoints": array of 2-3 short bullet strings (lead's requirements, budget, timeline if mentioned)
+- "nextAction": one specific recommended action for the sales agent
+- "intent": exactly one of "interested" | "site_visit" | "negotiation" | "not_interested" | "follow_up" | "unclear"
+
+Return ONLY the JSON, no markdown, no explanation.
+
+Transcript:
+${transcript.slice(0, 3000)}`,
     }],
-    max_tokens: 120,
+    max_tokens: 300,
   });
-  const summary = gpt.choices[0]?.message?.content?.trim() || null;
+
+  let parsed = null;
+  try { parsed = JSON.parse(gpt.choices[0]?.message?.content || "{}"); } catch {}
+
+  const summary    = parsed?.summary    || gpt.choices[0]?.message?.content?.trim() || null;
+  const keyPoints  = Array.isArray(parsed?.keyPoints)  ? parsed.keyPoints  : [];
+  const nextAction = parsed?.nextAction  || null;
+  const intent     = parsed?.intent      || null;
 
   lead.activities[actIdx].meta = {
     ...lead.activities[actIdx].meta,
     transcript,
     summary,
+    keyPoints,
+    nextAction,
+    intent,
     sentiment,
   };
   lead.markModified("activities");
