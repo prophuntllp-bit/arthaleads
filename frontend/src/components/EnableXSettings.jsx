@@ -110,12 +110,14 @@ export default function EnableXSettings() {
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">APP ID</label>
             <input className="input w-full" placeholder="e.g. f4a1b2c3d5..."
+              autoComplete="off"
               value={appId} onChange={e => setAppId(e.target.value)} />
           </div>
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">APP KEY</label>
             <div className="relative">
               <input className="input w-full pr-10" type={showApiKey ? "text" : "password"}
+                autoComplete="new-password"
                 placeholder={hasApiKey ? "Saved — enter new key to replace" : "Paste your APP KEY"}
                 value={apiKey} onChange={e => setApiKey(e.target.value)} />
               <button type="button" onClick={() => setShowApiKey(v => !v)}
