@@ -80,8 +80,10 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     }
 
     // ── Call hangup / completion event (duration + status) ──────────────────
-    // EnableX sends state="disconnected" with call_duration (float, seconds)
-    if (/disconnected|hangup|completed|exit|end/i.test(eventType)) {
+    // EnableX sends state="disconnected" with call_duration (float, seconds).
+    // Ignore bridge_disconnected — it fires simultaneously with disconnected and
+    // causes a Mongoose optimistic-concurrency error on the same document version.
+    if (eventType !== "bridge_disconnected" && /disconnected|hangup|completed|exit|end/i.test(eventType)) {
       const dur        = Math.round(
         Number(event?.call_duration ?? event?.data?.duration ?? event?.duration ?? 0)
       );
@@ -247,13 +249,14 @@ router.post("/initiate", protect, async (req, res, next) => {
 
     // EnableX bridge call: action_on_connect.connect tells EnableX to automatically
     // dial the lead and bridge both legs when the agent answers — no second API call needed.
+    // Use array format for to: with explicit type so EnableX treats this as a PSTN phone call.
     const payload = {
       from: fromNumber,
       to:   agentPhone,
       action_on_connect: {
         connect: {
-          from: fromNumber,  // caller ID shown to lead
-          to:   leadPhone,   // lead's phone number
+          from: fromNumber,
+          to:   [{ type: "phone", number: leadPhone }],
         },
       },
       custom_data: ownerRef,
