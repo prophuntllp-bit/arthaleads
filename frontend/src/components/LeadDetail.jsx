@@ -58,15 +58,28 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     }
   };
 
+  // Reset non-note state when a different lead opens
   useEffect(() => {
     setTab("info");
-    const latest = lead?.notes?.[lead.notes.length - 1];
-    setNote(latest?.text || "");
     setStatus(lead?.status || "New");
     setAiDraft(null);
     setCallHistory([]);
     setExpandedCall(null);
   }, [lead?._id, open]);
+
+  // Sync textarea with the latest note whenever notes change or lead changes
+  // Uses the latest note's _id (or length) as a stable key to avoid firing on every render
+  const latestNoteKey = (() => {
+    const notes = lead?.notes || [];
+    const last = notes[notes.length - 1];
+    return last?._id ? String(last._id) : String(notes.length);
+  })();
+  useEffect(() => {
+    const notes = lead?.notes || [];
+    const latest = notes[notes.length - 1];
+    setNote(latest?.text || "");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead?._id, open, latestNoteKey]);
 
   useEffect(() => {
     if (tab !== "calls" || !lead?._id) return;
