@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown } from "lucide-react";
+import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown, Phone } from "lucide-react";
 import api from "../services/api";
 import { PageLoader, AppSelect, AppDatePicker } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +18,7 @@ export default function Performance() {
   const [dateFrom,        setDateFrom]        = useState("");
   const [dateTo,          setDateTo]          = useState("");
   const [filterMemberId,  setFilterMemberId]  = useState("");
+  const [callAnalytics,   setCallAnalytics]   = useState(null);
   const dateFilterMounted = useRef(false);
 
   const displayMembers = useMemo(
@@ -274,7 +275,10 @@ export default function Performance() {
   };
 
   // Initial full load
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+    api.get("/calls/analytics").then(r => setCallAnalytics(r.data)).catch(() => {});
+  }, []);
 
   // Auto-refetch when date filter changes (skip first render)
   useEffect(() => {
@@ -377,6 +381,62 @@ export default function Performance() {
         <MetricCard icon={Target} label="Site Visits"  value={totals.siteVisits}    note="Visit-stage across all pipelines" />
         <MetricCard icon={Trophy} label="Closed / Booked" value={totals.closedWon} note="Won in pipeline + Booked in projects" />
       </section>
+
+      {/* Call Analytics */}
+      {callAnalytics && (callAnalytics.volumeByDay?.length > 0 || callAnalytics.durationByAgent?.length > 0) && (
+        <section className="card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4 text-orange-500" />
+            <h2 className="text-sm font-bold text-app">Call Analytics</h2>
+            <span className="text-xs text-app-soft">· last 30 days</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Volume bar chart */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-2">Daily Volume</p>
+              {callAnalytics.volumeByDay.slice(-14).map((d, i) => {
+                const max   = Math.max(...callAnalytics.volumeByDay.slice(-14).map(x => x.total), 1);
+                const date  = new Date(d._id.y, d._id.m - 1, d._id.d);
+                const label = date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                return (
+                  <div key={i} className="flex items-center gap-2 mb-1">
+                    <span className="text-[9px] text-app-soft w-9 shrink-0 text-right">{label}</span>
+                    <div className="flex-1 flex gap-0.5 h-3 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                      <div className="h-full bg-green-500/70 rounded-full" style={{ width: `${(d.answered / max) * 100}%` }} />
+                      <div className="h-full bg-red-400/50 rounded-full"  style={{ width: `${(d.missed  / max) * 100}%` }} />
+                    </div>
+                    <span className="text-[9px] font-semibold text-app w-4 text-right">{d.total}</span>
+                  </div>
+                );
+              })}
+              <div className="flex gap-3 mt-2 text-[9px] text-app-soft">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500/70 inline-block" /> Answered</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400/50  inline-block" /> Missed</span>
+              </div>
+            </div>
+            {/* Agent stats */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-2">Answered Calls by Agent</p>
+              {callAnalytics.durationByAgent.length === 0 ? (
+                <p className="text-xs text-app-soft">No answered calls yet.</p>
+              ) : callAnalytics.durationByAgent.map(a => (
+                <div key={a._id} className="flex items-center justify-between py-1.5 border-b last:border-0"
+                  style={{ borderColor: "var(--app-border)" }}>
+                  <span className="text-xs text-app font-medium truncate">{a.name || "Unknown"}</span>
+                  <div className="text-right shrink-0 ml-2">
+                    <span className="text-xs font-bold text-app">{a.totalCalls}</span>
+                    {a.avgDuration > 0 && (
+                      <span className="text-[10px] text-app-soft ml-1">
+                        {Math.floor(a.avgDuration / 60)}m{Math.round(a.avgDuration % 60)}s avg
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Member cards */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">

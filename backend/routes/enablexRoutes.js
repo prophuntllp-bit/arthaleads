@@ -5,7 +5,9 @@ const router  = express.Router(); // v2 — bridge call, all authenticated users
 const { protect, authorize } = require("../middlewares/auth");
 const Organization = require("../models/Organization");
 const Lead         = require("../models/Lead");
+const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
+const { sendPushToUser } = require("../utils/push");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -99,6 +101,17 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
         duration: dur,
       };
       dirty = true;
+
+      if (callStatus === "missed") {
+        const agentId = lead.activities[actIdx].performedBy;
+        if (agentId) {
+          sendPushToUser(String(agentId), {
+            title: "Missed Call",
+            body:  `Missed call to ${lead.name} (${lead.phone})`,
+            data:  { type: "missed_call", leadId: String(lead._id) },
+          }).catch(() => {});
+        }
+      }
     }
 
     if (dirty) {
@@ -116,19 +129,22 @@ router.use(protect);
 // GET /api/calls — paginated list of all call activities across all leads
 router.get("/", async (req, res, next) => {
   try {
-    const { page = 1, limit = 30, status } = req.query;
-    const skip   = (Number(page) - 1) * Number(limit);
-    const orgId  = req.user.orgId;
+    const { page = 1, limit = 30, status, agentId } = req.query;
+    const skip  = (Number(page) - 1) * Number(limit);
+    const orgId = req.user.orgId;
 
     const mongoose = require("mongoose");
-    const matchActivity = { "activities.type": "called" };
-    if (status && status !== "all") matchActivity["activities.meta.status"] = status;
+    const actMatch = {
+      "activities.type": "called",
+      ...(status  && status !== "all" ? { "activities.meta.status":   status } : {}),
+      ...(agentId ? { "activities.performedBy": new mongoose.Types.ObjectId(agentId) } : {}),
+    };
 
     const [rows, total] = await Promise.all([
       Lead.aggregate([
         { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
         { $unwind: "$activities" },
-        { $match: { "activities.type": "called", ...(status && status !== "all" ? { "activities.meta.status": status } : {}) } },
+        { $match: actMatch },
         { $sort:  { "activities.createdAt": -1 } },
         { $skip:  skip },
         { $limit: Number(limit) },
@@ -147,7 +163,7 @@ router.get("/", async (req, res, next) => {
       Lead.aggregate([
         { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
         { $unwind: "$activities" },
-        { $match: { "activities.type": "called", ...(status && status !== "all" ? { "activities.meta.status": status } : {}) } },
+        { $match: actMatch },
         { $count: "total" },
       ]),
     ]);
@@ -307,6 +323,84 @@ router.post("/initiate", protect, async (req, res, next) => {
       || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
   }
+});
+
+// GET /api/calls/analytics — call volume + per-agent duration (last 30 days)
+router.get("/analytics", async (req, res, next) => {
+  try {
+    const mongoose    = require("mongoose");
+    const orgId       = new mongoose.Types.ObjectId(String(req.user.orgId));
+    const thirtyAgo   = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+
+    const [volumeByDay, durationByAgent] = await Promise.all([
+      Lead.aggregate([
+        { $match: { orgId } },
+        { $unwind: "$activities" },
+        { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo } } },
+        { $group: {
+          _id:      { y: { $year: "$activities.createdAt" }, m: { $month: "$activities.createdAt" }, d: { $dayOfMonth: "$activities.createdAt" } },
+          total:    { $sum: 1 },
+          answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
+          missed:   { $sum: { $cond: [{ $eq: ["$activities.meta.status", "missed"]   }, 1, 0] } },
+        }},
+        { $sort: { "_id.y": 1, "_id.m": 1, "_id.d": 1 } },
+      ]),
+      Lead.aggregate([
+        { $match: { orgId } },
+        { $unwind: "$activities" },
+        { $match: { "activities.type": "called", "activities.meta.status": "answered", "activities.meta.duration": { $gt: 0 } } },
+        { $group: {
+          _id:         "$activities.performedBy",
+          name:        { $first: "$activities.performedByName" },
+          totalCalls:  { $sum: 1 },
+          avgDuration: { $avg: "$activities.meta.duration" },
+          totalDuration:{ $sum: "$activities.meta.duration" },
+        }},
+        { $sort: { totalCalls: -1 } },
+      ]),
+    ]);
+
+    res.json({ success: true, volumeByDay, durationByAgent });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/calls/:leadId/:activityId/notes — save call notes (all roles)
+router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
+  try {
+    const { notes } = req.body;
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId });
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+    const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
+    if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
+    lead.activities[idx].meta = { ...(lead.activities[idx].meta || {}), notes: String(notes || "").trim() };
+    lead.markModified("activities");
+    await lead.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/calls/:leadId/followup — create a follow-up task (all roles)
+router.post("/:leadId/followup", async (req, res, next) => {
+  try {
+    const { title, dueDate, description } = req.body;
+    if (!dueDate) return res.status(400).json({ success: false, message: "dueDate is required" });
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId }).select("name").lean();
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+    const task = await Task.create({
+      orgId:          req.user.orgId,
+      title:          title || `Follow up with ${lead.name}`,
+      description:    description || "",
+      priority:       "medium",
+      dueDate:        new Date(dueDate),
+      assignedTo:     req.user._id,
+      assignedToName: req.user.name,
+      assignedBy:     req.user._id,
+      assignedByName: req.user.name,
+      lead:           lead._id || req.params.leadId,
+      leadName:       lead.name,
+    });
+    res.status(201).json({ success: true, task });
+  } catch (err) { next(err); }
 });
 
 // ── AI transcription + summarization (runs async after webhook) ──────────────
