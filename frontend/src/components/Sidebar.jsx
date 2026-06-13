@@ -7,7 +7,7 @@ import {
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
-  PanelLeftClose, PanelLeft, Zap, Search, X as XIcon,
+  PanelLeftClose, PanelLeft, Zap, Search, X as XIcon, CornerDownLeft,
   Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
 } from "lucide-react";
 import WhatsAppIcon from "./WhatsAppIcon";
@@ -141,6 +141,54 @@ export default function Sidebar() {
   const [flyout, setFlyout] = useState(null);
   const flyoutRef = useRef(null);
   const flyoutCloseTimer = useRef(null);
+
+  // ── Global search with live suggestions ──────────────────────────────────
+  const [gsInput,       setGsInput]       = useState("");
+  const [gsSuggestions, setGsSuggestions] = useState([]);
+  const [gsShowDrop,    setGsShowDrop]    = useState(false);
+  const [gsLoading,     setGsLoading]     = useState(false);
+  const gsWrapRef    = useRef(null);
+  const gsDebounce   = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (gsWrapRef.current && !gsWrapRef.current.contains(e.target)) setGsShowDrop(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const fetchGsSuggestions = useCallback(async (val) => {
+    if (!val || val.length < 2) { setGsSuggestions([]); setGsShowDrop(false); return; }
+    setGsLoading(true);
+    try {
+      const { data } = await api.get(`/leads/unified?search=${encodeURIComponent(val)}&limit=7&page=1`);
+      setGsSuggestions(data.leads || []);
+      if ((data.leads || []).length > 0) setGsShowDrop(true);
+    } catch { setGsSuggestions([]); }
+    finally { setGsLoading(false); }
+  }, []);
+
+  const handleGsChange = (e) => {
+    const val = e.target.value;
+    setGsInput(val);
+    clearTimeout(gsDebounce.current);
+    if (!val.trim()) { setGsSuggestions([]); setGsShowDrop(false); return; }
+    gsDebounce.current = setTimeout(() => fetchGsSuggestions(val.trim()), 250);
+  };
+
+  const doGsNavigate = useCallback((val) => {
+    if (!val) return;
+    setGsShowDrop(false);
+    setGsInput("");
+    setGsSuggestions([]);
+    const SEARCH_IN_PLACE = ["/followups", "/calls"];
+    if (SEARCH_IN_PLACE.some(p => location.pathname.startsWith(p))) {
+      navigate(`${location.pathname}?q=${encodeURIComponent(val)}`);
+    } else {
+      navigate("/leads", { state: { presetSearch: val } });
+    }
+  }, [navigate, location.pathname]);
 
   useEffect(() => {
     if (mobileSearchOpen) setTimeout(() => mobileSearchRef.current?.focus(), 60);
@@ -931,34 +979,108 @@ export default function Sidebar() {
       }}
     >
       {/* Search */}
-      <form
-        style={{ width: 320 }}
-        className="relative"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const val = e.target.elements.globalSearch.value.trim();
-          if (!val) return;
-          const SEARCH_IN_PLACE = ["/followups", "/calls"];
-          if (SEARCH_IN_PLACE.some(p => location.pathname.startsWith(p))) {
-            navigate(`${location.pathname}?q=${encodeURIComponent(val)}`);
-          } else {
-            navigate("/leads", { state: { presetSearch: val } });
-          }
-          e.target.reset();
-        }}
-      >
-        <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
-          <Search style={{ width: 15, height: 15 }} />
-        </button>
-        <input
-          name="globalSearch"
-          placeholder="Search leads by name, phone…"
-          className="w-full rounded-xl pl-9 pr-3 py-2 text-sm text-app"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
-          onFocus={(e) => { e.target.style.borderColor = "var(--app-primary)"; }}
-          onBlur={(e)  => { e.target.style.borderColor = "var(--app-border)"; }}
-        />
-      </form>
+      <div ref={gsWrapRef} style={{ width: 320 }} className="relative">
+        <form
+          className="relative"
+          onSubmit={(e) => { e.preventDefault(); doGsNavigate(gsInput.trim()); }}
+        >
+          {/* Search icon left */}
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-soft" style={{ width: 15, height: 15 }} />
+
+          {/* Controlled input */}
+          <input
+            name="globalSearch"
+            value={gsInput}
+            onChange={handleGsChange}
+            onFocus={(e) => {
+              e.target.style.borderColor = "var(--app-primary)";
+              if (gsSuggestions.length > 0) setGsShowDrop(true);
+            }}
+            onBlur={(e) => { e.target.style.borderColor = "var(--app-border)"; }}
+            placeholder="Search leads by name, phone…"
+            className="w-full rounded-xl pl-9 pr-10 py-2 text-sm text-app"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
+            autoComplete="off"
+          />
+
+          {/* Go button (right) — glows orange when text is present */}
+          <button
+            type="submit"
+            title="Search"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
+            style={{
+              background:  gsInput ? "var(--app-primary)" : "transparent",
+              color:       gsInput ? "#fff" : "var(--app-text-soft)",
+            }}
+          >
+            <CornerDownLeft style={{ width: 13, height: 13 }} />
+          </button>
+        </form>
+
+        {/* Suggestions dropdown */}
+        {gsShowDrop && (gsSuggestions.length > 0 || gsLoading) && (
+          <div
+            className="absolute top-full left-0 right-0 mt-1.5 overflow-hidden z-[200]"
+            style={{
+              background:   "var(--app-surface)",
+              border:       "1px solid var(--app-border)",
+              borderRadius: "1rem",
+              boxShadow:    "0 8px 32px rgba(0,0,0,0.14)",
+            }}
+          >
+            {gsLoading && gsSuggestions.length === 0 ? (
+              <div className="px-4 py-3 text-xs text-app-soft">Searching…</div>
+            ) : (
+              <>
+                {gsSuggestions.map((lead) => (
+                  <button
+                    key={lead._id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setGsShowDrop(false);
+                      setGsInput("");
+                      setGsSuggestions([]);
+                      navigate("/leads", { state: { openLeadId: lead._id } });
+                    }}
+                    className="w-full text-left flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                  >
+                    {/* Avatar */}
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold text-white"
+                      style={{ background: "var(--app-primary)" }}>
+                      {(lead.name || "?").charAt(0).toUpperCase()}
+                    </div>
+                    {/* Name + phone */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-app truncate leading-tight">{lead.name || "Unknown"}</p>
+                      {lead.phone && <p className="text-xs text-app-soft truncate leading-tight">{lead.phone}</p>}
+                    </div>
+                    {/* Status pill */}
+                    {lead.status && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+                        style={{ background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                        {lead.status}
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {/* "See all results" footer */}
+                <div style={{ borderTop: "1px solid var(--app-border)" }}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); doGsNavigate(gsInput.trim()); }}
+                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-xs font-semibold transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: "var(--app-primary)" }}
+                  >
+                    <span>See all results for "{gsInput}"</span>
+                    <CornerDownLeft style={{ width: 13, height: 13 }} />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-1">
         {/* Theme toggle */}
@@ -1159,20 +1281,25 @@ export default function Sidebar() {
                 onChange={(e) => setMobileSearchQ(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && mobileSearchQ.trim()) {
-                    const SEARCH_IN_PLACE = ["/followups", "/calls"];
-                    if (SEARCH_IN_PLACE.some(p => location.pathname.startsWith(p))) {
-                      navigate(`${location.pathname}?q=${encodeURIComponent(mobileSearchQ.trim())}`);
-                    } else {
-                      navigate("/leads", { state: { presetSearch: mobileSearchQ.trim() } });
-                    }
+                    doGsNavigate(mobileSearchQ.trim());
                     setMobileSearchOpen(false); setMobileSearchQ("");
                   }
                   if (e.key === "Escape") { setMobileSearchOpen(false); setMobileSearchQ(""); }
                 }}
                 placeholder="Search leads by name, phone…"
-                className="w-full rounded-xl pl-9 pr-3 py-2 text-sm text-app"
+                className="w-full rounded-xl pl-9 pr-10 py-2 text-sm text-app"
                 style={{ background: "var(--app-surface-low)", border: "1.5px solid var(--app-primary)", outline: "none" }}
+                autoComplete="off"
               />
+              {/* Go button */}
+              <button
+                type="button"
+                onClick={() => { if (mobileSearchQ.trim()) { doGsNavigate(mobileSearchQ.trim()); setMobileSearchOpen(false); setMobileSearchQ(""); } }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-lg transition-all"
+                style={{ background: mobileSearchQ ? "var(--app-primary)" : "transparent", color: mobileSearchQ ? "#fff" : "var(--app-text-soft)" }}
+              >
+                <CornerDownLeft style={{ width: 13, height: 13 }} />
+              </button>
             </div>
             <button onClick={() => { setMobileSearchOpen(false); setMobileSearchQ(""); }}
               className="p-2 rounded-xl text-app hover:bg-black/5 dark:hover:bg-white/5 flex-shrink-0">
