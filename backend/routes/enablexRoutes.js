@@ -34,7 +34,8 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     // custom_data is echoed by EnableX from outbound call payload;
     // recording server sends it back when pushing the Cloudinary URL.
     const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
-    const eventType = (event?.type || event?.event_type || event?.voice_event || event?.name || "").toLowerCase();
+    // EnableX sends: state="connected"|"disconnected" (not type/event_type/voice_event)
+    const eventType = (event?.state || event?.type || event?.event_type || event?.voice_event || event?.name || "").toLowerCase();
 
     if (!ownerRef?.startsWith("lead_")) return;
 
@@ -72,12 +73,10 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     }
 
     // ── Call hangup / completion event (duration + status) ──────────────────
-    // EnableX event names: "call_hangup", "outbound_call_hangup", "conference_end",
-    // "participant_exit", "call:completed", "disconnected", "hangup" — match broadly
-    if (/hangup|completed|disconnected|exit|end/i.test(eventType)) {
-      const dur        = Number(
-        event?.data?.duration ?? event?.duration ??
-        event?.data?.call_duration ?? event?.call_duration ?? 0
+    // EnableX sends state="disconnected" with call_duration (float, seconds)
+    if (/disconnected|hangup|completed|exit|end/i.test(eventType)) {
+      const dur        = Math.round(
+        Number(event?.call_duration ?? event?.data?.duration ?? event?.duration ?? 0)
       );
       const callStatus = dur > 5 ? "answered" : "missed";
 
@@ -240,31 +239,29 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
     console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
-    // Bridge call: agent = moderator (starts conference audio), lead = participant.
-    // Both join the same named conference room — EnableX mixes their audio.
-    const confPayload = (to, isModerator) => ({
+    // True PSTN bridge via "dial" action:
+    // 1. EnableX calls the agent's phone
+    // 2. When agent answers, EnableX immediately dials the lead and bridges them directly
+    // (conference approach mutes audio because EnableX conference is WebRTC, not PSTN-native)
+    const payload = {
       from: fromNumber,
-      to,
+      to:   agentPhone,
       action_on_connect: {
-        conference: {
-          name:       confRoom,
-          beep:       "none",
-          moderator:  isModerator,   // agent starts the room; lead joins as participant
-          max_member: 2,
+        dial: {
+          to:      [{ type: "phone", number: leadPhone }],
+          from:    fromNumber,
+          timeout: 30,
         },
       },
       custom_data: ownerRef,
       event_url:   webhookUrl,
-    });
+    };
 
     let voiceId;
     try {
-      const [agentResp, leadResp] = await Promise.all([
-        axios.post(`${ENABLEX_BASE}/call`, confPayload(agentPhone, true),  basicAuth(org)),
-        axios.post(`${ENABLEX_BASE}/call`, confPayload(leadPhone,  false), basicAuth(org)),
-      ]);
-      voiceId = leadResp.data?.voice_id ?? leadResp.data?.id ?? null;
-      console.info("[enablex /initiate] Bridge call OK — agent:", agentPhone, "lead:", leadPhone, "conf:", confRoom);
+      const resp = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
+      voiceId = resp.data?.voice_id ?? resp.data?.id ?? null;
+      console.info("[enablex /initiate] Dial-bridge OK — agent:", agentPhone, "→ lead:", leadPhone);
     } catch (enablexErr) {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
