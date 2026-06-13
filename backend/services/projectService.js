@@ -210,6 +210,18 @@ const projectService = {
     return { leads, total, page, pages: Math.ceil(total / limit) };
   },
 
+  async addNote(projectId, leadId, text, user) {
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
+    if (!lead) throw new AppError("Lead not found", 404);
+    if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
+    lead.notes.push({ text: text.trim(), addedBy: user._id, addedByName: user.name || "", createdAt: new Date() });
+    await lead.save();
+    return lead;
+  },
+
   async updateRemark(leadId, { remark, remarkNote }, user) {
     // Verify org ownership via parent project (works for both old and new leads,
     // regardless of whether orgId is backfilled on the ProjectLead doc yet)

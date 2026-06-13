@@ -208,44 +208,41 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Contact remark cell (None / Contacted / Not Contacted + note) ─────────────
+// ── Contact remark cell (None / Contacted / Not Contacted + quick note adder) ──
 function RemarkCell({ lead, projectId, onUpdated }) {
   const [remark, setRemark] = useState(lead.remark || "");
-  const [note, setNote]     = useState(lead.remarkNote || "");
+  const [note, setNote]     = useState(""); // always empty — quick note adder (appends to notes[])
   const [saving, setSaving] = useState(false);
-  const noteRef = useRef(null);
+  const noteCount = (lead.notes || []).length;
 
-  const saveRemark = async (newRemark, newNote) => {
+  const saveRemark = async (newRemark) => {
     setSaving(true);
     try {
-      const res = await api.patch(`/projects/${projectId}/leads/${lead._id}/remark`, { remark: newRemark, remarkNote: newNote });
+      const res = await api.patch(`/projects/${projectId}/leads/${lead._id}/remark`, { remark: newRemark, remarkNote: lead.remarkNote || "" });
       onUpdated(res.data.data);
-    } catch { toast.error("Failed to save remark"); }
+    } catch { toast.error("Failed to save status"); }
     finally { setSaving(false); }
   };
 
-  const handleChange = (e) => {
-    const val = e.target.value;
-    setRemark(val);
-    if (val !== "Contacted") { setNote(""); saveRemark(val, ""); }
-    else saveRemark(val, note);
+  const submitNote = async () => {
+    if (!note.trim()) return;
+    setSaving(true);
+    try {
+      const res = await api.post(`/projects/${projectId}/leads/${lead._id}/notes`, { text: note.trim() });
+      setNote("");
+      onUpdated(res.data.data);
+    } catch { toast.error("Failed to save note"); }
+    finally { setSaving(false); }
   };
 
-  const remarkClass = remark === "Contacted"
-    ? "bg-green-500/10 border-green-500/30 text-green-600"
-    : remark === "Not Contacted"
-    ? "bg-red-500/10 border-red-500/30 text-red-500"
-    : "border-[var(--app-border)] text-app-soft";
-
   return (
-    <div className="flex flex-col gap-2 min-w-[160px]">
+    <div className="flex flex-col gap-1.5 min-w-[160px]">
       <div className="relative">
         <CustomSelect
           value={remark}
           onChange={(val) => {
             setRemark(val);
-            if (val !== "Contacted") { setNote(""); saveRemark(val, ""); }
-            else saveRemark(val, note);
+            saveRemark(val);
           }}
           placeholder="- None -"
           options={[
@@ -258,15 +255,20 @@ function RemarkCell({ lead, projectId, onUpdated }) {
       </div>
       {remark === "Contacted" && (
         <textarea
-          ref={noteRef}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          onBlur={() => saveRemark(remark, note)}
-          placeholder="Write a note..."
+          onBlur={submitNote}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitNote(); } }}
+          placeholder="Write a note… (Enter to add)"
           rows={2}
           className="w-full rounded-xl border px-2.5 py-1.5 text-xs resize-none transition"
           style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
         />
+      )}
+      {noteCount > 0 && (
+        <span className="text-[10px] text-orange-500 font-medium">
+          📝 {noteCount} note{noteCount !== 1 ? "s" : ""} — open lead to view
+        </span>
       )}
     </div>
   );

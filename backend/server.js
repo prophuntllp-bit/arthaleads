@@ -94,6 +94,32 @@ connectDB().then(async () => {
     console.error("[MIGRATION] orgId backfill failed:", e.message);
     try { require("./instrument").captureException(e, { tags: { migration: "orgId-backfill" } }); } catch {}
   }
+
+  // One-time migration: copy remarkNote → notes[] for project leads
+  try {
+    const mongoose = require("mongoose");
+    const toMigrate = await mongoose.connection.collection("projectleads").find({
+      remarkNote: { $exists: true, $ne: "" },
+      "notes.0": { $exists: false },
+    }).toArray();
+    if (toMigrate.length > 0) {
+      console.log(`[MIGRATION] Migrating ${toMigrate.length} remarkNote(s) to notes[]…`);
+      for (const lead of toMigrate) {
+        await mongoose.connection.collection("projectleads").updateOne(
+          { _id: lead._id },
+          { $push: { notes: {
+            _id: new mongoose.Types.ObjectId(),
+            text: lead.remarkNote,
+            addedByName: "Migrated note",
+            addedBy: lead.remarkUpdatedBy || null,
+            createdAt: lead.remarkUpdatedAt || lead.createdAt || new Date(),
+          }}}
+        );
+      }
+      console.log(`[MIGRATION] remarkNote→notes migration complete`);
+    }
+  } catch (e) { console.error("[MIGRATION] remarkNote migration failed:", e.message); }
+
 }).catch((e) => {
   console.error("[BOOT] DB connection failed - cannot start:", e.message);
   process.exit(1);

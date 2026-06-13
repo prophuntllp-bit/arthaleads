@@ -108,19 +108,24 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const isProjectLead = lead._type === "project";
 
   const refreshLead = async () => {
-    if (isProjectLead) return;
+    if (isProjectLead) return; // project lead data is managed by caller
     const { data } = await api.get(`/leads/${lead._id}`);
     onUpdated(data.data);
   };
 
   const handleNote = async () => {
-    if (isProjectLead) { toast.error("Notes are not available for project leads"); return; }
     if (!note.trim()) return;
     setSaving(true);
     try {
-      await api.post(`/leads/${lead._id}/notes`, { text: note });
-      setNote("");
-      await refreshLead();
+      if (isProjectLead && lead.projectId) {
+        const { data } = await api.post(`/projects/${lead.projectId}/leads/${lead._id}/notes`, { text: note });
+        setNote("");
+        onUpdated(data.data);
+      } else {
+        await api.post(`/leads/${lead._id}/notes`, { text: note });
+        setNote("");
+        await refreshLead();
+      }
       toast.success("Note added");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add note");

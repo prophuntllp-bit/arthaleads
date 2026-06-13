@@ -1,6 +1,16 @@
 ﻿// models/ProjectLead.js
 const mongoose = require("mongoose");
 
+const noteSchema = new mongoose.Schema(
+  {
+    text:        { type: String, required: true },
+    addedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    addedByName: { type: String, default: "" },
+    createdAt:   { type: Date, default: Date.now },
+  },
+  { _id: true }
+);
+
 const projectLeadSchema = new mongoose.Schema(
   {
     project: {
@@ -52,6 +62,9 @@ const projectLeadSchema = new mongoose.Schema(
       enum: ["", "New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"],
       default: "",
     },
+
+    // Notes added by agents (same structure as Lead.notes)
+    notes: [noteSchema],
 
     // Set to true when booking reaches Interested/Site Visit Booked - never unset
     isProspective: { type: Boolean, default: false, index: true },

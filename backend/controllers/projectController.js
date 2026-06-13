@@ -71,6 +71,15 @@ const projectController = {
     } catch (err) { next(err); }
   },
 
+  async addNote(req, res, next) {
+    try {
+      const { text } = req.body;
+      if (!text?.trim()) return res.status(400).json({ success: false, message: "Note text is required" });
+      const lead = await projectService.addNote(req.params.id, req.params.leadId, text, req.user);
+      res.json({ success: true, data: lead });
+    } catch (err) { next(err); }
+  },
+
   async updateRemark(req, res, next) {
     try {
       const { remark = "", remarkNote } = req.body;

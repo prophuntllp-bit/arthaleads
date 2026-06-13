@@ -16,6 +16,7 @@ router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);
+router.post("/:id/leads/:leadId/notes",   projectController.addNote);
 router.patch("/:id/leads/:leadId/remark", projectController.updateRemark);
 router.delete("/:id/leads/bulk", projectController.bulkDeleteLeads);
 router.patch("/:id/leads/bulk-status",    projectController.bulkUpdateStatus);
