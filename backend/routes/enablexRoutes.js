@@ -1,6 +1,6 @@
 const express = require("express");
 const axios   = require("axios");
-const router  = express.Router();
+const router  = express.Router(); // v2 — bridge call, all authenticated users can initiate
 
 const { protect, authorize } = require("../middlewares/auth");
 const Organization = require("../models/Organization");
