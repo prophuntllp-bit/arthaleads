@@ -222,35 +222,32 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber  = org.enablex.virtualNumber
       ? `+${normalizePhone(org.enablex.virtualNumber)}`
       : undefined;
+    const confRoom    = `crm_${Date.now()}`;
 
-    // Simple outbound call to the lead — TTS greeting plays when lead picks up.
-    // Agent joins via their own phone (bridge call requires EnableX conference plan).
-    const payload = {
+    // Bridge call: ring agent's phone + lead's phone simultaneously — both join same conference room.
+    const makePayload = (to) => ({
       from: fromNumber,
-      to:   leadPhone,
-      action_on_connect: {
-        play: {
-          text:     `Hello, you have a call from ${org.name || "the sales team"}. Please hold while we connect you.`,
-          language: "en-IN",
-          voice:    "female",
-        },
-      },
+      to,
+      action_on_connect: { conference: { name: confRoom } },
       custom_data: ownerRef,
       event_url:   webhookUrl,
-    };
+    });
 
-    let data;
+    let voiceId;
     try {
-      const resp = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
-      data = resp.data;
+      const [agentResp, leadResp] = await Promise.all([
+        axios.post(`${ENABLEX_BASE}/call`, makePayload(agentPhone), basicAuth(org)),
+        axios.post(`${ENABLEX_BASE}/call`, makePayload(leadPhone),  basicAuth(org)),
+      ]);
+      voiceId = leadResp.data?.voice_id ?? leadResp.data?.id ?? null;
+      console.info("[enablex /initiate] Bridge call initiated — agent:", agentPhone, "lead:", leadPhone, "conf:", confRoom);
     } catch (enablexErr) {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
-      console.error("[enablex /initiate] EnableX rejected call:", status, JSON.stringify(errBody));
-      console.error("[enablex /initiate] payload sent:", JSON.stringify({ ...payload, from: fromNumber }));
+      console.error("[enablex /initiate] EnableX rejected bridge call:", status, JSON.stringify(errBody));
+      console.error("[enablex /initiate] agentPhone:", agentPhone, "leadPhone:", leadPhone, "from:", fromNumber);
       throw enablexErr;
     }
-    const voiceId = data?.voice_id ?? data?.id ?? null;
 
     lead.activities.push({
       type:            "called",
@@ -259,14 +256,16 @@ router.post("/initiate", protect, async (req, res, next) => {
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction:  "outbound",
-        status:     "initiated",
-        phone:      lead.phone,
+        direction:   "outbound",
+        status:      "initiated",
+        phone:       lead.phone,
+        agentPhone:  req.user.phone,
+        confRoom,
       },
     });
     await lead.save();
 
-    res.json({ success: true, voiceId, message: `Calling ${lead.name} on ${lead.phone}…` });
+    res.json({ success: true, voiceId, message: `Calling ${lead.name}… Your phone (${req.user.phone}) will ring shortly.` });
   } catch (err) {
     const msg = err.response?.data?.message || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
