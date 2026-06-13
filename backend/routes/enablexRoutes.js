@@ -216,27 +216,29 @@ router.post("/initiate", protect, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
     }
 
-    const ownerRef   = `lead_${leadId}_${Date.now()}`;
-    const webhookUrl = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
-    const leadPhone  = `+${normalizePhone(lead.phone)}`;
+    const ownerRef    = `lead_${leadId}_${Date.now()}`;
+    const confRoom    = `conf_${ownerRef}`;
+    const webhookUrl  = `${process.env.APP_URL || "https://arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
+    const leadPhone   = `+${normalizePhone(lead.phone)}`;
+    const fromNumber  = org.enablex.virtualNumber
+      ? `+${normalizePhone(org.enablex.virtualNumber)}`
+      : undefined;
 
-    // EnableX calls the AGENT's phone first. When agent picks up, EnableX
-    // bridges the call to the lead. Both hear each other live.
-    const payload = {
-      from: org.enablex.virtualNumber || undefined,
-      to:   agentPhone,
+    // Bridge call via conference room:
+    // EnableX calls both the agent and the lead separately, puts each into
+    // the same named conference room so they hear each other live.
+    const callLeg = (to) => axios.post(`${ENABLEX_BASE}/call`, {
+      from: fromNumber,
+      to,
       action_on_connect: {
-        dial: {
-          to:      leadPhone,
-          timeout: 30,
-        },
+        conference: { name: confRoom },
       },
       custom_data: ownerRef,
       event_url:   webhookUrl,
-    };
+    }, basicAuth(org));
 
-    const { data } = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
-    const voiceId  = data?.voice_id ?? data?.id ?? null;
+    const [agentCall, leadCall] = await Promise.all([callLeg(agentPhone), callLeg(leadPhone)]);
+    const voiceId = agentCall.data?.voice_id ?? agentCall.data?.id ?? null;
 
     lead.activities.push({
       type:            "called",
@@ -245,15 +247,15 @@ router.post("/initiate", protect, async (req, res, next) => {
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction: "outbound",
-        status:    "initiated",
-        phone:     lead.phone,
+        direction:  "outbound",
+        status:     "initiated",
+        phone:      lead.phone,
         agentPhone: req.user.phone,
       },
     });
     await lead.save();
 
-    res.json({ success: true, voiceId, message: `Your phone (${req.user.phone}) will ring now — pick up to be connected to ${lead.name}.` });
+    res.json({ success: true, voiceId, message: `Your phone (${req.user.phone}) will ring now — pick up to speak with ${lead.name}.` });
   } catch (err) {
     const msg = err.response?.data?.message || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
