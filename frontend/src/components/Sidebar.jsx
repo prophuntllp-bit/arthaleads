@@ -1041,7 +1041,12 @@ export default function Sidebar() {
                       setGsShowDrop(false);
                       setGsInput("");
                       setGsSuggestions([]);
-                      navigate("/leads", { state: { openLeadId: lead._id } });
+                      // Stay on current page if it supports lead detail; otherwise go to /leads
+                      const LEAD_DETAIL_PAGES = ["/leads", "/followups", "/calls"];
+                      const target = LEAD_DETAIL_PAGES.some(p => location.pathname.startsWith(p))
+                        ? location.pathname
+                        : "/leads";
+                      navigate(target, { state: { openLeadId: lead._id } });
                     }}
                     className="w-full text-left flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                   >

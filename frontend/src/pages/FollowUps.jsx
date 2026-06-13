@@ -1,7 +1,8 @@
 ﻿import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge, AppDatePicker } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
+import LeadDetail from "../components/LeadDetail";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User, Search, X as XIcon } from "lucide-react";
@@ -179,10 +180,24 @@ function BookingBadge({ value }) {
 }
 
 export default function FollowUps() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role && user.role !== "agent";
+
+  // Lead detail panel — opened from global search suggestion
+  const [detailLead, setDetailLead] = useState(null);
+
+  useEffect(() => {
+    const openId = location.state?.openLeadId;
+    if (!openId) return;
+    // Clear the state so back-navigation doesn't re-open
+    navigate(location.pathname, { replace: true, state: {} });
+    api.get(`/leads/${openId}`)
+      .then(({ data }) => setDetailLead(data.lead || data))
+      .catch(() => toast.error("Could not load lead details"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [section, setSection] = useState("present");
   const [searchQ, setSearchQ] = useState(() => searchParams.get("q") || "");
@@ -564,6 +579,17 @@ export default function FollowUps() {
           </div>
         )}
       </div>
+
+      {/* Lead detail panel — opened from global search suggestions */}
+      {detailLead && (
+        <LeadDetail
+          open={!!detailLead}
+          lead={detailLead}
+          onClose={() => setDetailLead(null)}
+          onUpdated={(updated) => { setDetailLead(updated); fetchLeads(); }}
+          onEdit={() => {}}
+        />
+      )}
     </div>
   );
 }

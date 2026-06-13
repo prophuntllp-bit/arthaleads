@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation, useNavigate } from "react-router-dom";
+import LeadDetail from "../components/LeadDetail";
 import {
   Phone, PhoneOff, PhoneMissed, Mic, AlignLeft,
   Loader2, RefreshCw, Sparkles, ChevronRight, X,
@@ -658,9 +659,23 @@ function CallAnalytics({ data }) {
 export default function Calls() {
   useEffect(() => { document.title = "Calls - Arthaleads CRM"; }, []);
 
-  const { user } = useAuth();
-  const isAgent  = user?.role === "agent";
+  const { user }   = useAuth();
+  const isAgent    = user?.role === "agent";
+  const location   = useLocation();
+  const navigate   = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Lead detail panel — opened from global search suggestion
+  const [detailLead, setDetailLead] = useState(null);
+
+  useEffect(() => {
+    const openId = location.state?.openLeadId;
+    if (!openId) return;
+    navigate(location.pathname, { replace: true, state: {} });
+    api.get(`/leads/${openId}`)
+      .then(({ data }) => setDetailLead(data.lead || data))
+      .catch(() => toast.error("Could not load lead details"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [calls,     setCalls]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -857,6 +872,17 @@ export default function Calls() {
       </div>
 
       {selected && <LeadCallModal lead={selected} onClose={() => setSelected(null)} />}
+
+      {/* Lead detail panel — opened from global search suggestions */}
+      {detailLead && (
+        <LeadDetail
+          open={!!detailLead}
+          lead={detailLead}
+          onClose={() => setDetailLead(null)}
+          onUpdated={(updated) => setDetailLead(updated)}
+          onEdit={() => {}}
+        />
+      )}
     </>
   );
 }
