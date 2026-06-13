@@ -60,12 +60,13 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
 
   useEffect(() => {
     setTab("info");
-    setNote("");
+    const latest = lead?.notes?.[lead.notes.length - 1];
+    setNote(latest?.text || "");
     setStatus(lead?.status || "New");
     setAiDraft(null);
     setCallHistory([]);
     setExpandedCall(null);
-  }, [lead, open]);
+  }, [lead?._id, open]);
 
   useEffect(() => {
     if (tab !== "calls" || !lead?._id) return;
@@ -108,9 +109,10 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const isProjectLead = lead._type === "project";
 
   const refreshLead = async () => {
-    if (isProjectLead) return; // project lead data is managed by caller
+    if (isProjectLead) return null;
     const { data } = await api.get(`/leads/${lead._id}`);
     onUpdated(data.data);
+    return data.data;
   };
 
   const handleNote = async () => {
@@ -119,14 +121,19 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     try {
       if (isProjectLead && lead.projectId) {
         const { data } = await api.post(`/projects/${lead.projectId}/leads/${lead._id}/notes`, { text: note });
-        setNote("");
-        onUpdated(data.data);
+        const savedLead = data.data;
+        const latest = savedLead.notes?.[savedLead.notes.length - 1];
+        setNote(latest?.text || note);
+        onUpdated(savedLead);
       } else {
         await api.post(`/leads/${lead._id}/notes`, { text: note });
-        setNote("");
-        await refreshLead();
+        const updatedLead = await refreshLead();
+        if (updatedLead) {
+          const latest = updatedLead.notes?.[updatedLead.notes.length - 1];
+          setNote(latest?.text || note);
+        }
       }
-      toast.success("Note added");
+      toast.success("Note saved");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add note");
     } finally {
@@ -312,44 +319,34 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               placeholder="Add a note for the sales team..."
               value={note}
               onChange={(e) => setNote(e.target.value)}
+              rows={6}
             />
             <div className="flex justify-end">
               <button className="btn-primary rounded-xl" onClick={handleNote} disabled={saving}>
-                {saving ? <Spinner size="sm" /> : "Add Note"}
+                {saving ? <Spinner size="sm" /> : "Save Note"}
               </button>
             </div>
-            <div className="space-y-3">
-              {(lead.notes || []).length === 0 && <p className="text-sm text-app-soft">No notes yet.</p>}
-              {(lead.notes || []).slice().reverse().map((item) => {
-                const isFbError = item.text?.includes(FB_ERROR_PATTERN);
-                return (
-                  <div
-                    key={item._id || `${item.text}-${item.createdAt}`}
-                    className={`rounded-[1.25rem] p-4 overflow-hidden ${isFbError ? "border border-amber-400/30 bg-amber-50 dark:bg-amber-500/10" : "stitch-surface-muted"}`}
-                  >
+            {/* FB error notes still need to be surfaced for retry */}
+            {(lead.notes || []).some(n => n.text?.includes(FB_ERROR_PATTERN)) && (
+              <div className="space-y-3">
+                {(lead.notes || []).filter(n => n.text?.includes(FB_ERROR_PATTERN)).map((item) => (
+                  <div key={item._id || item.text} className="rounded-[1.25rem] p-4 border border-amber-400/30 bg-amber-50 dark:bg-amber-500/10">
                     <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
                     <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                      <p className="text-xs text-app-soft">
-                        {item.addedByName || item.addedBy?.name || "Unknown"} | {fmtDate(item.createdAt)}
-                      </p>
-                      {isFbError && (
-                        <button
-                          onClick={handleRetryFacebook}
-                          disabled={retrying}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
-                          style={{ background: "var(--app-primary)" }}
-                        >
-                          {retrying
-                            ? <><Spinner size="sm" /> Fetching…</>
-                            : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>
-                          }
-                        </button>
-                      )}
+                      <p className="text-xs text-app-soft">{item.addedByName || "Unknown"} | {fmtDate(item.createdAt)}</p>
+                      <button
+                        onClick={handleRetryFacebook}
+                        disabled={retrying}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
+                        style={{ background: "var(--app-primary)" }}
+                      >
+                        {retrying ? <><Spinner size="sm" /> Fetching…</> : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>}
+                      </button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
