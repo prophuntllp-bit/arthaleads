@@ -1,10 +1,10 @@
 ﻿import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge, AppDatePicker } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User } from "lucide-react";
+import { CalendarClock, ChevronLeft, ChevronRight, Clock, CalendarCheck, CalendarDays, ArrowUp, ArrowDown, CheckCircle2, User, Search, X as XIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 // ── Route patch to correct API based on lead type ─────────────────────────────
@@ -180,10 +180,12 @@ function BookingBadge({ value }) {
 
 export default function FollowUps() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const isAdmin = user?.role && user.role !== "agent";
 
   const [section, setSection] = useState("present");
+  const [searchQ, setSearchQ] = useState(() => searchParams.get("q") || "");
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -218,6 +220,7 @@ export default function FollowUps() {
         if (to) params.set("to", to);
       }
       if (isAdmin && myOnly) params.set("myOnly", "true");
+      if (searchQ.trim()) params.set("search", searchQ.trim());
       const r = await api.get(`/followups?${params.toString()}`);
       setLeads(r.data.leads || []);
       setTotal(r.data.total || 0);
@@ -227,7 +230,17 @@ export default function FollowUps() {
     } finally {
       setLoading(false);
     }
-  }, [section, page, from, to, sort, myOnly, isAdmin]);
+  }, [section, page, from, to, sort, myOnly, isAdmin, searchQ]);
+
+  // Sync ?q= URL param → searchQ (handles navigation from sidebar)
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    setSearchQ(q);
+    if (q) setPage(1);
+  }, [searchParams]);
+
+  // Reset page when search changes
+  useEffect(() => { setPage(1); }, [searchQ]);
 
   // Reset page + set smart sort default when switching sections
   useEffect(() => {
@@ -279,8 +292,27 @@ export default function FollowUps() {
         </div>
       </div>
 
-      {/* Controls row - sort toggle + future date filters + my-only toggle */}
+      {/* Controls row - search + sort toggle + future date filters + my-only toggle */}
       <div className="pt-3 flex items-center gap-3 flex-wrap">
+        {/* Search within follow-ups */}
+        <div className="relative flex-shrink-0" style={{ width: 220 }}>
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-soft" />
+          <input
+            value={searchQ}
+            onChange={e => { setSearchQ(e.target.value); setPage(1); setSearchParams(e.target.value ? { q: e.target.value } : {}); }}
+            placeholder="Search by name or phone…"
+            className="w-full rounded-xl pl-8 pr-7 py-1.5 text-sm text-app"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
+            onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
+            onBlur={e  => { e.target.style.borderColor = "var(--app-border)"; }}
+          />
+          {searchQ && (
+            <button onClick={() => { setSearchQ(""); setSearchParams({}); setPage(1); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
         {/* My leads only toggle — admin/manager only */}
         {isAdmin && (
           <button

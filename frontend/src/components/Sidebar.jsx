@@ -938,7 +938,12 @@ export default function Sidebar() {
           e.preventDefault();
           const val = e.target.elements.globalSearch.value.trim();
           if (!val) return;
-          navigate("/leads", { state: { presetSearch: val } });
+          const SEARCH_IN_PLACE = ["/followups", "/calls"];
+          if (SEARCH_IN_PLACE.some(p => location.pathname.startsWith(p))) {
+            navigate(`${location.pathname}?q=${encodeURIComponent(val)}`);
+          } else {
+            navigate("/leads", { state: { presetSearch: val } });
+          }
           e.target.reset();
         }}
       >
@@ -1154,7 +1159,12 @@ export default function Sidebar() {
                 onChange={(e) => setMobileSearchQ(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && mobileSearchQ.trim()) {
-                    navigate("/leads", { state: { presetSearch: mobileSearchQ.trim() } });
+                    const SEARCH_IN_PLACE = ["/followups", "/calls"];
+                    if (SEARCH_IN_PLACE.some(p => location.pathname.startsWith(p))) {
+                      navigate(`${location.pathname}?q=${encodeURIComponent(mobileSearchQ.trim())}`);
+                    } else {
+                      navigate("/leads", { state: { presetSearch: mobileSearchQ.trim() } });
+                    }
                     setMobileSearchOpen(false); setMobileSearchQ("");
                   }
                   if (e.key === "Escape") { setMobileSearchOpen(false); setMobileSearchQ(""); }

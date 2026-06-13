@@ -140,7 +140,7 @@ router.use(protect);
 // GET /api/calls — one row per lead (grouped), most-recent call shown
 router.get("/", async (req, res, next) => {
   try {
-    const { page = 1, limit = 30, status } = req.query;
+    const { page = 1, limit = 30, status, search } = req.query;
     // Agents always see only their own calls; managers/admins can filter by any agent
     const agentId = req.user.role === "agent"
       ? String(req.user._id)
@@ -149,6 +149,9 @@ router.get("/", async (req, res, next) => {
     const orgId = req.user.orgId;
 
     const mongoose = require("mongoose");
+    const searchCond = search
+      ? { $or: [{ name: { $regex: search, $options: "i" } }, { phone: { $regex: search, $options: "i" } }] }
+      : {};
     const actMatch = {
       "activities.type": "called",
       ...(status  && status !== "all" ? { "activities.meta.status": status } : {}),
@@ -157,7 +160,7 @@ router.get("/", async (req, res, next) => {
 
     const [rows, totalRows] = await Promise.all([
       Lead.aggregate([
-        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
+        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)), ...searchCond } },
         { $unwind: "$activities" },
         { $match: actMatch },
         { $sort: { "activities.createdAt": -1 } },
@@ -192,7 +195,7 @@ router.get("/", async (req, res, next) => {
       ]),
       // Count unique leads (not individual calls)
       Lead.aggregate([
-        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
+        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)), ...searchCond } },
         { $unwind: "$activities" },
         { $match: actMatch },
         { $group: { _id: "$_id" } },

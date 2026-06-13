@@ -3,7 +3,7 @@ const ProjectLead = require("../models/ProjectLead");
 const mongoose = require("mongoose");
 
 const followupService = {
-  async get(user, { section, from, to, page = 1, limit = 50, sort, myOnly = false }) {
+  async get(user, { section, from, to, page = 1, limit = 50, sort, myOnly = false, search = "" }) {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -14,6 +14,10 @@ const followupService = {
     const scopedToSelf = user.role === "agent" || myOnly;
     const selfCond = scopedToSelf
       ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
+      : [];
+
+    const searchCond = search
+      ? [{ $or: [{ name: { $regex: search, $options: "i" } }, { phone: { $regex: search, $options: "i" } }] }]
       : [];
 
     const baseLeadFilter = {
@@ -31,6 +35,7 @@ const followupService = {
         $and: [
           baseLeadFilter,
           ...selfCond,
+          ...searchCond,
           { $or: [
             { followUpDate: pastFilter },
             { followUpDate: null, createdAt: pastFilter, status: "New" },
@@ -38,10 +43,13 @@ const followupService = {
         ],
       };
       projFilter = {
-        $or: [
-          { followUp:  pastFilter },
-          { followUp2: pastFilter },
-          { followUp: null, followUp2: null, createdAt: pastFilter, remark: { $in: ["", null] } },
+        $and: [
+          ...searchCond,
+          { $or: [
+            { followUp:  pastFilter },
+            { followUp2: pastFilter },
+            { followUp: null, followUp2: null, createdAt: pastFilter, remark: { $in: ["", null] } },
+          ]},
         ],
       };
     } else if (section === "present") {
@@ -50,13 +58,17 @@ const followupService = {
         $and: [
           baseLeadFilter,
           ...selfCond,
+          ...searchCond,
           { followUpDate: todayRange },
         ],
       };
       projFilter = {
-        $or: [
-          { followUp:  todayRange },
-          { followUp2: todayRange },
+        $and: [
+          ...searchCond,
+          { $or: [
+            { followUp:  todayRange },
+            { followUp2: todayRange },
+          ]},
         ],
       };
     } else if (section === "future") {
@@ -67,13 +79,17 @@ const followupService = {
         $and: [
           baseLeadFilter,
           ...selfCond,
+          ...searchCond,
           { followUpDate: futureFollowUp },
         ],
       };
       projFilter = {
-        $or: [
-          { followUp:  futureFollowUp },
-          { followUp2: futureFollowUp },
+        $and: [
+          ...searchCond,
+          { $or: [
+            { followUp:  futureFollowUp },
+            { followUp2: futureFollowUp },
+          ]},
         ],
       };
     }
@@ -83,9 +99,8 @@ const followupService = {
     // Build the project-leads $unionWith stage.
     // Agents see project leads where they set the follow-up (followUpSetBy).
     // Admins/managers see all project leads scoped to their org.
-    const effectiveProjFilter = scopedToSelf
-      ? { $and: [{ followUpSetBy: user._id }, { orgId: orgIdObj }, projFilter] }
-      : projFilter;
+    const scopeConds = scopedToSelf ? [{ followUpSetBy: user._id }, { orgId: orgIdObj }] : [{ orgId: orgIdObj }];
+    const effectiveProjFilter = { $and: [...scopeConds, ...projFilter.$and] };
 
     const projUnionStage = [
       { $unionWith: {

@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Phone, PhoneOff, PhoneMissed, Mic, AlignLeft,
   Loader2, RefreshCw, Sparkles, ChevronRight, X,
   FileText, CalendarPlus, CheckCircle2, Filter,
-  ChevronLeft, PhoneCall, Copy, Check,
+  ChevronLeft, PhoneCall, Copy, Check, Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -659,11 +660,13 @@ export default function Calls() {
 
   const { user } = useAuth();
   const isAgent  = user?.role === "agent";
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [calls,     setCalls]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [tab,       setTab]       = useState("all");
   const [page,      setPage]      = useState(1);
+  const [searchQ,   setSearchQ]   = useState(() => searchParams.get("q") || "");
   const [total,     setTotal]     = useState(0);
   const [pages,     setPages]     = useState(1);
   const [stats,     setStats]     = useState({ total: 0, answered: 0, missed: 0 });
@@ -673,12 +676,13 @@ export default function Calls() {
   const [selected,  setSelected]  = useState(null);
   const LIMIT = 30;
 
-  const loadCalls = useCallback(async (status, pg, agId) => {
+  const loadCalls = useCallback(async (status, pg, agId, sq) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: pg, limit: LIMIT });
       if (status !== "all") params.set("status", status);
       if (agId) params.set("agentId", agId);
+      if (sq && sq.trim()) params.set("search", sq.trim());
       const { data } = await api.get(`/calls?${params}`);
       setCalls(data.calls || []);
       setTotal(data.total || 0);
@@ -708,11 +712,18 @@ export default function Calls() {
     } catch {}
   }, []);
 
-  useEffect(() => { loadCalls(tab, page, agentId); }, [tab, page, agentId, loadCalls]);
+  // Sync ?q= URL param → searchQ
+  useEffect(() => {
+    const q = searchParams.get("q") || "";
+    setSearchQ(q);
+    if (q) setPage(1);
+  }, [searchParams]);
+
+  useEffect(() => { loadCalls(tab, page, agentId, searchQ); }, [tab, page, agentId, searchQ, loadCalls]);
   useEffect(() => { loadStats(); loadAnalytics(); loadAgents(); }, [loadStats, loadAnalytics, loadAgents]);
 
   const switchTab = (id) => { setTab(id); setPage(1); };
-  const refresh   = ()    => { loadCalls(tab, page, agentId); loadStats(); loadAnalytics(); };
+  const refresh   = ()    => { loadCalls(tab, page, agentId, searchQ); loadStats(); loadAnalytics(); };
 
   return (
     <>
@@ -761,6 +772,26 @@ export default function Calls() {
                 {label}
               </button>
             ))}
+          </div>
+
+          {/* Search by lead name / phone */}
+          <div className="relative flex-shrink-0" style={{ width: 220 }}>
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-soft" />
+            <input
+              value={searchQ}
+              onChange={e => { setSearchQ(e.target.value); setPage(1); setSearchParams(e.target.value ? { q: e.target.value } : {}); }}
+              placeholder="Search lead name or phone…"
+              className="w-full rounded-xl pl-8 pr-7 py-2 text-sm text-app"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
+              onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
+              onBlur={e  => { e.target.style.borderColor = "var(--app-border)"; }}
+            />
+            {searchQ && (
+              <button onClick={() => { setSearchQ(""); setSearchParams({}); setPage(1); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           {!isAgent && agents.length > 1 && (
