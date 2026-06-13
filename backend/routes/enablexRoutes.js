@@ -48,30 +48,30 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
 
     let dirty = false;
 
-    // ── Agent answered → trigger second leg to the lead ─────────────────────
+    // ── Agent answered → bridge to lead via /call/{voice_id}/connect ────────
     if (eventType === "connected") {
       const meta = lead.activities[actIdx].meta;
-      if (meta.confRoom && meta.leadPhone && !meta.leadCallMade) {
-        // Mark immediately to prevent duplicate calls if webhook fires twice
+      if (meta.leadPhone && !meta.leadCallMade) {
+        const agentVoiceId = event.voice_id;
+        if (!agentVoiceId) {
+          console.error("[enablex webhook] connected event missing voice_id — cannot bridge");
+          return;
+        }
+        // Mark immediately to prevent duplicate bridge if webhook fires twice
         lead.activities[actIdx].meta = { ...meta, leadCallMade: true };
         lead.markModified("activities");
         await lead.save();
 
-        const org      = await Organization.findById(orgId).select("enablex").lean();
-        const fromNum  = normalizePhone(org.enablex.virtualNumber);
-        const wh       = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${orgId}`;
-        const leadPld  = {
-          from: fromNum,
-          to:   meta.leadPhone,
-          action_on_connect: {
-            conference: { name: meta.confRoom, beep: "none", moderator: false },
-          },
-          custom_data: meta.ownerRef,
-          event_url:   wh,
-        };
-        axios.post(`${ENABLEX_BASE}/call`, leadPld, { auth: { username: org.enablex.appId, password: org.enablex.apiKey } })
-          .then(r  => console.info("[enablex webhook] Lead leg triggered:", r.data?.voice_id))
-          .catch(e => console.error("[enablex webhook] Lead call failed:", e.response?.data || e.message));
+        const org     = await Organization.findById(orgId).select("enablex").lean();
+        const fromNum = normalizePhone(org.enablex.virtualNumber);
+        // Bridge the active agent call leg to the lead — real PSTN bridge, audio works
+        axios.post(
+          `${ENABLEX_BASE}/call/${agentVoiceId}/connect`,
+          { from: fromNum, to: meta.leadPhone },
+          { auth: { username: org.enablex.appId, password: org.enablex.apiKey } }
+        )
+          .then(r  => console.info("[enablex webhook] Bridge connected — lead:", meta.leadPhone, r.data))
+          .catch(e => console.error("[enablex webhook] Bridge failed:", e.response?.data || e.message));
         return;
       }
     }
@@ -255,7 +255,6 @@ router.post("/initiate", protect, async (req, res, next) => {
     // Use api.arthaleads.com — Vercel (www) has no /api proxy, so EnableX webhooks must target Railway directly
     const webhookUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
     const leadPhone  = normalizePhone(lead.phone);   // digits only, e.g. "917020950304"
-    const confRoom   = `crm_${Date.now()}`;
 
     if (!org.enablex.virtualNumber) {
       return res.status(400).json({
@@ -267,18 +266,15 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
     console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
-    // Step 1: Call the agent (moderator=true so conference audio starts when they answer).
-    // Step 2: Webhook handler calls the lead when agent state=connected, puts lead in same conf.
-    // This ensures audio is live before the lead joins — fixing the muted conference issue.
+    // Step 1: Call the agent with a TTS hold message.
+    // Step 2: When agent answers, webhook (state=connected) calls POST /call/{voice_id}/connect
+    //         to bridge the active agent leg to the lead — real PSTN bridge with working audio.
+    const holdText = `Hello, you have an outbound call request for ${lead.name}. Please hold while we connect you.`;
     const payload = {
       from: fromNumber,
       to:   agentPhone,
       action_on_connect: {
-        conference: {
-          name:      confRoom,
-          beep:      "none",
-          moderator: true,   // agent starts the room; lead joins via webhook second leg
-        },
+        play: { text: holdText, language: "en-IN", voice: "female" },
       },
       custom_data: ownerRef,
       event_url:   webhookUrl,
@@ -288,7 +284,7 @@ router.post("/initiate", protect, async (req, res, next) => {
     try {
       const resp = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
       voiceId = resp.data?.voice_id ?? resp.data?.id ?? null;
-      console.info("[enablex /initiate] Agent leg OK — agent:", agentPhone, "conf:", confRoom);
+      console.info("[enablex /initiate] Dial-bridge OK — agent:", agentPhone, "→ lead:", leadPhone);
     } catch (enablexErr) {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
@@ -311,13 +307,12 @@ router.post("/initiate", protect, async (req, res, next) => {
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction:     "outbound",
-        status:        "initiated",
-        phone:         lead.phone,
-        leadPhone,            // normalised digits, used by webhook to dial lead
-        agentPhone:    req.user.phone,
-        confRoom,
-        leadCallMade:  false, // webhook sets true when lead call is triggered
+        direction:    "outbound",
+        status:       "initiated",
+        phone:        lead.phone,
+        leadPhone,            // normalised digits, used by webhook to bridge to lead
+        agentPhone:   req.user.phone,
+        leadCallMade: false,  // webhook sets true after /call/{id}/connect fires
       },
     });
     await lead.save();
