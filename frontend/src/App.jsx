@@ -315,7 +315,6 @@ const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
 const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
 const Compare         = lazy(() => import("./pages/Compare"));
-const Calls           = lazy(() => import("./pages/Calls"));
 const Pricing         = lazy(() => import("./pages/Pricing"));
 const Bookings              = lazy(() => import("./pages/Bookings"));
 const Invoices              = lazy(() => import("./pages/Invoices"));
@@ -620,7 +619,6 @@ export default function App() {
           <Route path="/invoices"      element={<Invoices />} />
           <Route path="/developers"    element={<Developers />} />
           <Route path="/plans"         element={<Plans />} />
-          <Route path="/calls"         element={<Calls />} />
 
           {/* Admin only */}
           <Route element={<RequireRole roles={["admin"]} />}>
