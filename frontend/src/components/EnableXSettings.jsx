@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, ExternalLink, Loader2, Phone, Wifi, WifiOff, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, ExternalLink, Loader2, Phone, Wifi, WifiOff, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -12,6 +12,7 @@ export default function EnableXSettings() {
   const [orgId,          setOrgId]          = useState("");
   const [saving,         setSaving]         = useState(false);
   const [testing,        setTesting]        = useState(false);
+  const [showApiKey,     setShowApiKey]     = useState(false);
 
   const webhookUrl = orgId
     ? `${window.location.origin}/api/calls/webhook/${orgId}`
@@ -113,9 +114,15 @@ export default function EnableXSettings() {
           </div>
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">APP KEY</label>
-            <input className="input w-full" type="password"
-              placeholder={hasApiKey ? "Saved — enter new key to replace" : "Paste your APP KEY"}
-              value={apiKey} onChange={e => setApiKey(e.target.value)} />
+            <div className="relative">
+              <input className="input w-full pr-10" type={showApiKey ? "text" : "password"}
+                placeholder={hasApiKey ? "Saved — enter new key to replace" : "Paste your APP KEY"}
+                value={apiKey} onChange={e => setApiKey(e.target.value)} />
+              <button type="button" onClick={() => setShowApiKey(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">Virtual Phone Number</label>
