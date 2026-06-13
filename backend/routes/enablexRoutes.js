@@ -249,14 +249,13 @@ router.post("/initiate", protect, async (req, res, next) => {
 
     // EnableX bridge call: action_on_connect.connect tells EnableX to automatically
     // dial the lead and bridge both legs when the agent answers — no second API call needed.
-    // Use array format for to: with explicit type so EnableX treats this as a PSTN phone call.
     const payload = {
       from: fromNumber,
       to:   agentPhone,
       action_on_connect: {
         connect: {
-          from: fromNumber,
-          to:   [{ type: "phone", number: leadPhone }],
+          from: fromNumber,  // caller ID shown to lead
+          to:   leadPhone,   // lead's phone (digits only, e.g. "917020950304")
         },
       },
       custom_data: ownerRef,
