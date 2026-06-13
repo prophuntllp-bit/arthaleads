@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Phone, PhoneOff, PhoneMissed, Mic, AlignLeft,
   Loader2, RefreshCw, Sparkles, ChevronRight, X,
   FileText, CalendarPlus, CheckCircle2, Filter,
+  ChevronLeft, PhoneCall,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -30,11 +31,11 @@ const SENTIMENT = {
 const STATUS_STYLE = {
   answered:  { bg: "rgba(34,197,94,0.10)",  color: "#22c55e", icon: Phone       },
   missed:    { bg: "rgba(239,68,68,0.10)",  color: "#ef4444", icon: PhoneMissed },
-  initiated: { bg: "rgba(249,115,22,0.10)", color: "#f97316", icon: Phone       },
+  initiated: { bg: "rgba(249,115,22,0.10)", color: "#f97316", icon: PhoneCall   },
 };
 
-// ── Call detail modal ──────────────────────────────────────────────────────────
-function CallDetailModal({ call, onClose }) {
+// ── Call detail panel (shown inside the history modal) ────────────────────────
+function CallDetailPanel({ call, leadId, leadName, onBack }) {
   const meta   = call.meta || {};
   const status = meta.status || "initiated";
   const ss     = STATUS_STYLE[status] || STATUS_STYLE.initiated;
@@ -42,96 +43,234 @@ function CallDetailModal({ call, onClose }) {
 
   const [notes,         setNotes]         = useState(meta.notes || "");
   const [savingNotes,   setSavingNotes]   = useState(false);
-
   const [showFollowup,  setShowFollowup]  = useState(false);
-  const [followupTitle, setFollowupTitle] = useState(`Follow up with ${call.leadName}`);
+  const [followupTitle, setFollowupTitle] = useState(`Follow up with ${leadName}`);
   const [followupDate,  setFollowupDate]  = useState("");
   const [followupDesc,  setFollowupDesc]  = useState("");
   const [creatingTask,  setCreatingTask]  = useState(false);
   const [taskDone,      setTaskDone]      = useState(false);
-
   const [calling,       setCalling]       = useState(false);
-
-  useEffect(() => {
-    const handler = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
 
   const saveNotes = async () => {
     setSavingNotes(true);
     try {
-      await api.patch(`/calls/${call.leadId}/${call.activityId}/notes`, { notes });
+      await api.patch(`/calls/${leadId}/${call.activityId}/notes`, { notes });
       toast.success("Notes saved");
-    } catch {
-      toast.error("Failed to save notes");
-    } finally { setSavingNotes(false); }
+    } catch { toast.error("Failed to save notes"); }
+    finally   { setSavingNotes(false); }
   };
 
   const createFollowup = async () => {
     if (!followupDate) return;
     setCreatingTask(true);
     try {
-      await api.post(`/calls/${call.leadId}/followup`, {
-        title:       followupTitle,
-        dueDate:     followupDate,
-        description: followupDesc,
-      });
+      await api.post(`/calls/${leadId}/followup`, { title: followupTitle, dueDate: followupDate, description: followupDesc });
       toast.success("Follow-up task created");
       setTaskDone(true);
       setShowFollowup(false);
-    } catch {
-      toast.error("Failed to create task");
-    } finally { setCreatingTask(false); }
+    } catch { toast.error("Failed to create task"); }
+    finally   { setCreatingTask(false); }
   };
 
   const callBack = async () => {
     setCalling(true);
     try {
-      await api.post("/calls/initiate", { leadId: call.leadId });
+      await api.post("/calls/initiate", { leadId });
       toast.success("Calling back — check your phone.");
-      onClose();
+      onBack();
     } catch (err) {
       toast.error(err.response?.data?.message || "Call failed");
     } finally { setCalling(false); }
   };
 
-  const notesDirty = notes !== (meta.notes || "");
+  return (
+    <div className="space-y-4">
+      <div>
+        <button onClick={onBack}
+          className="flex items-center gap-1.5 text-xs text-app-soft hover:text-app mb-3 transition">
+          <ChevronLeft className="w-4 h-4" /> Back to call history
+        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
+            style={{ background: ss.bg, color: ss.color }}>{status}</span>
+          {sent && (
+            <span className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
+              style={{ background: sent.bg, color: sent.color }}>{sent.label}</span>
+          )}
+          {meta.duration > 0 && <span className="text-xs text-app-soft">{fmt(meta.duration)}</span>}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 mt-1 text-xs text-app-soft">
+          <span>{fmtDateTime(call.createdAt)}</span>
+          {call.performedBy && <span>· Agent: {call.performedBy}</span>}
+        </div>
+      </div>
+
+      {status === "missed" && (
+        <button onClick={callBack} disabled={calling}
+          className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition"
+          style={{ background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+          {calling ? <Loader2 className="w-4 h-4 animate-spin" /> : <PhoneMissed className="w-4 h-4" />}
+          Call Back Now
+        </button>
+      )}
+
+      {meta.recordingUrl ? (
+        <section>
+          <div className="flex items-center gap-2 mb-2">
+            <Mic className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Recording</span>
+          </div>
+          <audio controls src={meta.recordingUrl} className="w-full rounded-xl" style={{ height: 36 }} />
+        </section>
+      ) : status === "answered" && (
+        <div className="rounded-xl p-3 flex items-center gap-2 text-xs text-app-soft"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <Mic className="w-4 h-4 shrink-0 opacity-40" />
+          Recording will appear once uploaded by the recording server.
+        </div>
+      )}
+
+      {meta.summary ? (
+        <section>
+          <div className="rounded-xl p-4"
+            style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">AI Summary</span>
+            </div>
+            <p className="text-sm text-app leading-relaxed">{meta.summary}</p>
+          </div>
+        </section>
+      ) : status === "answered" && (
+        <div className="rounded-xl p-4"
+          style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.25)" }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Sparkles className="w-4 h-4 text-indigo-300" />
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">AI Summary</span>
+          </div>
+          <p className="text-xs text-app-soft">
+            AI summary generates automatically after the call recording is processed (calls over 10s).
+          </p>
+        </div>
+      )}
+
+      {meta.transcript && (
+        <section>
+          <div className="flex items-center gap-1.5 mb-2">
+            <AlignLeft className="w-3.5 h-3.5 text-app-soft" />
+            <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Transcript</span>
+          </div>
+          <div className="rounded-xl p-4 text-sm text-app leading-relaxed whitespace-pre-wrap overflow-y-auto"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", maxHeight: 180 }}>
+            {meta.transcript}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <div className="flex items-center gap-1.5 mb-2">
+          <FileText className="w-3.5 h-3.5 text-app-soft" />
+          <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Call Notes</span>
+        </div>
+        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+          placeholder="Add notes about this call…" rows={3} className="input w-full resize-none text-sm" />
+        <div className="flex justify-end mt-2">
+          <button onClick={saveNotes} disabled={savingNotes || notes === (meta.notes || "")}
+            className="px-4 py-1.5 rounded-xl text-xs font-semibold transition disabled:opacity-40"
+            style={{ background: "var(--app-primary)", color: "#fff" }}>
+            {savingNotes ? "Saving…" : "Save Notes"}
+          </button>
+        </div>
+      </section>
+
+      <section>
+        {taskDone ? (
+          <div className="flex items-center gap-2 text-green-500 text-sm font-semibold">
+            <CheckCircle2 className="w-4 h-4" /> Follow-up task created
+          </div>
+        ) : !showFollowup ? (
+          <button onClick={() => setShowFollowup(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition"
+            style={{ background: "rgba(249,115,22,0.07)", color: "var(--app-primary)", border: "1px dashed rgba(249,115,22,0.3)" }}>
+            <CalendarPlus className="w-4 h-4" /> Schedule Follow-up Task
+          </button>
+        ) : (
+          <div className="rounded-xl p-4 space-y-3"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <p className="text-xs font-bold uppercase tracking-wider text-app-soft">Schedule Follow-up</p>
+            <input type="text" value={followupTitle} onChange={e => setFollowupTitle(e.target.value)}
+              placeholder="Task title" className="input w-full" />
+            <input type="datetime-local" value={followupDate} onChange={e => setFollowupDate(e.target.value)}
+              className="input w-full" />
+            <textarea value={followupDesc} onChange={e => setFollowupDesc(e.target.value)}
+              placeholder="Notes (optional)" rows={2} className="input w-full resize-none text-sm" />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowFollowup(false)}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold btn-secondary">Cancel</button>
+              <button onClick={createFollowup} disabled={creatingTask || !followupDate}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40"
+                style={{ background: "var(--app-primary)", color: "#fff" }}>
+                {creatingTask ? "Creating…" : "Create Task"}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// ── Lead call history modal ────────────────────────────────────────────────────
+function LeadCallModal({ lead, onClose }) {
+  const [history,    setHistory]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [activeCall, setActiveCall] = useState(null);
+
+  useEffect(() => {
+    const handler = e => {
+      if (e.key !== "Escape") return;
+      if (activeCall) setActiveCall(null);
+      else onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose, activeCall]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get(`/calls/lead/${lead.leadId}`);
+        setHistory(data);
+      } catch { toast.error("Failed to load call history"); }
+      finally   { setLoading(false); }
+    })();
+  }, [lead.leadId]);
+
+  const callCount = history?.calls?.length ?? lead.callCount;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <div
-        className="card w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col"
-        style={{ maxHeight: "92vh" }}
-      >
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="card w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl flex flex-col" style={{ maxHeight: "92vh" }}>
+
         {/* Header */}
         <div className="p-5 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-bold text-app">{call.leadName || "Unknown"}</h2>
-                {call.leadPhone && <span className="text-sm text-app-soft">{call.leadPhone}</span>}
-              </div>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
-                  style={{ background: ss.bg, color: ss.color }}>
-                  {status}
+              <h2 className="text-base font-bold text-app">{lead.leadName || "Unknown"}</h2>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                {lead.leadPhone && <span className="text-sm text-app-soft">{lead.leadPhone}</span>}
+                <span className="inline-flex items-center gap-1 text-xs text-app-soft font-semibold">
+                  <Phone className="w-3 h-3" />
+                  {callCount} call{callCount !== 1 ? "s" : ""}
                 </span>
-                {sent && (
-                  <span className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
-                    style={{ background: sent.bg, color: sent.color }}>
-                    {sent.label}
+                {lead.leadStatus && (
+                  <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold"
+                    style={{ background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                    {lead.leadStatus}
                   </span>
                 )}
-                {meta.duration > 0 && <span className="text-xs text-app-soft">{fmt(meta.duration)}</span>}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-3 mt-2 text-xs text-app-soft">
-                <span>{fmtDateTime(call.createdAt)}</span>
-                {call.performedBy && <span>· Agent: {call.performedBy}</span>}
               </div>
             </div>
             <button onClick={onClose} className="text-app-soft hover:text-app transition p-1 shrink-0">
@@ -141,173 +280,69 @@ function CallDetailModal({ call, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-
-          {/* Callback — missed calls */}
-          {status === "missed" && (
-            <button
-              onClick={callBack}
-              disabled={calling}
-              className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition"
-              style={{ background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}
-            >
-              {calling
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <PhoneMissed className="w-4 h-4" />}
-              Call Back Now
-            </button>
-          )}
-
-          {/* Recording */}
-          {meta.recordingUrl ? (
-            <section>
-              <div className="flex items-center gap-2 mb-2">
-                <Mic className="w-3.5 h-3.5 text-orange-500" />
-                <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Recording</span>
-              </div>
-              <audio controls src={meta.recordingUrl} className="w-full rounded-xl" style={{ height: 36 }} />
-            </section>
-          ) : status === "answered" && (
-            <div className="rounded-xl p-3 flex items-center gap-2 text-xs text-app-soft"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <Mic className="w-4 h-4 shrink-0 opacity-40" />
-              Recording will appear here once uploaded by the recording server.
-            </div>
-          )}
-
-          {/* AI Summary */}
-          {meta.summary ? (
-            <section>
-              <div className="rounded-xl p-4"
-                style={{ background: "rgba(99,102,241,0.07)", border: "1px solid rgba(99,102,241,0.18)" }}>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Sparkles className="w-4 h-4 text-indigo-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">AI Summary</span>
-                </div>
-                <p className="text-sm text-app leading-relaxed">{meta.summary}</p>
-              </div>
-            </section>
-          ) : status === "answered" && (
-            <div className="rounded-xl p-4"
-              style={{ background: "rgba(99,102,241,0.05)", border: "1px dashed rgba(99,102,241,0.25)" }}>
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Sparkles className="w-4 h-4 text-indigo-300" />
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">AI Summary</span>
-              </div>
-              <p className="text-xs text-app-soft">
-                AI summary generates automatically after the call recording is processed (calls over 10s).
-              </p>
-            </div>
-          )}
-
-          {/* Transcript */}
-          {meta.transcript && (
-            <section>
-              <div className="flex items-center gap-1.5 mb-2">
-                <AlignLeft className="w-3.5 h-3.5 text-app-soft" />
-                <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Transcript</span>
-              </div>
-              <div className="rounded-xl p-4 text-sm text-app leading-relaxed whitespace-pre-wrap overflow-y-auto"
-                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", maxHeight: 220 }}>
-                {meta.transcript}
-              </div>
-            </section>
-          )}
-
-          {/* Call Notes */}
-          <section>
-            <div className="flex items-center gap-1.5 mb-2">
-              <FileText className="w-3.5 h-3.5 text-app-soft" />
-              <span className="text-xs font-bold uppercase tracking-wider text-app-soft">Call Notes</span>
-            </div>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Add notes about this call…"
-              rows={3}
-              className="input w-full resize-none text-sm"
+        <div className="flex-1 overflow-y-auto p-5">
+          {activeCall ? (
+            <CallDetailPanel
+              call={activeCall}
+              leadId={lead.leadId}
+              leadName={lead.leadName}
+              onBack={() => setActiveCall(null)}
             />
-            <div className="flex justify-end mt-2">
-              <button
-                onClick={saveNotes}
-                disabled={savingNotes || !notesDirty}
-                className="px-4 py-1.5 rounded-xl text-xs font-semibold transition disabled:opacity-40"
-                style={{ background: "var(--app-primary)", color: "#fff" }}
-              >
-                {savingNotes ? "Saving…" : "Save Notes"}
-              </button>
+          ) : loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-app-soft" />
             </div>
-          </section>
-
-          {/* Follow-up scheduler */}
-          <section>
-            {taskDone ? (
-              <div className="flex items-center gap-2 text-green-500 text-sm font-semibold">
-                <CheckCircle2 className="w-4 h-4" /> Follow-up task created
-              </div>
-            ) : !showFollowup ? (
-              <button
-                onClick={() => setShowFollowup(true)}
-                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition"
-                style={{ background: "rgba(249,115,22,0.07)", color: "var(--app-primary)", border: "1px dashed rgba(249,115,22,0.3)" }}
-              >
-                <CalendarPlus className="w-4 h-4" />
-                Schedule Follow-up Task
-              </button>
-            ) : (
-              <div className="rounded-xl p-4 space-y-3"
-                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                <p className="text-xs font-bold uppercase tracking-wider text-app-soft">Schedule Follow-up</p>
-                <input
-                  type="text"
-                  value={followupTitle}
-                  onChange={e => setFollowupTitle(e.target.value)}
-                  placeholder="Task title"
-                  className="input w-full"
-                />
-                <input
-                  type="datetime-local"
-                  value={followupDate}
-                  onChange={e => setFollowupDate(e.target.value)}
-                  className="input w-full"
-                />
-                <textarea
-                  value={followupDesc}
-                  onChange={e => setFollowupDesc(e.target.value)}
-                  placeholder="Notes (optional)"
-                  rows={2}
-                  className="input w-full resize-none text-sm"
-                />
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => setShowFollowup(false)}
-                    className="px-4 py-1.5 rounded-xl text-xs font-semibold btn-secondary">
-                    Cancel
+          ) : !history?.calls?.length ? (
+            <p className="text-sm text-app-soft text-center py-8">No call history found.</p>
+          ) : (
+            <div className="space-y-2">
+              {history.calls.map((call, i) => {
+                const meta   = call.meta || {};
+                const status = meta.status || "initiated";
+                const ss     = STATUS_STYLE[status] || STATUS_STYLE.initiated;
+                const StIcon = ss.icon;
+                return (
+                  <button key={call.activityId || i} onClick={() => setActiveCall(call)}
+                    className="w-full text-left rounded-xl p-3.5 transition hover:shadow-sm active:scale-[0.998]"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: ss.bg }}>
+                        <StIcon className="w-3.5 h-3.5" style={{ color: ss.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+                            style={{ background: ss.bg, color: ss.color }}>{status}</span>
+                          {meta.duration > 0 && (
+                            <span className="text-xs font-semibold text-app">{fmt(meta.duration)}</span>
+                          )}
+                          {meta.recordingUrl && <Mic      className="w-3 h-3 text-orange-400" />}
+                          {meta.summary      && <Sparkles className="w-3 h-3 text-indigo-400" />}
+                          {meta.notes        && <FileText className="w-3 h-3 text-app-soft"   />}
+                        </div>
+                        <div className="text-xs text-app-soft mt-0.5">
+                          {fmtDateTime(call.createdAt)}
+                          {call.performedBy && ` · ${call.performedBy}`}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-app-soft shrink-0" />
+                    </div>
                   </button>
-                  <button
-                    onClick={createFollowup}
-                    disabled={creatingTask || !followupDate}
-                    className="px-4 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40"
-                    style={{ background: "var(--app-primary)", color: "#fff" }}
-                  >
-                    {creatingTask ? "Creating…" : "Create Task"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Compact list card ──────────────────────────────────────────────────────────
-function CallCard({ call, onClick }) {
-  const meta   = call.meta || {};
-  const status = meta.status || "initiated";
+// ── Lead card (one per lead, shows most recent call) ─────────────────────────
+function LeadCallCard({ lead, onClick }) {
+  const status = lead.lastStatus || "initiated";
   const ss     = STATUS_STYLE[status] || STATUS_STYLE.initiated;
   const StIcon = ss.icon;
-  const sent   = meta.sentiment ? SENTIMENT[meta.sentiment] : null;
 
   return (
     <button onClick={onClick} className="card p-4 w-full text-left transition-all hover:shadow-md active:scale-[0.998]">
@@ -317,29 +352,24 @@ function CallCard({ call, onClick }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-bold text-app truncate">{call.leadName || "Unknown Lead"}</p>
-            {call.leadPhone && <span className="text-xs text-app-soft">{call.leadPhone}</span>}
+            <p className="text-sm font-bold text-app truncate">{lead.leadName || "Unknown Lead"}</p>
+            {lead.leadPhone && <span className="text-xs text-app-soft">{lead.leadPhone}</span>}
             <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-              style={{ background: ss.bg, color: ss.color }}>
-              {status}
-            </span>
-            {sent && (
-              <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
-                style={{ background: sent.bg, color: sent.color }}>
-                {sent.label}
-              </span>
-            )}
+              style={{ background: ss.bg, color: ss.color }}>{status}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-app-soft">
-            <span>{fmtDateTime(call.createdAt)}</span>
-            {call.performedBy && <span>· {call.performedBy}</span>}
-            {meta.duration > 0 && <span>· {fmt(meta.duration)}</span>}
+            <span>Last: {fmtDateTime(lead.lastCallAt)}</span>
+            {lead.lastPerformedBy && <span>· {lead.lastPerformedBy}</span>}
+            {lead.lastDuration > 0 && <span>· {fmt(lead.lastDuration)}</span>}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0 ml-1">
-          {meta.recordingUrl && <Mic       className="w-3.5 h-3.5 text-orange-400"  />}
-          {meta.summary      && <Sparkles  className="w-3.5 h-3.5 text-indigo-400"  />}
-          {(meta.notes || meta.transcript) && <FileText className="w-3.5 h-3.5 text-app-soft" />}
+        <div className="flex items-center gap-2 shrink-0 ml-1">
+          {lead.callCount > 1 && (
+            <span className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+              style={{ background: "var(--app-primary-subtle, rgba(249,115,22,0.10))", color: "var(--app-primary)", border: "1px solid rgba(249,115,22,0.2)" }}>
+              {lead.callCount} calls
+            </span>
+          )}
           <ChevronRight className="w-4 h-4 text-app-soft" />
         </div>
       </div>
@@ -347,7 +377,7 @@ function CallCard({ call, onClick }) {
   );
 }
 
-// ── Call analytics mini section ───────────────────────────────────────────────
+// ── Call analytics ────────────────────────────────────────────────────────────
 function CallAnalytics({ data }) {
   if (!data) return null;
   const { volumeByDay = [], durationByAgent = [] } = data;
@@ -356,7 +386,6 @@ function CallAnalytics({ data }) {
 
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {/* Volume by day */}
       <div className="card p-5">
         <p className="text-xs font-bold uppercase tracking-wider text-app-soft mb-3">Daily Call Volume (last 14 days)</p>
         {recent.length === 0 ? (
@@ -383,7 +412,6 @@ function CallAnalytics({ data }) {
         </div>
       </div>
 
-      {/* Avg duration by agent */}
       <div className="card p-5">
         <p className="text-xs font-bold uppercase tracking-wider text-app-soft mb-3">Answered Calls by Agent</p>
         {durationByAgent.length === 0 ? (
@@ -415,7 +443,7 @@ export default function Calls() {
   const [page,      setPage]      = useState(1);
   const [total,     setTotal]     = useState(0);
   const [pages,     setPages]     = useState(1);
-  const [stats,     setStats]     = useState({ answered: 0, missed: 0 });
+  const [stats,     setStats]     = useState({ total: 0, answered: 0, missed: 0 });
   const [agents,    setAgents]    = useState([]);
   const [agentId,   setAgentId]   = useState("");
   const [analytics, setAnalytics] = useState(null);
@@ -438,11 +466,8 @@ export default function Calls() {
 
   const loadStats = useCallback(async () => {
     try {
-      const [a, m] = await Promise.all([
-        api.get("/calls?status=answered&page=1&limit=1"),
-        api.get("/calls?status=missed&page=1&limit=1"),
-      ]);
-      setStats({ answered: a.data.total || 0, missed: m.data.total || 0 });
+      const { data } = await api.get("/calls/stats");
+      setStats({ total: data.total || 0, answered: data.answered || 0, missed: data.missed || 0 });
     } catch {}
   }, []);
 
@@ -486,9 +511,9 @@ export default function Calls() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Total Calls", value: total,          color: "var(--app-primary)" },
-            { label: "Answered",    value: stats.answered, color: "#22c55e"            },
-            { label: "Missed",      value: stats.missed,   color: "#ef4444"            },
+            { label: "Total Calls",  value: stats.total,    color: "var(--app-primary)" },
+            { label: "Answered",     value: stats.answered, color: "#22c55e"            },
+            { label: "Missed",       value: stats.missed,   color: "#ef4444"            },
           ].map(({ label, value, color }) => (
             <div key={label} className="card p-4 text-center">
               <p className="text-2xl font-black" style={{ color }}>{value}</p>
@@ -500,7 +525,7 @@ export default function Calls() {
         {/* Analytics */}
         <CallAnalytics data={analytics} />
 
-        {/* Filters row: tabs + agent filter */}
+        {/* Filters row */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-1 rounded-2xl p-1"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
@@ -515,12 +540,11 @@ export default function Calls() {
             ))}
           </div>
 
-          {/* Agent filter */}
           {agents.length > 1 && (
             <div className="flex items-center gap-2">
               <Filter className="w-3.5 h-3.5 text-app-soft" />
               <CustomSelect
-                value={agentId}
+                value={agentId || "__all__"}
                 onChange={v => { setAgentId(v === "__all__" ? "" : v); setPage(1); }}
                 placeholder="All Agents"
                 options={[
@@ -530,7 +554,8 @@ export default function Calls() {
                 style={{ minWidth: 160 }}
               />
               {agentId && (
-                <button onClick={() => setAgentId("")} className="text-xs text-orange-400 hover:text-orange-500 font-semibold">
+                <button onClick={() => setAgentId("")}
+                  className="text-xs text-orange-400 hover:text-orange-500 font-semibold">
                   Clear
                 </button>
               )}
@@ -538,7 +563,7 @@ export default function Calls() {
           )}
         </div>
 
-        {/* List */}
+        {/* Lead list — one card per lead */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-app-soft" />
@@ -558,8 +583,8 @@ export default function Calls() {
           </div>
         ) : (
           <div className="space-y-3">
-            {calls.map((call, i) => (
-              <CallCard key={call.activityId || i} call={call} onClick={() => setSelected(call)} />
+            {calls.map((lead) => (
+              <LeadCallCard key={String(lead.leadId)} lead={lead} onClick={() => setSelected(lead)} />
             ))}
           </div>
         )}
@@ -577,7 +602,7 @@ export default function Calls() {
 
       </div>
 
-      {selected && <CallDetailModal call={selected} onClose={() => setSelected(null)} />}
+      {selected && <LeadCallModal lead={selected} onClose={() => setSelected(null)} />}
     </>
   );
 }

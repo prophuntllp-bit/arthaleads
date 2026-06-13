@@ -102,6 +102,17 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       };
       dirty = true;
 
+      // Auto-advance lead status New → Contacted on first answered call
+      if (callStatus === "answered" && lead.status === "New") {
+        lead.status = "Contacted";
+        if (!lead.firstContactedAt) lead.firstContactedAt = new Date();
+        lead.activities.push({
+          type:        "status_changed",
+          description: "Status automatically changed to Contacted after answered call",
+          meta:        { from: "New", to: "Contacted", auto: true },
+        });
+      }
+
       if (callStatus === "missed") {
         const agentId = lead.activities[actIdx].performedBy;
         if (agentId) {
@@ -126,7 +137,7 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
 // ── Authenticated routes ─────────────────────────────────────────────────────
 router.use(protect);
 
-// GET /api/calls — paginated list of all call activities across all leads
+// GET /api/calls — one row per lead (grouped), most-recent call shown
 router.get("/", async (req, res, next) => {
   try {
     const { page = 1, limit = 30, status, agentId } = req.query;
@@ -136,34 +147,51 @@ router.get("/", async (req, res, next) => {
     const mongoose = require("mongoose");
     const actMatch = {
       "activities.type": "called",
-      ...(status  && status !== "all" ? { "activities.meta.status":   status } : {}),
+      ...(status  && status !== "all" ? { "activities.meta.status": status } : {}),
       ...(agentId ? { "activities.performedBy": new mongoose.Types.ObjectId(agentId) } : {}),
     };
 
-    const [rows, total] = await Promise.all([
+    const [rows, totalRows] = await Promise.all([
       Lead.aggregate([
         { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
         { $unwind: "$activities" },
         { $match: actMatch },
-        { $sort:  { "activities.createdAt": -1 } },
+        { $sort: { "activities.createdAt": -1 } },
+        { $group: {
+          _id:             "$_id",
+          leadName:        { $first: "$name" },
+          leadPhone:       { $first: "$phone" },
+          leadStatus:      { $first: "$status" },
+          callCount:       { $sum: 1 },
+          lastCallAt:      { $first: "$activities.createdAt" },
+          lastStatus:      { $first: "$activities.meta.status" },
+          lastDuration:    { $first: "$activities.meta.duration" },
+          lastPerformedBy: { $first: "$activities.performedByName" },
+          lastActivityId:  { $first: "$activities._id" },
+        }},
+        { $sort: { lastCallAt: -1 } },
         { $skip:  skip },
         { $limit: Number(limit) },
         { $project: {
-          _id:         0,
-          leadId:      "$_id",
-          leadName:    "$name",
-          leadPhone:   "$phone",
-          activityId:  "$activities._id",
-          description: "$activities.description",
-          performedBy: "$activities.performedByName",
-          createdAt:   "$activities.createdAt",
-          meta:        "$activities.meta",
+          _id:             0,
+          leadId:          "$_id",
+          leadName:        1,
+          leadPhone:       1,
+          leadStatus:      1,
+          callCount:       1,
+          lastCallAt:      1,
+          lastStatus:      1,
+          lastDuration:    1,
+          lastPerformedBy: 1,
+          lastActivityId:  1,
         }},
       ]),
+      // Count unique leads (not individual calls)
       Lead.aggregate([
         { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)) } },
         { $unwind: "$activities" },
         { $match: actMatch },
+        { $group: { _id: "$_id" } },
         { $count: "total" },
       ]),
     ]);
@@ -171,10 +199,57 @@ router.get("/", async (req, res, next) => {
     res.json({
       success: true,
       calls:   rows,
-      total:   total[0]?.total || 0,
+      total:   totalRows[0]?.total || 0,
       page:    Number(page),
-      pages:   Math.ceil((total[0]?.total || 0) / Number(limit)),
+      pages:   Math.ceil((totalRows[0]?.total || 0) / Number(limit)),
     });
+  } catch (err) { next(err); }
+});
+
+// GET /api/calls/stats — call counts by status (for dashboard stats row)
+router.get("/stats", async (req, res, next) => {
+  try {
+    const mongoose = require("mongoose");
+    const orgId    = new mongoose.Types.ObjectId(String(req.user.orgId));
+    const [answered, missed, total] = await Promise.all([
+      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
+        { $match: { "activities.type": "called", "activities.meta.status": "answered" } },
+        { $count: "total" }]),
+      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
+        { $match: { "activities.type": "called", "activities.meta.status": "missed" } },
+        { $count: "total" }]),
+      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
+        { $match: { "activities.type": "called" } },
+        { $count: "total" }]),
+    ]);
+    res.json({
+      success:  true,
+      total:    total[0]?.total    || 0,
+      answered: answered[0]?.total || 0,
+      missed:   missed[0]?.total   || 0,
+    });
+  } catch (err) { next(err); }
+});
+
+// GET /api/calls/lead/:leadId — full call history for one lead
+router.get("/lead/:leadId", async (req, res, next) => {
+  try {
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId })
+      .select("name phone status activities").lean();
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+
+    const calls = lead.activities
+      .filter(a => a.type === "called")
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(a => ({
+        activityId:  String(a._id),
+        description: a.description,
+        performedBy: a.performedByName,
+        createdAt:   a.createdAt,
+        meta:        a.meta || {},
+      }));
+
+    res.json({ success: true, leadId: String(lead._id), leadName: lead.name, leadPhone: lead.phone, leadStatus: lead.status, calls });
   } catch (err) { next(err); }
 });
 
