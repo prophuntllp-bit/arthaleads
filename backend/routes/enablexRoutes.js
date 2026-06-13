@@ -48,6 +48,34 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
 
     let dirty = false;
 
+    // ── Agent answered → trigger second leg to the lead ─────────────────────
+    if (eventType === "connected") {
+      const meta = lead.activities[actIdx].meta;
+      if (meta.confRoom && meta.leadPhone && !meta.leadCallMade) {
+        // Mark immediately to prevent duplicate calls if webhook fires twice
+        lead.activities[actIdx].meta = { ...meta, leadCallMade: true };
+        lead.markModified("activities");
+        await lead.save();
+
+        const org      = await Organization.findById(orgId).select("enablex").lean();
+        const fromNum  = normalizePhone(org.enablex.virtualNumber);
+        const wh       = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${orgId}`;
+        const leadPld  = {
+          from: fromNum,
+          to:   meta.leadPhone,
+          action_on_connect: {
+            conference: { name: meta.confRoom, beep: "none", moderator: false },
+          },
+          custom_data: meta.ownerRef,
+          event_url:   wh,
+        };
+        axios.post(`${ENABLEX_BASE}/call`, leadPld, { auth: { username: org.enablex.appId, password: org.enablex.apiKey } })
+          .then(r  => console.info("[enablex webhook] Lead leg triggered:", r.data?.voice_id))
+          .catch(e => console.error("[enablex webhook] Lead call failed:", e.response?.data || e.message));
+        return;
+      }
+    }
+
     // ── Recording push from our Cloudinary recording server ─────────────────
     // Payload: { custom_data, recording_url, duration?, transcript? }
     const recordingUrl = event?.recording_url
@@ -239,18 +267,17 @@ router.post("/initiate", protect, async (req, res, next) => {
     const fromNumber = normalizePhone(org.enablex.virtualNumber); // e.g. "911169040027"
     console.info("[enablex /initiate] appId prefix:", String(org.enablex.appId).slice(0, 6), "from:", fromNumber);
 
-    // True PSTN bridge via "dial" action:
-    // 1. EnableX calls the agent's phone
-    // 2. When agent answers, EnableX immediately dials the lead and bridges them directly
-    // (conference approach mutes audio because EnableX conference is WebRTC, not PSTN-native)
+    // Step 1: Call the agent (moderator=true so conference audio starts when they answer).
+    // Step 2: Webhook handler calls the lead when agent state=connected, puts lead in same conf.
+    // This ensures audio is live before the lead joins — fixing the muted conference issue.
     const payload = {
       from: fromNumber,
       to:   agentPhone,
       action_on_connect: {
-        dial: {
-          to:      [{ type: "phone", number: leadPhone }],
-          from:    fromNumber,
-          timeout: 30,
+        conference: {
+          name:      confRoom,
+          beep:      "none",
+          moderator: true,   // agent starts the room; lead joins via webhook second leg
         },
       },
       custom_data: ownerRef,
@@ -261,7 +288,7 @@ router.post("/initiate", protect, async (req, res, next) => {
     try {
       const resp = await axios.post(`${ENABLEX_BASE}/call`, payload, basicAuth(org));
       voiceId = resp.data?.voice_id ?? resp.data?.id ?? null;
-      console.info("[enablex /initiate] Dial-bridge OK — agent:", agentPhone, "→ lead:", leadPhone);
+      console.info("[enablex /initiate] Agent leg OK — agent:", agentPhone, "conf:", confRoom);
     } catch (enablexErr) {
       const status  = enablexErr.response?.status;
       const errBody = enablexErr.response?.data;
@@ -284,11 +311,13 @@ router.post("/initiate", protect, async (req, res, next) => {
       performedByName: req.user.name,
       meta: {
         voiceId, ownerRef,
-        direction:   "outbound",
-        status:      "initiated",
-        phone:       lead.phone,
-        agentPhone:  req.user.phone,
+        direction:     "outbound",
+        status:        "initiated",
+        phone:         lead.phone,
+        leadPhone,            // normalised digits, used by webhook to dial lead
+        agentPhone:    req.user.phone,
         confRoom,
+        leadCallMade:  false, // webhook sets true when lead call is triggered
       },
     });
     await lead.save();
