@@ -82,7 +82,7 @@ function parseRow(raw) {
   const phone = cleanPhone(rawPhone);
 
   const email  = r["email_address"] || r["email address"] || r["email"] || r["mail"] || "";
-  const source = r["source"] || r["lead source"] || "Facebook";
+  const source = r["source"] || r["lead source"] || "Manual";
 
   // Capture dynamic Facebook MCQ / custom form answers as structured notes
   const extraAnswers = Object.entries(r)

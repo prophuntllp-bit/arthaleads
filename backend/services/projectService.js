@@ -139,7 +139,7 @@ const projectService = {
       name: r.name,
       phone: r.phone,
       email: r.email || "",
-      source: r.source || "Facebook",
+      source: r.source || "Manual",
       remarkNote: r.remarkNote || "",  // preserve custom Facebook form answers
       importedBy: user._id,
       orgId: user.orgId,  // propagate tenant id for direct filtering
