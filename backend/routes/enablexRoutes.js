@@ -257,6 +257,71 @@ router.get("/lead/:leadId", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/calls/lead/:leadId/summary — aggregate AI analysis of all calls for a lead
+router.post("/lead/:leadId/summary", async (req, res, next) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ success: false, message: "OpenAI not configured." });
+    }
+    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId })
+      .select("name phone status activities").lean();
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+
+    const calls = lead.activities
+      .filter(a => a.type === "called")
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+    if (calls.length < 2) {
+      return res.status(400).json({ success: false, message: "Need at least 2 calls for an aggregate summary." });
+    }
+
+    // Build a concise chronological context string for GPT
+    const callLines = calls.map((c, i) => {
+      const m = c.meta || {};
+      const parts = [`Call ${i + 1} (${new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`];
+      if (m.status)   parts.push(`status: ${m.status}`);
+      if (m.duration) parts.push(`duration: ${fmt(m.duration)}`);
+      if (m.summary)  parts.push(`summary: "${m.summary}"`);
+      else if (m.notes) parts.push(`notes: "${m.notes}"`);
+      if (m.intent)   parts.push(`intent: ${m.intent}`);
+      return parts.join(" | ");
+    }).join("\n");
+
+    const openai = getOpenAI();
+    const gpt = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `You are a real estate CRM assistant. A sales agent called the same lead (${lead.name}) ${calls.length} times.
+Analyse the call pattern below and return ONLY a valid JSON object with exactly these fields:
+- "headline": a short (max 12 words) title explaining the situation (e.g. "Lead keeps rescheduling — needs firm commitment date")
+- "summary": 2-3 sentences explaining why so many calls were needed and what happened overall
+- "pattern": exactly one of "no_answer" | "follow_up_needed" | "complex_negotiation" | "gradual_progress" | "rescheduling" | "objection_handling" | "other"
+- "recommendation": one concrete next action for the agent to close or advance this lead
+
+Return ONLY the JSON, no markdown, no explanation.
+
+Call history:
+${callLines}`,
+      }],
+      max_tokens: 300,
+    });
+
+    let parsed = null;
+    try { parsed = JSON.parse(gpt.choices[0]?.message?.content || "{}"); } catch {}
+
+    const result = {
+      headline:       parsed?.headline       || "Multiple calls — see pattern below",
+      summary:        parsed?.summary        || gpt.choices[0]?.message?.content?.trim() || "",
+      pattern:        parsed?.pattern        || "other",
+      recommendation: parsed?.recommendation || "",
+      callCount:      calls.length,
+    };
+
+    res.json({ success: true, ...result });
+  } catch (err) { next(err); }
+});
+
 // GET /api/calls/settings
 router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
   try {
