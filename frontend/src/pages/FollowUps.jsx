@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { PageLoader, EmptyState, Spinner, PhoneActions, WhatsAppLink, SourceBadge, AppDatePicker } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
@@ -211,6 +211,8 @@ export default function FollowUps() {
 
   const [section, setSection] = useState("present");
   const [searchQ, setSearchQ] = useState(() => searchParams.get("q") || "");
+  const [searchInput, setSearchInput] = useState(() => searchParams.get("q") || "");
+  const searchDebounceRef = useRef(null);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -261,6 +263,7 @@ export default function FollowUps() {
   useEffect(() => {
     const q = searchParams.get("q") || "";
     setSearchQ(q);
+    setSearchInput(q);
     if (q) setPage(1);
   }, [searchParams]);
 
@@ -323,16 +326,24 @@ export default function FollowUps() {
         <div className="relative flex-shrink-0" style={{ width: 220 }}>
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-soft" />
           <input
-            value={searchQ}
-            onChange={e => { setSearchQ(e.target.value); setPage(1); setSearchParams(e.target.value ? { q: e.target.value } : {}); }}
+            value={searchInput}
+            onChange={e => {
+              const v = e.target.value;
+              setSearchInput(v);
+              clearTimeout(searchDebounceRef.current);
+              searchDebounceRef.current = setTimeout(() => {
+                setPage(1);
+                setSearchParams(v ? { q: v } : {});
+              }, 350);
+            }}
             placeholder="Search by name or phone…"
             className="w-full rounded-xl pl-8 pr-7 py-1.5 text-sm text-app"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", outline: "none" }}
             onFocus={e => { e.target.style.borderColor = "var(--app-primary)"; }}
             onBlur={e  => { e.target.style.borderColor = "var(--app-border)"; }}
           />
-          {searchQ && (
-            <button onClick={() => { setSearchQ(""); setSearchParams({}); setPage(1); }}
+          {searchInput && (
+            <button onClick={() => { clearTimeout(searchDebounceRef.current); setSearchInput(""); setSearchQ(""); setSearchParams({}); setPage(1); }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
               <XIcon className="w-3.5 h-3.5" />
             </button>

@@ -88,5 +88,8 @@ const projectLeadSchema = new mongoose.Schema(
 
 projectLeadSchema.index({ project: 1, createdAt: -1 });
 projectLeadSchema.index({ orgId: 1, createdAt: -1 });
+projectLeadSchema.index({ project: 1, isProspective: 1, createdAt: -1 });
+projectLeadSchema.index({ orgId: 1, followUp: 1 });
+projectLeadSchema.index({ orgId: 1, followUp2: 1 });
 
 module.exports = mongoose.model("ProjectLead", projectLeadSchema);

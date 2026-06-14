@@ -65,7 +65,7 @@ export default function LeadPipeline() {
   const fetchLeads = useCallback(async (silent = false, userId = selectedUserId) => {
     if (silent) setRefreshing(true); else setLoading(true);
     try {
-      const params = { limit: 5000, page: 1 };
+      const params = { limit: 2000, page: 1 };
       if (userId) params.userId = userId;
       const { data } = await api.get("/leads/unified", { params });
       setLeads(data.leads || []);

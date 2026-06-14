@@ -40,7 +40,7 @@ export default function DumpLeads() {
   const canDelete = ["admin", "manager", "super_admin"].includes(user?.role);
 
   useEffect(() => {
-    api.get("/leads/dump", { params: { limit: 2000 } })
+    api.get("/leads/dump", { params: { limit: 500 } })
       .then((r) => setLeads(r.data.leads ?? r.data.data ?? []))
       .catch(() => toast.error("Failed to load dump leads"))
       .finally(() => setLoading(false));
