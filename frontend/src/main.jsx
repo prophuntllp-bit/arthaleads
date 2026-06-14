@@ -55,6 +55,14 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+import { isCapacitorNative, setupNativeFeel } from "./utils/capacitorPush";
+
+// Native Android app: add CSS class for native-feel styles, init status bar etc.
+if (isCapacitorNative) {
+  document.documentElement.classList.add("is-native");
+  setupNativeFeel();
+}
+
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { GoogleOAuthProvider } from "@react-oauth/google";

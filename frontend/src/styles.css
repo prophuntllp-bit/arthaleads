@@ -525,3 +525,43 @@
 .ai-sparkle {
   animation: ai-glow-pulse 2s ease-in-out infinite;
 }
+
+/* ── Native Android app feel (Capacitor context) ─────────────────────────────
+   Applied only when html.is-native class is set (by main.jsx when Capacitor
+   is detected). Prevents browser-like behaviour: text selection, overscroll
+   bounce, scrollbars, 300ms tap delay, and tap highlight flashes.
+──────────────────────────────────────────────────────────────────────────── */
+html.is-native {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: none;
+}
+html.is-native body {
+  overscroll-behavior: none;
+  /* Prevent the grey WebView background showing on pull-down */
+  background: #111113;
+}
+html.is-native * {
+  /* Kill the blue/grey flash that appears on tap in WebView */
+  -webkit-tap-highlight-color: transparent !important;
+  /* Eliminate the 300ms tap delay */
+  touch-action: manipulation;
+  /* No accidental text selection on long-press */
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Re-enable selection inside text inputs */
+html.is-native input,
+html.is-native textarea,
+html.is-native [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* Hide scrollbars in the native app — they look web-like */
+html.is-native *::-webkit-scrollbar { display: none !important; }
+html.is-native * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+/* Keep the top-scroll mirror strip visible (horizontal scroll sync) */
+html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important; height: 4px; }
+

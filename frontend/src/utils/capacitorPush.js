@@ -1,5 +1,5 @@
 // utils/capacitorPush.js
-// FCM push notifications for the Capacitor Android APK.
+// FCM push notifications + native feel setup for the Capacitor Android APK.
 // All code is no-op when running in a browser or PWA — safe to import everywhere.
 import api from "../services/api";
 
@@ -102,6 +102,44 @@ export async function setupCapacitorPush() {
   } catch (err) {
     console.warn("[capacitorPush] Setup failed:", err.message);
   }
+}
+
+/**
+ * Initialize native look & feel — status bar, keyboard behaviour, haptics.
+ * Call once on app startup (before auth check) when isCapacitorNative is true.
+ */
+export async function setupNativeFeel() {
+  if (!isCapacitorNative) return;
+  try {
+    const [{ StatusBar, Style }, { Keyboard }] = await Promise.all([
+      import("@capacitor/status-bar"),
+      import("@capacitor/keyboard"),
+    ]);
+
+    // Dark status bar (white icons) matching our dark splash/nav
+    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setBackgroundColor({ color: "#111113" });
+    // Status bar overlays the WebView so the app fills edge-to-edge
+    await StatusBar.setOverlaysWebView({ overlay: false });
+
+    // Keyboard: shrink the body so inputs are never hidden behind the keyboard
+    Keyboard.setResizeMode({ mode: "body" }).catch(() => {});
+    Keyboard.setScroll({ isDisabled: false }).catch(() => {});
+  } catch (err) {
+    console.warn("[native] setup failed:", err.message);
+  }
+}
+
+/**
+ * Trigger a native haptic tap — call on important button presses.
+ * No-op in browser / when haptics not available.
+ */
+export async function hapticTap() {
+  if (!isCapacitorNative) return;
+  try {
+    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+    await Haptics.impact({ style: ImpactStyle.Light });
+  } catch {}
 }
 
 /**
