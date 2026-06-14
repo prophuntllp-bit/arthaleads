@@ -41,6 +41,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [aiDraft, setAiDraft] = useState(null);
   const [drafting, setDrafting] = useState(false);
   const [calling, setCalling] = useState(false);
+  const statusUpdating = useRef(false);
   const [callHistory, setCallHistory]     = useState([]);
   const [callsLoading, setCallsLoading]   = useState(false);
   const [expandedCall, setExpandedCall]   = useState(null);
@@ -129,7 +130,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   };
 
   const handleNote = async () => {
-    if (!note.trim()) return;
+    const latestText = lead?.notes?.[lead.notes.length - 1]?.text || "";
+    if (!note.trim() || note.trim() === latestText.trim()) return;
     setSaving(true);
     try {
       if (isProjectLead && lead.projectId) {
@@ -155,6 +157,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   };
 
   const handleStatus = async (nextStatus) => {
+    if (statusUpdating.current) return;
+    statusUpdating.current = true;
     setStatus(nextStatus);
     try {
       let updated;
@@ -170,6 +174,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update status");
       setStatus(lead.status);
+    } finally {
+      statusUpdating.current = false;
     }
   };
 

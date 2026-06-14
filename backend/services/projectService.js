@@ -213,6 +213,7 @@ const projectService = {
   async addNote(projectId, leadId, text, user) {
     const lead = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
     if (!lead) throw new AppError("Lead not found", 404);
+    if (String(lead.project?._id) !== String(projectId)) throw new AppError("Lead not found", 404);
     if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
     if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
       throw new AppError("Access denied", 403);

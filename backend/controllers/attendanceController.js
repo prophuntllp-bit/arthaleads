@@ -94,7 +94,7 @@ const attendanceController = {
       const now = new Date();
       const clockInMins = istMins(now);
       const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
-      const isLate = clockInMins > lateThreshold;
+      const isLate = clockInMins >= lateThreshold;
       const lateByMinutes = isLate ? clockInMins - lateThreshold : null;
 
       // Handle selfie upload and geo fields
@@ -191,7 +191,8 @@ const attendanceController = {
     try {
       const { from, to, userId, page = 1, limit = 60 } = req.query;
       const safePage = Math.max(1, parseInt(page) || 1);
-      const skip = (safePage - 1) * parseInt(limit);
+      const safeLimit = Math.min(Math.max(1, parseInt(limit) || 60), 200);
+      const skip = (safePage - 1) * safeLimit;
 
       const filter = { orgId: req.user.orgId };
 
@@ -212,7 +213,7 @@ const attendanceController = {
         Attendance.find(filter)
           .sort({ date: -1, clockIn: -1 })
           .skip(skip)
-          .limit(parseInt(limit))
+          .limit(safeLimit)
           .populate("userId", "name email role"),
         Attendance.countDocuments(filter),
       ]);
@@ -222,7 +223,7 @@ const attendanceController = {
         data: records,
         total,
         page: safePage,
-        pages: Math.ceil(total / parseInt(limit)),
+        pages: Math.ceil(total / safeLimit),
       });
     } catch (err) { next(err); }
   },
@@ -317,7 +318,7 @@ const attendanceController = {
 
       const settings = await getOrgSettings(req.user.orgId);
       const totalMinutes = (clockInDate && clockOutDate)
-        ? Math.round((clockOutDate - clockInDate) / 60000)
+        ? Math.min(Math.round((clockOutDate - clockInDate) / 60000), 1440)
         : null;
 
       // Compute late status from the clock-in time
@@ -325,7 +326,7 @@ const attendanceController = {
       if (clockInDate) {
         const clockInMins = istMins(clockInDate);
         const lateThreshold = parseHHMM(settings.shiftStartTime) + settings.bufferMinutes;
-        isLate = clockInMins > lateThreshold;
+        isLate = clockInMins >= lateThreshold;
         lateByMinutes = isLate ? clockInMins - lateThreshold : null;
       }
       const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;

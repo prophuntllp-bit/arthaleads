@@ -582,9 +582,6 @@ export default function ProjectDetail() {
     setProspSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
   };
 
-  const toggleOneSvd = (lid) => {
-    setSvdSelectedIds((prev) => { const next = new Set(prev); next.has(lid) ? next.delete(lid) : next.add(lid); return next; });
-  };
 
   // Update lead across all three sections after edit
   const handleEditLeadSaved = (updated) => {
