@@ -81,11 +81,12 @@ api.interceptors.response.use(
       // toast fires 1-2 seconds after "Welcome back!" on cold Railway boots.
       if (_authInProgress) return new Promise(() => {});
 
-      // Grace period: Android WebView / Samsung Chrome sometimes doesn't honour
-      // AbortController for in-flight XHR, so the /auth/me 401 can arrive AFTER
-      // login() has already returned and cleared _authInProgress. Silently ignore
-      // any 401 that arrives within 8 seconds of a completed auth call.
-      if (_authCompletedAt && Date.now() - _authCompletedAt < 8000) return new Promise(() => {});
+      // Grace period: Android WebView doesn't reliably honour AbortController,
+      // so the mount-time /auth/me 401 can arrive long after login() has completed.
+      // On Railway, cold-start latency is 20-30s, so we extend to 60s to cover
+      // the case where /auth/me was still waiting in the TCP handshake phase when
+      // login() aborted it — the abort doesn't reach the network layer in time.
+      if (_authCompletedAt && Date.now() - _authCompletedAt < 60000) return new Promise(() => {});
 
       // All other 401s mean the session expired — clear state, show one toast, redirect.
       // Return a never-resolving promise so component .catch() blocks never fire and

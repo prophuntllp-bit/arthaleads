@@ -2,9 +2,11 @@
 	"appId": "com.arthaleads.crm",
 	"appName": "Arthaleads",
 	"webDir": "dist",
-	"server": {
-		"url": "https://arthaleads.com",
-		"cleartext": false
+	"backgroundColor": "#111113",
+	"android": {
+		"backgroundColor": "#111113",
+		"allowMixedContent": false,
+		"webContentsDebuggingEnabled": false
 	},
 	"plugins": {
 		"PushNotifications": {
@@ -13,6 +15,19 @@
 				"sound",
 				"alert"
 			]
+		},
+		"StatusBar": {
+			"style": "Dark",
+			"backgroundColor": "#111113",
+			"overlaysWebView": false
+		},
+		"Keyboard": {
+			"resize": "body",
+			"style": "dark",
+			"resizeOnFullScreen": true
+		},
+		"SplashScreen": {
+			"launchShowDuration": 0
 		}
 	}
 }
