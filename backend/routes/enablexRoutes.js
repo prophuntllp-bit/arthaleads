@@ -1,10 +1,12 @@
-const express = require("express");
-const axios   = require("axios");
-const router  = express.Router(); // v2 — bridge call, all authenticated users can initiate
+const express   = require("express");
+const axios     = require("axios");
+const mongoose  = require("mongoose");
+const router    = express.Router(); // v2 — bridge call, all authenticated users can initiate
 
 const { protect, authorize } = require("../middlewares/auth");
 const Organization = require("../models/Organization");
 const Lead         = require("../models/Lead");
+const User         = require("../models/User");
 const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
 const { sendPushToUser } = require("../utils/push");
@@ -21,6 +23,125 @@ function normalizePhone(phone) {
   if (d.length === 11 && d.startsWith("0")) return `91${d.slice(1)}`;
   return d;
 }
+
+// ── Public: inbound call answer URL ──────────────────────────────────────────
+// EnableX calls this (GET or POST) when someone dials the virtual number.
+// We look up who last called that phone number and bridge the inbound call
+// to that agent — so the lead always reaches the same person they spoke to.
+// Configure in EnableX portal → Phone Numbers → your DID → Answer URL:
+//   https://api.arthaleads.com/api/calls/inbound/<orgId>
+router.all("/inbound/:orgId", express.json(), async (req, res) => {
+  const params    = { ...req.query, ...(req.body || {}) };
+  const { orgId } = req.params;
+  // EnableX sends caller as "from", some versions use "caller_number"
+  const callerRaw = params.from || params.caller_number || params.call_from || "";
+
+  console.info("[enablex inbound] orgId:", orgId, "from:", callerRaw,
+    "params:", JSON.stringify(params).slice(0, 300));
+
+  try {
+    const org = await Organization.findById(orgId).select("enablex").lean();
+    if (!org?.enablex?.enabled || !org.enablex.virtualNumber) {
+      console.warn("[enablex inbound] org not found or EnableX not enabled");
+      return res.json({ message: "Service not available." });
+    }
+
+    const fromNumber = normalizePhone(org.enablex.virtualNumber);
+    const webhookUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${orgId}`;
+
+    // Match lead by last 10 digits of their phone (DB stores numbers in various formats)
+    const last10 = callerRaw.replace(/\D/g, "").slice(-10);
+    let lead = null;
+    if (last10.length >= 8) {
+      lead = await Lead.findOne({
+        orgId:     new mongoose.Types.ObjectId(orgId),
+        phone:     { $regex: last10 + "$", $options: "i" },
+        isDeleted: { $ne: true },
+      }).select("name phone activities").lean();
+    }
+
+    let agentPhone   = null;
+    let agentUserId  = null;
+    let agentName    = null;
+
+    if (lead) {
+      // Route to the agent who most recently called this lead (outbound)
+      const lastOutbound = [...lead.activities]
+        .filter(a => a.type === "called" && a.meta?.direction === "outbound" && a.meta?.agentPhone)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+
+      if (lastOutbound?.meta?.agentPhone) {
+        agentPhone  = normalizePhone(lastOutbound.meta.agentPhone);
+        agentUserId = lastOutbound.performedBy;
+        agentName   = lastOutbound.performedByName;
+      }
+    }
+
+    // Fallback: route to any admin/manager/agent in the org who has a phone number
+    if (!agentPhone) {
+      const fallback = await User.findOne({
+        orgId,
+        isActive: true,
+        phone:    { $exists: true, $ne: "" },
+        role:     { $in: ["admin", "manager", "agent"] },
+      }).sort({ createdAt: 1 }).select("phone name _id").lean();
+
+      if (fallback?.phone) {
+        agentPhone  = normalizePhone(fallback.phone);
+        agentUserId = fallback._id;
+        agentName   = fallback.name;
+      }
+    }
+
+    if (!agentPhone) {
+      console.warn("[enablex inbound] no agent phone found for org", orgId);
+      return res.json({ message: "No available agent to route this call." });
+    }
+
+    const ownerRef = `lead_${lead?._id || "unknown"}_${Date.now()}`;
+
+    console.info("[enablex inbound] routing", callerRaw, "→ agent", agentPhone,
+      lead ? `(lead: ${lead.name})` : "(unknown caller)");
+
+    // Respond to EnableX first — it has a tight timeout on the answer URL
+    res.json({
+      connect: {
+        from:    fromNumber,  // virtual number shown as caller ID to agent
+        to:      agentPhone,
+        timeout: 30,
+      },
+      custom_data: ownerRef,
+      event_url:   webhookUrl,
+    });
+
+    // Log inbound call activity on the lead (async — after response)
+    if (lead) {
+      Lead.findById(lead._id).then(async (doc) => {
+        if (!doc) return;
+        doc.activities.push({
+          type:            "called",
+          description:     `Inbound call from ${doc.name}`,
+          performedBy:     agentUserId || undefined,
+          performedByName: agentName   || undefined,
+          meta: {
+            direction:      "inbound",
+            status:         "initiated",
+            ownerRef,
+            phone:          callerRaw,
+            routedToPhone:  org.enablex.virtualNumber,
+            routedToAgent:  agentName || "",
+          },
+        });
+        doc.markModified("activities");
+        await doc.save();
+      }).catch(e => console.error("[enablex inbound] activity log failed:", e.message));
+    }
+  } catch (err) {
+    console.error("[enablex inbound] error:", err.message);
+    // Still try to respond so EnableX doesn't hang
+    if (!res.headersSent) res.json({ message: "Routing error." });
+  }
+});
 
 // ── Public webhook (EnableX + recording server post here, no JWT) ─────────────
 // Must be registered BEFORE the protect middleware below.
@@ -330,10 +451,14 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
   try {
     const org = await Organization.findById(req.user.orgId).select("enablex").lean();
     const { apiKey, ...safe } = org?.enablex || {};
+    const orgId = String(req.user.orgId);
+    // Inbound answer URL — admins paste this into EnableX portal → Phone Numbers → Answer URL
+    const inboundUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/inbound/${orgId}`;
     res.json({
-      enablex:   { ...safe, apiKey: apiKey || "", hasApiKey: !!apiKey },
-      connected: !!(apiKey && org?.enablex?.enabled),
-      orgId:     String(req.user.orgId),
+      enablex:    { ...safe, apiKey: apiKey || "", hasApiKey: !!apiKey },
+      connected:  !!(apiKey && org?.enablex?.enabled),
+      orgId,
+      inboundUrl, // shown in Settings → Telephony so admin can copy it
     });
   } catch (err) { next(err); }
 });
@@ -418,8 +543,9 @@ router.post("/initiate", protect, async (req, res, next) => {
       to:   agentPhone,
       action_on_connect: {
         connect: {
-          from: fromNumber,  // caller ID shown to lead
-          to:   leadPhone,   // lead's phone (digits only, e.g. "917020950304")
+          from:    fromNumber,  // caller ID shown to lead (virtual number)
+          to:      leadPhone,   // lead's phone (digits only, e.g. "917020950304")
+          timeout: 30,          // wait up to 30 s for lead to answer before giving up
         },
       },
       custom_data: ownerRef,
