@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, ImagePlus, KeyRound, ShieldCheck, UserRound, Shuffle,
-         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Phone } from "lucide-react";
+import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Phone, Pencil, Trash2 } from "lucide-react";
 import EnableXSettings from "../components/EnableXSettings";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -364,6 +364,9 @@ export default function Settings() {
   const [showNewPwd, setShowNewPwd]         = useState(false);
   const [autoAssign, setAutoAssign]         = useState(org?.autoAssign ?? true);
   const [togglingAA, setTogglingAA]         = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef                       = useRef(null);
+  const avatarFileRef                       = useRef(null);
 
   // Sync toggle state whenever org data loads/changes (e.g. after auth/me refresh)
   useEffect(() => {
@@ -417,6 +420,19 @@ export default function Settings() {
     reader.onerror = () => toast.error("Could not read that image");
     reader.readAsDataURL(file);
     event.target.value = "";
+  };
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handler = (e) => { if (!avatarMenuRef.current?.contains(e.target)) setAvatarMenuOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [avatarMenuOpen]);
+
+  const handleDeleteAvatar = () => {
+    setAvatarMenuOpen(false);
+    setForm((cur) => ({ ...cur, avatar: "" }));
+    toast.success("Photo removed — save to apply");
   };
 
   const handleAutoAssignToggle = async () => {
@@ -505,13 +521,43 @@ export default function Settings() {
         <section className="card p-6 space-y-5">
           {/* Avatar + identity */}
           <div className="flex items-center gap-4">
-            {profilePreview ? (
-              <img src={profilePreview} alt={form.name} className="h-20 w-20 rounded-[1.5rem] object-cover border" style={{ borderColor: "var(--app-border)" }} />
-            ) : (
-              <div className="flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-orange-500/10 text-2xl font-bold text-orange-500">
-                {form.name?.[0]?.toUpperCase() || user?.name?.[0]?.toUpperCase()}
-              </div>
-            )}
+            {/* Avatar with pencil overlay */}
+            <div className="relative shrink-0" ref={avatarMenuRef}>
+              <button type="button" onClick={() => setAvatarMenuOpen(v => !v)}
+                className="group relative h-20 w-20 rounded-[1.5rem] overflow-hidden focus:outline-none">
+                {profilePreview ? (
+                  <img src={profilePreview} alt={form.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-orange-500/10 text-2xl font-bold text-orange-500">
+                    {form.name?.[0]?.toUpperCase() || user?.name?.[0]?.toUpperCase()}
+                  </div>
+                )}
+                {/* dark overlay + pencil on hover */}
+                <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem] bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Pencil className="h-5 w-5 text-white" />
+                </div>
+              </button>
+
+              {/* Dropdown menu */}
+              {avatarMenuOpen && (
+                <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 rounded-xl overflow-hidden shadow-lg py-1"
+                  style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+                  <label className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
+                    <Upload className="h-4 w-4 text-app-soft" />
+                    {profilePreview ? "Change photo" : "Upload photo"}
+                    <input ref={avatarFileRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                      className="hidden" onChange={(e) => { setAvatarMenuOpen(false); handleAvatarUpload(e); }} />
+                  </label>
+                  {profilePreview && (
+                    <button type="button" onClick={handleDeleteAvatar}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">
+                      <Trash2 className="h-4 w-4" /> Remove photo
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div>
               <p className="text-lg font-semibold text-app">{form.name || user?.name}</p>
               <p className="text-sm text-app-soft">{user?.email}</p>
@@ -532,14 +578,6 @@ export default function Settings() {
               <div className="sm:col-span-2">
                 <label className="label">Email</label>
                 <input className="input text-app-soft" style={{ background: "var(--app-surface-low)" }} value={user?.email || ""} disabled />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="label flex items-center gap-2"><ImagePlus className="h-4 w-4 text-orange-500" /> Profile Picture</label>
-                <label className="btn-secondary inline-flex cursor-pointer rounded-xl">
-                  <ImagePlus className="h-4 w-4" /> Choose Image
-                  <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" className="hidden" onChange={handleAvatarUpload} />
-                </label>
-                <p className="mt-2 text-xs text-app-soft">PNG, JPG, WEBP, or GIF up to 2 MB.</p>
               </div>
             </div>
 
