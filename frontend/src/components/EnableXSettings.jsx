@@ -15,6 +15,7 @@ export default function EnableXSettings() {
   const [showApiKey,     setShowApiKey]     = useState(false);
   const [aiAutoStatus,   setAiAutoStatus]   = useState(false);
   const [togglingAI,     setTogglingAI]     = useState(false);
+  const [inboundUrl,     setInboundUrl]     = useState("");
 
   const webhookUrl = orgId
     ? `${window.location.origin}/api/calls/webhook/${orgId}`
@@ -30,6 +31,7 @@ export default function EnableXSettings() {
       setApiKey(s.apiKey || "");
       setVirtualNumber(s.virtualNumber || "");
       setAiAutoStatus(!!s.aiAutoStatus);
+      setInboundUrl(r.data.inboundUrl || "");
     }).catch(() => {});
   }, []);
 
@@ -82,6 +84,11 @@ export default function EnableXSettings() {
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
     toast.success("Webhook URL copied!");
+  };
+
+  const copyInboundUrl = () => {
+    navigator.clipboard.writeText(inboundUrl);
+    toast.success("Answer URL copied!");
   };
 
   return (
@@ -189,6 +196,35 @@ export default function EnableXSettings() {
           </div>
         </div>
       </div>
+
+      {/* Step 3: Inbound Answer URL */}
+      {inboundUrl && (
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
+              style={{ background: "var(--app-primary)" }}>3</span>
+            <h3 className="text-base font-bold text-app">Set Answer URL for inbound calls</h3>
+          </div>
+          <p className="text-sm text-app-soft pl-8">
+            When a lead calls your virtual number, EnableX will route the call to the agent who last spoke with them.
+            In EnableX portal → <strong>Phone Numbers</strong> → select your DID → set the <strong>Answer URL</strong> to:
+          </p>
+          <div className="pl-8">
+            <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <code className="flex-1 text-xs text-orange-500 truncate">{inboundUrl}</code>
+              <button onClick={copyInboundUrl}
+                className="shrink-0 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg text-app-soft hover:text-app transition"
+                style={{ background: "var(--app-border)" }}>
+                <Copy className="w-3.5 h-3.5" /> Copy
+              </button>
+            </div>
+            <p className="text-xs text-app-soft mt-2">
+              Inbound calls are automatically bridged to the right agent. If no prior contact exists, the call goes to any available team member.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* What you get */}
       {connected && (
