@@ -441,7 +441,7 @@ export default function FollowUps() {
         ) : (
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
-              <table data-tour="followup-table" className="text-xs" style={{ borderCollapse: "collapse", tableLayout: "fixed", width: Object.values(colW).reduce((a, b) => a + b, 0) + 50 }}>
+              <table data-tour="followup-table" className="stitch-table-fixed text-xs" style={{ borderCollapse: "collapse", tableLayout: "fixed", width: Object.values(colW).reduce((a, b) => a + b, 0) + 50 }}>
                 <thead>
                   <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
                     <RTh k="name"       colW={colW} startResize={startResize} className={FU_TH}>Name</RTh>
