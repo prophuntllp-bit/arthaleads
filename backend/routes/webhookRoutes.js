@@ -80,10 +80,13 @@ async function getFacebookLeadFields(leadgenId, accessToken) {
 }
 
 async function findFacebookAutomationByPayload(leadData) {
-  const candidates = await Automation.find({
-    platform: "Facebook",
-    isActive: true,
-  }).sort({ updatedAt: -1 });
+  // Narrow by pageId at the DB level so MongoDB can use the compound index
+  // { platform:1, isActive:1, pageId:1 } rather than scanning every tenant.
+  // When page_id is absent the query falls back to a full active-FB scan
+  // (rare — only happens for malformed or test payloads).
+  const query = { platform: "Facebook", isActive: true };
+  if (leadData.page_id) query.pageId = String(leadData.page_id);
+  const candidates = await Automation.find(query).sort({ updatedAt: -1 });
 
   // Priority 1: exact page + form match
   const exactMatch = candidates.find((item) => {

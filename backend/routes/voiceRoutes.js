@@ -11,14 +11,20 @@ const apiKeyAuth = require("../middlewares/apiKey");
 router.use(apiKeyAuth);
 
 // ── Org-scope middleware ───────────────────────────────────────────────────────
-// Every voice route must be scoped to a single org to prevent cross-tenant leaks.
-// Priority: X-Org-Id header > ?org_id param > VOICE_ORG_ID env var
+// When using a per-org API key, apiKeyAuth already set req.orgId — use it directly.
+// For the legacy global key path, fall back to header/param/env (deprecated).
 router.use((req, res, next) => {
+  if (req.orgId) {
+    // Per-org key path: org is determined from key lookup — no spoofable header needed.
+    req.voiceOrgId = req.orgId;
+    return next();
+  }
+  // Legacy global key fallback (migrate orgs off this path by issuing per-org keys)
   const orgId = req.headers["x-org-id"] || req.query.org_id || process.env.VOICE_ORG_ID;
   if (!orgId) {
     return res.status(400).json({
       success: false,
-      message: "org_id is required. Pass X-Org-Id header, ?org_id= param, or set VOICE_ORG_ID env var.",
+      message: "Generate a per-org API key via Arthaleads Settings → Voice Integration.",
     });
   }
   req.voiceOrgId = orgId;

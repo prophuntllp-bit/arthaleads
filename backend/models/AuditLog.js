@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 
 const auditLogSchema = new mongoose.Schema(
   {
+    requestId: { type: String }, // correlation ID from X-Request-Id header
     action: {
       type: String,
       required: true,
@@ -10,6 +11,8 @@ const auditLogSchema = new mongoose.Schema(
         "plan_change", "org_activated", "org_deactivated",
         "trial_extended", "impersonate", "org_name_changed",
         "logo_changed", "brand_color_changed", "broadcast_sent",
+        "user_created", "user_deactivated", "user_reactivated",
+        "user_role_changed", "user_password_reset",
       ],
     },
     performedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },

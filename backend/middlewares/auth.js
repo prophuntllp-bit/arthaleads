@@ -4,6 +4,30 @@ const User = require("../models/User");
 const Organization = require("../models/Organization");
 const { AppError } = require("./errorHandler");
 
+// ── Allowed origins for CSRF check ───────────────────────────────────────────
+// Mirrors server.js CORS config so cookie-bearing requests from foreign origins
+// are rejected even if the CORS preflight somehow passed.
+function _buildCsrfAllowedOrigins() {
+  const raw = (process.env.CLIENT_URLS || "http://localhost:3000")
+    .split(",").map((o) => o.trim());
+  const set = new Set(raw);
+  set.add("capacitor://localhost");
+  set.add("http://localhost");
+  for (const o of raw) {
+    try {
+      const { protocol, hostname, port } = new URL(o);
+      const p = port ? `:${port}` : "";
+      if (hostname.startsWith("www.")) {
+        set.add(`${protocol}//${hostname.slice(4)}${p}`);
+      } else {
+        set.add(`${protocol}//www.${hostname}${p}`);
+      }
+    } catch {}
+  }
+  return set;
+}
+const _csrfAllowedOrigins = _buildCsrfAllowedOrigins();
+
 // ── In-memory org cache (60 s TTL) ───────────────────────────────────────────
 // Avoids a DB round-trip on every authenticated request.
 // Invalidated automatically by TTL; worst-case a deactivated org stays cached 60 s.
@@ -28,10 +52,12 @@ function invalidateOrgCache(orgId) {
 const protect = async (req, res, next) => {
   try {
     let token;
+    let tokenFromCookie = false;
 
     // 1. Prefer httpOnly cookie (browser clients - XSS-safe)
     if (req.cookies?.crm_token) {
       token = req.cookies.crm_token;
+      tokenFromCookie = true;
     // 2. Fall back to Authorization header (API clients, mobile, Postman)
     } else if (req.headers.authorization?.startsWith("Bearer ")) {
       token = req.headers.authorization.split(" ")[1];
@@ -39,6 +65,16 @@ const protect = async (req, res, next) => {
 
     if (!token) {
       return next(new AppError("Not authenticated. Please log in.", 401));
+    }
+
+    // CSRF guard: if auth came from a cookie, verify the request origin is ours.
+    // Browsers always send Origin on cross-origin requests. A foreign origin with
+    // a valid cookie means a cross-site request forgery attempt.
+    if (tokenFromCookie) {
+      const origin = req.headers.origin;
+      if (origin && !_csrfAllowedOrigins.has(origin)) {
+        return next(new AppError("CSRF: request origin not permitted.", 403));
+      }
     }
 
     // Verify token

@@ -4,7 +4,21 @@ const authService = require("../services/authService");
 const otpService  = require("../services/otpService");
 const SignupOtp   = require("../models/SignupOtp");
 const User        = require("../models/User");
+const AuditLog    = require("../models/AuditLog");
 const { AppError } = require("../middlewares/errorHandler");
+
+function _auditLog(req, action, extras = {}) {
+  AuditLog.create({
+    requestId:      req.requestId,
+    action,
+    performedBy:    req.user?._id,
+    performedByName: req.user?.name,
+    targetOrg:      req.user?.orgId,
+    ip:             req.ip,
+    userAgent:      req.headers["user-agent"],
+    ...extras,
+  }).catch(() => {}); // non-blocking — never fail the main request
+}
 
 // Normalise phone to bare 10-digit string
 function normPhone(raw) {
@@ -132,6 +146,7 @@ const authController = {
   async createUser(req, res, next) {
     try {
       const user = await authService.createUser(req.body, req.orgId, req.user?.name);
+      _auditLog(req, "user_created", { targetUser: user._id, targetUserName: user.name });
       res.status(201).json({ success: true, user });
     } catch (err) {
       next(err);
@@ -150,6 +165,8 @@ const authController = {
   async toggleUserActive(req, res, next) {
     try {
       const user = await authService.toggleUserActive(req.params.id, req.user._id, req.user.orgId);
+      const action = user.isActive ? "user_reactivated" : "user_deactivated";
+      _auditLog(req, action, { targetUser: user._id, targetUserName: user.name });
       res.json({ success: true, user });
     } catch (err) {
       next(err);
@@ -159,6 +176,7 @@ const authController = {
   async deleteUser(req, res, next) {
     try {
       await authService.deleteUser(req.params.id, req.user._id, req.user.orgId);
+      _auditLog(req, "user_deactivated", { targetUser: req.params.id, details: { permanently: true } });
       res.json({ success: true, message: "User removed successfully" });
     } catch (err) {
       next(err);

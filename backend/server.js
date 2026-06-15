@@ -128,6 +128,16 @@ connectDB().then(async () => {
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
 
+// Attach a unique request ID to every request for log correlation and client debugging.
+// Honour an incoming X-Request-Id if present (e.g. from a load balancer) so the
+// ID is consistent across the full request chain.
+app.use((req, res, next) => {
+  const crypto = require("crypto");
+  req.requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.requestId);
+  next();
+});
+
 // CORS - allow multiple frontend origins from env
 // Auto-expand every entry to include both www. and non-www variants so Samsung
 // Android PWA installs always match regardless of which form the app was

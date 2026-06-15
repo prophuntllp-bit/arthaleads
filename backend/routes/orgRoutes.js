@@ -232,4 +232,28 @@ router.get("/me/qr-token", authorize("admin", "manager", "super_admin"), async (
   } catch (err) { next(err); }
 });
 
+// POST /api/org/me/voice-key — generate / rotate per-org Voice API key (admin only)
+// The returned key is the one to configure in the telephony provider (e.g. EnableX).
+router.post("/me/voice-key", authorize("admin"), async (req, res, next) => {
+  try {
+    const crypto = require("crypto");
+    const voiceApiKey = "vk_" + crypto.randomBytes(24).toString("hex");
+    const org = await Organization.findByIdAndUpdate(req.orgId, { voiceApiKey }, { new: true });
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    res.json({ success: true, voiceApiKey: org.voiceApiKey });
+  } catch (err) { next(err); }
+});
+
+// GET /api/org/me/voice-key — fetch current Voice API key (admin only, masked)
+router.get("/me/voice-key", authorize("admin"), async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("voiceApiKey").lean();
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+    const key = org.voiceApiKey || "";
+    // Return masked key: show prefix + last 4 chars only
+    const masked = key.length > 8 ? key.slice(0, 6) + "****" + key.slice(-4) : (key ? "****" : "");
+    res.json({ success: true, voiceApiKey: masked, isConfigured: !!key });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
