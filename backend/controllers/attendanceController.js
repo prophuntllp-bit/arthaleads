@@ -54,6 +54,15 @@ function computeEarlyLeave(clockOutDate, settings) {
   };
 }
 
+// Overtime = any time worked past shift end (Option A: time-after-shift)
+function computeOvertime(clockOutDate, settings) {
+  if (!clockOutDate) return { overtimeMinutes: null };
+  const clockOutMins = istMins(clockOutDate);
+  const endMins = parseHHMM(settings.shiftEndTime);
+  const overtimeMinutes = clockOutMins > endMins ? clockOutMins - endMins : null;
+  return { overtimeMinutes };
+}
+
 // Parse "HH:MM" → total minutes since midnight
 function parseHHMM(str) {
   const [h, m] = (str || "09:30").split(":").map(Number);
@@ -162,6 +171,8 @@ const attendanceController = {
       const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(now, settings);
       record.isEarlyLeave = isEarlyLeave;
       record.earlyLeaveByMinutes = earlyLeaveByMinutes;
+      const { overtimeMinutes } = computeOvertime(now, settings);
+      record.overtimeMinutes = overtimeMinutes;
       if (req.body.note) record.note = req.body.note;
 
       // Handle selfie upload and geo fields
@@ -263,7 +274,7 @@ const attendanceController = {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
       };
 
-      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Note"];
+      const header = ["Date", "Name", "Email", "Role", "Clock In", "Clock Out", "Duration", "Day Type", "Late", "Late By", "Early Leave", "Early Leave By", "Overtime", "Note"];
       const rows = records.map((r) => [
         r.date,
         r.userId?.name || "",
@@ -277,6 +288,7 @@ const attendanceController = {
         r.lateByMinutes ? fmtDur(r.lateByMinutes) : "",
         r.isEarlyLeave ? "Yes" : "No",
         r.earlyLeaveByMinutes ? fmtDur(r.earlyLeaveByMinutes) : "",
+        r.overtimeMinutes ? fmtDur(r.overtimeMinutes) : "",
         r.note || "",
       ]);
 
@@ -331,10 +343,11 @@ const attendanceController = {
       }
       const dayType = totalMinutes != null ? computeDayType(totalMinutes, settings) : null;
       const { isEarlyLeave, earlyLeaveByMinutes } = computeEarlyLeave(clockOutDate, settings);
+      const { overtimeMinutes } = computeOvertime(clockOutDate, settings);
 
       const record = await Attendance.findOneAndUpdate(
         { userId, orgId: req.user.orgId, date },
-        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, isEarlyLeave, earlyLeaveByMinutes, dayType, note: note || "" } },
+        { $set: { clockIn: clockInDate, clockOut: clockOutDate, totalMinutes, isLate, lateByMinutes, isEarlyLeave, earlyLeaveByMinutes, overtimeMinutes, dayType, note: note || "" } },
         { upsert: true, new: true, runValidators: false }
       ).populate("userId", "name email role");
 

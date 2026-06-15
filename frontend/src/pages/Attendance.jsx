@@ -469,7 +469,7 @@ export default function Attendance() {
                 <table className="w-full text-xs min-w-[700px]">
                   <thead>
                     <tr className="border-b" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
-                      {["Member", "Clock In", "Clock Out", "Hours", "Day Type", "Status", "Proof"].map(h => (
+                      {["Member", "Clock In", "Clock Out", "Hours", "OT", "Day Type", "Status", "Proof"].map(h => (
                         <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
                     </tr>
@@ -513,6 +513,11 @@ export default function Attendance() {
                               : "-"}
                           </td>
                           <td className="px-5 py-3">
+                            {a?.overtimeMinutes
+                              ? <span className="text-indigo-500 font-semibold">+{fmtDuration(a.overtimeMinutes)}</span>
+                              : <span className="text-app-soft">—</span>}
+                          </td>
+                          <td className="px-5 py-3">
                             <DayTypeBadge dayType={a?.dayType} clockIn={a?.clockIn} clockOut={a?.clockOut} />
                           </td>
                           <td className="px-5 py-3"><StatusBadge a={a} /></td>
@@ -523,7 +528,7 @@ export default function Attendance() {
                       );
                     })}
                     {teamToday.length === 0 && (
-                      <tr><td colSpan={7} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
+                      <tr><td colSpan={8} className="px-5 py-10 text-center text-app-soft text-xs">No team members found</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -617,7 +622,7 @@ export default function Attendance() {
                       {[
                         "Date",
                         ...(isAdmin ? ["Member"] : []),
-                        "Clock In", "Clock Out", "Duration", "Day Type", "Status", "Note", "Proof",
+                        "Clock In", "Clock Out", "Duration", "OT", "Day Type", "Status", "Note", "Proof",
                       ].map(h => (
                         <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-app-soft">{h}</th>
                       ))}
@@ -662,6 +667,11 @@ export default function Attendance() {
                               : <span className="text-app-soft">-</span>}
                           </td>
                           <td className="px-4 py-3 font-semibold text-app">{fmtDuration(rec.totalMinutes)}</td>
+                          <td className="px-4 py-3">
+                            {rec.overtimeMinutes
+                              ? <span className="text-indigo-500 font-semibold">+{fmtDuration(rec.overtimeMinutes)}</span>
+                              : <span className="text-app-soft">—</span>}
+                          </td>
                           <td className="px-4 py-3">
                             <DayTypeBadge dayType={rec.dayType} clockIn={rec.clockIn} clockOut={rec.clockOut} />
                           </td>

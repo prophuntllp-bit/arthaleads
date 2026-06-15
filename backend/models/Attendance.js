@@ -40,6 +40,7 @@ const attendanceSchema = new mongoose.Schema(
       enum: ["full", "half", "short", null],
       default: null,
     },
+    overtimeMinutes: { type: Number, default: null },
     clockInSelfie:  { type: String, default: "" },
     clockInLat:     { type: Number, default: null },
     clockInLng:     { type: Number, default: null },
