@@ -94,16 +94,26 @@ function compressImage(dataUri, maxPx = 400) {
 
 // Logo upload widget used inside OrgBillingSection
 function OrgLogoUpload({ logo, onUpdated }) {
-  const inputRef = useRef(null);
-  const [preview, setPreview] = useState(logo || "");
+  const inputRef   = useRef(null);
+  const menuRef    = useRef(null);
+  const [preview,   setPreview]   = useState(logo || "");
   const [uploading, setUploading] = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
 
   useEffect(() => { setPreview(logo || ""); }, [logo]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    setMenuOpen(false);
     if (!file.type.startsWith("image/")) return toast.error("Only image files supported");
     if (file.size > 5 * 1024 * 1024) return toast.error("Image must be under 5 MB");
 
@@ -125,6 +135,7 @@ function OrgLogoUpload({ logo, onUpdated }) {
   };
 
   const handleRemove = async () => {
+    setMenuOpen(false);
     if (!confirm("Remove organisation logo?")) return;
     setUploading(true);
     try {
@@ -138,40 +149,51 @@ function OrgLogoUpload({ logo, onUpdated }) {
 
   return (
     <div className="flex items-center gap-4">
-      {/* Preview */}
-      <div
-        onClick={() => !uploading && inputRef.current?.click()}
-        className="w-20 h-16 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition border-2"
-        style={{ background: "var(--app-surface-low)",
-          borderColor: preview ? "var(--app-primary)" : "var(--app-border)",
-          borderStyle: preview ? "solid" : "dashed" }}
-        title="Click to upload logo"
-      >
-        {uploading ? (
-          <span className="h-5 w-5 rounded-full border-2 border-orange-400 border-t-transparent animate-spin" />
-        ) : preview ? (
-          <img src={preview} alt="org logo" className="max-w-full max-h-full object-contain p-1"
-            onError={() => setPreview("")} />
-        ) : (
-          <Upload className="h-5 w-5 text-app-soft" />
-        )}
-      </div>
-
-      <div>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-          className="btn-secondary rounded-xl text-xs px-3 py-2 flex items-center gap-1.5 disabled:opacity-50">
-          <Upload className="h-3.5 w-3.5" /> {preview ? "Change Logo" : "Upload Logo"}
+      {/* Avatar-style logo with pencil overlay */}
+      <div className="relative shrink-0" ref={menuRef}>
+        <button type="button" onClick={() => !uploading && setMenuOpen(v => !v)}
+          className="group relative w-20 h-16 rounded-2xl overflow-hidden focus:outline-none"
+          style={{ background: "var(--app-surface-low)", border: `2px ${preview ? "solid" : "dashed"} ${preview ? "var(--app-primary)" : "var(--app-border)"}` }}>
+          {uploading ? (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="h-5 w-5 rounded-full border-2 border-orange-400 border-t-transparent animate-spin" />
+            </span>
+          ) : preview ? (
+            <img src={preview} alt="org logo" className="max-w-full max-h-full object-contain p-1"
+              onError={() => setPreview("")} />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <Upload className="h-5 w-5 text-app-soft" />
+            </span>
+          )}
+          {/* pencil overlay on hover */}
+          {!uploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl">
+              <Pencil className="h-4 w-4 text-white" />
+            </div>
+          )}
         </button>
-        {preview && (
-          <button type="button" onClick={handleRemove} disabled={uploading}
-            className="mt-1 text-[11px] text-app-soft hover:text-red-500 transition flex items-center gap-1">
-            <X className="h-3 w-3" /> Remove
-          </button>
+
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <div className="absolute left-0 top-[calc(100%+6px)] z-50 w-44 rounded-xl overflow-hidden shadow-lg py-1"
+            style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
+            <label className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
+              <Upload className="h-4 w-4 text-app-soft" />
+              {preview ? "Change logo" : "Upload logo"}
+              <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            </label>
+            {preview && (
+              <button type="button" onClick={handleRemove}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">
+                <Trash2 className="h-4 w-4" /> Remove logo
+              </button>
+            )}
+          </div>
         )}
-        <p className="text-[10px] text-app-soft mt-1">PNG, JPG or SVG · appears on invoice letterhead</p>
       </div>
 
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      <p className="text-xs text-app-soft">PNG, JPG or SVG · max 5 MB<br />Appears on invoice letterhead</p>
     </div>
   );
 }
