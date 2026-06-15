@@ -2,9 +2,9 @@
 Contributors: arthaleads
 Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
-Tested up to: 7.0
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,12 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.4 =
+* Fixed all unescaped output warnings — every echo now uses esc_html() or esc_attr().
+* Removed Google Fonts CDN dependency; admin UI now uses system fonts for privacy compliance.
+* Replaced innerHTML-based row rebuild with safe DOM manipulation to prevent potential XSS.
+* Fixed "Tested up to" version tag (was incorrectly set to 7.0; corrected to 6.8).
 
 = 1.0.3 =
 * Restored full multi-file plugin structure with separate class files for each form integration.

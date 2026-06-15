@@ -19,7 +19,7 @@ function arthaleads_render_admin_page() {
 ?>
 <style>
 *{box-sizing:border-box}
-#al-wrap{font-family:'Inter',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:660px;margin:24px auto;color:#1f2937}
+#al-wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;max-width:660px;margin:24px auto;color:#1f2937}
 .al-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px 32px;margin-bottom:16px}
 .al-head{display:flex;align-items:center;gap:14px}
 .al-logo{width:50px;height:50px;background:linear-gradient(135deg,#FFA040 0%,#E55500 100%);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:9px}
@@ -80,8 +80,8 @@ function arthaleads_render_admin_page() {
                 <h1 class="al-title">Arthaleads</h1>
                 <p class="al-sub">Capture WordPress form leads into your CRM — automatically, in real time</p>
             </div>
-            <span id="al-status-pill" class="al-pill <?php echo $is_connected ? 'al-pill-ok' : 'al-pill-no'; ?>">
-                <?php echo $is_connected ? '✓ Connected' : '⏳ Not Connected'; ?>
+            <span id="al-status-pill" class="al-pill <?php echo esc_attr( $is_connected ? 'al-pill-ok' : 'al-pill-no' ); ?>">
+                <?php echo esc_html( $is_connected ? '✓ Connected' : '⏳ Not Connected' ); ?>
             </span>
         </div>
     </div>
@@ -224,11 +224,18 @@ function arthaleads_render_admin_page() {
         setTimeout(function() { toastEl.style.display = 'none'; }, 3500);
     }
 
+    function esc(str) {
+        var d = document.createElement('div');
+        d.appendChild(document.createTextNode(String(str)));
+        return d.innerHTML;
+    }
+
     function rebuildRows(integrations) {
         var icons  = {cf7:'📋',wpforms:'📝',elementor_form:'⚡',gravity_form:'🌀',ninja_form:'🥷',forminator_form:'🔵',fluent_form:'💧',metform:'📐'};
         var colors = {cf7:'#0073aa',wpforms:'#e27730',elementor_form:'#92003b',gravity_form:'#333',ninja_form:'#15a15e',forminator_form:'#8200e9',fluent_form:'#1a73e8',metform:'#ff4f58'};
         var connected = tokenEl.value.trim().length > 3;
-        var html = '';
+        var container = document.getElementById('al-integrations');
+        container.innerHTML = '';
         integrations.forEach(function(intg) {
             var key     = intg.key;
             var status  = intg.status;
@@ -243,14 +250,44 @@ function arthaleads_render_admin_page() {
             else                                          { badgeTxt='Not Installed';   badgeCls='al-b-gray'; }
             var icon  = icons[key]  || '📄';
             var color = colors[key] || '#6b7280';
-            html += '<div class="al-row '+rowCls+'" id="al-row-'+key+'">';
-            html += '<div class="al-ico" style="background:'+color+'22">'+icon+'</div>';
-            html += '<span class="al-name">'+intg.name+'</span>';
-            html += '<span class="al-badge '+badgeCls+'" id="al-badge-'+key+'">'+badgeTxt+'</span>';
-            html += '<label class="al-tog"><input type="checkbox" class="al-toggle-input" data-key="'+key+'"'+(enabled?' checked':'')+(canTog?'':' disabled')+'/><span class="al-sl"></span></label>';
-            html += '</div>';
+
+            var row = document.createElement('div');
+            row.className = 'al-row ' + rowCls;
+            row.id = 'al-row-' + esc(key);
+
+            var ico = document.createElement('div');
+            ico.className = 'al-ico';
+            ico.style.background = esc(color) + '22';
+            ico.textContent = icon;
+
+            var nameEl = document.createElement('span');
+            nameEl.className = 'al-name';
+            nameEl.textContent = intg.name;
+
+            var badge = document.createElement('span');
+            badge.className = 'al-badge ' + badgeCls;
+            badge.id = 'al-badge-' + esc(key);
+            badge.textContent = badgeTxt;
+
+            var label = document.createElement('label');
+            label.className = 'al-tog';
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'al-toggle-input';
+            cb.dataset.key = key;
+            cb.checked = enabled;
+            cb.disabled = !canTog;
+            var sl = document.createElement('span');
+            sl.className = 'al-sl';
+            label.appendChild(cb);
+            label.appendChild(sl);
+
+            row.appendChild(ico);
+            row.appendChild(nameEl);
+            row.appendChild(badge);
+            row.appendChild(label);
+            container.appendChild(row);
         });
-        document.getElementById('al-integrations').innerHTML = html;
         bindToggleEvents();
     }
 
