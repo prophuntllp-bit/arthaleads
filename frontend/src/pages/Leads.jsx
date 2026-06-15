@@ -414,7 +414,7 @@ export default function Leads() {
 
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
   const [colW, startResize] = useColumnResize("leads", {
-    lead: 180, phone: 172, source: 118, project: 118,
+    lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
     status: 88, priority: 82, requirements: 175, budget: 88, purpose: 72,
     remark: 128, remark1: 118, remark2: 118,
     followup: 185, followup2: 185, booking: 138,
@@ -1453,10 +1453,10 @@ export default function Leads() {
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
-            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.entries(colW).filter(([k]) => k !== "whatsapp").reduce((a, [, b]) => a + b, 0) }}>
+            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.values(colW).reduce((a, b) => a + b, 0) }}>
               <colgroup>
                 {canDelete && <col style={{ width: 40, minWidth: 40 }} />}
-                {Object.entries(colW).filter(([k]) => k !== "whatsapp").map(([k, w]) => <col key={k} style={{ width: w, minWidth: 60 }} />)}
+                {Object.entries(colW).map(([k, w]) => <col key={k} style={{ width: w, minWidth: 60 }} />)}
               </colgroup>
               <thead>
                 <tr>
@@ -1473,7 +1473,8 @@ export default function Leads() {
                     </th>
                   )}
                   <RTh k="lead"         colW={colW} startResize={startResize}>Lead</RTh>
-                  <RTh k="phone"        colW={colW} startResize={startResize}>Phone / WhatsApp</RTh>
+                  <RTh k="phone"        colW={colW} startResize={startResize}>Phone</RTh>
+                  <RTh k="whatsapp"     colW={colW} startResize={startResize}>WhatsApp</RTh>
                   <RTh k="source"       colW={colW} startResize={startResize}>Source</RTh>
                   <RTh k="project"      colW={colW} startResize={startResize}>Project</RTh>
                   <RTh k="status"       colW={colW} startResize={startResize}>Status</RTh>
@@ -1516,12 +1517,8 @@ export default function Leads() {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact(lead)} />
-                        <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} />
-                      </div>
-                    </td>
+                    <td><PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact(lead)} /></td>
+                    <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} /></td>
                     <td>
                       <div className="flex flex-col gap-0.5">
                         <SourceBadge source={lead.source} />
