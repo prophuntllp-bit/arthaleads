@@ -1453,7 +1453,7 @@ export default function Leads() {
               <div ref={topSpacerRef} style={{ height: 1 }} />
             </div>
           <div ref={tableScrollRef} data-tour="leads-table" className="overflow-x-auto">
-            <table className="stitch-table text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.entries(colW).filter(([k]) => k !== "whatsapp").reduce((a, [, b]) => a + b, 0) }}>
+            <table className="stitch-table stitch-table-fixed text-sm" style={{ tableLayout: "fixed", width: (canDelete ? 40 : 0) + Object.entries(colW).filter(([k]) => k !== "whatsapp").reduce((a, [, b]) => a + b, 0) }}>
               <colgroup>
                 {canDelete && <col style={{ width: 40, minWidth: 40 }} />}
                 {Object.entries(colW).filter(([k]) => k !== "whatsapp").map(([k, w]) => <col key={k} style={{ width: w, minWidth: 60 }} />)}
