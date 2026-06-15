@@ -229,7 +229,9 @@ export default function Attendance() {
     setTeamLoading(true);
     try {
       const r = await api.get("/attendance/team-today");
-      setTeamToday(r.data.data || []);
+      const raw = r.data.data || [];
+      raw.sort((a, b) => (a.user?.name || "").localeCompare(b.user?.name || ""));
+      setTeamToday(raw);
     } catch { /**/ }
     finally { setTeamLoading(false); }
   }, [isAdmin]);
