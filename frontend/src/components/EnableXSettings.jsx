@@ -206,8 +206,8 @@ export default function EnableXSettings() {
             <h3 className="text-base font-bold text-app">Set Answer URL for inbound calls</h3>
           </div>
           <p className="text-sm text-app-soft pl-8">
-            When a lead calls your virtual number, EnableX will route the call to the agent who last spoke with them.
-            In EnableX portal → <strong>Phone Numbers</strong> → select your DID → set the <strong>Answer URL</strong> to:
+            When a lead calls your virtual number, the call is automatically routed to the agent who last spoke with them.
+            Share this URL with <strong>EnableX support</strong> and ask them to set it as the <strong>Inbound Webhook / Answer URL</strong> for your DID number, or find it in EnableX portal → your <strong>Voice App</strong> → <strong>Settings</strong> → Inbound Webhook:
           </p>
           <div className="pl-8">
             <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"

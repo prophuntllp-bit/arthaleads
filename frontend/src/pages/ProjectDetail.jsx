@@ -384,15 +384,19 @@ export default function ProjectDetail() {
     return () => document.removeEventListener("mousedown", handler);
   }, [exportLeadsDropOpen]);
 
-  const exportLeads = async (format) => {
+  const exportLeads = async (format, exportAll = false) => {
     setExportLeadsDropOpen(false);
     setExportingLeads(true);
     try {
       let sourceLeads;
-      if (selectedIds.size > 0) {
+      if (!exportAll && selectedIds.size > 0) {
         sourceLeads = leads.filter((l) => selectedIds.has(l._id));
       } else {
-        const params = { page: 1, limit: 9999, ...(search && { search }), ...(bookingFilter && { bookingIn: bookingFilter }) };
+        const params = {
+          page: 1, limit: 9999,
+          ...(!exportAll && search && { search }),
+          ...(!exportAll && bookingFilter && { bookingIn: bookingFilter }),
+        };
         const { data } = await api.get(`/projects/${id}/leads`, { params });
         sourceLeads = data.leads || [];
       }
@@ -412,9 +416,10 @@ export default function ProjectDetail() {
       }));
       if (!rows.length) { toast.error("No leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
-      const filterLabel = bookingFilter ? `_${bookingFilter.replace(/ /g, "_")}` : "";
-      const selectionLabel = selectedIds.size > 0 ? `_${selectedIds.size}selected` : "";
-      const filename = `Leads_${projectName}${filterLabel}${selectionLabel}`;
+      const filterLabel = !exportAll && bookingFilter ? `_${bookingFilter.replace(/ /g, "_")}` : "";
+      const selectionLabel = !exportAll && selectedIds.size > 0 ? `_${selectedIds.size}selected` : "";
+      const allLabel = exportAll ? "_ALL" : "";
+      const filename = `Leads_${projectName}${allLabel}${filterLabel}${selectionLabel}`;
       if (format === "csv") {
         const ws = xlsxUtils.json_to_sheet(rows);
         const csv = xlsxUtils.sheet_to_csv(ws);
@@ -882,12 +887,20 @@ export default function ProjectDetail() {
                 Export
               </button>
               {exportLeadsDropOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 w-40 rounded-xl overflow-hidden shadow-lg py-1"
+                <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-xl overflow-hidden shadow-lg py-1"
                   style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}>
                   {[["xlsx", "Export Excel"], ["csv", "Export CSV"]].map(([fmt, label]) => (
                     <button key={fmt} onClick={() => exportLeads(fmt)}
                       className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
                       <FileSpreadsheet className="h-4 w-4 text-app-soft" /> {label}
+                    </button>
+                  ))}
+                  <div className="mx-3 my-1 border-t" style={{ borderColor: "var(--app-border)" }} />
+                  <p className="px-4 py-1 text-xs text-app-soft font-medium">Export All (no filter)</p>
+                  {[["xlsx", "All Leads Excel"], ["csv", "All Leads CSV"]].map(([fmt, label]) => (
+                    <button key={`all-${fmt}`} onClick={() => exportLeads(fmt, true)}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-app hover:bg-orange-500/10 transition">
+                      <FileSpreadsheet className="h-4 w-4 text-orange-500" /> {label}
                     </button>
                   ))}
                 </div>
