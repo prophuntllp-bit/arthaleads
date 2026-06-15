@@ -241,6 +241,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             <div className="md:col-span-2">
               <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
             </div>
+            {lead.remarkNote && (
+              <div className="md:col-span-2">
+                <Info label="Remark / Imported Info" value={lead.remarkNote} />
+              </div>
+            )}
             {!!lead.formResponses?.length && (
               <div className="md:col-span-2 rounded-[1.35rem] p-4 stitch-surface-muted">
                 <p className="stitch-kicker mb-3">Form Questions</p>

@@ -920,6 +920,7 @@ function FollowUpDuePanel({ user, navigate }) {
 function HotLeadsWidget({ navigate }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [minimized, setMinimized] = useState(() => localStorage.getItem("hot_panel_minimized") === "1");
 
   useEffect(() => {
     api.get("/leads/hot", { params: { limit: 6 } })
@@ -988,15 +989,22 @@ function HotLeadsWidget({ navigate }) {
           style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
           View all <ArrowRight className="h-3 w-3" />
         </button>
+        <button type="button"
+          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
+          title={minimized ? "Expand" : "Minimize"}
+          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+        </button>
       </div>
 
       {/* Lead rows */}
-      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
-        {leads.map((lead) => {
+      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {leads.map((lead, idx) => {
           const ss = SCORE_STYLE(lead._score);
           const ac = ACTION_COLOR[lead._nextAction?.color] || ACTION_COLOR.orange;
           return (
             <div key={lead._id}
+              style={{ animation: "fadeSlideIn 0.3s ease both", animationDelay: `${idx * 55}ms` }}
               className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-orange-500/5">
 
               {/* Score badge */}
@@ -1051,7 +1059,7 @@ function HotLeadsWidget({ navigate }) {
             </div>
           );
         })}
-      </div>
+      </div>}
     </section>
   );
 }

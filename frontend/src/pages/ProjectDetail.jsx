@@ -1031,7 +1031,15 @@ export default function ProjectDetail() {
                   <div ref={topSpacerRef} style={{ height: 1 }} />
                 </div>
                 <div ref={tableScrollRef} className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1500px]">
+                  <table className="stitch-table stitch-table-fixed" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.email, colW.source, colW.contactStatus, colW.note, colW.remark1, colW.remark2, colW.followUp, colW.followUp2, colW.status, colW.updatedBy, colW.assignedTo].reduce((a,b)=>a+b,0) + 128 }}>
+                    <colgroup>
+                      <col style={{ width: 28, minWidth: 28 }} />
+                      <col style={{ width: 28, minWidth: 28 }} />
+                      {["name","phone","whatsapp","email","source","contactStatus","note","remark1","remark2","followUp","followUp2","status","updatedBy","assignedTo"].map(k => (
+                        <col key={k} style={{ width: colW[k], minWidth: 60 }} />
+                      ))}
+                      <col style={{ width: 72, minWidth: 72 }} />
+                    </colgroup>
                     <thead>
                       <tr>
                         <th style={{ width: 28, minWidth: 28 }} className="px-1">
@@ -1045,21 +1053,21 @@ export default function ProjectDetail() {
                           />
                         </th>
                         <th style={{ width: 28, minWidth: 28 }} className="text-center px-1">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
-                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Email</th>
-                        <th style={{ width: 80, minWidth: 80 }}>Source</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Contact Status</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
-                        <th style={{ width: 140, minWidth: 140 }}>Remark</th>
-                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
-                        <th style={{ width: 110, minWidth: 110 }}>Assigned To</th>
-                        <th style={{ width: 72, minWidth: 72 }}></th>
+                        <RTh k="name" colW={colW} startResize={startResize} >Name</RTh>
+                        <RTh k="phone"         colW={colW} startResize={startResize}>Phone</RTh>
+                        <RTh k="whatsapp"      colW={colW} startResize={startResize}>WhatsApp</RTh>
+                        <RTh k="email"         colW={colW} startResize={startResize}>Email</RTh>
+                        <RTh k="source"        colW={colW} startResize={startResize}>Source</RTh>
+                        <RTh k="contactStatus" colW={colW} startResize={startResize}>Contact Status</RTh>
+                        <RTh k="note"          colW={colW} startResize={startResize}>Notes</RTh>
+                        <RTh k="remark1"       colW={colW} startResize={startResize}>Remark 1</RTh>
+                        <RTh k="remark2"       colW={colW} startResize={startResize}>Remark 2</RTh>
+                        <RTh k="followUp"      colW={colW} startResize={startResize}>Follow Up</RTh>
+                        <RTh k="followUp2"     colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                        <RTh k="status"        colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="updatedBy"     colW={colW} startResize={startResize}>Updated By</RTh>
+                        <RTh k="assignedTo"    colW={colW} startResize={startResize}>Assigned To</RTh>
+                        <th style={{ width: 72, minWidth: 72 }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1085,6 +1093,47 @@ export default function ProjectDetail() {
                             <RemarkCell lead={lead} projectId={id} onUpdated={handleLeadUpdated} />
                           </td>
                           <td>
+                            {(() => {
+                              const notes = lead.notes || [];
+                              const latest = notes[notes.length - 1];
+                              if (latest) {
+                                return (
+                                  <button
+                                    onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
+                                    className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10"
+                                    title={`${notes.length} note${notes.length !== 1 ? "s" : ""} — click to view all`}
+                                  >
+                                    <span className="line-clamp-2 text-app">{latest.text}</span>
+                                    {notes.length > 1 && (
+                                      <span className="text-[10px] text-orange-400 font-medium mt-0.5 block">+{notes.length - 1} more</span>
+                                    )}
+                                  </button>
+                                );
+                              }
+                              // No team notes yet — fall back to imported form data (remarkNote)
+                              // so the data from the removed "Remark" column is still visible here.
+                              if (lead.remarkNote) {
+                                return (
+                                  <button
+                                    onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
+                                    className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10"
+                                    title="Imported info — click to view & add notes"
+                                  >
+                                    <span className="line-clamp-2 text-app-soft">{lead.remarkNote}</span>
+                                  </button>
+                                );
+                              }
+                              return (
+                                <button
+                                  onClick={() => setDetailLead({ ...lead, _type: "project", projectId: id })}
+                                  className="block w-full text-left px-1 py-0.5 text-xs rounded transition hover:bg-orange-500/10"
+                                >
+                                  Add note…
+                                </button>
+                              );
+                            })()}
+                          </td>
+                          <td>
                             <InlineText value={lead.remark1} leadId={lead._id} projectId={id} field="remark1" placeholder="Remark 1…" onSaved={handleLeadUpdated} />
                           </td>
                           <td>
@@ -1095,9 +1144,6 @@ export default function ProjectDetail() {
                           </td>
                           <td>
                             <InlineDate value={lead.followUp2} leadId={lead._id} projectId={id} field="followUp2" onSaved={handleLeadUpdated} />
-                          </td>
-                          <td>
-                            <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="General remark…" multiline onSaved={handleLeadUpdated} />
                           </td>
                           <td>
                             <InlineBooking value={lead.booking} leadId={lead._id} projectId={id} onSaved={handleLeadUpdated} />
@@ -1357,7 +1403,15 @@ export default function ProjectDetail() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="stitch-table min-w-[1400px]">
+                  <table className="stitch-table stitch-table-fixed" style={{ tableLayout: "fixed", width: [colW.name, colW.phone, colW.whatsapp, colW.status, colW.followUp, colW.followUp2, colW.remark1, colW.remark2, colW.remark3, colW.remark4, colW.updatedBy].reduce((a,b)=>a+b,0) + (canManage ? 28 : 0) + 32 + 44 }}>
+                    <colgroup>
+                      {canManage && <col style={{ width: 28, minWidth: 28 }} />}
+                      <col style={{ width: 32, minWidth: 32 }} />
+                      {["name","phone","whatsapp","status","followUp","followUp2","remark1","remark2","remark3","remark4","updatedBy"].map(k => (
+                        <col key={k} style={{ width: colW[k], minWidth: 60 }} />
+                      ))}
+                      <col style={{ width: 44, minWidth: 44 }} />
+                    </colgroup>
                     <thead>
                       <tr>
                         {canManage && <th style={{ width: 28, minWidth: 28 }} className="px-1">
@@ -1366,19 +1420,18 @@ export default function ProjectDetail() {
                             onChange={toggleAllProsp} className="h-3.5 w-3.5 cursor-pointer rounded accent-orange-500" title="Select all" />
                         </th>}
                         <th style={{ width: 32, minWidth: 32 }} className="text-center">#</th>
-                        <th className="sticky left-0 z-20 shadow-[2px_0_6px_rgba(0,0,0,0.07)]" style={{ width: 100, minWidth: 100, background: "var(--app-surface)" }}>Name</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Phone</th>
-                        <th style={{ width: 110, minWidth: 110 }}>WhatsApp</th>
-                        <th style={{ width: 150, minWidth: 150 }}>Status</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up</th>
-                        <th style={{ width: 185, minWidth: 185 }}>Follow Up 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 1</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 2</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 3</th>
-                        <th style={{ width: 130, minWidth: 130 }}>Remark 4</th>
-                        <th style={{ width: 140, minWidth: 140 }}>Note</th>
-                        <th style={{ width: 100, minWidth: 100 }}>Updated By</th>
-                        <th style={{ width: 44, minWidth: 44 }}></th>
+                        <RTh k="name" colW={colW} startResize={startResize} >Name</RTh>
+                        <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
+                        <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
+                        <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="followUp"  colW={colW} startResize={startResize}>Follow Up</RTh>
+                        <RTh k="followUp2" colW={colW} startResize={startResize}>Follow Up 2</RTh>
+                        <RTh k="remark1"   colW={colW} startResize={startResize}>Remark 1</RTh>
+                        <RTh k="remark2"   colW={colW} startResize={startResize}>Remark 2</RTh>
+                        <RTh k="remark3"   colW={colW} startResize={startResize}>Remark 3</RTh>
+                        <RTh k="remark4"   colW={colW} startResize={startResize}>Remark 4</RTh>
+                        <RTh k="updatedBy" colW={colW} startResize={startResize}>Updated By</RTh>
+                        <th style={{ width: 44, minWidth: 44 }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1419,9 +1472,6 @@ export default function ProjectDetail() {
                             </td>
                             <td>
                               <InlineText value={lead.remark4} leadId={lead._id} projectId={id} field="remark4" placeholder="Remark 4…" onSaved={handleProspUpdate} />
-                            </td>
-                            <td>
-                              <InlineText value={lead.remarkNote} leadId={lead._id} projectId={id} field="remarkNote" placeholder="Note…" multiline onSaved={handleProspUpdate} />
                             </td>
                             <td className="text-xs text-app-soft whitespace-nowrap">
                               {lead.remarkUpdatedBy?.name || "-"}
