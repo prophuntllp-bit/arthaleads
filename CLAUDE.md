@@ -31,6 +31,21 @@ Every page's root element must use `className="stitch-page"` — nothing else. T
 ### Mobile sidebar
 The mobile drawer sidebar uses `.sidebar-glass` which has a CSS override below 1024px to be fully solid (no glass transparency). Do NOT add glass/blur to the mobile sidebar.
 
+### Fixed-layout tables — MANDATORY rule
+Every table that uses `tableLayout: "fixed"` (inline style or Tailwind `table-fixed`) MUST also have the class `stitch-table-fixed` on the `<table>` element.
+
+`stitch-table-fixed` is defined in `styles.css` and applies:
+```css
+.stitch-table-fixed tbody td {
+  overflow: hidden;
+  max-width: 0;
+}
+```
+This clips each cell's content at the column boundary so long text goes hidden behind the next column instead of bleeding/merging across adjacent cells. Without it, text overflows visually into neighbouring columns.
+
+- Existing tables that already use it: Leads, FollowUps, ProjectDetail (both Leads and Prospective tabs).
+- Apply this class every time a new fixed-layout table is created or an existing one is modified.
+
 ## Git Workflow
 
 Always commit and push directly to the `main` branch. Do not use feature branches unless the user explicitly asks for one.
