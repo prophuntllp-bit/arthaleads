@@ -136,6 +136,9 @@ const _rawOrigins = (process.env.CLIENT_URLS || "http://localhost:3000")
   .split(",").map((o) => o.trim());
 
 const allowedOrigins = new Set(_rawOrigins);
+// Capacitor Android WebView always sends these origins — always allow them.
+allowedOrigins.add("capacitor://localhost");
+allowedOrigins.add("http://localhost");
 for (const o of _rawOrigins) {
   try {
     const { protocol, hostname, port } = new URL(o);

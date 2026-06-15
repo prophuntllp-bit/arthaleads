@@ -526,6 +526,11 @@
   animation: ai-glow-pulse 2s ease-in-out infinite;
 }
 
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
 /* ── Native Android app feel (Capacitor context) ─────────────────────────────
    Applied only when html.is-native class is set (by main.jsx when Capacitor
    is detected). Prevents browser-like behaviour: text selection, overscroll
