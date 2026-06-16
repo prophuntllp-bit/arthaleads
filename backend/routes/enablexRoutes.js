@@ -35,6 +35,7 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
   const { orgId } = req.params;
   // EnableX sends caller as "from", some versions use "caller_number"
   const callerRaw = params.from || params.caller_number || params.call_from || "";
+  const voiceId    = params.voice_id || params.voiceId || "";
 
   console.info("[enablex inbound] orgId:", orgId, "from:", callerRaw,
     "params:", JSON.stringify(params).slice(0, 300));
@@ -114,16 +115,33 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
     console.info("[enablex inbound] routing", callerRaw, "→ agent", agentPhone,
       lead ? `(lead: ${lead.name})` : "(unknown caller)");
 
-    // Respond to EnableX first — it has a tight timeout on the answer URL
-    res.json({
-      connect: {
-        from:    fromNumber,  // virtual number shown as caller ID to agent
-        to:      agentPhone,
-        timeout: 30,
-      },
-      custom_data: ownerRef,
-      event_url:   webhookUrl,
-    });
+    // Ack the webhook immediately — EnableX has a tight timeout on the answer URL.
+    // The actual call control happens via the REST API below, not via this body.
+    res.json({});
+
+    // EnableX inbound calls aren't auto-answered once a custom Event URL is
+    // configured — the call just rings (and eventually drops) unless we
+    // explicitly accept it, then bridge it to the agent via the connect API.
+    // (Outbound calls use action_on_connect.connect in the /call POST instead —
+    // that mechanism doesn't apply here since this call already exists.)
+    if (!voiceId) {
+      console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge");
+    } else {
+      try {
+        await axios.put(`${ENABLEX_BASE}/call/${voiceId}/accept`, {}, basicAuth(org));
+        await axios.put(`${ENABLEX_BASE}/call/${voiceId}/connect`, {
+          from:        fromNumber,  // virtual number shown as caller ID to agent
+          to:          agentPhone,
+          timeout:     30,
+          custom_data: ownerRef,
+          event_url:   webhookUrl,
+        }, basicAuth(org));
+        console.info("[enablex inbound] accepted + bridged voice_id", voiceId, "→ agent", agentPhone);
+      } catch (bridgeErr) {
+        console.error("[enablex inbound] accept/connect failed:", bridgeErr.response?.status,
+          JSON.stringify(bridgeErr.response?.data));
+      }
+    }
 
     // Log inbound call activity on the lead (async — after response)
     if (lead) {
