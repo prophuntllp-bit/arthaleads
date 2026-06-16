@@ -39,6 +39,17 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
   console.info("[enablex inbound] orgId:", orgId, "from:", callerRaw,
     "params:", JSON.stringify(params).slice(0, 300));
 
+  // EnableX hits this same Answer URL again for later call-state callbacks
+  // (e.g. "disconnected") on the inbound leg itself, not just the initial
+  // "incomingcall" ring. Only the initial ring should trigger routing +
+  // a connect action — anything else should just be acknowledged, otherwise
+  // we re-run the lookup, log a duplicate activity, and send a pointless
+  // second connect action for a call that already ended.
+  if (params.state && params.state !== "incomingcall") {
+    console.info("[enablex inbound] ignoring state callback:", params.state);
+    return res.json({});
+  }
+
   try {
     const org = await Organization.findById(orgId).select("enablex").lean();
     if (!org?.enablex?.enabled || !org.enablex.virtualNumber) {
