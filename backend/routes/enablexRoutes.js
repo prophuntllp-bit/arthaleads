@@ -273,6 +273,23 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
           }).catch(() => {});
         }
       }
+
+      // Terminate agent's phone leg so it hangs up when lead disconnects
+      const storedVoiceId = lead.activities[actIdx].meta?.voiceId;
+      if (storedVoiceId) {
+        Organization.findById(orgId).select("enablex").lean()
+          .then(org => org?.enablex?.appId
+            ? axios.delete(`${ENABLEX_BASE}/call/${storedVoiceId}`, basicAuth(org)) : null)
+          .catch(e => console.info("[enablex] terminate agent leg:", e.response?.status || e.message));
+      }
+
+      // Schedule recording fetch from EnableX → upload to Cloudinary (after call processes)
+      if (callStatus === "answered" && storedVoiceId && dur > 5) {
+        setTimeout(() => {
+          fetchAndSaveRecording(orgId, storedVoiceId, ownerRef)
+            .catch(e => console.error("[enablex] fetchAndSaveRecording:", e.message));
+        }, 20000);
+      }
     }
 
     if (dirty) {
@@ -579,6 +596,7 @@ router.post("/initiate", protect, async (req, res, next) => {
       },
       custom_data: ownerRef,
       event_url:   webhookUrl,
+      record:      true,
     };
 
     let voiceId;
@@ -806,6 +824,70 @@ ${transcript.slice(0, 3000)}`,
 
   lead.markModified("activities");
   await lead.save();
+}
+
+// ── Fetch recording from EnableX → upload to Cloudinary → save URL + auto-transcribe ──
+async function fetchAndSaveRecording(orgId, voiceId, ownerRef) {
+  const { v2: cloudinary } = require("cloudinary");
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  const org = await Organization.findById(orgId).select("enablex").lean();
+  if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
+
+  // EnableX needs time to process — retry up to 4 times with 15s gaps
+  let fileUrl = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 15000));
+    try {
+      const resp = await axios.get(`${ENABLEX_BASE}/recording/${voiceId}`, basicAuth(org));
+      const d    = resp.data;
+      fileUrl    = d?.file_url || d?.recording_url || d?.url || d?.data?.file_url || d?.data?.url;
+      if (fileUrl) break;
+    } catch (e) {
+      console.warn(`[enablex recording] attempt ${attempt + 1}:`, e.response?.status, e.message);
+    }
+  }
+
+  if (!fileUrl) {
+    console.warn("[enablex recording] no recording URL for voice_id:", voiceId);
+    return;
+  }
+
+  // Download audio and upload to Cloudinary (we host it — not EnableX)
+  const audioResp = await axios.get(fileUrl, {
+    responseType: "arraybuffer",
+    timeout:      60000,
+    ...basicAuth(org),
+  });
+  const dataUri = `data:audio/mpeg;base64,${Buffer.from(audioResp.data).toString("base64")}`;
+  const result  = await cloudinary.uploader.upload(dataUri, {
+    resource_type: "video",
+    folder:        "arthaleads/call-recordings",
+    public_id:     `call-${voiceId}`,
+    overwrite:     true,
+  });
+  const recordingUrl = result.secure_url;
+  console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
+
+  // Save URL to lead activity
+  const lead = await Lead.findOne({ orgId, "activities.meta.ownerRef": ownerRef });
+  if (!lead) return;
+  const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
+  if (actIdx < 0 || lead.activities[actIdx].meta?.recordingUrl) return;
+
+  lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingUrl };
+  lead.markModified("activities");
+  await lead.save();
+
+  // Auto-transcribe + AI analysis
+  const dur = Number(lead.activities[actIdx].meta?.duration ?? 0);
+  if (process.env.OPENAI_API_KEY && dur > 10) {
+    transcribeAndSummarize(String(lead._id), actIdx, recordingUrl).catch(() => {});
+  }
 }
 
 module.exports = router;
