@@ -72,16 +72,34 @@ function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
 
-  // Name: support both spreadsheet headers and Facebook's full_name field
-  const name = r["full_name"] || r["full name"] || r["name"] || r["customer name"] || r["lead name"] || "";
+  // Helper: fuzzy fallback — find first key that contains any of the given substrings
+  const fuzzy = (substrings) => {
+    const keys = Object.keys(r);
+    for (const sub of substrings) {
+      const found = keys.find((k) => k.includes(sub));
+      if (found && r[found]) return r[found];
+    }
+    return "";
+  };
 
-  // Phone: support Facebook's phone_number and all common variants
-  const rawPhone = r["phone_number"] || r["phone number"] || r["phone"] || r["mobile"] ||
+  // Name: exact matches first, then fuzzy on any key containing "name"
+  const name =
+    r["full_name"] || r["full name"] || r["name"] || r["customer name"] || r["lead name"] ||
+    r["contact name"] || r["client name"] || r["prospect name"] ||
+    fuzzy(["name"]);
+
+  // Phone: exact matches first, then fuzzy on keys containing phone/mobile/contact/cell/number
+  const rawPhone =
+    r["phone_number"] || r["phone number"] || r["phone"] || r["mobile"] ||
     r["contact"] || r["mobile number"] || r["ph"] || r["number"] || r["mob"] ||
-    r["whatsapp"] || r["contact number"] || r["cell"] || "";
+    r["whatsapp"] || r["contact number"] || r["cell"] || r["mobile no"] ||
+    r["mobile no."] || r["phone no"] || r["phone no."] || r["cell phone"] ||
+    r["cell no"] || r["telephone"] || r["tel"] || r["contact no"] || r["contact no."] ||
+    fuzzy(["phone", "mobile", "cell", "tel", "whatsapp", "contact no", "mob no"]);
   const phone = cleanPhone(rawPhone);
 
-  const email  = r["email_address"] || r["email address"] || r["email"] || r["mail"] || "";
+  const email  = r["email_address"] || r["email address"] || r["email"] || r["mail"] ||
+    fuzzy(["email", "mail"]);
   const source = r["source"] || r["lead source"] || "Manual";
 
   // Capture dynamic Facebook MCQ / custom form answers as structured notes
