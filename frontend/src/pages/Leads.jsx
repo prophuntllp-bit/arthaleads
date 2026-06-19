@@ -804,11 +804,16 @@ export default function Leads() {
   const parseImportRow = (row, inferredCols = {}) => {
     const col = makeColPicker(row);
 
+    // Combine separate first/last name columns when present
+    const firstName = col("First Name","FirstName","FName","Given Name","GivenName");
+    const lastName  = col("Last Name","LastName","LName","Surname","Family Name","FamilyName");
+    const splitName = [firstName, lastName].filter(Boolean).join(" ");
+
     const name = col(
-      "Lead Name","LeadName","Full Name","FullName","Name","Customer Name","CustomerName",
+      "Lead Name","LeadName","Full Name","FullName","Name","Names","Customer Name","CustomerName",
       "Contact Name","ContactName","Client Name","ClientName","User Name","UserName",
       "Prospect","Party","Buyer","Person","Contact","Customer"
-    ) || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
+    ) || splitName || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
 
     const phone = col(
       "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
