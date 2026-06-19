@@ -196,9 +196,9 @@ function Hero({ isDark }) {
 
           {/* ── Mockup image with mouse parallax ── */}
           <div ref={mockupRef} style={{ willChange: "transform", transformStyle: "preserve-3d", position: "relative", zIndex: 1 }}>
-            <link rel="preload" as="image" href="/dashboard-light.png" />
+            <link rel="preload" as="image" href="/hero-mockup.png" />
             <img
-              src="/dashboard-light.png"
+              src="/hero-mockup.png"
               alt="Arthaleads CRM Dashboard"
               className="w-full"
               style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))" }}
