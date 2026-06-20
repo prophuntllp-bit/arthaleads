@@ -152,13 +152,13 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
         // Continue anyway — connect may still work
       }
 
-      // Step 2: Bridge to the agent's phone
-      // from = caller's actual number shown as caller ID on agent's phone (so they know who's calling)
+      // Step 2: Bridge to the agent's phone.
+      // from MUST be the provisioned virtual DID — EnableX rejects any number
+      // not registered in the project (error 6118 "Phone number not found").
       try {
         const connectResp = await axios.put(`${ENABLEX_BASE}/call/${voiceId}/connect`, {
-          from:        callerRaw || fromNumber,  // show caller's real number to agent
+          from:        fromNumber,   // provisioned CLI (virtual DID) — do NOT use callerRaw here
           to:          agentPhone,
-          timeout:     30,
           custom_data: ownerRef,
           event_url:   webhookUrl,
         }, basicAuth(org));
