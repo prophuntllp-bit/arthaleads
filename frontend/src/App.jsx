@@ -12,6 +12,7 @@ import OnboardingGate from "./components/OnboardingGate";
 import CookieBanner from "./components/CookieBanner";
 import { Spinner } from "./components/UI";
 import ErrorBoundary from "./components/ErrorBoundary";
+import CustomCursor from "./components/CustomCursor";
 import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
@@ -558,6 +559,7 @@ export default function App() {
     <AuthProvider>
     <CopilotProvider>
       <ErrorBoundary>
+      <CustomCursor />
       <CookieBanner />
       <InstallBanner />
       <Suspense fallback={<PageFallback />}>
