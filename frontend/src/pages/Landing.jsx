@@ -201,7 +201,7 @@ function Hero({ isDark }) {
               src="/hero-mockup.png"
               alt="Arthaleads CRM Dashboard"
               className="w-full"
-              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))" }}
+              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))", mixBlendMode: isDark ? "normal" : "multiply" }}
             />
           </div>
 
