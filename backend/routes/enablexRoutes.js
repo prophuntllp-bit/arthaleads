@@ -38,7 +38,7 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
   const voiceId    = params.voice_id || params.voiceId || "";
 
   console.info("[enablex inbound] orgId:", orgId, "from:", callerRaw,
-    "params:", JSON.stringify(params).slice(0, 300));
+    "voiceId:", voiceId, "params:", JSON.stringify(params));
 
   // EnableX hits this same Answer URL again for later call-state callbacks
   // (e.g. "disconnected") on the inbound leg itself, not just the initial
@@ -140,22 +140,33 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     // (Outbound calls use action_on_connect.connect in the /call POST instead —
     // that mechanism doesn't apply here since this call already exists.)
     if (!voiceId) {
-      console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge. params:", JSON.stringify(params));
+      console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge. full params:", JSON.stringify(params));
     } else {
+      // Step 1: Accept the inbound call (answers it so caller hears hold instead of ringing)
       try {
-        await axios.put(`${ENABLEX_BASE}/call/${voiceId}/accept`, {}, basicAuth(org));
-        await axios.put(`${ENABLEX_BASE}/call/${voiceId}/connect`, {
-          from:        fromNumber,  // virtual number shown as caller ID to agent
+        const acceptResp = await axios.put(`${ENABLEX_BASE}/call/${voiceId}/accept`, {}, basicAuth(org));
+        console.info("[enablex inbound] accept OK:", voiceId, JSON.stringify(acceptResp.data).slice(0, 200));
+      } catch (acceptErr) {
+        console.error("[enablex inbound] accept FAILED:", acceptErr.response?.status,
+          JSON.stringify(acceptErr.response?.data));
+        // Continue anyway — connect may still work
+      }
+
+      // Step 2: Bridge to the agent's phone
+      // from = caller's actual number shown as caller ID on agent's phone (so they know who's calling)
+      try {
+        const connectResp = await axios.put(`${ENABLEX_BASE}/call/${voiceId}/connect`, {
+          from:        callerRaw || fromNumber,  // show caller's real number to agent
           to:          agentPhone,
           timeout:     30,
-          record:      true,
           custom_data: ownerRef,
           event_url:   webhookUrl,
         }, basicAuth(org));
-        console.info("[enablex inbound] accepted + bridged voice_id", voiceId, "→ agent", agentPhone);
-      } catch (bridgeErr) {
-        console.error("[enablex inbound] accept/connect failed:", bridgeErr.response?.status,
-          JSON.stringify(bridgeErr.response?.data));
+        console.info("[enablex inbound] connect OK:", voiceId, "→ agent", agentPhone,
+          JSON.stringify(connectResp.data).slice(0, 200));
+      } catch (connectErr) {
+        console.error("[enablex inbound] connect FAILED:", connectErr.response?.status,
+          JSON.stringify(connectErr.response?.data));
       }
     }
 
