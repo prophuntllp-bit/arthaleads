@@ -9,7 +9,7 @@ const Lead         = require("../models/Lead");
 const User         = require("../models/User");
 const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
-const { sendPushToUser } = require("../utils/push");
+const { sendPushToUser, sendPushToAll } = require("../utils/push");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -30,7 +30,7 @@ function normalizePhone(phone) {
 // to that agent — so the lead always reaches the same person they spoke to.
 // Configure in EnableX portal → Phone Numbers → your DID → Answer URL:
 //   https://api.arthaleads.com/api/calls/inbound/<orgId>
-router.all("/inbound/:orgId", express.json(), async (req, res) => {
+router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: true }), async (req, res) => {
   const params    = { ...req.query, ...(req.body || {}) };
   const { orgId } = req.params;
   // EnableX sends caller as "from", some versions use "caller_number"
@@ -107,6 +107,12 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
 
     if (!agentPhone) {
       console.warn("[enablex inbound] no agent phone found for org", orgId);
+      // Notify all org admins that a call came in but couldn't be routed
+      sendPushToAll({
+        title: "Missed Inbound Call",
+        body:  `A call came in${lead ? ` from ${lead.name}` : ""} but no agent has a phone number configured to receive it.`,
+        data:  { type: "missed_call", leadId: lead ? String(lead._id) : null },
+      }, orgId).catch(() => {});
       return res.json({ message: "No available agent to route this call." });
     }
 
@@ -119,13 +125,22 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
     // The actual call control happens via the REST API below, not via this body.
     res.json({});
 
+    // Notify the agent in-app so they know their phone is about to ring
+    if (agentUserId) {
+      sendPushToUser(String(agentUserId), {
+        title: "Incoming Call",
+        body:  lead ? `${lead.name} is calling — pick up your phone` : `Inbound call — pick up your phone`,
+        data:  { type: "inbound_call", leadId: lead ? String(lead._id) : null },
+      }).catch(() => {});
+    }
+
     // EnableX inbound calls aren't auto-answered once a custom Event URL is
     // configured — the call just rings (and eventually drops) unless we
     // explicitly accept it, then bridge it to the agent via the connect API.
     // (Outbound calls use action_on_connect.connect in the /call POST instead —
     // that mechanism doesn't apply here since this call already exists.)
     if (!voiceId) {
-      console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge");
+      console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge. params:", JSON.stringify(params));
     } else {
       try {
         await axios.put(`${ENABLEX_BASE}/call/${voiceId}/accept`, {}, basicAuth(org));
@@ -133,6 +148,7 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
           from:        fromNumber,  // virtual number shown as caller ID to agent
           to:          agentPhone,
           timeout:     30,
+          record:      true,
           custom_data: ownerRef,
           event_url:   webhookUrl,
         }, basicAuth(org));
@@ -157,7 +173,8 @@ router.all("/inbound/:orgId", express.json(), async (req, res) => {
             status:         "initiated",
             ownerRef,
             phone:          callerRaw,
-            routedToPhone:  org.enablex.virtualNumber,
+            agentPhone:     agentPhone,   // normalized agent phone (used for future inbound routing)
+            routedToPhone:  agentPhone,   // actual phone we bridged to (not the virtual DID)
             routedToAgent:  agentName || "",
           },
         });
@@ -241,8 +258,9 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       );
       const callStatus = dur > 5 ? "answered" : "missed";
 
+      const isInbound = lead.activities[actIdx].meta?.direction === "inbound";
       lead.activities[actIdx].description = callStatus === "missed"
-        ? `Missed call to ${lead.name}`
+        ? (isInbound ? `Missed inbound call from ${lead.name}` : `Missed call to ${lead.name}`)
         : `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`;
 
       lead.activities[actIdx].meta = {
