@@ -1,11 +1,37 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 const HOVER_TARGETS = "a, button, [data-cursor-hover]";
+const MARKETING_PATHS = new Set([
+  "/",
+  "/privacy",
+  "/terms",
+  "/refund",
+  "/cookie-policy",
+  "/security",
+  "/status",
+  "/refer",
+  "/api-docs",
+  "/compare",
+  "/pricing",
+  "/blog",
+  "/about-us",
+  "/case-studies",
+  "/product-updates",
+  "/help-guide",
+  "/wordpress-plugin",
+  "/careers",
+  "/contact",
+]);
 
 export default function CustomCursor() {
   const cursorRef = useRef(null);
+  const { pathname } = useLocation();
+  const isMarketingPage = MARKETING_PATHS.has(pathname) || pathname.startsWith("/blog/");
 
   useEffect(() => {
+    if (!isMarketingPage) return;
+
     const cursor = cursorRef.current;
     const finePointer = window.matchMedia("(pointer: fine)");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -63,7 +89,9 @@ export default function CustomCursor() {
       document.removeEventListener("pointerout", onPointerOut);
       document.documentElement.removeEventListener("mouseleave", onPointerLeave);
     };
-  }, []);
+  }, [isMarketingPage]);
+
+  if (!isMarketingPage) return null;
 
   return <div ref={cursorRef} className="custom-cursor" aria-hidden="true" />;
 }
