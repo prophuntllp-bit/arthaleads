@@ -9,6 +9,7 @@ const Lead = require("../models/Lead");
 
 const STREAM_PATH_PREFIX = "/audio/calls/";
 const SAMPLE_RATE = 16000;
+const activeTracks = new Map();
 
 function diagnosticsEnabled() {
   return String(process.env.CALL_STREAM_DIAGNOSTICS_ENABLED || "").toLowerCase() === "true";
@@ -130,6 +131,7 @@ async function saveDiagnosticResult(state, result) {
 async function finalizeTrack(state) {
   if (state.finalizePromise) return state.finalizePromise;
   state.finalizePromise = (async () => {
+    await state.writePromise;
     if (!state.bytes) return;
     const pcm = await fs.promises.readFile(state.pcmPath);
     await fs.promises.writeFile(state.wavPath, createWavBuffer(pcm));
@@ -169,8 +171,18 @@ async function finalizeTrack(state) {
     ]);
   })().catch(error => {
     console.error("[call-stream] finalize failed", state.voiceId, error.message);
+  }).finally(() => {
+    activeTracks.delete(state.voiceId);
   });
   return state.finalizePromise;
+}
+
+async function stopCallStream(voiceId) {
+  const state = activeTracks.get(String(voiceId || ""));
+  if (!state) return false;
+  await finalizeTrack(state);
+  if (state.websocket.readyState === WebSocket.OPEN) state.websocket.close();
+  return true;
 }
 
 function parseStreamRequest(request) {
@@ -220,10 +232,14 @@ function attachCallStreamRecorder(server) {
     const state = {
       ...identity,
       bytes: 0,
+      frameCount: 0,
+      writePromise: Promise.resolve(),
+      websocket,
       pcmPath: path.join(directory, `${safeId(identity.voiceId)}.pcm`),
       wavPath: path.join(directory, `${safeId(identity.voiceId)}.wav`),
     };
     fs.writeFileSync(state.pcmPath, Buffer.alloc(0));
+    activeTracks.set(identity.voiceId, state);
     console.info("[call-stream] websocket connected", identity);
 
     websocket.on("message", async message => {
@@ -250,8 +266,17 @@ function attachCallStreamRecorder(server) {
           : decodeMuLawToPcm16(encoded);
         const inputRate = Number(format.sample_rate || format.sampleRate || 8000);
         pcm = resamplePcm16(pcm, inputRate, SAMPLE_RATE);
-        await fs.promises.appendFile(state.pcmPath, pcm);
+        state.writePromise = state.writePromise.then(() => fs.promises.appendFile(state.pcmPath, pcm));
+        await state.writePromise;
         state.bytes += pcm.length;
+        state.frameCount += 1;
+        if (state.frameCount === 1) {
+          console.info("[call-stream] first audio frame received", {
+            voiceId: state.voiceId,
+            encoding,
+            inputRate,
+          });
+        }
       } catch (error) {
         console.warn("[call-stream] ignored invalid frame", error.message);
       }
@@ -270,4 +295,5 @@ module.exports = {
   attachCallStreamRecorder,
   buildCallStreamUrl,
   diagnosticsEnabled,
+  stopCallStream,
 };

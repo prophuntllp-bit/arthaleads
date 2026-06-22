@@ -10,7 +10,11 @@ const User         = require("../models/User");
 const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
 const { sendPushToUser, sendPushToAll } = require("../utils/push");
-const { buildCallStreamUrl, diagnosticsEnabled } = require("../services/callStreamRecorder");
+const {
+  buildCallStreamUrl,
+  diagnosticsEnabled,
+  stopCallStream,
+} = require("../services/callStreamRecorder");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -217,6 +221,15 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
     // EnableX sends: state="connected"|"disconnected" (not type/event_type/voice_event)
     const eventType = (event?.state || event?.type || event?.event_type || event?.voice_event || event?.name || "").toLowerCase();
+
+    if (eventType === "stream_stopped") {
+      const stoppedVoiceId = event?.voice_id || event?.voiceId || event?.data?.voice_id || event?.data?.voiceId;
+      if (stoppedVoiceId) {
+        const finalized = await stopCallStream(stoppedVoiceId);
+        console.info("[call-stream] stream_stopped finalized", stoppedVoiceId, finalized);
+      }
+      return;
+    }
 
     if (!ownerRef?.startsWith("lead_")) return;
 
