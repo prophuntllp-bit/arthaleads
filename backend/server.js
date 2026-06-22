@@ -28,6 +28,7 @@ const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
 const logger = require("./config/logger");
+const { attachCallStreamRecorder } = require("./services/callStreamRecorder");
 const { errorHandler } = require("./middlewares/errorHandler");
 const authRoutes = require("./routes/authRoutes");
 const leadRoutes = require("./routes/leadRoutes");
@@ -311,6 +312,7 @@ console.log("[BOOT] Calling app.listen on port", PORT);
 const server = app.listen(PORT, () => {
   logger.info(`🚀 CRM Server running on port ${PORT} [${process.env.NODE_ENV || "development"}]`);
 });
+attachCallStreamRecorder(server);
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
 // Railway sends SIGTERM before killing the container on deploy/restart.

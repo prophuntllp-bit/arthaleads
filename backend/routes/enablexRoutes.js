@@ -10,6 +10,7 @@ const User         = require("../models/User");
 const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
 const { sendPushToUser, sendPushToAll } = require("../utils/push");
+const { buildCallStreamUrl, diagnosticsEnabled } = require("../services/callStreamRecorder");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -231,7 +232,43 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
     // ── Agent or lead connected — bridge is automatic via action_on_connect.connect ─
     // Just log; no second API call needed. The initial call payload wires the bridge.
     if (eventType === "connected") {
-      console.info("[enablex webhook] leg connected — from:", event.from, "to:", event.to);
+      const legVoiceId = event?.voice_id || event?.voiceId || event?.data?.voice_id || event?.data?.voiceId;
+      console.info("[enablex webhook] leg connected — voice_id:", legVoiceId,
+        "from:", event.from, "to:", event.to);
+
+      if (diagnosticsEnabled() && legVoiceId) {
+        const currentDiagnostics = lead.activities[actIdx].meta?.recordingDiagnostics || {};
+        const attemptedVoiceIds = Array.isArray(currentDiagnostics.attemptedVoiceIds)
+          ? currentDiagnostics.attemptedVoiceIds
+          : [];
+
+        if (!attemptedVoiceIds.includes(String(legVoiceId))) {
+          const org = await Organization.findById(orgId).select("enablex").lean();
+          if (org?.enablex?.appId && org?.enablex?.apiKey) {
+            const wssHost = buildCallStreamUrl({ orgId, ownerRef, voiceId: String(legVoiceId) });
+            lead.activities[actIdx].meta = {
+              ...lead.activities[actIdx].meta,
+              recordingDiagnostics: {
+                ...currentDiagnostics,
+                status: "stream_requested",
+                attemptedVoiceIds: [...attemptedVoiceIds, String(legVoiceId)],
+                lastRequestedAt: new Date().toISOString(),
+              },
+            };
+            lead.markModified("activities");
+            await lead.save();
+
+            try {
+              await axios.put(`${ENABLEX_BASE}/call/${encodeURIComponent(legVoiceId)}/stream`,
+                { wss_host: wssHost }, { ...basicAuth(org), timeout: 10000 });
+              console.info("[call-stream] stream requested for bridge leg", legVoiceId);
+            } catch (streamError) {
+              console.error("[call-stream] stream request failed", legVoiceId,
+                streamError.response?.status, streamError.response?.data || streamError.message);
+            }
+          }
+        }
+      }
       return;
     }
 
