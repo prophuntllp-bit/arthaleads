@@ -20,7 +20,6 @@ import {
   MessageCircle,
   Pencil,
   Phone,
-  Search,
   Sparkles,
   Target,
   TrendingUp,
@@ -446,7 +445,6 @@ export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const [greeting, setGreeting] = useState(getGreeting());
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
@@ -534,21 +532,6 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 min-w-0 w-full lg:w-[40%] lg:flex-[0_0_40%]">
           {/* Pills row */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search: mobile only */}
-            <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-              <input
-                className="input rounded-full pl-11 pr-4"
-                placeholder="Search leads by name, phone or email…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchQuery.trim()) {
-                    navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
-                  }
-                }}
-              />
-            </div>
             {activePlatforms.map((platform) => {
               const cfg = PLATFORM_CONFIG[platform];
               if (!cfg) return null;
