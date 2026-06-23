@@ -29,7 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { StatCard, PageLoader } from "../components/UI";
+import { PageLoader } from "../components/UI";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
@@ -627,23 +627,11 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div data-tour="stat-cards" className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
-          delta={data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : undefined}
-          onClick={() => navigate("/leads")} />
-        <StatCard label="New" value={data?.allTimeNew || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
-          onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
-        <StatCard label="Closed Won" value={data?.allTimeClosedWon || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
-          delta={data ? calcDelta(data.thisMonthClosedWon, data.lastMonthClosedWon) : undefined}
-          onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
-        <StatCard label="Follow-ups Today" value={data?.todayFollowUps || 0} icon={Clock3} color="text-amber-400" sub={`${data?.totalFollowUps || 0} total scheduled`}
-          onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
-      </div>
-      <InsightStrip data={data} />
-      <GoalMetricsRow
+      <BentoStats
+        data={data}
+        navigate={navigate}
         goal={monthlyGoal}
         current={data?.thisMonthClosedWon || 0}
-        avgResponseMs={data?.avgResponseMs}
         role={user?.role}
         onGoalUpdate={(n) => setGoalOverride(n)}
       />
@@ -805,41 +793,73 @@ export default function Dashboard() {
   );
 }
 
-// ── Insight Strip ─────────────────────────────────────────────────────────────
-function InsightStrip({ data }) {
+// ── Bento Stats ───────────────────────────────────────────────────────────────
+function MiniStat({ label, value, color, sub, onClick }) {
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick}
+        className="card p-3 flex flex-col gap-1 text-left w-full hover:-translate-y-0.5 transition hover:border-orange-500/30">
+        <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate">{label}</p>
+        <p className="text-base sm:text-lg font-black leading-none truncate" style={{ color }}>{value}</p>
+        {sub && <p className="text-[9px] text-app-soft truncate">{sub}</p>}
+      </button>
+    );
+  }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)" }}>
-          <IndianRupee className="w-5 h-5 text-orange-500" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Pipeline Value</p>
-          <p className="text-xl font-bold text-app">{fmtINR(data?.pipelineValue)}</p>
-          <p className="text-[10px] text-app-soft">{data?.pipelineLeads || 0} active leads</p>
+    <div className="card p-3 flex flex-col gap-1">
+      <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate">{label}</p>
+      <p className="text-base sm:text-lg font-black leading-none truncate" style={{ color }}>{value}</p>
+      {sub && <p className="text-[9px] text-app-soft truncate">{sub}</p>}
+    </div>
+  );
+}
+
+function BentoStats({ data, navigate, goal, current, role, onGoalUpdate }) {
+  const delta = data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : null;
+  return (
+    <div data-tour="stat-cards" className="flex flex-col sm:flex-row gap-3">
+
+      {/* LEFT: 2 hero metric cards — side-by-side on mobile, stacked on sm+ */}
+      <div className="flex flex-row sm:flex-col gap-3 sm:w-[30%] sm:flex-shrink-0">
+        <button type="button" onClick={() => navigate("/leads")}
+          className="card p-4 flex-1 flex flex-col gap-2 text-left hover:-translate-y-0.5 transition hover:border-orange-500/30">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold flex items-center gap-1">
+            <Users className="w-3 h-3 shrink-0" /> Total Leads
+          </p>
+          <p className="text-3xl sm:text-4xl font-black text-orange-500 leading-none">{data?.allTimeTotal || 0}</p>
+          {delta !== null && (
+            <p className={`text-[10px] font-semibold ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}% vs last month
+            </p>
+          )}
+        </button>
+
+        <div className="card p-4 flex-1 flex flex-col gap-2">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold flex items-center gap-1">
+            <IndianRupee className="w-3 h-3 shrink-0" /> Pipeline Value
+          </p>
+          <p className="text-2xl sm:text-3xl font-black text-app leading-none">{fmtINR(data?.pipelineValue)}</p>
+          <p className="text-[9px] text-app-soft">{data?.pipelineLeads || 0} active leads</p>
         </div>
       </div>
 
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(34,197,94,0.10)" }}>
-          <Target className="w-5 h-5 text-emerald-500" />
+      {/* RIGHT: compact 2×3 grid + inline goal bar */}
+      <div className="flex flex-col gap-3 flex-1 min-w-0">
+        <div className="grid grid-cols-3 gap-2">
+          <MiniStat label="New" value={data?.allTimeNew || 0} color="#6366f1"
+            sub="Uncontacted" onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
+          <MiniStat label="Closed Won" value={data?.allTimeClosedWon || 0} color="#22c55e"
+            sub="Converted" onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
+          <MiniStat label="Follow-ups" value={data?.todayFollowUps || 0} color="#f59e0b"
+            sub="Due today" onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
+          <MiniStat label="Conversion" value={`${data?.conversionRate ?? 0}%`} color="#22c55e"
+            sub={`${data?.allTimeClosedWon || 0} of ${data?.allTimeTotal || 0} closed`} />
+          <MiniStat label="Today's Leads" value={data?.todayCreated || 0} color="#6366f1"
+            sub={`${data?.todaySiteVisits || 0} site visits`} />
+          <MiniStat label="Avg Response" value={fmtResponseTime(data?.avgResponseMs)} color="#22c55e"
+            sub="First contact" />
         </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Conversion Rate</p>
-          <p className="text-xl font-bold text-emerald-400">{data?.conversionRate ?? 0}%</p>
-          <p className="text-[10px] text-app-soft">{data?.allTimeClosedWon || 0} of {data?.allTimeTotal || 0} leads closed</p>
-        </div>
-      </div>
-
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.10)" }}>
-          <Zap className="w-5 h-5 text-indigo-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Today's Activity</p>
-          <p className="text-xl font-bold text-indigo-400">{data?.todayCreated || 0} new leads</p>
-          <p className="text-[10px] text-app-soft">{data?.todaySiteVisits || 0} site visits · {data?.todayFollowUps || 0} follow-ups</p>
-        </div>
+        <GoalMetricsRow goal={goal} current={current} avgResponseMs={null} role={role} onGoalUpdate={onGoalUpdate} />
       </div>
     </div>
   );
