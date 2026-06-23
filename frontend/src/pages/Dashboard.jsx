@@ -1129,53 +1129,55 @@ function FollowUpDuePanel({ user, navigate }) {
 
       {/* ── Header ── */}
       <div
-        className="flex items-center gap-3 px-4 py-3"
+        className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
         style={{ background: `linear-gradient(to right, ${accentBg}, transparent)`, borderBottom: "1px solid var(--app-border)" }}
       >
-        {/* Icon */}
-        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
-          <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
+        {/* Row 1 (mobile) / Left side (desktop): Icon + Title */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
+            <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-app leading-tight">
+              {overdue.length > 0 && today.length > 0
+                ? `${overdue.length} overdue · ${today.length} due today`
+                : overdue.length > 0
+                ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
+                : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
+            </p>
+            <p className="text-[11px] text-app-soft">
+              {user?.role === "agent" ? "Your action list" : "Across your team"}
+            </p>
+          </div>
         </div>
 
-        {/* Title - takes remaining space */}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-app leading-tight">
-            {overdue.length > 0 && today.length > 0
-              ? `${overdue.length} overdue · ${today.length} due today`
-              : overdue.length > 0
-              ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
-              : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
-          </p>
-          <p className="text-[11px] text-app-soft">
-            {user?.role === "agent" ? "Your action list" : "Across your team"}
-          </p>
+        {/* Row 2 (mobile) / Right side (desktop): Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate("/followups")}
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
+          >
+            View all
+          </button>
+          <button
+            type="button"
+            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
+            title={minimized ? "Expand" : "Minimize"}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            title="Dismiss"
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
         </div>
-
-        {/* Actions - compact on mobile */}
-        <button
-          type="button"
-          onClick={() => navigate("/followups")}
-          className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
-        >
-          View all
-        </button>
-        <button
-          type="button"
-          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
-          title={minimized ? "Expand" : "Minimize"}
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-        >
-          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-        </button>
-        <button
-          type="button"
-          onClick={dismiss}
-          title="Dismiss"
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-        >
-          <X className="h-3.5 w-3.5 text-app-soft" />
-        </button>
       </div>
 
       {/* ── Lead rows ── */}
