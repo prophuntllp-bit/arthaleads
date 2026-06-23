@@ -1129,15 +1129,15 @@ function FollowUpDuePanel({ user, navigate }) {
 
       {/* ── Header ── */}
       <div
-        className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
+        className="flex items-center gap-3 px-4 py-3"
         style={{ background: `linear-gradient(to right, ${accentBg}, transparent)`, borderBottom: "1px solid var(--app-border)" }}
       >
-        {/* Row 1 (mobile) / Left side (desktop): Icon + Title */}
+        {/* Col 1: Icon + text */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
             <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <p className="text-sm font-bold text-app leading-tight">
               {overdue.length > 0 && today.length > 0
                 ? `${overdue.length} overdue · ${today.length} due today`
@@ -1151,8 +1151,8 @@ function FollowUpDuePanel({ user, navigate }) {
           </div>
         </div>
 
-        {/* Row 2 (mobile) / Right side (desktop): Action buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Col 2: View all (row 1) + ^ X (row 2) */}
+        <div className="shrink-0 flex flex-col items-end gap-1.5">
           <button
             type="button"
             onClick={() => navigate("/followups")}
@@ -1161,22 +1161,24 @@ function FollowUpDuePanel({ user, navigate }) {
           >
             View all
           </button>
-          <button
-            type="button"
-            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
-            title={minimized ? "Expand" : "Minimize"}
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-          >
-            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-          </button>
-          <button
-            type="button"
-            onClick={dismiss}
-            title="Dismiss"
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-          >
-            <X className="h-3.5 w-3.5 text-app-soft" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
+              title={minimized ? "Expand" : "Minimize"}
+              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+            </button>
+            <button
+              type="button"
+              onClick={dismiss}
+              title="Dismiss"
+              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <X className="h-3.5 w-3.5 text-app-soft" />
+            </button>
+          </div>
         </div>
       </div>
 
