@@ -128,15 +128,12 @@ function InsightCard({ text, index, startDelay }) {
   const { displayed, done } = useTypewriter(text, 20, startDelay);
   const theme = INSIGHT_THEMES[index % INSIGHT_THEMES.length];
   return (
-    <div className="rounded-xl px-3 py-2.5 transition-all duration-500"
-      style={{ background: theme.bg, border: `1px solid ${theme.border}`, opacity: displayed ? 1 : 0 }}>
-      <div className="flex items-start gap-2">
-        <span className="text-[9px] font-black mt-0.5 flex-shrink-0" style={{ color: theme.accent }}>{theme.arrow}</span>
-        <p className="text-[11px] leading-snug text-app">
-          {displayed}
-          {!done && <span className="ai-cursor" style={{ background: theme.accent }} />}
-        </p>
-      </div>
+    <div className="flex items-start gap-2" style={{ opacity: displayed ? 1 : 0, transition: "opacity 0.3s" }}>
+      <span className="text-[9px] font-black mt-0.5 flex-shrink-0" style={{ color: theme.accent }}>{theme.arrow}</span>
+      <p className="text-[11px] leading-snug text-app">
+        {displayed}
+        {!done && <span className="ai-cursor" style={{ background: theme.accent }} />}
+      </p>
     </div>
   );
 }
@@ -149,6 +146,7 @@ function SmartInsightsWidget({ data }) {
   const [error, setError]       = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [cardDelays, setCardDelays] = useState([]);
+  const [open, setOpen] = useState(false);
 
   const allowed = user?.role === "admin" || user?.role === "manager" || user?.role === "super_admin";
   if (!allowed) return null;
@@ -217,51 +215,75 @@ function SmartInsightsWidget({ data }) {
 
   useEffect(() => { generate(); }, [!!data]);
 
+  const insightCount = insights?.length ?? 0;
+
   return (
     <div className="w-full rounded-xl overflow-hidden"
       style={{ background: "rgba(var(--app-primary-rgb),0.04)", border: "1px solid rgba(var(--app-primary-rgb),0.16)" }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: "1px solid rgba(var(--app-primary-rgb),0.12)", background: "rgba(var(--app-primary-rgb),0.06)" }}>
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="ai-sparkle" style={{ width: 11, height: 11, color: "#f97316", flexShrink: 0 }} />
-          <span className="text-[10px] font-black uppercase tracking-widest"
-            style={{ background: "linear-gradient(90deg,#f97316,#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Artha AI
+      {/* Always-visible pill row */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Sparkles className="ai-sparkle" style={{ width: 11, height: 11, color: "#f97316", flexShrink: 0 }} />
+        <span className="text-[10px] font-black uppercase tracking-widest"
+          style={{ background: "linear-gradient(90deg,#f97316,#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          Artha AI
+        </span>
+        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+          style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", border: "1px solid rgba(249,115,22,0.25)" }}>
+          LIVE
+        </span>
+
+        {/* Status text when collapsed */}
+        {!open && (
+          <span className="text-[11px] text-app-soft flex-1 truncate ml-0.5">
+            {aiLoading
+              ? "Analysing pipeline…"
+              : error
+              ? "Could not load insights"
+              : insights
+              ? `${insightCount} insight${insightCount !== 1 ? "s" : ""} ready`
+              : ""}
           </span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-            style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", border: "1px solid rgba(249,115,22,0.25)" }}>
-            LIVE
-          </span>
+        )}
+
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          {open && (
+            <button onClick={() => generate(true)} disabled={aiLoading}
+              className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg"
+              style={{ background: "rgba(var(--app-primary-rgb),0.08)" }}>
+              <Zap style={{ width: 8, height: 8 }} />
+              {aiLoading ? "…" : "Refresh"}
+            </button>
+          )}
+          <button onClick={() => setOpen(v => !v)}
+            className="text-[10px] text-app-soft hover:text-app transition-all flex items-center gap-0.5 px-2 py-0.5 rounded-lg"
+            style={{ background: "rgba(var(--app-primary-rgb),0.08)", border: "0.5px solid rgba(var(--app-primary-rgb),0.2)" }}>
+            {open ? "Hide" : "View"}
+            <ChevronDown style={{ width: 10, height: 10, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+          </button>
         </div>
-        <button onClick={() => generate(true)} disabled={aiLoading}
-          className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg"
-          style={{ background: "rgba(var(--app-primary-rgb),0.08)" }}>
-          <Zap style={{ width: 8, height: 8 }} />
-          {aiLoading ? "…" : "Refresh"}
-        </button>
       </div>
 
-      {/* Body */}
-      <div className="px-3 py-2 flex flex-col gap-2">
-        {aiLoading && (
-          <>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
-              <span className="text-[10px] text-app-soft">Artha AI is analysing your pipeline…</span>
-            </div>
-            <div className="ai-shimmer-bar h-8 rounded-lg" />
-            <div className="ai-shimmer-bar h-8 rounded-lg" style={{ animationDelay: "0.3s" }} />
-          </>
-        )}
-        {error && (
-          <p className="text-[11px] text-app-soft py-1">Could not generate insights right now.</p>
-        )}
-        {insights && insights.map((line, i) => (
-          <InsightCard key={i} text={line} index={i} startDelay={cardDelays[i] ?? 0} />
-        ))}
-      </div>
+      {/* Expanded body */}
+      {open && (
+        <div className="px-3 pb-2.5 pt-1 flex flex-col gap-2"
+          style={{ borderTop: "1px solid rgba(var(--app-primary-rgb),0.12)" }}>
+          {aiLoading && (
+            <>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
+                <span className="text-[10px] text-app-soft">Artha AI is analysing your pipeline…</span>
+              </div>
+              <div className="ai-shimmer-bar h-5 rounded-lg" />
+              <div className="ai-shimmer-bar h-5 rounded-lg" style={{ animationDelay: "0.3s" }} />
+            </>
+          )}
+          {error && <p className="text-[11px] text-app-soft pt-1">Could not generate insights right now.</p>}
+          {insights && insights.map((line, i) => (
+            <InsightCard key={i} text={line} index={i} startDelay={cardDelays[i] ?? 0} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
