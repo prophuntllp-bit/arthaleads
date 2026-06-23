@@ -1310,30 +1310,38 @@ function HotLeadsWidget({ navigate }) {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3"
         style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(239,68,68,0.06), transparent)" }}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(239,68,68,0.12)" }}>
-          <Flame className="h-4 w-4 text-red-400" />
+
+        {/* Col 1: Icon + title + subtitle */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "rgba(239,68,68,0.12)" }}>
+            <Flame className="h-4 w-4 text-red-400" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-app">Hot Today</h3>
+            <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-app">Hot Today</h3>
-          <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
+
+        {/* Col 2: View all (row 1) + AI Scored + chevron (row 2) */}
+        <div className="shrink-0 flex flex-col items-end gap-1.5">
+          <button type="button"
+            onClick={() => navigate("/leads")}
+            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+            View all <ArrowRight className="h-3 w-3" />
+          </button>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-indigo-400" />
+            <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">AI Scored</span>
+            <button type="button"
+              onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
+              title={minimized ? "Expand" : "Minimize"}
+              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+              <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Sparkles className="h-3 w-3 text-indigo-400" />
-          <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">AI Scored</span>
-        </div>
-        <button type="button"
-          onClick={() => navigate("/leads")}
-          className="shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
-          View all <ArrowRight className="h-3 w-3" />
-        </button>
-        <button type="button"
-          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
-          title={minimized ? "Expand" : "Minimize"}
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
-          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-        </button>
       </div>
 
       {/* Lead rows */}
