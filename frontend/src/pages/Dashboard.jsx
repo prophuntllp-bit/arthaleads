@@ -1344,21 +1344,22 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   const topScore = leads[0]?._score ?? null;
 
   return (
+    <div className="hot-ai-wrapper">{/* spinning conic-gradient border */}
     <section data-tour="hot-today" className="card overflow-hidden"
-      style={{ borderColor: "rgba(99,102,241,0.25)" }}>
-      {/* Header — indigo/violet gradient to signal AI-powered, distinct from warning cards */}
+      style={{ borderColor: "transparent", borderRadius: "1rem" }}>
+      {/* Header — warm orange gradient, signals AI-powered USP */}
       <div className="flex items-center gap-3 px-4 py-3"
-        style={{ borderBottom: minimized ? "none" : "1px solid rgba(99,102,241,0.15)", background: "linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(139,92,246,0.07) 60%, transparent 100%)" }}>
+        style={{ borderBottom: minimized ? "none" : "1px solid rgba(249,115,22,0.12)", background: "linear-gradient(135deg, rgba(249,115,22,0.09) 0%, rgba(251,146,60,0.05) 60%, transparent 100%)" }}>
 
         {/* Icon + title + subtitle */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Icon with pulsing live dot */}
           <div className="relative flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-            style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))", border: "1px solid rgba(99,102,241,0.25)" }}>
+            style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.18), rgba(251,146,60,0.14))", border: "1px solid rgba(249,115,22,0.3)" }}>
             <Flame className="h-4 w-4" style={{ color: "#f97316" }} />
             <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: "#6366f1" }} />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "#6366f1" }} />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-70" style={{ background: "#f97316" }} />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "#f97316" }} />
             </span>
           </div>
           <div className="min-w-0 flex-1">
@@ -1369,31 +1370,31 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
           </div>
         </div>
 
-        {/* Controls — AI SCORED badge + chevron (no "View all" — it's not navigating to a filtered list) */}
+        {/* Controls — AI SCORED badge + chevron */}
         <div className="shrink-0 flex items-center gap-1">
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+            style={{ background: "linear-gradient(90deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15))", border: "1px solid rgba(249,115,22,0.35)", color: "#fb923c" }}>
             <Sparkles className="h-2.5 w-2.5" />
             <span className="hidden sm:inline">AI Scored</span>
           </span>
           <button type="button"
             onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
             title={minimized ? "Expand" : "Minimize"}
-            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-indigo-500/10 cursor-pointer">
-            <ChevronDown className={`h-3.5 w-3.5 text-indigo-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-orange-500/10 cursor-pointer">
+            <ChevronDown className={`h-3.5 w-3.5 text-orange-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
           </button>
         </div>
       </div>
 
       {/* Lead rows */}
-      {!minimized && <div className="divide-y" style={{ borderColor: "rgba(99,102,241,0.08)" }}>
+      {!minimized && <div className="divide-y" style={{ borderColor: "rgba(249,115,22,0.08)" }}>
         {leads.map((lead, idx) => {
           const ss = SCORE_STYLE(lead._score);
           const ac = ACTION_COLOR[lead._nextAction?.color] || ACTION_COLOR.orange;
           return (
             <div key={lead._id}
               style={{ animation: "fadeSlideIn 0.3s ease both", animationDelay: `${idx * 55}ms` }}
-              className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-indigo-500/5">
+              className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-orange-500/5">
 
               {/* Score badge */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -1449,6 +1450,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
         })}
       </div>}
     </section>
+    </div>
   );
 }
 

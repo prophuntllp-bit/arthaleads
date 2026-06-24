@@ -531,6 +531,42 @@
   to   { opacity: 1; transform: translateY(0);   }
 }
 
+/* ── Hot Today AI card — spinning conic-gradient border ───────────────────────
+   @property lets us animate a CSS custom property (the angle) so the arc
+   travels continuously around the card. Fallback: static orange border glow. */
+@property --hot-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes hotBorderSpin {
+  to { --hot-angle: 360deg; }
+}
+
+@keyframes hotCardGlow {
+  0%, 100% { box-shadow: 0 0 10px 2px rgba(249,115,22,0.18); }
+  50%       { box-shadow: 0 0 24px 6px rgba(249,115,22,0.36); }
+}
+
+.hot-ai-wrapper {
+  --hot-angle: 0deg;
+  padding: 1.5px;
+  border-radius: calc(1rem + 2px); /* card border-radius + wrapper padding */
+  background: conic-gradient(
+    from var(--hot-angle),
+    transparent 0deg,
+    rgba(249, 115, 22, 0.0) 200deg,
+    rgba(249, 115, 22, 0.9) 260deg,
+    rgba(251, 146, 60, 1.0) 290deg,
+    rgba(249, 115, 22, 0.9) 320deg,
+    rgba(249, 115, 22, 0.0) 360deg
+  );
+  animation:
+    hotBorderSpin 3s linear infinite,
+    hotCardGlow 3s ease-in-out infinite;
+}
+
 /* ── Native Android app feel (Capacitor context) ─────────────────────────────
    Applied only when html.is-native class is set (by main.jsx when Capacitor
    is detected). Prevents browser-like behaviour: text selection, overscroll
