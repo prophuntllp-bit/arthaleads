@@ -1163,8 +1163,8 @@ function FollowUpDuePanel({ user, navigate }) {
           </div>
         </div>
 
-        {/* Col 2: View all (row 1) + ^ X (row 2) */}
-        <div className="shrink-0 flex flex-col items-end gap-1.5">
+        {/* Controls — single row: View all | chevron | X */}
+        <div className="shrink-0 flex items-center gap-1">
           <button
             type="button"
             onClick={() => navigate("/followups")}
@@ -1173,24 +1173,22 @@ function FollowUpDuePanel({ user, navigate }) {
           >
             View all
           </button>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
-              title={minimized ? "Expand" : "Minimize"}
-              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-            </button>
-            <button
-              type="button"
-              onClick={dismiss}
-              title="Dismiss"
-              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-            >
-              <X className="h-3.5 w-3.5 text-app-soft" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
+            title={minimized ? "Expand" : "Minimize"}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            title="Dismiss"
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
         </div>
       </div>
 
@@ -1347,27 +1345,24 @@ function HotLeadsWidget({ navigate, limit = 6 }) {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="shrink-0 flex flex-col items-end gap-1.5">
+        {/* Controls — single row: View all | AI Scored | chevron */}
+        <div className="shrink-0 flex items-center gap-1.5">
           <button type="button" onClick={() => navigate("/leads")}
             className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
             style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
             View all <ArrowRight className="h-3 w-3" />
           </button>
-          <div className="flex items-center gap-1.5">
-            {/* Glowing AI Scored badge */}
-            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-              style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
-              <Sparkles className="h-2.5 w-2.5" />
-              AI Scored
-            </span>
-            <button type="button"
-              onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
-              title={minimized ? "Expand" : "Minimize"}
-              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-indigo-500/10 cursor-pointer">
-              <ChevronDown className={`h-3.5 w-3.5 text-indigo-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-            </button>
-          </div>
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+            <Sparkles className="h-2.5 w-2.5" />
+            AI Scored
+          </span>
+          <button type="button"
+            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
+            title={minimized ? "Expand" : "Minimize"}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-indigo-500/10 cursor-pointer">
+            <ChevronDown className={`h-3.5 w-3.5 text-indigo-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+          </button>
         </div>
       </div>
 
