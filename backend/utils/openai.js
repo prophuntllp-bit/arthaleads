@@ -407,11 +407,11 @@ CURRENT FEATURES (v2 — live right now)
 DASHBOARD (/dashboard)
 Home screen with a zoned layout divided into clear sections:
 
-ZONE: TODAY AT A GLANCE — Six equal stat cards in a single row (2-col on mobile, 3-col on tablet, 6-col on desktop): Total Leads (clickable, shows % vs last month), Pipeline Value (active leads sum), New (uncontacted), Closed Won (with conversion %), Follow-ups due today (clickable), Avg Response time. Monthly goal bar below the cards shows % progress with an inline edit pencil (admin/manager only).
+ZONE: TODAY AT A GLANCE — Six equal stat cards in a single row (2-col on mobile, 3-col on tablet, 6-col on desktop): Total Leads (clickable, shows % vs last month), Pipeline Value (active leads sum), New (uncontacted), Closed Won (with conversion %), Follow-ups due today (clickable), Avg Response time.
 
-ZONE: ACTION REQUIRED — Two-column side-by-side layout on tablet/desktop, stacked on mobile:
-- LEFT: OVERDUE FOLLOW-UPS panel — lists all leads whose follow-up date has passed. Amber-tinted card, dismissible per session (X button), collapsible (chevron). "View all" link goes to Leads page.
-- RIGHT: HOT TODAY — AI-scored leads (0–100 pts) ranked by priority. Red 🔥 for score ≥80, orange ⚡ for ≥60. Each row shows score badge, lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons. Collapsible with chevron. Sparkles icon = AI Scored.
+ZONE: ACTION REQUIRED — Two-column side-by-side layout on tablet/desktop, stacked on mobile. Both panels load instantly alongside the KPI stats (parallel fetch):
+- LEFT: OVERDUE FOLLOW-UPS panel — lists all leads whose follow-up date has passed. Amber-tinted card, dismissible per session (X button), collapsible (chevron). Scrollable list shows up to 5 rows before scrolling. "View all" link goes to Follow-ups page.
+- RIGHT: HOT TODAY — Arthaleads' main AI feature. Scores every lead 0–100 pts and ranks them by priority so agents know exactly who to call first. Distinguished by an animated orange spinning border glow (the only card with this effect on the dashboard — signals it's the USP). Orange header gradient, pulsing live dot on the flame icon, orange "AI Scored" sparkle badge. No "View all" button — chevron collapses/expands the list. Each row: score badge (red ≥80, orange ≥60), lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons.
 Below the 2-col grid: UPCOMING 48 HOURS — leads with follow-up or site visit in the next 2 days.
 
 ADMIN INTELLIGENCE ZONE (Admin/Manager only — entire zone hidden from agents):
@@ -420,7 +420,7 @@ ADMIN INTELLIGENCE ZONE (Admin/Manager only — entire zone hidden from agents):
 3. WEEKLY TREND CHART - 7-day line chart of new leads created per day (IST timezone). Total for the window shown top-right.
 4. LIVE AGENT STATUS - Team member clock-in grid: green = clocked in (shows time), purple = clocked out, grey = not checked in. "X online" badge.
 5. AUTOMATION HEALTH - Green/red dot per integration showing live vs offline status at a glance.
-6. PROJECT BREAKDOWN - Active projects sorted by lead count. Each row: project name, lead count, conversion rate progress bar. Collapsible with chevron. Click any row → project detail page.
+6. PROJECT BREAKDOWN + MONTHLY GOAL — Side-by-side 2-col grid (stacked on mobile): LEFT is Project Breakdown — active projects sorted by lead count, each row shows project name, lead count, conversion rate progress bar, collapsible chevron, click any row → project detail page. RIGHT is Monthly Goal — progress bar showing closings this month vs target, inline edit pencil for admin/manager to update the goal.
 
 PERFORMANCE ZONE — Leads by Status (horizontal bar chart) + Leads by Source (donut pie). Pipeline Drop-off funnel below.
 
