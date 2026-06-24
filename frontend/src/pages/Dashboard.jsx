@@ -1,13 +1,13 @@
 ﻿// Dashboard - v2
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
-  Plus,
   ArrowRight,
   Bell,
+  Building2,
   Calendar,
   Check,
   CheckCircle,
@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Pencil,
   Phone,
+  Plus,
   Sparkles,
   Target,
   TrendingUp,
@@ -456,6 +457,7 @@ export default function Dashboard() {
   const [retrying, setRetrying] = useState(false);
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
+  const [allAutomations, setAllAutomations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
@@ -494,6 +496,7 @@ export default function Dashboard() {
     api.get("/automations")
       .then((res) => {
         const list = res.data.automations || [];
+        setAllAutomations(list);
         const active = list.filter((a) => a.status === "connected" && a.isActive !== false);
         // Deduplicate by platform (multiple Facebook automations = one card)
         const seen = new Set();
@@ -753,6 +756,20 @@ export default function Dashboard() {
           )}
         </section>
       </div>
+
+      {/* ── Admin Intelligence Row ─────────────────────────────────────── */}
+      <AdminOnly role={user?.role}>
+        <StaleLeadsWidget navigate={navigate} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <RevenueForecastWidget data={data} />
+          <WeeklyTrendWidget data={data} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <LiveAgentStatusWidget navigate={navigate} />
+          <AutomationHealthWidget automations={allAutomations} />
+        </div>
+        <ProjectBreakdownWidget navigate={navigate} />
+      </AdminOnly>
 
       <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
 
@@ -1407,6 +1424,380 @@ function HotLeadsWidget({ navigate }) {
           );
         })}
       </div>}
+    </section>
+  );
+}
+
+// ── Admin-only widget wrapper — renders null for agents ───────────────────────
+function AdminOnly({ role, children }) {
+  if (role !== "admin" && role !== "manager" && role !== "super_admin") return null;
+  return children;
+}
+
+// ── 1. Revenue Forecast Widget ────────────────────────────────────────────────
+function RevenueForecastWidget({ data }) {
+  if (!data) return null;
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const dayOfMonth  = new Date().getDate();
+  const pace        = dayOfMonth > 0 ? Math.round((data.thisMonthClosedWon / dayOfMonth) * daysInMonth) : 0;
+  const goal        = data.monthlyClosingGoal || 0;
+  const onTrack     = goal > 0 ? pace >= goal : null;
+  const expectedRev = data.pipelineValue && data.conversionRate
+    ? Math.round((data.pipelineValue * data.conversionRate) / 100)
+    : 0;
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Forecast</p>
+          <h3 className="text-base font-bold text-app">Revenue & Closing Pace</h3>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+          style={{ background: "rgba(99,102,241,0.12)" }}>
+          <TrendingUp className="h-4 w-4 text-indigo-400" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Pipeline Value</p>
+          <p className="text-lg font-black text-indigo-400 leading-none">{fmtINR(data.pipelineValue)}</p>
+          <p className="text-[9px] text-app-soft">{data.pipelineLeads || 0} active leads</p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Expected Revenue</p>
+          <p className="text-lg font-black text-emerald-400 leading-none">{fmtINR(expectedRev)}</p>
+          <p className="text-[9px] text-app-soft">At {data.conversionRate ?? 0}% conversion</p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Closings</p>
+          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0}</p>
+          <p className="text-[9px] text-app-soft">Last month: {data.lastMonthClosedWon || 0}</p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Projected Pace</p>
+          <p className={`text-lg font-black leading-none ${onTrack === null ? "text-app" : onTrack ? "text-emerald-400" : "text-red-400"}`}>
+            {pace}
+          </p>
+          <p className="text-[9px] text-app-soft flex items-center gap-0.5">
+            {onTrack === null ? "No goal set" : onTrack
+              ? <><span className="text-emerald-400">↑</span> On track</>
+              : <><span className="text-red-400">↓</span> Behind pace</>}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── 2. Stale Leads Alert Widget ───────────────────────────────────────────────
+function StaleLeadsWidget({ navigate }) {
+  const [leads, setLeads] = useState(null);
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem("stale_panel_dismissed") === "1"
+  );
+
+  useEffect(() => {
+    if (dismissed) return;
+    api.get("/leads/stale").then((r) => setLeads(r.data.data || [])).catch(() => setLeads([]));
+  }, [dismissed]);
+
+  if (dismissed || leads === null || leads.length === 0) return null;
+
+  function daysAgo(date) {
+    return Math.floor((Date.now() - new Date(date)) / (1000 * 60 * 60 * 24));
+  }
+
+  return (
+    <section className="card overflow-hidden" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
+      <div className="flex items-center gap-3 px-4 py-3"
+        style={{ background: "linear-gradient(to right, rgba(245,158,11,0.08), transparent)", borderBottom: "1px solid var(--app-border)" }}>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "rgba(245,158,11,0.12)" }}>
+            <Clock3 className="h-4 w-4 text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">
+              {leads.length} stale lead{leads.length !== 1 ? "s" : ""} need attention
+            </p>
+            <p className="text-[11px] text-app-soft">No activity in 7+ days</p>
+          </div>
+        </div>
+        <div className="shrink-0 flex flex-col items-end gap-1.5">
+          <button type="button" onClick={() => navigate("/leads")}
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+            View all
+          </button>
+          <button type="button" onClick={() => { sessionStorage.setItem("stale_panel_dismissed", "1"); setDismissed(true); }}
+            className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
+        </div>
+      </div>
+
+      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {leads.slice(0, 8).map((lead) => (
+          <div key={lead._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-500/5 transition">
+            <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+              style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+              {daysAgo(lead.updatedAt)}d
+            </span>
+            <div className="min-w-0 flex-1">
+              <button type="button" onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+                className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block leading-tight text-left">
+                {lead.name}
+              </button>
+              <p className="text-[11px] text-app-soft truncate">{[lead.status, lead.source, lead.assignedToName].filter(Boolean).join(" · ")}</p>
+            </div>
+            {lead.phone && (
+              <a href={`tel:${lead.phone}`}
+                className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition"
+                style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}>
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {leads.length > 8 && (
+        <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+          <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
+            onClick={() => navigate("/leads")}>
+            +{leads.length - 8} more stale leads — view all
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── 3. Project Breakdown Widget ───────────────────────────────────────────────
+function ProjectBreakdownWidget({ navigate }) {
+  const [projects, setProjects] = useState(null);
+
+  useEffect(() => {
+    api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
+  }, []);
+
+  if (!projects || projects.length === 0) return null;
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Projects</p>
+          <h3 className="text-base font-bold text-app">Project-wise Leads</h3>
+        </div>
+        <button type="button" onClick={() => navigate("/projects")}
+          className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          View all <ArrowRight className="h-3 w-3" />
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {projects.slice(0, 6).map((p) => {
+          const pct = p.totalLeads > 0 ? Math.min(100, Math.round((p.closedWon / p.totalLeads) * 100)) : 0;
+          return (
+            <button key={String(p._id)} type="button"
+              onClick={() => navigate(`/projects/${p._id}`)}
+              className="w-full flex items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-orange-500/5 hover:-translate-y-0.5"
+              style={{ border: "1px solid transparent" }}>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                style={{ background: "rgba(99,102,241,0.10)" }}>
+                <Building2 className="h-4 w-4 text-indigo-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-sm font-semibold text-app truncate">{p.name}</p>
+                  <span className="text-xs font-bold text-app shrink-0">{p.totalLeads}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 50 ? "#22c55e" : "#f97316" }} />
+                  </div>
+                  <span className="text-[10px] text-app-soft shrink-0">{pct}% won</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── 4. Live Agent Status Widget ───────────────────────────────────────────────
+function LiveAgentStatusWidget({ navigate }) {
+  const [team, setTeam] = useState(null);
+
+  useEffect(() => {
+    api.get("/attendance/team-today").then((r) => setTeam(r.data.data || [])).catch(() => setTeam([]));
+  }, []);
+
+  if (!team || team.length === 0) return null;
+
+  const clocked = team.filter((m) => m.attendance?.clockIn && !m.attendance?.clockOut);
+  const done    = team.filter((m) => m.attendance?.clockIn && m.attendance?.clockOut);
+  const absent  = team.filter((m) => !m.attendance?.clockIn);
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Live</p>
+          <h3 className="text-base font-bold text-app">Agent Status Today</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+            {clocked.length} online
+          </span>
+          <button type="button" onClick={() => navigate("/attendance")}
+            className="text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            Attendance →
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {team.map((member) => {
+          const isIn  = member.attendance?.clockIn && !member.attendance?.clockOut;
+          const isDone = member.attendance?.clockIn && member.attendance?.clockOut;
+          const clockInTime = member.attendance?.clockIn
+            ? new Date(member.attendance.clockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })
+            : null;
+          return (
+            <div key={member.user._id}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="relative flex-shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                  style={{ background: isIn ? "rgba(34,197,94,0.15)" : isDone ? "rgba(99,102,241,0.12)" : "rgba(107,114,128,0.12)",
+                           color: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280" }}>
+                  {member.user.name?.[0]?.toUpperCase()}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                  style={{ background: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280",
+                           borderColor: "var(--app-surface-low)" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-app truncate">{member.user.name}</p>
+                <p className="text-[10px] text-app-soft truncate">
+                  {isIn ? `In since ${clockInTime}` : isDone ? "Done for today" : "Not checked in"}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── 5. Weekly Trend Chart Widget ──────────────────────────────────────────────
+function WeeklyTrendWidget({ data }) {
+  if (!data?.recentDailyLeads) return null;
+
+  const today = new Date();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  const countMap = {};
+  data.recentDailyLeads.forEach((r) => { countMap[r._id] = r.count; });
+
+  const chartData = days.map((date) => ({
+    day: new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short" }),
+    count: countMap[date] || 0,
+  }));
+
+  const total7 = chartData.reduce((s, d) => s + d.count, 0);
+  const prev7  = data.lastMonthLeads || 0;
+  const delta7 = data.thisMonthLeads > 0 ? null : null;
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Trends</p>
+          <h3 className="text-base font-bold text-app">Leads This Week</h3>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-black text-app">{total7}</p>
+          <p className="text-[10px] text-app-soft">last 7 days</p>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={100}>
+        <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip
+            contentStyle={{ borderRadius: 12, border: "1px solid var(--app-border)", background: "var(--app-bg)", color: "var(--app-text)", fontSize: 12 }}
+            cursor={{ stroke: "rgba(249,115,22,0.2)", strokeWidth: 2 }}
+          />
+          <Line type="monotone" dataKey="count" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316", r: 3 }} activeDot={{ r: 5 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
+
+// ── 6. Automation Health Widget ───────────────────────────────────────────────
+function AutomationHealthWidget({ automations }) {
+  if (!automations || automations.length === 0) return null;
+
+  const active   = automations.filter((a) => a.status === "connected" && a.isActive !== false);
+  const inactive = automations.filter((a) => a.status !== "connected" || a.isActive === false);
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Integrations</p>
+          <h3 className="text-base font-bold text-app">Automation Health</h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {active.length > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+              {active.length} live
+            </span>
+          )}
+          {inactive.length > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>
+              {inactive.length} off
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {automations.slice(0, 6).map((a) => {
+          const isLive = a.status === "connected" && a.isActive !== false;
+          return (
+            <div key={a._id} className="flex items-center gap-2.5 p-2.5 rounded-xl"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0">
+                <PlatformLogo platform={a.platform} size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-app truncate">{a.name || a.platform}</p>
+                <p className="text-[10px] text-app-soft">{a.platform}</p>
+              </div>
+              <span className="shrink-0 w-2 h-2 rounded-full" style={{ background: isLive ? "#22c55e" : "#ef4444" }} />
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

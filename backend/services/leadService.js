@@ -653,6 +653,16 @@ const leadService = {
             { $project: { name: 1, phone: 1, followUpDate: 1, siteVisitDate: 1, status: 1, assignedToName: 1 } },
           ],
 
+          // Daily lead counts for the last 7 days (for weekly trend chart)
+          recentDailyLeads: [
+            { $match: { createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
+            { $group: {
+              _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Kolkata" } },
+              count: { $sum: 1 },
+            }},
+            { $sort: { "_id": 1 } },
+          ],
+
           // Recent activity feed — top 10 actions from 50 most recently modified leads
           recentActivity: [
             { $sort: { updatedAt: -1 } },
@@ -721,6 +731,7 @@ const leadService = {
       upcomingItems:      result.upcomingItems || [],
       allTimeByStatus:    allTimeStatus,
       recentActivity:     result.recentActivity || [],
+      recentDailyLeads:   result.recentDailyLeads || [],
       avgResponseMs:      result.avgFirstResponse[0]?.avgMs != null
         ? Math.max(0, result.avgFirstResponse[0].avgMs)
         : null,
