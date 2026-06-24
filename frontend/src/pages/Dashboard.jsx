@@ -1194,9 +1194,9 @@ function FollowUpDuePanel({ user, navigate }) {
         </div>
       </div>
 
-      {/* ── Lead rows ── */}
-      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
-        {leads.slice(0, 10).map((lead) => (
+      {/* ── Lead rows — fixed height, scroll reveals remaining ── */}
+      {!minimized && <div className="divide-y overflow-y-auto" style={{ borderColor: "var(--app-border)", maxHeight: "280px" }}>
+        {leads.map((lead) => (
           <div key={lead._id} className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
 
             {/* Urgency badge - compact on mobile */}
@@ -1255,11 +1255,11 @@ function FollowUpDuePanel({ user, navigate }) {
         ))}
       </div>}
 
-      {/* Footer */}
-      {!minimized && leads.length > 10 && (
-        <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+      {/* Footer — scroll count hint when there are more than 5 leads */}
+      {!minimized && leads.length > 5 && (
+        <div className="px-4 py-2 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
           <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium" onClick={() => navigate("/followups")}>
-            +{leads.length - 10} more - view all in Follow-ups
+            Scroll to see all {leads.length} · View in Follow-ups →
           </button>
         </div>
       )}
