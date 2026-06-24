@@ -598,33 +598,7 @@ export default function Dashboard() {
 
       <OnboardingChecklist totalLeads={data?.allTimeTotal || 0} />
 
-      <FollowUpDuePanel user={user} navigate={navigate} />
-
-      {activePlatforms.length > 0 && (
-        <div
-          className="grid gap-2 sm:gap-4"
-          style={{ gridTemplateColumns: `repeat(${Math.min(activePlatforms.length, 4)}, minmax(0, 1fr))` }}
-        >
-          {activePlatforms.map((platform) => {
-            const cfg = PLATFORM_CONFIG[platform];
-            if (!cfg) return null;
-            return (
-              <TopLeadSourceCard
-                key={platform}
-                label={cfg.label}
-                value={data?.bySource?.[cfg.sourceKey] || 0}
-                logo={<PlatformLogo platform={platform} size={20} />}
-                note={cfg.note}
-                tone={cfg.tone}
-                iconTone={cfg.iconTone}
-                onClick={() => navigate("/leads", { state: { presetSource: cfg.presetSource } })}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Agent with no leads assigned yet */}
+      {/* Agent — no leads yet */}
       {!loading && data && user?.role === "agent" && data.allTimeTotal === 0 && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
@@ -635,7 +609,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      <BentoStats
+      {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
+      <ZonedKPIRow
         data={data}
         navigate={navigate}
         goal={monthlyGoal}
@@ -643,160 +618,175 @@ export default function Dashboard() {
         role={user?.role}
         onGoalUpdate={(n) => setGoalOverride(n)}
       />
-      <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
 
-      <HotLeadsWidget navigate={navigate} />
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <section className="card p-4 xl:col-span-7">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="stitch-kicker mb-1">Performance</p>
-              <h3 className="text-base font-bold text-app">Leads by Status</h3>
-            </div>
-            <div className="stitch-pill text-xs">Live pipeline</div>
-          </div>
-          <ResponsiveContainer width="100%" height={Math.max(80, statusChartData.length * 44)}>
-            <BarChart
-              data={statusChartData}
-              layout="vertical"
-              barCategoryGap="18%"
-              margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
-              style={{ outline: "none" }}
-            >
-              <XAxis
-                type="number"
-                tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
-                axisLine={false}
-                tickLine={false}
-                width={78}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid var(--app-border)",
-                  background: "var(--app-bg)",
-                  color: "var(--app-text)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  fontSize: 12,
-                }}
-                itemStyle={{ color: "var(--app-text)" }}
-                labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
-              />
-              <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                {statusChartData.map((_, index) => (
-                  <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </section>
-
-        <section className="card p-4 xl:col-span-5">
-          <div className="mb-3">
-            <p className="stitch-kicker mb-1">Acquisition Mix</p>
-            <h3 className="text-base font-bold text-app">Leads by Source</h3>
-          </div>
-          {sourceChartData.length === 0 ? (
-            <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart style={{ outline: "none" }}>
-                    <Pie
-                      data={sourceChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={58}
-                      outerRadius={85}
-                      dataKey="value"
-                      labelLine={false}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                      isAnimationActive={false}
-                      tabIndex={-1}
-                    >
-                      {sourceChartData.map((_, index) => (
-                        <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center label */}
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-app">
-                    {sourceChartData.reduce((s, d) => s + d.value, 0)}
-                  </span>
-                  <span className="text-xs text-app-soft">Total</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {sourceChartData.map(({ name, value }, index) => (
-                  <div key={name} className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
-                    />
-                    <span className="truncate text-xs text-app-soft">{name}</span>
-                    <span className="ml-auto text-xs font-semibold text-app">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
+      {/* ── Zone 3: Action Required ───────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Action Required" color="amber" />
+        <FollowUpDuePanel user={user} navigate={navigate} />
+        <AdminOnly role={user?.role}>
+          <StaleLeadsWidget navigate={navigate} />
+        </AdminOnly>
+        <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
-      {/* ── Admin Intelligence Row ─────────────────────────────────────── */}
+      {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
       <AdminOnly role={user?.role}>
-        <StaleLeadsWidget navigate={navigate} />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <RevenueForecastWidget data={data} />
-          <WeeklyTrendWidget data={data} />
+        <div className="space-y-3">
+          <ZoneHeader label="Admin Intelligence" color="indigo" />
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <RevenueForecastWidget data={data} />
+            <WeeklyTrendWidget data={data} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <LiveAgentStatusWidget navigate={navigate} />
+            <AutomationHealthWidget automations={allAutomations} />
+          </div>
+          <ProjectBreakdownWidget navigate={navigate} />
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <LiveAgentStatusWidget navigate={navigate} />
-          <AutomationHealthWidget automations={allAutomations} />
-        </div>
-        <ProjectBreakdownWidget navigate={navigate} />
       </AdminOnly>
 
-      <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <section className="card p-6 xl:col-span-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <p className="stitch-kicker mb-2">Team Focus</p>
-              <h3 className="text-lg font-bold text-app">Top Agents</h3>
+      {/* ── Zone 5: Performance ──────────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Performance" />
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+          <section className="card p-4 xl:col-span-7">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="stitch-kicker mb-1">Pipeline</p>
+                <h3 className="text-base font-bold text-app">Leads by Status</h3>
+              </div>
+              <div className="stitch-pill text-xs">Live</div>
             </div>
-            <div className="stitch-pill">Leaderboard</div>
-          </div>
-          <div className="space-y-4">
-            {(data?.byAgent || []).slice(0, 5).map((agent, index) => (
-              <button
-                key={agent._id}
-                type="button"
-                onClick={() => navigate("/performance", { state: { focusUserId: agent._id } })}
-                className="flex w-full items-center gap-4 rounded-[1.25rem] p-3 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
+            <ResponsiveContainer width="100%" height={Math.max(80, statusChartData.length * 44)}>
+              <BarChart
+                data={statusChartData}
+                layout="vertical"
+                barCategoryGap="18%"
+                margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
+                style={{ outline: "none" }}
               >
-                <span className="w-4 text-xs font-bold text-app-soft">{index + 1}</span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-sm font-bold text-orange-500">
-                  {agent.name?.[0]?.toUpperCase()}
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={78}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "1px solid var(--app-border)",
+                    background: "var(--app-bg)",
+                    color: "var(--app-text)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    fontSize: 12,
+                  }}
+                  itemStyle={{ color: "var(--app-text)" }}
+                  labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
+                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                />
+                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                  {statusChartData.map((_, index) => (
+                    <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </section>
+
+          <section className="card p-4 xl:col-span-5">
+            <div className="mb-3">
+              <p className="stitch-kicker mb-1">Acquisition Mix</p>
+              <h3 className="text-base font-bold text-app">Leads by Source</h3>
+            </div>
+            {sourceChartData.length === 0 ? (
+              <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart style={{ outline: "none" }}>
+                      <Pie
+                        data={sourceChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={85}
+                        dataKey="value"
+                        labelLine={false}
+                        paddingAngle={2}
+                        strokeWidth={0}
+                        isAnimationActive={false}
+                        tabIndex={-1}
+                      >
+                        {sourceChartData.map((_, index) => (
+                          <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-app">
+                      {sourceChartData.reduce((s, d) => s + d.value, 0)}
+                    </span>
+                    <span className="text-xs text-app-soft">Total</span>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-app">{agent.name}</p>
-                  <p className="text-xs text-app-soft">Active agent</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {sourceChartData.map(({ name, value }, index) => (
+                    <div key={name} className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
+                      />
+                      <span className="truncate text-xs text-app-soft">{name}</span>
+                      <span className="ml-auto text-xs font-semibold text-app">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+        <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
+      </div>
+
+      {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Team" />
+        <HotLeadsWidget navigate={navigate} />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <section className="card p-6 xl:col-span-5">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="stitch-kicker mb-2">Team Focus</p>
+                <h3 className="text-lg font-bold text-app">Top Agents</h3>
+              </div>
+              <div className="stitch-pill">Leaderboard</div>
+            </div>
+            <div className="space-y-4">
+              {(data?.byAgent || []).slice(0, 5).map((agent, index) => (
+                <button
+                  key={agent._id}
+                  type="button"
+                  onClick={() => navigate("/performance", { state: { focusUserId: agent._id } })}
+                  className="flex w-full items-center gap-4 rounded-[1.25rem] p-3 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
+                >
+                  <span className="w-4 text-xs font-bold text-app-soft">{index + 1}</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-sm font-bold text-orange-500">
+                    {agent.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-app">{agent.name}</p>
+                    <p className="text-xs text-app-soft">Active agent</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-app">{agent.count}</p>
@@ -810,79 +800,82 @@ export default function Dashboard() {
 
         <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
+      </div>{/* end Zone 6 */}
 
     </div>
   );
 }
 
-// ── Bento Stats ───────────────────────────────────────────────────────────────
-function MiniStat({ label, value, color, sub, onClick }) {
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick}
-        className="card p-3 flex flex-col gap-1 text-left w-full hover:-translate-y-0.5 transition hover:border-orange-500/30">
-        <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate">{label}</p>
-        <p className="text-base sm:text-lg font-black leading-none truncate" style={{ color }}>{value}</p>
-        {sub && <p className="text-[9px] text-app-soft truncate">{sub}</p>}
-      </button>
-    );
-  }
+// ── Zone components ───────────────────────────────────────────────────────────
+function ZoneHeader({ label, color = "default" }) {
+  const colorMap = { amber: "#f59e0b", indigo: "#6366f1", green: "#22c55e", purple: "#a855f7" };
+  const c = colorMap[color] || "var(--app-text-soft)";
   return (
-    <div className="card p-3 flex flex-col gap-1">
-      <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate">{label}</p>
-      <p className="text-base sm:text-lg font-black leading-none truncate" style={{ color }}>{value}</p>
-      {sub && <p className="text-[9px] text-app-soft truncate">{sub}</p>}
+    <div className="flex items-center gap-3 select-none">
+      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+      <span className="text-[9px] font-black uppercase tracking-[0.15em] shrink-0" style={{ color: c }}>{label}</span>
+      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
     </div>
   );
 }
 
-function BentoStats({ data, navigate, goal, current, role, onGoalUpdate }) {
+function ZonedKPIRow({ data, navigate, goal, current, role, onGoalUpdate }) {
   const delta = data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : null;
+  const stats = [
+    {
+      label: "Total Leads", value: data?.allTimeTotal ?? 0, color: "#f97316",
+      sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs last month` : "All time",
+      subColor: delta !== null ? (delta >= 0 ? "#22c55e" : "#ef4444") : undefined,
+      onClick: () => navigate("/leads"),
+    },
+    {
+      label: "Pipeline", value: fmtINR(data?.pipelineValue), color: "var(--app-text)",
+      sub: `${data?.pipelineLeads || 0} active leads`,
+    },
+    {
+      label: "New", value: data?.allTimeNew ?? 0, color: "#6366f1",
+      sub: "Uncontacted",
+      onClick: () => navigate("/leads", { state: { presetStatus: "New" } }),
+    },
+    {
+      label: "Closed Won", value: data?.allTimeClosedWon ?? 0, color: "#22c55e",
+      sub: `${data?.conversionRate ?? 0}% conversion`,
+      onClick: () => navigate("/leads", { state: { presetStatus: "Closed Won" } }),
+    },
+    {
+      label: "Follow-ups", value: data?.todayFollowUps ?? 0, color: "#f59e0b",
+      sub: "Due today",
+      onClick: () => navigate("/leads", { state: { presetFollowUpToday: true } }),
+    },
+    {
+      label: "Avg Response", value: fmtResponseTime(data?.avgResponseMs), color: "#22c55e",
+      sub: "First contact",
+    },
+  ];
   return (
-    <div data-tour="stat-cards" className="flex flex-col sm:flex-row gap-3">
-
-      {/* LEFT: 2 hero metric cards — side-by-side on mobile, stacked on sm+ */}
-      <div className="flex flex-row sm:flex-col gap-3 sm:w-[30%] sm:flex-shrink-0">
-        <button type="button" onClick={() => navigate("/leads")}
-          className="card p-4 flex-1 flex flex-col gap-2 text-left hover:-translate-y-0.5 transition hover:border-orange-500/30">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold flex items-center gap-1">
-            <Users className="w-3 h-3 shrink-0" /> Total Leads
-          </p>
-          <p className="text-3xl sm:text-4xl font-black text-orange-500 leading-none">{data?.allTimeTotal || 0}</p>
-          {delta !== null && (
-            <p className={`text-[10px] font-semibold ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {delta >= 0 ? "↑" : "↓"} {Math.abs(delta)}% vs last month
-            </p>
-          )}
-        </button>
-
-        <div className="card p-4 flex-1 flex flex-col gap-2">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold flex items-center gap-1">
-            <IndianRupee className="w-3 h-3 shrink-0" /> Pipeline Value
-          </p>
-          <p className="text-2xl sm:text-3xl font-black text-app leading-none">{fmtINR(data?.pipelineValue)}</p>
-          <p className="text-[9px] text-app-soft">{data?.pipelineLeads || 0} active leads</p>
-        </div>
+    <div data-tour="stat-cards" className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {stats.map((s) => {
+          const inner = (
+            <>
+              <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate leading-none">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }}>{s.sub}</p>
+            </>
+          );
+          return s.onClick ? (
+            <button key={s.label} type="button" onClick={s.onClick}
+              className="card p-3 flex flex-col gap-0 text-left hover:-translate-y-0.5 transition hover:border-orange-500/30">
+              {inner}
+            </button>
+          ) : (
+            <div key={s.label} className="card p-3 flex flex-col gap-0">
+              {inner}
+            </div>
+          );
+        })}
       </div>
-
-      {/* RIGHT: compact 2×3 grid + inline goal bar */}
-      <div className="flex flex-col gap-3 flex-1 min-w-0">
-        <div className="grid grid-cols-3 gap-2">
-          <MiniStat label="New" value={data?.allTimeNew || 0} color="#6366f1"
-            sub="Uncontacted" onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
-          <MiniStat label="Closed Won" value={data?.allTimeClosedWon || 0} color="#22c55e"
-            sub="Converted" onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
-          <MiniStat label="Follow-ups" value={data?.todayFollowUps || 0} color="#f59e0b"
-            sub="Due today" onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
-          <MiniStat label="Conversion" value={`${data?.conversionRate ?? 0}%`} color="#22c55e"
-            sub={`${data?.allTimeClosedWon || 0} of ${data?.allTimeTotal || 0} closed`} />
-          <MiniStat label="Today's Leads" value={data?.todayCreated || 0} color="#6366f1"
-            sub={`${data?.todaySiteVisits || 0} site visits`} />
-          <MiniStat label="Avg Response" value={fmtResponseTime(data?.avgResponseMs)} color="#22c55e"
-            sub="First contact" />
-        </div>
-        <GoalMetricsRow goal={goal} current={current} avgResponseMs={null} role={role} onGoalUpdate={onGoalUpdate} />
-      </div>
+      <GoalMetricsRow goal={goal} current={current} avgResponseMs={null} role={role} onGoalUpdate={onGoalUpdate} />
     </div>
   );
 }
