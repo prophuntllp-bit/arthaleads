@@ -407,6 +407,21 @@ CURRENT FEATURES (v2 — live right now)
 DASHBOARD (/dashboard)
 Home screen. Stats: total leads, new leads, closed won, follow-ups due today, pipeline value, conversion rate. "Hot Today" widget ranks highest-scored leads (0-100 AI score) with one-tap Call and WhatsApp. Lead source pie chart. Leads-by-status bar chart. Top agents leaderboard. Team activity feed. Date range filter (top-right). "New Lead" button (top-right).
 
+ADMIN INTELLIGENCE WIDGETS (Admin/Manager only - on the Dashboard, below the main stats)
+Six extra panels are visible only to admin and manager roles. Agents do not see them.
+
+1. STALE LEADS ALERT - An amber warning panel listing leads not updated in 7+ days that are not Closed Won or Closed Lost. Shows "Xd" badge (how many days since last touch), lead name, status, source, assigned agent. Click any lead name or phone icon to open/call. Dismiss with the X button (hidden for the rest of that browser session). "View all" navigates to the Leads page.
+
+2. REVENUE FORECAST - Four stat cards side by side: (a) Pipeline Value - total budget.max sum of all non-closed leads. (b) Expected Revenue - pipeline value multiplied by conversion rate. (c) Month Closings - Closed Won count this month vs last month. (d) Projected Pace - estimated month-end closings based on daily pace so far; green "On track" if >= goal, red "Behind pace" if < goal, "No goal set" if no monthly goal has been configured.
+
+3. WEEKLY TREND CHART - A line chart showing new leads created each day for the last 7 days (Mon to today). Total count for the 7-day window shown top-right. Uses IST timezone. If no leads were created on a given day the line shows 0.
+
+4. LIVE AGENT STATUS - A card grid showing every active team member with a coloured status dot: green = clocked in right now (shows "In since HH:MM"), purple = done for today (clocked out), grey = not checked in yet. "X online" badge in the header. "Attendance →" button links to the full Attendance page.
+
+5. AUTOMATION HEALTH - A grid of every connected automation (Facebook, Google, WhatsApp, Website Form, etc.) showing a green dot for live/connected or a red dot for offline/inactive. Gives a quick overview of all integrations without navigating to the Automation page.
+
+6. PROJECT BREAKDOWN - A scrollable list of all active (non-archived) projects sorted by lead count. Each row shows the project name, total leads, and a mini progress bar showing the conversion rate (Closed Won / total leads). Click any project row to open the project detail page.
+
 LEADS (/leads)
 Master list. Add single lead (+ Add Lead button). Bulk import via CSV/Excel. Click a lead to open detail panel: Info, Notes, Activity tabs. From detail panel: update any field, set follow-up, add notes, Call/WhatsApp/AI Draft. Bulk actions via checkboxes: assign, status change, WhatsApp blast, delete. Filter by name/phone/email/status/source/agent/priority. Export to CSV/Excel. AI Lead Scoring 0-100.
 
@@ -484,7 +499,7 @@ If asked about any of these, set comingSoon: true and tell them it is in develop
 - Document Uploads on Leads: attach PDFs, photos, booking forms, KYC to a lead
 - WhatsApp Business API (Two-Way Messaging): full conversation inside the CRM
 - Browser Calling (WebRTC): call leads directly from the browser tab without a physical phone
-- Advanced AI Analytics: predicted conversion probability, best time to call, churn risk
+- Advanced AI Analytics: predicted conversion probability, best time to call, churn risk, lead quality scoring beyond the current 0-100 AI score
 - Mobile App (iOS and Android): native apps with offline support and push notifications
 - Late Mark and Half-Day Auto-Detection: currently admins must mark manually
 
