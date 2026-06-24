@@ -405,22 +405,28 @@ CURRENT FEATURES (v2 — live right now)
 ════════════════════════════════════════════════
 
 DASHBOARD (/dashboard)
-Home screen. Stats: total leads, new leads, closed won, follow-ups due today, pipeline value, conversion rate. "Hot Today" widget ranks highest-scored leads (0-100 AI score) with one-tap Call and WhatsApp. Lead source pie chart. Leads-by-status bar chart. Top agents leaderboard. Team activity feed. Date range filter (top-right). "New Lead" button (top-right).
+Home screen with a zoned layout divided into clear sections:
 
-ADMIN INTELLIGENCE WIDGETS (Admin/Manager only - on the Dashboard, below the main stats)
-Six extra panels are visible only to admin and manager roles. Agents do not see them.
+ZONE: TODAY AT A GLANCE — Six equal stat cards in a single row (2-col on mobile, 3-col on tablet, 6-col on desktop): Total Leads (clickable, shows % vs last month), Pipeline Value (active leads sum), New (uncontacted), Closed Won (with conversion %), Follow-ups due today (clickable), Avg Response time. Monthly goal bar below the cards shows % progress with an inline edit pencil (admin/manager only).
 
-1. STALE LEADS ALERT - An amber warning panel listing leads not updated in 7+ days that are not Closed Won or Closed Lost. Shows "Xd" badge (how many days since last touch), lead name, status, source, assigned agent. Click any lead name or phone icon to open/call. Dismiss with the X button (hidden for the rest of that browser session). "View all" navigates to the Leads page.
+ZONE: ACTION REQUIRED — Two-column side-by-side layout on tablet/desktop, stacked on mobile:
+- LEFT: OVERDUE FOLLOW-UPS panel — lists all leads whose follow-up date has passed. Amber-tinted card, dismissible per session (X button), collapsible (chevron). "View all" link goes to Leads page.
+- RIGHT: HOT TODAY — AI-scored leads (0–100 pts) ranked by priority. Red 🔥 for score ≥80, orange ⚡ for ≥60. Each row shows score badge, lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons. Collapsible with chevron. Sparkles icon = AI Scored.
+Below the 2-col grid: UPCOMING 48 HOURS — leads with follow-up or site visit in the next 2 days.
 
-2. REVENUE FORECAST - Four stat cards side by side: (a) Pipeline Value - total budget.max sum of all non-closed leads. (b) Expected Revenue - pipeline value multiplied by conversion rate. (c) Month Closings - Closed Won count this month vs last month. (d) Projected Pace - estimated month-end closings based on daily pace so far; green "On track" if >= goal, red "Behind pace" if < goal, "No goal set" if no monthly goal has been configured.
+ADMIN INTELLIGENCE ZONE (Admin/Manager only — entire zone hidden from agents):
+1. STALE LEADS ALERT - Amber panel listing leads not updated in 7+ days (non-closed). Shows "Xd" days badge, lead name, status, source, assigned agent. Phone icon for quick call. Dismiss with X (session), collapse/expand with chevron (persists). "View all" → Leads page.
+2. REVENUE FORECAST - Four stat cards: (a) Pipeline Value (b) Expected Revenue = pipeline × conversion rate (c) Month Closings this vs last month (d) Projected Pace with on-track/behind-pace indicator.
+3. WEEKLY TREND CHART - 7-day line chart of new leads created per day (IST timezone). Total for the window shown top-right.
+4. LIVE AGENT STATUS - Team member clock-in grid: green = clocked in (shows time), purple = clocked out, grey = not checked in. "X online" badge.
+5. AUTOMATION HEALTH - Green/red dot per integration showing live vs offline status at a glance.
+6. PROJECT BREAKDOWN - Active projects sorted by lead count. Each row: project name, lead count, conversion rate progress bar. Collapsible with chevron. Click any row → project detail page.
 
-3. WEEKLY TREND CHART - A line chart showing new leads created each day for the last 7 days (Mon to today). Total count for the 7-day window shown top-right. Uses IST timezone. If no leads were created on a given day the line shows 0.
+PERFORMANCE ZONE — Leads by Status (horizontal bar chart) + Leads by Source (donut pie). Pipeline Drop-off funnel below.
 
-4. LIVE AGENT STATUS - A card grid showing every active team member with a coloured status dot: green = clocked in right now (shows "In since HH:MM"), purple = done for today (clocked out), grey = not checked in yet. "X online" badge in the header. "Attendance →" button links to the full Attendance page.
+TEAM ZONE — Top Agents leaderboard (rank, name, lead count, click → Performance page). Team Activity feed (last 10 actions by any agent with lead name + timestamp).
 
-5. AUTOMATION HEALTH - A grid of every connected automation (Facebook, Google, WhatsApp, Website Form, etc.) showing a green dot for live/connected or a red dot for offline/inactive. Gives a quick overview of all integrations without navigating to the Automation page.
-
-6. PROJECT BREAKDOWN - A scrollable list of all active (non-archived) projects sorted by lead count. Each row shows the project name, total leads, and a mini progress bar showing the conversion rate (Closed Won / total leads). Click any project row to open the project detail page.
+Other controls: Date range filter (top-right of header), "New Lead" button, Artha AI widget, live clock.
 
 LEADS (/leads)
 Master list. Add single lead (+ Add Lead button). Bulk import via CSV/Excel. Click a lead to open detail panel: Info, Notes, Activity tabs. From detail panel: update any field, set follow-up, add notes, Call/WhatsApp/AI Draft. Bulk actions via checkboxes: assign, status change, WhatsApp blast, delete. Filter by name/phone/email/status/source/agent/priority. Export to CSV/Excel. AI Lead Scoring 0-100.

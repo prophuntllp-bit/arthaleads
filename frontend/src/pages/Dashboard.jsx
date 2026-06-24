@@ -622,16 +622,11 @@ export default function Dashboard() {
       {/* ── Zone 3: Action Required ───────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Action Required" color="amber" />
-        {/* 2-col grid: FollowUpDuePanel left, StaleLeads right (admin/manager only).
-            On mobile both stack to 1 col. When StaleLeads is absent (agent role),
-            FollowUpDuePanel spans the full row via col-span-full. */}
+        {/* 2-col grid: overdue follow-ups left, hot leads right.
+            Mobile (<640px): stacked 1 col. Tablet/desktop: side by side. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-          <div className={!(user?.role === "admin" || user?.role === "manager") ? "col-span-full sm:col-span-full" : ""}>
-            <FollowUpDuePanel user={user} navigate={navigate} />
-          </div>
-          {(user?.role === "admin" || user?.role === "manager") && (
-            <StaleLeadsWidget navigate={navigate} />
-          )}
+          <FollowUpDuePanel user={user} navigate={navigate} />
+          <HotLeadsWidget navigate={navigate} limit={4} />
         </div>
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
@@ -640,6 +635,7 @@ export default function Dashboard() {
       <AdminOnly role={user?.role}>
         <div className="space-y-3">
           <ZoneHeader label="Admin Intelligence" color="indigo" />
+          <StaleLeadsWidget navigate={navigate} />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <RevenueForecastWidget data={data} />
             <WeeklyTrendWidget data={data} />
@@ -769,7 +765,6 @@ export default function Dashboard() {
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Team" />
-        <HotLeadsWidget navigate={navigate} />
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
           <section className="card p-6 xl:col-span-5">
             <div className="mb-5 flex items-center justify-between">
@@ -1273,13 +1268,13 @@ function FollowUpDuePanel({ user, navigate }) {
 }
 
 // ── Hot Today Widget ──────────────────────────────────────────────────────────
-function HotLeadsWidget({ navigate }) {
+function HotLeadsWidget({ navigate, limit = 6 }) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [minimized, setMinimized] = useState(() => localStorage.getItem("hot_panel_minimized") === "1");
 
   useEffect(() => {
-    api.get("/leads/hot", { params: { limit: 6 } })
+    api.get("/leads/hot", { params: { limit } })
       .then((r) => setLeads(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
