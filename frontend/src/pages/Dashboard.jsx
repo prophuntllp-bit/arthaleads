@@ -649,15 +649,15 @@ export default function Dashboard() {
       <div className="space-y-3">
         <ZoneHeader label="Performance" />
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-          <section className="card p-4 xl:col-span-7">
-            <div className="mb-3 flex items-center justify-between">
+          <section className="card p-3 xl:col-span-7">
+            <div className="mb-2 flex items-center justify-between">
               <div>
-                <p className="stitch-kicker mb-1">Pipeline</p>
-                <h3 className="text-base font-bold text-app">Leads by Status</h3>
+                <p className="stitch-kicker mb-0.5">Pipeline</p>
+                <h3 className="text-sm font-bold text-app">Leads by Status</h3>
               </div>
               <div className="stitch-pill text-xs">Live</div>
             </div>
-            <ResponsiveContainer width="100%" height={Math.max(80, statusChartData.length * 44)}>
+            <ResponsiveContainer width="100%" height={Math.max(70, statusChartData.length * 36)}>
               <BarChart
                 data={statusChartData}
                 layout="vertical"
@@ -702,17 +702,17 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </section>
 
-          <section className="card p-4 xl:col-span-5">
-            <div className="mb-3">
-              <p className="stitch-kicker mb-1">Acquisition Mix</p>
-              <h3 className="text-base font-bold text-app">Leads by Source</h3>
+          <section className="card p-3 xl:col-span-5">
+            <div className="mb-2">
+              <p className="stitch-kicker mb-0.5">Acquisition Mix</p>
+              <h3 className="text-sm font-bold text-app">Leads by Source</h3>
             </div>
             {sourceChartData.length === 0 ? (
-              <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
+              <p className="py-8 text-center text-sm text-app-soft">No data yet</p>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3">
                 <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height={160}>
                     <PieChart style={{ outline: "none" }}>
                       <Pie
                         data={sourceChartData}
@@ -1492,6 +1492,9 @@ function StaleLeadsWidget({ navigate }) {
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("stale_panel_dismissed") === "1"
   );
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("stale_panel_collapsed") === "1"
+  );
 
   useEffect(() => {
     if (dismissed) return;
@@ -1504,10 +1507,16 @@ function StaleLeadsWidget({ navigate }) {
     return Math.floor((Date.now() - new Date(date)) / (1000 * 60 * 60 * 24));
   }
 
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("stale_panel_collapsed", next ? "1" : "0");
+  }
+
   return (
     <section className="card overflow-hidden" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
       <div className="flex items-center gap-3 px-4 py-3"
-        style={{ background: "linear-gradient(to right, rgba(245,158,11,0.08), transparent)", borderBottom: "1px solid var(--app-border)" }}>
+        style={{ background: "linear-gradient(to right, rgba(245,158,11,0.08), transparent)", borderBottom: collapsed ? "none" : "1px solid var(--app-border)" }}>
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
             style={{ background: "rgba(245,158,11,0.12)" }}>
@@ -1520,51 +1529,59 @@ function StaleLeadsWidget({ navigate }) {
             <p className="text-[11px] text-app-soft">No activity in 7+ days</p>
           </div>
         </div>
-        <div className="shrink-0 flex flex-col items-end gap-1.5">
+        <div className="shrink-0 flex items-center gap-1">
           <button type="button" onClick={() => navigate("/leads")}
             className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
             View all
           </button>
+          <button type="button" onClick={toggleCollapsed}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+          </button>
           <button type="button" onClick={() => { sessionStorage.setItem("stale_panel_dismissed", "1"); setDismissed(true); }}
-            className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
             <X className="h-3.5 w-3.5 text-app-soft" />
           </button>
         </div>
       </div>
 
-      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
-        {leads.slice(0, 8).map((lead) => (
-          <div key={lead._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-500/5 transition">
-            <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
-              {daysAgo(lead.updatedAt)}d
-            </span>
-            <div className="min-w-0 flex-1">
-              <button type="button" onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
-                className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block leading-tight text-left">
-                {lead.name}
-              </button>
-              <p className="text-[11px] text-app-soft truncate">{[lead.status, lead.source, lead.assignedToName].filter(Boolean).join(" · ")}</p>
-            </div>
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`}
-                className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition"
-                style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}>
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-            )}
+      {!collapsed && (
+        <>
+          <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+            {leads.slice(0, 8).map((lead) => (
+              <div key={lead._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-500/5 transition">
+                <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                  {daysAgo(lead.updatedAt)}d
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+                    className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block leading-tight text-left">
+                    {lead.name}
+                  </button>
+                  <p className="text-[11px] text-app-soft truncate">{[lead.status, lead.source, lead.assignedToName].filter(Boolean).join(" · ")}</p>
+                </div>
+                {lead.phone && (
+                  <a href={`tel:${lead.phone}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition"
+                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}>
+                    <Phone className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {leads.length > 8 && (
-        <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
-          <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
-            onClick={() => navigate("/leads")}>
-            +{leads.length - 8} more stale leads — view all
-          </button>
-        </div>
+          {leads.length > 8 && (
+            <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+              <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
+                onClick={() => navigate("/leads")}>
+                +{leads.length - 8} more stale leads — view all
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -1573,6 +1590,9 @@ function StaleLeadsWidget({ navigate }) {
 // ── 3. Project Breakdown Widget ───────────────────────────────────────────────
 function ProjectBreakdownWidget({ navigate }) {
   const [projects, setProjects] = useState(null);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("projects_panel_collapsed") === "1"
+  );
 
   useEffect(() => {
     api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
@@ -1580,48 +1600,63 @@ function ProjectBreakdownWidget({ navigate }) {
 
   if (!projects || projects.length === 0) return null;
 
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("projects_panel_collapsed", next ? "1" : "0");
+  }
+
   return (
-    <section className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="stitch-kicker mb-1">Projects</p>
-          <h3 className="text-base font-bold text-app">Project-wise Leads</h3>
+    <section className="card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: collapsed ? "none" : "1px solid var(--app-border)" }}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+            style={{ background: "rgba(99,102,241,0.10)" }}>
+            <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">Project-wise Leads</p>
+            <p className="text-[11px] text-app-soft">{projects.length} active project{projects.length !== 1 ? "s" : ""}</p>
+          </div>
         </div>
-        <button type="button" onClick={() => navigate("/projects")}
-          className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-          View all <ArrowRight className="h-3 w-3" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => navigate("/projects")}
+            className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            View all <ArrowRight className="h-3 w-3" />
+          </button>
+          <button type="button" onClick={toggleCollapsed}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        {projects.slice(0, 6).map((p) => {
-          const pct = p.totalLeads > 0 ? Math.min(100, Math.round((p.closedWon / p.totalLeads) * 100)) : 0;
-          return (
-            <button key={String(p._id)} type="button"
-              onClick={() => navigate(`/projects/${p._id}`)}
-              className="w-full flex items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-orange-500/5 hover:-translate-y-0.5"
-              style={{ border: "1px solid transparent" }}>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: "rgba(99,102,241,0.10)" }}>
-                <Building2 className="h-4 w-4 text-indigo-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <p className="text-sm font-semibold text-app truncate">{p.name}</p>
-                  <span className="text-xs font-bold text-app shrink-0">{p.totalLeads}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 50 ? "#22c55e" : "#f97316" }} />
+      {!collapsed && (
+        <div className="p-3 space-y-1">
+          {projects.slice(0, 6).map((p) => {
+            const pct = p.totalLeads > 0 ? Math.min(100, Math.round((p.closedWon / p.totalLeads) * 100)) : 0;
+            return (
+              <button key={String(p._id)} type="button"
+                onClick={() => navigate(`/projects/${p._id}`)}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-orange-500/5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-sm font-semibold text-app truncate">{p.name}</p>
+                    <span className="text-xs font-bold text-app shrink-0">{p.totalLeads} leads</span>
                   </div>
-                  <span className="text-[10px] text-app-soft shrink-0">{pct}% won</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 50 ? "#22c55e" : "#f97316" }} />
+                    </div>
+                    <span className="text-[10px] text-app-soft shrink-0">{pct}% won</span>
+                  </div>
                 </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
