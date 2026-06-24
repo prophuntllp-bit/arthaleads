@@ -462,6 +462,9 @@ export default function Dashboard() {
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
+  // Pre-fetched in parallel with analytics so Action Required renders immediately
+  const [prefetchedFollowups, setPrefetchedFollowups] = useState(null);
+  const [prefetchedHot, setPrefetchedHot] = useState(null);
 
   const fetchAnalytics = (retryCount = 0) => {
     if (retryCount === 0) setLoading(true);
@@ -485,7 +488,18 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchAnalytics(); }, [dateRange, refreshKey]);
+  useEffect(() => {
+    fetchAnalytics();
+    // Fire in parallel with analytics so Action Required cards have data ready
+    if (sessionStorage.getItem("fup_panel_dismissed") !== "1") {
+      api.get("/leads/followups-due")
+        .then((r) => setPrefetchedFollowups(r.data.data || []))
+        .catch(() => setPrefetchedFollowups([]));
+    }
+    api.get("/leads/hot", { params: { limit: 4 } })
+      .then((r) => setPrefetchedHot(r.data.data || []))
+      .catch(() => setPrefetchedHot([]));
+  }, [dateRange, refreshKey]);
 
   useEffect(() => {
     api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
@@ -625,8 +639,8 @@ export default function Dashboard() {
         {/* 2-col grid: overdue follow-ups left, hot leads right.
             Mobile (<640px): stacked 1 col. Tablet/desktop: side by side. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-          <FollowUpDuePanel user={user} navigate={navigate} />
-          <HotLeadsWidget navigate={navigate} limit={4} />
+          <FollowUpDuePanel user={user} navigate={navigate} prefetchedLeads={prefetchedFollowups} />
+          <HotLeadsWidget navigate={navigate} limit={4} prefetchedLeads={prefetchedHot} />
         </div>
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
@@ -1099,8 +1113,8 @@ function DropoffFunnel({ allTimeByStatus }) {
 }
 
 // ── Follow-up Due Alert Panel ─────────────────────────────────────────────────
-function FollowUpDuePanel({ user, navigate }) {
-  const [leads, setLeads] = useState([]);
+function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
+  const [leads, setLeads] = useState(prefetchedLeads || []);
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("fup_panel_dismissed") === "1"
   );
@@ -1109,11 +1123,16 @@ function FollowUpDuePanel({ user, navigate }) {
   );
 
   useEffect(() => {
+    // Use pre-fetched data when provided — no duplicate network call
+    if (prefetchedLeads !== null && prefetchedLeads !== undefined) {
+      setLeads(prefetchedLeads);
+      return;
+    }
     if (dismissed) return;
     api.get("/leads/followups-due")
       .then((r) => setLeads(r.data.data || []))
       .catch(() => {});
-  }, [dismissed]);
+  }, [dismissed, prefetchedLeads]);
 
   if (dismissed || !leads.length) return null;
 
@@ -1266,17 +1285,22 @@ function FollowUpDuePanel({ user, navigate }) {
 }
 
 // ── Hot Today Widget ──────────────────────────────────────────────────────────
-function HotLeadsWidget({ navigate, limit = 6 }) {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
+function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
+  const [leads, setLeads] = useState(prefetchedLeads || []);
+  const [loading, setLoading] = useState(prefetchedLeads === null || prefetchedLeads === undefined);
   const [minimized, setMinimized] = useState(() => localStorage.getItem("hot_panel_minimized") === "1");
 
   useEffect(() => {
+    if (prefetchedLeads !== null && prefetchedLeads !== undefined) {
+      setLeads(prefetchedLeads);
+      setLoading(false);
+      return;
+    }
     api.get("/leads/hot", { params: { limit } })
       .then((r) => setLeads(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [prefetchedLeads]);
 
   if (loading) return null;
   if (!leads.length) return null;
