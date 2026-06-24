@@ -624,14 +624,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
-      <ZonedKPIRow
-        data={data}
-        navigate={navigate}
-        goal={monthlyGoal}
-        current={data?.thisMonthClosedWon || 0}
-        role={user?.role}
-        onGoalUpdate={(n) => setGoalOverride(n)}
-      />
+      <ZonedKPIRow data={data} navigate={navigate} />
 
       {/* ── Zone 3: Action Required ───────────────────────────────────── */}
       <div className="space-y-3">
@@ -658,7 +651,17 @@ export default function Dashboard() {
             <LiveAgentStatusWidget navigate={navigate} />
             <AutomationHealthWidget automations={allAutomations} />
           </div>
-          <ProjectBreakdownWidget navigate={navigate} />
+          {/* Project breakdown + Monthly goal — side by side */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+            <ProjectBreakdownWidget navigate={navigate} />
+            <GoalMetricsRow
+              goal={monthlyGoal}
+              current={data?.thisMonthClosedWon || 0}
+              avgResponseMs={null}
+              role={user?.role}
+              onGoalUpdate={(n) => setGoalOverride(n)}
+            />
+          </div>
         </div>
       </AdminOnly>
 
@@ -835,7 +838,7 @@ function ZoneHeader({ label, color = "default" }) {
   );
 }
 
-function ZonedKPIRow({ data, navigate, goal, current, role, onGoalUpdate }) {
+function ZonedKPIRow({ data, navigate }) {
   const delta = data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : null;
   const stats = [
     {
@@ -891,7 +894,6 @@ function ZonedKPIRow({ data, navigate, goal, current, role, onGoalUpdate }) {
           );
         })}
       </div>
-      <GoalMetricsRow goal={goal} current={current} avgResponseMs={null} role={role} onGoalUpdate={onGoalUpdate} />
     </div>
   );
 }
@@ -1349,7 +1351,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
         style={{ borderBottom: minimized ? "none" : "1px solid rgba(99,102,241,0.15)", background: "linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(139,92,246,0.07) 60%, transparent 100%)" }}>
 
         {/* Icon + title + subtitle */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Icon with pulsing live dot */}
           <div className="relative flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
             style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))", border: "1px solid rgba(99,102,241,0.25)" }}>
@@ -1359,27 +1361,20 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "#6366f1" }} />
             </span>
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold text-app">Hot Today</h3>
-            <p className="text-[11px] text-app-soft">
-              {topScore !== null
-                ? `Top score: ${topScore} pts · ${leads.length} leads ranked`
-                : "Highest-scored leads to prioritize first"}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-app leading-tight">Hot Today</h3>
+            <p className="text-[11px] text-app-soft truncate">
+              {topScore !== null ? `Top score: ${topScore} pts · ${leads.length} ranked` : "AI-ranked leads to call first"}
             </p>
           </div>
         </div>
 
-        {/* Controls — single row: View all | AI Scored | chevron */}
-        <div className="shrink-0 flex items-center gap-1.5">
-          <button type="button" onClick={() => navigate("/leads")}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
-            style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
-            View all <ArrowRight className="h-3 w-3" />
-          </button>
+        {/* Controls — AI SCORED badge + chevron (no "View all" — it's not navigating to a filtered list) */}
+        <div className="shrink-0 flex items-center gap-1">
           <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
             style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
             <Sparkles className="h-2.5 w-2.5" />
-            AI Scored
+            <span className="hidden sm:inline">AI Scored</span>
           </span>
           <button type="button"
             onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
