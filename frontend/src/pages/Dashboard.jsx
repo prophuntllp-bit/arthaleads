@@ -1461,19 +1461,21 @@ function RevenueForecastWidget({ data }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Pipeline Value</p>
-          <p className="text-lg font-black text-indigo-400 leading-none">{fmtINR(data.pipelineValue)}</p>
-          <p className="text-[9px] text-app-soft">{data.pipelineLeads || 0} active leads</p>
-        </div>
-        <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Expected Revenue</p>
           <p className="text-lg font-black text-emerald-400 leading-none">{fmtINR(expectedRev)}</p>
           <p className="text-[9px] text-app-soft">At {data.conversionRate ?? 0}% conversion</p>
         </div>
         <div className="card p-3 flex flex-col gap-1">
-          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Closings</p>
-          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0}</p>
-          <p className="text-[9px] text-app-soft">Last month: {data.lastMonthClosedWon || 0}</p>
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Leads</p>
+          <p className="text-lg font-black text-indigo-400 leading-none">{data.thisMonthLeads || 0}</p>
+          <p className={`text-[9px] font-semibold ${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "text-emerald-400" : "text-red-400"}`}>
+            {(data.lastMonthLeads || 0) === 0 ? "Last month: 0" : `${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "↑" : "↓"} vs ${data.lastMonthLeads} last month`}
+          </p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Closings vs Last Month</p>
+          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0} <span className="text-sm font-normal text-app-soft">/ {data.lastMonthClosedWon || 0}</span></p>
+          <p className="text-[9px] text-app-soft">This month / last month</p>
         </div>
         <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Projected Pace</p>
