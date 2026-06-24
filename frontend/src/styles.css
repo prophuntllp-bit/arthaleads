@@ -544,11 +544,6 @@
   to { --hot-angle: 360deg; }
 }
 
-@keyframes hotCardGlow {
-  0%, 100% { box-shadow: 0 0 10px 2px rgba(249,115,22,0.18); }
-  50%       { box-shadow: 0 0 24px 6px rgba(249,115,22,0.36); }
-}
-
 .hot-ai-wrapper {
   --hot-angle: 0deg;
   padding: 1.5px;
@@ -562,9 +557,7 @@
     rgba(249, 115, 22, 0.9) 320deg,
     rgba(249, 115, 22, 0.0) 360deg
   );
-  animation:
-    hotBorderSpin 3s linear infinite,
-    hotCardGlow 3s ease-in-out infinite;
+  animation: hotBorderSpin 3s linear infinite;
 }
 
 /* ── Native Android app feel (Capacitor context) ─────────────────────────────
