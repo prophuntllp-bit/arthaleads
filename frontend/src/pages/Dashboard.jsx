@@ -622,10 +622,17 @@ export default function Dashboard() {
       {/* ── Zone 3: Action Required ───────────────────────────────────── */}
       <div className="space-y-3">
         <ZoneHeader label="Action Required" color="amber" />
-        <FollowUpDuePanel user={user} navigate={navigate} />
-        <AdminOnly role={user?.role}>
-          <StaleLeadsWidget navigate={navigate} />
-        </AdminOnly>
+        {/* 2-col grid: FollowUpDuePanel left, StaleLeads right (admin/manager only).
+            On mobile both stack to 1 col. When StaleLeads is absent (agent role),
+            FollowUpDuePanel spans the full row via col-span-full. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <div className={!(user?.role === "admin" || user?.role === "manager") ? "col-span-full sm:col-span-full" : ""}>
+            <FollowUpDuePanel user={user} navigate={navigate} />
+          </div>
+          {(user?.role === "admin" || user?.role === "manager") && (
+            <StaleLeadsWidget navigate={navigate} />
+          )}
+        </div>
         <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
