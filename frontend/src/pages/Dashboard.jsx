@@ -1317,54 +1317,69 @@ function HotLeadsWidget({ navigate, limit = 6 }) {
     return <Zap className="h-3 w-3" />;
   };
 
-  return (
-    <section data-tour="hot-today" className="card overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3"
-        style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(239,68,68,0.06), transparent)" }}>
+  const topScore = leads[0]?._score ?? null;
 
-        {/* Col 1: Icon + title + subtitle */}
+  return (
+    <section data-tour="hot-today" className="card overflow-hidden"
+      style={{ borderColor: "rgba(99,102,241,0.25)" }}>
+      {/* Header — indigo/violet gradient to signal AI-powered, distinct from warning cards */}
+      <div className="flex items-center gap-3 px-4 py-3"
+        style={{ borderBottom: minimized ? "none" : "1px solid rgba(99,102,241,0.15)", background: "linear-gradient(135deg, rgba(99,102,241,0.10) 0%, rgba(139,92,246,0.07) 60%, transparent 100%)" }}>
+
+        {/* Icon + title + subtitle */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-            style={{ background: "rgba(239,68,68,0.12)" }}>
-            <Flame className="h-4 w-4 text-red-400" />
+          {/* Icon with pulsing live dot */}
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.18))", border: "1px solid rgba(99,102,241,0.25)" }}>
+            <Flame className="h-4 w-4" style={{ color: "#f97316" }} />
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ background: "#6366f1" }} />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "#6366f1" }} />
+            </span>
           </div>
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-app">Hot Today</h3>
-            <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
+            <p className="text-[11px] text-app-soft">
+              {topScore !== null
+                ? `Top score: ${topScore} pts · ${leads.length} leads ranked`
+                : "Highest-scored leads to prioritize first"}
+            </p>
           </div>
         </div>
 
-        {/* Col 2: View all (row 1) + AI Scored + chevron (row 2) */}
+        {/* Controls */}
         <div className="shrink-0 flex flex-col items-end gap-1.5">
-          <button type="button"
-            onClick={() => navigate("/leads")}
+          <button type="button" onClick={() => navigate("/leads")}
             className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+            style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
             View all <ArrowRight className="h-3 w-3" />
           </button>
           <div className="flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3 text-indigo-400" />
-            <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">AI Scored</span>
+            {/* Glowing AI Scored badge */}
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: "linear-gradient(90deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+              <Sparkles className="h-2.5 w-2.5" />
+              AI Scored
+            </span>
             <button type="button"
               onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
               title={minimized ? "Expand" : "Minimize"}
-              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
-              <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+              className="flex h-6 w-6 items-center justify-center rounded-lg transition hover:bg-indigo-500/10 cursor-pointer">
+              <ChevronDown className={`h-3.5 w-3.5 text-indigo-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Lead rows */}
-      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+      {!minimized && <div className="divide-y" style={{ borderColor: "rgba(99,102,241,0.08)" }}>
         {leads.map((lead, idx) => {
           const ss = SCORE_STYLE(lead._score);
           const ac = ACTION_COLOR[lead._nextAction?.color] || ACTION_COLOR.orange;
           return (
             <div key={lead._id}
               style={{ animation: "fadeSlideIn 0.3s ease both", animationDelay: `${idx * 55}ms` }}
-              className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-orange-500/5">
+              className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 transition hover:bg-indigo-500/5">
 
               {/* Score badge */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
