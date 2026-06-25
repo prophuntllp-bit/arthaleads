@@ -1347,9 +1347,9 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
     <div className="hot-ai-wrapper">{/* spinning conic-gradient border */}
     <section data-tour="hot-today" className="card overflow-hidden"
       style={{ borderColor: "transparent", borderRadius: "1rem" }}>
-      {/* Header — warm orange gradient, signals AI-powered USP */}
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3"
-        style={{ borderBottom: minimized ? "none" : "1px solid rgba(249,115,22,0.12)", background: "linear-gradient(135deg, rgba(249,115,22,0.09) 0%, rgba(251,146,60,0.05) 60%, transparent 100%)" }}>
+        style={{ borderBottom: minimized ? "none" : "1px solid rgba(249,115,22,0.12)" }}>
 
         {/* Icon + title + subtitle */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
