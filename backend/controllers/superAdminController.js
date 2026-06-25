@@ -9,6 +9,7 @@ const Automation  = require("../models/Automation");
 const Ticket      = require("../models/Ticket");
 const AuditLog    = require("../models/AuditLog");
 const AiUsage     = require("../models/AiUsage");
+const SupportAccess = require("../models/SupportAccess");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
@@ -551,9 +552,77 @@ const superAdminController = {
     }
   },
 
+  // POST /api/super-admin/orgs/:id/request-access — create approval request, notify org admin via push
+  async requestAccess(req, res, next) {
+    try {
+
+      const { reason, notes } = req.body;
+      if (!reason) return next(new AppError("Reason is required", 400));
+
+      const org = await Organization.findById(req.params.id).select("name isActive").lean();
+      if (!org)          return next(new AppError("Organisation not found", 404));
+      if (!org.isActive) return next(new AppError("Organisation is inactive", 400));
+
+      const orgAdmin = await User.findOne({ orgId: req.params.id, role: "admin", isActive: true })
+        .select("_id name email");
+      if (!orgAdmin) return next(new AppError("No active admin found for this organisation", 404));
+
+      const access = await SupportAccess.create({
+        orgId:           req.params.id,
+        requestedBy:     req.user._id,
+        requestedByName: req.user.name,
+        orgAdminId:      orgAdmin._id,
+        reason,
+        notes: notes || "",
+        status:     "pending",
+        notifiedAt: new Date(),
+      });
+
+      const REASON_LABELS = {
+        customer_support:  "Customer Support",
+        onboarding:        "Onboarding Assistance",
+        bug_investigation: "Bug Investigation",
+        data_migration:    "Data Migration",
+        billing_issue:     "Billing Issue",
+        other:             "Other",
+      };
+
+      const { sendPushToUser } = require("../utils/push");
+      sendPushToUser(orgAdmin._id, {
+        title: "Support Access Request",
+        body:  `Arthaleads support (${req.user.name}) is requesting access — ${REASON_LABELS[reason]}. Tap to review.`,
+        data:  { type: "support_access_request", requestId: String(access._id), url: "/settings?tab=security" },
+      }).catch(() => {});
+
+      await logAudit("support_access_request", req, {
+        targetOrg:      org._id,
+        targetOrgName:  org.name,
+        targetUser:     orgAdmin._id,
+        targetUserName: orgAdmin.name,
+        details:        { reason, notes, requestId: String(access._id) },
+      });
+
+      res.json({ success: true, requestId: access._id, status: "pending" });
+    } catch (err) { next(err); }
+  },
+
+  // GET /api/super-admin/orgs/:id/support-requests
+  async listSupportRequests(req, res, next) {
+    try {
+
+      const requests = await SupportAccess.find({ orgId: req.params.id })
+        .sort({ createdAt: -1 }).limit(20).lean();
+      res.json({ success: true, requests });
+    } catch (err) { next(err); }
+  },
+
   // POST /api/super-admin/orgs/:id/impersonate — issue a 2-hour JWT for the org's admin
   async impersonate(req, res, next) {
     try {
+
+      const { reason, notes, requestId } = req.body;
+      if (!reason) return next(new AppError("Reason is required", 400));
+
       const org = await Organization.findById(req.params.id).select("name isActive").lean();
       if (!org)           return next(new AppError("Organisation not found", 404));
       if (!org.isActive)  return next(new AppError("Cannot impersonate an inactive organisation", 400));
@@ -562,15 +631,50 @@ const superAdminController = {
         .select("_id name email");
       if (!admin) return next(new AppError("No active admin found for this organisation", 404));
 
+      let accessRecord;
+      if (requestId) {
+        accessRecord = await SupportAccess.findById(requestId);
+        if (!accessRecord || String(accessRecord.orgId) !== req.params.id)
+          return next(new AppError("Invalid access request", 400));
+        if (accessRecord.status !== "approved")
+          return next(new AppError("Access request has not been approved yet", 403));
+        accessRecord.status = "active";
+        accessRecord.accessedAt = new Date();
+        await accessRecord.save();
+      } else {
+        accessRecord = await SupportAccess.create({
+          orgId:           req.params.id,
+          requestedBy:     req.user._id,
+          requestedByName: req.user.name,
+          orgAdminId:      admin._id,
+          reason,
+          notes: notes || "",
+          status:     "active",
+          accessedAt: new Date(),
+        });
+      }
+
       await logAudit("impersonate", req, {
         targetOrg:      org._id || req.params.id,
         targetOrgName:  org.name,
         targetUser:     admin._id,
         targetUserName: admin.name,
-        details:        { adminEmail: admin.email },
+        details:        { adminEmail: admin.email, reason, notes, requestId: String(accessRecord._id) },
       });
 
-      const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+      await Organization.findByIdAndUpdate(req.params.id, {
+        "activeSupportSession.active":         true,
+        "activeSupportSession.reason":         reason,
+        "activeSupportSession.superAdminName": req.user.name,
+        "activeSupportSession.startedAt":      new Date(),
+        "activeSupportSession.requestId":      accessRecord._id,
+      });
+
+      const token = jwt.sign(
+        { id: admin._id, isSupportSession: true, supportRequestId: String(accessRecord._id) },
+        process.env.JWT_SECRET,
+        { expiresIn: "2h" }
+      );
 
       res.cookie("crm_token", token, {
         httpOnly: true,
@@ -580,10 +684,30 @@ const superAdminController = {
         maxAge:   2 * 60 * 60 * 1000,
       });
 
-      res.json({ success: true, orgName: org.name, adminName: admin.name, adminEmail: admin.email });
+      res.json({
+        success: true,
+        orgName: org.name, adminName: admin.name, adminEmail: admin.email,
+        requestId: String(accessRecord._id),
+      });
     } catch (err) {
       next(err);
     }
+  },
+
+  // POST /api/super-admin/orgs/:id/end-support-session
+  async endSupportSession(req, res, next) {
+    try {
+
+      const { requestId } = req.body;
+      await Organization.findByIdAndUpdate(req.params.id, {
+        "activeSupportSession.active":    false,
+        "activeSupportSession.startedAt": null,
+      });
+      if (requestId) {
+        await SupportAccess.findByIdAndUpdate(requestId, { status: "completed", endedAt: new Date() });
+      }
+      res.json({ success: true });
+    } catch (err) { next(err); }
   },
 
   // GET /api/super-admin/audit — paginated audit log

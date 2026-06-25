@@ -256,4 +256,63 @@ router.get("/me/voice-key", authorize("admin"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Support Access (org admin side) ──────────────────────────────────────────
+
+// GET /api/org/support-access — list all access requests for this org
+router.get("/support-access", authorize("admin"), async (req, res, next) => {
+  try {
+    const SupportAccess = require("../models/SupportAccess");
+    const records = await SupportAccess.find({ orgId: req.orgId })
+      .sort({ createdAt: -1 }).limit(50).lean();
+    res.json({ success: true, records });
+  } catch (err) { next(err); }
+});
+
+// POST /api/org/support-access/:id/respond — approve or deny a pending request
+router.post("/support-access/:id/respond", authorize("admin"), async (req, res, next) => {
+  try {
+    const SupportAccess = require("../models/SupportAccess");
+    const { action } = req.body; // "approve" | "deny"
+    if (!["approve", "deny"].includes(action)) return res.status(400).json({ success: false, message: "Invalid action" });
+
+    const record = await SupportAccess.findById(req.params.id);
+    if (!record) return res.status(404).json({ success: false, message: "Request not found" });
+    if (String(record.orgId) !== String(req.orgId)) return res.status(403).json({ success: false, message: "Forbidden" });
+    if (record.status !== "pending") return res.status(400).json({ success: false, message: "Request already resolved" });
+
+    record.status = action === "approve" ? "approved" : "denied";
+    record.resolvedAt = new Date();
+    record.seenByOrgAdmin = true;
+    await record.save();
+
+    // Notify super admin via push
+    const { sendPushToUser } = require("../utils/push");
+    sendPushToUser(record.requestedBy, {
+      title: action === "approve" ? "Access Approved" : "Access Denied",
+      body:  action === "approve"
+        ? `${req.user.name} approved your support access request. You can now enter the session.`
+        : `${req.user.name} denied your support access request.`,
+      data:  { type: "support_access_response", requestId: String(record._id), action },
+    }).catch(() => {});
+
+    res.json({ success: true, status: record.status });
+  } catch (err) { next(err); }
+});
+
+// POST /api/org/support-access/end-session — org admin ends active support session
+router.post("/support-access/end-session", authorize("admin"), async (req, res, next) => {
+  try {
+    const SupportAccess = require("../models/SupportAccess");
+    await Organization.findByIdAndUpdate(req.orgId, {
+      "activeSupportSession.active":    false,
+      "activeSupportSession.startedAt": null,
+    });
+    await SupportAccess.updateMany(
+      { orgId: req.orgId, status: "active" },
+      { status: "completed", endedAt: new Date() }
+    );
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

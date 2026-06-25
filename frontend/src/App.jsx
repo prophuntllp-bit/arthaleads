@@ -7,6 +7,7 @@ import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import SupportSessionBanner from "./components/SupportSessionBanner";
 import HelpBot from "./components/HelpBot";
 import OnboardingGate from "./components/OnboardingGate";
 import CookieBanner from "./components/CookieBanner";
@@ -484,6 +485,7 @@ function RequireAuth() {
   return (
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
+      <SupportSessionBanner />
       <Sidebar />
       <main className="flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto">
         <Outlet />

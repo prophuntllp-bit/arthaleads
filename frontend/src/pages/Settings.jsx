@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
-         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Phone, Pencil, Trash2 } from "lucide-react";
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Phone, Pencil, Trash2, Lock, RefreshCw } from "lucide-react";
 import EnableXSettings from "../components/EnableXSettings";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -509,6 +509,7 @@ export default function Settings() {
   const TABS = [
     { id: "profile",      label: "My Profile",    icon: UserRound  },
     ...(isAdmin ? [{ id: "organization", label: "Organization", icon: Building2 }] : []),
+    ...(isAdmin ? [{ id: "security",     label: "Security",     icon: Lock }] : []),
   ];
 
   return (
@@ -706,6 +707,153 @@ export default function Settings() {
         </div>
       )}
 
+      {/* ── Security tab (admin only) ── */}
+      {tab === "security" && isAdmin && (
+        <SupportAccessLog />
+      )}
+
     </div>
+  );
+}
+
+function SupportAccessLog() {
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pending, setPending] = useState([]);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/org/support-access");
+      setRecords(data.records || []);
+      setPending((data.records || []).filter(r => r.status === "pending"));
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const respond = async (id, action) => {
+    try {
+      await api.post(`/org/support-access/${id}/respond`, { action });
+      load();
+      toast.success(action === "approve" ? "Access approved" : "Access denied");
+    } catch { toast.error("Failed to respond"); }
+  };
+
+  const endSession = async () => {
+    try {
+      await api.post("/org/support-access/end-session");
+      load();
+      toast.success("Support session ended");
+    } catch { toast.error("Failed to end session"); }
+  };
+
+  const REASON_LABELS = {
+    customer_support:  "Customer Support",
+    onboarding:        "Onboarding Assistance",
+    bug_investigation: "Bug Investigation",
+    data_migration:    "Data Migration",
+    billing_issue:     "Billing Issue",
+    other:             "Other",
+  };
+  const STATUS_STYLES = {
+    pending:   { bg: "rgba(245,158,11,0.1)", color: "#d97706" },
+    approved:  { bg: "rgba(34,197,94,0.1)",  color: "#16a34a" },
+    denied:    { bg: "rgba(239,68,68,0.1)",  color: "#dc2626" },
+    active:    { bg: "rgba(249,115,22,0.1)", color: "#ea580c" },
+    completed: { bg: "rgba(100,116,139,0.1)", color: "#64748b" },
+  };
+
+  return (
+    <section className="card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-orange-500/10">
+            <Lock className="w-4 h-4 text-orange-500" />
+          </div>
+          <div>
+            <h2 className="font-bold text-app">Support Access Log</h2>
+            <p className="text-xs text-app-soft">Track and control when Arthaleads support accesses your account</p>
+          </div>
+        </div>
+        <button onClick={load} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft transition">
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {pending.length > 0 && (
+        <div className="px-6 py-4 border-b space-y-3" style={{ borderColor: "var(--app-border)", background: "rgba(245,158,11,0.04)" }}>
+          <p className="text-xs font-bold text-amber-600 uppercase tracking-wider">Pending Approval</p>
+          {pending.map(r => (
+            <div key={r._id} className="flex items-center gap-3 p-3 rounded-2xl"
+              style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-app">{r.requestedByName} is requesting access</p>
+                <p className="text-xs text-app-soft">{REASON_LABELS[r.reason] || r.reason}{r.notes && ` — ${r.notes}`}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => respond(r._id, "deny")}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 transition">
+                  Deny
+                </button>
+                <button onClick={() => respond(r._id, "approve")}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-green-500 hover:bg-green-600 transition">
+                  Approve
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-6 h-6 rounded-full border-2 animate-spin" style={{ borderColor: "var(--app-primary)", borderTopColor: "transparent" }} />
+        </div>
+      ) : records.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <ShieldCheck className="w-10 h-10 text-green-500/30 mb-3" />
+          <p className="text-sm font-semibold text-app-soft">No support access on record</p>
+          <p className="text-xs text-app-soft/60 mt-1">Arthaleads support has not accessed your account</p>
+        </div>
+      ) : (
+        <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+          {records.map(r => {
+            const s = STATUS_STYLES[r.status] || STATUS_STYLES.completed;
+            const isActive = r.status === "active";
+            return (
+              <div key={r._id} className={`flex items-start gap-3 px-6 py-3.5 ${isActive ? "bg-orange-500/5" : ""}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-app">{r.requestedByName}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: s.bg, color: s.color }}>
+                      {r.status}
+                    </span>
+                    {isActive && <span className="text-[10px] text-orange-500 font-bold animate-pulse">● Live now</span>}
+                  </div>
+                  <p className="text-xs text-app-soft mt-0.5">
+                    {REASON_LABELS[r.reason] || r.reason}
+                    {r.notes && ` — ${r.notes}`}
+                  </p>
+                  <p className="text-[10px] text-app-soft/60 mt-0.5">
+                    {new Date(r.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                    {r.endedAt && ` → ${new Date(r.endedAt).toLocaleString("en-IN", { timeStyle: "short" })}`}
+                  </p>
+                </div>
+                {isActive && (
+                  <button onClick={endSession}
+                    className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-xl transition"
+                    style={{ background: "rgba(249,115,22,0.1)", color: "#ea580c", border: "1px solid rgba(249,115,22,0.25)" }}>
+                    End Session
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
