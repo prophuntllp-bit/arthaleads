@@ -1184,16 +1184,8 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
           </div>
         </div>
 
-        {/* Controls — single row: View all | chevron | X */}
+        {/* Controls — chevron | X */}
         <div className="shrink-0 flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => navigate("/followups")}
-            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
-            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
-          >
-            View all
-          </button>
           <button
             type="button"
             onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
