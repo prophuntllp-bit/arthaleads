@@ -6,7 +6,6 @@ import { Check } from "lucide-react";
 
 const STORAGE_KEY = "cookie_prefs";
 
-// ── Interactive cookie preference center ──────────────────────────────────────
 function CookiePreferences() {
   const { isDark } = usePublicTheme();
   const [prefs, setPrefs] = useState({ necessary: true, analytics: true, marketing: false });
@@ -26,11 +25,11 @@ function CookiePreferences() {
 
   const categories = [
     { key: "necessary", name: "Strictly Necessary", locked: true,
-      desc: "Required for login, security, and core CRM functionality. These cannot be turned off." },
+      desc: "Required for login, security, and core CRM functionality. Cannot be turned off." },
     { key: "analytics", name: "Analytics", locked: false,
-      desc: "Help us understand how the site is used so we can improve it. Anonymous and aggregated." },
+      desc: "Help us understand how the platform is used so we can improve it. Anonymous and aggregated." },
     { key: "marketing", name: "Marketing", locked: false,
-      desc: "Used to measure ad campaigns and show relevant content. Off by default." },
+      desc: "Used to measure ad campaign effectiveness and show relevant content. Off by default." },
   ];
 
   const toggle = (key) => {
@@ -47,7 +46,9 @@ function CookiePreferences() {
   return (
     <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "0.75rem", padding: "1.25rem" }}>
       <h3 style={{ fontSize: 15, fontWeight: 700, color: heading, marginBottom: 4 }}>Manage Your Cookie Preferences</h3>
-      <p style={{ fontSize: 12, color: soft, marginBottom: 16 }}>Choose which cookies you allow. Your choice is saved on this device.</p>
+      <p style={{ fontSize: 12, color: soft, marginBottom: 16 }}>
+        Choose which cookies you allow. Your choice is saved on this device and respected on future visits.
+      </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {categories.map((c) => (
@@ -100,84 +101,154 @@ function CookiePreferences() {
 export default function CookiePolicy() {
   useSEO({
     title:       "Cookie Policy | Arthaleads Real Estate CRM",
-    description: "Learn how Arthaleads uses cookies. Manage your cookie preferences for analytics and marketing. Compliant with India’s DPDP Act 2023.",
+    description: "Learn how Arthaleads uses cookies. Manage your cookie preferences for analytics and marketing. Compliant with India's DPDP Act 2023.",
     canonical:   "https://www.arthaleads.com/cookie-policy",
   });
 
   return (
-    <LegalLayout title="Cookie Policy" badge="Privacy" updated="31 May 2026">
+    <LegalLayout title="Cookie Policy" badge="Privacy" updated="25 June 2026">
 
       <Section title="1. What Are Cookies?">
         <p>
-          Cookies are small text files stored on your device when you visit a website. They help the site
-          remember your actions and preferences (such as login, language, and display settings) so you don't
-          have to re-enter them. We also use similar technologies like local storage to keep you signed in
-          securely.
+          Cookies are small text files stored on your device when you visit a website. They help the
+          platform remember your preferences — such as login state, theme, and display settings — so you
+          don't have to re-enter them each visit. We also use similar technologies such as <code>localStorage</code>{" "}
+          and <code>sessionStorage</code> for client-side state that never leaves your browser.
         </p>
       </Section>
 
       <Section title="2. Your Cookie Choices">
-        <p>You can control non-essential cookies below. Your preference is stored on your device and respected on future visits.</p>
+        <p>
+          Under India's Digital Personal Data Protection (DPDP) Act, 2023, and general principles of
+          privacy, we give you control over non-essential cookies. Use the panel below to set your
+          preferences at any time — your choice is saved on this device.
+        </p>
         <div style={{ marginTop: "1rem" }}>
           <CookiePreferences />
         </div>
       </Section>
 
       <Section title="3. Types of Cookies We Use">
-        <ul className="list-disc pl-5 space-y-1.5">
+        <ul className="list-disc pl-5 space-y-2">
           <li>
-            <strong style={{ color: "var(--app-text)" }}>Strictly necessary:</strong>{" "}
-            Authentication tokens (httpOnly session cookie), security, and load balancing. The CRM cannot
-            function without these.
+            <strong style={{ color: "var(--app-text)" }}>Strictly Necessary:</strong>{" "}
+            These cookies are required for the platform to function. They handle authentication, security,
+            CSRF protection, and session management. Without them, you cannot log into the CRM. These are
+            set unconditionally and cannot be opted out of.
           </li>
           <li>
             <strong style={{ color: "var(--app-text)" }}>Analytics:</strong>{" "}
-            Anonymous usage data that helps us understand which features are used and where to improve.
+            Anonymous, aggregated data that helps us understand which features are most used and where
+            improvements are needed. No personally identifiable information is included. Enabled by default
+            but can be turned off in the panel above.
           </li>
           <li>
             <strong style={{ color: "var(--app-text)" }}>Marketing:</strong>{" "}
-            Used only with your consent to measure the effectiveness of our advertising. Off by default.
+            Used only with your explicit consent to measure the effectiveness of our advertising campaigns.
+            Disabled by default.
           </li>
         </ul>
       </Section>
 
-      <Section title="4. Cookies We Set">
-        <ul className="list-disc pl-5 space-y-1.5">
-          <li><strong style={{ color: "var(--app-text)" }}>crm_token</strong> — secure httpOnly session cookie that keeps you logged in. Essential.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>cookie_prefs</strong> — stores your cookie preferences from the panel above.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>theme</strong> — remembers your light/dark mode choice.</li>
+      <Section title="4. Specific Cookies We Set">
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>crm_token</strong> —
+            Secure httpOnly session cookie that keeps you authenticated. Set on login, cleared on logout.
+            Expires after 2 hours of inactivity (or 7 days if "Remember me" is selected).
+            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary.</em>
+          </li>
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>cookie_prefs</strong> —
+            Stores your cookie consent choices from the preference panel above. Set locally in{" "}
+            <code>localStorage</code>, never sent to our servers.
+            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (preference storage).</em>
+          </li>
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>theme</strong> —
+            Remembers your light/dark mode choice. Stored in <code>localStorage</code>.
+            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
+          </li>
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>admin_sidebar_pinned</strong> —
+            Remembers whether the admin panel sidebar is pinned open or collapsed. Stored in{" "}
+            <code>localStorage</code>. Never sent to servers.
+            <em style={{ color: "var(--app-text-soft)" }}> Strictly necessary (UI preference).</em>
+          </li>
         </ul>
       </Section>
 
-      <Section title="5. Third-Party Services">
+      <Section title="5. sessionStorage (Non-Persistent)">
         <p>
-          We use a small number of trusted third-party services to operate the platform — for example,
-          Cloudinary (image hosting), Resend (transactional email), and Sentry (error monitoring). These may
-          set their own cookies strictly to deliver their service. We do not sell your data to any
-          third party.
+          We use <code>sessionStorage</code> for temporary in-browser state that is automatically cleared
+          when you close the tab or browser. This includes:
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>impersonating</strong> —
+            When Arthaleads platform support enters a support session on your account, a temporary record
+            is stored in <code>sessionStorage</code> so the support banner can display context. This is
+            cleared the moment the session ends or the browser tab is closed. It is never persisted to
+            our servers beyond the audit log entry.
+          </li>
+          <li>
+            <strong style={{ color: "var(--app-text)" }}>fup_panel_dismissed</strong> —
+            Tracks whether you have dismissed the follow-up reminder panel during the current session.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="6. Third-Party Services">
+        <p>
+          We use a small number of trusted third-party services to operate the platform. These services
+          may set their own cookies or store identifiers strictly to deliver their function:
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li><strong style={{ color: "var(--app-text)" }}>Cloudinary</strong> — Image and media hosting (org logos, blog images). No tracking cookies.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google)</strong> — Push notification delivery for Android app users. May store a device token.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>OpenAI</strong> — AI feature processing. API calls only; no browser-level cookies set by OpenAI in our platform.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Resend</strong> — Transactional email delivery. No browser cookies.</li>
+        </ul>
+        <p>We do not use Google Analytics, Facebook Pixel, or any behavioural advertising trackers.</p>
+      </Section>
+
+      <Section title="7. Managing Cookies in Your Browser">
+        <p>
+          In addition to the controls in Section 2, you can manage or delete cookies through your browser
+          settings. Instructions for common browsers:
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li><strong style={{ color: "var(--app-text)" }}>Chrome:</strong> Settings → Privacy and security → Cookies and other site data.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Safari:</strong> Preferences → Privacy → Manage Website Data.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Firefox:</strong> Options → Privacy &amp; Security → Cookies and Site Data.</li>
+        </ul>
+        <p>
+          Note: Disabling strictly necessary cookies will prevent you from logging into the CRM or using
+          core platform features.
         </p>
       </Section>
 
-      <Section title="6. Managing Cookies in Your Browser">
+      <Section title="8. DPDP Act 2023 Compliance">
         <p>
-          In addition to the controls above, you can manage or delete cookies through your browser settings.
-          Note that disabling strictly necessary cookies will prevent you from logging into the CRM.
+          Arthaleads is committed to compliance with India's Digital Personal Data Protection Act, 2023.
+          In line with this:
         </p>
-      </Section>
-
-      <Section title="7. DPDP Act 2023 Compliance">
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li>We do not set non-essential cookies without your consent.</li>
+          <li>We provide clear, granular controls to accept or reject each category of cookie.</li>
+          <li>We do not use cookies to build behavioural advertising profiles or sell your data.</li>
+          <li>You can withdraw consent and change your preferences at any time using the panel in Section 2.</li>
+        </ul>
         <p>
-          Arthaleads is committed to compliance with India's Digital Personal Data Protection Act, 2023. We
-          obtain consent before setting non-essential cookies, give you clear controls, and never use your
-          personal data beyond operating the CRM service for you. For more on how we handle data, see our{" "}
+          For details on how we handle personal data more broadly, see our{" "}
           <a href="/privacy" style={{ color: "var(--app-primary)" }} className="hover:underline">Privacy Policy</a>.
         </p>
       </Section>
 
-      <Section title="8. Contact Us">
-        <p>Questions about our use of cookies?</p>
+      <Section title="9. Contact Us">
+        <p>Questions about our use of cookies or data practices?</p>
         <ContactBox>
-          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads</p>
+          <p className="font-bold mb-1" style={{ color: "var(--app-text)" }}>Arthaleads (Prophunt LLP)</p>
           <p style={{ color: "var(--app-text-soft)" }}>
             Email:{" "}
             <a href="mailto:contact@arthaleads.com" style={{ color: "var(--app-primary)" }} className="hover:underline">
