@@ -1338,7 +1338,7 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
   return (
     <div className="hot-ai-wrapper">{/* spinning conic-gradient border */}
     <section data-tour="hot-today" className="card overflow-hidden"
-      style={{ borderColor: "transparent", borderRadius: "1rem" }}>
+      style={{ borderColor: "transparent", borderRadius: "1rem", background: "var(--app-card-solid, var(--app-surface-solid))" }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3"
         style={{ borderBottom: minimized ? "none" : "1px solid rgba(249,115,22,0.12)" }}>
