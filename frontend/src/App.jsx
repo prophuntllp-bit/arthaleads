@@ -329,6 +329,7 @@ const SuperAdminBroadcast   = lazy(() => import("./pages/SuperAdminBroadcast"));
 const SuperAdminOrgDetail   = lazy(() => import("./pages/SuperAdminOrgDetail"));
 const SuperAdminAudit       = lazy(() => import("./pages/SuperAdminAudit"));
 const SuperAdminRevenue     = lazy(() => import("./pages/SuperAdminRevenue"));
+const SuperAdminInsights    = lazy(() => import("./pages/SuperAdminInsights"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -646,6 +647,7 @@ export default function App() {
           <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
           <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
           <Route path="/super-admin/audit"              element={<SuperAdminAudit />} />
+          <Route path="/super-admin/insights"          element={<SuperAdminInsights />} />
           <Route path="/super-admin/orgs/:id"           element={<SuperAdminOrgDetail />} />
           <Route path="/super-admin/blog"               element={<BlogManager />} />
           <Route path="/super-admin/blog/new"           element={<BlogEditor />} />

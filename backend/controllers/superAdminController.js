@@ -606,6 +606,171 @@ const superAdminController = {
       next(err);
     }
   },
+  // GET /api/super-admin/insights — org health scores, feature adoption, churn signals
+  async insights(req, res, next) {
+    try {
+      const Booking = mongoose.model("Booking");
+      const orgs = await Organization.find().lean();
+      const orgIds = orgs.map(o => o._id);
+
+      const sevenDaysAgo    = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo   = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const currentMonth    = new Date().toISOString().slice(0, 7);
+
+      const [
+        recentUsers,
+        allUsers,
+        leadsThisWeek,
+        totalLeads,
+        automationCounts,
+        projectCounts,
+        bookingCounts,
+        aiUsageDocs,
+      ] = await Promise.all([
+        // Users who logged in within last 7 days
+        User.aggregate([
+          { $match: { orgId: { $in: orgIds }, lastLogin: { $gte: sevenDaysAgo } } },
+          { $group: { _id: "$orgId", lastLogin: { $max: "$lastLogin" } } },
+        ]),
+        // Most recent login + user count per org
+        User.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 }, lastLogin: { $max: "$lastLogin" } } },
+        ]),
+        // Leads added in last 7 days
+        Lead.aggregate([
+          { $match: { orgId: { $in: orgIds }, createdAt: { $gte: sevenDaysAgo }, isDeleted: { $ne: true } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Total active leads
+        Lead.aggregate([
+          { $match: { orgId: { $in: orgIds }, isDeleted: { $ne: true }, isArchived: { $ne: true } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Active automations
+        Automation.aggregate([
+          { $match: { orgId: { $in: orgIds }, enabled: true } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Projects
+        Project.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Bookings (closings recorded)
+        Booking.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]).catch(() => []),
+        // AI usage this month
+        AiUsage.aggregate([
+          { $match: { orgId: { $in: orgIds }, month: currentMonth } },
+          { $group: { _id: "$orgId", calls: { $sum: "$callCount" }, tokens: { $sum: "$tokenCount" } } },
+        ]).catch(() => []),
+      ]);
+
+      // Build lookup maps
+      const toMap = (arr, val) => Object.fromEntries(arr.map(r => [String(r._id), typeof val === "function" ? val(r) : r[val] || 0]));
+      const recentLoginSet  = new Set(recentUsers.map(r => String(r._id)));
+      const allUserMap      = toMap(allUsers, r => r);
+      const leadsWeekMap    = toMap(leadsThisWeek, "count");
+      const totalLeadsMap   = toMap(totalLeads, "count");
+      const automationMap   = toMap(automationCounts, "count");
+      const projectMap      = toMap(projectCounts, "count");
+      const bookingMap      = toMap(bookingCounts, "count");
+      const aiUsageMap      = toMap(aiUsageDocs, r => r);
+
+      const now = new Date();
+
+      const result = orgs.map(org => {
+        const id = String(org._id);
+        const loginedRecently  = recentLoginSet.has(id);
+        const userInfo         = allUserMap[id] || {};
+        const leadsThisWeekN   = leadsWeekMap[id]  || 0;
+        const totalLeadsN      = totalLeadsMap[id] || 0;
+        const activeAutos      = automationMap[id] || 0;
+        const projectCount     = projectMap[id]    || 0;
+        const bookingCount     = bookingMap[id]    || 0;
+        const aiUsage          = aiUsageMap[id]    || {};
+        const hasWhatsApp      = !!org.whatsapp?.enabled;
+        const hasTelephony     = !!org.enablex?.enabled;
+        const hasProjects      = projectCount > 0;
+        const hasBookings      = bookingCount > 0;
+        const hasAi            = (aiUsage.calls || 0) > 0;
+        const lastLoginAt      = userInfo.lastLogin || null;
+        const daysSinceLogin   = lastLoginAt ? Math.floor((now - new Date(lastLoginAt)) / 86400000) : null;
+        const isTrialExpired   = org.plan === "trial" && org.trialEndsAt && now > new Date(org.trialEndsAt);
+        const daysToTrialEnd   = org.trialEndsAt ? Math.ceil((new Date(org.trialEndsAt) - now) / 86400000) : null;
+
+        // Health score: sum of weighted signals (max 100)
+        let healthScore = 0;
+        if (loginedRecently)      healthScore += 30;
+        if (leadsThisWeekN > 0)   healthScore += 20;
+        if (activeAutos > 0)      healthScore += 15;
+        if (hasWhatsApp)          healthScore += 10;
+        if (hasTelephony)         healthScore += 10;
+        if (hasProjects)          healthScore += 10;
+        if (hasBookings)          healthScore += 5;
+        healthScore = Math.min(100, healthScore);
+
+        // Churn signals
+        const churnSignals = [];
+        if (daysSinceLogin === null || daysSinceLogin > 7)  churnSignals.push("No login in 7+ days");
+        if (leadsThisWeekN === 0 && totalLeadsN < 5)        churnSignals.push("Less than 5 leads total");
+        if (activeAutos === 0)                              churnSignals.push("No automations active");
+        if (isTrialExpired)                                 churnSignals.push("Trial expired");
+        else if (daysToTrialEnd !== null && daysToTrialEnd <= 3 && daysToTrialEnd > 0)
+                                                            churnSignals.push(`Trial ends in ${daysToTrialEnd}d`);
+        if (!hasWhatsApp && !hasTelephony)                  churnSignals.push("No integrations connected");
+
+        return {
+          _id: org._id,
+          name: org.name,
+          slug: org.slug,
+          plan: org.plan,
+          logo: org.logo,
+          isActive: org.isActive,
+          trialEndsAt: org.trialEndsAt,
+          createdAt: org.createdAt,
+          healthScore,
+          features: {
+            leads:       totalLeadsN > 0,
+            aiBot:       hasAi,
+            whatsapp:    hasWhatsApp,
+            telephony:   hasTelephony,
+            automations: activeAutos > 0,
+            projects:    hasProjects,
+            bookings:    hasBookings,
+          },
+          stats: {
+            totalLeads: totalLeadsN,
+            leadsThisWeek: leadsThisWeekN,
+            activeAutomations: activeAutos,
+            lastLoginAt,
+            daysSinceLogin,
+            userCount: userInfo.count || 0,
+            aiCallsMonth: aiUsage.calls || 0,
+          },
+          churnSignals,
+        };
+      });
+
+      // Sort: churn risk first, then at-risk, then healthy
+      result.sort((a, b) => a.healthScore - b.healthScore);
+
+      res.json({
+        orgs: result,
+        summary: {
+          totalOrgs:     result.length,
+          healthyOrgs:   result.filter(o => o.healthScore >= 70).length,
+          atRiskOrgs:    result.filter(o => o.healthScore >= 40 && o.healthScore < 70).length,
+          churnRiskOrgs: result.filter(o => o.healthScore < 40).length,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = superAdminController;

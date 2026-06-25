@@ -4,21 +4,22 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import {
   LayoutDashboard, Building2, Users, TicketIcon, BarChart3,
-  Megaphone, FileText, TrendingUp, ShieldCheck,
+  Megaphone, FileText, TrendingUp, ShieldCheck, Activity,
   LogOut, Menu, X, ChevronUp, MoonStar, SunMedium,
   PanelLeftClose, PanelLeft, Settings,
 } from "lucide-react";
 
 const NAV = [
-  { to: "/super-admin",           label: "Dashboard",     icon: LayoutDashboard, end: true },
-  { to: "/super-admin/orgs",      label: "Organizations", icon: Building2 },
-  { to: "/super-admin/users",     label: "Users",         icon: Users },
-  { to: "/super-admin/tickets",   label: "Tickets",       icon: TicketIcon },
-  { to: "/super-admin/analytics", label: "Analytics",     icon: BarChart3 },
-  { to: "/super-admin/revenue",   label: "Revenue",       icon: TrendingUp },
-  { to: "/super-admin/broadcast", label: "Broadcast",     icon: Megaphone },
-  { to: "/super-admin/audit",     label: "Audit Log",     icon: ShieldCheck },
-  { to: "/super-admin/blog",      label: "Blog",          icon: FileText },
+  { to: "/super-admin",            label: "Dashboard",     icon: LayoutDashboard, end: true },
+  { to: "/super-admin/orgs",       label: "Organizations", icon: Building2 },
+  { to: "/super-admin/users",      label: "Users",         icon: Users },
+  { to: "/super-admin/insights",   label: "Insights",      icon: Activity },
+  { to: "/super-admin/tickets",    label: "Tickets",       icon: TicketIcon },
+  { to: "/super-admin/analytics",  label: "Analytics",     icon: BarChart3 },
+  { to: "/super-admin/revenue",    label: "Revenue",       icon: TrendingUp },
+  { to: "/super-admin/broadcast",  label: "Broadcast",     icon: Megaphone },
+  { to: "/super-admin/audit",      label: "Audit Log",     icon: ShieldCheck },
+  { to: "/super-admin/blog",       label: "Blog",          icon: FileText },
 ];
 
 export default function AdminSidebar() {

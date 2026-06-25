@@ -27,5 +27,6 @@ router.get("/tickets/:id/thread",   ctrl.getTicketThread);
 router.patch("/tickets/:id",        ctrl.updateTicket);
 router.post("/tickets/:id/reply",   ctrl.replyTicket);
 router.post("/broadcast",           ctrl.broadcast);
+router.get("/insights",             ctrl.insights);
 
 module.exports = router;
