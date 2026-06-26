@@ -309,7 +309,13 @@ export default function Sidebar() {
       toast(
         (t) => (
           <div className="flex items-start gap-3 cursor-pointer"
-            onClick={() => { toast.dismiss(t.id); if (notifData?.url) window.location.href = notifData.url; }}>
+            onClick={() => {
+              toast.dismiss(t.id);
+              if (notifData?.url) {
+                const dest = new URL(notifData.url, window.location.origin);
+                if (dest.origin === window.location.origin) window.location.href = dest.href;
+              }
+            }}>
             <Bell className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold leading-tight">{title}</p>
