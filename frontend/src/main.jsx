@@ -1,18 +1,110 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
+import toast from "react-hot-toast";
+
+// ── Service Worker: periodic sync + message handling ─────────────────────────
+// SW is registered in index.html so PWABuilder/crawlers can detect it.
+// Here we set up periodic sync tags and listen for SW messages.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      // Wait for the SW registered in index.html to be ready
+      const registration = await navigator.serviceWorker.ready;
+
+      // ── Periodic Sync: refresh follow-ups hourly, leads every 2h ──────────
+      if ("periodicSync" in registration) {
+        try {
+          const perm = await navigator.permissions.query({ name: "periodic-background-sync" });
+          if (perm.state === "granted") {
+            await registration.periodicSync.register("check-followups", {
+              minInterval: 60 * 60 * 1000,      // 1 hour
+            });
+            await registration.periodicSync.register("check-leads", {
+              minInterval: 2 * 60 * 60 * 1000,  // 2 hours
+            });
+          }
+        } catch {
+          // Browser doesn't support periodic-background-sync - silent fail
+        }
+      }
+
+      // ── Background Sync: pre-register so offline mutations get replayed ───
+      if ("sync" in registration) {
+        registration.sync.register("sync-pending-requests").catch(() => {});
+      }
+    } catch {
+      // SW not ready - app still works fine
+    }
+  });
+
+  // ── Messages from the Service Worker → in-app UI ─────────────────────────
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    const { type, title, body, resource } = event.data || {};
+
+    if (type === "PUSH_NOTIFICATION") {
+      toast(body || title, {
+        duration: 6000,
+        icon: "🔔",
+        style: { fontWeight: "500" },
+      });
+    }
+
+    if (type === "PERIODIC_SYNC") {
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource } }));
+    }
+  });
+}
+
+import { isCapacitorNative, setupNativeFeel } from "./utils/capacitorPush";
+
+// Native Android app: add CSS class for native-feel styles, init status bar etc.
+if (isCapacitorNative) {
+  document.documentElement.classList.add("is-native");
+  setupNativeFeel();
+}
+
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
+// Self-hosted Inter (served from Vercel, no Google Fonts CDN dependency)
+// Only weights 400-700 loaded - matches the original Google Fonts setup exactly
+// so font rendering is identical to what users expect
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <BrowserRouter>
-        <App />
-        <Toaster position="top-right" />
-      </BrowserRouter>
-    </ThemeProvider>
+    <HelmetProvider>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+        <ThemeProvider>
+          <BrowserRouter>
+            <App />
+            <Toaster position="top-right" />
+          </BrowserRouter>
+        </ThemeProvider>
+      </GoogleOAuthProvider>
+    </HelmetProvider>
   </React.StrictMode>
 );
+
+// Fade out splash only after BOTH conditions are met:
+//  1. React has painted its first frame (double rAF)
+//  2. At least 1.8s has passed so the animation is actually visible
+const reactReady = new Promise((resolve) => {
+  requestAnimationFrame(() => requestAnimationFrame(resolve));
+});
+const minDisplay = new Promise((resolve) => setTimeout(resolve, 1800));
+
+Promise.all([reactReady, minDisplay]).then(() => {
+  const splash = document.getElementById("app-splash");
+  if (splash) {
+    splash.classList.add("splash-hidden");
+    setTimeout(() => splash.remove(), 600);
+  }
+});

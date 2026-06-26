@@ -5,11 +5,18 @@ export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Offi
 export const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
 export const PURPOSE_OPTIONS = ["Buy", "Rent", "Invest", "N/A"];
 export const DATE_RANGE_OPTIONS = [
-  { value: "", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "tomorrow", label: "Tomorrow" },
-  { value: "last7days", label: "Last 7 Days" },
-  { value: "last30days", label: "Last 30 Days" }
+  { value: "",             label: "Maximum" },
+  { value: "today",        label: "Today" },
+  { value: "yesterday",    label: "Yesterday" },
+  { value: "last7days",    label: "Last 7 Days" },
+  { value: "last14days",   label: "Last 14 Days" },
+  { value: "last28days",   label: "Last 28 Days" },
+  { value: "last30days",   label: "Last 30 Days" },
+  { value: "thisweek",     label: "This Week" },
+  { value: "lastweek",     label: "Last Week" },
+  { value: "thismonth",    label: "This Month" },
+  { value: "lastmonth",    label: "Last Month" },
+  { value: "thisyear",     label: "This Year" },
 ];
 
 export const STATUS_COLORS = {
@@ -49,6 +56,20 @@ export function fmtDate(value) {
     month: "short",
     year: "numeric"
   });
+}
+
+/** Format a UTC date string as IST date + 12h time (e.g. "07 Apr 2026, 2:30 PM") */
+export function fmtDateTime(value) {
+  if (!value) return "-";
+  const d = new Date(value);
+  // Shift to IST (+5:30)
+  const ist = new Date(d.getTime() + 330 * 60 * 1000);
+  const date = ist.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+  const hours = ist.getUTCHours();
+  const minutes = ist.getUTCMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const h12 = hours % 12 || 12;
+  return `${date}, ${h12}:${minutes} ${ampm}`;
 }
 
 export function fmtCurrency(value) {

@@ -1,0 +1,26 @@
+name: Deploy Backend to Railway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        # Pinned: Railway CLI 5.3.0 (2026-06-05) broke RAILWAY_TOKEN project-token
+        # auth in CI with "Not signed in". 5.2.0 is the last known-good release.
+        # Bump once the upstream regression is fixed.
+        run: npm install --global @railway/cli@5.2.0
+
+      - name: Deploy to Railway
+        run: railway up --detach --service Arthaleads
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

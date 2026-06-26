@@ -21,10 +21,82 @@ function renderPopupScript(payload, targetOrigin) {
 </html>`;
 }
 
+const crypto = require("crypto");
+const Automation = require("../models/Automation");
+const { AppError } = require("../middlewares/errorHandler");
+
+function generateWebsiteToken() {
+  // 192 bits of entropy - URL-safe hex, no need for slice
+  return "AW-" + crypto.randomBytes(24).toString("hex");
+}
+
 const automationController = {
+  // GET /api/automations/website/connections - list all website automations (read-only)
+  async getWebsiteToken(req, res) {
+    try {
+      const automations = await Automation.find({
+        orgId: req.user.orgId,
+        platform: "Website Form",
+        isActive: true,
+      }).sort({ createdAt: 1 });
+
+      res.json({
+        success: true,
+        connections: automations.map((a) => ({
+          id: a._id,
+          name: a.name,
+          token: a.verifyToken,
+          status: a.status,
+          lastSyncAt: a.lastSyncAt,
+          siteUrl: a.siteUrl || "",
+          siteName: a.siteName || "",
+          connectedForms: a.connectedForms || [],
+        })),
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // POST /api/automations/website/create - add a new website connection
+  async createWebsiteConnection(req, res) {
+    try {
+      const { name } = req.body || {};
+      const automation = await Automation.create({
+        name: name || "New WordPress Site",
+        platform: "Website Form",
+        mode: "form",
+        status: "draft",
+        leadSourceLabel: "Website",
+        webhookPath: "/webhook/website",
+        verifyToken: generateWebsiteToken(),
+        description: "Receives leads from WordPress contact forms via the Arthaleads plugin.",
+        isActive: true,
+        orgId: req.user.orgId,
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+      res.status(201).json({
+        success: true,
+        connection: {
+          id: automation._id,
+          name: automation.name,
+          token: automation.verifyToken,
+          status: automation.status,
+          lastSyncAt: automation.lastSyncAt,
+          siteUrl: "",
+          siteName: "",
+          connectedForms: [],
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   async list(req, res, next) {
     try {
-      const automations = await automationService.list();
+      const automations = await automationService.list(req.user.orgId);
       res.json({ success: true, automations });
     } catch (err) {
       next(err);
@@ -51,7 +123,7 @@ const automationController = {
 
   async remove(req, res, next) {
     try {
-      await automationService.remove(req.params.id);
+      await automationService.remove(req.params.id, req.user.orgId);
       res.json({ success: true, message: "Automation source removed successfully" });
     } catch (err) {
       next(err);
@@ -59,13 +131,16 @@ const automationController = {
   },
 
   async facebookConnect(req, res, next) {
-    // Must set COOP before redirect — helmet's default COOP: same-origin
+    // Must set COOP before redirect - helmet's default COOP: same-origin
     // nullifies window.opener on the very first popup page load
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
     try {
-      const rawToken = req.query.token || "";
+      // Cookie is sent automatically by browser for same-origin popup navigation;
+      // fall back to query param for backward compatibility
+      const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
-      const state = automationService.createFacebookState({ userId: user._id.toString(), crmToken: rawToken });
+      // Pass only userId - never embed the session token in the OAuth state (URL-visible)
+      const state = automationService.createFacebookState({ userId: user._id.toString() });
       const authUrl = automationService.getFacebookAuthUrl(state);
       res.redirect(authUrl);
     } catch (err) {
@@ -75,31 +150,56 @@ const automationController = {
 
   async facebookCallback(req, res) {
     const frontendOrigin = automationService.getFrontendOrigin();
-
-    // Allow window.opener.postMessage — helmet defaults break both of these:
-    // - COOP: same-origin nullifies window.opener
-    // - CSP: script-src 'self' blocks inline <script> tags
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
-    res.setHeader("Content-Security-Policy", "script-src 'unsafe-inline'");
 
     try {
-      const { code, state } = req.query;
-      if (!code || !state) {
-        throw new Error("Missing Facebook callback data");
+      console.log(`[facebookCallback] query params: ${JSON.stringify(req.query)}`);
+      const { code, state, error, error_description } = req.query;
+
+      // Facebook returns ?error= when the user denies or the app lacks App Review approval
+      if (error) {
+        const fbMsg = error_description
+          ? decodeURIComponent(error_description.replace(/\+/g, " "))
+          : error;
+        console.warn(`[facebookCallback] Facebook returned error: ${error} — ${fbMsg}`);
+        throw new Error(`Facebook declined the connection: ${fbMsg}`);
       }
 
-      automationService.verifyFacebookState(state);
-      const pages = await automationService.getFacebookConnectionData(code);
+      if (!code || !state) throw new Error("Missing Facebook callback data");
 
-      res.status(200).send(renderPopupScript({
-        type: "facebook_oauth_success",
-        pages,
-      }, frontendOrigin));
+      const statePayload = automationService.verifyFacebookState(state);
+      const { pages, freshToken } = await automationService.getFacebookConnectionData(code);
+
+      console.log(`[facebookCallback] pages fetched: ${pages.length} | userId: ${statePayload.userId}`);
+      pages.forEach(p => console.log(`  page: ${p.name} (${p.id}) | forms: ${p.forms?.length ?? 0} | ${JSON.stringify(p.forms?.map(f => f.name))}`));
+      if (pages.length === 0) console.warn("[facebookCallback] WARNING: No pages returned - user may not have approved pages_show_list or has no admin pages");
+
+      const sessionId = require("crypto").randomBytes(16).toString("hex");
+      await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
+      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
     } catch (err) {
-      res.status(200).send(renderPopupScript({
-        type: "facebook_oauth_error",
-        message: err.message || "Facebook connection failed",
-      }, frontendOrigin));
+      const sessionId = require("crypto").randomBytes(16).toString("hex");
+      await automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Facebook connection failed" });
+      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
+    }
+  },
+
+  async getFacebookResult(req, res) {
+    const { session } = req.query;
+    if (!session) return res.status(400).json({ error: "Missing session" });
+    const result = await automationService.getOAuthResult(session);
+    if (!result) return res.status(404).json({ error: "Session not found or expired" });
+    return res.json(result);
+  },
+
+  async verifySystemToken(req, res, next) {
+    try {
+      const { token } = req.body;
+      if (!token?.trim()) return next(new AppError("Token is required", 400));
+      const result = await automationService.verifySystemToken(token.trim());
+      res.json({ success: true, ...result });
+    } catch (err) {
+      next(err);
     }
   },
 };

@@ -5,24 +5,38 @@ const avatarSchema = Joi.string()
   .allow("")
   .optional();
 
+// 8+ chars, 1 uppercase, 1 digit, 1 special character
+const passwordSchema = Joi.string()
+  .min(8)
+  .pattern(/^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/)
+  .messages({
+    "string.pattern.base": "Password must have at least 1 uppercase letter, 1 number, and 1 special character",
+    "string.min": "Password must be at least 8 characters",
+  });
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const signupSchema = Joi.object({
-  name: Joi.string().min(2).max(80).required(),
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  role: Joi.string().valid("admin", "manager", "agent").default("agent"),
-  phone: Joi.string().allow("").optional(),
+  orgName:      Joi.string().min(2).max(100).required(),
+  name:         Joi.string().min(2).max(80).required(),
+  email:        Joi.string().email().required(),
+  password:     passwordSchema.required(),
+  phone:        Joi.string().min(10).max(15).required(),
+  referralCode: Joi.string().length(6).uppercase().alphanum().optional().allow("", null),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
+  // Accept either an email address or a phone number (10-digit or +91 format)
+  email: Joi.alternatives().try(
+    Joi.string().email(),
+    Joi.string().pattern(/^\+?[0-9]{7,15}$/)
+  ).required().label("Email or Phone"),
   password: Joi.string().required(),
 });
 
 const createUserSchema = Joi.object({
   name: Joi.string().min(2).max(80).required(),
   email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
+  password: passwordSchema.required(),
   role: Joi.string().valid("admin", "manager", "agent").required(),
   phone: Joi.string().allow("").optional(),
   avatar: avatarSchema,
@@ -31,7 +45,7 @@ const createUserSchema = Joi.object({
 const updateUserSchema = Joi.object({
   name: Joi.string().min(2).max(80),
   email: Joi.string().email(),
-  password: Joi.string().min(6),
+  password: passwordSchema,
   role: Joi.string().valid("admin", "manager", "agent"),
   phone: Joi.string().allow(""),
   avatar: avatarSchema,
@@ -44,7 +58,7 @@ const updateProfileSchema = Joi.object({
   avatar: avatarSchema,
   role: Joi.string().valid("admin", "manager", "agent"),
   currentPassword: Joi.string().allow(""),
-  newPassword: Joi.string().min(6).allow(""),
+  newPassword: passwordSchema.allow(""),
 }).min(1);
 
 const createAutomationSchema = Joi.object({
@@ -61,6 +75,7 @@ const createAutomationSchema = Joi.object({
   webhookPath: Joi.string().allow("").max(200).optional(),
   verifyToken: Joi.string().allow("").max(150).optional(),
   accessToken: Joi.string().allow("").max(500).optional(),
+  userToken: Joi.string().allow("").max(500).optional(),
   mappingNotes: Joi.string().allow("").max(1000).optional(),
   lastSyncAt: Joi.date().allow(null).optional(),
   isActive: Joi.boolean().optional(),
@@ -80,6 +95,7 @@ const updateAutomationSchema = Joi.object({
   webhookPath: Joi.string().allow("").max(200),
   verifyToken: Joi.string().allow("").max(150),
   accessToken: Joi.string().allow("").max(500),
+  userToken: Joi.string().allow("").max(500),
   mappingNotes: Joi.string().allow("").max(1000),
   lastSyncAt: Joi.date().allow(null),
   isActive: Joi.boolean(),
@@ -90,6 +106,8 @@ const createLeadSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   phone: Joi.string().min(7).max(20).required(),
   email: Joi.string().email().allow("").optional(),
+  streetAddress: Joi.string().allow("").optional(),
+  city: Joi.string().allow("").optional(),
   propertyType: Joi.string()
     .valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other")
     .default("Apartment"),
@@ -111,6 +129,13 @@ const createLeadSchema = Joi.object({
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),
   followUpNote: Joi.string().allow("").optional(),
+  formResponses: Joi.array().items(
+    Joi.object({
+      fieldKey: Joi.string().required(),
+      label: Joi.string().required(),
+      value: Joi.string().allow(""),
+    })
+  ).optional(),
   tags: Joi.array().items(Joi.string()).optional(),
 });
 
@@ -118,6 +143,8 @@ const updateLeadSchema = Joi.object({
   name: Joi.string().min(2).max(100),
   phone: Joi.string().min(7).max(20),
   email: Joi.string().email().allow(""),
+  streetAddress: Joi.string().allow(""),
+  city: Joi.string().allow(""),
   propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other"),
   budget: Joi.object({
     min: Joi.number().min(0),
@@ -133,8 +160,20 @@ const updateLeadSchema = Joi.object({
   assignedTo: Joi.string().hex().length(24).allow(null, ""),
   followUpDate: Joi.date().allow(null),
   followUpNote: Joi.string().allow(""),
+  formResponses: Joi.array().items(
+    Joi.object({
+      fieldKey: Joi.string().required(),
+      label: Joi.string().required(),
+      value: Joi.string().allow(""),
+    })
+  ),
+  followUp2: Joi.date().allow(null, ""),
   siteVisitDate: Joi.date().allow(null),
   siteVisitDone: Joi.boolean(),
+  remark1: Joi.string().allow("").max(500),
+  remark2: Joi.string().allow("").max(500),
+  remark: Joi.string().allow("").max(1000),
+  booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
 }).min(1); // At least one field required for update
@@ -153,6 +192,8 @@ const importLeadsSchema = Joi.object({
       name: Joi.string().min(2).max(100).required(),
       phone: Joi.string().min(7).max(20).required(),
       email: Joi.string().email().allow("").optional(),
+      streetAddress: Joi.string().allow("").optional(),
+      city: Joi.string().allow("").optional(),
       propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other").default("Apartment"),
       budget: Joi.object({
         min: Joi.number().min(0).default(0),
@@ -168,7 +209,18 @@ const importLeadsSchema = Joi.object({
       assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
       followUpDate: Joi.date().allow(null).optional(),
       followUpNote: Joi.string().allow("").optional(),
+      formResponses: Joi.array().items(
+        Joi.object({
+          fieldKey: Joi.string().required(),
+          label: Joi.string().required(),
+          value: Joi.string().allow(""),
+        })
+      ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
+      booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow("").optional(),
+      remark: Joi.string().allow("").optional(),
+      remark1: Joi.string().allow("").optional(),
+      remark2: Joi.string().allow("").optional(),
     })
   ).min(1).required(),
 });

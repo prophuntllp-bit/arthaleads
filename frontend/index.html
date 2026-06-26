@@ -1,27 +1,243 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f97316" />
-    <meta name="description" content="PropCRM - Real Estate CRM for Sales Teams by PropHunt LLP" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- Primary Meta -->
+    <title>Arthaleads - Real Estate CRM</title>
+    <meta name="description" content="Arthaleads brings every property lead into one premium workspace. Manage Facebook ads, Google campaigns, WhatsApp enquiries, and team follow-ups - built for Pune's real estate market." />
+    <meta name="theme-color" content="#FF6B00" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="PropCRM" />
-    <meta name="application-name" content="PropCRM" />
-    <title>PropCRM — Real Estate CRM</title>
-    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-title" content="Arthaleads" />
+    <meta name="application-name" content="Arthaleads" />
+
+    <!-- Canonical — set per-page via react-helmet-async; homepage default only -->
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="Arthaleads">
+    <meta property="og:title" content="Arthaleads - Every Lead. One Place.">
+    <meta property="og:description" content="Premium real estate CRM for Pune developers and channel partners. Manage all your property leads in one workspace.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.arthaleads.com">
+    <meta property="og:image" content="https://www.arthaleads.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:alt" content="Arthaleads – Real Estate CRM dashboard showing lead pipeline and team performance">
+    <meta property="og:locale" content="en_IN">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@arthaleads">
+    <meta name="twitter:title" content="Arthaleads - Real Estate CRM for Pune">
+    <meta name="twitter:description" content="Manage every property lead in one premium workspace. Built for developers & channel partners.">
+    <meta name="twitter:image" content="https://www.arthaleads.com/og-image.png">
+    <meta name="twitter:image:alt" content="Arthaleads CRM dashboard">
+
+    <!-- Structured Data — Organization + SoftwareApplication + WebSite -->
+    <script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://www.arthaleads.com/#organization",
+    "name": "Arthaleads",
+    "url": "https://www.arthaleads.com",
+    "logo": "https://www.arthaleads.com/logo.png",
+    "description": "Arthaleads is a real estate CRM platform built for Indian property developers, brokers and channel partners. Capture and manage leads from Facebook, Google, WhatsApp and website forms in one workspace.",
+    "foundingDate": "2022",
+    "foundingLocation": "Pune, Maharashtra, India",
+    "areaServed": "IN",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Pune",
+      "addressRegion": "Maharashtra",
+      "addressCountry": "IN"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "url": "https://www.arthaleads.com/contact",
+      "availableLanguage": ["English", "Hindi", "Marathi"]
+    },
+    "sameAs": [
+      "https://www.linkedin.com/company/arthaleads",
+      "https://twitter.com/arthaleads"
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://www.arthaleads.com/#software",
+    "name": "Arthaleads",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "CRM Software",
+    "operatingSystem": "Web, Android, iOS",
+    "description": "Real estate CRM for Indian developers and channel partners. Manage leads from Facebook Ads, Google Ads, WhatsApp and website forms. Track team performance, site visits, follow-ups and conversions.",
+    "url": "https://www.arthaleads.com",
+    "screenshot": "https://www.arthaleads.com/dashboard-dark.png",
+    "featureList": "Lead capture from Facebook & Google Ads, WhatsApp lead management, team assignment & tracking, site visit scheduling, follow-up reminders, performance analytics, WordPress plugin, CSV import/export",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "INR",
+      "lowPrice": "0",
+      "offerCount": "3",
+      "offers": [
+        { "@type": "Offer", "name": "Starter", "description": "For small teams up to 3 agents" },
+        { "@type": "Offer", "name": "Growth",  "description": "For growing teams with automation and analytics" },
+        { "@type": "Offer", "name": "Enterprise", "description": "For large developers and channel partner networks" }
+      ]
+    },
+    "publisher": { "@id": "https://www.arthaleads.com/#organization" },
+    "author":    { "@id": "https://www.arthaleads.com/#organization" }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": "https://www.arthaleads.com/#website",
+    "name": "Arthaleads",
+    "url": "https://www.arthaleads.com",
+    "description": "Real estate CRM for Indian property developers and channel partners",
+    "publisher": { "@id": "https://www.arthaleads.com/#organization" },
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://www.arthaleads.com/blog?search={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+]
+    </script>
+
+    <!-- Favicon / App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Preload splash logo so it's ready instantly -->
+    <link rel="preload" as="image" href="/logo.png" />
+
+    <!-- Sitemap autodiscovery -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- Service Worker - registered here so PWABuilder / crawlers can detect it -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+
+    <style>
+      /* HARDCODED: Inter is the only font. Self-hosted via @fontsource-variable/inter
+         (served from Vercel - no Google Fonts CDN dependency, works on all browsers).
+         Applied before React loads to prevent any flash to system font.
+         DO NOT remove or change this block. */
+      *, *::before, *::after { font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important; }
+    </style>
   </head>
   <body>
+    <!-- ── Splash screen ──────────────────────────────────────────────────────
+         Shown immediately (before React loads). Pure CSS - zero JS cost.
+         Faded out by main.jsx once React has painted the first frame.
+    ──────────────────────────────────────────────────────────────────────── -->
+    <div id="app-splash">
+      <!-- Expanding glow ring -->
+      <div class="splash-ring"></div>
+      <!-- Logo -->
+      <img src="/logo.png" alt="Arthaleads" class="splash-logo" />
+      <!-- Loading dots -->
+      <div class="splash-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 36px;
+        background: #111113;
+        transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      #app-splash.splash-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Logo - gentle breathe + glow pulse */
+      .splash-logo {
+        width: 100px;
+        height: 100px;
+        border-radius: 28px;
+        animation: splash-breathe 2s ease-in-out infinite;
+        will-change: transform, filter;
+      }
+      @keyframes splash-breathe {
+        0%, 100% {
+          transform: scale(1);
+          filter: drop-shadow(0 0 18px rgba(255, 107, 0, 0.45));
+        }
+        50% {
+          transform: scale(1.055);
+          filter: drop-shadow(0 0 38px rgba(255, 107, 0, 0.80));
+        }
+      }
+
+      /* Expanding ring behind the logo */
+      .splash-ring {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 36px;
+        border: 1.5px solid rgba(255, 107, 0, 0.55);
+        animation: splash-ring 2s ease-out infinite;
+        will-change: transform, opacity;
+      }
+      @keyframes splash-ring {
+        0%   { transform: scale(0.82); opacity: 0.7; }
+        100% { transform: scale(1.55); opacity: 0;   }
+      }
+
+      /* Loading dots */
+      .splash-dots {
+        display: flex;
+        gap: 8px;
+      }
+      .splash-dots span {
+        display: block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255, 107, 0, 0.75);
+        animation: splash-dot 1.2s ease-in-out infinite;
+        will-change: transform, opacity;
+      }
+      .splash-dots span:nth-child(1) { animation-delay: 0s;    }
+      .splash-dots span:nth-child(2) { animation-delay: 0.18s; }
+      .splash-dots span:nth-child(3) { animation-delay: 0.36s; }
+      @keyframes splash-dot {
+        0%, 80%, 100% { transform: scale(0.75); opacity: 0.35; }
+        40%            { transform: scale(1.15); opacity: 1;    }
+      }
+    </style>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

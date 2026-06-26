@@ -1,0 +1,44 @@
+User-agent: *
+Allow: /
+Allow: /blog
+Allow: /about-us
+Allow: /careers
+Allow: /contact
+Allow: /case-studies
+Allow: /product-updates
+Allow: /help-guide
+Allow: /wordpress-plugin
+Allow: /privacy
+Allow: /terms
+Allow: /refund
+Allow: /cookie-policy
+Allow: /security
+Allow: /status
+Allow: /refer
+Allow: /api-docs
+Allow: /compare
+Allow: /pricing
+
+# Internal CRM pages - not for indexing
+Disallow: /dashboard
+Disallow: /leads
+Disallow: /pipeline
+Disallow: /projects
+Disallow: /followups
+Disallow: /attendance
+Disallow: /performance
+Disallow: /automation
+Disallow: /team
+Disallow: /settings
+Disallow: /help-support
+Disallow: /super-admin
+Disallow: /dump-leads
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /fb-callback
+Disallow: /share-target
+Disallow: /api/
+
+Sitemap: https://www.arthaleads.com/sitemap.xml

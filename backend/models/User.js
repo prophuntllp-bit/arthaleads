@@ -2,7 +2,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const ROLES = ["admin", "manager", "agent"];
+const ROLES = ["super_admin", "admin", "manager", "agent"];
 
 const userSchema = new mongoose.Schema(
   {
@@ -23,9 +23,14 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: false, // optional for Google OAuth users
       minlength: [6, "Password must be at least 6 characters"],
       select: false, // never returned in queries by default
+    },
+    googleId: {
+      type: String,
+      default: null,
+      select: false,
     },
     role: {
       type: String,
@@ -40,20 +45,33 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: false, default: null, index: true },
+    passwordResetToken:   { type: String, select: false },
+    passwordResetExpires: { type: Date,   select: false },
+    // Phone OTP (sent via email)
+    otpCode:      { type: String, select: false },
+    otpExpiresAt: { type: Date,   select: false },
+    // Brute-force lockout
+    loginAttempts: { type: Number, default: 0,    select: false },
+    lockoutUntil:  { type: Date,   default: null,  select: false },
   },
   { timestamps: true }
 );
 
-// Hash password before saving
+// Hash password before saving (skip for Google-only accounts)
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Compare plain password with hashed
+// Compare plain password with hashed.
+// Returns false when no password is set (Google-only accounts) or the password
+// field wasn't selected — bcrypt.compare would otherwise throw
+// "Illegal arguments: string, undefined" and surface as a raw 500 to the user.
 userSchema.methods.comparePassword = async function (plain) {
+  if (!plain || !this.password) return false;
   return bcrypt.compare(plain, this.password);
 };
 

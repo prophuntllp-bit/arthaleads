@@ -19,3 +19,22 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+.vercel
+
+# Capacitor Android project — committed; android/.gitignore handles internal exclusions.
+# google-services.json is injected by CI from GOOGLE_SERVICES_JSON secret (never committed).
+frontend/android/app/google-services.json
+
+# Android release keystore — store privately, add base64 as KEYSTORE_BASE64 GitHub secret
+android-release/
+frontend/android/app/release.keystore
+*.jks
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# ZIP artifacts — generate locally, never commit
+*.zip

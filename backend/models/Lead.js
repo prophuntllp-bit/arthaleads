@@ -1,4 +1,4 @@
-// models/Lead.js - Full Real Estate CRM Lead Schema
+﻿// models/Lead.js - Full Real Estate CRM Lead Schema
 const mongoose = require("mongoose");
 
 // ── Sub-schemas ────────────────────────────────────────────────────────────────
@@ -6,8 +6,8 @@ const mongoose = require("mongoose");
 const noteSchema = new mongoose.Schema(
   {
     text: { type: String, required: true, trim: true },
-    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    addedByName: { type: String }, // denormalized for fast display
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // optional - system/webhook notes have no user
+    addedByName: { type: String, default: "" },
   },
   { timestamps: true }
 );
@@ -25,6 +25,15 @@ const activitySchema = new mongoose.Schema(
     meta: { type: mongoose.Schema.Types.Mixed, default: {} }, // e.g. { from: "New", to: "Contacted" }
   },
   { timestamps: true }
+);
+
+const formResponseSchema = new mongoose.Schema(
+  {
+    fieldKey: { type: String, required: true, trim: true },
+    label: { type: String, required: true, trim: true },
+    value: { type: String, default: "", trim: true },
+  },
+  { _id: false }
 );
 
 // ── Main Lead Schema ───────────────────────────────────────────────────────────
@@ -49,6 +58,16 @@ const leadSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email"],
+      default: "",
+    },
+    streetAddress: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    city: {
+      type: String,
+      trim: true,
       default: "",
     },
 
@@ -85,42 +104,89 @@ const leadSchema = new mongoose.Schema(
     // ── Lead Source ───────────────────────────────────────────────────────────
     source: {
       type: String,
-      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"],
+      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"],
       default: "Manual",
     },
 
     // ── Ownership & Assignment ────────────────────────────────────────────────
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // required removed - external webhook leads (Facebook, Website) have no CRM creator
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     assignedToName: { type: String, default: "" }, // denormalized
 
     // ── Follow-up ─────────────────────────────────────────────────────────────
-    followUpDate: { type: Date, default: null },
-    followUpNote: { type: String, default: "" },
+    followUpDate:       { type: Date,   default: null },
+    followUpNote:       { type: String, default: "" },
+    followUpSetBy:      { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    followUpSetByName:  { type: String, default: "" },
 
     // ── Activity & Notes ──────────────────────────────────────────────────────
     notes: [noteSchema],
     activities: [activitySchema],
+    formResponses: [formResponseSchema],
 
     // ── Site Visit ────────────────────────────────────────────────────────────
     siteVisitDate: { type: Date, default: null },
     siteVisitDone: { type: Boolean, default: false },
 
+    // ── Telecaller Remarks ────────────────────────────────────────────────────
+    remark1:   { type: String, trim: true, default: "" },
+    remark2:   { type: String, trim: true, default: "" },
+    remark3:   { type: String, trim: true, default: "" },
+    remark4:   { type: String, trim: true, default: "" },
+    remark:    { type: String, trim: true, default: "" },
+    followUp2: { type: Date, default: null },
+    booking: {
+      type: String,
+      enum: ["", "Interested", "Not Interested", "Not Reachable", "Low Budget", "Call Back", "Site Visit Booked", "Site Visit Done", "Booked", "Other Location", "Commercial"],
+      default: "",
+    },
+
+    // ── Lead Source Metadata ───────────────────────────────────────────────────
+    leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP - Lead Ads", "prophuntllp.com"
+    formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
+    sourcePage:      { type: String, trim: true, default: "" }, // full page URL where the form was submitted
+    sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")
+    requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
+
+    // ── Response Time Tracking ────────────────────────────────────────────────
+    firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"
+
     // ── Misc ──────────────────────────────────────────────────────────────────
     tags: [{ type: String, trim: true }],
     isArchived: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt:  { type: Date, default: null },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+    whatsappConversationId: { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", default: null },
   },
   { timestamps: true }
 );
 
 // ── Indexes ───────────────────────────────────────────────────────────────────
-leadSchema.index({ status: 1 });
-leadSchema.index({ source: 1 });
-leadSchema.index({ assignedTo: 1 });
-leadSchema.index({ createdBy: 1 });
+// Single-field (kept for backward compat)
 leadSchema.index({ followUpDate: 1 });
-leadSchema.index({ priority: 1 });
 leadSchema.index({ createdAt: -1 });
+
+// Compound indexes - these cover the most common multi-field queries:
+// "all active leads for this org sorted by date" (dashboard, leads list)
+leadSchema.index({ orgId: 1, isArchived: 1, createdAt: -1 });
+// "leads by status for this org" (pipeline, analytics)
+leadSchema.index({ orgId: 1, status: 1, isArchived: 1 });
+// "leads assigned to a user for this org" (agent view, performance)
+leadSchema.index({ orgId: 1, assignedTo: 1, isArchived: 1 });
+// "deleted/dump leads for this org"
+leadSchema.index({ orgId: 1, isDeleted: 1 });
+// "follow-up leads for this org by date" (followups page)
+leadSchema.index({ orgId: 1, followUpDate: 1, isArchived: 1 });
+// "alerts: new leads by org + date" (sidebar alert polling)
+leadSchema.index({ orgId: 1, createdAt: -1, isArchived: 1 });
+// "recent activity feed sort" (analytics dashboard recentActivity facet)
+leadSchema.index({ orgId: 1, updatedAt: -1, isArchived: 1 });
+// phone dedup check
+leadSchema.index({ orgId: 1, phone: 1 });
+// domain filter
+leadSchema.index({ orgId: 1, sourceDomain: 1 });
 
 const Lead = mongoose.model("Lead", leadSchema);
 module.exports = Lead;

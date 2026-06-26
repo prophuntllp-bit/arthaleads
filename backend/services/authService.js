@@ -1,47 +1,268 @@
-// services/authService.js
+﻿// services/authService.js
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const Lead = require("../models/Lead");
+const Lead        = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
+const Project     = require("../models/Project");
+const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
+const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
+const logger = require("../config/logger");
+
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_MS          = 15 * 60 * 1000; // 15 minutes
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+    expiresIn: process.env.JWT_EXPIRES_IN || "30d",
   });
 
 const authService = {
   async signup(data) {
-    const existing = await User.findOne({ email: data.email });
+    const normalizedEmail = (data.email || "").toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) throw new AppError("Email already registered", 409);
 
-    const user = await User.create(data);
+    const normPhone = String(data.phone || "").replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1").slice(-10);
+
+    // Create organization first
+    const orgName = data.orgName || `${data.name}'s Workspace`;
+    let slug = Organization.generateSlug(orgName);
+    // Ensure slug uniqueness
+    const slugExists = await Organization.findOne({ slug });
+    if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
+
+    const org = await Organization.create({ name: orgName, slug });
+
+    // Attribute referral if a valid code was passed
+    if (data.referralCode) {
+      const code = String(data.referralCode).toUpperCase();
+      const referrer = await Organization.findOne({ referralCode: code }).lean();
+      if (referrer && referrer._id.toString() !== org._id.toString()) {
+        org.referredBy = referrer._id;
+        await org.save({ validateBeforeSave: false });
+      }
+    }
+
+    let user;
+    try {
+      user = await User.create({ ...data, email: normalizedEmail, phone: normPhone, orgId: org._id, role: "admin" });
+    } catch (err) {
+      if (err.code === 11000) throw new AppError("Email already registered", 409);
+      throw err;
+    }
     const token = signToken(user._id);
-    return { token, user };
+
+    // Fire-and-forget welcome email - don't block the signup response
+    sendWelcomeEmail(user.email, user.name, org.name)
+      .then(() => console.log(`[signup] ✅ welcome email sent to ${user.email}`))
+      .catch((err) => console.error(`[signup] ❌ welcome email failed:`, err.message));
+
+    return { token, user, org };
   },
 
-  async login(email, password) {
-    // Explicitly select password (it's excluded by default)
-    const user = await User.findOne({ email }).select("+password");
-    if (!user || !(await user.comparePassword(password))) {
-      throw new AppError("Invalid email or password", 401);
+  async login(identifier, password, ip = "unknown") {
+    // Support login with either email OR phone number
+    const isPhone = /^\+?[0-9]{7,15}$/.test((identifier || "").replace(/\s/g, ""));
+    let userQuery;
+    if (isPhone) {
+      // Normalise: strip country code prefix so we match any stored format
+      const raw  = identifier.replace(/\s/g, "");
+      const norm = raw.replace(/^\+?91/, "").replace(/^0/, "").slice(-10);
+      userQuery = { phone: { $in: [norm, `+91${norm}`, `91${norm}`, `0${norm}`, raw] } };
+    } else {
+      userQuery = { email: identifier.toLowerCase().trim() };
     }
-    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    // Select lockout fields alongside password
+    const user = await User.findOne(userQuery)
+      .select("+password +loginAttempts +lockoutUntil");
+
+    // Reject deactivated accounts before touching attempt counters
+    if (user && !user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    // ── Brute-force lockout check ─────────────────────────────────────────────
+    if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
+      const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
+      logger.warn(`[login] locked account attempt - identifier: ${identifier}, ip: ${ip}`);
+      throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
+    }
+
+    const validPassword = user && await user.comparePassword(password);
+
+    if (!user || !validPassword) {
+      // Log and increment attempt counter
+      logger.warn(`[login] failed attempt - identifier: ${identifier}, ip: ${ip}`);
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
+          user.loginAttempts = 0;
+          await user.save({ validateBeforeSave: false });
+          logger.warn(`[login] account locked - identifier: ${identifier}, ip: ${ip}, locked for 15 min`);
+          throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
+        }
+        await user.save({ validateBeforeSave: false });
+      }
+      throw new AppError("Invalid email/phone or password", 401);
+    }
+
+    // ── Successful login - reset lockout fields ───────────────────────────────
+    user.loginAttempts = 0;
+    user.lockoutUntil  = null;
+    user.lastLogin     = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
+      : null;
+    return { token, user, org };
+  },
+
+  // Super-admin only login — rejects any non-super_admin credential
+  async adminLogin(email, password, ip = "unknown") {
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select("+password +loginAttempts +lockoutUntil");
+
+    if (user?.lockoutUntil && user.lockoutUntil > Date.now()) {
+      const minsLeft = Math.ceil((user.lockoutUntil - Date.now()) / 60000);
+      throw new AppError(`Too many failed attempts. Try again in ${minsLeft} minute(s).`, 429);
+    }
+
+    const validPassword = user && await user.comparePassword(password);
+    if (!user || !validPassword) {
+      if (user) {
+        user.loginAttempts = (user.loginAttempts || 0) + 1;
+        if (user.loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          user.lockoutUntil  = new Date(Date.now() + LOCKOUT_MS);
+          user.loginAttempts = 0;
+          await user.save({ validateBeforeSave: false });
+          throw new AppError("Too many failed attempts. Account locked for 15 minutes.", 429);
+        }
+        await user.save({ validateBeforeSave: false });
+      }
+      // Generic message - don't reveal whether email exists
+      throw new AppError("Invalid credentials", 401);
+    }
+
+    // Only super_admin can use this endpoint
+    if (user.role !== "super_admin") {
+      logger.warn(`[admin-login] non-super_admin attempt - email: ${email}, ip: ${ip}`);
+      throw new AppError("Access denied. This login is for platform administrators only.", 403);
+    }
+
+    if (!user.isActive) throw new AppError("Account deactivated.", 403);
+
+    user.loginAttempts = 0;
+    user.lockoutUntil  = null;
+    user.lastLogin     = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    return { token, user, org: null };
+  },
+
+  async googleAuth(credential) {
+    // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
+    // Verify it by calling Google's userinfo endpoint - no client-secret needed.
+    const response = await fetch(
+      `https://www.googleapis.com/oauth2/v3/userinfo`,
+      { headers: { Authorization: `Bearer ${credential}` } }
+    );
+    const payload = await response.json();
+
+    if (!response.ok || payload.error) {
+      console.error("[googleAuth] userinfo failed:", payload);
+      throw new AppError("Google sign-in failed. Please try again.", 401);
+    }
+
+    const { sub: googleId, email, name, picture, email_verified } = payload;
+
+    if (!email) throw new AppError("Google account has no email", 400);
+
+    // Reject unverified Google emails. Google issues tokens for unverified
+    // addresses in some Workspace flows; without this check an attacker holding
+    // an unverified account for victim@x.com could link to an existing CRM user
+    // by email (see "link the Google account" path below) and hijack it.
+    // userinfo returns email_verified as a boolean or the string "true"/"false".
+    const isVerified = email_verified === true || email_verified === "true";
+    if (!isVerified) {
+      throw new AppError("Your Google account email is not verified. Please verify it with Google first.", 400);
+    }
+
+    // Find existing user by googleId or email
+    let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");
+
+    if (user) {
+      // Always check isActive before doing anything else with the account
+      if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+      if (!user.googleId) {
+        // Only auto-link Google to accounts that have no password set (e.g. admin-invited
+        // team members). Accounts that already have a password require the owner to
+        // explicitly link Google from their profile settings — silent linking is a
+        // known account-takeover vector if a Google account shares the same email.
+        const userWithPwd = await User.findById(user._id).select("+password");
+        if (userWithPwd?.password) {
+          throw new AppError(
+            "An account with this email already exists. Please sign in with your email and password.",
+            400
+          );
+        }
+        user.googleId = googleId;
+        if (picture && !user.avatar) user.avatar = picture;
+      }
+    } else {
+      // New Google user - create their own org and make them admin
+      const orgName = `${name}'s Workspace`;
+      let slug = Organization.generateSlug(orgName);
+      const slugExists = await Organization.findOne({ slug });
+      if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
+      const org = await Organization.create({ name: orgName, slug });
+
+      user = await User.create({
+        name,
+        email,
+        googleId,
+        avatar: picture || "",
+        role: "admin",
+        orgId: org._id,
+      });
+
+      // Fire-and-forget welcome email for new Google signups
+      sendWelcomeEmail(user.email, user.name, org.name)
+        .then(() => console.log(`[googleAuth] ✅ welcome email sent to ${user.email}`))
+        .catch((err) => console.error(`[googleAuth] ❌ welcome email failed:`, err.message));
+    }
 
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
 
     const token = signToken(user._id);
-    return { token, user };
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
+      : null;
+    return { token, user, org };
   },
 
   async getMe(userId) {
     const user = await User.findById(userId);
     if (!user) throw new AppError("User not found", 404);
-    return user;
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
+      : null;
+    return { user, org };
   },
 
-  async getAllAgents() {
-    return User.find({ isActive: true }).select("name email role phone avatar");
+  async getAllAgents(orgId) {
+    // Return all active team members (agents + managers + admins) so any of them
+    // can be assigned to a project. Excludes super_admin (system-level role).
+    return User.find({ orgId, isActive: true, role: { $in: ["agent", "manager", "admin"] } })
+      .select("name email role phone avatar")
+      .sort({ name: 1 })
+      .lean();
   },
 
   async updateProfile(userId, updates, actor) {
@@ -78,20 +299,50 @@ const authService = {
   },
 
   // Admin only
-  async getAllUsers() {
-    return User.find().select("-password").sort({ createdAt: -1 });
+  async getAllUsers(orgId) {
+    return User.find({ orgId }).select("-password").sort({ createdAt: -1 }).lean();
   },
 
-  async createUser(payload) {
+  async createUser(payload, orgId, addedByName) {
     const existing = await User.findOne({ email: payload.email });
     if (existing) throw new AppError("Email already registered", 409);
 
-    return User.create(payload);
+    // Enforce per-plan team member limits
+    // starter: 3  |  trial/growth/pro: 20  |  enterprise: unlimited
+    const org = await Organization.findById(orgId).select("plan").lean();
+    if (org && org.plan !== "enterprise") {
+      const LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+      const limit = LIMITS[org.plan];
+      if (limit !== undefined) {
+        const currentCount = await User.countDocuments({ orgId, isActive: true });
+        if (currentCount >= limit) {
+          const planLabel = org.plan === "starter" ? "Starter" : "Growth";
+          const next = org.plan === "starter" ? "Growth" : "Enterprise";
+          throw new AppError(
+            `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
+            403
+          );
+        }
+      }
+    }
+
+    const user = await User.create({ ...payload, orgId });
+
+    // Look up org name for the invite email
+    Organization.findById(orgId).select("name").lean()
+      .then((org) => sendTeamInviteEmail(user.email, user.name, org?.name || "your workspace", addedByName))
+      .then(() => console.log(`[createUser] ✅ invite email sent to ${user.email}`))
+      .catch((err) => console.error(`[createUser] ❌ invite email failed:`, err.message));
+
+    return user;
   },
 
-  async updateUser(targetId, updates, adminId) {
+  async updateUser(targetId, updates, adminId, adminOrgId) {
     const user = await User.findById(targetId).select("+password");
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
     if (targetId === adminId.toString() && updates.isActive === false) {
       throw new AppError("You cannot deactivate yourself", 400);
     }
@@ -108,79 +359,249 @@ const authService = {
     return user;
   },
 
-  async deleteUser(targetId, adminId) {
+  async deleteUser(targetId, adminId, adminOrgId) {
     if (targetId === adminId.toString()) {
       throw new AppError("You cannot delete yourself", 400);
     }
 
     const user = await User.findById(targetId);
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
 
     await user.deleteOne();
     return true;
   },
 
-  async toggleUserActive(targetId, adminId) {
+  async toggleUserActive(targetId, adminId, adminOrgId) {
     if (targetId === adminId.toString()) throw new AppError("Cannot deactivate yourself", 400);
     const user = await User.findById(targetId);
     if (!user) throw new AppError("User not found", 404);
+    if (adminOrgId && user.orgId?.toString() !== adminOrgId.toString()) {
+      throw new AppError("Access denied", 403);
+    }
     user.isActive = !user.isActive;
     await user.save({ validateBeforeSave: false });
     return user;
   },
 
-  async getPerformance(actor) {
+  // ── Forgot password - generate token + send email ─────────────────────────
+  async forgotPassword(email) {
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
+      .select("+passwordResetToken +passwordResetExpires");
+
+    // Always respond with success to prevent email enumeration attacks —
+    // including Google-only accounts (returning a distinct error would confirm
+    // the address is registered and reveal the auth method used).
+    if (!user) return;
+
+    const hasPassword = await User.findById(user._id).select("+password");
+    if (!hasPassword?.password) return; // Google-only: respond silently
+
+    // Generate a 32-byte random token, store the SHA-256 hash in DB
+    const rawToken   = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    user.passwordResetToken   = hashedToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save({ validateBeforeSave: false });
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
+
+    // Fire-and-forget - respond immediately, email sends in background
+    sendPasswordResetEmail(user.email, user.name, resetUrl)
+      .then(() => console.log(`[forgotPassword] ✅ email sent to ${user.email}`))
+      .catch((err) => console.error(`[forgotPassword] ❌ email failed for ${user.email}:`, err.message, err.code));
+    // Return immediately - user sees success, email delivers in background
+  },
+
+  // ── Reset password - verify token + set new password ─────────────────────
+  async resetPassword(rawToken, newPassword) {
+    const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken:   hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    }).select("+passwordResetToken +passwordResetExpires");
+
+    if (!user) throw new AppError("Reset link is invalid or has expired.", 400);
+
+    user.password             = newPassword;
+    user.passwordResetToken   = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    const token = signToken(user._id);
+    const org   = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
+      : null;
+    return { token, user, org };
+  },
+
+  // ── MSG91 OTP login ───────────────────────────────────────────────────────────
+  // Called after MSG91 has already verified the OTP. We just look up the user.
+  async loginByPhone(phone) {
+    const normalise = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1").replace(/^0(\d{10})$/, "$1");
+    const norm = normalise(phone);
+    const variants = [norm, `+91${norm}`, `91${norm}`, `0${norm}`];
+
+    const user = await User.findOne({ phone: { $in: variants } });
+    if (!user) {
+      throw new AppError(
+        "No account found with this phone number. Please sign up first or ask your admin to add your number.",
+        404
+      );
+    }
+    if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
+
+    const token = signToken(user._id);
+    const org = user.orgId
+      ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch").lean()
+      : null;
+    return { token, user, org };
+  },
+
+  async getPerformance(actor, { dateFrom, dateTo } = {}) {
     const memberMatch = actor.role === "manager"
-      ? { role: { $in: ["manager", "agent"] } }
-      : { role: { $in: ["admin", "manager", "agent"] } };
+      ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
+      : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
 
-    const users = await User.find(memberMatch).select("name email role avatar isActive");
-    const userIds = users.map((user) => user._id);
-
-    const [assignedCounts, closedWonCounts, siteVisitCounts, newCounts] = await Promise.all([
-      Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false } },
-        { $group: { _id: "$assignedTo", totalAssigned: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "Closed Won" } },
-        { $group: { _id: "$assignedTo", closedWon: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "Site Visit" } },
-        { $group: { _id: "$assignedTo", siteVisits: { $sum: 1 } } },
-      ]),
-      Lead.aggregate([
-        { $match: { assignedTo: { $in: userIds }, isArchived: false, status: "New" } },
-        { $group: { _id: "$assignedTo", newLeads: { $sum: 1 } } },
-      ]),
-    ]);
+    const users   = await User.find(memberMatch).select("name email role avatar isActive");
+    const userIds = users.map((u) => u._id);
+    const orgId   = actor.orgId;
 
     const mapFrom = (items, field) =>
-      items.reduce((acc, item) => {
+      (items || []).reduce((acc, item) => {
         acc[item._id.toString()] = item[field];
         return acc;
       }, {});
 
-    const assignedMap = mapFrom(assignedCounts, "totalAssigned");
-    const wonMap = mapFrom(closedWonCounts, "closedWon");
-    const visitMap = mapFrom(siteVisitCounts, "siteVisits");
-    const newMap = mapFrom(newCounts, "newLeads");
+    // Build optional date filter for createdAt
+    const dateFilter = {};
+    if (dateFrom) dateFilter.$gte = new Date(dateFrom);
+    if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+    const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+
+    // ── Main pipeline (Lead model, keyed by assignedTo) ──────────────────────
+    const [pipelineFacet] = await Lead.aggregate([
+      { $match: { orgId, assignedTo: { $in: userIds }, isArchived: { $ne: true }, ...dateMatch } },
+      { $facet: {
+        assigned:   [{ $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        closedWon:  [{ $match: { status: "Closed Won"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        siteVisits: [{ $match: { status: "Site Visit"  } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        newLeads:   [{ $match: { status: "New"         } }, { $group: { _id: "$assignedTo", count: { $sum: 1 } } }],
+        // avgResponseTime: avg ms between lead creation and first "Contacted" status
+        responseTime: [
+          { $match: { firstContactedAt: { $ne: null } } },
+          { $group: {
+            _id: "$assignedTo",
+            avgMs: { $avg: { $subtract: ["$firstContactedAt", "$createdAt"] } },
+          }},
+        ],
+      }},
+    ]);
+
+    const pl_assigned   = mapFrom(pipelineFacet?.assigned,     "count");
+    const pl_won        = mapFrom(pipelineFacet?.closedWon,   "count");
+    const pl_visits     = mapFrom(pipelineFacet?.siteVisits,  "count");
+    const pl_new        = mapFrom(pipelineFacet?.newLeads,    "count");
+    const pl_respTime   = mapFrom(pipelineFacet?.responseTime,"avgMs");
+
+    // ── Project pipeline - keyed by Project.assignedTo ───────────────────────
+    // The project's assignedTo array tells us which agents are responsible for
+    // working those leads. We $lookup the parent project, $unwind assignedTo,
+    // then group by the assigned user - regardless of who imported the leads.
+    const [projectFacet] = await ProjectLead.aggregate([
+      { $match: { orgId, ...dateMatch } },
+      { $lookup: {
+          from: "projects",
+          localField: "project",
+          foreignField: "_id",
+          as: "proj",
+      }},
+      { $unwind: "$proj" },
+      // One row per (lead × assigned user)
+      { $unwind: "$proj.assignedTo" },
+      // Only count for users in our visible team
+      { $match: { "proj.assignedTo": { $in: userIds } } },
+      { $facet: {
+        assigned:        [{ $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        booked:          [{ $match: { booking: "Booked"           } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        siteVisitBooked: [{ $match: { booking: "Site Visit Booked"} }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        siteVisitDone:   [{ $match: { booking: "Site Visit Done"  } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        interested:      [{ $match: { booking: "Interested"       } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        callBack:        [{ $match: { booking: "Call Back"        } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        notInterested:   [{ $match: { booking: "Not Interested"   } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+        notReachable:    [{ $match: { booking: "Not Reachable"    } }, { $group: { _id: "$proj.assignedTo", count: { $sum: 1 } } }],
+      }},
+    ]);
+
+    const pr_assigned        = mapFrom(projectFacet?.assigned,        "count");
+    const pr_booked          = mapFrom(projectFacet?.booked,          "count");
+    const pr_siteVisitBooked = mapFrom(projectFacet?.siteVisitBooked, "count");
+    const pr_siteVisitDone   = mapFrom(projectFacet?.siteVisitDone,   "count");
+    const pr_interested      = mapFrom(projectFacet?.interested,      "count");
+    const pr_callBack        = mapFrom(projectFacet?.callBack,        "count");
+    const pr_notInterested   = mapFrom(projectFacet?.notInterested,   "count");
+    const pr_notReachable    = mapFrom(projectFacet?.notReachable,    "count");
 
     return users.map((user) => {
       const id = user._id.toString();
-      const totalAssigned = assignedMap[id] || 0;
-      const closedWon = wonMap[id] || 0;
-      const siteVisits = visitMap[id] || 0;
-      const newLeads = newMap[id] || 0;
+
+      // Pipeline stats
+      const rawAvgMs = pl_respTime[id] || null;
+      // Convert ms → human-readable: < 60min → "Xm", < 24h → "Xh Ym", else "Xd Yh"
+      let avgResponseTime = null;
+      if (rawAvgMs != null) {
+        const mins  = Math.round(rawAvgMs / 60000);
+        const hours = Math.floor(mins / 60);
+        const days  = Math.floor(hours / 24);
+        if (days > 0)        avgResponseTime = `${days}d ${hours % 24}h`;
+        else if (hours > 0)  avgResponseTime = `${hours}h ${mins % 60}m`;
+        else                 avgResponseTime = `${mins}m`;
+      }
+
+      const pipeline = {
+        totalAssigned:   pl_assigned[id] || 0,
+        newLeads:        pl_new[id]       || 0,
+        siteVisits:      pl_visits[id]    || 0,
+        closedWon:       pl_won[id]       || 0,
+        avgResponseTime,
+      };
+      pipeline.conversionRate = pipeline.totalAssigned
+        ? Number(((pipeline.closedWon / pipeline.totalAssigned) * 100).toFixed(1)) : 0;
+
+      // Project pipeline stats
+      const project = {
+        totalAssigned:    pr_assigned[id]        || 0,
+        interested:       pr_interested[id]      || 0,
+        siteVisitBooked:  pr_siteVisitBooked[id] || 0,
+        siteVisitDone:    pr_siteVisitDone[id]   || 0,
+        // combined: all leads that have reached the site visit stage
+        siteVisits:      (pr_siteVisitBooked[id] || 0) + (pr_siteVisitDone[id] || 0),
+        booked:           pr_booked[id]          || 0,
+        callBack:         pr_callBack[id]        || 0,
+        notInterested:    pr_notInterested[id]   || 0,
+        notReachable:     pr_notReachable[id]    || 0,
+      };
+      project.conversionRate = project.totalAssigned
+        ? Number(((project.booked / project.totalAssigned) * 100).toFixed(1)) : 0;
 
       return {
         ...user.toJSON(),
-        totalAssigned,
-        closedWon,
-        siteVisits,
-        newLeads,
-        conversionRate: totalAssigned ? Number(((closedWon / totalAssigned) * 100).toFixed(1)) : 0,
+        // top-level totals (combined) for summary cards
+        totalAssigned: pipeline.totalAssigned + project.totalAssigned,
+        siteVisits:    pipeline.siteVisits    + project.siteVisits,
+        closedWon:     pipeline.closedWon     + project.booked,
+        newLeads:      pipeline.newLeads,
+        // per-pipeline breakdown
+        pipeline,
+        project,
       };
     });
   },

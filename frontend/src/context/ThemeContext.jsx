@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const ThemeContext = createContext(null);
 
-const STORAGE_KEY = "propcrm_theme";
+const STORAGE_KEY = "arthaleads_theme";
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || "dark");
+  const [theme, setTheme] = useState(() => localStorage.getItem(STORAGE_KEY) || "light");
 
   useEffect(() => {
     const root = document.documentElement;

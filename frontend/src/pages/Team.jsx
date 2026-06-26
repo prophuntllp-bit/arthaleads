@@ -1,9 +1,11 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 
 const emptyMember = {
   name: "",
@@ -16,16 +18,23 @@ const emptyMember = {
 };
 
 export default function Team() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  useEffect(() => { document.title = "Team Management - Arthaleads CRM"; }, []);
+  const { user, org } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState(emptyMember);
   const [saving, setSaving] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
   const [deletingUser, setDeletingUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const isAdmin = ["admin", "super_admin"].includes(user?.role);
+  // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
+  const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+  const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
+  const atLimit = users.length >= memberLimit;
 
   const loadUsers = async () => {
     setLoading(true);
@@ -52,6 +61,7 @@ export default function Team() {
   const openCreate = () => {
     setEditingUser(null);
     setForm(emptyMember);
+    setShowPwd(false);
     setShowModal(true);
   };
 
@@ -66,6 +76,7 @@ export default function Team() {
       avatar: member.avatar || "",
       isActive: member.isActive ?? true,
     });
+    setShowPwd(false);
     setShowModal(true);
   };
 
@@ -108,7 +119,14 @@ export default function Team() {
       };
 
       if (!editingUser || form.password) {
-        payload.password = form.password;
+        const pwd = form.password;
+        const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(pwd);
+        if (pwd.length < 8 || !pwdOk) {
+          toast.error("Password must be 8+ characters with 1 uppercase, 1 number, and 1 special character");
+          setSaving(false);
+          return;
+        }
+        payload.password = pwd;
       }
 
       if (editingUser) {
@@ -170,9 +188,18 @@ export default function Team() {
             </p>
           </div>
           {isAdmin && (
-            <button className="btn-primary rounded-xl" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Add Team Member
-            </button>
+            <div className="flex items-center gap-2">
+              {memberLimit < Infinity && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
+                  style={{ background: atLimit ? "rgba(239,68,68,0.1)" : "rgba(var(--app-primary-rgb),0.08)", color: atLimit ? "#ef4444" : "var(--app-primary)", borderColor: atLimit ? "rgba(239,68,68,0.3)" : "rgba(var(--app-primary-rgb),0.2)" }}>
+                  {users.length}/{memberLimit} members · {planLabel(org?.plan)}
+                </span>
+              )}
+              <button data-tour="invite-btn" className="btn-primary rounded-xl" onClick={openCreate} disabled={atLimit}
+                title={atLimit ? `${planLabel(org?.plan)} plan limit reached. Upgrade to add more members.` : undefined}>
+                <Plus className="h-4 w-4" /> Add Team Member
+              </button>
+            </div>
           )}
         </div>
       </section>
@@ -245,16 +272,32 @@ export default function Team() {
             <input className="input" type="email" value={form.email} onChange={handleChange("email")} required />
           </div>
           <div>
-            <label className="label">Phone</label>
-            <input className="input" value={form.phone} onChange={handleChange("phone")} />
+            <label className="label">Mobile Number</label>
+            <input
+              className="input"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange("phone")}
+              placeholder="10-digit mobile number"
+              required={!editingUser}
+              minLength={10}
+            />
+            {!editingUser && (
+              <p className="mt-1 text-[11px] text-app-soft">Required - used for follow-up alerts and team contact.</p>
+            )}
           </div>
           <div>
             <label className="label">Role</label>
-            <select className="select" value={form.role} onChange={handleChange("role")}>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="agent">Sales Agent</option>
-            </select>
+            <CustomSelect
+              value={form.role}
+              onChange={(v) => handleChange("role")({ target: { value: v } })}
+              options={[
+                { value: "admin", label: "Admin" },
+                { value: "manager", label: "Manager" },
+                { value: "agent", label: "Sales Agent" },
+              ]}
+              style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+            />
           </div>
           <div className="md:col-span-2">
             <label className="label">Profile Picture URL</label>
@@ -279,7 +322,12 @@ export default function Team() {
           )}
           <div className="md:col-span-2">
             <label className="label">{editingUser ? "Set New Password (optional)" : "Temporary Password"}</label>
-            <input className="input" type="password" value={form.password} onChange={handleChange("password")} required={!editingUser} />
+            <div className="relative">
+              <input className="input pr-10" type={showPwd ? "text" : "password"} value={form.password} onChange={handleChange("password")} required={!editingUser} placeholder="8+ chars, uppercase, number, special" />
+              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowPwd((v) => !v)}>
+                {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
           <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm text-app" style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}>
             <input type="checkbox" checked={form.isActive} onChange={handleChange("isActive")} />

@@ -5,10 +5,10 @@ const Lead = require("../models/Lead");
 const logger = require("../config/logger");
 
 const USERS = [
-  { name: "Rahul Kapoor", email: "admin@propcrm.in", password: "admin123", role: "admin" },
-  { name: "Sneha Patil", email: "manager@propcrm.in", password: "manager123", role: "manager" },
-  { name: "Ravi Kulkarni", email: "ravi@propcrm.in", password: "agent123", role: "agent" },
-  { name: "Pooja Dubey", email: "pooja@propcrm.in", password: "agent123", role: "agent" },
+  { name: "Rahul Kapoor", email: "admin@arthaleads.com", password: "admin123", role: "admin" },
+  { name: "Sneha Patil", email: "manager@arthaleads.com", password: "manager123", role: "manager" },
+  { name: "Ravi Kulkarni", email: "ravi@arthaleads.com", password: "agent123", role: "agent" },
+  { name: "Pooja Dubey", email: "pooja@arthaleads.com", password: "agent123", role: "agent" },
 ];
 
 const LEADS = [

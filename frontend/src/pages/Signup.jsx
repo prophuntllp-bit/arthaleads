@@ -1,138 +1,170 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Building2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    phone: "",
-    role: "agent", // always agent — admin promotes via Team page
-  });
+  const [searchParams] = useSearchParams();
+  const { signup, googleLogin } = useAuth();
+  const [loading, setLoading]   = useState(false);
+  const [gLoading, setGLoading] = useState(false);
+  const [error, setError]       = useState("");
+  const [showPwd, setShowPwd]   = useState(false);
+  const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "", phone: "" });
+  const [referralCode] = useState(() => searchParams.get("ref") || "");
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const triggerGoogle = useGoogleLogin({
+    scope: "openid email profile",
+    onSuccess: async (tokenResponse) => {
+      if (!tokenResponse.access_token) {
+        setError("Google sign-up failed. Please try again.");
+        return;
+      }
+      setError("");
+      setGLoading(true);
+      try {
+        await googleLogin(tokenResponse.access_token);
+        toast.success("Account ready! Welcome to Arthaleads.");
+        navigate("/dashboard");
+      } catch (e) {
+        setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
+      } finally {
+        setGLoading(false);
+      }
+    },
+    onError: () => setError("Google sign-up failed. Please try again."),
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
+    const pwdOk = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()\-_=+{};:,<.>?/\\|[\]~`])/.test(form.password);
+    if (form.password.length < 8 || !pwdOk) { setError("Password must be at least 8 characters with 1 uppercase, 1 number, and 1 special character"); return; }
 
     setLoading(true);
     try {
-      await signup(form);
-      toast.success("Account created! Welcome to PropCRM.");
-      navigate("/");
+      await signup({ ...form, ...(referralCode ? { referralCode } : {}) });
+      toast.success("Account created! Welcome to Arthaleads.");
+      navigate("/dashboard");
     } catch (err) {
-      // Show the real backend error message if available
-      const msg =
-        err.response?.data?.message ||
-        (err.request
-          ? "Could not reach the server. Please check your internet connection and try again."
-          : "Something went wrong. Please try again.");
+      const msg = err.response?.data?.message ||
+        (err.request ? "Could not reach the server. Please check your connection and try again." : "Something went wrong. Please try again.");
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="auth-shell flex items-center justify-center p-4">
-      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[0.98fr_1.02fr]">
+  const features = [
+    { icon: Zap,       text: "Access your leads and pipeline instantly" },
+    { icon: Bell,      text: "Get notified on follow-ups and site visits" },
+    { icon: Users,     text: "Collaborate with your team in real time" },
+    { icon: PhoneCall, text: "Track every call, WhatsApp and site visit" },
+    { icon: BarChart3, text: "Monitor team performance and conversions" },
+    { icon: Shield,    text: "Role-based access for admins, managers & agents" },
+  ];
 
-        {/* Left panel — desktop only */}
+  return (
+    <div className="auth-shell min-h-screen flex items-center justify-center px-4 py-10">
+      <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-2 lg:items-stretch">
+
+        {/* Left panel */}
         <div
-          className="hidden rounded-[2.25rem] border p-10 lg:flex lg:flex-col lg:justify-between"
+          className="hidden rounded-[2rem] border p-8 lg:flex lg:flex-col"
           style={{
             borderColor: "var(--app-border)",
             background: "linear-gradient(145deg, color-mix(in srgb, var(--app-surface) 88%, transparent), color-mix(in srgb, var(--app-surface-low) 92%, transparent))",
             boxShadow: "var(--app-shadow)",
           }}
         >
-          <div>
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg">
-              <Building2 className="h-7 w-7 text-white" />
+          <div className="mb-6 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg flex-shrink-0">
+              <img src="/logo.png" alt="ArthaLeads" className="w-full h-full object-cover" />
             </div>
-            <p className="stitch-kicker mb-3">Team Onboarding</p>
-            <h1 className="max-w-md text-5xl font-black leading-[1.02] tracking-tight text-app">
-              Join your real estate team on PropCRM.
-            </h1>
-            <p className="mt-5 max-w-lg text-sm leading-6 text-app-soft">
-              Create your account to start managing leads, tracking follow-ups, and closing deals with your team.
-            </p>
+            <div>
+              <p className="font-black text-base leading-none tracking-tight">
+                <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+              </p>
+              <p className="text-[8px] font-semibold tracking-[0.15em] text-app-soft uppercase mt-0.5">
+                Turning Opportunities Into Value
+              </p>
+            </div>
           </div>
-
-          <div className="space-y-3">
-            {[
-              "Access your leads and pipeline instantly",
-              "Get notified on follow-ups and site visits",
-              "Collaborate with your team in real time",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-500" />
-                <span className="text-sm text-app">{item}</span>
+          <p className="stitch-kicker mb-2">Team Onboarding</p>
+          <h2 className="text-3xl font-black leading-tight tracking-tight text-app mb-2">
+            Join your real estate team on Arthaleads.
+          </h2>
+          <p className="text-sm leading-6 text-app-soft mb-6">
+            One workspace for all your leads, follow-ups, projects and team activity.
+          </p>
+          <div className="grid grid-cols-1 gap-2.5 flex-1">
+            {features.map(({ icon: Icon, text }) => (
+              <div key={text} className="flex items-center gap-3 rounded-2xl p-3 stitch-surface-muted">
+                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-500/10 flex-shrink-0">
+                  <Icon className="h-3.5 w-3.5 text-orange-500" />
+                </div>
+                <span className="text-sm text-app">{text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right panel — form */}
-        <div className="w-full max-w-2xl lg:ml-auto lg:max-w-none">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#a04100] to-[#ff6b00] shadow-lg lg:hidden">
-              <Building2 className="h-7 w-7 text-white" />
+        {/* Right panel */}
+        <div className="flex flex-col w-full">
+          <div className="mb-6 flex flex-col items-center text-center lg:hidden">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-lg mb-3">
+              <img src="/logo.png" alt="ArthaLeads" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-app">Create your account</h1>
-            <p className="mt-2 text-sm text-app-soft">Start managing real estate leads with your team.</p>
+            <p className="font-black text-xl leading-none tracking-tight">
+              <span style={{ color: "#FF6B00" }}>Artha</span><span className="text-app">Leads</span>
+            </p>
           </div>
 
-          <div className="auth-card">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="mb-5 text-center lg:hidden">
+            <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
+            <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
+          </div>
+
+          <div className="auth-card flex-1">
+            <div className="hidden lg:block mb-5 text-center">
+              <h1 className="text-2xl font-black tracking-tight text-app">Create your account</h1>
+              <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
 
               <div>
-                <label className="label">Full Name</label>
-                <input
-                  className="input"
-                  value={form.name}
-                  onChange={set("name")}
-                  placeholder="e.g. Abhishek Ghadge"
-                  required
-                  minLength={2}
-                />
+                <label className="label">Company / Organization Name</label>
+                <input className="input" value={form.orgName} onChange={set("orgName")} placeholder="Your company or organization name" autoComplete="organization" required minLength={2} />
+              </div>
+
+              <div>
+                <label className="label">Your Full Name</label>
+                <input className="input" value={form.name} onChange={set("name")} placeholder="Enter your full name" autoComplete="name" required minLength={2} />
               </div>
 
               <div>
                 <label className="label">Work Email</label>
-                <input
-                  className="input"
-                  type="email"
-                  value={form.email}
-                  onChange={set("email")}
-                  placeholder="you@company.com"
-                  required
-                />
+                <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="your@email.com" autoComplete="username" required />
               </div>
 
               <div>
-                <label className="label">Phone <span className="text-app-soft font-normal">(optional)</span></label>
+                <label className="label">Mobile Number</label>
                 <input
                   className="input"
                   type="tel"
                   value={form.phone}
                   onChange={set("phone")}
-                  placeholder="e.g. 8080197945"
+                  placeholder="10-digit mobile number"
+                  autoComplete="tel"
+                  required
+                  minLength={10}
                 />
               </div>
 
@@ -144,19 +176,19 @@ export default function Signup() {
                     type={showPwd ? "text" : "password"}
                     value={form.password}
                     onChange={set("password")}
-                    placeholder="Minimum 6 characters"
+                    placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special char"
+                    autoComplete="new-password"
                     required
-                    minLength={6}
+                    minLength={8}
                   />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app"
-                    onClick={() => setShowPwd((v) => !v)}
-                  >
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition"
+                    onClick={() => setShowPwd((v) => !v)}>
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="mt-1 text-xs text-app-soft">Your admin will assign your role after you join.</p>
+                <p className="mt-1.5 text-xs text-app-soft">
+                  8+ characters · 1 uppercase · 1 number · 1 special character (e.g. !@#$)
+                </p>
               </div>
 
               {error && (
@@ -167,18 +199,48 @@ export default function Signup() {
 
               <button
                 type="submit"
-                className="btn-primary w-full justify-center py-3 mt-2"
+                className="btn-primary w-full justify-center py-3 mt-2 disabled:opacity-50"
                 disabled={loading}
               >
-                {loading ? <><Spinner size="sm" /><span>Creating account…</span></> : "Create Account"}
+                {loading ? (
+                  <><Spinner size="sm" /><span>Creating account…</span></>
+                ) : (
+                  "Create Account"
+                )}
               </button>
             </form>
 
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+              <span className="text-xs text-app-soft">or sign up with</span>
+              <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => triggerGoogle()}
+              disabled={gLoading}
+              className="w-full flex items-center justify-center gap-3 rounded-2xl border px-4 py-2.5 text-sm font-semibold text-app transition hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
+              style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
+            >
+              {gLoading ? (
+                <><Spinner size="sm" /> Signing up…</>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.2 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13 17.7 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
+                    <path fill="#FBBC05" d="M10.5 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.1.7-4.6l-7.9-6.1A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/>
+                    <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/>
+                  </svg>
+                  Sign up with Google
+                </>
+              )}
+            </button>
+
             <p className="mt-6 text-center text-sm text-app-soft">
               Already have an account?{" "}
-              <Link to="/login" className="font-semibold text-orange-500 hover:underline">
-                Sign in
-              </Link>
+              <Link to="/login" className="font-semibold text-orange-500 hover:underline">Sign in</Link>
             </p>
           </div>
         </div>
