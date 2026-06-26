@@ -312,7 +312,6 @@ const Refund          = lazy(() => import("./pages/Refund"));
 const Calls           = lazy(() => import("./pages/Calls"));
 const CookiePolicy    = lazy(() => import("./pages/CookiePolicy"));
 const Security        = lazy(() => import("./pages/Security"));
-const Status          = lazy(() => import("./pages/Status"));
 const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
 const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
@@ -576,7 +575,6 @@ export default function App() {
         <Route path="/refund"               element={<Refund />} />
         <Route path="/cookie-policy"        element={<CookiePolicy />} />
         <Route path="/security"             element={<Security />} />
-        <Route path="/status"               element={<Status />} />
         <Route path="/refer"                element={<ReferEarn />} />
         <Route path="/api-docs"             element={<ApiDocs />} />
         <Route path="/compare"              element={<Compare />} />
