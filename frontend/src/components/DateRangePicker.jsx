@@ -1,7 +1,7 @@
 // components/DateRangePicker.jsx
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PRESETS = [
   { label: "Today",             value: "today" },
@@ -86,7 +86,7 @@ function presetDates(value) {
   }
 }
 
-function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover }) {
+function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClick, onDayHover, hideHeader = false, compact = false }) {
   const firstDay   = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells = [];
@@ -111,14 +111,18 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
     return d && d.getTime() === t.getTime();
   };
 
+  const cellH = compact ? "h-7" : "h-8";
+
   return (
-    <div className="min-w-[220px]">
-      <div className="mb-3 text-center text-sm font-semibold text-app">
-        {MONTHS[month]} {year}
-      </div>
-      <div className="grid grid-cols-7 mb-1">
+    <div className="flex-1 min-w-0">
+      {!hideHeader && (
+        <div className={`${compact ? "mb-2" : "mb-3"} text-center text-sm font-semibold text-app`}>
+          {MONTHS[month]} {year}
+        </div>
+      )}
+      <div className="grid grid-cols-7 mb-0.5">
         {DAYS.map((d) => (
-          <div key={d} className="py-1 text-center text-[10px] font-bold uppercase text-app-soft">{d}</div>
+          <div key={d} className={`${compact ? "py-0.5" : "py-1"} text-center text-[10px] font-bold uppercase text-app-soft`}>{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7">
@@ -131,7 +135,7 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
               type="button"
               onClick={() => onDayClick(d)}
               onMouseEnter={() => onDayHover(d)}
-              className={`relative h-8 w-full text-xs font-medium transition-colors
+              className={`relative ${cellH} w-full text-xs font-medium transition-colors
                 ${start || end ? "text-white z-10" : inR ? "text-orange-700" : tod ? "font-bold text-orange-500" : "text-app hover:text-orange-500"}
                 ${inR && !start && !end ? "bg-orange-100 dark:bg-orange-500/15 rounded-none" : ""}
                 ${start ? "rounded-l-full" : ""} ${end ? "rounded-r-full" : ""}
@@ -149,7 +153,7 @@ function CalendarMonth({ year, month, rangeStart, rangeEnd, hoverDate, onDayClic
   );
 }
 
-export default function DateRangePicker({ value, onChange, label }) {
+export default function DateRangePicker({ value, onChange, label, compact = false }) {
   const [open, setOpen]         = useState(false);
   const [pending, setPending]   = useState(value);
   const [rangeStart, setRangeStart] = useState(null);
@@ -157,6 +161,8 @@ export default function DateRangePicker({ value, onChange, label }) {
   const [hoverDate, setHoverDate]   = useState(null);
   const [picking, setPicking]       = useState(false);
   const [popoverPos, setPopoverPos] = useState({ top: 0, right: 0 });
+  const [isMobile, setIsMobile]     = useState(false);
+  const [mobileShowCalendar, setMobileShowCalendar] = useState(false);
   const today = new Date(); today.setHours(0,0,0,0);
   const [leftMonth, setLeftMonth] = useState({ year: today.getFullYear(), month: today.getMonth() - 1 < 0 ? 11 : today.getMonth() - 1, adjYear: today.getMonth() - 1 < 0 ? today.getFullYear() - 1 : today.getFullYear() });
   const [rightMonth, setRightMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -165,7 +171,10 @@ export default function DateRangePicker({ value, onChange, label }) {
   const btnRef = useRef(null);
   const popoverRef = useRef(null);
 
-  const selectedLabel = PRESETS.find((p) => p.value === value)?.label || "Date Range";
+  const isCustomObj = value && typeof value === "object" && value.preset === "custom";
+  const selectedLabel = isCustomObj
+    ? "Custom Range"
+    : PRESETS.find((p) => p.value === value)?.label || "Date Range";
 
   // Sync calendar display with preset
   useEffect(() => {
@@ -200,6 +209,15 @@ export default function DateRangePicker({ value, onChange, label }) {
     });
   };
 
+  // Single-month nav for mobile
+  const shiftSingle = (dir) => {
+    setRightMonth((prev) => {
+      let m = prev.month + dir, y = prev.year;
+      if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
+      return { year: y, month: m };
+    });
+  };
+
   const handleDayClick = (d) => {
     if (!picking) {
       setRangeStart(d); setRangeEnd(null); setPicking(true);
@@ -214,21 +232,36 @@ export default function DateRangePicker({ value, onChange, label }) {
   };
 
   const handleUpdate = () => {
-    onChange(pending);
+    if (pending === "custom" && rangeStart) {
+      const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      onChange({ preset: "custom", from: fmt(rangeStart), to: fmt(rangeEnd || rangeStart) });
+    } else {
+      onChange(pending);
+    }
     setOpen(false);
   };
 
-  const displayDates = presetDates(value);
+  const displayDates = isCustomObj
+    ? { start: value.from ? new Date(value.from) : null, end: value.to ? new Date(value.to) : null }
+    : presetDates(value);
 
   const openPicker = () => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setPopoverPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const mobile = window.innerWidth < 640;
+      setIsMobile(mobile);
+      if (mobile) {
+        const top = Math.min(rect.bottom + 8, window.innerHeight - 320);
+        setPopoverPos({ top: Math.max(top, 8), left: 8, right: 8 });
+        setMobileShowCalendar(isCustomObj);
+      } else {
+        setPopoverPos({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
     }
-    setPending(value);
+    setPending(isCustomObj ? "custom" : value);
     setOpen((o) => !o);
   };
 
@@ -238,11 +271,11 @@ export default function DateRangePicker({ value, onChange, label }) {
         ref={btnRef}
         type="button"
         onClick={openPicker}
-        className="stitch-pill flex items-center gap-2"
+        className="stitch-pill flex items-center gap-2 whitespace-nowrap"
       >
         <CalendarDays className="h-4 w-4 text-orange-500" />
-        <span>{label || selectedLabel}</span>
-        {displayDates.start && displayDates.end && (
+        <span className={compact ? "hidden sm:inline" : ""}>{label || selectedLabel}</span>
+        {!compact && displayDates.start && displayDates.end && (
           <span className="text-[10px] opacity-60 hidden sm:inline">
             {toIST(displayDates.start)} – {toIST(displayDates.end)}
           </span>
@@ -255,81 +288,171 @@ export default function DateRangePicker({ value, onChange, label }) {
           className="fixed z-[9999] rounded-2xl shadow-2xl overflow-hidden"
           style={{
             top: popoverPos.top,
-            right: popoverPos.right,
+            ...(isMobile
+              ? { left: popoverPos.left, right: popoverPos.right, maxWidth: 320, margin: "0 auto" }
+              : { right: popoverPos.right, minWidth: 580 }),
             background: "var(--app-surface)",
             border: "1px solid var(--app-border)",
             backdropFilter: "var(--glass-blur-heavy)",
             WebkitBackdropFilter: "var(--glass-blur-heavy)",
             boxShadow: "var(--app-shadow-lg)",
-            minWidth: 580,
+            maxHeight: isMobile ? "70vh" : "80vh",
+            overflowY: "auto",
           }}
         >
-          <div className="flex">
-            {/* Presets sidebar */}
-            <div className="w-44 border-r flex-shrink-0 py-3" style={{ borderColor: "var(--app-border)" }}>
-              <p className="stitch-kicker px-4 mb-2">Recently used</p>
-              {PRESETS.map((p) => (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => { setPending(p.value); const d = presetDates(p.value); setRangeStart(d.start); setRangeEnd(d.end); setPicking(false); }}
-                  className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
-                    pending === p.value ? "text-orange-500 font-semibold" : "text-app-soft hover:text-app"
-                  }`}
-                >
-                  <span className={`h-3.5 w-3.5 rounded-full border flex-shrink-0 flex items-center justify-center ${
-                    pending === p.value ? "border-orange-500" : "border-app-soft/40"
-                  }`}>
-                    {pending === p.value && <span className="h-2 w-2 rounded-full bg-orange-500" />}
-                  </span>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Calendar panel */}
-            <div className="flex-1 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <button type="button" onClick={() => shiftLeft(-1)} className="btn-ghost p-1.5">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <div className="flex gap-8">
-                  <span className="text-sm font-semibold text-app">{MONTHS[leftMonth.month]} {leftMonth.adjYear}</span>
-                  <span className="text-sm font-semibold text-app">{MONTHS[rightMonth.month]} {rightMonth.year}</span>
+          {isMobile ? (
+            /* ── Mobile: preset list (instant-apply) + optional custom calendar ── */
+            <div className="flex flex-col">
+              {!mobileShowCalendar ? (
+                /* Preset grid — tap = instant apply + close */
+                <div className="p-2">
+                  <div className="grid grid-cols-2 gap-0.5">
+                    {PRESETS.map((p) => {
+                      const active = p.value === value;
+                      return (
+                        <button
+                          key={p.value}
+                          type="button"
+                          onClick={() => { onChange(p.value); setOpen(false); }}
+                          className="text-left px-3 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                          style={{
+                            background: active ? "var(--app-primary)" : "transparent",
+                            color: active ? "#fff" : "var(--app-text-soft)",
+                          }}
+                          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "var(--app-surface-low)"; }}
+                          onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Custom range trigger */}
+                  <div className="mt-1 pt-1 border-t" style={{ borderColor: "var(--app-border)" }}>
+                    <button
+                      type="button"
+                      className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium transition-colors"
+                      style={{ color: "var(--app-primary)" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(249,115,22,0.08)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                      onClick={() => { setPending("custom"); setRangeStart(null); setRangeEnd(null); setMobileShowCalendar(true); }}
+                    >
+                      + Custom date range
+                    </button>
+                  </div>
                 </div>
-                <button type="button" onClick={() => shiftLeft(1)} className="btn-ghost p-1.5">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="flex gap-6">
-                <CalendarMonth
-                  year={leftMonth.adjYear} month={leftMonth.month}
-                  rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
-                  onDayClick={handleDayClick} onDayHover={setHoverDate}
-                />
-                <div className="w-px self-stretch" style={{ background: "var(--app-border)" }} />
-                <CalendarMonth
-                  year={rightMonth.year} month={rightMonth.month}
-                  rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
-                  onDayClick={handleDayClick} onDayHover={setHoverDate}
-                />
-              </div>
-
-              <div className="mt-4 border-t pt-3 flex items-center justify-between gap-4" style={{ borderColor: "var(--app-border)" }}>
-                <p className="text-[11px] text-app-soft">Dates shown in Kolkata Time (IST)</p>
-                <div className="flex items-center gap-2">
-                  {rangeStart && (
-                    <span className="text-xs text-app-soft">
-                      {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
+              ) : (
+                /* Custom calendar — shown only when user taps custom range */
+                <div className="flex flex-col">
+                  {/* Back header */}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
+                    <button type="button" onClick={() => setMobileShowCalendar(false)} className="btn-ghost p-1">
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="text-xs font-semibold text-app">Custom date range</span>
+                  </div>
+                  {/* Mini calendar */}
+                  <div className="px-3 pt-2 pb-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <button type="button" onClick={() => shiftSingle(-1)} className="btn-ghost p-1">
+                        <ChevronLeft className="h-3 w-3" />
+                      </button>
+                      <span className="text-[11px] font-bold text-app">
+                        {MONTHS[rightMonth.month]} {rightMonth.year}
+                      </span>
+                      <button type="button" onClick={() => shiftSingle(1)} className="btn-ghost p-1">
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <CalendarMonth
+                      year={rightMonth.year} month={rightMonth.month}
+                      rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                      onDayClick={handleDayClick} onDayHover={setHoverDate}
+                      hideHeader compact
+                    />
+                  </div>
+                  {/* Footer */}
+                  <div className="border-t px-3 py-2 flex items-center justify-between gap-2" style={{ borderColor: "var(--app-border)" }}>
+                    <p className="text-[10px] text-app-soft truncate flex-1">
+                      {rangeStart ? `${toIST(rangeStart)}${rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}` : "Tap start date"}
+                    </p>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-3 py-1.5 text-[11px]">Cancel</button>
+                      <button type="button" onClick={handleUpdate} className="btn-primary px-3 py-1.5 text-[11px]">Apply</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Desktop layout: sidebar + dual calendar ── */
+            <div className="flex">
+              {/* Presets sidebar */}
+              <div className="w-44 border-r flex-shrink-0 py-3" style={{ borderColor: "var(--app-border)" }}>
+                <p className="stitch-kicker px-4 mb-2">Recently used</p>
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => { setPending(p.value); const d = presetDates(p.value); setRangeStart(d.start); setRangeEnd(d.end); setPicking(false); }}
+                    className={`flex w-full items-center gap-2.5 px-4 py-2 text-sm transition-colors ${
+                      pending === p.value ? "text-orange-500 font-semibold" : "text-app-soft hover:text-app"
+                    }`}
+                  >
+                    <span className={`h-3.5 w-3.5 rounded-full border flex-shrink-0 flex items-center justify-center ${
+                      pending === p.value ? "border-orange-500" : "border-app-soft/40"
+                    }`}>
+                      {pending === p.value && <span className="h-2 w-2 rounded-full bg-orange-500" />}
                     </span>
-                  )}
-                  <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
-                  <button type="button" onClick={handleUpdate} className="btn-primary px-4 py-2 text-xs">Update</button>
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Calendar panel */}
+              <div className="flex-1 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <button type="button" onClick={() => shiftLeft(-1)} className="btn-ghost p-1.5">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <div className="flex gap-8">
+                    <span className="text-sm font-semibold text-app">{MONTHS[leftMonth.month]} {leftMonth.adjYear}</span>
+                    <span className="text-sm font-semibold text-app">{MONTHS[rightMonth.month]} {rightMonth.year}</span>
+                  </div>
+                  <button type="button" onClick={() => shiftLeft(1)} className="btn-ghost p-1.5">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex gap-6">
+                  <CalendarMonth
+                    year={leftMonth.adjYear} month={leftMonth.month}
+                    rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                    onDayClick={handleDayClick} onDayHover={setHoverDate}
+                  />
+                  <div className="w-px self-stretch" style={{ background: "var(--app-border)" }} />
+                  <CalendarMonth
+                    year={rightMonth.year} month={rightMonth.month}
+                    rangeStart={rangeStart} rangeEnd={rangeEnd} hoverDate={hoverDate}
+                    onDayClick={handleDayClick} onDayHover={setHoverDate}
+                  />
+                </div>
+
+                <div className="mt-4 border-t pt-3 flex items-center justify-between gap-4" style={{ borderColor: "var(--app-border)" }}>
+                  <p className="text-[11px] text-app-soft">Dates shown in Kolkata Time (IST)</p>
+                  <div className="flex items-center gap-2">
+                    {rangeStart && (
+                      <span className="text-xs text-app-soft">
+                        {toIST(rangeStart)}{rangeEnd ? ` → ${toIST(rangeEnd)}` : ""}
+                      </span>
+                    )}
+                    <button type="button" onClick={() => setOpen(false)} className="btn-secondary px-4 py-2 text-xs">Cancel</button>
+                    <button type="button" onClick={handleUpdate} className="btn-primary px-4 py-2 text-xs">Update</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>,
         document.body
       )}

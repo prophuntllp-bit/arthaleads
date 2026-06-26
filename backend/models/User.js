@@ -2,7 +2,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-const ROLES = ["admin", "manager", "agent"];
+const ROLES = ["super_admin", "admin", "manager", "agent"];
 
 const userSchema = new mongoose.Schema(
   {
@@ -45,6 +45,15 @@ const userSchema = new mongoose.Schema(
     },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
+    orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: false, default: null, index: true },
+    passwordResetToken:   { type: String, select: false },
+    passwordResetExpires: { type: Date,   select: false },
+    // Phone OTP (sent via email)
+    otpCode:      { type: String, select: false },
+    otpExpiresAt: { type: Date,   select: false },
+    // Brute-force lockout
+    loginAttempts: { type: Number, default: 0,    select: false },
+    lockoutUntil:  { type: Date,   default: null,  select: false },
   },
   { timestamps: true }
 );
@@ -57,8 +66,12 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// Compare plain password with hashed
+// Compare plain password with hashed.
+// Returns false when no password is set (Google-only accounts) or the password
+// field wasn't selected — bcrypt.compare would otherwise throw
+// "Illegal arguments: string, undefined" and surface as a raw 500 to the user.
 userSchema.methods.comparePassword = async function (plain) {
+  if (!plain || !this.password) return false;
   return bcrypt.compare(plain, this.password);
 };
 

@@ -1,4 +1,4 @@
-// pages/Projects.jsx
+﻿// pages/Projects.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -6,7 +6,8 @@ import { PageLoader, EmptyState } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { Building2, FolderKanban, MapPin, Pencil, Plus, Users } from "lucide-react";
+import { Building2, FolderKanban, MapPin, Pencil, Plus, QrCode, Users } from "lucide-react";
+import QrModal from "../components/QrModal";
 
 function fmtPrice(n) {
   if (!n) return null;
@@ -16,14 +17,16 @@ function fmtPrice(n) {
 }
 
 export default function Projects() {
+  useEffect(() => { document.title = "Property Inventory - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const canManage = ["admin", "manager"].includes(user?.role);
+  const canManage = ["admin", "manager", "super_admin"].includes(user?.role);
 
   const [projects, setProjects] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editProj, setEditProj] = useState(null);
+  const [qrProj, setQrProj]     = useState(null); // project whose QR is open
 
   useEffect(() => {
     api.get("/projects")
@@ -87,7 +90,7 @@ export default function Projects() {
           {projects.map((proj) => (
             <div
               key={proj._id}
-              className="card cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
+              className="group card cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5"
               onClick={() => navigate(`/projects/${proj._id}`)}
             >
               {/* Image */}
@@ -118,7 +121,7 @@ export default function Projects() {
                 {canManage && (
                   <button
                     onClick={(e) => openEdit(e, proj)}
-                    className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-xl text-white opacity-0 group-hover:opacity-100 transition"
+                    className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-xl text-white opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition"
                     style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -131,12 +134,21 @@ export default function Projects() {
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h3 className="font-bold text-app leading-tight">{proj.name}</h3>
                   {canManage && (
-                    <button
-                      onClick={(e) => openEdit(e, proj)}
-                      className="flex-shrink-0 rounded-xl p-1.5 transition hover:bg-orange-500/10"
-                    >
-                      <Pencil className="h-3.5 w-3.5 text-app-soft" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setQrProj(proj); }}
+                        className="rounded-xl p-1.5 transition hover:bg-orange-500/10"
+                        title="QR Code"
+                      >
+                        <QrCode className="h-3.5 w-3.5 text-app-soft" />
+                      </button>
+                      <button
+                        onClick={(e) => openEdit(e, proj)}
+                        className="rounded-xl p-1.5 transition hover:bg-orange-500/10"
+                      >
+                        <Pencil className="h-3.5 w-3.5 text-app-soft" />
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -165,6 +177,35 @@ export default function Projects() {
                     ))}
                   </div>
                 )}
+
+                {/* Assigned members badge */}
+                {proj.assignedTo?.length > 0 && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <div className="flex -space-x-1.5">
+                      {proj.assignedTo.slice(0, 3).map((m) => {
+                        const member = typeof m === "object" ? m : { _id: m, name: "?" };
+                        const initials = member.name
+                          ? member.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+                          : "?";
+                        return (
+                          <span
+                            key={member._id}
+                            title={member.name}
+                            className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold text-white"
+                            style={{ background: "var(--color-orange-500, #f97316)", borderColor: "var(--app-surface)" }}
+                          >
+                            {initials}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <span className="text-[11px] text-app-soft">
+                      {proj.assignedTo.length > 3
+                        ? `${proj.assignedTo.slice(0, 3).map((m) => (typeof m === "object" ? m.name : "")).filter(Boolean).join(", ")} +${proj.assignedTo.length - 3} more`
+                        : proj.assignedTo.map((m) => (typeof m === "object" ? m.name : "")).filter(Boolean).join(", ")}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -177,6 +218,15 @@ export default function Projects() {
           onClose={() => { setShowForm(false); setEditProj(null); }}
           project={editProj}
           onSaved={handleSaved}
+        />
+      )}
+
+      {qrProj && (
+        <QrModal
+          type="project"
+          id={qrProj._id}
+          name={qrProj.name}
+          onClose={() => setQrProj(null)}
         />
       )}
     </div>

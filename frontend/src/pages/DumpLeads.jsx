@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
-import { Archive, Phone, RotateCcw, Trash2 } from "lucide-react";
+﻿import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Archive, ChevronDown, Download, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { EmptyState, PageLoader, SourceBadge, StatusBadge } from "../components/UI";
+import { EmptyState, PageLoader, PhoneActions, WhatsAppLink, SourceBadge, StatusBadge } from "../components/UI";
+import CustomSelect from "../components/CustomSelect";
 import { fmtDate } from "../utils/constants";
 import api from "../services/api";
 import toast from "react-hot-toast";
+import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 
 const BOOKING_COLOR = {
   "Not Interested":    "bg-red-500/10 text-red-500 border-red-500/20",
@@ -16,18 +19,114 @@ const BOOKING_COLOR = {
 
 export default function DumpLeads() {
   const { user } = useAuth();
-  const [leads, setLeads]     = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch]   = useState("");
+  const [leads, setLeads]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [search, setSearch]         = useState("");
+  const [limit, setLimit]           = useState(10);
+  const [page, setPage]             = useState(1);
+  const [importing, setImporting]   = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
+  const exportBtnRef      = useRef(null);
+  const exportDropdownRef = useRef(null);
+  const topScrollRef      = useRef(null);
+  const tableWrapRef      = useRef(null);
 
-  const canDelete = ["admin", "manager"].includes(user?.role);
+  // ── Bulk select state ─────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds]     = useState(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting]   = useState(false);
+
+  const canDelete = ["admin", "manager", "super_admin"].includes(user?.role);
 
   useEffect(() => {
-    api.get("/leads/dump")
-      .then((r) => setLeads(r.data.data))
+    api.get("/leads/dump", { params: { limit: 500 } })
+      .then((r) => setLeads(r.data.leads ?? r.data.data ?? []))
       .catch(() => toast.error("Failed to load dump leads"))
       .finally(() => setLoading(false));
   }, []);
+
+  // Reset selection when page or search changes
+  useEffect(() => { setSelectedIds(new Set()); }, [page, search]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!showExportMenu) return;
+    const h = (e) => {
+      if (exportBtnRef.current?.contains(e.target)) return;
+      if (exportDropdownRef.current?.contains(e.target)) return;
+      setShowExportMenu(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showExportMenu]);
+
+  // ── Selection helpers ──────────────────────────────────────────────────────
+  const allSelected  = paginated_ids_check() && paginated_ids_check().every((id) => selectedIds.has(id));
+  const someSelected = paginated_ids_check() && paginated_ids_check().some((id)  => selectedIds.has(id));
+
+  function paginated_ids_check() {
+    const filtered = leads.filter((l) =>
+      !search ||
+      l.name?.toLowerCase().includes(search.toLowerCase()) ||
+      l.phone?.includes(search) ||
+      l.email?.toLowerCase().includes(search.toLowerCase())
+    );
+    const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+    const safePage   = Math.min(page, totalPages);
+    return filtered.slice((safePage - 1) * limit, safePage * limit).map((l) => l._id + (l._type || ""));
+  }
+
+  const filtered = leads.filter((l) =>
+    !search ||
+    l.name?.toLowerCase().includes(search.toLowerCase()) ||
+    l.phone?.includes(search) ||
+    l.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / limit));
+  const safePage   = Math.min(page, totalPages);
+  const paginated  = filtered.slice((safePage - 1) * limit, safePage * limit);
+
+  const toggleAll = () => {
+    const pageIds = paginated.map((l) => l._id + (l._type || ""));
+    if (pageIds.every((id) => selectedIds.has(id))) {
+      setSelectedIds((prev) => { const next = new Set(prev); pageIds.forEach((id) => next.delete(id)); return next; });
+    } else {
+      setSelectedIds((prev) => { const next = new Set(prev); pageIds.forEach((id) => next.add(id)); return next; });
+    }
+  };
+
+  const toggleOne = (lead) => {
+    const uid = lead._id + (lead._type || "");
+    setSelectedIds((prev) => { const next = new Set(prev); next.has(uid) ? next.delete(uid) : next.add(uid); return next; });
+  };
+
+  const isSelected = (lead) => selectedIds.has(lead._id + (lead._type || ""));
+
+  // ── Bulk delete ────────────────────────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      const selected = leads.filter((l) => selectedIds.has(l._id + (l._type || "")));
+      await Promise.all(selected.map((lead) => {
+        if (lead._type === "project") {
+          return api.delete(`/projects/${lead.projectId}/leads/${lead._id}`);
+        } else {
+          return api.delete(`/leads/${lead._id}/permanent`);
+        }
+      }));
+      const deletedUids = new Set(selected.map((l) => l._id + (l._type || "")));
+      setLeads((prev) => prev.filter((l) => !deletedUids.has(l._id + (l._type || ""))));
+      setSelectedIds(new Set());
+      setShowBulkConfirm(false);
+      toast.success(`${selected.length} leads permanently deleted`);
+    } catch {
+      toast.error("Bulk delete failed");
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   // ── Regular lead actions ────────────────────────────────────────────────────
   const handleHardDelete = async (id) => {
@@ -65,12 +164,170 @@ export default function DumpLeads() {
     } catch { toast.error("Delete failed"); }
   };
 
-  const filtered = leads.filter((l) =>
-    !search ||
-    l.name?.toLowerCase().includes(search.toLowerCase()) ||
-    l.phone?.includes(search) ||
-    l.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  // ── Export ──────────────────────────────────────────────────────────────────
+  const exportRows = async (type, overrideSource) => {
+    try {
+      const source = overrideSource
+        ?? (selectedIds.size > 0
+          ? leads.filter((l) => selectedIds.has(l._id + (l._type || "")))
+          : leads);
+
+      const rows = source.map((lead) => ({
+        Name: lead.name,
+        Phone: lead.phone,
+        Email: lead.email || "",
+        Source: lead.source || "",
+        Project: lead.projectName || "",
+        PipelineStatus: lead.status || "",
+        BookingStatus: lead.booking || "",
+        Reason: lead.isDeleted ? "Deleted" : "Not Interested",
+        AssignedTo: lead.assignedToName || "",
+        Remark: lead.remark || "",
+        Remark1: lead.remark1 || "",
+        Remark2: lead.remark2 || "",
+        AddedOn: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
+      }));
+
+      const suffix = !overrideSource && selectedIds.size > 0 ? `-selected-${selectedIds.size}` : "";
+      const dateStr = new Date().toISOString().slice(0, 10);
+
+      if (type === "json") {
+        const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `arthaleads-dump-leads${suffix}-${dateStr}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${rows.length} leads as JSON`);
+        return;
+      }
+
+      const worksheet = xlsxUtils.json_to_sheet(rows);
+      const workbook = xlsxUtils.book_new();
+      xlsxUtils.book_append_sheet(workbook, worksheet, "Dump Leads");
+      const ext = type === "excel" ? "xlsx" : "csv";
+      xlsxWriteFile(workbook, `arthaleads-dump-leads${suffix}-${dateStr}.${ext}`, { bookType: ext });
+      toast.success(`Exported ${rows.length} leads as ${type === "excel" ? "Excel" : "CSV"}`);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Export failed");
+    }
+  };
+
+  // ── Native CSV/TSV parser ─────────────────────────────────────────────────────
+  const parseCsvText = (text) => {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) return [];
+    const delim = lines[0].includes("\t") ? "\t" : ",";
+    const parseRow = (line) => {
+      const vals = [];
+      let cur = "", inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (ch === delim && !inQuote) { vals.push(cur); cur = ""; continue; }
+        cur += ch;
+      }
+      vals.push(cur);
+      return vals;
+    };
+    const headers = parseRow(lines[0]).map((h) => h.trim());
+    return lines.slice(1).map((line) => {
+      const vals = parseRow(line);
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = (vals[i] || "").trim(); });
+      return obj;
+    });
+  };
+
+  // ── Import ──────────────────────────────────────────────────────────────────
+  const handleImport = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const isCsv = file.name.toLowerCase().endsWith(".csv");
+      let rows;
+      if (isCsv) {
+        let text;
+        if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          text = new TextDecoder("utf-16le").decode(buffer.slice(2));
+        } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          text = new TextDecoder("utf-16be").decode(buffer.slice(2));
+        } else {
+          text = new TextDecoder("utf-8").decode(buffer);
+        }
+        rows = parseCsvText(text);
+      } else {
+        const workbook = xlsxRead(buffer, { type: "array" });
+        const firstSheet = workbook.SheetNames[0];
+        rows = xlsxUtils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+      }
+
+      const leadsToImport = rows
+        .map((row) => ({
+          name:   String(row.Name   || row.name   || "").trim(),
+          phone:  String(row.Phone  || row.phone  || "").trim(),
+          email:  String(row.Email  || row.email  || "").trim(),
+          source: String(row.Source || row.source || "Manual").trim() || "Manual",
+          status: String(row.PipelineStatus || row.Status || row.status || "New").trim() || "New",
+          remark: String(row.Remark  || row.remark  || "").trim(),
+          remark1: String(row.Remark1 || row.remark1 || "").trim(),
+          remark2: String(row.Remark2 || row.remark2 || "").trim(),
+          booking: "Not Interested",
+          isDeleted: false,
+        }))
+        .filter((e) => e.name && e.phone);
+
+      if (!leadsToImport.length) {
+        toast.error("No valid leads found. File must have Name and Phone columns.");
+        return;
+      }
+
+      const { data } = await api.post("/leads/import", { leads: leadsToImport });
+      toast.success(data.message || `${leadsToImport.length} leads imported to dump`);
+      const r = await api.get("/leads/dump", { params: { limit: 2000 } });
+      setLeads(r.data.leads ?? r.data.data ?? []);
+    } catch (e) {
+      toast.error(e.response?.data?.message || e.message || "Import failed");
+    } finally {
+      setImporting(false);
+      event.target.value = "";
+    }
+  };
+
+  const allSelectedOnPage = paginated.length > 0 && paginated.every((l) => isSelected(l));
+  const someSelectedOnPage = paginated.some((l) => isSelected(l));
+
+  // ── Track actual table scroll width for the top mirror spacer ───────────
+  const [tableScrollWidth, setTableScrollWidth] = useState(900);
+
+  useEffect(() => {
+    const table = tableWrapRef.current;
+    if (!table) return;
+    const update = () => setTableScrollWidth(table.scrollWidth);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [loading, filtered.length]);
+
+  // ── Sync top ↔ bottom scrollbars ─────────────────────────────────────────
+  useEffect(() => {
+    const top   = topScrollRef.current;
+    const table = tableWrapRef.current;
+    if (!top || !table) return;
+    const syncFromTop   = () => { table.scrollLeft = top.scrollLeft; };
+    const syncFromTable = () => { top.scrollLeft   = table.scrollLeft; };
+    top.addEventListener("scroll",   syncFromTop);
+    table.addEventListener("scroll", syncFromTable);
+    return () => {
+      top.removeEventListener("scroll",   syncFromTop);
+      table.removeEventListener("scroll", syncFromTable);
+    };
+  }, [loading, filtered.length]);
 
   return (
     <div className="stitch-page space-y-6">
@@ -78,17 +335,62 @@ export default function DumpLeads() {
         <div className="flex flex-1 flex-col gap-2">
           <p className="stitch-kicker mb-1">Archive</p>
           <h1 className="text-3xl font-black tracking-tight text-app">Dump Leads</h1>
-          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted — {leads.length} total</p>
+          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted - {leads.length} total</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Bulk delete button */}
+          {selectedIds.size > 0 && canDelete && (
+            <button
+              className="btn-danger rounded-xl flex items-center gap-2"
+              onClick={() => setShowBulkConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete {selectedIds.size} selected
+            </button>
+          )}
+
+          {/* Import */}
+          <label className="btn-secondary cursor-pointer rounded-xl flex items-center gap-2 text-sm font-medium">
+            <Upload className="h-4 w-4" />
+            {importing ? "Importing…" : "Import"}
+            <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} disabled={importing} />
+          </label>
+
+          {/* Export */}
+          <div>
+            <button
+              ref={exportBtnRef}
+              className="btn-secondary rounded-xl flex items-center gap-2 text-sm font-medium"
+              onClick={() => {
+                const rect = exportBtnRef.current?.getBoundingClientRect();
+                if (rect) setExportMenuPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                setShowExportMenu((c) => !c);
+              }}
+            >
+              <Download className="h-4 w-4" />
+              {selectedIds.size > 0 ? `Export ${selectedIds.size} selected` : "Export"}
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="card p-4 flex gap-3">
+      <div className="card p-4 flex flex-wrap gap-3 items-center">
         <input
-          className="input flex-1"
+          className="input flex-1 min-w-[180px]"
           placeholder="Search by name, phone, or email…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-xs text-app-soft whitespace-nowrap">Show rows</span>
+          <CustomSelect
+            value={String(limit)}
+            onChange={(v) => { setLimit(Number(v)); setPage(1); }}
+            options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+            style={{ minWidth: 70 }}
+          />
+        </div>
       </div>
 
       <section className="card overflow-hidden">
@@ -97,18 +399,57 @@ export default function DumpLeads() {
         ) : filtered.length === 0 ? (
           <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            {/* ── Top scrollbar mirror - always-visible horizontal bar ── */}
+            <div
+              ref={topScrollRef}
+              className="top-scroll-mirror"
+              style={{
+                overflowX: "scroll",
+                overflowY: "hidden",
+                height: 14,
+                borderBottom: "1px solid var(--app-border)",
+              }}
+            >
+              <div style={{ minWidth: tableScrollWidth, height: 1 }} />
+            </div>
+
+          <div ref={tableWrapRef} className="overflow-x-auto">
             <table className="stitch-table min-w-[900px] text-sm">
               <thead>
                 <tr>
-                  {["Lead", "Phone", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
+                  {canDelete && (
+                    <th className="w-10 px-3">
+                      <input
+                        type="checkbox"
+                        checked={allSelectedOnPage}
+                        ref={(el) => { if (el) el.indeterminate = someSelectedOnPage && !allSelectedOnPage; }}
+                        onChange={toggleAll}
+                        className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                      />
+                    </th>
+                  )}
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead, i) => (
-                  <tr key={lead._id + (lead._type || "")} className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""}`}>
+                {paginated.map((lead, i) => (
+                  <tr
+                    key={lead._id + (lead._type || "")}
+                    className={`${i % 2 === 1 ? "bg-black/5 dark:bg-white/[0.02]" : ""} ${lead.isDeleted ? "opacity-75" : ""} ${isSelected(lead) ? "bg-orange-500/5" : ""}`}
+                  >
+                    {canDelete && (
+                      <td className="w-10 px-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected(lead)}
+                          onChange={() => toggleOne(lead)}
+                          className="h-4 w-4 cursor-pointer rounded accent-orange-500"
+                        />
+                      </td>
+                    )}
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="stitch-surface-muted flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border text-xs font-bold text-orange-500">
@@ -120,16 +461,13 @@ export default function DumpLeads() {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <a href={`tel:${lead.phone}`} className="flex items-center gap-1 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap">
-                        <Phone className="h-3 w-3" />{lead.phone}
-                      </a>
-                    </td>
+                    <td><PhoneActions phone={lead.phone} /></td>
+                    <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName
                         ? <span className="text-[11px] font-semibold text-violet-600">{lead.projectName}</span>
-                        : <span className="text-xs text-app-soft">—</span>}
+                        : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td><StatusBadge status={lead.status} /></td>
                     <td>
@@ -137,34 +475,32 @@ export default function DumpLeads() {
                         <span className={`badge border ${BOOKING_COLOR[lead.booking] || "bg-gray-100 text-gray-600"}`}>
                           {lead.booking}
                         </span>
-                      ) : <span className="text-xs text-app-soft">—</span>}
+                      ) : <span className="text-xs text-app-soft">-</span>}
                     </td>
                     <td>
                       {lead.isDeleted
                         ? <span className="badge bg-red-500/10 text-red-500 border border-red-500/20">Deleted</span>
                         : <span className="badge bg-gray-100/50 text-gray-500">Not Interested</span>}
                     </td>
-                    <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "—"}</td>
+                    <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "-"}</td>
                     <td className="text-xs text-app-soft max-w-[180px]">
-                      <p className="truncate">{lead.remark || lead.remark1 || "—"}</p>
+                      <p className="truncate">{lead.remark || lead.remark1 || "-"}</p>
                     </td>
                     <td className="text-xs text-app-soft whitespace-nowrap">{fmtDate(lead.createdAt)}</td>
                     {canDelete && (
                       <td>
                         <div className="flex items-center gap-1">
-                          {/* Restore button */}
                           {lead._type === "project" ? (
                             <button onClick={() => handleProjRestore(lead)}
                               className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
-                          ) : lead.isDeleted ? (
+                          ) : (
                             <button onClick={() => handleRestore(lead._id)}
                               className="rounded-lg p-1.5 text-green-500 hover:bg-green-500/10 transition" title="Restore lead">
                               <RotateCcw className="h-3.5 w-3.5" />
                             </button>
-                          ) : null}
-                          {/* Permanent delete button */}
+                          )}
                           {lead._type === "project" ? (
                             <button onClick={() => handleProjHardDelete(lead)}
                               className="rounded-lg p-1.5 text-red-500 hover:bg-red-500/10 transition" title="Delete permanently">
@@ -183,9 +519,140 @@ export default function DumpLeads() {
                 ))}
               </tbody>
             </table>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "var(--app-border)" }}>
+                <p className="text-xs text-app-soft">
+                  {filtered.length} total · showing {(safePage - 1) * limit + 1}–{Math.min(safePage * limit, filtered.length)}
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30 transition"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                  >← Prev</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                    .reduce((acc, p, idx, arr) => {
+                      if (idx > 0 && p - arr[idx - 1] > 1) acc.push("…");
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, idx) =>
+                      p === "…" ? (
+                        <span key={`ellipsis-${idx}`} className="px-2 text-xs text-app-soft">…</span>
+                      ) : (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                            p === safePage ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"
+                          }`}
+                          style={p === safePage ? { background: "var(--app-primary)" } : {}}
+                        >{p}</button>
+                      )
+                    )}
+                  <button
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-30 transition"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                  >Next →</button>
+                </div>
+              </div>
+            )}
           </div>
+          </>
         )}
       </section>
+
+      {/* Export dropdown - rendered via portal so it's never clipped by overflow:hidden */}
+      {showExportMenu && createPortal(
+        <div
+          ref={exportDropdownRef}
+          className="fixed z-[9999] w-52 overflow-hidden rounded-2xl"
+          style={{
+            top: exportMenuPos.top,
+            right: exportMenuPos.right,
+            background: "var(--app-bg)",
+            border: "1px solid var(--app-border)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.22)",
+          }}
+        >
+          {selectedIds.size > 0 && (
+            <p className="px-4 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-app-soft">
+              {selectedIds.size} selected
+            </p>
+          )}
+          {[
+            { key: "csv",   label: "Export CSV" },
+            { key: "excel", label: "Export Excel" },
+            { key: "json",  label: "Export JSON" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app transition hover:brightness-95"
+              onClick={() => { setShowExportMenu(false); exportRows(item.key); }}
+            >
+              <Download className="h-4 w-4" /> {item.label}
+            </button>
+          ))}
+          {selectedIds.size > 0 && (
+            <>
+              <div className="mx-4 border-t" style={{ borderColor: "var(--app-border)" }} />
+              {[
+                { key: "csv",   label: "Export all as CSV" },
+                { key: "excel", label: "Export all as Excel" },
+              ].map((item) => (
+                <button
+                  key={"all-" + item.key}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-sm text-app-soft transition hover:bg-black/5 dark:hover:bg-white/5"
+                  onClick={() => {
+                    setShowExportMenu(false);
+                    exportRows(item.key, leads);
+                  }}
+                >
+                  <Download className="h-4 w-4" /> {item.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+
+      {/* Bulk delete confirm dialog */}
+      {showBulkConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !bulkDeleting && setShowBulkConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl p-6 space-y-4" style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10">
+                <Trash2 className="h-5 w-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-app">Delete {selectedIds.size} leads?</h3>
+                <p className="text-xs text-app-soft">This action is permanent and cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                className="flex-1 btn-secondary rounded-xl"
+                onClick={() => setShowBulkConfirm(false)}
+                disabled={bulkDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                className="flex-1 btn-danger rounded-xl flex items-center justify-center gap-2"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? "Deleting…" : <><Trash2 className="h-4 w-4" /> Delete permanently</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

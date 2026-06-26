@@ -13,9 +13,19 @@ const {
 } = require("../validations/schemas");
 
 // Public routes
-router.post("/signup", validate(signupSchema), authController.signup);
-router.post("/login",  validate(loginSchema),  authController.login);
-router.post("/google", authController.googleAuth);
+router.post("/signup",         validate(signupSchema), authController.signup);
+router.post("/login",          validate(loginSchema),  authController.login);
+router.post("/admin-login",    authController.adminLogin); // super_admin only
+router.post("/google",         authController.googleAuth);
+router.post("/otp/send",           authController.sendOtp);          // login: email OTP send
+router.post("/otp/verify",         authController.verifyOtp);         // login: email OTP verify + login
+router.post("/signup/send-otp",    authController.signupSendOtp);     // signup: phone verify OTP send
+router.post("/signup/verify-otp",  authController.signupVerifyOtp);   // signup: phone verify OTP confirm
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password/:token", authController.resetPassword);
+
+// Logout must be public - cookie must clear even if JWT is expired/invalid
+router.post("/logout",        authController.logout);
 
 // Protected routes
 router.use(protect);

@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 
-export function useLeads(mode = "normal") {
+export function useLeads(mode = "normal", initialFilters = {}) {
   const [limit, setLimit] = useState(10);
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-    source: "",
-    priority: "",
-    dateRange: ""
+    search: initialFilters.search || "",
+    status: initialFilters.status || "",
+    source: initialFilters.source || "",
+    priority: initialFilters.priority || "",
+    dateRange: initialFilters.dateRange || "",
+    followUpToday: initialFilters.followUpToday || "",
   });
 
   const endpoint = mode === "unified" ? "/leads/unified" : "/leads";
@@ -45,7 +47,9 @@ export function useLeads(mode = "normal") {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [filters, page, limit, endpoint]);
+  }, [filters, page, limit, endpoint, refreshKey]);
+
+  const refetch = () => setRefreshKey((k) => k + 1);
 
   const setFilter = (key, value) => {
     setPage(1);
@@ -59,9 +63,13 @@ export function useLeads(mode = "normal") {
 
   const upsertLead = (lead, prepend = false) => {
     setLeads((current) => {
-      const exists = current.some((item) => item._id === lead._id);
-      if (exists) {
-        return current.map((item) => (item._id === lead._id ? lead : item));
+      const idx = current.findIndex((item) => item._id === lead._id);
+      if (idx !== -1) {
+        const existing = current[idx];
+        // Merge: preserve client-side fields (_type, projectId, projectName) from
+        // the existing entry, then overlay fresh API data on top
+        const merged = { ...existing, ...lead };
+        return current.map((item, i) => (i === idx ? merged : item));
       }
       return prepend ? [lead, ...current].slice(0, limit) : current;
     });
@@ -87,6 +95,7 @@ export function useLeads(mode = "normal") {
     loading,
     upsertLead,
     removeLead,
+    refetch,
     limit,
     changeLimit,
     LIMIT: limit,

@@ -1,7 +1,7 @@
-// components/ProjectForm.jsx
-import { useRef, useState } from "react";
-import { Modal, Spinner } from "./UI";
-import { ImageOff, Plus, Upload, X } from "lucide-react";
+﻿// components/ProjectForm.jsx
+import { useEffect, useRef, useState } from "react";
+import { Modal, Spinner, AppDatePicker } from "./UI";
+import { ChevronDown, ImageOff, Plus, Search, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -21,6 +21,7 @@ const empty = {
   images: [], priceMin: "", priceMax: "",
   bhkTypes: [], area: "", amenities: [],
   possessionDate: "", reraNumber: "",
+  assignedTo: [], // array of { _id, name } objects for display
 };
 
 function toForm(p) {
@@ -31,6 +32,10 @@ function toForm(p) {
     bhkTypes: p.bhkTypes || [], area: p.area || "", amenities: p.amenities || [],
     possessionDate: p.possessionDate ? p.possessionDate.slice(0, 10) : "",
     reraNumber: p.reraNumber || "",
+    // assignedTo from API is array of populated objects { _id, name, avatar } or IDs
+    assignedTo: Array.isArray(p.assignedTo)
+      ? p.assignedTo.map((m) => (typeof m === "object" ? { _id: m._id, name: m.name } : { _id: m, name: m }))
+      : [],
   };
 }
 
@@ -66,6 +71,35 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const [uploadingImg, setUploadingImg]   = useState(false);
   const [saving, setSaving]       = useState(false);
   const imgFileRef = useRef(null);
+
+  // Re-sync form whenever the modal opens or the project prop changes
+  useEffect(() => {
+    if (open) setForm(toForm(project));
+  }, [open, project]);
+
+  // Assign agents
+  const [allAgents, setAllAgents]         = useState([]);
+  const [agentDropOpen, setAgentDropOpen] = useState(false);
+  const [agentSearch, setAgentSearch]     = useState("");
+  const agentDropRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (agentDropRef.current && !agentDropRef.current.contains(e.target)) {
+        setAgentDropOpen(false);
+        setAgentSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    api.get("/auth/agents")
+      .then((r) => setAllAgents(r.data.agents || []))
+      .catch(() => {}); // silently fail - not critical
+  }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -121,6 +155,18 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const removeAmenity = (i) =>
     setForm((f) => ({ ...f, amenities: f.amenities.filter((_, idx) => idx !== i) }));
 
+  // ── Assign Agents ─────────────────────────────────────────────────────────
+  const addMember = (agent) => {
+    if (!agent) return;
+    if (form.assignedTo.some((m) => m._id === agent._id)) return;
+    setForm((f) => ({ ...f, assignedTo: [...f.assignedTo, { _id: agent._id, name: agent.name, role: agent.role }] }));
+    setAgentDropOpen(false);
+    setAgentSearch("");
+  };
+
+  const removeMember = (id) =>
+    setForm((f) => ({ ...f, assignedTo: f.assignedTo.filter((m) => m._id !== id) }));
+
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -131,6 +177,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
       priceMin: form.priceMin ? Number(form.priceMin) : 0,
       priceMax: form.priceMax ? Number(form.priceMax) : 0,
       possessionDate: form.possessionDate || null,
+      // Send only IDs to the backend
+      assignedTo: form.assignedTo.map((m) => m._id),
     };
 
     setSaving(true);
@@ -256,7 +304,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
             <div>
               <label className="label">Possession Date</label>
-              <input className="input" type="date" value={form.possessionDate} onChange={set("possessionDate")} />
+              <AppDatePicker value={form.possessionDate} onChange={v => setForm(f => ({ ...f, possessionDate: v }))} />
             </div>
           </div>
 
@@ -279,7 +327,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          {/* Amenities — dropdown + custom */}
+          {/* Amenities - dropdown + custom */}
           <div>
             <label className="label">Amenities</label>
             <div className="flex gap-2">
@@ -323,6 +371,112 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Assign Agents ── */}
+        <div className="space-y-3">
+          <div>
+            <p className="stitch-kicker">Assign Agents</p>
+            <p className="text-xs text-app-soft mt-0.5">
+              Agents assigned here will see this project and receive follow-up notifications.
+              Their performance is tracked under this project.
+            </p>
+          </div>
+
+          {/* Custom searchable dropdown */}
+          <div className="relative" ref={agentDropRef}>
+            <button
+              type="button"
+              onClick={() => { setAgentDropOpen((o) => !o); setAgentSearch(""); }}
+              className="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl text-sm text-left transition"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}
+            >
+              <span className="text-app-soft">
+                {allAgents.filter(a => !form.assignedTo.some(m => m._id === a._id)).length === 0
+                  ? "All team members added"
+                  : "Select a team member to assign…"}
+              </span>
+              <ChevronDown className={`h-4 w-4 text-app-soft flex-shrink-0 transition-transform ${agentDropOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {agentDropOpen && (
+              <div
+                className="absolute z-50 left-0 right-0 mt-1 rounded-xl shadow-xl overflow-hidden"
+                style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+              >
+                {/* Search box */}
+                <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
+                  <Search className="h-3.5 w-3.5 text-app-soft flex-shrink-0" />
+                  <input
+                    autoFocus
+                    className="flex-1 bg-transparent text-sm text-app outline-none placeholder:text-app-soft"
+                    placeholder="Search by name…"
+                    value={agentSearch}
+                    onChange={(e) => setAgentSearch(e.target.value)}
+                  />
+                </div>
+
+                {/* List */}
+                <ul className="max-h-48 overflow-y-auto">
+                  {allAgents
+                    .filter((a) => !form.assignedTo.some((m) => m._id === a._id))
+                    .filter((a) => agentSearch === "" || a.name.toLowerCase().includes(agentSearch.toLowerCase()))
+                    .map((a) => (
+                      <li key={a._id}>
+                        <button
+                          type="button"
+                          onClick={() => addMember(a)}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition hover:bg-orange-500/10"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500/15 text-orange-500 text-xs font-bold flex-shrink-0">
+                            {a.name?.[0]?.toUpperCase()}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-medium text-app truncate">{a.name}</p>
+                            <p className="text-[11px] text-app-soft capitalize">{a.role}</p>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  {allAgents
+                    .filter((a) => !form.assignedTo.some((m) => m._id === a._id))
+                    .filter((a) => agentSearch === "" || a.name.toLowerCase().includes(agentSearch.toLowerCase()))
+                    .length === 0 && (
+                    <li className="px-4 py-3 text-sm text-app-soft text-center">
+                      {agentSearch ? "No members match your search" : "All team members already added"}
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Assigned member chips */}
+          {form.assignedTo.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {form.assignedTo.map((m) => (
+                <span key={m._id}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold"
+                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-500/20 text-orange-500 text-[10px] font-bold">
+                    {m.name?.[0]?.toUpperCase()}
+                  </span>
+                  <span className="text-app">{m.name}</span>
+                  <button type="button" onClick={() => removeMember(m._id)}
+                    className="text-app-soft hover:text-red-500 transition-colors ml-0.5">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-400/30">
+              <span className="text-red-500 text-sm">⚠</span>
+              <p className="text-xs font-medium text-red-600 dark:text-red-400">
+                No agents assigned - agents won't see this project and notifications won't be sent.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

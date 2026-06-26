@@ -1,4 +1,4 @@
-// utils/pushNotifications.js — Web Push subscription helpers
+﻿// utils/pushNotifications.js - Web Push subscription helpers
 import api from "../services/api";
 
 function urlBase64ToUint8Array(base64String) {
@@ -11,9 +11,8 @@ function urlBase64ToUint8Array(base64String) {
 export async function subscribeToPush() {
   try {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") return;
+    // Caller is responsible for requesting permission — this function only subscribes.
+    if (Notification.permission !== "granted") return;
 
     const reg = await navigator.serviceWorker.ready;
 

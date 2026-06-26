@@ -4,61 +4,114 @@
 
 @layer base {
   :root {
+    --wa-dropdown-bg: #ffffff;
     --app-bg: #f0ede8;
     --app-surface: rgba(255, 255, 255, 0.58);
+    --app-surface-solid: #ffffff;
     --app-surface-low: rgba(255, 255, 255, 0.38);
     --app-surface-high: rgba(255, 255, 255, 0.75);
     --app-text: #18181b;
-    --app-text-soft: #71717a;
-    --app-border: rgba(160, 65, 0, 0.12);
-    --app-border-strong: rgba(160, 65, 0, 0.22);
-    --app-primary: #ff6b00;
-    --app-primary-deep: #a04100;
-    --app-shadow: 0 8px 32px rgba(160, 65, 0, 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
-    --app-shadow-lg: 0 24px 64px rgba(160, 65, 0, 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
+    /* Soft text darkened from #71717a → #5f5f66 for AA contrast on glass surfaces,
+       especially at the 10–11px sizes used in kickers and table headers. */
+    --app-text-soft: #5f5f66;
+    /* Brand-colour tokens — overridden at runtime by applyBrandColor() in App.jsx */
+    --app-primary:           #ff6b00;
+    --app-primary-deep:      #a04100;
+    --app-primary-rgb:       255, 107, 0;   /* used in rgba(var(--app-primary-rgb), alpha) */
+    --app-primary-deep-rgb:  160, 65, 0;
+    --app-border:            rgba(var(--app-primary-deep-rgb), 0.12);
+    --app-border-strong:     rgba(var(--app-primary-deep-rgb), 0.22);
+    --app-shadow:    0 8px 32px rgba(var(--app-primary-deep-rgb), 0.10), 0 1px 0 rgba(255,255,255,0.8) inset;
+    --app-shadow-lg: 0 24px 64px rgba(var(--app-primary-deep-rgb), 0.14), 0 1px 0 rgba(255,255,255,0.8) inset;
     --glass-blur: blur(20px) saturate(160%);
     --glass-blur-heavy: blur(40px) saturate(180%);
+    --app-card-solid: #ffffff;
   }
 
   :root.dark {
-    --app-bg: #080810;
-    --app-surface: rgba(14, 14, 22, 0.60);
-    --app-surface-low: rgba(8, 8, 16, 0.55);
-    --app-surface-high: rgba(22, 22, 34, 0.72);
-    --app-text: #f0f0f5;
-    --app-text-soft: #8888a0;
-    --app-border: rgba(255, 255, 255, 0.07);
-    --app-border-strong: rgba(255, 107, 0, 0.18);
-    --app-primary: #ff6b00;
-    --app-primary-deep: #a04100;
-    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.50), 0 1px 0 rgba(255,255,255,0.04) inset;
-    --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(255,255,255,0.06) inset;
-    --glass-blur: blur(20px) saturate(160%);
-    --glass-blur-heavy: blur(40px) saturate(180%);
+    --wa-dropdown-bg: #1e1d20;
+    --app-bg: #111113;
+    --app-surface: rgba(30, 29, 32, 0.75);
+    --app-surface-solid: #1e1d20;
+    --app-surface-low: rgba(22, 21, 24, 0.68);
+    --app-surface-high: rgba(42, 40, 46, 0.84);
+    --app-text: #ededed;
+    --app-text-soft: #969696;
+    --app-border: rgba(255, 255, 255, 0.10);
+    --app-border-strong:    rgba(var(--app-primary-rgb), 0.28);
+    --app-primary:          #ff6b00;
+    --app-primary-deep:     #a04100;
+    --app-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.08) inset;
+    --app-shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.10) inset;
+    --glass-blur: blur(24px) saturate(170%);
+    --glass-blur-heavy: blur(48px) saturate(190%);
+    --app-card-solid: #1e1d20;
+  }
+
+  /* ── Mobile: reduce blur values to prevent GPU rendering glitches on Android ── */
+  @media (max-width: 640px) {
+    :root, :root.dark {
+      --glass-blur: blur(4px) saturate(130%);
+      --glass-blur-heavy: blur(6px) saturate(140%);
+    }
+  }
+
+  /* ── Mobile sidebar: fully solid so content doesn't bleed through ── */
+  @media (max-width: 1023px) {
+    .sidebar-glass {
+      background: #ffffff !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    html.dark .sidebar-glass {
+      background: #18171c !important;
+    }
   }
 
   html { color-scheme: light; }
   html.dark { color-scheme: dark; }
 
+  /* ── Accessibility: visible keyboard focus ──
+     Many components set outline:none for the mouse; restore a clear ring for
+     keyboard users only (:focus-visible never triggers on plain mouse clicks). */
+  :focus-visible {
+    outline: 2px solid var(--app-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ── Accessibility: honour prefers-reduced-motion ──
+     Users who request reduced motion get near-instant transitions/animations
+     instead of blobs, pulses, and slides. WCAG 2.3.3. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   body {
-    @apply font-sans antialiased;
+    /* HARDCODED font - self-hosted via @fontsource-variable/inter, never change this */
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply antialiased;
     color: var(--app-text);
     min-height: 100vh;
     /* Light mode: warm cream with subtle orange tint */
     background-color: #f0ede8;
     background-image:
-      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(255, 107, 0, 0.18) 0%, transparent 55%),
-      radial-gradient(ellipse 70% 55% at 85% 90%, rgba(160, 65, 0, 0.14) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(255, 150, 50, 0.06) 0%, transparent 65%);
+      radial-gradient(ellipse 80% 60% at 15% 10%, rgba(var(--app-primary-rgb), 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 55% at 85% 90%, rgba(var(--app-primary-deep-rgb), 0.14) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(var(--app-primary-rgb), 0.06) 0%, transparent 65%);
     background-attachment: fixed;
   }
 
   html.dark body {
-    background-color: #080810;
+    background-color: #111113;
     background-image:
-      radial-gradient(ellipse 80% 60% at 10% 5%, rgba(255, 107, 0, 0.22) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 55% at 90% 95%, rgba(120, 40, 0, 0.28) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(40, 10, 0, 0.30) 0%, transparent 70%);
+      radial-gradient(ellipse 65% 45% at 10% 5%,  rgba(var(--app-primary-rgb), 0.12) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 40% at 90% 95%, rgba(var(--app-primary-deep-rgb), 0.13) 0%, transparent 55%);
     background-attachment: fixed;
   }
 
@@ -101,8 +154,8 @@
 
   .input:focus {
     outline: none;
-    border-color: rgba(255, 107, 0, 0.45);
-    box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.12), 0 2px 12px rgba(255, 107, 0, 0.08);
+    border-color: rgba(var(--app-primary-rgb), 0.45);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12), 0 2px 12px rgba(var(--app-primary-rgb), 0.08);
     background: var(--app-surface);
   }
 
@@ -118,7 +171,7 @@
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
     background-image: linear-gradient(135deg, var(--app-primary-deep), var(--app-primary));
-    box-shadow: 0 8px 24px rgba(255, 107, 0, 0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
+    box-shadow: 0 8px 24px rgba(var(--app-primary-rgb), 0.35), 0 1px 0 rgba(255,255,255,0.15) inset;
     position: relative;
     overflow: hidden;
   }
@@ -133,13 +186,13 @@
   }
 
   .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 12px 32px rgba(255, 107, 0, 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
+    box-shadow: 0 12px 32px rgba(var(--app-primary-rgb), 0.45), 0 1px 0 rgba(255,255,255,0.15) inset;
     transform: translateY(-1px);
   }
 
   .btn-primary:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.30);
+    box-shadow: 0 4px 16px rgba(var(--app-primary-rgb), 0.30);
   }
 
   .btn-secondary {
@@ -245,16 +298,23 @@
   .stitch-table { width: 100%; border-collapse: collapse; }
 
   .stitch-table thead th {
-    @apply px-5 py-4 text-left text-[11px] font-bold uppercase tracking-[0.18em];
+    @apply px-2.5 py-2 text-left text-[10px] font-bold uppercase tracking-[0.14em];
     color: var(--app-text-soft);
     background: var(--app-surface-low);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    white-space: nowrap;
   }
 
   .stitch-table tbody td {
-    @apply px-5 py-4 align-middle;
+    @apply px-2.5 py-2 align-middle;
     border-top: 1px solid color-mix(in srgb, var(--app-border) 90%, transparent);
+  }
+
+  /* Fixed-layout table cells: clip content to column width */
+  .stitch-table-fixed tbody td {
+    overflow: hidden;
+    max-width: 0;
   }
 
   .stitch-table tbody tr { transition: background-color 160ms ease; }
@@ -267,14 +327,14 @@
   .auth-shell {
     min-height: 100vh;
     background:
-      radial-gradient(ellipse at 15% 15%, rgba(255, 107, 0, 0.20) 0%, transparent 45%),
-      radial-gradient(ellipse at 85% 85%, rgba(160, 65, 0, 0.16) 0%, transparent 40%),
-      radial-gradient(ellipse at 50% 50%, rgba(255, 150, 50, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 15% 15%, rgba(var(--app-primary-rgb), 0.20) 0%, transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(var(--app-primary-deep-rgb), 0.16) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(var(--app-primary-rgb), 0.06) 0%, transparent 60%),
       var(--app-bg);
   }
 
   .auth-card {
-    @apply rounded-[2rem] p-8 sm:p-10;
+    @apply rounded-[2rem] p-5 sm:p-8 lg:p-10;
     background: var(--app-surface);
     border: 1px solid var(--app-border-strong);
     box-shadow: var(--app-shadow-lg);
@@ -292,7 +352,7 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 107, 0, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--app-primary-rgb), 0.4), transparent);
     border-radius: 999px;
   }
 
@@ -307,7 +367,7 @@
 
   /* ── Glow accent for active/highlight states ── */
   .glow-orange {
-    box-shadow: 0 0 24px rgba(255, 107, 0, 0.25), 0 4px 12px rgba(255, 107, 0, 0.15);
+    box-shadow: 0 0 24px rgba(var(--app-primary-rgb), 0.25), 0 4px 12px rgba(var(--app-primary-rgb), 0.15);
   }
 
   /* ── Sidebar glass ── */
@@ -320,7 +380,7 @@
   }
 
   html.dark .sidebar-glass {
-    box-shadow: 4px 0 48px rgba(0, 0, 0, 0.40);
+    box-shadow: 4px 0 48px rgba(0, 0, 0, 0.30);
   }
 
   /* ── Scrollbar ── */
@@ -331,6 +391,259 @@
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 107, 0, 0.30);
+    background: rgba(var(--app-primary-rgb), 0.30);
+  }
+
+  /* ── Recharts: kill tap-highlight & focus ring on mobile ── */
+  .recharts-wrapper,
+  .recharts-wrapper svg,
+  .recharts-wrapper svg *,
+  .recharts-surface {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* ── Hide scrollbar (e.g. horizontally-scrolled tab strips) ── */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* ── Top-scrollbar mirror strip — always show the track ── */
+  .top-scroll-mirror::-webkit-scrollbar { height: 8px; display: block; }
+  .top-scroll-mirror::-webkit-scrollbar-track {
+    background: var(--app-surface-low);
+    border-radius: 999px;
+  }
+  .top-scroll-mirror::-webkit-scrollbar-thumb {
+    background: var(--app-border-strong);
+    border-radius: 999px;
+  }
+  .top-scroll-mirror::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--app-primary-rgb), 0.40);
+  }
+
+  /* ── Safe area insets (notched phones & gesture bars) ── */
+
+  /* Page content: extra bottom padding so last card clears gesture bar */
+  .stitch-page {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Desktop sidebar: prevent bottom content hiding behind home indicator */
+  aside.sidebar-glass {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Mobile top bar: push below notch / Dynamic Island */
+  .mobile-topbar {
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0.75rem));
+  }
+
+  /* main scroll container: extra bottom space for Android gesture bar */
+  main {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* On mobile (<lg), main must clear taller notch-aware topbar */
+  @media (max-width: 1023px) {
+    main {
+      padding-top: calc(4rem + env(safe-area-inset-top, 0px)) !important;
+    }
+  }
+}
+
+/* ── Dashboard bell ring animation ─────────────────────────────────────── */
+@keyframes flyout-in {
+  from { opacity: 0; transform: translateX(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+
+@keyframes bell-ring {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  10%, 30%      { transform: rotate(-18deg); }
+  20%, 40%      { transform: rotate(18deg); }
+}
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--app-primary); opacity: 1; }
+  50%      { box-shadow: 0 0 0 6px transparent; opacity: 0.8; }
+}
+.bell-ringing {
+  animation: bell-ring 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+.badge-glow {
+  animation: badge-glow 1.5s ease-in-out infinite;
+}
+
+/* ── Dashboard digital clock ────────────────────────────────────────────── */
+@keyframes clock-glow-pulse {
+  0%   { text-shadow: 0 0 0px color-mix(in srgb, var(--app-primary) 0%, transparent); }
+  25%  { text-shadow: 0 0 12px color-mix(in srgb, var(--app-primary) 80%, transparent); }
+  100% { text-shadow: 0 0 0px color-mix(in srgb, var(--app-primary) 0%, transparent); }
+}
+@keyframes colon-blink {
+  0%, 49%  { opacity: 1; }
+  50%, 99% { opacity: 0.2; }
+}
+.clock-glow {
+  animation: clock-glow-pulse 1s ease-out forwards;
+}
+.clock-colon {
+  animation: colon-blink 1s step-start infinite;
+}
+
+@keyframes ai-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.ai-shimmer-bar {
+  background: linear-gradient(90deg,
+    rgba(249,115,22,0.04) 0%,
+    rgba(249,115,22,0.13) 40%,
+    rgba(249,115,22,0.04) 100%);
+  background-size: 200% 100%;
+  animation: ai-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes ai-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.ai-cursor {
+  display: inline-block;
+  width: 1.5px;
+  height: 0.75em;
+  margin-left: 1px;
+  vertical-align: middle;
+  border-radius: 1px;
+  animation: ai-cursor-blink 0.7s step-start infinite;
+}
+
+@keyframes ai-glow-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.15); }
+}
+.ai-sparkle {
+  animation: ai-glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Hot Today AI card — spinning conic-gradient border ───────────────────────
+   @property lets us animate a CSS custom property (the angle) so the arc
+   travels continuously around the card. Fallback: static orange border glow. */
+@property --hot-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes hotBorderSpin {
+  to { --hot-angle: 360deg; }
+}
+
+.hot-ai-wrapper {
+  --hot-angle: 0deg;
+  padding: 1.5px;
+  border-radius: calc(1rem + 2px); /* card border-radius + wrapper padding */
+  background: conic-gradient(
+    from var(--hot-angle),
+    transparent 0deg,
+    rgba(249, 115, 22, 0.0) 200deg,
+    rgba(249, 115, 22, 0.9) 260deg,
+    rgba(251, 146, 60, 1.0) 290deg,
+    rgba(249, 115, 22, 0.9) 320deg,
+    rgba(249, 115, 22, 0.0) 360deg
+  );
+  animation: hotBorderSpin 3s linear infinite;
+}
+
+/* ── Native Android app feel (Capacitor context) ─────────────────────────────
+   Applied only when html.is-native class is set (by main.jsx when Capacitor
+   is detected). Prevents browser-like behaviour: text selection, overscroll
+   bounce, scrollbars, 300ms tap delay, and tap highlight flashes.
+──────────────────────────────────────────────────────────────────────────── */
+html.is-native {
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: none;
+}
+html.is-native body {
+  overscroll-behavior: none;
+  /* Prevent the grey WebView background showing on pull-down */
+  background: #111113;
+}
+html.is-native * {
+  /* Kill the blue/grey flash that appears on tap in WebView */
+  -webkit-tap-highlight-color: transparent !important;
+  /* Eliminate the 300ms tap delay */
+  touch-action: manipulation;
+  /* No accidental text selection on long-press */
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Re-enable selection inside text inputs */
+html.is-native input,
+html.is-native textarea,
+html.is-native [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* Hide scrollbars in the native app — they look web-like */
+html.is-native *::-webkit-scrollbar { display: none !important; }
+html.is-native * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+/* Keep the top-scroll mirror strip visible (horizontal scroll sync) */
+html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important; height: 4px; }
+
+/* Gold ring cursor for mouse and trackpad users. */
+.custom-cursor {
+  position: fixed;
+  z-index: 9999;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(17, 24, 39, 0.9);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition:
+    width 0.22s,
+    height 0.22s,
+    background 0.22s,
+    border-color 0.22s,
+    opacity 0.15s;
+  will-change: left, top;
+}
+
+.custom-cursor.visible {
+  opacity: 1;
+}
+
+.custom-cursor::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #111827;
+  transform: translate(-50%, -50%);
+}
+
+.custom-cursor.active {
+  width: 46px;
+  height: 46px;
+  border-color: #000;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+@media (pointer: coarse) {
+  .custom-cursor {
+    display: none;
   }
 }

@@ -1,5 +1,6 @@
 ﻿const jwt = require("jsonwebtoken");
 const Automation = require("../models/Automation");
+const OAuthSession = require("../models/OAuthSession");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
 
@@ -50,14 +51,15 @@ function applyDefaults(payload = {}) {
 }
 
 const automationService = {
-  async list() {
-    return Automation.find().sort({ createdAt: -1 });
+  async list(orgId) {
+    return Automation.find({ orgId }).select("-accessToken -userToken").sort({ createdAt: -1 });
   },
 
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
     const automation = await Automation.create({
       ...normalized,
+      orgId: actor.orgId,
       createdBy: actor._id,
       updatedBy: actor._id,
     });
@@ -82,6 +84,7 @@ const automationService = {
     });
     const res = await fetch(`${url}?${params.toString()}`, { method: "POST" });
     const json = await res.json();
+    console.log(`[subscribePageWebhook] page=${pageId} response:`, JSON.stringify(json));
     if (!res.ok || !json.success) {
       throw new Error(json.error?.message || "Failed to subscribe page webhook");
     }
@@ -89,7 +92,7 @@ const automationService = {
   },
 
   async update(id, payload, actor) {
-    const automation = await Automation.findById(id);
+    const automation = await Automation.findOne({ _id: id, orgId: actor.orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
 
     const normalized = applyDefaults({ ...automation.toObject(), ...payload });
@@ -107,12 +110,22 @@ const automationService = {
       "webhookPath",
       "verifyToken",
       "accessToken",
+      "userToken",
       "mappingNotes",
       "lastSyncAt",
       "isActive",
     ].forEach((key) => {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
+
+    // When a fresh userToken is saved, record expiry.
+    // System user tokens (permanent) skip the 60-day window so the cron never touches them.
+    if (payload.userToken && payload.userToken !== automation.userToken) {
+      automation.userTokenExpiresAt = payload.isSystemToken
+        ? new Date("2099-12-31")                                       // permanent — cron skips
+        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);            // normal 60-day token
+      automation.tokenRefreshedAt = new Date();
+    }
 
     automation.updatedBy = actor._id;
     await automation.save();
@@ -129,8 +142,8 @@ const automationService = {
     return automation;
   },
 
-  async remove(id) {
-    const automation = await Automation.findById(id);
+  async remove(id, orgId) {
+    const automation = await Automation.findOne({ _id: id, orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
     await automation.deleteOne();
     return true;
@@ -148,16 +161,17 @@ const automationService = {
 
     const user = await User.findById(decoded.id);
     if (!user) throw new AppError("User not found", 404);
-    if (!["admin", "manager"].includes(user.role)) {
+    if (!["admin", "manager", "super_admin"].includes(user.role)) {
       throw new AppError("Not authorized to manage automations", 403);
     }
 
     return user;
   },
 
-  createFacebookState({ userId, crmToken }) {
+  createFacebookState({ userId }) {
+    // Only embed userId - never the session JWT (which would leak via URL/browser history)
     return jwt.sign(
-      { userId, crmToken, type: "facebook_oauth" },
+      { userId, type: "facebook_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -167,7 +181,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "facebook_oauth") throw new Error("Invalid state type");
-      return decoded;
+      return { userId: decoded.userId };
     } catch {
       throw new AppError("Invalid Facebook OAuth state", 400);
     }
@@ -189,12 +203,13 @@ const automationService = {
       redirect_uri: this.getFacebookRedirectUri(),
       state,
       response_type: "code",
+      // leads_retrieval is intentionally omitted — the server-side App Token
+      // (FB_APP_ID|FB_APP_SECRET) handles all lead fetching, so users never
+      // need to grant that advanced permission personally.
       scope: [
         "pages_show_list",
         "pages_manage_metadata",
         "pages_read_engagement",
-        "leads_retrieval",
-        "ads_management",
       ].join(","),
     });
 
@@ -206,6 +221,7 @@ const automationService = {
       throw new AppError("Facebook OAuth credentials are not configured", 500);
     }
 
+    // Step 1: Exchange code for short-lived user token
     const params = new URLSearchParams({
       client_id: process.env.FB_APP_ID,
       client_secret: process.env.FB_APP_SECRET,
@@ -219,50 +235,159 @@ const automationService = {
       throw new AppError(json.error?.message || "Failed to exchange Facebook OAuth code", 400);
     }
 
-    return json.access_token;
+    const shortLivedToken = json.access_token;
+
+    // Step 2: Extend to long-lived user token (60 days)
+    // Page tokens derived from a long-lived user token become non-expiring
+    try {
+      const llParams = new URLSearchParams({
+        grant_type: "fb_exchange_token",
+        client_id: process.env.FB_APP_ID,
+        client_secret: process.env.FB_APP_SECRET,
+        fb_exchange_token: shortLivedToken,
+      });
+      const llResponse = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token?${llParams.toString()}`);
+      const llJson = await llResponse.json();
+      if (llResponse.ok && llJson.access_token) {
+        console.log("[facebookOAuth] Extended to long-lived user token successfully");
+        return llJson.access_token;
+      }
+    } catch (extErr) {
+      console.warn("[facebookOAuth] Could not extend token, using short-lived:", extErr.message);
+    }
+
+    return shortLivedToken;
+  },
+
+  // Get a page-specific access token using the user token
+  // This is needed for Business Manager pages where /owned_pages doesn't return access_token
+  async fetchPageToken(pageId, userAccessToken) {
+    try {
+      const params = new URLSearchParams({ access_token: userAccessToken, fields: "access_token" });
+      const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}?${params.toString()}`);
+      const json = await resp.json();
+      if (json.access_token) {
+        console.log(`[fetchPageToken] Got page token for ${pageId}`);
+        return json.access_token;
+      }
+      console.warn(`[fetchPageToken] No access_token returned for page ${pageId}:`, JSON.stringify(json));
+    } catch (e) {
+      console.warn(`[fetchPageToken] Failed for page ${pageId}:`, e.message);
+    }
+    return userAccessToken; // fallback to user token
   },
 
   async fetchFacebookPages(accessToken) {
-    const params = new URLSearchParams({
-      access_token: accessToken,
-      fields: "id,name,access_token,tasks",
-    });
+    // 1️⃣ Direct pages — managed personally by the user (/me/accounts)
+    const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
+    const resp1 = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
+    const json1 = await resp1.json();
 
-    const response = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me/accounts?${params.toString()}`);
-    const json = await response.json();
-    if (!response.ok) {
-      throw new AppError(json.error?.message || "Failed to fetch Facebook pages", 400);
+    if (!resp1.ok) {
+      console.error("[fetchFacebookPages] /me/accounts error:", JSON.stringify(json1));
+      throw new AppError(json1.error?.message || "Failed to fetch Facebook pages", 400);
     }
 
-    return json.data || [];
+    const directPages = json1.data || [];
+    console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} direct page(s)`);
+
+    // 2️⃣ Fetch page tokens for any pages missing them, then deduplicate
+    // Note: /me/businesses (Business Manager pages) requires the business_management
+    // permission which needs separate Facebook App Review approval. Until that is
+    // granted, only pages directly administered on the user's personal profile
+    // (/me/accounts) are returned. Customers whose pages are Business-Manager-only
+    // must add themselves as a personal Page Admin first, then reconnect.
+    const enriched = await Promise.all(
+      directPages.map(async (page) => {
+        if (page.access_token) return page;
+        const pageToken = await this.fetchPageToken(page.id, accessToken);
+        return { ...page, access_token: pageToken };
+      })
+    );
+
+    const seen = new Set();
+    const deduped = enriched.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
+
+    console.log(`[fetchFacebookPages] Total unique pages: ${deduped.length} (direct /me/accounts)`);
+    return deduped;
   },
 
   async fetchFacebookForms(pageId, pageAccessToken) {
     const params = new URLSearchParams({
       access_token: pageAccessToken,
-      fields: "id,name,status",
+      fields: "id,name,status,created_time",
+      limit: "100",
     });
 
     const response = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}/leadgen_forms?${params.toString()}`);
     const json = await response.json();
-    if (!response.ok) return [];
+    if (!response.ok) {
+      console.error(`[fetchFacebookForms] API error for page ${pageId}:`, JSON.stringify(json));
+      return [];
+    }
 
-    return json.data || [];
+    const forms = json.data || [];
+    console.log(`[fetchFacebookForms] page ${pageId} returned ${forms.length} forms:`, forms.map(f => f.name));
+    return forms;
   },
 
   async getFacebookConnectionData(code) {
     const userAccessToken = await this.exchangeFacebookCode(code);
-    const pages = await this.fetchFacebookPages(userAccessToken);
+    const rawPages = await this.fetchFacebookPages(userAccessToken);
 
-    return Promise.all(
-      pages.map(async (page) => ({
-        id: page.id,
-        name: page.name,
-        tasks: page.tasks || [],
-        accessToken: page.access_token || "",
-        forms: await this.fetchFacebookForms(page.id, page.access_token),
-      }))
+    const pages = await Promise.all(
+      rawPages.map(async (page) => {
+        // page.access_token may be absent for Business Manager pages; fall back to user token
+        const pageToken = page.access_token || userAccessToken;
+        return {
+          id: page.id,
+          name: page.name,
+          tasks: page.tasks || [],
+          accessToken: pageToken,
+          forms: await this.fetchFacebookForms(page.id, pageToken),
+        };
+      })
     );
+
+    // Return pages + the fresh user token (used as fallback access token on reconnect)
+    return { pages, freshToken: userAccessToken };
+  },
+
+  async verifySystemToken(token) {
+    // Verify the token is valid and get the identity
+    const meResp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/me?access_token=${encodeURIComponent(token)}`);
+    const me = await meResp.json();
+    if (me.error) throw new AppError(me.error.message || "Invalid token — check permissions and try again", 400);
+
+    // Fetch pages (reuses existing logic that handles personal + Business Manager pages)
+    const rawPages = await this.fetchFacebookPages(token);
+    const pages = await Promise.all(rawPages.map(async (page) => {
+      const pageToken = page.access_token || token;
+      return {
+        id:          page.id,
+        name:        page.name,
+        tasks:       page.tasks || [],
+        accessToken: pageToken,
+        forms:       await this.fetchFacebookForms(page.id, pageToken),
+      };
+    }));
+
+    return { pages, systemToken: token };
+  },
+
+  async storeOAuthResult(sessionId, data) {
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    await OAuthSession.findOneAndUpdate(
+      { sessionId },
+      { sessionId, data, expiresAt },
+      { upsert: true }
+    );
+  },
+
+  async getOAuthResult(sessionId) {
+    const entry = await OAuthSession.findOneAndDelete({ sessionId });
+    if (!entry || entry.expiresAt < new Date()) return null;
+    return entry.data; // one-time use (deleted above)
   },
 };
 

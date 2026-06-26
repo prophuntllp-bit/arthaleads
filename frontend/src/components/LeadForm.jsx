@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
-import { FormField, Modal, Spinner } from "./UI";
+import { FormField, Modal, Spinner, AppDatePicker } from "./UI";
+import CustomSelect from "./CustomSelect";
 import {
   BHK_OPTIONS,
   PRIORITY_OPTIONS,
@@ -15,6 +16,8 @@ const initialForm = {
   name: "",
   phone: "",
   email: "",
+  streetAddress: "",
+  city: "",
   source: "Manual",
   status: "New",
   priority: "Medium",
@@ -43,6 +46,8 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       name: lead.name || "",
       phone: lead.phone || "",
       email: lead.email || "",
+      streetAddress: lead.streetAddress || "",
+      city: lead.city || "",
       source: lead.source || "Manual",
       status: lead.status || "New",
       priority: lead.priority || "Medium",
@@ -61,6 +66,7 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
   const setValue = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));
   };
+  const setField = (key) => (v) => setForm((f) => ({ ...f, [key]: v }));
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -70,6 +76,8 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       name: form.name,
       phone: form.phone,
       email: form.email,
+      streetAddress: form.streetAddress,
+      city: form.city,
       source: form.source,
       status: form.status,
       priority: form.priority,
@@ -89,7 +97,9 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
 
     try {
       const { data } = lead
-        ? await api.put(`/leads/${lead._id}`, payload)
+        ? lead._type === "project" && lead.projectId
+          ? await api.patch(`/projects/${lead.projectId}/leads/${lead._id}`, payload)
+          : await api.put(`/leads/${lead._id}`, payload)
         : await api.post("/leads", payload);
 
       toast.success(lead ? "Lead updated" : "Lead created");
@@ -120,35 +130,29 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         <FormField label="Email">
           <input className="input" type="email" value={form.email} onChange={setValue("email")} />
         </FormField>
+        <FormField label="Street Address">
+          <input className="input" value={form.streetAddress} onChange={setValue("streetAddress")} />
+        </FormField>
+        <FormField label="City">
+          <input className="input" value={form.city} onChange={setValue("city")} />
+        </FormField>
         <FormField label="Source">
-          <select className="select" value={form.source} onChange={setValue("source")}>
-            {SOURCE_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.source} onChange={setField("source")} options={SOURCE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Status">
-          <select className="select" value={form.status} onChange={setValue("status")}>
-            {STATUS_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Priority">
-          <select className="select" value={form.priority} onChange={setValue("priority")}>
-            {PRIORITY_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.priority} onChange={setField("priority")} options={PRIORITY_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Property Type">
-          <select className="select" value={form.propertyType} onChange={setValue("propertyType")}>
-            {PROPERTY_TYPES.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.propertyType} onChange={setField("propertyType")} options={PROPERTY_TYPES} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="BHK">
-          <select className="select" value={form.bhk} onChange={setValue("bhk")}>
-            {BHK_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.bhk} onChange={setField("bhk")} options={BHK_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Purpose">
-          <select className="select" value={form.purpose} onChange={setValue("purpose")}>
-            {PURPOSE_OPTIONS.map((item) => <option key={item}>{item}</option>)}
-          </select>
+          <CustomSelect value={form.purpose} onChange={setField("purpose")} options={PURPOSE_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
         </FormField>
         <FormField label="Preferred Location">
           <input className="input" value={form.preferredLocation} onChange={setValue("preferredLocation")} />
@@ -160,17 +164,16 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
           <input className="input" type="number" min="0" value={form.budgetMax} onChange={setValue("budgetMax")} />
         </FormField>
         <FormField label="Follow-up Date">
-          <input className="input" type="date" value={form.followUpDate} onChange={setValue("followUpDate")} />
+          <AppDatePicker value={form.followUpDate} onChange={setField("followUpDate")} />
         </FormField>
         <FormField label="Assign To">
-          <select className="select" value={form.assignedTo} onChange={setValue("assignedTo")}>
-            <option value="">Unassigned</option>
-            {agents.map((agent) => (
-              <option key={agent._id} value={agent._id}>
-                {agent.name} ({agent.role})
-              </option>
-            ))}
-          </select>
+          <CustomSelect
+            value={form.assignedTo}
+            onChange={setField("assignedTo")}
+            placeholder="Unassigned"
+            options={agents.map((a) => ({ value: a._id, label: `${a.name} (${a.role})` }))}
+            style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+          />
         </FormField>
         <div className="md:col-span-2">
           <FormField label="Follow-up Note">
