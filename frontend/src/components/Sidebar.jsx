@@ -3,7 +3,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  LayoutDashboard, Users, UserCheck, Settings, User,
+  LayoutDashboard, Users, UserCheck, Settings, User, Gift,
   LogOut, Menu, X, Kanban, MoonStar, SunMedium, LifeBuoy, BarChart3, Workflow,
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
@@ -768,6 +768,11 @@ export default function Sidebar() {
                   <User style={{ width: 13, height: 13, flexShrink: 0 }} />
                   My Profile
                 </button>
+                <button onClick={() => { navigate("/referrals"); setProfileOpen(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+                  <Gift style={{ width: 13, height: 13, flexShrink: 0, color: "#ff6b00" }} />
+                  Referrals
+                </button>
                 <button onClick={() => { toggleTheme(); setProfileOpen(false); }}
                   className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
                   {isDark
@@ -1234,6 +1239,11 @@ export default function Sidebar() {
             className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
             <User style={{ width: 13, height: 13, flexShrink: 0 }} />
             My Profile
+          </button>
+          <button onClick={() => { navigate("/referrals"); setDesktopProfileOpen(false); }}
+            className="flex items-center gap-2 w-full px-3 py-2 text-xs rounded-xl transition-all text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5 text-left">
+            <Gift style={{ width: 13, height: 13, flexShrink: 0, color: "#ff6b00" }} />
+            Referrals
           </button>
         </div>
 
