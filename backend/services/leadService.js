@@ -471,7 +471,7 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, booking, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
+    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
     // Accept both names — the Leads page filter sends `assignedTo`, some
     // internal callers still send the older `userId`.
     const agentId  = query.assignedTo || query.userId;
@@ -541,12 +541,24 @@ const leadService = {
 
       // ProjectLead has no per-lead `assignedTo` — assignment lives on the
       // parent Project (Project.assignedTo[]), so scope by project instead.
+      let scopedProjectIds = null;
       if (user.role === "agent" || query.myOnly === "true") {
         const scoped = await Project.find({ orgId: user.orgId, assignedTo: user._id }).select("_id").lean();
-        projFilter.project = { $in: scoped.map((p) => p._id) };
+        scopedProjectIds = scoped.map((p) => String(p._id));
       } else if (agentId && (user.role === "admin" || user.role === "manager")) {
         const scoped = await Project.find({ orgId: user.orgId, assignedTo: agentId }).select("_id").lean();
-        projFilter.project = { $in: scoped.map((p) => p._id) };
+        scopedProjectIds = scoped.map((p) => String(p._id));
+      }
+
+      if (projectId) {
+        // Explicit project filter — intersect with any agent-based scoping so
+        // "agent X + project Y" correctly returns nothing when X isn't on Y,
+        // instead of ignoring one of the two filters.
+        projFilter.project = (scopedProjectIds && !scopedProjectIds.includes(String(projectId)))
+          ? null // guaranteed no match — ProjectLead.project is a required field, never null
+          : projectId;
+      } else if (scopedProjectIds) {
+        projFilter.project = { $in: scopedProjectIds };
       }
 
       [projLeads, projTotal] = await Promise.all([
@@ -555,10 +567,14 @@ const leadService = {
       ]);
     }
 
-    const [leads, leadTotal] = await Promise.all([
-      Lead.find(leadFilter).sort({ createdAt: -1 }).limit(fetchCap).lean(),
-      Lead.countDocuments(leadFilter),
-    ]);
+    // Lead has no project association at all — a project filter can only
+    // ever match ProjectLead documents, so skip the Lead query entirely.
+    const [leads, leadTotal] = projectId
+      ? [[], 0]
+      : await Promise.all([
+          Lead.find(leadFilter).sort({ createdAt: -1 }).limit(fetchCap).lean(),
+          Lead.countDocuments(leadFilter),
+        ]);
 
     const taggedLeads = leads.map((l) => ({ ...l, _type: "lead" }));
     const taggedProjLeads = projLeads.map((pl) => ({
