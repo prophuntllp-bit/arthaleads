@@ -1,4 +1,5 @@
 const Task = require("../models/Task");
+const { sendPushToUser } = require("../utils/push");
 
 const taskController = {
   // GET /api/tasks  — all roles; agents see only tasks assigned to them
@@ -68,6 +69,16 @@ const taskController = {
       });
 
       res.status(201).json({ success: true, task });
+
+      // Notify the assignee — skip if they assigned it to themselves
+      if (String(task.assignedTo) !== String(user._id)) {
+        sendPushToUser(task.assignedTo, {
+          type: "task_assigned",
+          title: "New Task Assigned",
+          body: `${user.name} assigned you a task: ${task.title}`,
+          data: { url: "/tasks", taskId: String(task._id) },
+        }).catch(() => {});
+      }
     } catch (err) { next(err); }
   },
 
@@ -77,12 +88,23 @@ const taskController = {
       const task = await Task.findOne({ _id: req.params.id, orgId: req.user.orgId });
       if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
+      const prevAssignedTo = String(task.assignedTo);
       const allowed = ["title", "description", "priority", "dueDate", "assignedTo", "assignedToName", "lead", "leadName", "project", "projectName"];
       for (const key of allowed) {
         if (req.body[key] !== undefined) task[key] = req.body[key];
       }
       await task.save();
       res.json({ success: true, task });
+
+      // Notify the new assignee on reassignment — skip if unchanged or self-assigned
+      if (String(task.assignedTo) !== prevAssignedTo && String(task.assignedTo) !== String(req.user._id)) {
+        sendPushToUser(task.assignedTo, {
+          type: "task_assigned",
+          title: "New Task Assigned",
+          body: `${req.user.name} assigned you a task: ${task.title}`,
+          data: { url: "/tasks", taskId: String(task._id) },
+        }).catch(() => {});
+      }
     } catch (err) { next(err); }
   },
 

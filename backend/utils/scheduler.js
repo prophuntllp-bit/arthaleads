@@ -2,6 +2,7 @@
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const Automation = require("../models/Automation");
+const Task = require("../models/Task");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
@@ -136,6 +137,31 @@ async function runUpcomingReminder() {
   await notifyLeads(allLeads, (lead) => `Follow-up in 10 minutes: ${lead.name}${lead.phone ? ` (${lead.phone})` : ""}`);
 }
 
+// ── Daily 9 AM: tasks due today reminder ────────────────────────────────────
+async function runTaskReminder() {
+  const { start, end } = getTodayRange();
+
+  const tasks = await Task.find({
+    status: "pending",
+    dueDate: { $gte: start, $lte: end },
+  }).select("title assignedTo dueDate").lean();
+
+  if (!tasks.length) {
+    logger.info("Task reminder: no tasks due today");
+    return;
+  }
+
+  logger.info(`Task reminder: ${tasks.length} task(s) due today`);
+  for (const task of tasks) {
+    await sendPushToUser(task.assignedTo, {
+      type: "task_due",
+      title: "Task Due Today",
+      body: task.title,
+      data: { url: "/tasks", taskId: String(task._id) },
+    });
+  }
+}
+
 // ── Facebook token refresh ────────────────────────────────────────────────────
 // Facebook long-lived user tokens expire after 60 days.
 // We refresh any token expiring within 20 days so it never actually expires.
@@ -228,6 +254,11 @@ cron.schedule("* * * * *", () => {
   runUpcomingReminder().catch((err) => logger.error(`Upcoming reminder error: ${err.message}`));
 });
 
+// ── Daily 9 AM IST (UTC 03:30): tasks due today ──────────────────────────────
+cron.schedule("30 3 * * *", () => {
+  runTaskReminder().catch((err) => logger.error(`Task reminder error: ${err.message}`));
+});
+
 // ── Daily 2 AM IST (UTC 8:30 PM = 20:30): full DB backup via email ──────────
 cron.schedule("30 20 * * *", () => {
   runBackup().catch((err) => logger.error(`[backup] cron failed: ${err.message}`));
@@ -238,4 +269,4 @@ cron.schedule("30 4 * * *", () => {
   refreshFacebookTokens().catch((err) => logger.error(`[fb-token-refresh] cron failed: ${err.message}`));
 });
 
-module.exports = { runDailyReminder, runUpcomingReminder, runBackup, refreshFacebookTokens };
+module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
