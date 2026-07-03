@@ -832,6 +832,45 @@ const leadService = {
     return pl;
   },
 
+  // ── Bulk Transfer to Project ─────────────────────────────────────────────
+  // Moves multiple leads into a project's lead list in one operation.
+  // Preserves remarks/follow-ups/booking exactly like the single-lead
+  // transfer above — only the container (Lead → ProjectLead) changes.
+  async bulkTransferToProject(ids, toProjectId, user) {
+    const project = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
+    if (!project) throw new AppError("Project not found", 404);
+
+    const leadsToTransfer = await Lead.find({ _id: { $in: ids }, orgId: user.orgId, isArchived: { $ne: true } });
+    if (!leadsToTransfer.length) throw new AppError("No leads found to transfer", 404);
+
+    const docs = leadsToTransfer.map((lead) => ({
+      project:    toProjectId,
+      name:       lead.name,
+      phone:      lead.phone,
+      email:      lead.email || "",
+      source:     lead.source || "Manual",
+      importedBy: user._id,
+      orgId:      user.orgId,
+      remark1:    lead.remark1   || "",
+      remark2:    lead.remark2   || "",
+      remark3:    lead.remark3   || "",
+      remark4:    lead.remark4   || "",
+      remarkNote: lead.remark    || "",
+      followUp:   lead.followUpDate  || null,
+      followUp2:  lead.followUp2     || null,
+      booking:    lead.booking       || "",
+      followUpSetBy:      lead.followUpSetBy     || null,
+      followUpSetByName:  lead.followUpSetByName || "",
+    }));
+
+    await ProjectLead.insertMany(docs);
+    await Lead.updateMany(
+      { _id: { $in: leadsToTransfer.map((l) => l._id) } },
+      { $set: { isArchived: true } }
+    );
+    return { count: leadsToTransfer.length, project };
+  },
+
   async getDump(user, { page = 1, limit = 50 } = {}) {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const lim  = parseInt(limit);

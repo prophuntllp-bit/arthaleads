@@ -53,6 +53,7 @@ router.get("/export", leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.post("/bulk-assign", authorize("admin", "manager"), leadController.bulkAssign);
 router.patch("/bulk-status", authorize("admin", "manager"), leadController.bulkUpdateStatus);
+router.post("/bulk-transfer", authorize("admin", "manager"), leadController.bulkTransfer);
 router.delete("/bulk", leadController.bulkDelete);
 
 // POST /api/leads/backfill-source-domain  (admin only)

@@ -228,6 +228,22 @@ const leadController = {
     }
   },
 
+  async bulkTransfer(req, res, next) {
+    try {
+      const { ids, toProjectId } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      if (!toProjectId) {
+        return res.status(400).json({ success: false, message: "toProjectId is required" });
+      }
+      const { count, project } = await leadService.bulkTransferToProject(ids, toProjectId, req.user);
+      res.json({ success: true, message: `${count} lead${count !== 1 ? "s" : ""} transferred to ${project.name}` });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async transferLead(req, res, next) {
     try {
       const { toProjectId } = req.body;

@@ -393,6 +393,8 @@ export default function Leads() {
   const [bulkAssigning, setBulkAssigning]     = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState("");
   const [bulkUpdatingStatus, setBulkUpdatingStatus] = useState(false);
+  const [bulkTransferProjectId, setBulkTransferProjectId] = useState("");
+  const [bulkTransferring, setBulkTransferring] = useState(false);
   const [waBroadcast, setWaBroadcast]         = useState(null); // null | { list, msg, idx, skipped, step }
 
   // ── Project-wise leads ────────────────────────────────────────────────────
@@ -582,6 +584,24 @@ export default function Leads() {
       toast.error(e.response?.data?.message || "Bulk status update failed");
     } finally {
       setBulkUpdatingStatus(false);
+    }
+  };
+
+  const handleBulkTransfer = async () => {
+    if (!bulkTransferProjectId) { toast.error("Please select a project"); return; }
+    setBulkTransferring(true);
+    try {
+      const ids = [...selectedIds];
+      const r = await api.post("/leads/bulk-transfer", { ids, toProjectId: bulkTransferProjectId });
+      toast.success(r.data.message || `${ids.length} lead(s) transferred`);
+      // Transferred leads are archived out of the main pipeline — drop them from the table
+      ids.forEach((id) => removeLead(id));
+      setSelectedIds(new Set());
+      setBulkTransferProjectId("");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk transfer failed");
+    } finally {
+      setBulkTransferring(false);
     }
   };
 
@@ -1839,6 +1859,29 @@ export default function Leads() {
               </button>
             </div>
 
+            {/* Row 3b: Transfer to project */}
+            {projects.length > 0 && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkTransferProjectId}
+                    onChange={(v) => setBulkTransferProjectId(v)}
+                    placeholder="Transfer to project…"
+                    options={projects.map((p) => ({ value: p._id, label: p.name }))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={handleBulkTransfer}
+                  disabled={bulkTransferring || !bulkTransferProjectId}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-blue-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:opacity-40 cursor-pointer"
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  {bulkTransferring ? "…" : "Transfer"}
+                </button>
+              </div>
+            )}
+
             {/* Row 4: WhatsApp + Delete */}
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -1908,6 +1951,28 @@ export default function Leads() {
                 {bulkUpdatingStatus ? "Updating…" : "Update"}
               </button>
             </div>
+
+            {projects.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkTransferProjectId}
+                    onChange={(v) => setBulkTransferProjectId(v)}
+                    placeholder="Transfer to project…"
+                    options={projects.map((p) => ({ value: p._id, label: p.name }))}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={handleBulkTransfer}
+                  disabled={bulkTransferring || !bulkTransferProjectId}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-blue-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-600 disabled:opacity-40 cursor-pointer"
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  {bulkTransferring ? "Transferring…" : "Transfer"}
+                </button>
+              </div>
+            )}
 
             <button
               onClick={() => {
