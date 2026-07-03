@@ -1148,7 +1148,7 @@ export default function Leads() {
         {/* Row 2: filters — 3-col × 3-row grid on sm+ */}
         {(() => {
           const activeFilterCount = [
-            filters.status, filters.source, filters.priority, filters.siteFilter,
+            filters.status, filters.source, filters.priority, filters.booking, filters.siteFilter,
             filters.assignedTo,
             filters.myOnly === "true" ? "t" : null, selectedProject ? "t" : null,
           ].filter(Boolean).length;
@@ -1225,11 +1225,12 @@ export default function Leads() {
                     style={{ width: "100%" }}
                   />
                 )}
-                {/* Status, Source, Priority */}
+                {/* Status, Source, Priority, Booking */}
                 {[
                   { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
                   { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
+                  { key: "booking",  placeholder: "All Bookings",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
                 ].map(({ key, placeholder, opts }) => (
                   <CustomSelect
                     key={key}
@@ -1272,7 +1273,7 @@ export default function Leads() {
                     <button
                       className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                       onClick={() => {
-                        ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly", "assignedTo"].forEach((k) => setFilter(k, ""));
+                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "myOnly", "assignedTo"].forEach((k) => setFilter(k, ""));
                         setSelectedProject(null);
                         try { localStorage.removeItem("leads_myOnly"); } catch {}
                       }}
