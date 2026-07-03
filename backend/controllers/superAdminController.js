@@ -9,6 +9,7 @@ const Automation  = require("../models/Automation");
 const Ticket      = require("../models/Ticket");
 const AuditLog    = require("../models/AuditLog");
 const AiUsage     = require("../models/AiUsage");
+const SupportAccess = require("../models/SupportAccess");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { runBackup } = require("../utils/backup");
@@ -551,9 +552,77 @@ const superAdminController = {
     }
   },
 
+  // POST /api/super-admin/orgs/:id/request-access — create approval request, notify org admin via push
+  async requestAccess(req, res, next) {
+    try {
+
+      const { reason, notes } = req.body;
+      if (!reason) return next(new AppError("Reason is required", 400));
+
+      const org = await Organization.findById(req.params.id).select("name isActive").lean();
+      if (!org)          return next(new AppError("Organisation not found", 404));
+      if (!org.isActive) return next(new AppError("Organisation is inactive", 400));
+
+      const orgAdmin = await User.findOne({ orgId: req.params.id, role: "admin", isActive: true })
+        .select("_id name email");
+      if (!orgAdmin) return next(new AppError("No active admin found for this organisation", 404));
+
+      const access = await SupportAccess.create({
+        orgId:           req.params.id,
+        requestedBy:     req.user._id,
+        requestedByName: req.user.name,
+        orgAdminId:      orgAdmin._id,
+        reason,
+        notes: notes || "",
+        status:     "pending",
+        notifiedAt: new Date(),
+      });
+
+      const REASON_LABELS = {
+        customer_support:  "Customer Support",
+        onboarding:        "Onboarding Assistance",
+        bug_investigation: "Bug Investigation",
+        data_migration:    "Data Migration",
+        billing_issue:     "Billing Issue",
+        other:             "Other",
+      };
+
+      const { sendPushToUser } = require("../utils/push");
+      sendPushToUser(orgAdmin._id, {
+        title: "Support Access Request",
+        body:  `Arthaleads support (${req.user.name}) is requesting access — ${REASON_LABELS[reason]}. Tap to review.`,
+        data:  { type: "support_access_request", requestId: String(access._id), url: "/settings?tab=security" },
+      }).catch(() => {});
+
+      await logAudit("support_access_request", req, {
+        targetOrg:      org._id,
+        targetOrgName:  org.name,
+        targetUser:     orgAdmin._id,
+        targetUserName: orgAdmin.name,
+        details:        { reason, notes, requestId: String(access._id) },
+      });
+
+      res.json({ success: true, requestId: access._id, status: "pending" });
+    } catch (err) { next(err); }
+  },
+
+  // GET /api/super-admin/orgs/:id/support-requests
+  async listSupportRequests(req, res, next) {
+    try {
+
+      const requests = await SupportAccess.find({ orgId: req.params.id })
+        .sort({ createdAt: -1 }).limit(20).lean();
+      res.json({ success: true, requests });
+    } catch (err) { next(err); }
+  },
+
   // POST /api/super-admin/orgs/:id/impersonate — issue a 2-hour JWT for the org's admin
   async impersonate(req, res, next) {
     try {
+
+      const { reason, notes, requestId } = req.body;
+      if (!reason) return next(new AppError("Reason is required", 400));
+
       const org = await Organization.findById(req.params.id).select("name isActive").lean();
       if (!org)           return next(new AppError("Organisation not found", 404));
       if (!org.isActive)  return next(new AppError("Cannot impersonate an inactive organisation", 400));
@@ -562,15 +631,50 @@ const superAdminController = {
         .select("_id name email");
       if (!admin) return next(new AppError("No active admin found for this organisation", 404));
 
+      let accessRecord;
+      if (requestId) {
+        accessRecord = await SupportAccess.findById(requestId);
+        if (!accessRecord || String(accessRecord.orgId) !== req.params.id)
+          return next(new AppError("Invalid access request", 400));
+        if (accessRecord.status !== "approved")
+          return next(new AppError("Access request has not been approved yet", 403));
+        accessRecord.status = "active";
+        accessRecord.accessedAt = new Date();
+        await accessRecord.save();
+      } else {
+        accessRecord = await SupportAccess.create({
+          orgId:           req.params.id,
+          requestedBy:     req.user._id,
+          requestedByName: req.user.name,
+          orgAdminId:      admin._id,
+          reason,
+          notes: notes || "",
+          status:     "active",
+          accessedAt: new Date(),
+        });
+      }
+
       await logAudit("impersonate", req, {
         targetOrg:      org._id || req.params.id,
         targetOrgName:  org.name,
         targetUser:     admin._id,
         targetUserName: admin.name,
-        details:        { adminEmail: admin.email },
+        details:        { adminEmail: admin.email, reason, notes, requestId: String(accessRecord._id) },
       });
 
-      const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+      await Organization.findByIdAndUpdate(req.params.id, {
+        "activeSupportSession.active":         true,
+        "activeSupportSession.reason":         reason,
+        "activeSupportSession.superAdminName": req.user.name,
+        "activeSupportSession.startedAt":      new Date(),
+        "activeSupportSession.requestId":      accessRecord._id,
+      });
+
+      const token = jwt.sign(
+        { id: admin._id, isSupportSession: true, supportRequestId: String(accessRecord._id) },
+        process.env.JWT_SECRET,
+        { expiresIn: "2h" }
+      );
 
       res.cookie("crm_token", token, {
         httpOnly: true,
@@ -580,10 +684,30 @@ const superAdminController = {
         maxAge:   2 * 60 * 60 * 1000,
       });
 
-      res.json({ success: true, orgName: org.name, adminName: admin.name, adminEmail: admin.email });
+      res.json({
+        success: true,
+        orgName: org.name, adminName: admin.name, adminEmail: admin.email,
+        requestId: String(accessRecord._id),
+      });
     } catch (err) {
       next(err);
     }
+  },
+
+  // POST /api/super-admin/orgs/:id/end-support-session
+  async endSupportSession(req, res, next) {
+    try {
+
+      const { requestId } = req.body;
+      await Organization.findByIdAndUpdate(req.params.id, {
+        "activeSupportSession.active":    false,
+        "activeSupportSession.startedAt": null,
+      });
+      if (requestId) {
+        await SupportAccess.findByIdAndUpdate(requestId, { status: "completed", endedAt: new Date() });
+      }
+      res.json({ success: true });
+    } catch (err) { next(err); }
   },
 
   // GET /api/super-admin/audit — paginated audit log
@@ -602,6 +726,171 @@ const superAdminController = {
       ]);
 
       res.json({ success: true, logs, total, pages: Math.ceil(total / limit) });
+    } catch (err) {
+      next(err);
+    }
+  },
+  // GET /api/super-admin/insights — org health scores, feature adoption, churn signals
+  async insights(req, res, next) {
+    try {
+      const Booking = mongoose.model("Booking");
+      const orgs = await Organization.find().lean();
+      const orgIds = orgs.map(o => o._id);
+
+      const sevenDaysAgo    = new Date(Date.now() - 7  * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo   = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const currentMonth    = new Date().toISOString().slice(0, 7);
+
+      const [
+        recentUsers,
+        allUsers,
+        leadsThisWeek,
+        totalLeads,
+        automationCounts,
+        projectCounts,
+        bookingCounts,
+        aiUsageDocs,
+      ] = await Promise.all([
+        // Users who logged in within last 7 days
+        User.aggregate([
+          { $match: { orgId: { $in: orgIds }, lastLogin: { $gte: sevenDaysAgo } } },
+          { $group: { _id: "$orgId", lastLogin: { $max: "$lastLogin" } } },
+        ]),
+        // Most recent login + user count per org
+        User.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 }, lastLogin: { $max: "$lastLogin" } } },
+        ]),
+        // Leads added in last 7 days
+        Lead.aggregate([
+          { $match: { orgId: { $in: orgIds }, createdAt: { $gte: sevenDaysAgo }, isDeleted: { $ne: true } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Total active leads
+        Lead.aggregate([
+          { $match: { orgId: { $in: orgIds }, isDeleted: { $ne: true }, isArchived: { $ne: true } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Active automations
+        Automation.aggregate([
+          { $match: { orgId: { $in: orgIds }, enabled: true } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Projects
+        Project.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]),
+        // Bookings (closings recorded)
+        Booking.aggregate([
+          { $match: { orgId: { $in: orgIds } } },
+          { $group: { _id: "$orgId", count: { $sum: 1 } } },
+        ]).catch(() => []),
+        // AI usage this month
+        AiUsage.aggregate([
+          { $match: { orgId: { $in: orgIds }, month: currentMonth } },
+          { $group: { _id: "$orgId", calls: { $sum: "$callCount" }, tokens: { $sum: "$tokenCount" } } },
+        ]).catch(() => []),
+      ]);
+
+      // Build lookup maps
+      const toMap = (arr, val) => Object.fromEntries(arr.map(r => [String(r._id), typeof val === "function" ? val(r) : r[val] || 0]));
+      const recentLoginSet  = new Set(recentUsers.map(r => String(r._id)));
+      const allUserMap      = toMap(allUsers, r => r);
+      const leadsWeekMap    = toMap(leadsThisWeek, "count");
+      const totalLeadsMap   = toMap(totalLeads, "count");
+      const automationMap   = toMap(automationCounts, "count");
+      const projectMap      = toMap(projectCounts, "count");
+      const bookingMap      = toMap(bookingCounts, "count");
+      const aiUsageMap      = toMap(aiUsageDocs, r => r);
+
+      const now = new Date();
+
+      const result = orgs.map(org => {
+        const id = String(org._id);
+        const loginedRecently  = recentLoginSet.has(id);
+        const userInfo         = allUserMap[id] || {};
+        const leadsThisWeekN   = leadsWeekMap[id]  || 0;
+        const totalLeadsN      = totalLeadsMap[id] || 0;
+        const activeAutos      = automationMap[id] || 0;
+        const projectCount     = projectMap[id]    || 0;
+        const bookingCount     = bookingMap[id]    || 0;
+        const aiUsage          = aiUsageMap[id]    || {};
+        const hasWhatsApp      = !!org.whatsapp?.enabled;
+        const hasTelephony     = !!org.enablex?.enabled;
+        const hasProjects      = projectCount > 0;
+        const hasBookings      = bookingCount > 0;
+        const hasAi            = (aiUsage.calls || 0) > 0;
+        const lastLoginAt      = userInfo.lastLogin || null;
+        const daysSinceLogin   = lastLoginAt ? Math.floor((now - new Date(lastLoginAt)) / 86400000) : null;
+        const isTrialExpired   = org.plan === "trial" && org.trialEndsAt && now > new Date(org.trialEndsAt);
+        const daysToTrialEnd   = org.trialEndsAt ? Math.ceil((new Date(org.trialEndsAt) - now) / 86400000) : null;
+
+        // Health score: sum of weighted signals (max 100)
+        let healthScore = 0;
+        if (loginedRecently)      healthScore += 30;
+        if (leadsThisWeekN > 0)   healthScore += 20;
+        if (activeAutos > 0)      healthScore += 15;
+        if (hasWhatsApp)          healthScore += 10;
+        if (hasTelephony)         healthScore += 10;
+        if (hasProjects)          healthScore += 10;
+        if (hasBookings)          healthScore += 5;
+        healthScore = Math.min(100, healthScore);
+
+        // Churn signals
+        const churnSignals = [];
+        if (daysSinceLogin === null || daysSinceLogin > 7)  churnSignals.push("No login in 7+ days");
+        if (leadsThisWeekN === 0 && totalLeadsN < 5)        churnSignals.push("Less than 5 leads total");
+        if (activeAutos === 0)                              churnSignals.push("No automations active");
+        if (isTrialExpired)                                 churnSignals.push("Trial expired");
+        else if (daysToTrialEnd !== null && daysToTrialEnd <= 3 && daysToTrialEnd > 0)
+                                                            churnSignals.push(`Trial ends in ${daysToTrialEnd}d`);
+        if (!hasWhatsApp && !hasTelephony)                  churnSignals.push("No integrations connected");
+
+        return {
+          _id: org._id,
+          name: org.name,
+          slug: org.slug,
+          plan: org.plan,
+          logo: org.logo,
+          isActive: org.isActive,
+          trialEndsAt: org.trialEndsAt,
+          createdAt: org.createdAt,
+          healthScore,
+          features: {
+            leads:       totalLeadsN > 0,
+            aiBot:       hasAi,
+            whatsapp:    hasWhatsApp,
+            telephony:   hasTelephony,
+            automations: activeAutos > 0,
+            projects:    hasProjects,
+            bookings:    hasBookings,
+          },
+          stats: {
+            totalLeads: totalLeadsN,
+            leadsThisWeek: leadsThisWeekN,
+            activeAutomations: activeAutos,
+            lastLoginAt,
+            daysSinceLogin,
+            userCount: userInfo.count || 0,
+            aiCallsMonth: aiUsage.calls || 0,
+          },
+          churnSignals,
+        };
+      });
+
+      // Sort: churn risk first, then at-risk, then healthy
+      result.sort((a, b) => a.healthScore - b.healthScore);
+
+      res.json({
+        orgs: result,
+        summary: {
+          totalOrgs:     result.length,
+          healthyOrgs:   result.filter(o => o.healthScore >= 70).length,
+          atRiskOrgs:    result.filter(o => o.healthScore >= 40 && o.healthScore < 70).length,
+          churnRiskOrgs: result.filter(o => o.healthScore < 40).length,
+        },
+      });
     } catch (err) {
       next(err);
     }

@@ -405,7 +405,28 @@ CURRENT FEATURES (v2 — live right now)
 ════════════════════════════════════════════════
 
 DASHBOARD (/dashboard)
-Home screen. Stats: total leads, new leads, closed won, follow-ups due today, pipeline value, conversion rate. "Hot Today" widget ranks highest-scored leads (0-100 AI score) with one-tap Call and WhatsApp. Lead source pie chart. Leads-by-status bar chart. Top agents leaderboard. Team activity feed. Date range filter (top-right). "New Lead" button (top-right).
+Home screen with a zoned layout divided into clear sections:
+
+ZONE: TODAY AT A GLANCE — Six equal stat cards in a single row (2-col on mobile, 3-col on tablet, 6-col on desktop): Total Leads (clickable, shows % vs last month), Pipeline Value (active leads sum), New (uncontacted), Closed Won (with conversion %), Follow-ups due today (clickable), Avg Response time.
+
+ZONE: ACTION REQUIRED — Two-column side-by-side layout on tablet/desktop, stacked on mobile. Both panels load instantly alongside the KPI stats (parallel fetch):
+- LEFT: OVERDUE FOLLOW-UPS panel — lists all leads whose follow-up date has passed. Amber-tinted card, dismissible per session (X button), collapsible (chevron). Scrollable list shows up to 5 rows before scrolling. "View all" link goes to Follow-ups page.
+- RIGHT: HOT TODAY — Arthaleads' main AI feature. Scores every lead 0–100 pts and ranks them by priority so agents know exactly who to call first. Distinguished by an animated orange spinning border glow (the only card with this effect on the dashboard — signals it's the USP). Orange header gradient, pulsing live dot on the flame icon, orange "AI Scored" sparkle badge. No "View all" button — chevron collapses/expands the list. Each row: score badge (red ≥80, orange ≥60), lead name/status, next-best-action badge, one-tap Call and WhatsApp buttons.
+Below the 2-col grid: UPCOMING 48 HOURS — leads with follow-up or site visit in the next 2 days.
+
+ADMIN INTELLIGENCE ZONE (Admin/Manager only — entire zone hidden from agents):
+1. STALE LEADS ALERT - Amber panel listing leads not updated in 7+ days (non-closed). Shows "Xd" days badge, lead name, status, source, assigned agent. Phone icon for quick call. Dismiss with X (session), collapse/expand with chevron (persists). "View all" → Leads page.
+2. REVENUE FORECAST - Four stat cards: (a) Pipeline Value (b) Expected Revenue = pipeline × conversion rate (c) Month Closings this vs last month (d) Projected Pace with on-track/behind-pace indicator.
+3. WEEKLY TREND CHART - 7-day line chart of new leads created per day (IST timezone). Total for the window shown top-right.
+4. LIVE AGENT STATUS - Team member clock-in grid: green = clocked in (shows time), purple = clocked out, grey = not checked in. "X online" badge.
+5. AUTOMATION HEALTH - Green/red dot per integration showing live vs offline status at a glance.
+6. PROJECT BREAKDOWN + MONTHLY GOAL — Side-by-side 2-col grid (stacked on mobile): LEFT is Project Breakdown — active projects sorted by lead count, each row shows project name, lead count, conversion rate progress bar, collapsible chevron, click any row → project detail page. RIGHT is Monthly Goal — progress bar showing closings this month vs target, inline edit pencil for admin/manager to update the goal.
+
+PERFORMANCE ZONE — Leads by Status (horizontal bar chart) + Leads by Source (donut pie). Pipeline Drop-off funnel below.
+
+TEAM ZONE — Top Agents leaderboard (rank, name, lead count, click → Performance page). Team Activity feed (last 10 actions by any agent with lead name + timestamp).
+
+Other controls: Date range filter (top-right of header), "New Lead" button, Artha AI widget, live clock.
 
 LEADS (/leads)
 Master list. Add single lead (+ Add Lead button). Bulk import via CSV/Excel. Click a lead to open detail panel: Info, Notes, Activity tabs. From detail panel: update any field, set follow-up, add notes, Call/WhatsApp/AI Draft. Bulk actions via checkboxes: assign, status change, WhatsApp blast, delete. Filter by name/phone/email/status/source/agent/priority. Export to CSV/Excel. AI Lead Scoring 0-100.
@@ -484,7 +505,7 @@ If asked about any of these, set comingSoon: true and tell them it is in develop
 - Document Uploads on Leads: attach PDFs, photos, booking forms, KYC to a lead
 - WhatsApp Business API (Two-Way Messaging): full conversation inside the CRM
 - Browser Calling (WebRTC): call leads directly from the browser tab without a physical phone
-- Advanced AI Analytics: predicted conversion probability, best time to call, churn risk
+- Advanced AI Analytics: predicted conversion probability, best time to call, churn risk, lead quality scoring beyond the current 0-100 AI score
 - Mobile App (iOS and Android): native apps with offline support and push notifications
 - Late Mark and Half-Day Auto-Detection: currently admins must mark manually
 

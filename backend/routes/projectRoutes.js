@@ -6,6 +6,48 @@ const { protect, authorize } = require("../middlewares/auth");
 
 router.use(protect);
 
+const ProjectLead = require("../models/ProjectLead");
+const Project     = require("../models/Project");
+
+// GET /api/projects/stats — per-project lead counts + pipeline value (admin/manager only)
+router.get("/stats", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const projects = await Project.find({ orgId: req.user.orgId, isArchived: { $ne: true } })
+      .select("name location priceMin priceMax")
+      .lean();
+
+    const counts = await ProjectLead.aggregate([
+      { $match: { orgId: req.user.orgId } },
+      {
+        $group: {
+          _id: "$projectId",
+          total: { $sum: 1 },
+          closedWon: { $sum: { $cond: [{ $eq: ["$status", "Closed Won"] }, 1, 0] } },
+        },
+      },
+    ]);
+
+    const countMap = {};
+    counts.forEach((c) => { countMap[String(c._id)] = c; });
+
+    const stats = projects.map((p) => {
+      const c = countMap[String(p._id)] || { total: 0, closedWon: 0 };
+      return {
+        _id: p._id,
+        name: p.name,
+        location: p.location,
+        priceMin: p.priceMin,
+        priceMax: p.priceMax,
+        totalLeads: c.total,
+        closedWon: c.closedWon,
+        conversionRate: c.total > 0 ? Math.round((c.closedWon / c.total) * 100) : 0,
+      };
+    });
+
+    res.json({ data: stats.sort((a, b) => b.totalLeads - a.totalLeads) });
+  } catch (e) { next(e); }
+});
+
 // Project CRUD
 router.get("/",    projectController.getAll);
 router.post("/",   authorize("admin", "manager"), projectController.create);

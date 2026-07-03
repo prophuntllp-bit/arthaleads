@@ -60,7 +60,6 @@ export default function PublicFooter() {
                 ["Blog",          "/blog"],
                 ["Help Guide",    "/help-guide"],
                 ["Security",      "/security"],
-                ["System Status", "/status"],
                 ["Contact Us",    "/contact"],
               ].map(([label, href]) => (
                 <Link key={label} to={href} style={{ color: text }} className="block text-sm hover:text-[#ff6b00] transition-colors">{label}</Link>

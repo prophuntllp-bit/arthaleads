@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { LogOut, Shield } from "lucide-react";
+import api from "../services/api";
 
 export default function ImpersonationBanner() {
   const { logout } = useAuth();
@@ -12,6 +13,12 @@ export default function ImpersonationBanner() {
   if (!data) return null;
 
   const exit = async () => {
+    // Tell backend to clear activeSupportSession and mark record completed
+    try {
+      if (data.orgId && data.requestId) {
+        await api.post(`/super-admin/orgs/${data.orgId}/end-support-session`, { requestId: data.requestId });
+      }
+    } catch { /* non-blocking */ }
     sessionStorage.removeItem("impersonating");
     await logout();
     window.location.href = "/admin-login";
@@ -25,7 +32,10 @@ export default function ImpersonationBanner() {
         <p className="text-white text-xs font-semibold truncate">
           Viewing as <strong>{data.adminName}</strong> · {data.orgName}
         </p>
-        <span className="hidden sm:inline text-white/60 text-xs truncate">({data.adminEmail})</span>
+        {data.reasonLabel && (
+          <span className="hidden sm:inline text-white/70 text-xs">— {data.reasonLabel}</span>
+        )}
+        <span className="hidden lg:inline text-white/60 text-xs truncate">({data.adminEmail})</span>
       </div>
       <button
         onClick={exit}

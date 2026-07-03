@@ -155,6 +155,20 @@ const projectService = {
       insertedCount = bulkErr.insertedDocs?.length ?? 0;
       writeErrors   = bulkErr.writeErrors?.length  ?? 0;
     }
+
+    // Notify every user assigned to this project that new leads were added
+    if (insertedCount > 0 && project.assignedTo?.length) {
+      const { sendPushToUser } = require("../utils/push");
+      const payload = {
+        title: `New leads in ${project.name}`,
+        body: `${insertedCount} new lead${insertedCount !== 1 ? "s" : ""} added — check your project pipeline`,
+        data: { url: `/projects/${projectId}` },
+      };
+      project.assignedTo.forEach((uid) => {
+        sendPushToUser(String(uid), payload).catch(() => {});
+      });
+    }
+
     return { inserted: insertedCount, skipped: invalid + writeErrors, duplicates };
   },
 

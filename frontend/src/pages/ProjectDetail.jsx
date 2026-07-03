@@ -61,9 +61,14 @@ function cleanPhone(raw) {
 
 // Standard contact columns (Facebook Graph API style + common spreadsheet headers)
 const STANDARD_IMPORT_KEYS = new Set([
-  "full name", "full_name", "name", "customer name", "lead name",
+  "full name", "full_name", "name", "names", "customer name", "lead name",
+  "contact name", "client name", "prospect name",
+  "first name", "first_name", "firstname", "fname", "given name", "given_name",
+  "last name", "last_name", "lastname", "lname", "surname", "family name", "family_name",
   "phone number", "phone_number", "phone", "mobile", "contact",
   "mobile number", "ph", "number", "mob", "whatsapp", "contact number", "cell",
+  "mobile no", "mobile no.", "phone no", "phone no.", "cell phone",
+  "cell no", "telephone", "tel", "contact no", "contact no.",
   "email", "email address", "email_address", "mail",
   "source", "lead source",
 ]);
@@ -82,10 +87,17 @@ function parseRow(raw) {
     return "";
   };
 
-  // Name: exact matches first, then fuzzy on any key containing "name"
+  // Combine separate first/last name columns when present
+  const firstName = r["first name"] || r["first_name"] || r["firstname"] || r["fname"] || r["given name"] || r["given_name"] || "";
+  const lastName  = r["last name"]  || r["last_name"]  || r["lastname"]  || r["lname"] || r["surname"]    || r["family name"] || r["family_name"] || "";
+  const splitName = [firstName, lastName].filter(Boolean).join(" ");
+
+  // Name: exact matches first, then split first+last, then fuzzy on any key containing "name"
   const name =
-    r["full_name"] || r["full name"] || r["name"] || r["customer name"] || r["lead name"] ||
-    r["contact name"] || r["client name"] || r["prospect name"] ||
+    r["full_name"] || r["full name"] || r["name"] || r["names"] ||
+    r["customer name"] || r["lead name"] || r["contact name"] ||
+    r["client name"] || r["prospect name"] ||
+    splitName ||
     fuzzy(["name"]);
 
   // Phone: exact matches first, then fuzzy on keys containing phone/mobile/contact/cell/number

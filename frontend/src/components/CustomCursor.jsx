@@ -9,7 +9,6 @@ const MARKETING_PATHS = new Set([
   "/refund",
   "/cookie-policy",
   "/security",
-  "/status",
   "/refer",
   "/api-docs",
   "/compare",

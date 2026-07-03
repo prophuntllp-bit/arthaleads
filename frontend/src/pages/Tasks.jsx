@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -6,11 +6,82 @@ import toast from "react-hot-toast";
 import { useSEO } from "../utils/useSEO";
 import {
   Plus, Pencil, Trash2, CheckCircle2, Calendar, User,
-  FolderKanban, Users, Clock, AlertCircle,
+  FolderKanban, Users, Clock, AlertCircle, X,
 } from "lucide-react";
 import { Modal, Spinner, EmptyState } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import DateTimePicker from "../components/DateTimePicker";
+
+// Debounced lead search-select — resolves to a real Lead _id (not just a label)
+// so tasks stay genuinely linked to the lead they're about. Remounts fresh each
+// time the parent Modal opens (see Modal: `if (!open) return null`), so the
+// uncontrolled `query` state always starts from the right label.
+function LeadPicker({ initialLabel, onSelect, onClear }) {
+  const [query, setQuery]     = useState(initialLabel || "");
+  const [results, setResults] = useState([]);
+  const [open, setOpen]       = useState(false);
+  const [loading, setLoading] = useState(false);
+  const wrapRef     = useRef(null);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const search = (q) => {
+    clearTimeout(debounceRef.current);
+    if (q.trim().length < 2) { setResults([]); setOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const { data } = await api.get(`/leads?search=${encodeURIComponent(q.trim())}&limit=8`);
+        setResults(data.leads || []);
+        setOpen(true);
+      } catch { setResults([]); }
+      finally { setLoading(false); }
+    }, 250);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        className="input w-full pr-8"
+        placeholder="Search lead by name or phone…"
+        value={query}
+        onChange={(e) => {
+          const v = e.target.value;
+          setQuery(v);
+          onClear();
+          search(v);
+        }}
+        onFocus={() => { if (results.length) setOpen(true); }}
+      />
+      {query && (
+        <button type="button" onClick={() => { setQuery(""); setResults([]); setOpen(false); onClear(); }}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-app-soft hover:text-app">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {open && (results.length > 0 || loading) && (
+        <div className="absolute z-20 mt-1 w-full rounded-2xl border overflow-hidden shadow-xl"
+          style={{ background: "var(--app-surface)", borderColor: "var(--app-border)", maxHeight: 220, overflowY: "auto" }}>
+          {loading && results.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-app-soft">Searching…</div>
+          ) : results.map((l) => (
+            <button key={l._id} type="button"
+              className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => { onSelect(l); setQuery(l.name); setOpen(false); }}>
+              <span className="text-sm font-semibold text-app">{l.name}</span>
+              {l.phone && <span className="text-xs text-app-soft">{l.phone}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const PRIORITY_META = {
   critical: { label: "Critical", bg: "bg-red-100 dark:bg-red-500/20",    text: "text-red-600 dark:text-red-400",    dot: "bg-red-500" },
@@ -63,6 +134,7 @@ export default function Tasks() {
   const [myOnly, setMyOnly]       = useState(false);
   const [priorityFilter, setPriorityFilter] = useState("");
   const [teamMembers, setTeamMembers] = useState([]);
+  const [projects, setProjects]       = useState([]);
 
   // Modal state
   const [showForm, setShowForm]   = useState(false);
@@ -128,6 +200,7 @@ export default function Tasks() {
   useEffect(() => {
     if (!canManage) return;
     api.get("/auth/agents").then(({ data }) => setTeamMembers(data.agents || [])).catch(() => toast.error("Failed to load team members"));
+    api.get("/projects").then(({ data }) => setProjects(data.data || [])).catch(() => {});
   }, [canManage]);
 
   const openAdd = () => { setForm(EMPTY_FORM); setEditTask(null); setShowForm(true); };
@@ -444,22 +517,25 @@ export default function Tasks() {
               <label className="block text-xs font-semibold text-app-soft mb-1.5">
                 <FolderKanban className="inline h-3 w-3 mr-1" />Link to Project (optional)
               </label>
-              <input
-                className="input w-full"
-                placeholder="Project name"
-                value={form.projectName}
-                onChange={e => setForm(f => ({ ...f, projectName: e.target.value }))}
+              <CustomSelect
+                value={form.project}
+                onChange={v => {
+                  const p = projects.find(x => x._id === v);
+                  setForm(f => ({ ...f, project: v, projectName: p?.name || "" }));
+                }}
+                placeholder="Select project"
+                options={projects.map(p => ({ value: p._id, label: p.name }))}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-app-soft mb-1.5">
                 <User className="inline h-3 w-3 mr-1" />Link to Lead (optional)
               </label>
-              <input
-                className="input w-full"
-                placeholder="Lead name"
-                value={form.leadName}
-                onChange={e => setForm(f => ({ ...f, leadName: e.target.value }))}
+              <LeadPicker
+                initialLabel={form.leadName}
+                onSelect={(l) => setForm(f => ({ ...f, lead: l._id, leadName: l.name }))}
+                onClear={() => setForm(f => ({ ...f, lead: "", leadName: "" }))}
               />
             </div>
           </div>

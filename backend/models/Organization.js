@@ -34,6 +34,13 @@ const orgSchema = new mongoose.Schema(
     brandColor: { type: String, default: "" },  // hex accent colour e.g. "#2563eb"
     autoAssign: { type: Boolean, default: true }, // round-robin auto-assign new leads to agents
     monthlyClosingGoal: { type: Number, default: 0, min: 0 },
+    activeSupportSession: {
+      active:          { type: Boolean, default: false },
+      reason:          { type: String, default: "" },
+      superAdminName:  { type: String, default: "" },
+      startedAt:       { type: Date, default: null },
+      requestId:       { type: mongoose.Schema.Types.ObjectId, default: null },
+    },
     attendanceSettings: {
       shiftStartTime: { type: String, default: "09:30" }, // "HH:MM" 24-hour
       shiftEndTime:   { type: String, default: "19:00" }, // expected clock-out time

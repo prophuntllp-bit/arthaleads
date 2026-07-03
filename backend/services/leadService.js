@@ -164,7 +164,7 @@ const leadService = {
   // ── List with filters + pagination ─────────────────────────────────────────
   async getAll(query, user) {
     const {
-      status, source, priority, assignedTo,
+      status, source, priority, booking, assignedTo,
       search, page = 1, limit = 20,
       sortBy = "createdAt", order = "desc",
       dateRange, from, to,
@@ -181,6 +181,7 @@ const leadService = {
     if (status) filter.status = status;
     if (source) filter.source = source;
     if (priority) filter.priority = priority;
+    if (booking) filter.booking = booking;
     if (assignedTo) filter.assignedTo = assignedTo;
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
     if (createdAtFilter) filter.createdAt = createdAtFilter;
@@ -470,10 +471,17 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
+    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
+    // Accept both names — the Leads page filter sends `assignedTo`, some
+    // internal callers still send the older `userId`.
+    const agentId  = query.assignedTo || query.userId;
     const limitInt = parseInt(limit);
     const pageInt  = parseInt(page);
     const skip     = (pageInt - 1) * limitInt;
+    // Cross-collection merge can't push skip/limit down to the DB, so each
+    // side fetches its own top-N (sorted the same way) and we merge-sort in
+    // memory. Capped so deep pagination can't force an unbounded scan.
+    const fetchCap = Math.min(skip + limitInt, 2000);
 
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
@@ -486,12 +494,13 @@ const leadService = {
 
     if (user.role === "agent" || query.myOnly === "true") {
       andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
-    } else if (query.userId && (user.role === "admin" || user.role === "manager")) {
-      andConditions.push({ $or: [{ assignedTo: query.userId }, { createdBy: query.userId }] });
+    } else if (agentId && (user.role === "admin" || user.role === "manager")) {
+      andConditions.push({ $or: [{ assignedTo: agentId }, { createdBy: agentId }] });
     }
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
+    if (booking)  leadFilter.booking  = booking;
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
@@ -506,12 +515,94 @@ const leadService = {
     }
     if (andConditions.length) leadFilter.$and = andConditions;
 
-    const [leads, total] = await Promise.all([
-      Lead.find(leadFilter).sort({ createdAt: -1 }).skip(skip).limit(limitInt).lean(),
-      Lead.countDocuments(leadFilter),
-    ]);
+    // ── Project-lead filter ────────────────────────────────────────────────────
+    // ProjectLead has no `priority` field and no source-domain metadata, so it
+    // can never match those filters — skip the collection entirely instead of
+    // silently contributing zero matches to what looks like "no results".
+    const skipProjectLeads = !!priority || !!siteFilter;
+    let projLeads = [], projTotal = 0;
 
-    return { leads: leads.map((l) => ({ ...l, _type: "lead" })), total, page: pageInt, pages: Math.ceil(total / limitInt) };
+    if (!skipProjectLeads) {
+      const projFilter = { orgId: user.orgId };
+      if (status)  projFilter.status  = status;
+      if (source)  projFilter.source  = source;
+      if (booking) projFilter.booking = booking;
+      if (createdAtFilter) projFilter.createdAt = createdAtFilter;
+      if (followUpToday === "true" || followUpToday === true) {
+        projFilter.$or = [
+          { followUp:  { $gte: todayStart, $lte: todayEnd } },
+          { followUp2: { $gte: todayStart, $lte: todayEnd } },
+        ];
+      }
+      if (search) {
+        const rx = { $regex: escapeRegex(search), $options: "i" };
+        projFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
+      }
+
+      // ProjectLead has no per-lead `assignedTo` — assignment lives on the
+      // parent Project (Project.assignedTo[]), so scope by project instead.
+      let scopedProjectIds = null;
+      if (user.role === "agent" || query.myOnly === "true") {
+        const scoped = await Project.find({ orgId: user.orgId, assignedTo: user._id }).select("_id").lean();
+        scopedProjectIds = scoped.map((p) => String(p._id));
+      } else if (agentId && (user.role === "admin" || user.role === "manager")) {
+        const scoped = await Project.find({ orgId: user.orgId, assignedTo: agentId }).select("_id").lean();
+        scopedProjectIds = scoped.map((p) => String(p._id));
+      }
+
+      if (projectId) {
+        // Explicit project filter — intersect with any agent-based scoping so
+        // "agent X + project Y" correctly returns nothing when X isn't on Y,
+        // instead of ignoring one of the two filters.
+        projFilter.project = (scopedProjectIds && !scopedProjectIds.includes(String(projectId)))
+          ? null // guaranteed no match — ProjectLead.project is a required field, never null
+          : projectId;
+      } else if (scopedProjectIds) {
+        projFilter.project = { $in: scopedProjectIds };
+      }
+
+      [projLeads, projTotal] = await Promise.all([
+        ProjectLead.find(projFilter).populate("project", "name").sort({ createdAt: -1 }).limit(fetchCap).lean(),
+        ProjectLead.countDocuments(projFilter),
+      ]);
+    }
+
+    // Lead has no project association at all — a project filter can only
+    // ever match ProjectLead documents, so skip the Lead query entirely.
+    const [leads, leadTotal] = projectId
+      ? [[], 0]
+      : await Promise.all([
+          Lead.find(leadFilter).sort({ createdAt: -1 }).limit(fetchCap).lean(),
+          Lead.countDocuments(leadFilter),
+        ]);
+
+    const taggedLeads = leads.map((l) => ({ ...l, _type: "lead" }));
+    const taggedProjLeads = projLeads.map((pl) => ({
+      _id:          pl._id,
+      _type:        "project",
+      projectId:    pl.project?._id || pl.project,
+      projectName:  pl.project?.name || "",
+      name:         pl.name,
+      phone:        pl.phone,
+      email:        pl.email,
+      source:       pl.source,
+      status:       pl.status,
+      remark:       pl.remark,
+      remark1:      pl.remark1,
+      remark2:      pl.remark2,
+      followUpDate: pl.followUp,
+      followUp2:    pl.followUp2,
+      booking:      pl.booking,
+      notes:        pl.notes,
+      createdAt:    pl.createdAt,
+    }));
+
+    const merged = [...taggedLeads, ...taggedProjLeads]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(skip, skip + limitInt);
+
+    const total = leadTotal + projTotal;
+    return { leads: merged, total, page: pageInt, pages: Math.ceil(total / limitInt) };
   },
 
   async getAnalytics(user, query = {}) {
@@ -653,6 +744,16 @@ const leadService = {
             { $project: { name: 1, phone: 1, followUpDate: 1, siteVisitDate: 1, status: 1, assignedToName: 1 } },
           ],
 
+          // Daily lead counts for the last 7 days (for weekly trend chart)
+          recentDailyLeads: [
+            { $match: { createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
+            { $group: {
+              _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Kolkata" } },
+              count: { $sum: 1 },
+            }},
+            { $sort: { "_id": 1 } },
+          ],
+
           // Recent activity feed — top 10 actions from 50 most recently modified leads
           recentActivity: [
             { $sort: { updatedAt: -1 } },
@@ -721,6 +822,7 @@ const leadService = {
       upcomingItems:      result.upcomingItems || [],
       allTimeByStatus:    allTimeStatus,
       recentActivity:     result.recentActivity || [],
+      recentDailyLeads:   result.recentDailyLeads || [],
       avgResponseMs:      result.avgFirstResponse[0]?.avgMs != null
         ? Math.max(0, result.avgFirstResponse[0].avgMs)
         : null,
@@ -840,35 +942,56 @@ const leadService = {
     const project = await Project.findOne({ _id: toProjectId, isArchived: { $ne: true }, orgId: user.orgId });
     if (!project) throw new AppError("Project not found", 404);
 
-    const leadsToTransfer = await Lead.find({ _id: { $in: ids }, orgId: user.orgId, isArchived: { $ne: true } });
-    if (!leadsToTransfer.length) throw new AppError("No leads found to transfer", 404);
+    // The unified Leads list mixes plain Lead docs with ProjectLead docs
+    // (already inside another project) — a bulk selection can contain both,
+    // so look them up in parallel rather than assuming everything is a Lead.
+    const [leadsToTransfer, projectLeadsToTransfer] = await Promise.all([
+      Lead.find({ _id: { $in: ids }, orgId: user.orgId, isArchived: { $ne: true } }),
+      ProjectLead.find({ _id: { $in: ids }, orgId: user.orgId }),
+    ]);
+    if (!leadsToTransfer.length && !projectLeadsToTransfer.length) {
+      throw new AppError("No leads found to transfer", 404);
+    }
 
-    const docs = leadsToTransfer.map((lead) => ({
-      project:    toProjectId,
-      name:       lead.name,
-      phone:      lead.phone,
-      email:      lead.email || "",
-      source:     lead.source || "Manual",
-      importedBy: user._id,
-      orgId:      user.orgId,
-      remark1:    lead.remark1   || "",
-      remark2:    lead.remark2   || "",
-      remark3:    lead.remark3   || "",
-      remark4:    lead.remark4   || "",
-      remarkNote: lead.remark    || "",
-      followUp:   lead.followUpDate  || null,
-      followUp2:  lead.followUp2     || null,
-      booking:    lead.booking       || "",
-      followUpSetBy:      lead.followUpSetBy     || null,
-      followUpSetByName:  lead.followUpSetByName || "",
-    }));
+    if (leadsToTransfer.length) {
+      const docs = leadsToTransfer.map((lead) => ({
+        project:    toProjectId,
+        name:       lead.name,
+        phone:      lead.phone,
+        email:      lead.email || "",
+        source:     lead.source || "Manual",
+        importedBy: user._id,
+        orgId:      user.orgId,
+        remark1:    lead.remark1   || "",
+        remark2:    lead.remark2   || "",
+        remark3:    lead.remark3   || "",
+        remark4:    lead.remark4   || "",
+        remarkNote: lead.remark    || "",
+        followUp:   lead.followUpDate  || null,
+        followUp2:  lead.followUp2     || null,
+        booking:    lead.booking       || "",
+        followUpSetBy:      lead.followUpSetBy     || null,
+        followUpSetByName:  lead.followUpSetByName || "",
+      }));
 
-    await ProjectLead.insertMany(docs);
-    await Lead.updateMany(
-      { _id: { $in: leadsToTransfer.map((l) => l._id) } },
-      { $set: { isArchived: true } }
-    );
-    return { count: leadsToTransfer.length, project };
+      await ProjectLead.insertMany(docs);
+      await Lead.updateMany(
+        { _id: { $in: leadsToTransfer.map((l) => l._id) } },
+        { $set: { isArchived: true } }
+      );
+    }
+
+    // Already-project leads just move containers — flip `project` in place
+    // so remarks/follow-ups/status/notes are untouched, same as the
+    // single-lead project→project transfer in projectService.transferLead.
+    if (projectLeadsToTransfer.length) {
+      await ProjectLead.updateMany(
+        { _id: { $in: projectLeadsToTransfer.map((l) => l._id) } },
+        { $set: { project: toProjectId } }
+      );
+    }
+
+    return { count: leadsToTransfer.length + projectLeadsToTransfer.length, project };
   },
 
   async getDump(user, { page = 1, limit = 50 } = {}) {

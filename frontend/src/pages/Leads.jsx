@@ -145,44 +145,6 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
   );
 }
 
-// ── Project lead inline helpers ───────────────────────────────────────────────
-function ProjInlineText({ value, leadId, projectId, field, placeholder = "Add note…", multiline = false, onSaved }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal]         = useState(value || "");
-  const [saving, setSaving]   = useState(false);
-
-  const save = async () => {
-    setEditing(false);
-    if (val === (value || "")) return;
-    setSaving(true);
-    try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: val });
-      onSaved(res.data.data);
-    } catch { toast.error("Save failed"); setVal(value || ""); }
-    finally { setSaving(false); }
-  };
-
-  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  if (editing) {
-    const shared = {
-      autoFocus: true,
-      className: "w-full min-w-[120px] rounded-lg border px-2 py-1 text-xs focus:outline-none focus:border-orange-400",
-      style: { borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" },
-      value: val, onChange: (e) => setVal(e.target.value), onBlur: save,
-      onKeyDown: (e) => e.key === "Escape" && setEditing(false),
-    };
-    return multiline
-      ? <textarea {...shared} rows={2} className={shared.className + " resize-none"} />
-      : <input {...shared} onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} />;
-  }
-  return (
-    <span onClick={() => setEditing(true)}
-      className="block cursor-pointer rounded px-1 py-0.5 text-xs transition hover:bg-orange-500/10 min-w-[70px]" title="Click to edit">
-      {val || <span className="text-app-soft italic">{placeholder}</span>}
-    </span>
-  );
-}
-
 // ── Remark cell - click to edit inline, blur/Enter to save ──────────────────
 const REMARK_PREVIEW_LEN = 40;
 function RemarkPopupCell({ value, leadId, projectId, field, placeholder = "Add remark…", onSaved }) {
@@ -245,56 +207,6 @@ function RemarkPopupCell({ value, leadId, projectId, field, placeholder = "Add r
         </button>
       )}
     </div>
-  );
-}
-
-function ProjInlineDate({ value, leadId, projectId, field, onSaved }) {
-  const [saving, setSaving] = useState(false);
-  const save = async (isoStr) => {
-    setSaving(true);
-    try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: isoStr });
-      onSaved(res.data.data);
-    } catch { toast.error("Save failed"); }
-    finally { setSaving(false); }
-  };
-  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return <DateTimePicker value={value} onChange={save} />;
-}
-
-const PROJ_BOOKING_OPTIONS = [
-  { value: "",                   label: "- None -",           color: null },
-  { value: "Interested",         label: "Interested",          color: "#2563eb" },
-  { value: "Not Interested",     label: "Not Interested",      color: "#ef4444" },
-  { value: "Not Reachable",      label: "Not Reachable",       color: "#6b7280" },
-  { value: "Low Budget",         label: "Low Budget",          color: "#db2777" },
-  { value: "Call Back",          label: "Call Back",           color: "#d97706" },
-  { value: "Site Visit Booked",  label: "Site Visit Booked",   color: "#7c3aed" },
-  { value: "Site Visit Done",    label: "Site Visit Done",     color: "#0d9488" },
-  { value: "Booked",             label: "Booked",              color: "#16a34a" },
-  { value: "Other Location",     label: "Other Location",      color: "#ea580c" },
-  { value: "Commercial",         label: "Commercial",          color: "#4f46e5" },
-];
-
-function ProjInlineBooking({ value, leadId, projectId, onSaved }) {
-  const [saving, setSaving] = useState(false);
-  const save = async (v) => {
-    setSaving(true);
-    try {
-      const res = await api.patch(`/projects/${projectId}/leads/${leadId}`, { booking: v });
-      onSaved(res.data.data);
-    } catch { toast.error("Save failed"); }
-    finally { setSaving(false); }
-  };
-  if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
-  return (
-    <CustomSelect
-      value={value || ""}
-      onChange={save}
-      placeholder="- None -"
-      options={PROJ_BOOKING_OPTIONS.filter((o) => o.value !== "").map((o) => ({ value: o.value, label: o.label, color: o.color }))}
-      style={{ minWidth: 125, fontWeight: 600 }}
-    />
   );
 }
 
@@ -370,7 +282,7 @@ export default function Leads() {
   const [showForm, setShowForm] = useState(false);
   const [editLead, setEditLead] = useState(null);
   const [detailLead, setDetailLead] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const [deletingLead, setDeletingLead] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   // transferMeta: { lead, leadType: "lead"|"project", projectId: string|null }
   const [transferMeta, setTransferMeta] = useState(null);
@@ -397,22 +309,10 @@ export default function Leads() {
   const [bulkTransferring, setBulkTransferring] = useState(false);
   const [waBroadcast, setWaBroadcast]         = useState(null); // null | { list, msg, idx, skipped, step }
 
-  // ── Project-wise leads ────────────────────────────────────────────────────
-  const [projRefreshKey, setProjRefreshKey] = useState(0);
-  const [projects, setProjects]               = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [projLeads, setProjLeads]             = useState([]);
-  const [projTotal, setProjTotal]             = useState(0);
-  const [projPage, setProjPage]               = useState(1);
-  const [projPages, setProjPages]             = useState(1);
-  const [projLoading, setProjLoading]         = useState(false);
-  const [projSearch, setProjSearch]           = useState("");
-  const [projDeletingId, setProjDeletingId]         = useState(null);
-  const [projDeleting, setProjDeleting]             = useState(false);
-  const [projSelectedIds, setProjSelectedIds]       = useState(new Set());
-  const [showProjBulkConfirm, setShowProjBulkConfirm] = useState(false);
-  const [projBulkDeleting, setProjBulkDeleting]     = useState(false);
-  const [projLimit, setProjLimit] = useState(10);
+  // ── Projects (for the "Link to Project" filter — leads are shown combined
+  // in the same unified table, filtered by project rather than in a separate
+  // drill-down view) ────────────────────────────────────────────────────────
+  const [projects, setProjects] = useState([]);
 
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
   const [colW, startResize] = useColumnResize("leads", {
@@ -436,15 +336,6 @@ export default function Leads() {
   useEffect(() => {
     api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!selectedProject) return;
-    setProjLoading(true);
-    api.get(`/projects/${selectedProject._id}/leads`, { params: { page: projPage, limit: projLimit, search: projSearch } })
-      .then((r) => { setProjLeads(r.data.leads); setProjTotal(r.data.total); setProjPages(r.data.pages); })
-      .catch(() => toast.error("Failed to load project leads"))
-      .finally(() => setProjLoading(false));
-  }, [selectedProject, projPage, projSearch, projLimit, projRefreshKey]);
 
   useEffect(() => {
     if (user?.role !== "agent") {
@@ -502,14 +393,18 @@ export default function Leads() {
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      await api.delete(`/leads/${deletingId}`);
-      removeLead(deletingId);
+      if (deletingLead._type === "project" && deletingLead.projectId) {
+        await api.delete(`/projects/${deletingLead.projectId}/leads/${deletingLead._id}`);
+      } else {
+        await api.delete(`/leads/${deletingLead._id}`);
+      }
+      removeLead(deletingLead._id);
       toast.success("Lead moved to Dump");
     } catch (e) {
       toast.error(e.response?.data?.message || "Move to Dump failed");
     } finally {
       setDeleteLoading(false);
-      setDeletingId(null);
+      setDeletingLead(null);
     }
   };
 
@@ -527,14 +422,27 @@ export default function Leads() {
     } catch { /* silent - the call/chat still happened */ }
   };
 
+  // Bulk endpoints (/leads/bulk*) only operate on the plain Lead collection —
+  // project leads (_type === "project") have no bulk equivalent yet, so they're
+  // excluded here rather than sent to an endpoint that can't find them.
+  const splitBulkSelection = () => {
+    const ids = [...selectedIds];
+    const plainIds = ids.filter((id) => leads.find((l) => l._id === id)?._type !== "project");
+    const skipped = ids.length - plainIds.length;
+    return { plainIds, skipped };
+  };
+
   const handleBulkDelete = async () => {
     setBulkDeleting(true);
     try {
-      const ids = [...selectedIds];
-      await api.delete("/leads/bulk", { data: { ids } });
-      ids.forEach((id) => removeLead(id));
+      const { plainIds, skipped } = splitBulkSelection();
+      if (plainIds.length) {
+        await api.delete("/leads/bulk", { data: { ids: plainIds } });
+        plainIds.forEach((id) => removeLead(id));
+      }
       setSelectedIds(new Set());
-      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} moved to Dump`);
+      if (plainIds.length) toast.success(`${plainIds.length} lead${plainIds.length !== 1 ? "s" : ""} moved to Dump`);
+      if (skipped) toast.error(`${skipped} project lead${skipped !== 1 ? "s" : ""} skipped — delete those individually for now`);
     } catch (e) {
       toast.error(e.response?.data?.message || "Move to Dump failed");
     } finally {
@@ -547,17 +455,20 @@ export default function Leads() {
     if (!bulkAssignAgentId) { toast.error("Please select an agent"); return; }
     setBulkAssigning(true);
     try {
-      const ids = [...selectedIds];
-      const r = await api.post("/leads/bulk-assign", { ids, agentId: bulkAssignAgentId });
-      toast.success(r.data.message || `${ids.length} lead(s) assigned`);
-      // Update leads in table: set assignedTo + assignedToName
-      const agent = agents.find((a) => a._id === bulkAssignAgentId);
-      if (agent) {
-        ids.forEach((id) => {
-          const lead = leads.find((l) => l._id === id);
-          if (lead) upsertLead({ ...lead, assignedTo: agent._id, assignedToName: agent.name }, false);
-        });
+      const { plainIds, skipped } = splitBulkSelection();
+      if (plainIds.length) {
+        const r = await api.post("/leads/bulk-assign", { ids: plainIds, agentId: bulkAssignAgentId });
+        toast.success(r.data.message || `${plainIds.length} lead(s) assigned`);
+        // Update leads in table: set assignedTo + assignedToName
+        const agent = agents.find((a) => a._id === bulkAssignAgentId);
+        if (agent) {
+          plainIds.forEach((id) => {
+            const lead = leads.find((l) => l._id === id);
+            if (lead) upsertLead({ ...lead, assignedTo: agent._id, assignedToName: agent.name }, false);
+          });
+        }
       }
+      if (skipped) toast.error(`${skipped} project lead${skipped !== 1 ? "s" : ""} skipped — no bulk assign for those yet`);
       setSelectedIds(new Set());
       setBulkAssignAgentId("");
     } catch (e) {
@@ -571,13 +482,16 @@ export default function Leads() {
     if (!bulkStatusValue) { toast.error("Please select a status"); return; }
     setBulkUpdatingStatus(true);
     try {
-      const ids = [...selectedIds];
-      const r = await api.patch("/leads/bulk-status", { ids, status: bulkStatusValue });
-      toast.success(r.data.message || `${ids.length} lead(s) updated`);
-      ids.forEach((id) => {
-        const lead = leads.find((l) => l._id === id);
-        if (lead) upsertLead({ ...lead, status: bulkStatusValue }, false);
-      });
+      const { plainIds, skipped } = splitBulkSelection();
+      if (plainIds.length) {
+        const r = await api.patch("/leads/bulk-status", { ids: plainIds, status: bulkStatusValue });
+        toast.success(r.data.message || `${plainIds.length} lead(s) updated`);
+        plainIds.forEach((id) => {
+          const lead = leads.find((l) => l._id === id);
+          if (lead) upsertLead({ ...lead, status: bulkStatusValue }, false);
+        });
+      }
+      if (skipped) toast.error(`${skipped} project lead${skipped !== 1 ? "s" : ""} skipped — no bulk status update for those yet`);
       setSelectedIds(new Set());
       setBulkStatusValue("");
     } catch (e) {
@@ -594,8 +508,10 @@ export default function Leads() {
       const ids = [...selectedIds];
       const r = await api.post("/leads/bulk-transfer", { ids, toProjectId: bulkTransferProjectId });
       toast.success(r.data.message || `${ids.length} lead(s) transferred`);
-      // Transferred leads are archived out of the main pipeline — drop them from the table
-      ids.forEach((id) => removeLead(id));
+      // Transferred rows change project/type (plain lead → project lead, or
+      // project lead → a different project) — refetch rather than patch
+      // client state, so the current page reflects the new project/filter.
+      refetch();
       setSelectedIds(new Set());
       setBulkTransferProjectId("");
     } catch (e) {
@@ -619,64 +535,6 @@ export default function Leads() {
     }
   };
 
-  const projAllSelected = projLeads.length > 0 && projLeads.every((l) => projSelectedIds.has(l._id));
-  const projSomeSelected = projLeads.some((l) => projSelectedIds.has(l._id));
-
-  const projToggleAll = () => {
-    if (projAllSelected) setProjSelectedIds(new Set());
-    else setProjSelectedIds(new Set(projLeads.map((l) => l._id)));
-  };
-
-  const projToggleOne = (lid) => {
-    setProjSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(lid)) next.delete(lid); else next.add(lid);
-      return next;
-    });
-  };
-
-  const handleProjLeadUpdated = (updated) => {
-    if (updated?.booking === "Not Interested") {
-      setProjLeads((prev) => prev.filter((l) => l._id !== updated._id));
-      toast.success("Lead moved to Dump");
-    } else {
-      setProjLeads((prev) => prev.map((l) => l._id === updated._id ? updated : l));
-    }
-  };
-
-  const handleProjBulkDelete = async () => {
-    setProjBulkDeleting(true);
-    try {
-      const ids = [...projSelectedIds];
-      await api.delete(`/projects/${selectedProject._id}/leads/bulk`, { data: { ids } });
-      setProjLeads((prev) => prev.filter((l) => !projSelectedIds.has(l._id)));
-      setProjTotal((t) => t - ids.length);
-      setProjSelectedIds(new Set());
-      toast.success(`${ids.length} lead${ids.length !== 1 ? "s" : ""} deleted`);
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Bulk delete failed");
-    } finally {
-      setProjBulkDeleting(false);
-      setShowProjBulkConfirm(false);
-    }
-  };
-
-  const handleProjDeleteLead = async () => {
-    setProjDeleting(true);
-    try {
-      await api.delete(`/projects/${selectedProject._id}/leads/${projDeletingId}`);
-      setProjLeads((prev) => prev.filter((l) => l._id !== projDeletingId));
-      setProjTotal((t) => t - 1);
-      toast.success("Lead deleted");
-    } catch (e) {
-      toast.error(e.response?.data?.message || "Delete failed");
-    } finally {
-      setProjDeleting(false);
-      setProjDeletingId(null);
-    }
-  };
-
-
   const exportRows = async (type, selectedIdsOverride = null) => {
     const tid = toast.loading("Preparing export…");
     try {
@@ -685,11 +543,16 @@ export default function Leads() {
       // Respect current filters AND the current page + row-count setting.
       // If specific IDs are selected, fetch just enough to cover them.
       const params = new URLSearchParams();
-      if (filters.status)    params.set("status",    filters.status);
-      if (filters.source)    params.set("source",    filters.source);
-      if (filters.priority)  params.set("priority",  filters.priority);
-      if (filters.search)    params.set("search",    filters.search);
-      if (filters.dateRange) params.set("dateRange", filters.dateRange);
+      if (filters.status)     params.set("status",     filters.status);
+      if (filters.source)     params.set("source",     filters.source);
+      if (filters.priority)   params.set("priority",   filters.priority);
+      if (filters.booking)    params.set("booking",    filters.booking);
+      if (filters.search)     params.set("search",     filters.search);
+      if (filters.siteFilter) params.set("siteFilter", filters.siteFilter);
+      if (filters.assignedTo) params.set("assignedTo", filters.assignedTo);
+      if (filters.projectId)  params.set("projectId",  filters.projectId);
+      if (filters.myOnly)     params.set("myOnly",     filters.myOnly);
+      if (filters.dateRange)  params.set("dateRange",  filters.dateRange);
       // Use the current page + limit so export matches exactly what the user sees
       params.set("limit", String(limit));
       params.set("page",  String(page));
@@ -824,11 +687,16 @@ export default function Leads() {
   const parseImportRow = (row, inferredCols = {}) => {
     const col = makeColPicker(row);
 
+    // Combine separate first/last name columns when present
+    const firstName = col("First Name","FirstName","FName","Given Name","GivenName");
+    const lastName  = col("Last Name","LastName","LName","Surname","Family Name","FamilyName");
+    const splitName = [firstName, lastName].filter(Boolean).join(" ");
+
     const name = col(
-      "Lead Name","LeadName","Full Name","FullName","Name","Customer Name","CustomerName",
+      "Lead Name","LeadName","Full Name","FullName","Name","Names","Customer Name","CustomerName",
       "Contact Name","ContactName","Client Name","ClientName","User Name","UserName",
       "Prospect","Party","Buyer","Person","Contact","Customer"
-    ) || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
+    ) || splitName || (inferredCols.name ? String(row[inferredCols.name] ?? "").trim() : "");
 
     const phone = col(
       "Phone","Phone Number","PhoneNumber","Mobile","Mobile Number","MobileNumber",
@@ -1163,9 +1031,9 @@ export default function Leads() {
         {/* Row 2: filters — 3-col × 3-row grid on sm+ */}
         {(() => {
           const activeFilterCount = [
-            filters.status, filters.source, filters.priority, filters.siteFilter,
-            filters.assignedTo,
-            filters.myOnly === "true" ? "t" : null, selectedProject ? "t" : null,
+            filters.status, filters.source, filters.priority, filters.booking, filters.siteFilter,
+            filters.assignedTo, filters.projectId,
+            filters.myOnly === "true" ? "t" : null,
           ].filter(Boolean).length;
           return (
             <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
@@ -1227,24 +1095,22 @@ export default function Leads() {
                     style={{ width: "100%" }}
                   />
                 )}
-                {/* R2C1: Projects */}
+                {/* R2C1: Projects — filters the same unified table/list below */}
                 {projects.length > 0 && (
                   <CustomSelect
-                    value={selectedProject?._id || ""}
-                    onChange={(v) => {
-                      const p = projects.find((x) => x._id === v) || null;
-                      setSelectedProject(p); setProjPage(1); setProjSearch("");
-                    }}
+                    value={filters.projectId || ""}
+                    onChange={(v) => setFilter("projectId", v)}
                     placeholder="All Projects"
                     options={projects.map((p) => ({ value: p._id, label: `${p.name} (${p.leadCount || 0})` }))}
                     style={{ width: "100%" }}
                   />
                 )}
-                {/* Status, Source, Priority */}
+                {/* Status, Source, Priority, Booking */}
                 {[
                   { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
                   { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
+                  { key: "booking",  placeholder: "All Bookings",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
                 ].map(({ key, placeholder, opts }) => (
                   <CustomSelect
                     key={key}
@@ -1282,13 +1148,12 @@ export default function Leads() {
                   </div>
                 )}
                 {/* Clear */}
-                {(Object.values(filters).some(Boolean) || selectedProject) && (
+                {Object.values(filters).some(Boolean) && (
                   <div className="col-span-2 sm:col-auto">
                     <button
                       className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                       onClick={() => {
-                        ["search", "siteFilter", "status", "source", "priority", "dateRange", "myOnly", "assignedTo"].forEach((k) => setFilter(k, ""));
-                        setSelectedProject(null);
+                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "myOnly", "assignedTo", "projectId"].forEach((k) => setFilter(k, ""));
                         try { localStorage.removeItem("leads_myOnly"); } catch {}
                       }}
                     >
@@ -1301,152 +1166,6 @@ export default function Leads() {
           );
         })()}
       </div>
-
-      {/* ── Project leads table (shown when a project is selected) ─────────────── */}
-      {selectedProject && (
-            <section className="card p-4 space-y-3">
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <div className="relative flex-1 max-w-sm min-w-[180px]">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-                  <input className="input rounded-full pl-11 text-sm" placeholder="Search by name or phone..."
-                    value={projSearch}
-                    onChange={(e) => { setProjSearch(e.target.value); setProjPage(1); setProjSelectedIds(new Set()); }} />
-                </div>
-                {projSelectedIds.size > 0 && canDelete && (
-                  <button className="btn-danger rounded-xl text-xs" onClick={() => setShowProjBulkConfirm(true)}>
-                    <Trash2 className="h-4 w-4" /> Delete {projSelectedIds.size} selected
-                  </button>
-                )}
-                <span className="text-xs text-app-soft">{projTotal} leads</span>
-              </div>
-
-              {projLoading ? <div className="flex justify-center py-8"><Spinner size="lg" /></div> : (
-                <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--app-border)" }}>
-                  <table className="stitch-table min-w-[1400px]">
-                    <thead>
-                      <tr>
-                        {canDelete && (
-                          <th className="w-10 px-3">
-                            <input
-                              type="checkbox"
-                              checked={projAllSelected}
-                              ref={(el) => { if (el) el.indeterminate = projSomeSelected && !projAllSelected; }}
-                              onChange={projToggleAll}
-                              className="h-4 w-4 cursor-pointer rounded accent-orange-500"
-                              title="Select all"
-                            />
-                          </th>
-                        )}
-                        <th>#</th><th>Name</th><th>Phone</th><th>WhatsApp</th><th>Email</th><th>Source</th>
-                        <th>Contact Status</th><th style={{ minWidth: 185 }}>Follow Up</th><th style={{ minWidth: 185 }}>Follow Up 2</th>
-                        <th>Remark 1</th><th>Remark 2</th><th>Remark</th><th>Status</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {projLeads.length === 0 ? (
-                        <tr><td colSpan={canDelete ? 14 : 12} className="py-10 text-center text-sm text-app-soft">No leads in this project yet</td></tr>
-                      ) : projLeads.map((lead, i) => (
-                        <tr key={lead._id} className={`group ${projSelectedIds.has(lead._id) ? "ring-1 ring-inset ring-orange-400/40 bg-orange-500/5" : ""}`}>
-                          {canDelete && (
-                            <td className="w-10 px-3">
-                              <input
-                                type="checkbox"
-                                checked={projSelectedIds.has(lead._id)}
-                                onChange={() => projToggleOne(lead._id)}
-                                className="h-4 w-4 cursor-pointer rounded accent-orange-500"
-                              />
-                            </td>
-                          )}
-                          <td className="text-xs text-app-soft">{(projPage - 1) * projLimit + i + 1}</td>
-                          <td className="font-medium text-app text-sm whitespace-nowrap">{lead.name}</td>
-                          <td><PhoneActions phone={lead.phone} lead={lead} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
-                          <td><WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact({ ...lead, _type: "project", projectId: selectedProject._id })} /></td>
-                          <td className="text-sm text-app-soft">{lead.email || "-"}</td>
-                          <td><span className="stitch-pill text-[11px]">{lead.source}</span></td>
-                          <td><ContactStatusCell lead={lead} projectId={selectedProject._id} onUpdated={handleProjLeadUpdated} /></td>
-                          <td className="min-w-[185px]"><ProjInlineDate value={lead.followUp} leadId={lead._id} projectId={selectedProject._id} field="followUp" onSaved={handleProjLeadUpdated} /></td>
-                          <td className="min-w-[185px]"><ProjInlineDate value={lead.followUp2} leadId={lead._id} projectId={selectedProject._id} field="followUp2" onSaved={handleProjLeadUpdated} /></td>
-                          <td><RemarkPopupCell value={lead.remark1} leadId={lead._id} projectId={selectedProject._id} field="remark1" placeholder="Remark 1…" onSaved={handleProjLeadUpdated} /></td>
-                          <td><RemarkPopupCell value={lead.remark2} leadId={lead._id} projectId={selectedProject._id} field="remark2" placeholder="Remark 2…" onSaved={handleProjLeadUpdated} /></td>
-                          <td><ProjInlineText value={lead.remarkNote} leadId={lead._id} projectId={selectedProject._id} field="remarkNote" placeholder="Remark…" multiline onSaved={handleProjLeadUpdated} /></td>
-                          <td><ProjInlineBooking value={lead.booking} leadId={lead._id} projectId={selectedProject._id} onSaved={handleProjLeadUpdated} /></td>
-                          <td>
-                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition">
-                              <button
-                                className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-orange-500/10 hover:text-orange-500"
-                                onClick={() => setTransferMeta({ lead, leadType: "project", projectId: selectedProject._id })}
-                                title="Transfer lead"
-                              >
-                                <ArrowRightLeft className="h-4 w-4" />
-                              </button>
-                              {canDelete && (
-                                <button
-                                  className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400"
-                                  onClick={() => setProjDeletingId(lead._id)}
-                                  title="Delete lead"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3" style={{ borderColor: "var(--app-border)" }}>
-                    <div className="flex items-center gap-2 text-xs text-app-soft">
-                      <span>Show rows:</span>
-                      {[10, 30, 50, 100, 200, 500].map((n) => (
-                        <button key={n} onClick={() => { setProjLimit(n); setProjPage(1); }}
-                          className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${projLimit === n ? "text-white" : "text-app-soft hover:text-app hover:bg-black/5 dark:hover:bg-white/5"}`}
-                          style={projLimit === n ? { background: "var(--app-primary)" } : {}}
-                        >{n}</button>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-app-soft">{projTotal === 0 ? "0 results" : `${(projPage - 1) * projLimit + 1} – ${Math.min(projPage * projLimit, projTotal)} of ${projTotal}`}</span>
-                      {projPages > 1 && (
-                        <div className="flex items-center gap-1.5 text-xs text-app-soft">
-                          <span>Go to</span>
-                          <input
-                            key={projPage}
-                            type="number"
-                            min={1}
-                            max={projPages}
-                            defaultValue={projPage}
-                            className="w-14 rounded-lg border text-center text-xs py-1 px-1 outline-none focus:border-orange-400"
-                            style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)" }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                const v = Math.max(1, Math.min(projPages, parseInt(e.target.value) || 1));
-                                setProjPage(v);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const v = Math.max(1, Math.min(projPages, parseInt(e.target.value) || 1));
-                              if (v !== projPage) setProjPage(v);
-                            }}
-                          />
-                          <span>of {projPages}</span>
-                        </div>
-                      )}
-                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
-                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={projPage === 1} onClick={() => setProjPage(1)}><ChevronLeft className="h-3.5 w-3.5" /><ChevronLeft className="h-3.5 w-3.5 -ml-2" /></button>
-                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
-                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={projPage === 1} onClick={() => setProjPage((p) => p - 1)}><ChevronLeft className="h-4 w-4" /></button>
-                      <button className="flex h-8 w-8 items-center justify-center rounded-xl border transition disabled:opacity-30"
-                        style={{ borderColor: "var(--app-border)", background: "var(--app-surface-low)" }}
-                        disabled={projPage === projPages || projPages === 0} onClick={() => setProjPage((p) => p + 1)}><ChevronRight className="h-4 w-4" /></button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
 
       <section className="card overflow-hidden">
         {loading ? (
@@ -1631,7 +1350,7 @@ export default function Leads() {
                           <ArrowRightLeft className="h-4 w-4" />
                         </button>
                         {canDelete && (
-                          <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingId(lead._id)} title="Delete">
+                          <button className="flex h-8 w-8 items-center justify-center rounded-xl text-app-soft transition hover:bg-red-500/10 hover:text-red-400" onClick={() => setDeletingLead(lead)} title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -1717,8 +1436,8 @@ export default function Leads() {
         onEdit={(lead) => { setDetailLead(null); setEditLead(lead); setShowForm(true); }}
       />
       <ConfirmDialog
-        open={!!deletingId}
-        onClose={() => setDeletingId(null)}
+        open={!!deletingLead}
+        onClose={() => setDeletingLead(null)}
         onConfirm={handleDelete}
         loading={deleteLoading}
         title={user?.role === "super_admin" ? "Delete Lead" : "Move to Dump"}
@@ -1740,31 +1459,6 @@ export default function Leads() {
             : `${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""} will be moved to the Dump section. You can restore or permanently delete them from there.`
         }
       />
-      <ConfirmDialog
-        open={!!projDeletingId}
-        onClose={() => setProjDeletingId(null)}
-        onConfirm={handleProjDeleteLead}
-        loading={projDeleting}
-        title="Delete Project Lead"
-        message={
-          user?.role === "super_admin"
-            ? "Are you sure you want to permanently delete this lead? This cannot be undone."
-            : "This lead will be moved to Dump Leads. You can restore or permanently delete it from there."
-        }
-      />
-      <ConfirmDialog
-        open={showProjBulkConfirm}
-        onClose={() => setShowProjBulkConfirm(false)}
-        onConfirm={handleProjBulkDelete}
-        loading={projBulkDeleting}
-        title={`Delete ${projSelectedIds.size} Lead${projSelectedIds.size !== 1 ? "s" : ""}`}
-        message={
-          user?.role === "super_admin"
-            ? `Are you sure you want to permanently delete ${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
-            : `${projSelectedIds.size} selected lead${projSelectedIds.size !== 1 ? "s" : ""} will be moved to Dump Leads. You can restore or permanently delete them from there.`
-        }
-      />
-
       <TransferModal
         open={!!transferMeta}
         onClose={() => setTransferMeta(null)}

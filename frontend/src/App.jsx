@@ -7,6 +7,7 @@ import { PublicThemeProvider } from "./context/PublicThemeContext";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
+import SupportSessionBanner from "./components/SupportSessionBanner";
 import HelpBot from "./components/HelpBot";
 import OnboardingGate from "./components/OnboardingGate";
 import CookieBanner from "./components/CookieBanner";
@@ -311,7 +312,6 @@ const Refund          = lazy(() => import("./pages/Refund"));
 const Calls           = lazy(() => import("./pages/Calls"));
 const CookiePolicy    = lazy(() => import("./pages/CookiePolicy"));
 const Security        = lazy(() => import("./pages/Security"));
-const Status          = lazy(() => import("./pages/Status"));
 const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
 const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
@@ -329,6 +329,7 @@ const SuperAdminBroadcast   = lazy(() => import("./pages/SuperAdminBroadcast"));
 const SuperAdminOrgDetail   = lazy(() => import("./pages/SuperAdminOrgDetail"));
 const SuperAdminAudit       = lazy(() => import("./pages/SuperAdminAudit"));
 const SuperAdminRevenue     = lazy(() => import("./pages/SuperAdminRevenue"));
+const SuperAdminInsights    = lazy(() => import("./pages/SuperAdminInsights"));
 
 // ── Org Inactive overlay ──────────────────────────────────────────────────────
 function OrgInactiveScreen({ onLogout }) {
@@ -483,6 +484,7 @@ function RequireAuth() {
   return (
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
+      <SupportSessionBanner />
       <Sidebar />
       <main className="flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto">
         <Outlet />
@@ -573,7 +575,6 @@ export default function App() {
         <Route path="/refund"               element={<Refund />} />
         <Route path="/cookie-policy"        element={<CookiePolicy />} />
         <Route path="/security"             element={<Security />} />
-        <Route path="/status"               element={<Status />} />
         <Route path="/refer"                element={<ReferEarn />} />
         <Route path="/api-docs"             element={<ApiDocs />} />
         <Route path="/compare"              element={<Compare />} />
@@ -646,6 +647,7 @@ export default function App() {
           <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
           <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
           <Route path="/super-admin/audit"              element={<SuperAdminAudit />} />
+          <Route path="/super-admin/insights"          element={<SuperAdminInsights />} />
           <Route path="/super-admin/orgs/:id"           element={<SuperAdminOrgDetail />} />
           <Route path="/super-admin/blog"               element={<BlogManager />} />
           <Route path="/super-admin/blog/new"           element={<BlogEditor />} />

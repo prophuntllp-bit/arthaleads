@@ -8,7 +8,187 @@ import {
   CheckCircle2, XCircle, Clock, ExternalLink, LogIn,
   Mail, Phone, Shield, Zap, RefreshCw, HardDrive,
   ShieldCheck, ChevronLeft, ChevronRight, Activity, Sparkles,
+  Send, KeyRound, X,
 } from "lucide-react";
+
+const REASON_OPTIONS = [
+  { value: "customer_support",  label: "Customer Support" },
+  { value: "onboarding",        label: "Onboarding Assistance" },
+  { value: "bug_investigation", label: "Bug Investigation" },
+  { value: "data_migration",    label: "Data Migration" },
+  { value: "billing_issue",     label: "Billing Issue" },
+  { value: "other",             label: "Other" },
+];
+
+function AccessModal({ org, onClose, onImpersonated }) {
+  const [reason, setReason]       = useState("customer_support");
+  const [notes, setNotes]         = useState("");
+  const [mode, setMode]           = useState("direct"); // "direct" | "request"
+  const [loading, setLoading]     = useState(false);
+  const [requested, setRequested] = useState(null); // { requestId }
+  const [requests, setRequests]   = useState([]);
+
+  useEffect(() => {
+    api.get(`/super-admin/orgs/${org._id}/support-requests`)
+      .then(r => setRequests(r.data.requests || []))
+      .catch(() => {});
+  }, [org._id]);
+
+  const approvedRequest = requests.find(r => r.status === "approved");
+
+  const handleDirect = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(`/super-admin/orgs/${org._id}/impersonate`, { reason, notes });
+      sessionStorage.setItem("impersonating", JSON.stringify({
+        orgName: data.orgName, adminName: data.adminName, adminEmail: data.adminEmail,
+        orgId: org._id, requestId: data.requestId,
+        reasonLabel: REASON_OPTIONS.find(r => r.value === reason)?.label,
+      }));
+      toast.success(`Entered session as ${data.adminName} (${data.orgName})`);
+      onImpersonated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to start session");
+    } finally { setLoading(false); }
+  };
+
+  const handleRequest = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(`/super-admin/orgs/${org._id}/request-access`, { reason, notes });
+      setRequested(data);
+      toast.success("Approval request sent to org admin");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send request");
+    } finally { setLoading(false); }
+  };
+
+  const handleEnterApproved = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.post(`/super-admin/orgs/${org._id}/impersonate`, {
+        reason: approvedRequest.reason, notes: approvedRequest.notes,
+        requestId: approvedRequest._id,
+      });
+      sessionStorage.setItem("impersonating", JSON.stringify({
+        orgName: data.orgName, adminName: data.adminName, adminEmail: data.adminEmail,
+        orgId: org._id, requestId: data.requestId,
+        reasonLabel: REASON_OPTIONS.find(r => r.value === approvedRequest.reason)?.label,
+      }));
+      toast.success(`Entered session as ${data.adminName} (${data.orgName})`);
+      onImpersonated();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to start session");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="relative w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+        onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--app-border)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-orange-500/10">
+              <KeyRound className="w-4 h-4 text-orange-500" />
+            </div>
+            <div>
+              <h2 className="font-bold text-sm text-app">Support Access</h2>
+              <p className="text-[10px] text-app-soft">{org.name}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-app-soft">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Approved request banner */}
+          {approvedRequest && (
+            <div className="rounded-2xl p-4 flex items-center justify-between gap-3"
+              style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+              <div>
+                <p className="text-xs font-bold text-green-600">Access Approved</p>
+                <p className="text-[10px] text-app-soft mt-0.5">
+                  {REASON_OPTIONS.find(r => r.value === approvedRequest.reason)?.label}
+                  {approvedRequest.notes && ` — ${approvedRequest.notes}`}
+                </p>
+              </div>
+              <button onClick={handleEnterApproved} disabled={loading}
+                className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold text-white transition"
+                style={{ background: "#22c55e" }}>
+                Enter Session
+              </button>
+            </div>
+          )}
+
+          {/* Mode toggle */}
+          <div className="flex gap-2 p-1 rounded-2xl" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            {[
+              { id: "direct",  label: "Direct Access", icon: LogIn,  desc: "Immediate, fully logged" },
+              { id: "request", label: "Request Approval", icon: Send, desc: "Org admin must approve first" },
+            ].map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)}
+                className={`flex-1 flex flex-col items-center gap-0.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+                  mode === m.id ? "text-white shadow-sm" : "text-app-soft hover:text-app"
+                }`}
+                style={mode === m.id ? { background: "var(--app-primary)" } : {}}>
+                <m.icon className="w-3.5 h-3.5" />
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Reason */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-app-soft uppercase tracking-wider">Reason *</label>
+            <select
+              value={reason} onChange={e => setReason(e.target.value)}
+              className="input w-full text-sm">
+              {REASON_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-app-soft uppercase tracking-wider">Notes <span className="normal-case font-normal">(optional)</span></label>
+            <textarea
+              value={notes} onChange={e => setNotes(e.target.value)}
+              rows={2} placeholder="Brief description of what you'll be doing…"
+              className="input w-full text-sm resize-none" />
+          </div>
+
+          {/* Pending request sent */}
+          {requested && (
+            <div className="rounded-2xl p-3 text-center text-xs text-amber-600 font-semibold"
+              style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
+              Request sent — waiting for org admin to approve. You'll get a push notification when they respond.
+            </div>
+          )}
+
+          {/* Action */}
+          {!requested && (
+            <button
+              onClick={mode === "direct" ? handleDirect : handleRequest}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold text-white transition"
+              style={{ background: loading ? "rgba(249,115,22,0.5)" : "var(--app-primary)" }}>
+              {loading ? <Spinner size="sm" /> : mode === "direct" ? <LogIn className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+              {loading ? "Processing…" : mode === "direct" ? "Enter Session" : "Send Approval Request"}
+            </button>
+          )}
+
+          <p className="text-[10px] text-center text-app-soft/60">
+            All sessions are logged in the audit trail. Org admin will see a banner while you're inside.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const PLAN_COLORS = {
   trial: "bg-yellow-500/10 text-yellow-600 border-yellow-500/25",
@@ -91,6 +271,7 @@ export default function SuperAdminOrgDetail() {
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState("overview");
   const [impersonating, setImp] = useState(false);
+  const [accessModal, setAccessModal] = useState(false);
 
   // Activity tab state
   const [actLogs,    setActLogs]    = useState([]);
@@ -145,22 +326,8 @@ export default function SuperAdminOrgDetail() {
     if (tab === "activity") loadActivity(actPage);
   }, [actPage]);
 
-  const handleImpersonate = async () => {
-    if (!window.confirm(`Login as the admin of "${data.org.name}"? Your current admin session will end.`)) return;
-    setImp(true);
-    try {
-      const { data: res } = await api.post(`/super-admin/orgs/${id}/impersonate`);
-      sessionStorage.setItem("impersonating", JSON.stringify({
-        orgName: res.orgName,
-        adminName: res.adminName,
-        adminEmail: res.adminEmail,
-      }));
-      toast.success(`Logged in as ${res.adminName} (${res.orgName})`);
-      window.location.href = "/dashboard";
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Impersonation failed");
-      setImp(false);
-    }
+  const handleImpersonated = () => {
+    window.location.href = "/dashboard";
   };
 
   if (loading) return <PageLoader />;
@@ -245,20 +412,33 @@ export default function SuperAdminOrgDetail() {
         ))}
       </div>
 
-      {/* Impersonate button */}
+      {/* Support Access button */}
       <div className="card p-4 mb-5 flex items-center gap-4">
-        <div>
-          <p className="text-sm font-bold text-app">Login As This Organisation</p>
-          <p className="text-xs text-app-soft mt-0.5">Open the CRM as their admin to debug or assist. Your admin session will end — log back in via /admin-login.</p>
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-orange-500/10">
+            <KeyRound className="w-4 h-4 text-orange-500" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app">Support Access</p>
+            <p className="text-xs text-app-soft mt-0.5">Enter their CRM to debug or assist. Requires a reason — org admin sees a banner while you're inside.</p>
+          </div>
         </div>
         <button
-          onClick={handleImpersonate}
-          disabled={impersonating || !effectivelyActive}
+          onClick={() => setAccessModal(true)}
+          disabled={!effectivelyActive}
           className="ml-auto flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50 flex-shrink-0 cursor-pointer"
           style={{ background: effectivelyActive ? "var(--app-primary)" : undefined }}>
-          {impersonating ? <><Spinner size="sm" /> Switching…</> : <><LogIn className="w-4 h-4" /> Login As</>}
+          <LogIn className="w-4 h-4" /> Request Access
         </button>
       </div>
+
+      {accessModal && (
+        <AccessModal
+          org={org}
+          onClose={() => setAccessModal(false)}
+          onImpersonated={handleImpersonated}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-2xl mb-4 w-fit" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>

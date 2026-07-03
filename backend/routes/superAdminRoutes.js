@@ -11,7 +11,10 @@ router.get("/orgs/:id",               ctrl.getOrgDetail);
 router.patch("/orgs/:id",             ctrl.updateOrg);
 router.patch("/orgs/:id/logo",        ctrl.updateLogo);
 router.patch("/orgs/:id/extend-trial", ctrl.extendTrial);
-router.post("/orgs/:id/impersonate",  ctrl.impersonate);
+router.post("/orgs/:id/impersonate",          ctrl.impersonate);
+router.post("/orgs/:id/request-access",       ctrl.requestAccess);
+router.get ("/orgs/:id/support-requests",     ctrl.listSupportRequests);
+router.post("/orgs/:id/end-support-session",  ctrl.endSupportSession);
 router.get("/audit",                  ctrl.listAudit);
 router.get("/users",                  ctrl.listUsers);
 router.post("/backup",                ctrl.triggerBackup);
@@ -27,5 +30,6 @@ router.get("/tickets/:id/thread",   ctrl.getTicketThread);
 router.patch("/tickets/:id",        ctrl.updateTicket);
 router.post("/tickets/:id/reply",   ctrl.replyTicket);
 router.post("/broadcast",           ctrl.broadcast);
+router.get("/insights",             ctrl.insights);
 
 module.exports = router;

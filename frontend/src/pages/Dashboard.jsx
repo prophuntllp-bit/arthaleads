@@ -1,13 +1,13 @@
 ﻿// Dashboard - v2
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
-  Plus,
   ArrowRight,
   Bell,
+  Building2,
   Calendar,
   Check,
   CheckCircle,
@@ -20,7 +20,7 @@ import {
   MessageCircle,
   Pencil,
   Phone,
-  Search,
+  Plus,
   Sparkles,
   Target,
   TrendingUp,
@@ -29,7 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { StatCard, PageLoader } from "../components/UI";
+import { PageLoader } from "../components/UI";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
@@ -128,15 +128,12 @@ function InsightCard({ text, index, startDelay }) {
   const { displayed, done } = useTypewriter(text, 20, startDelay);
   const theme = INSIGHT_THEMES[index % INSIGHT_THEMES.length];
   return (
-    <div className="rounded-xl px-3 py-2.5 transition-all duration-500"
-      style={{ background: theme.bg, border: `1px solid ${theme.border}`, opacity: displayed ? 1 : 0 }}>
-      <div className="flex items-start gap-2">
-        <span className="text-[9px] font-black mt-0.5 flex-shrink-0" style={{ color: theme.accent }}>{theme.arrow}</span>
-        <p className="text-[11px] leading-snug text-app">
-          {displayed}
-          {!done && <span className="ai-cursor" style={{ background: theme.accent }} />}
-        </p>
-      </div>
+    <div className="flex items-start gap-2" style={{ opacity: displayed ? 1 : 0, transition: "opacity 0.3s" }}>
+      <span className="text-[9px] font-black mt-0.5 flex-shrink-0" style={{ color: theme.accent }}>{theme.arrow}</span>
+      <p className="text-[11px] leading-snug text-app">
+        {displayed}
+        {!done && <span className="ai-cursor" style={{ background: theme.accent }} />}
+      </p>
     </div>
   );
 }
@@ -149,6 +146,7 @@ function SmartInsightsWidget({ data }) {
   const [error, setError]       = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [cardDelays, setCardDelays] = useState([]);
+  const [open, setOpen] = useState(false);
 
   const allowed = user?.role === "admin" || user?.role === "manager" || user?.role === "super_admin";
   if (!allowed) return null;
@@ -217,51 +215,75 @@ function SmartInsightsWidget({ data }) {
 
   useEffect(() => { generate(); }, [!!data]);
 
+  const insightCount = insights?.length ?? 0;
+
   return (
     <div className="w-full rounded-xl overflow-hidden"
       style={{ background: "rgba(var(--app-primary-rgb),0.04)", border: "1px solid rgba(var(--app-primary-rgb),0.16)" }}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: "1px solid rgba(var(--app-primary-rgb),0.12)", background: "rgba(var(--app-primary-rgb),0.06)" }}>
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="ai-sparkle" style={{ width: 11, height: 11, color: "#f97316", flexShrink: 0 }} />
-          <span className="text-[10px] font-black uppercase tracking-widest"
-            style={{ background: "linear-gradient(90deg,#f97316,#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Artha AI
+      {/* Always-visible pill row */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Sparkles className="ai-sparkle" style={{ width: 11, height: 11, color: "#f97316", flexShrink: 0 }} />
+        <span className="text-[10px] font-black uppercase tracking-widest"
+          style={{ background: "linear-gradient(90deg,#f97316,#fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          Artha AI
+        </span>
+        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+          style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", border: "1px solid rgba(249,115,22,0.25)" }}>
+          LIVE
+        </span>
+
+        {/* Status text when collapsed */}
+        {!open && (
+          <span className="text-[11px] text-app-soft flex-1 truncate ml-0.5">
+            {aiLoading
+              ? "Analysing pipeline…"
+              : error
+              ? "Could not load insights"
+              : insights
+              ? `${insightCount} insight${insightCount !== 1 ? "s" : ""} ready`
+              : ""}
           </span>
-          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-            style={{ background: "rgba(249,115,22,0.15)", color: "#f97316", border: "1px solid rgba(249,115,22,0.25)" }}>
-            LIVE
-          </span>
+        )}
+
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          {open && (
+            <button onClick={() => generate(true)} disabled={aiLoading}
+              className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg"
+              style={{ background: "rgba(var(--app-primary-rgb),0.08)" }}>
+              <Zap style={{ width: 8, height: 8 }} />
+              {aiLoading ? "…" : "Refresh"}
+            </button>
+          )}
+          <button onClick={() => setOpen(v => !v)}
+            className="text-[10px] text-app-soft hover:text-app transition-all flex items-center gap-0.5 px-2 py-0.5 rounded-lg"
+            style={{ background: "rgba(var(--app-primary-rgb),0.08)", border: "0.5px solid rgba(var(--app-primary-rgb),0.2)" }}>
+            {open ? "Hide" : "View"}
+            <ChevronDown style={{ width: 10, height: 10, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+          </button>
         </div>
-        <button onClick={() => generate(true)} disabled={aiLoading}
-          className="text-[10px] text-app-soft hover:text-app transition-all disabled:opacity-40 flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg"
-          style={{ background: "rgba(var(--app-primary-rgb),0.08)" }}>
-          <Zap style={{ width: 8, height: 8 }} />
-          {aiLoading ? "…" : "Refresh"}
-        </button>
       </div>
 
-      {/* Body */}
-      <div className="px-3 py-2 flex flex-col gap-2">
-        {aiLoading && (
-          <>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
-              <span className="text-[10px] text-app-soft">Artha AI is analysing your pipeline…</span>
-            </div>
-            <div className="ai-shimmer-bar h-8 rounded-lg" />
-            <div className="ai-shimmer-bar h-8 rounded-lg" style={{ animationDelay: "0.3s" }} />
-          </>
-        )}
-        {error && (
-          <p className="text-[11px] text-app-soft py-1">Could not generate insights right now.</p>
-        )}
-        {insights && insights.map((line, i) => (
-          <InsightCard key={i} text={line} index={i} startDelay={cardDelays[i] ?? 0} />
-        ))}
-      </div>
+      {/* Expanded body */}
+      {open && (
+        <div className="px-3 pb-2.5 pt-1 flex flex-col gap-2"
+          style={{ borderTop: "1px solid rgba(var(--app-primary-rgb),0.12)" }}>
+          {aiLoading && (
+            <>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse flex-shrink-0" />
+                <span className="text-[10px] text-app-soft">Artha AI is analysing your pipeline…</span>
+              </div>
+              <div className="ai-shimmer-bar h-5 rounded-lg" />
+              <div className="ai-shimmer-bar h-5 rounded-lg" style={{ animationDelay: "0.3s" }} />
+            </>
+          )}
+          {error && <p className="text-[11px] text-app-soft pt-1">Could not generate insights right now.</p>}
+          {insights && insights.map((line, i) => (
+            <InsightCard key={i} text={line} index={i} startDelay={cardDelays[i] ?? 0} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -424,7 +446,6 @@ export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const [greeting, setGreeting] = useState(getGreeting());
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setInterval(() => setGreeting(getGreeting()), 30 * 60 * 1000); // 30 min - greeting only changes AM/PM
@@ -436,10 +457,14 @@ export default function Dashboard() {
   const [retrying, setRetrying] = useState(false);
   const [dateRange, setDateRange] = useState("last30days");
   const [connectedPlatforms, setConnectedPlatforms] = useState(null); // null = loading
+  const [allAutomations, setAllAutomations] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [agents, setAgents] = useState([]);
   const [goalOverride, setGoalOverride] = useState(null);
   const [analyticsError, setAnalyticsError] = useState(false);
+  // Pre-fetched in parallel with analytics so Action Required renders immediately
+  const [prefetchedFollowups, setPrefetchedFollowups] = useState(null);
+  const [prefetchedHot, setPrefetchedHot] = useState(null);
 
   const fetchAnalytics = (retryCount = 0) => {
     if (retryCount === 0) setLoading(true);
@@ -463,7 +488,18 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchAnalytics(); }, [dateRange, refreshKey]);
+  useEffect(() => {
+    fetchAnalytics();
+    // Fire in parallel with analytics so Action Required cards have data ready
+    if (sessionStorage.getItem("fup_panel_dismissed") !== "1") {
+      api.get("/leads/followups-due")
+        .then((r) => setPrefetchedFollowups(r.data.data || []))
+        .catch(() => setPrefetchedFollowups([]));
+    }
+    api.get("/leads/hot", { params: { limit: 4 } })
+      .then((r) => setPrefetchedHot(r.data.data || []))
+      .catch(() => setPrefetchedHot([]));
+  }, [dateRange, refreshKey]);
 
   useEffect(() => {
     api.get("/auth/agents").then((r) => setAgents(r.data.agents || [])).catch(() => {});
@@ -474,6 +510,7 @@ export default function Dashboard() {
     api.get("/automations")
       .then((res) => {
         const list = res.data.automations || [];
+        setAllAutomations(list);
         const active = list.filter((a) => a.status === "connected" && a.isActive !== false);
         // Deduplicate by platform (multiple Facebook automations = one card)
         const seen = new Set();
@@ -512,21 +549,6 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 min-w-0 w-full lg:w-[40%] lg:flex-[0_0_40%]">
           {/* Pills row */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Search: mobile only */}
-            <div className="relative min-w-[260px] flex-1 max-w-xl md:hidden">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-app-soft" />
-              <input
-                className="input rounded-full pl-11 pr-4"
-                placeholder="Search leads by name, phone or email…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchQuery.trim()) {
-                    navigate("/leads", { state: { presetSearch: searchQuery.trim() } });
-                  }
-                }}
-              />
-            </div>
             {activePlatforms.map((platform) => {
               const cfg = PLATFORM_CONFIG[platform];
               if (!cfg) return null;
@@ -590,33 +612,7 @@ export default function Dashboard() {
 
       <OnboardingChecklist totalLeads={data?.allTimeTotal || 0} />
 
-      <FollowUpDuePanel user={user} navigate={navigate} />
-
-      {activePlatforms.length > 0 && (
-        <div
-          className="grid gap-2 sm:gap-4"
-          style={{ gridTemplateColumns: `repeat(${Math.min(activePlatforms.length, 4)}, minmax(0, 1fr))` }}
-        >
-          {activePlatforms.map((platform) => {
-            const cfg = PLATFORM_CONFIG[platform];
-            if (!cfg) return null;
-            return (
-              <TopLeadSourceCard
-                key={platform}
-                label={cfg.label}
-                value={data?.bySource?.[cfg.sourceKey] || 0}
-                logo={<PlatformLogo platform={platform} size={20} />}
-                note={cfg.note}
-                tone={cfg.tone}
-                iconTone={cfg.iconTone}
-                onClick={() => navigate("/leads", { state: { presetSource: cfg.presetSource } })}
-              />
-            );
-          })}
-        </div>
-      )}
-
-      {/* Agent with no leads assigned yet */}
+      {/* Agent — no leads yet */}
       {!loading && data && user?.role === "agent" && data.allTimeTotal === 0 && (
         <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
@@ -627,166 +623,189 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div data-tour="stat-cards" className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="Total Leads" value={data?.allTimeTotal || 0} icon={Users} color="text-orange-500"
-          delta={data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : undefined}
-          onClick={() => navigate("/leads")} />
-        <StatCard label="New" value={data?.allTimeNew || 0} icon={TrendingUp} color="text-indigo-400" sub="Uncontacted"
-          onClick={() => navigate("/leads", { state: { presetStatus: "New" } })} />
-        <StatCard label="Closed Won" value={data?.allTimeClosedWon || 0} icon={CheckCircle} color="text-emerald-400" sub="Converted"
-          delta={data ? calcDelta(data.thisMonthClosedWon, data.lastMonthClosedWon) : undefined}
-          onClick={() => navigate("/leads", { state: { presetStatus: "Closed Won" } })} />
-        <StatCard label="Follow-ups Today" value={data?.todayFollowUps || 0} icon={Clock3} color="text-amber-400" sub={`${data?.totalFollowUps || 0} total scheduled`}
-          onClick={() => navigate("/leads", { state: { presetFollowUpToday: true } })} />
-      </div>
-      <InsightStrip data={data} />
-      <GoalMetricsRow
-        goal={monthlyGoal}
-        current={data?.thisMonthClosedWon || 0}
-        avgResponseMs={data?.avgResponseMs}
-        role={user?.role}
-        onGoalUpdate={(n) => setGoalOverride(n)}
-      />
-      <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
+      {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
+      <ZonedKPIRow data={data} navigate={navigate} />
 
-      <HotLeadsWidget navigate={navigate} />
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <section className="card p-4 xl:col-span-7">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="stitch-kicker mb-1">Performance</p>
-              <h3 className="text-base font-bold text-app">Leads by Status</h3>
-            </div>
-            <div className="stitch-pill text-xs">Live pipeline</div>
-          </div>
-          <ResponsiveContainer width="100%" height={Math.max(80, statusChartData.length * 44)}>
-            <BarChart
-              data={statusChartData}
-              layout="vertical"
-              barCategoryGap="18%"
-              margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
-              style={{ outline: "none" }}
-            >
-              <XAxis
-                type="number"
-                tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
-                axisLine={false}
-                tickLine={false}
-                width={78}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid var(--app-border)",
-                  background: "var(--app-bg)",
-                  color: "var(--app-text)",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                  fontSize: 12,
-                }}
-                itemStyle={{ color: "var(--app-text)" }}
-                labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
-              />
-              <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                {statusChartData.map((_, index) => (
-                  <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </section>
-
-        <section className="card p-4 xl:col-span-5">
-          <div className="mb-3">
-            <p className="stitch-kicker mb-1">Acquisition Mix</p>
-            <h3 className="text-base font-bold text-app">Leads by Source</h3>
-          </div>
-          {sourceChartData.length === 0 ? (
-            <p className="py-12 text-center text-sm text-app-soft">No data yet</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart style={{ outline: "none" }}>
-                    <Pie
-                      data={sourceChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={58}
-                      outerRadius={85}
-                      dataKey="value"
-                      labelLine={false}
-                      paddingAngle={2}
-                      strokeWidth={0}
-                      isAnimationActive={false}
-                      tabIndex={-1}
-                    >
-                      {sourceChartData.map((_, index) => (
-                        <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center label */}
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-app">
-                    {sourceChartData.reduce((s, d) => s + d.value, 0)}
-                  </span>
-                  <span className="text-xs text-app-soft">Total</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                {sourceChartData.map(({ name, value }, index) => (
-                  <div key={name} className="flex items-center gap-2 min-w-0">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
-                    />
-                    <span className="truncate text-xs text-app-soft">{name}</span>
-                    <span className="ml-auto text-xs font-semibold text-app">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
+      {/* ── Zone 3: Action Required ───────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Action Required" color="amber" />
+        {/* 2-col grid: overdue follow-ups left, hot leads right.
+            Mobile (<640px): stacked 1 col. Tablet/desktop: side by side. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+          <FollowUpDuePanel user={user} navigate={navigate} prefetchedLeads={prefetchedFollowups} />
+          <HotLeadsWidget navigate={navigate} limit={4} prefetchedLeads={prefetchedHot} />
+        </div>
+        <UpcomingSchedule items={data?.upcomingItems || []} navigate={navigate} />
       </div>
 
-      <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <section className="card p-6 xl:col-span-5">
-          <div className="mb-5 flex items-center justify-between">
-            <div>
-              <p className="stitch-kicker mb-2">Team Focus</p>
-              <h3 className="text-lg font-bold text-app">Top Agents</h3>
-            </div>
-            <div className="stitch-pill">Leaderboard</div>
+      {/* ── Zone 4: Admin Intelligence ───────────────────────────────── */}
+      <AdminOnly role={user?.role}>
+        <div className="space-y-3">
+          <ZoneHeader label="Admin Intelligence" color="indigo" />
+          <StaleLeadsWidget navigate={navigate} />
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <RevenueForecastWidget data={data} />
+            <WeeklyTrendWidget data={data} />
           </div>
-          <div className="space-y-4">
-            {(data?.byAgent || []).slice(0, 5).map((agent, index) => (
-              <button
-                key={agent._id}
-                type="button"
-                onClick={() => navigate("/performance", { state: { focusUserId: agent._id } })}
-                className="flex w-full items-center gap-4 rounded-[1.25rem] p-3 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <LiveAgentStatusWidget navigate={navigate} />
+            <AutomationHealthWidget automations={allAutomations} />
+          </div>
+          {/* Project breakdown + Monthly goal — side by side */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 items-start">
+            <ProjectBreakdownWidget navigate={navigate} />
+            <GoalMetricsRow
+              goal={monthlyGoal}
+              current={data?.thisMonthClosedWon || 0}
+              avgResponseMs={null}
+              role={user?.role}
+              onGoalUpdate={(n) => setGoalOverride(n)}
+            />
+          </div>
+        </div>
+      </AdminOnly>
+
+      {/* ── Zone 5: Performance ──────────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Performance" />
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+          <section className="card p-3 xl:col-span-7">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="stitch-kicker mb-0.5">Pipeline</p>
+                <h3 className="text-sm font-bold text-app">Leads by Status</h3>
+              </div>
+              <div className="stitch-pill text-xs">Live</div>
+            </div>
+            <ResponsiveContainer width="100%" height={Math.max(70, statusChartData.length * 36)}>
+              <BarChart
+                data={statusChartData}
+                layout="vertical"
+                barCategoryGap="18%"
+                margin={{ top: 0, right: 12, left: 0, bottom: 0 }}
+                style={{ outline: "none" }}
               >
-                <span className="w-4 text-xs font-bold text-app-soft">{index + 1}</span>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-sm font-bold text-orange-500">
-                  {agent.name?.[0]?.toUpperCase()}
+                <XAxis
+                  type="number"
+                  tick={{ fontSize: 10, fill: "var(--app-text-soft)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 11, fill: "var(--app-text-soft)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={78}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: "1px solid var(--app-border)",
+                    background: "var(--app-bg)",
+                    color: "var(--app-text)",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    fontSize: 12,
+                  }}
+                  itemStyle={{ color: "var(--app-text)" }}
+                  labelStyle={{ color: "var(--app-text)", fontWeight: 600 }}
+                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                />
+                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                  {statusChartData.map((_, index) => (
+                    <Cell key={index} fill={STATUS_CHART_COLORS[index % STATUS_CHART_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </section>
+
+          <section className="card p-3 xl:col-span-5">
+            <div className="mb-2">
+              <p className="stitch-kicker mb-0.5">Acquisition Mix</p>
+              <h3 className="text-sm font-bold text-app">Leads by Source</h3>
+            </div>
+            {sourceChartData.length === 0 ? (
+              <p className="py-8 text-center text-sm text-app-soft">No data yet</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="relative" style={{ WebkitTapHighlightColor: "transparent" }}>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart style={{ outline: "none" }}>
+                      <Pie
+                        data={sourceChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={85}
+                        dataKey="value"
+                        labelLine={false}
+                        paddingAngle={2}
+                        strokeWidth={0}
+                        isAnimationActive={false}
+                        tabIndex={-1}
+                      >
+                        {sourceChartData.map((_, index) => (
+                          <Cell key={index} fill={SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold text-app">
+                      {sourceChartData.reduce((s, d) => s + d.value, 0)}
+                    </span>
+                    <span className="text-xs text-app-soft">Total</span>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-app">{agent.name}</p>
-                  <p className="text-xs text-app-soft">Active agent</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {sourceChartData.map(({ name, value }, index) => (
+                    <div key={name} className="flex items-center gap-2 min-w-0">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: SOURCE_CHART_COLORS[index % SOURCE_CHART_COLORS.length] }}
+                      />
+                      <span className="truncate text-xs text-app-soft">{name}</span>
+                      <span className="ml-auto text-xs font-semibold text-app">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+        <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
+      </div>
+
+      {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <ZoneHeader label="Team" />
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+          <section className="card p-6 xl:col-span-5">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="stitch-kicker mb-2">Team Focus</p>
+                <h3 className="text-lg font-bold text-app">Top Agents</h3>
+              </div>
+              <div className="stitch-pill">Leaderboard</div>
+            </div>
+            <div className="space-y-4">
+              {(data?.byAgent || []).slice(0, 5).map((agent, index) => (
+                <button
+                  key={agent._id}
+                  type="button"
+                  onClick={() => navigate("/performance", { state: { focusUserId: agent._id } })}
+                  className="flex w-full items-center gap-4 rounded-[1.25rem] p-3 text-left stitch-surface-muted transition hover:-translate-y-0.5 hover:border-orange-500/30 hover:bg-orange-500/5"
+                >
+                  <span className="w-4 text-xs font-bold text-app-soft">{index + 1}</span>
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/10 text-sm font-bold text-orange-500">
+                    {agent.name?.[0]?.toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-app">{agent.name}</p>
+                    <p className="text-xs text-app-soft">Active agent</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-app">{agent.count}</p>
@@ -800,46 +819,80 @@ export default function Dashboard() {
 
         <ActivityFeed items={data?.recentActivity || []} navigate={navigate} />
       </div>
+      </div>{/* end Zone 6 */}
 
     </div>
   );
 }
 
-// ── Insight Strip ─────────────────────────────────────────────────────────────
-function InsightStrip({ data }) {
+// ── Zone components ───────────────────────────────────────────────────────────
+function ZoneHeader({ label, color = "default" }) {
+  const colorMap = { amber: "#f59e0b", indigo: "#6366f1", green: "#22c55e", purple: "#a855f7" };
+  const c = colorMap[color] || "var(--app-text-soft)";
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,107,0,0.10)" }}>
-          <IndianRupee className="w-5 h-5 text-orange-500" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Pipeline Value</p>
-          <p className="text-xl font-bold text-app">{fmtINR(data?.pipelineValue)}</p>
-          <p className="text-[10px] text-app-soft">{data?.pipelineLeads || 0} active leads</p>
-        </div>
-      </div>
+    <div className="flex items-center gap-3 select-none">
+      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+      <span className="text-[9px] font-black uppercase tracking-[0.15em] shrink-0" style={{ color: c }}>{label}</span>
+      <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
+    </div>
+  );
+}
 
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(34,197,94,0.10)" }}>
-          <Target className="w-5 h-5 text-emerald-500" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Conversion Rate</p>
-          <p className="text-xl font-bold text-emerald-400">{data?.conversionRate ?? 0}%</p>
-          <p className="text-[10px] text-app-soft">{data?.allTimeClosedWon || 0} of {data?.allTimeTotal || 0} leads closed</p>
-        </div>
-      </div>
-
-      <div className="card p-4 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(99,102,241,0.10)" }}>
-          <Zap className="w-5 h-5 text-indigo-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] text-app-soft uppercase tracking-wider font-semibold">Today's Activity</p>
-          <p className="text-xl font-bold text-indigo-400">{data?.todayCreated || 0} new leads</p>
-          <p className="text-[10px] text-app-soft">{data?.todaySiteVisits || 0} site visits · {data?.todayFollowUps || 0} follow-ups</p>
-        </div>
+function ZonedKPIRow({ data, navigate }) {
+  const delta = data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : null;
+  const stats = [
+    {
+      label: "Total Leads", value: data?.allTimeTotal ?? 0, color: "#f97316",
+      sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs last month` : "All time",
+      subColor: delta !== null ? (delta >= 0 ? "#22c55e" : "#ef4444") : undefined,
+      onClick: () => navigate("/leads"),
+    },
+    {
+      label: "Pipeline", value: fmtINR(data?.pipelineValue), color: "var(--app-text)",
+      sub: `${data?.pipelineLeads || 0} active leads`,
+    },
+    {
+      label: "New", value: data?.allTimeNew ?? 0, color: "#6366f1",
+      sub: "Uncontacted",
+      onClick: () => navigate("/leads", { state: { presetStatus: "New" } }),
+    },
+    {
+      label: "Closed Won", value: data?.allTimeClosedWon ?? 0, color: "#22c55e",
+      sub: `${data?.conversionRate ?? 0}% conversion`,
+      onClick: () => navigate("/leads", { state: { presetStatus: "Closed Won" } }),
+    },
+    {
+      label: "Follow-ups", value: data?.todayFollowUps ?? 0, color: "#f59e0b",
+      sub: "Due today",
+      onClick: () => navigate("/leads", { state: { presetFollowUpToday: true } }),
+    },
+    {
+      label: "Avg Response", value: fmtResponseTime(data?.avgResponseMs), color: "#22c55e",
+      sub: "First contact",
+    },
+  ];
+  return (
+    <div data-tour="stat-cards" className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {stats.map((s) => {
+          const inner = (
+            <>
+              <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate leading-none">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }}>{s.sub}</p>
+            </>
+          );
+          return s.onClick ? (
+            <button key={s.label} type="button" onClick={s.onClick}
+              className="card p-3 flex flex-col gap-0 text-left hover:-translate-y-0.5 transition hover:border-orange-500/30">
+              {inner}
+            </button>
+          ) : (
+            <div key={s.label} className="card p-3 flex flex-col gap-0">
+              {inner}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1062,8 +1115,8 @@ function DropoffFunnel({ allTimeByStatus }) {
 }
 
 // ── Follow-up Due Alert Panel ─────────────────────────────────────────────────
-function FollowUpDuePanel({ user, navigate }) {
-  const [leads, setLeads] = useState([]);
+function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
+  const [leads, setLeads] = useState(prefetchedLeads || []);
   const [dismissed, setDismissed] = useState(
     () => sessionStorage.getItem("fup_panel_dismissed") === "1"
   );
@@ -1072,11 +1125,16 @@ function FollowUpDuePanel({ user, navigate }) {
   );
 
   useEffect(() => {
+    // Use pre-fetched data when provided — no duplicate network call
+    if (prefetchedLeads !== null && prefetchedLeads !== undefined) {
+      setLeads(prefetchedLeads);
+      return;
+    }
     if (dismissed) return;
     api.get("/leads/followups-due")
       .then((r) => setLeads(r.data.data || []))
       .catch(() => {});
-  }, [dismissed]);
+  }, [dismissed, prefetchedLeads]);
 
   if (dismissed || !leads.length) return null;
 
@@ -1107,55 +1165,49 @@ function FollowUpDuePanel({ user, navigate }) {
         className="flex items-center gap-3 px-4 py-3"
         style={{ background: `linear-gradient(to right, ${accentBg}, transparent)`, borderBottom: "1px solid var(--app-border)" }}
       >
-        {/* Icon */}
-        <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
-          <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
+        {/* Col 1: Icon + text */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: overdue.length ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)" }}>
+            <AlertTriangle className="h-4 w-4" style={{ color: accentColor }} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">
+              {overdue.length > 0 && today.length > 0
+                ? `${overdue.length} overdue · ${today.length} due today`
+                : overdue.length > 0
+                ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
+                : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
+            </p>
+            <p className="text-[11px] text-app-soft">
+              {user?.role === "agent" ? "Your action list" : "Across your team"}
+            </p>
+          </div>
         </div>
 
-        {/* Title - takes remaining space */}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-app leading-tight">
-            {overdue.length > 0 && today.length > 0
-              ? `${overdue.length} overdue · ${today.length} due today`
-              : overdue.length > 0
-              ? `${overdue.length} overdue follow-up${overdue.length > 1 ? "s" : ""}`
-              : `${today.length} follow-up${today.length > 1 ? "s" : ""} due today`}
-          </p>
-          <p className="text-[11px] text-app-soft">
-            {user?.role === "agent" ? "Your action list" : "Across your team"}
-          </p>
+        {/* Controls — chevron | X */}
+        <div className="shrink-0 flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
+            title={minimized ? "Expand" : "Minimize"}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+          </button>
+          <button
+            type="button"
+            onClick={dismiss}
+            title="Dismiss"
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
+          >
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
         </div>
-
-        {/* Actions - compact on mobile */}
-        <button
-          type="button"
-          onClick={() => navigate("/followups")}
-          className="shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
-        >
-          View all
-        </button>
-        <button
-          type="button"
-          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("fup_panel_minimized", next ? "1" : "0"); return next; })}
-          title={minimized ? "Expand" : "Minimize"}
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-        >
-          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-        </button>
-        <button
-          type="button"
-          onClick={dismiss}
-          title="Dismiss"
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5"
-        >
-          <X className="h-3.5 w-3.5 text-app-soft" />
-        </button>
       </div>
 
-      {/* ── Lead rows ── */}
-      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
-        {leads.slice(0, 10).map((lead) => (
+      {/* ── Lead rows — fixed height, scroll reveals remaining ── */}
+      {!minimized && <div className="divide-y overflow-y-auto" style={{ borderColor: "var(--app-border)", maxHeight: "280px" }}>
+        {leads.map((lead) => (
           <div key={lead._id} className="flex items-center gap-2 px-4 py-2.5 transition hover:bg-black/[0.02] dark:hover:bg-white/[0.02]">
 
             {/* Urgency badge - compact on mobile */}
@@ -1214,11 +1266,11 @@ function FollowUpDuePanel({ user, navigate }) {
         ))}
       </div>}
 
-      {/* Footer */}
-      {!minimized && leads.length > 10 && (
-        <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+      {/* Footer — scroll count hint when there are more than 5 leads */}
+      {!minimized && leads.length > 5 && (
+        <div className="px-4 py-2 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
           <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium" onClick={() => navigate("/followups")}>
-            +{leads.length - 10} more - view all in Follow-ups
+            Scroll to see all {leads.length} · View in Follow-ups →
           </button>
         </div>
       )}
@@ -1227,17 +1279,22 @@ function FollowUpDuePanel({ user, navigate }) {
 }
 
 // ── Hot Today Widget ──────────────────────────────────────────────────────────
-function HotLeadsWidget({ navigate }) {
-  const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
+function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
+  const [leads, setLeads] = useState(prefetchedLeads || []);
+  const [loading, setLoading] = useState(prefetchedLeads === null || prefetchedLeads === undefined);
   const [minimized, setMinimized] = useState(() => localStorage.getItem("hot_panel_minimized") === "1");
 
   useEffect(() => {
-    api.get("/leads/hot", { params: { limit: 6 } })
+    if (prefetchedLeads !== null && prefetchedLeads !== undefined) {
+      setLeads(prefetchedLeads);
+      setLoading(false);
+      return;
+    }
+    api.get("/leads/hot", { params: { limit } })
       .then((r) => setLeads(r.data.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [prefetchedLeads]);
 
   if (loading) return null;
   if (!leads.length) return null;
@@ -1276,39 +1333,53 @@ function HotLeadsWidget({ navigate }) {
     return <Zap className="h-3 w-3" />;
   };
 
+  const topScore = leads[0]?._score ?? null;
+
   return (
-    <section data-tour="hot-today" className="card overflow-hidden">
+    <div className="hot-ai-wrapper">{/* spinning conic-gradient border */}
+    <section data-tour="hot-today" className="card overflow-hidden"
+      style={{ borderColor: "transparent", borderRadius: "1rem", background: "var(--app-card-solid, var(--app-surface-solid))" }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3"
-        style={{ borderBottom: "1px solid var(--app-border)", background: "linear-gradient(to right, rgba(239,68,68,0.06), transparent)" }}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(239,68,68,0.12)" }}>
-          <Flame className="h-4 w-4 text-red-400" />
+        style={{ borderBottom: minimized ? "none" : "1px solid rgba(249,115,22,0.12)" }}>
+
+        {/* Icon + title + subtitle */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {/* Icon with pulsing live dot */}
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "linear-gradient(135deg, rgba(249,115,22,0.18), rgba(251,146,60,0.14))", border: "1px solid rgba(249,115,22,0.3)" }}>
+            <Flame className="h-4 w-4" style={{ color: "#f97316" }} />
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-70" style={{ background: "#f97316" }} />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full" style={{ background: "#f97316" }} />
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-app leading-tight">Hot Today</h3>
+            <p className="text-[11px] text-app-soft truncate">
+              {topScore !== null ? `Top score: ${topScore} pts · ${leads.length} ranked` : "AI-ranked leads to call first"}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-app">Hot Today</h3>
-          <p className="text-[11px] text-app-soft">Highest-scored leads to prioritize first</p>
+
+        {/* Controls — AI SCORED badge + chevron */}
+        <div className="shrink-0 flex items-center gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            style={{ background: "linear-gradient(90deg, rgba(249,115,22,0.15), rgba(251,146,60,0.15))", border: "1px solid rgba(249,115,22,0.35)", color: "#fb923c" }}>
+            <Sparkles className="h-2.5 w-2.5" />
+            <span className="hidden sm:inline">AI Scored</span>
+          </span>
+          <button type="button"
+            onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
+            title={minimized ? "Expand" : "Minimize"}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-orange-500/10 cursor-pointer">
+            <ChevronDown className={`h-3.5 w-3.5 text-orange-400 transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
+          </button>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Sparkles className="h-3 w-3 text-indigo-400" />
-          <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider">AI Scored</span>
-        </div>
-        <button type="button"
-          onClick={() => navigate("/leads")}
-          className="shrink-0 flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition cursor-pointer"
-          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
-          View all <ArrowRight className="h-3 w-3" />
-        </button>
-        <button type="button"
-          onClick={() => setMinimized((v) => { const next = !v; localStorage.setItem("hot_panel_minimized", next ? "1" : "0"); return next; })}
-          title={minimized ? "Expand" : "Minimize"}
-          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
-          <ChevronDown className={`h-3.5 w-3.5 text-app-soft transition-transform duration-200 ${minimized ? "rotate-180" : ""}`} />
-        </button>
       </div>
 
       {/* Lead rows */}
-      {!minimized && <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+      {!minimized && <div className="divide-y" style={{ borderColor: "rgba(249,115,22,0.08)" }}>
         {leads.map((lead, idx) => {
           const ss = SCORE_STYLE(lead._score);
           const ac = ACTION_COLOR[lead._nextAction?.color] || ACTION_COLOR.orange;
@@ -1370,6 +1441,418 @@ function HotLeadsWidget({ navigate }) {
           );
         })}
       </div>}
+    </section>
+    </div>
+  );
+}
+
+// ── Admin-only widget wrapper — renders null for agents ───────────────────────
+function AdminOnly({ role, children }) {
+  if (role !== "admin" && role !== "manager" && role !== "super_admin") return null;
+  return children;
+}
+
+// ── 1. Revenue Forecast Widget ────────────────────────────────────────────────
+function RevenueForecastWidget({ data }) {
+  if (!data) return null;
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const dayOfMonth  = new Date().getDate();
+  const pace        = dayOfMonth > 0 ? Math.round((data.thisMonthClosedWon / dayOfMonth) * daysInMonth) : 0;
+  const goal        = data.monthlyClosingGoal || 0;
+  const onTrack     = goal > 0 ? pace >= goal : null;
+  const expectedRev = data.pipelineValue && data.conversionRate
+    ? Math.round((data.pipelineValue * data.conversionRate) / 100)
+    : 0;
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Forecast</p>
+          <h3 className="text-base font-bold text-app">Revenue & Closing Pace</h3>
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+          style={{ background: "rgba(99,102,241,0.12)" }}>
+          <TrendingUp className="h-4 w-4 text-indigo-400" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Expected Revenue</p>
+          <p className="text-lg font-black text-emerald-400 leading-none">{fmtINR(expectedRev)}</p>
+          <p className="text-[9px] text-app-soft">At {data.conversionRate ?? 0}% conversion</p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Leads</p>
+          <p className="text-lg font-black text-indigo-400 leading-none">{data.thisMonthLeads || 0}</p>
+          <p className={`text-[9px] font-semibold ${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "text-emerald-400" : "text-red-400"}`}>
+            {(data.lastMonthLeads || 0) === 0 ? "Last month: 0" : `${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "↑" : "↓"} vs ${data.lastMonthLeads} last month`}
+          </p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Closings vs Last Month</p>
+          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0} <span className="text-sm font-normal text-app-soft">/ {data.lastMonthClosedWon || 0}</span></p>
+          <p className="text-[9px] text-app-soft">This month / last month</p>
+        </div>
+        <div className="card p-3 flex flex-col gap-1">
+          <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Projected Pace</p>
+          <p className={`text-lg font-black leading-none ${onTrack === null ? "text-app" : onTrack ? "text-emerald-400" : "text-red-400"}`}>
+            {pace}
+          </p>
+          <p className="text-[9px] text-app-soft flex items-center gap-0.5">
+            {onTrack === null ? "No goal set" : onTrack
+              ? <><span className="text-emerald-400">↑</span> On track</>
+              : <><span className="text-red-400">↓</span> Behind pace</>}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── 2. Stale Leads Alert Widget ───────────────────────────────────────────────
+function StaleLeadsWidget({ navigate }) {
+  const [leads, setLeads] = useState(null);
+  const [dismissed, setDismissed] = useState(
+    () => sessionStorage.getItem("stale_panel_dismissed") === "1"
+  );
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("stale_panel_collapsed") === "1"
+  );
+
+  useEffect(() => {
+    if (dismissed) return;
+    api.get("/leads/stale").then((r) => setLeads(r.data.data || [])).catch(() => setLeads([]));
+  }, [dismissed]);
+
+  if (dismissed || leads === null || leads.length === 0) return null;
+
+  function daysAgo(date) {
+    return Math.floor((Date.now() - new Date(date)) / (1000 * 60 * 60 * 24));
+  }
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("stale_panel_collapsed", next ? "1" : "0");
+  }
+
+  return (
+    <section className="card overflow-hidden" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
+      <div className="flex items-center gap-3 px-4 py-3"
+        style={{ background: "linear-gradient(to right, rgba(245,158,11,0.08), transparent)", borderBottom: collapsed ? "none" : "1px solid var(--app-border)" }}>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "rgba(245,158,11,0.12)" }}>
+            <Clock3 className="h-4 w-4 text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">
+              {leads.length} stale lead{leads.length !== 1 ? "s" : ""} need attention
+            </p>
+            <p className="text-[11px] text-app-soft">No activity in 7+ days</p>
+          </div>
+        </div>
+        <div className="shrink-0 flex items-center gap-1">
+          <button type="button" onClick={() => navigate("/leads")}
+            className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}>
+            View all
+          </button>
+          <button type="button" onClick={toggleCollapsed}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+          </button>
+          <button type="button" onClick={() => { sessionStorage.setItem("stale_panel_dismissed", "1"); setDismissed(true); }}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <X className="h-3.5 w-3.5 text-app-soft" />
+          </button>
+        </div>
+      </div>
+
+      {!collapsed && (
+        <>
+          <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+            {leads.slice(0, 8).map((lead) => (
+              <div key={lead._id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-500/5 transition">
+                <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide"
+                  style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>
+                  {daysAgo(lead.updatedAt)}d
+                </span>
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })}
+                    className="text-sm font-semibold text-app hover:text-orange-500 transition truncate block leading-tight text-left">
+                    {lead.name}
+                  </button>
+                  <p className="text-[11px] text-app-soft truncate">{[lead.status, lead.source, lead.assignedToName].filter(Boolean).join(" · ")}</p>
+                </div>
+                {lead.phone && (
+                  <a href={`tel:${lead.phone}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition"
+                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}>
+                    <Phone className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {leads.length > 8 && (
+            <div className="px-4 py-2.5 text-center" style={{ borderTop: "1px solid var(--app-border)", background: "var(--app-surface-low)" }}>
+              <button type="button" className="text-xs text-app-soft hover:text-orange-500 transition font-medium"
+                onClick={() => navigate("/leads")}>
+                +{leads.length - 8} more stale leads — view all
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+// ── 3. Project Breakdown Widget ───────────────────────────────────────────────
+function ProjectBreakdownWidget({ navigate }) {
+  const [projects, setProjects] = useState(null);
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem("projects_panel_collapsed") === "1"
+  );
+
+  useEffect(() => {
+    api.get("/projects/stats").then((r) => setProjects(r.data.data || [])).catch(() => setProjects([]));
+  }, []);
+
+  if (!projects || projects.length === 0) return null;
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("projects_panel_collapsed", next ? "1" : "0");
+  }
+
+  return (
+    <section className="card overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: collapsed ? "none" : "1px solid var(--app-border)" }}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+            style={{ background: "rgba(99,102,241,0.10)" }}>
+            <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-app leading-tight">Project-wise Leads</p>
+            <p className="text-[11px] text-app-soft">{projects.length} active project{projects.length !== 1 ? "s" : ""}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => navigate("/projects")}
+            className="flex items-center gap-1 text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            View all <ArrowRight className="h-3 w-3" />
+          </button>
+          <button type="button" onClick={toggleCollapsed}
+            className="flex h-7 w-7 items-center justify-center rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <ChevronDown className={`h-4 w-4 text-app-soft transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {!collapsed && (
+        <div className="p-3 space-y-1">
+          {projects.slice(0, 6).map((p) => {
+            const pct = p.totalLeads > 0 ? Math.min(100, Math.round((p.closedWon / p.totalLeads) * 100)) : 0;
+            return (
+              <button key={String(p._id)} type="button"
+                onClick={() => navigate(`/projects/${p._id}`)}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-orange-500/5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-sm font-semibold text-app truncate">{p.name}</p>
+                    <span className="text-xs font-bold text-app shrink-0">{p.totalLeads} leads</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--app-surface-low)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 50 ? "#22c55e" : "#f97316" }} />
+                    </div>
+                    <span className="text-[10px] text-app-soft shrink-0">{pct}% won</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ── 4. Live Agent Status Widget ───────────────────────────────────────────────
+function LiveAgentStatusWidget({ navigate }) {
+  const [team, setTeam] = useState(null);
+
+  useEffect(() => {
+    api.get("/attendance/team-today").then((r) => setTeam(r.data.data || [])).catch(() => setTeam([]));
+  }, []);
+
+  if (!team || team.length === 0) return null;
+
+  const clocked = team.filter((m) => m.attendance?.clockIn && !m.attendance?.clockOut);
+  const done    = team.filter((m) => m.attendance?.clockIn && m.attendance?.clockOut);
+  const absent  = team.filter((m) => !m.attendance?.clockIn);
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Live</p>
+          <h3 className="text-base font-bold text-app">Agent Status Today</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+            {clocked.length} online
+          </span>
+          <button type="button" onClick={() => navigate("/attendance")}
+            className="text-[11px] font-semibold text-app-soft hover:text-app transition rounded-lg px-2.5 py-1"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            Attendance →
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {team.map((member) => {
+          const isIn  = member.attendance?.clockIn && !member.attendance?.clockOut;
+          const isDone = member.attendance?.clockIn && member.attendance?.clockOut;
+          const clockInTime = member.attendance?.clockIn
+            ? new Date(member.attendance.clockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" })
+            : null;
+          return (
+            <div key={member.user._id}
+              className="flex items-center gap-2.5 p-2.5 rounded-xl"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="relative flex-shrink-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                  style={{ background: isIn ? "rgba(34,197,94,0.15)" : isDone ? "rgba(99,102,241,0.12)" : "rgba(107,114,128,0.12)",
+                           color: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280" }}>
+                  {member.user.name?.[0]?.toUpperCase()}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                  style={{ background: isIn ? "#22c55e" : isDone ? "#6366f1" : "#6b7280",
+                           borderColor: "var(--app-surface-low)" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-app truncate">{member.user.name}</p>
+                <p className="text-[10px] text-app-soft truncate">
+                  {isIn ? `In since ${clockInTime}` : isDone ? "Done for today" : "Not checked in"}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+// ── 5. Weekly Trend Chart Widget ──────────────────────────────────────────────
+function WeeklyTrendWidget({ data }) {
+  if (!data?.recentDailyLeads) return null;
+
+  const today = new Date();
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  const countMap = {};
+  data.recentDailyLeads.forEach((r) => { countMap[r._id] = r.count; });
+
+  const chartData = days.map((date) => ({
+    day: new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short" }),
+    count: countMap[date] || 0,
+  }));
+
+  const total7 = chartData.reduce((s, d) => s + d.count, 0);
+  const prev7  = data.lastMonthLeads || 0;
+  const delta7 = data.thisMonthLeads > 0 ? null : null;
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Trends</p>
+          <h3 className="text-base font-bold text-app">Leads This Week</h3>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-black text-app">{total7}</p>
+          <p className="text-[10px] text-app-soft">last 7 days</p>
+        </div>
+      </div>
+      <ResponsiveContainer width="100%" height={100}>
+        <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip
+            contentStyle={{ borderRadius: 12, border: "1px solid var(--app-border)", background: "var(--app-bg)", color: "var(--app-text)", fontSize: 12 }}
+            cursor={{ stroke: "rgba(249,115,22,0.2)", strokeWidth: 2 }}
+          />
+          <Line type="monotone" dataKey="count" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316", r: 3 }} activeDot={{ r: 5 }} />
+        </LineChart>
+      </ResponsiveContainer>
+    </section>
+  );
+}
+
+// ── 6. Automation Health Widget ───────────────────────────────────────────────
+function AutomationHealthWidget({ automations }) {
+  if (!automations || automations.length === 0) return null;
+
+  const active   = automations.filter((a) => a.status === "connected" && a.isActive !== false);
+  const inactive = automations.filter((a) => a.status !== "connected" || a.isActive === false);
+
+  return (
+    <section className="card p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="stitch-kicker mb-1">Integrations</p>
+          <h3 className="text-base font-bold text-app">Automation Health</h3>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {active.length > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+              {active.length} live
+            </span>
+          )}
+          {inactive.length > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>
+              {inactive.length} off
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {automations.slice(0, 6).map((a) => {
+          const isLive = a.status === "connected" && a.isActive !== false;
+          return (
+            <div key={a._id} className="flex items-center gap-2.5 p-2.5 rounded-xl"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0">
+                <PlatformLogo platform={a.platform} size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-app truncate">{a.name || a.platform}</p>
+                <p className="text-[10px] text-app-soft">{a.platform}</p>
+              </div>
+              <span className="shrink-0 w-2 h-2 rounded-full" style={{ background: isLive ? "#22c55e" : "#ef4444" }} />
+            </div>
+          );
+        })}
+      </div>
     </section>
   );
 }

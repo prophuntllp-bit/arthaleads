@@ -201,7 +201,7 @@ function Hero({ isDark }) {
               src="/hero-mockup.png"
               alt="Arthaleads CRM Dashboard"
               className="w-full"
-              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))" }}
+              style={{ display: "block", filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.22))", mixBlendMode: isDark ? "normal" : "multiply" }}
             />
           </div>
 
@@ -337,6 +337,7 @@ const FEATURES = [
   { cat: "automation", icon: Bot,        color: "#a855f7", title: "AI Copilot & Help Bot",     desc: "An AI assistant built into every page. Ask live questions like 'How many overdue follow-ups do I have?' or 'Who are my hottest leads?' — and get instant answers from your own CRM data." },
   { cat: "leads",      icon: Filter,     color: "#14b8a6", title: "Duplicate Prevention",      desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically - even across different formats. Every agent calls a unique lead." },
   { cat: "leads",      icon: TrendingUp, color: "#ff6b00", title: "Lead Pipeline",             desc: "Kanban-style pipeline view lets you drag leads through stages - New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance." },
+  { cat: "analytics",  icon: Activity,   color: "#6366f1", title: "Admin Intelligence Dashboard", desc: "Six real-time admin panels in one screen: stale lead alerts (7+ days no touch), revenue forecast vs goal, weekly lead trend chart, live agent clock-in status, automation health, and project-wise conversion breakdown." },
   { cat: "analytics",  icon: Shield,     color: "#22c55e", title: "Secure & Multi-tenant",     desc: "Enterprise-grade data isolation. Every organisation's data is completely separate. Role-based access ensures agents only see what they're supposed to." },
 ];
 

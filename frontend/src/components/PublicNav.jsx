@@ -4,7 +4,7 @@ import {
   Menu, X, ChevronDown, Sun, Moon,
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
-  Code2, GitCompare, Shield, Activity, Gift,
+  Code2, GitCompare, Shield, Gift,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 
@@ -20,7 +20,6 @@ const NAV_RESOURCES = [
 const NAV_COMPANY = [
   { label: "Careers",       href: "/careers",  desc: "Join the Arthaleads team",   icon: Briefcase, badge: "Hiring" },
   { label: "Security",      href: "/security", desc: "How we protect your data",   icon: Shield },
-  { label: "System Status", href: "/status",   desc: "Live uptime & incidents",    icon: Activity },
   { label: "Refer & Earn",  href: "/refer",    desc: "Give a month, get a month",  icon: Gift, badge: "Earn" },
 ];
 

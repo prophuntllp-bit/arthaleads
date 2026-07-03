@@ -45,6 +45,24 @@ router.get("/hot", async (req, res, next) => {
     res.json({ success: true, data: scored });
   } catch (err) { next(err); }
 });
+// GET /api/leads/stale — leads not updated in 7+ days, non-closed (admin/manager only)
+router.get("/stale", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const leads = await Lead.find({
+      orgId: req.user.orgId,
+      isDeleted: { $ne: true },
+      status: { $nin: ["Closed Won", "Closed Lost"] },
+      updatedAt: { $lt: cutoff },
+    })
+      .select("name phone status source assignedToName updatedAt")
+      .sort({ updatedAt: 1 })
+      .limit(25)
+      .lean();
+    res.json({ data: leads });
+  } catch (e) { next(e); }
+});
+
 router.get("/dump", leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/followups-due", leadController.getFollowUpsDue);
