@@ -562,7 +562,9 @@ const leadService = {
       }
 
       [projLeads, projTotal] = await Promise.all([
-        ProjectLead.find(projFilter).populate("project", "name").sort({ createdAt: -1 }).limit(fetchCap).lean(),
+        ProjectLead.find(projFilter)
+          .populate({ path: "project", select: "name assignedTo", populate: { path: "assignedTo", select: "name" } })
+          .sort({ createdAt: -1 }).limit(fetchCap).lean(),
         ProjectLead.countDocuments(projFilter),
       ]);
     }
@@ -582,6 +584,10 @@ const leadService = {
       _type:        "project",
       projectId:    pl.project?._id || pl.project,
       projectName:  pl.project?.name || "",
+      // ProjectLead has no per-lead assignee — it's assigned via the parent
+      // project's agent(s), so surface those names in the same column the
+      // unified list already uses for plain-lead assignment.
+      assignedToName: (pl.project?.assignedTo || []).map((u) => u.name).filter(Boolean).join(", "),
       name:         pl.name,
       phone:        pl.phone,
       email:        pl.email,
