@@ -115,7 +115,13 @@ function EarlyLeaveBadge({ isEarlyLeave, earlyLeaveByMinutes }) {
   );
 }
 
-const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", note: "" };
+const EMPTY_ENTRY = { userId: "", date: todayStr(), clockIn: "", clockOut: "", nextDayClockOut: false, note: "" };
+
+function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + days);
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
 const DEFAULT_SETTINGS = { shiftStartTime: "09:30", shiftEndTime: "19:00", bufferMinutes: 15, halfDayMinutes: 240, fullDayMinutes: 480, requireSelfie: true };
 
 function ProofCell({ selfie, lat, lng }) {
@@ -311,11 +317,12 @@ export default function Attendance() {
     setEntrySaving(true);
     try {
       const toIso = (date, time) => time ? new Date(`${date}T${time}:00`).toISOString() : null;
+      const clockOutDate = entryForm.nextDayClockOut ? addDays(entryForm.date, 1) : entryForm.date;
       await api.post("/attendance/admin-entry", {
         userId:   entryForm.userId,
         date:     entryForm.date,
         clockIn:  toIso(entryForm.date, entryForm.clockIn),
-        clockOut: toIso(entryForm.date, entryForm.clockOut),
+        clockOut: toIso(clockOutDate, entryForm.clockOut),
         note:     entryForm.note,
       });
       toast.success("Attendance record saved");
@@ -689,11 +696,16 @@ export default function Attendance() {
                                     const dt = new Date(d);
                                     return `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
                                   };
+                                  const toLocalDateStr = (d) => {
+                                    const dt = new Date(d);
+                                    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+                                  };
                                   setEntryForm({
                                     userId:   rec.userId?._id || rec.userId || "",
                                     date:     rec.date,
                                     clockIn:  toLocalTime(rec.clockIn),
                                     clockOut: toLocalTime(rec.clockOut),
+                                    nextDayClockOut: !!(rec.clockIn && rec.clockOut && toLocalDateStr(rec.clockOut) !== toLocalDateStr(rec.clockIn)),
                                     note:     rec.note || "",
                                   });
                                   setEntryModal(true);
@@ -878,9 +890,21 @@ export default function Attendance() {
                 <div>
                   <label className="label">Clock Out</label>
                   <input type="time" className="input" value={entryForm.clockOut}
-                    onChange={e => setEntryForm(f => ({ ...f, clockOut: e.target.value }))} />
+                    onChange={e => {
+                      const clockOut = e.target.value;
+                      setEntryForm(f => ({
+                        ...f,
+                        clockOut,
+                        nextDayClockOut: f.clockIn && clockOut ? clockOut <= f.clockIn : f.nextDayClockOut,
+                      }));
+                    }} />
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-xs text-app-soft cursor-pointer">
+                <input type="checkbox" checked={entryForm.nextDayClockOut}
+                  onChange={e => setEntryForm(f => ({ ...f, nextDayClockOut: e.target.checked }))} />
+                Clock-out is next day (overnight shift)
+              </label>
               <div>
                 <label className="label">Note (optional)</label>
                 <input type="text" className="input" placeholder="e.g. Work from home" value={entryForm.note}
