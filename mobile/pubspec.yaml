@@ -1,0 +1,27 @@
+name: arthaleads_mobile
+description: "Arthaleads CRM — native Android app."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+  provider: ^6.1.2
+  intl: ^0.20.0
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
