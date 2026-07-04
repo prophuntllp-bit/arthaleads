@@ -71,6 +71,11 @@ Color priorityColor(String? priority) {
   }
 }
 
+/// Safe string extraction from API maps — some fields (populated refs,
+/// structured objects like /leads/hot `_nextAction`) arrive as Maps, and a
+/// blind `as String?` cast crashes the widget tree.
+String? str(dynamic v) => v is String ? v : null;
+
 /// Compact budget: 8000000 → "80L", 10000000 → "1Cr" (mirrors fmtBudget in Leads.jsx)
 String fmtBudget(num? val) {
   if (val == null || val == 0) return '';

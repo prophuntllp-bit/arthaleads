@@ -199,14 +199,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ..._hot.map((l) => Card(
                   child: ListTile(
                     dense: true,
-                    title: Text(l['name'] as String? ?? '—',
+                    title: Text(str(l['name']) ?? '—',
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      l['_nextAction'] as String? ?? l['phone'] as String? ?? '',
+                      // _nextAction is a structured {action, icon, color} object
+                      str((l['_nextAction'] as Map?)?['action']) ?? str(l['phone']) ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: StatusChip(l['status'] as String?),
+                    trailing: StatusChip(str(l['status'])),
                   ),
                 )),
             const SizedBox(height: 16),
