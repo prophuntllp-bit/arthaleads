@@ -18,6 +18,11 @@ process.on("unhandledRejection", (reason) => {
 
 require("dotenv").config();
 console.log("[BOOT] dotenv OK, PORT:", process.env.PORT, "MONGO:", !!process.env.MONGO_URI);
+if (process.env.NODE_ENV === "production" && !/^[0-9a-f]{64}$/i.test(process.env.CRYPTO_KEY || "")) {
+  console.error("[BOOT] WARNING: CRYPTO_KEY is missing or not a 64-hex-character string. " +
+    "Automation.accessToken/userToken encryption will throw the moment a Facebook connection is saved. " +
+    "Set CRYPTO_KEY in this service's environment variables — see backend/.env.example.");
+}
 console.log("[BOOT] Loading modules...");
 const express    = require("express");
 const cors       = require("cors");
