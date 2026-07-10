@@ -177,7 +177,7 @@ class _TasksScreenState extends State<TasksScreen> {
                       firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
                     );
-                    if (date == null) return;
+                    if (date == null || !ctx.mounted) return;
                     final time = await showTimePicker(
                       context: ctx,
                       initialTime: TimeOfDay.fromDateTime(dueDate),
@@ -200,8 +200,8 @@ class _TasksScreenState extends State<TasksScreen> {
                       'description': descCtrl.text.trim(),
                       'priority': priority,
                       'dueDate': dueDate.toUtc().toIso8601String(),
-                      if (assignedTo != null) 'assignedTo': assignedTo,
-                      if (agentName != null) 'assignedToName': agentName,
+                      'assignedTo': ?assignedTo,
+                      'assignedToName': ?agentName,
                     };
                     try {
                       if (task == null) {
