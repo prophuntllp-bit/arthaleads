@@ -519,7 +519,11 @@ const leadService = {
     // ProjectLead has no `priority` field and no source-domain metadata, so it
     // can never match those filters — skip the collection entirely instead of
     // silently contributing zero matches to what looks like "no results".
-    const skipProjectLeads = !!priority || !!siteFilter;
+    // Also skip when browsing "All Projects" (no explicit projectId) — Project
+    // Leads have no pipeline fields (requirements/budget/purpose) and were
+    // inflating the unfiltered list + hiding real Website-source Leads behind
+    // blank rows. They still show up once a specific project is selected.
+    const skipProjectLeads = !!priority || !!siteFilter || !projectId;
     let projLeads = [], projTotal = 0;
 
     if (!skipProjectLeads) {
