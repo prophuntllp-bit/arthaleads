@@ -24,6 +24,12 @@ const projectLeadSchema = new mongoose.Schema(
     email:  { type: String, trim: true, lowercase: true, default: "" },
     source: { type: String, default: "Facebook" },
 
+    // Mirrors Lead's source-tracking fields — preserved on transfer so a lead
+    // moved into a project doesn't lose which page/domain it came from.
+    leadSourceLabel: { type: String, trim: true, default: "" },
+    sourcePage:      { type: String, trim: true, default: "" },
+    sourceDomain:    { type: String, trim: true, default: "" },
+
     // Remark system for telecallers
     remark: {
       type: String,
@@ -91,5 +97,6 @@ projectLeadSchema.index({ orgId: 1, createdAt: -1 });
 projectLeadSchema.index({ project: 1, isProspective: 1, createdAt: -1 });
 projectLeadSchema.index({ orgId: 1, followUp: 1 });
 projectLeadSchema.index({ orgId: 1, followUp2: 1 });
+projectLeadSchema.index({ orgId: 1, sourceDomain: 1 });
 
 module.exports = mongoose.model("ProjectLead", projectLeadSchema);

@@ -938,6 +938,12 @@ const leadService = {
       source:     lead.source || "Manual",
       importedBy: user._id,
       orgId:      user.orgId,
+      // Preserve where the lead actually came from — without this, the
+      // domain filter on the Leads page can never find it again once
+      // it's transferred into a project.
+      leadSourceLabel: lead.leadSourceLabel || "",
+      sourcePage:      lead.sourcePage      || "",
+      sourceDomain:    lead.sourceDomain    || "",
       // Preserve all telecaller remark fields
       remark1:    lead.remark1   || "",
       remark2:    lead.remark2   || "",
@@ -983,6 +989,9 @@ const leadService = {
         source:     lead.source || "Manual",
         importedBy: user._id,
         orgId:      user.orgId,
+        leadSourceLabel: lead.leadSourceLabel || "",
+        sourcePage:      lead.sourcePage      || "",
+        sourceDomain:    lead.sourceDomain    || "",
         remark1:    lead.remark1   || "",
         remark2:    lead.remark2   || "",
         remark3:    lead.remark3   || "",
