@@ -161,6 +161,17 @@ const leadService = {
     return lead;
   },
 
+  // ── Distinct website domains — powers the "Website" source sub-menu on the
+  // Leads page filter bar, so agents can pick a domain instead of typing it ──
+  async getDomains(user) {
+    const domains = await Lead.distinct("sourceDomain", {
+      orgId: user.orgId,
+      isDeleted: { $ne: true },
+      sourceDomain: { $nin: ["", null] },
+    });
+    return domains.sort((a, b) => a.localeCompare(b));
+  },
+
   // ── List with filters + pagination ─────────────────────────────────────────
   async getAll(query, user) {
     const {

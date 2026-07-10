@@ -40,6 +40,15 @@ const leadController = {
     }
   },
 
+  async getDomains(req, res, next) {
+    try {
+      const domains = await leadService.getDomains(req.user);
+      res.json({ success: true, domains });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getById(req, res, next) {
     try {
       const lead = await leadService.getById(req.params.id, req.user);

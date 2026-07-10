@@ -67,6 +67,7 @@ router.get("/dump", leadController.getDump);
 router.get("/alerts", leadController.getAlerts);
 router.get("/followups-due", leadController.getFollowUpsDue);
 router.get("/unified", leadController.getAllUnified);
+router.get("/domains", leadController.getDomains);
 router.get("/export", leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.post("/bulk-assign", authorize("admin", "manager"), leadController.bulkAssign);

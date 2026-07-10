@@ -9,6 +9,7 @@ import {
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
 import CustomSelect from "../components/CustomSelect";
+import SourceDomainSelect from "../components/SourceDomainSelect";
 import TransferModal from "../components/TransferModal";
 import QrModal from "../components/QrModal";
 import { useLeads } from "../hooks/useLeads";
@@ -314,6 +315,9 @@ export default function Leads() {
   // drill-down view) ────────────────────────────────────────────────────────
   const [projects, setProjects] = useState([]);
 
+  // ── Distinct website domains — powers the "Website" source sub-menu below ──
+  const [domains, setDomains] = useState([]);
+
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
   const [colW, startResize] = useColumnResize("leads", {
     lead: 180, phone: 148, whatsapp: 118, source: 118, project: 118,
@@ -335,6 +339,10 @@ export default function Leads() {
 
   useEffect(() => {
     api.get("/projects").then((r) => setProjects(r.data.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api.get("/leads/domains").then((r) => setDomains(r.data.domains || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1105,10 +1113,29 @@ export default function Leads() {
                     style={{ width: "100%" }}
                   />
                 )}
-                {/* Status, Source, Priority, Booking */}
+                {/* Status */}
+                <CustomSelect
+                  value={filters.status}
+                  onChange={(v) => setFilter("status", v)}
+                  placeholder="All Statuses"
+                  options={STATUS_OPTIONS}
+                  style={{ width: "100%" }}
+                />
+                {/* Source — "Website" expands into a sub-menu of actual domains */}
+                <SourceDomainSelect
+                  value={filters.source}
+                  domain={filters.siteFilter}
+                  domains={domains}
+                  onChange={(source, dom) => {
+                    setFilter("source", source);
+                    setFilter("siteFilter", dom);
+                  }}
+                  placeholder="All Sources"
+                  options={SOURCE_OPTIONS}
+                  style={{ width: "100%" }}
+                />
+                {/* Priority, Booking */}
                 {[
-                  { key: "status",   placeholder: "All Statuses",   opts: STATUS_OPTIONS   },
-                  { key: "source",   placeholder: "All Sources",    opts: SOURCE_OPTIONS   },
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
                   { key: "booking",  placeholder: "All Bookings",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
                 ].map(({ key, placeholder, opts }) => (
