@@ -15,6 +15,13 @@
  * Apply for real: node backend/scripts/backfill-projectlead-domain.js --apply
  */
 require("dotenv").config();
+const dns = require("dns");
+// Some Windows machines report a broken/stale resolver (dns.getServers()
+// resolving to 127.0.0.1 with nothing listening there) that breaks the
+// mongodb+srv:// lookup this script and the driver both need. Force known-
+// good public resolvers so this doesn't depend on the local machine's
+// network config.
+dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 const mongoose = require("mongoose");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
