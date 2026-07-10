@@ -527,14 +527,15 @@ const leadService = {
     if (andConditions.length) leadFilter.$and = andConditions;
 
     // ── Project-lead filter ────────────────────────────────────────────────────
-    // ProjectLead has no `priority` field and no source-domain metadata, so it
-    // can never match those filters — skip the collection entirely instead of
-    // silently contributing zero matches to what looks like "no results".
-    // Also skip when browsing "All Projects" (no explicit projectId) — Project
-    // Leads have no pipeline fields (requirements/budget/purpose) and were
-    // inflating the unfiltered list + hiding real Website-source Leads behind
-    // blank rows. They still show up once a specific project is selected.
-    const skipProjectLeads = !!priority || !!siteFilter || !projectId;
+    // ProjectLead has no `priority` field, so it can never match a priority
+    // filter — skip the collection entirely instead of silently contributing
+    // zero matches to what looks like "no results".
+    // Also skip when browsing "All Projects" with no explicit project AND no
+    // domain search — Project Leads have no other pipeline fields
+    // (requirements/budget/purpose) and were inflating the unfiltered list
+    // with blank rows. An explicit project filter or a domain search both
+    // count as deliberate intent to include them.
+    const skipProjectLeads = !!priority || (!projectId && !siteFilter);
     let projLeads = [], projTotal = 0;
 
     if (!skipProjectLeads) {
@@ -549,10 +550,16 @@ const leadService = {
           { followUp2: { $gte: todayStart, $lte: todayEnd } },
         ];
       }
+      const projAndConditions = [];
       if (search) {
         const rx = { $regex: escapeRegex(search), $options: "i" };
-        projFilter.$and = [{ $or: [{ name: rx }, { phone: rx }, { email: rx }] }];
+        projAndConditions.push({ $or: [{ name: rx }, { phone: rx }, { email: rx }] });
       }
+      if (siteFilter) {
+        const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
+        projAndConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
+      }
+      if (projAndConditions.length) projFilter.$and = projAndConditions;
 
       // ProjectLead has no per-lead `assignedTo` — assignment lives on the
       // parent Project (Project.assignedTo[]), so scope by project instead.
