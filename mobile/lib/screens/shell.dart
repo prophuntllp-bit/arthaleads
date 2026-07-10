@@ -3,11 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
 import '../core/theme.dart';
+import 'attendance/attendance_screen.dart';
+import 'calls/calls_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'followups/followups_screen.dart';
 import 'leads/leads_screen.dart';
+import 'pipeline/pipeline_screen.dart';
 import 'placeholder_screen.dart';
 import 'projects/projects_screen.dart';
+import 'tasks/tasks_screen.dart';
 
 /// One entry in the navigation drawer.
 class _NavItem {
@@ -34,12 +38,12 @@ class _ShellState extends State<Shell> {
     _NavItem('Dashboard', Icons.dashboard_rounded, () => const DashboardScreen()),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
     _NavItem('Follow-ups', Icons.event_repeat_rounded, () => const FollowUpsScreen()),
-    _NavItem('Pipeline', Icons.view_kanban_rounded, () => const PlaceholderScreen(title: 'Pipeline')),
+    _NavItem('Pipeline', Icons.view_kanban_rounded, () => const PipelineScreen()),
     _NavItem('Projects', Icons.folder_rounded, () => const ProjectsScreen()),
-    _NavItem('Tasks', Icons.task_alt_rounded, () => const PlaceholderScreen(title: 'Tasks')),
-    _NavItem('Calls', Icons.call_rounded, () => const PlaceholderScreen(title: 'Calls')),
+    _NavItem('Tasks', Icons.task_alt_rounded, () => const TasksScreen()),
+    _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
     _NavItem('Inbox', Icons.chat_rounded, () => const PlaceholderScreen(title: 'Inbox')),
-    _NavItem('Attendance', Icons.fingerprint_rounded, () => const PlaceholderScreen(title: 'Attendance')),
+    _NavItem('Attendance', Icons.fingerprint_rounded, () => const AttendanceScreen()),
     _NavItem('Bookings', Icons.receipt_long_rounded, () => const PlaceholderScreen(title: 'Bookings')),
     _NavItem('Dump', Icons.delete_sweep_rounded, () => const PlaceholderScreen(title: 'Dump Leads')),
     _NavItem('Team', Icons.groups_rounded, () => const PlaceholderScreen(title: 'Team'), adminOnly: true),
