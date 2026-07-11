@@ -1,5 +1,6 @@
 ﻿const express = require("express");
 const crypto  = require("crypto");
+const rateLimit = require("express-rate-limit");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
 const Automation = require("../models/Automation");
@@ -13,6 +14,21 @@ const router = express.Router();
 
 // One alert per org per hour — prevents push spam when token is dead and leads keep arriving
 const tokenAlertCooldown = new Map(); // orgId → lastAlertTimestamp
+
+// Public, unauthenticated lead-capture endpoint used by the WordPress plugin
+// and custom website forms. The `token` is embedded in the plugin's own
+// config, so it isn't a secret strong enough to stop a scraper who finds it
+// from POSTing directly to this endpoint, bypassing the actual site entirely.
+// Rate-limit per token (not just per IP) so a single leaked token can't be
+// used to flood one org's pipeline from many IPs.
+const websiteLeadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, // 30 lead submissions per token per 15 min
+  keyGenerator: (req) => req.body?.token || req.ip,
+  message: { success: false, message: "Too many submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ── Facebook signature verification ──────────────────────────────────────────
 // Uses the `verify` callback of express.json() to access the raw buffer
@@ -463,10 +479,19 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 });
 
 // ── Website / WordPress webhook ───────────────────────────────────────────────
-// POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, form_name, page_url }
-router.post("/website", express.json(), async (req, res) => {
+// POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url }
+router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => {
   try {
-    const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url } = req.body || {};
+    const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url } = req.body || {};
+
+    // Honeypot: the plugin always sends this field empty. A generic bot that
+    // blindly fills every field it finds in the plugin's public source will
+    // often fill it too — silently accept without creating a lead so the
+    // bot doesn't learn its submission was rejected.
+    if (website_url) {
+      logger.info(`[website webhook] honeypot triggered, dropped silently (token=${String(token).slice(0, 8)}…)`);
+      return res.status(200).json({ success: true, message: "Lead received" });
+    }
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 

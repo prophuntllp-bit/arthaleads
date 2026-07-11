@@ -44,7 +44,11 @@ class Arthaleads_API {
             'source_name' => Arthaleads_Options::get( 'site_name' ) ?: get_bloginfo( 'name' ),
             'form_plugin' => $this->integration_key,
             'page_url'    => $page_url,
-        ], $data ) );
+        ], $data, [
+            // Honeypot — always empty from this plugin. Merged last so it
+            // can't be accidentally overridden by a same-named form field.
+            'website_url' => '',
+        ] ) );
 
         wp_remote_post( Arthaleads_Constants::API_WEBHOOK_URL, [
             'method'   => 'POST',
