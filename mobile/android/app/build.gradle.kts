@@ -31,8 +31,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.arthaleads.crm"
+        // Temporarily distinct from the Capacitor app's ID (com.arthaleads.crm)
+        // so both can be installed side-by-side on the same device during the
+        // transition. Switch back to com.arthaleads.crm before the real
+        // Play Store release (that's the listing this app is meant to replace).
+        applicationId = "com.arthaleads.crm.next"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
