@@ -4,16 +4,18 @@ import 'package:provider/provider.dart';
 import '../core/auth_state.dart';
 import '../core/theme.dart';
 import 'attendance/attendance_screen.dart';
+import 'automation/automation_screen.dart';
+import 'bookings/bookings_screen.dart';
 import 'calls/calls_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 import 'dump/dump_screen.dart';
 import 'followups/followups_screen.dart';
 import 'help/help_screen.dart';
 import 'inbox/inbox_screen.dart';
+import 'invoices/invoices_screen.dart';
 import 'leads/leads_screen.dart';
 import 'performance/performance_screen.dart';
 import 'pipeline/pipeline_screen.dart';
-import 'placeholder_screen.dart';
 import 'projects/projects_screen.dart';
 import 'referrals/referrals_screen.dart';
 import 'settings/settings_screen.dart';
@@ -51,12 +53,12 @@ class _ShellState extends State<Shell> {
     _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
     _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),
     _NavItem('Attendance', Icons.fingerprint_rounded, () => const AttendanceScreen()),
-    _NavItem('Bookings', Icons.receipt_long_rounded, () => const PlaceholderScreen(title: 'Bookings')),
+    _NavItem('Bookings', Icons.receipt_long_rounded, () => const BookingsScreen()),
     _NavItem('Dump', Icons.delete_sweep_rounded, () => const DumpScreen()),
     _NavItem('Team', Icons.groups_rounded, () => const TeamScreen(), adminOnly: true),
     _NavItem('Performance', Icons.trending_up_rounded, () => const PerformanceScreen(), adminOnly: true),
-    _NavItem('Invoices', Icons.request_quote_rounded, () => const PlaceholderScreen(title: 'Invoices'), adminOnly: true),
-    _NavItem('Automation', Icons.bolt_rounded, () => const PlaceholderScreen(title: 'Automation'), adminOnly: true),
+    _NavItem('Invoices', Icons.request_quote_rounded, () => const InvoicesScreen(), adminOnly: true),
+    _NavItem('Automation', Icons.bolt_rounded, () => const AutomationScreen(), adminOnly: true),
     _NavItem('Referrals', Icons.card_giftcard_rounded, () => const ReferralsScreen()),
     _NavItem('Help & Support', Icons.support_agent_rounded, () => const HelpScreen()),
     _NavItem('Settings', Icons.settings_rounded, () => const SettingsScreen()),
