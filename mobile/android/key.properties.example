@@ -1,0 +1,7 @@
+## Local release signing config — copy to key.properties (gitignored) and fill in.
+## Not needed for debug builds. CI uses GitHub Actions secrets instead — see
+## .github/workflows/mobile-flutter-ci.yml.
+storePassword=
+keyPassword=
+keyAlias=arthaleads
+storeFile=release.keystore
