@@ -4,6 +4,7 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import { getRecaptchaToken } from "../utils/recaptcha";
 
 export default function Contact() {
   const { isDark } = usePublicTheme();
@@ -24,10 +25,11 @@ export default function Contact() {
     setError("");
     const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
     try {
+      const recaptchaToken = await getRecaptchaToken("contact");
       const res = await fetch(`${apiBase}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, recaptchaToken }),
       });
       const data = await res.json();
       if (data.success) {

@@ -59,6 +59,8 @@ const authController = {
 
   async login(req, res, next) {
     try {
+      const ok = await verifyRecaptcha(req.body.recaptchaToken, "login");
+      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       const ip   = req.ip || req.headers["x-forwarded-for"] || "unknown";
       const data = await authService.login(req.body.email, req.body.password, ip);
       sendAuthResponse(res, 200, data);

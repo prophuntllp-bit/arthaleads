@@ -1,5 +1,6 @@
 ﻿const { Resend } = require("resend");
 const logger = require("../config/logger");
+const { verifyRecaptcha } = require("../utils/recaptcha");
 
 function getResend() {
   if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY not set");
@@ -24,6 +25,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 async function sendContactForm(req, res) {
   const raw = req.body || {};
+
+  const ok = await verifyRecaptcha(raw.recaptchaToken, "contact");
+  if (!ok) return res.status(400).json({ success: false, message: "Verification failed. Please refresh and try again." });
 
   const name    = sanitize(raw.name,    100);
   const email   = sanitize(raw.email,   254);

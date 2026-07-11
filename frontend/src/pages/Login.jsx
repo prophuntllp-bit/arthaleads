@@ -5,6 +5,7 @@ import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
+import { getRecaptchaToken } from "../utils/recaptcha";
 
 // ── Main Login page ───────────────────────────────────────────────────────────
 export default function Login() {
@@ -52,7 +53,8 @@ export default function Login() {
     const RETRY_DELAYS = [6000, 12000];
     for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
       try {
-        await login(form.email, form.password);
+        const recaptchaToken = await getRecaptchaToken("login");
+        await login(form.email, form.password, recaptchaToken);
         toast.success("Welcome back!");
         setLoading(false);
         navigate("/dashboard");
