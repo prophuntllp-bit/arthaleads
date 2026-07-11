@@ -242,7 +242,7 @@ class _TeamScreenState extends State<TeamScreen> {
                         children: [
                           Switch(
                             value: active,
-                            activeColor: AppColors.success,
+                            activeThumbColor: AppColors.success,
                             onChanged: (_) => _toggleActive(u),
                           ),
                           IconButton(

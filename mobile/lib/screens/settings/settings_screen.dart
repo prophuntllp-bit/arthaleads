@@ -56,15 +56,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (_newPassword.text.isNotEmpty) 'currentPassword': _currentPassword.text,
         if (_newPassword.text.isNotEmpty) 'newPassword': _newPassword.text,
       });
-      if (mounted) {
-        await context.read<AuthState>().refresh();
-        _currentPassword.clear();
-        _newPassword.clear();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Profile updated'),
-          backgroundColor: AppColors.success,
-        ));
-      }
+      if (!mounted) return;
+      await context.read<AuthState>().refresh();
+      _currentPassword.clear();
+      _newPassword.clear();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Profile updated'),
+        backgroundColor: AppColors.success,
+      ));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
