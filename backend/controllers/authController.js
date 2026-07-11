@@ -6,6 +6,7 @@ const SignupOtp   = require("../models/SignupOtp");
 const User        = require("../models/User");
 const AuditLog    = require("../models/AuditLog");
 const { AppError } = require("../middlewares/errorHandler");
+const { verifyRecaptcha } = require("../utils/recaptcha");
 
 function _auditLog(req, action, extras = {}) {
   AuditLog.create({
@@ -47,6 +48,8 @@ function sendAuthResponse(res, statusCode, data) {
 const authController = {
   async signup(req, res, next) {
     try {
+      const ok = await verifyRecaptcha(req.body.recaptchaToken, "signup");
+      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       const data = await authService.signup(req.body);
       sendAuthResponse(res, 201, data);
     } catch (err) {
@@ -207,7 +210,9 @@ const authController = {
   // ── Signup phone verification ─────────────────────────────────────────────
   async signupSendOtp(req, res, next) {
     try {
-      const { phone, email } = req.body;
+      const { phone, email, recaptchaToken } = req.body;
+      const ok = await verifyRecaptcha(recaptchaToken, "signup_send_otp");
+      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       if (!phone || !email) return next(new AppError("Phone and email are required", 400));
 
       // Basic email format check before sending an OTP to it
@@ -333,7 +338,9 @@ const authController = {
   // ── MSG91 OTP ────────────────────────────────────────────────────────────────
   async sendOtp(req, res, next) {
     try {
-      const { phone } = req.body;
+      const { phone, recaptchaToken } = req.body;
+      const ok = await verifyRecaptcha(recaptchaToken, "login_send_otp");
+      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       if (!phone) return next(new AppError("Phone number is required", 400));
       const digits = String(phone).replace(/\D/g, "");
       if (digits.length < 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));

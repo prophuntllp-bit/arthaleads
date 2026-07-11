@@ -5,6 +5,7 @@ import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "luc
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 import { useGoogleLogin } from "@react-oauth/google";
+import { getRecaptchaToken } from "../utils/recaptcha";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -49,7 +50,8 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      await signup({ ...form, ...(referralCode ? { referralCode } : {}) });
+      const recaptchaToken = await getRecaptchaToken("signup");
+      await signup({ ...form, recaptchaToken, ...(referralCode ? { referralCode } : {}) });
       toast.success("Account created! Welcome to Arthaleads.");
       navigate("/dashboard");
     } catch (err) {
