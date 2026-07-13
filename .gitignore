@@ -26,6 +26,9 @@ yarn-error.log*
 # google-services.json is injected by CI from GOOGLE_SERVICES_JSON secret (never committed).
 frontend/android/app/google-services.json
 
+# Same pattern for the Flutter mobile app.
+mobile/android/app/google-services.json
+
 # Android release keystore — store privately, add base64 as KEYSTORE_BASE64 GitHub secret
 android-release/
 frontend/android/app/release.keystore

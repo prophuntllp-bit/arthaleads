@@ -25,6 +25,18 @@ jobs:
         working-directory: mobile
         run: flutter pub get
 
+      - name: Inject google-services.json
+        working-directory: mobile/android/app
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > google-services.json
+            echo "google-services.json injected — FCM push + Google Sign-In enabled"
+          else
+            echo "WARNING: GOOGLE_SERVICES_JSON secret not set — push notifications and Google Sign-In will NOT work"
+          fi
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
       - name: Analyze
         working-directory: mobile
         run: flutter analyze

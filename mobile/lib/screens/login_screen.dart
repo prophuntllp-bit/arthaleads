@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api_client.dart';
@@ -16,8 +17,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _identifier = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _googleLoading = false;
   bool _obscure = true;
   String? _error;
+  // scopes match frontend's useGoogleLogin default (email + profile via userinfo)
+  final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
 
   @override
   void dispose() {
@@ -43,6 +47,26 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = ApiClient.errorMessage(e, 'Login failed'));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _submitGoogle() async {
+    setState(() {
+      _googleLoading = true;
+      _error = null;
+    });
+    try {
+      final account = await _googleSignIn.signIn();
+      if (account == null) return; // user cancelled
+      final auth = await account.authentication;
+      final accessToken = auth.accessToken;
+      if (accessToken == null) throw Exception('No Google access token');
+      if (!mounted) return;
+      await context.read<AuthState>().googleLogin(accessToken);
+    } catch (e) {
+      setState(() => _error = ApiClient.errorMessage(e, 'Google sign-in failed. Please try again.'));
+    } finally {
+      if (mounted) setState(() => _googleLoading = false);
     }
   }
 
@@ -126,6 +150,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
                     ),
                     child: const Text('Forgot password?'),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('OR', style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: _googleLoading ? null : _submitGoogle,
+                    icon: _googleLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                    label: const Text('Continue with Google'),
                   ),
                 ],
               ),

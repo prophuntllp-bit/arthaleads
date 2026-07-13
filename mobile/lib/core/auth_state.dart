@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
+import 'push_service.dart';
 
 /// Session state — mirrors frontend/src/context/AuthContext.jsx.
 /// `user` and `org` are kept as raw maps (the backend is schema-flexible and
@@ -70,7 +71,28 @@ class AuthState extends ChangeNotifier {
     }
   }
 
+  /// Google Sign-In. Sends the OAuth access_token to the same /auth/google
+  /// endpoint the web app uses (backend/services/authService.js googleAuth)
+  /// — it verifies the token directly against Google's userinfo API, so it
+  /// doesn't matter which client (web or Android) issued it.
+  Future<void> googleLogin(String accessToken) async {
+    _api.authInProgress = true;
+    try {
+      final res = await _api.dio.post('/auth/google', data: {'credential': accessToken});
+      final token = res.data['token'] as String?;
+      if (token == null) throw Exception('No token in response');
+      await _api.setToken(token);
+      user = (res.data['user'] as Map?)?.cast<String, dynamic>();
+      org = (res.data['org'] as Map?)?.cast<String, dynamic>();
+      orgBlockReason = null;
+      notifyListeners();
+    } finally {
+      _api.authInProgress = false;
+    }
+  }
+
   Future<void> logout() async {
+    await PushService.instance.unregister(); // needs the auth token, so before clearToken
     try {
       await _api.dio.post('/auth/logout');
     } catch (_) {

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
+import '../core/push_service.dart';
 import '../core/theme.dart';
+import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
 import 'bookings/bookings_screen.dart';
@@ -21,6 +23,29 @@ import 'referrals/referrals_screen.dart';
 import 'settings/settings_screen.dart';
 import 'tasks/tasks_screen.dart';
 import 'team/team_screen.dart';
+
+/// Floating button opening the Artha AI help assistant — persistent across
+/// every tab, mirrors the web app's floating HelpBot bubble.
+class _ArthaFab extends StatelessWidget {
+  const _ArthaFab();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 52,
+      height: 52,
+      child: FloatingActionButton(
+        heroTag: 'artha-fab',
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const ArthaChatScreen()),
+        ),
+        child: ClipOval(
+          child: Image.asset('assets/images/ai_avatar.png', fit: BoxFit.cover),
+        ),
+      ),
+    );
+  }
+}
 
 /// One entry in the navigation drawer.
 class _NavItem {
@@ -42,6 +67,33 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    PushService.instance.init();
+    PushService.instance.pendingRoute.addListener(_onPendingRoute);
+  }
+
+  @override
+  void dispose() {
+    PushService.instance.pendingRoute.removeListener(_onPendingRoute);
+    super.dispose();
+  }
+
+  // Jumps to the tab matching a tapped notification's data.url (e.g.
+  // "/leads/507f..." → the "Leads" tab). Falls back to doing nothing
+  // (staying on the current tab) if no label matches.
+  void _onPendingRoute() {
+    final path = PushService.instance.pendingRoute.value;
+    if (path == null) return;
+    PushService.instance.pendingRoute.value = null;
+    final normalized = path.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '');
+    final match = _items.indexWhere(
+      (i) => normalized.contains(i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '')),
+    );
+    if (match != -1) setState(() => _index = match);
+  }
 
   static final List<_NavItem> _items = [
     _NavItem('Dashboard', Icons.dashboard_rounded, () => const DashboardScreen()),
@@ -151,7 +203,18 @@ class _ShellState extends State<Shell> {
           ),
         ),
       ),
-      body: current.builder(),
+      body: Stack(
+        children: [
+          current.builder(),
+          // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
+          // overlaps each screen's own "+" FAB, which all sit bottom-right.
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: _ArthaFab(),
+          ),
+        ],
+      ),
     );
   }
 }
