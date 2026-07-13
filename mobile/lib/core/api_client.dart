@@ -15,6 +15,14 @@ class ApiClient {
     defaultValue: 'https://api.arthaleads.com/api',
   );
 
+  // Identifies genuine mobile-app requests to the backend so it can skip the
+  // browser-only reCAPTCHA check on /auth/login (must match the backend's
+  // MOBILE_APP_SECRET env var).
+  static const _mobileAppSecret = String.fromEnvironment(
+    'MOBILE_APP_SECRET',
+    defaultValue: '202b0e2769ca92352bb029a92e1ae308593809cf0e9d46ff706c3f921bbdae5c',
+  );
+
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
@@ -34,7 +42,10 @@ class ApiClient {
       // Railway cold start can take 20-30s — same 45s budget as the web app.
       connectTimeout: const Duration(seconds: 45),
       receiveTimeout: const Duration(seconds: 45),
-      headers: {'Accept': 'application/json'},
+      headers: {
+        'Accept': 'application/json',
+        'X-Mobile-App-Secret': _mobileAppSecret,
+      },
     ),
   )..interceptors.add(
       InterceptorsWrapper(

@@ -59,8 +59,14 @@ const authController = {
 
   async login(req, res, next) {
     try {
-      const ok = await verifyRecaptcha(req.body.recaptchaToken, "login");
-      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
+      // reCAPTCHA v3 is a browser-only widget — the mobile app can't produce a
+      // token, so it identifies itself with a pre-shared secret instead.
+      const isMobileApp = !!process.env.MOBILE_APP_SECRET &&
+        req.headers["x-mobile-app-secret"] === process.env.MOBILE_APP_SECRET;
+      if (!isMobileApp) {
+        const ok = await verifyRecaptcha(req.body.recaptchaToken, "login");
+        if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
+      }
       const ip   = req.ip || req.headers["x-forwarded-for"] || "unknown";
       const data = await authService.login(req.body.email, req.body.password, ip);
       sendAuthResponse(res, 200, data);
