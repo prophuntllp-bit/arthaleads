@@ -234,6 +234,9 @@ class _CallsScreenState extends State<CallsScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   IconButton(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
                                     icon: calling
                                         ? const SizedBox(
                                             width: 18, height: 18,

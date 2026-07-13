@@ -146,10 +146,15 @@ class _TeamScreenState extends State<TeamScreen> {
                 DropdownButtonFormField<String>(
                   initialValue: role,
                   decoration: const InputDecoration(labelText: 'Role'),
-                  items: const [
-                    DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                    DropdownMenuItem(value: 'manager', child: Text('Manager')),
-                    DropdownMenuItem(value: 'agent', child: Text('Agent')),
+                  items: [
+                    const DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                    const DropdownMenuItem(value: 'manager', child: Text('Manager')),
+                    const DropdownMenuItem(value: 'agent', child: Text('Agent')),
+                    // Not a normally assignable role — included only so editing an
+                    // existing super_admin's other fields doesn't crash the dropdown
+                    // (initialValue must match exactly one item) or silently demote them.
+                    if (role == 'super_admin')
+                      const DropdownMenuItem(value: 'super_admin', child: Text('Super Admin')),
                   ],
                   onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
                 ),

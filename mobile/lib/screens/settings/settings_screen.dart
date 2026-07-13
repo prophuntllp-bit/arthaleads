@@ -18,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _api = ApiClient.instance;
   late final _name = TextEditingController();
+  late final _email = TextEditingController();
   late final _phone = TextEditingController();
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
@@ -27,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _email.dispose();
     _phone.dispose();
     _currentPassword.dispose();
     _newPassword.dispose();
@@ -36,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _initFromAuth(AuthState auth) {
     if (_initialized) return;
     _name.text = auth.user?['name'] as String? ?? '';
+    _email.text = auth.user?['email'] as String? ?? '';
     _phone.text = auth.user?['phone'] as String? ?? '';
     _initialized = true;
   }
@@ -106,8 +109,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name')),
         const SizedBox(height: 12),
         TextField(
+          controller: _email,
           enabled: false,
-          decoration: InputDecoration(labelText: 'Email', hintText: auth.user?['email'] as String? ?? ''),
+          decoration: const InputDecoration(labelText: 'Email'),
         ),
         const SizedBox(height: 12),
         TextField(controller: _phone, decoration: const InputDecoration(labelText: 'Phone')),
