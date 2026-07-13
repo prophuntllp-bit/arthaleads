@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
 
@@ -10,6 +11,9 @@ class LeadFilters {
   final String booking;
   final String projectId;
   final String assignedTo;
+  final String siteFilter;
+  final DateTime? from;
+  final DateTime? to;
   final bool myOnly;
   final bool followUpToday;
 
@@ -20,6 +24,9 @@ class LeadFilters {
     this.booking = '',
     this.projectId = '',
     this.assignedTo = '',
+    this.siteFilter = '',
+    this.from,
+    this.to,
     this.myOnly = false,
     this.followUpToday = false,
   });
@@ -31,6 +38,9 @@ class LeadFilters {
         if (booking.isNotEmpty) 'booking': booking,
         if (projectId.isNotEmpty) 'projectId': projectId,
         if (assignedTo.isNotEmpty) 'assignedTo': assignedTo,
+        if (siteFilter.isNotEmpty) 'siteFilter': siteFilter,
+        if (from != null) 'from': from!.toIso8601String().substring(0, 10),
+        if (to != null) 'to': to!.toIso8601String().substring(0, 10),
         if (myOnly) 'myOnly': 'true',
         if (followUpToday) 'followUpToday': 'true',
       };
@@ -44,6 +54,11 @@ class LeadFilters {
     String? booking,
     String? projectId,
     String? assignedTo,
+    String? siteFilter,
+    DateTime? from,
+    DateTime? to,
+    bool clearFrom = false,
+    bool clearTo = false,
     bool? myOnly,
     bool? followUpToday,
   }) =>
@@ -54,6 +69,9 @@ class LeadFilters {
         booking: booking ?? this.booking,
         projectId: projectId ?? this.projectId,
         assignedTo: assignedTo ?? this.assignedTo,
+        siteFilter: siteFilter ?? this.siteFilter,
+        from: clearFrom ? null : (from ?? this.from),
+        to: clearTo ? null : (to ?? this.to),
         myOnly: myOnly ?? this.myOnly,
         followUpToday: followUpToday ?? this.followUpToday,
       );
@@ -63,6 +81,7 @@ class LeadFiltersSheet extends StatefulWidget {
   final LeadFilters current;
   final List<Map<String, dynamic>> projects;
   final List<Map<String, dynamic>> agents;
+  final List<String> domains;
   final bool isAdmin;
 
   const LeadFiltersSheet({
@@ -70,6 +89,7 @@ class LeadFiltersSheet extends StatefulWidget {
     required this.current,
     required this.projects,
     required this.agents,
+    this.domains = const [],
     required this.isAdmin,
   });
 
@@ -104,6 +124,9 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
             ),
             _dropdown('Status', statusOptions, f.status, (v) => setState(() => f = f.copyWith(status: v))),
             _dropdown('Source', sourceOptions, f.source, (v) => setState(() => f = f.copyWith(source: v))),
+            if (widget.domains.isNotEmpty)
+              _dropdown('Website Domain', widget.domains, f.siteFilter,
+                  (v) => setState(() => f = f.copyWith(siteFilter: v))),
             _dropdown('Priority', priorityOptions, f.priority, (v) => setState(() => f = f.copyWith(priority: v))),
             _dropdown(
               'Booking',
@@ -124,6 +147,19 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
                 f.assignedTo,
                 (v) => setState(() => f = f.copyWith(assignedTo: v)),
               ),
+            Row(
+              children: [
+                Expanded(
+                  child: _dateField('From', f.from,
+                      (d) => setState(() => f = f.copyWith(from: d, clearFrom: d == null))),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _dateField('To', f.to,
+                      (d) => setState(() => f = f.copyWith(to: d, clearTo: d == null))),
+                ),
+              ],
+            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('My leads only'),
@@ -142,6 +178,34 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               child: const Text('Apply Filters'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dateField(String label, DateTime? value, ValueChanged<DateTime?> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: InkWell(
+        onTap: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: value ?? now,
+            firstDate: now.subtract(const Duration(days: 365 * 3)),
+            lastDate: now.add(const Duration(days: 1)),
+          );
+          if (picked != null) onChanged(picked);
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            isDense: true,
+            suffixIcon: value != null
+                ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => onChanged(null))
+                : null,
+          ),
+          child: Text(value == null ? 'Any' : DateFormat('dd MMM yyyy').format(value)),
         ),
       ),
     );

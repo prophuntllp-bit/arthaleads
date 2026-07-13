@@ -37,7 +37,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
     setState(() => _loading = true);
     try {
       final res = await _api.dio.get('/automations');
-      setState(() => _automations = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>());
+      setState(() => _automations = (res.data['automations'] as List? ?? []).cast<Map<String, dynamic>>());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -55,7 +55,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
       final res = await _api.dio.patch('/automations/${a['_id']}', data: {'isActive': !(a['isActive'] == true)});
       setState(() {
         final idx = _automations.indexWhere((x) => x['_id'] == a['_id']);
-        if (idx != -1) _automations[idx] = (res.data['data'] as Map).cast<String, dynamic>();
+        if (idx != -1) _automations[idx] = (res.data['automation'] as Map).cast<String, dynamic>();
       });
     } catch (e) {
       if (mounted) {

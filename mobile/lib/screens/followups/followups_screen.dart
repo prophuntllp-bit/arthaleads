@@ -25,7 +25,9 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   int _page = 1;
   int _pages = 1;
   bool _loading = true;
+  bool _sortDesc = false;
   final _scroll = ScrollController();
+  final _searchCtrl = TextEditingController();
 
   static const _sections = [
     ('past', 'Past', Icons.history, AppColors.danger),
@@ -49,6 +51,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   @override
   void dispose() {
     _scroll.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -63,7 +66,8 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
         'section': _section,
         'page': _page,
         'limit': 50,
-        'sort': _section == 'past' ? 'desc' : 'asc',
+        'sort': _sortDesc ? 'desc' : 'asc',
+        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
       });
       setState(() {
         _leads.addAll((res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>());
@@ -114,6 +118,34 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
     }
   }
 
+  Future<void> _markDone(Map<String, dynamic> lead) async {
+    final isProject = lead['_type'] == 'project' && lead['projectId'] != null;
+    final field = isProject ? 'followUp' : 'followUpDate';
+    try {
+      if (isProject) {
+        await _api.dio.patch('/projects/${lead['projectId']}/leads/${lead['_id']}',
+            data: {field: null, 'followUp2': null});
+      } else {
+        await _api.dio.patch('/leads/${lead['_id']}', data: {field: null, 'followUp2': null});
+      }
+      setState(() {
+        _leads.remove(lead);
+        _total -= 1;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Follow-up marked as done')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Failed to mark done')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    }
+  }
+
   String _fmtDate(String? iso) {
     final dt = DateTime.tryParse(iso ?? '')?.toLocal();
     if (dt == null) return '—';
@@ -139,8 +171,37 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
             selected: {_section},
             onSelectionChanged: (sel) {
               _section = sel.first;
+              _sortDesc = _section == 'past';
               _load(reset: true);
             },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  decoration: const InputDecoration(
+                    hintText: 'Search name, phone…',
+                    prefixIcon: Icon(Icons.search, size: 20),
+                    isDense: true,
+                  ),
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _load(reset: true),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: _sortDesc ? 'Latest first' : 'Earliest first',
+                onPressed: () {
+                  setState(() => _sortDesc = !_sortDesc);
+                  _load(reset: true);
+                },
+                icon: Icon(_sortDesc ? Icons.arrow_downward : Icons.arrow_upward, size: 18),
+              ),
+            ],
           ),
         ),
         Padding(
@@ -193,6 +254,11 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.edit_calendar, size: 20, color: AppColors.info),
                                     onPressed: () => _reschedule(lead),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Mark done',
+                                    icon: const Icon(Icons.check_circle_outline, size: 20, color: AppColors.success),
+                                    onPressed: () => _markDone(lead),
                                   ),
                                 ],
                               ),

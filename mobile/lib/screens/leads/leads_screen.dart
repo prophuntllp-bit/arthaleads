@@ -40,6 +40,7 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _agents = [];
+  List<String> _domains = [];
 
   @override
   void initState() {
@@ -75,6 +76,10 @@ class LeadsScreenState extends State<LeadsScreen> {
         _agents = (res.data['agents'] as List? ?? []).cast<Map<String, dynamic>>();
       } catch (_) {}
     }
+    try {
+      final res = await _api.dio.get('/leads/domains');
+      _domains = (res.data['domains'] as List? ?? []).cast<String>();
+    } catch (_) {}
     if (mounted) setState(() {});
   }
 
@@ -289,7 +294,7 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _openDetail(Map<String, dynamic> lead) async {
-    final changed = await showModalBottomSheet<bool>(
+    final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -299,7 +304,11 @@ class LeadsScreenState extends State<LeadsScreen> {
         onUpdated: _upsertRow,
       ),
     );
-    if (changed == true) _load(reset: true);
+    if (result == 'edit') {
+      await _openForm(lead: lead);
+    } else if (result == true) {
+      _load(reset: true);
+    }
   }
 
   Future<void> _openForm({Map<String, dynamic>? lead}) async {
@@ -353,6 +362,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                         current: _filters,
                         projects: _projects,
                         agents: _agents,
+                        domains: _domains,
                         isAdmin: auth.isAdmin,
                       ),
                     );
