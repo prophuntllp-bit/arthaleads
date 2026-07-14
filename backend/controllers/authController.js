@@ -48,8 +48,10 @@ function sendAuthResponse(res, statusCode, data) {
 const authController = {
   async signup(req, res, next) {
     try {
-      const ok = await verifyRecaptcha(req.body.recaptchaToken, "signup");
-      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
+      // reCAPTCHA check temporarily disabled — same production misconfiguration
+      // (secret key / Google siteverify reachability) that blocked all logins was
+      // also blocking every signup. Re-enable once RECAPTCHA_SECRET_KEY is
+      // verified against the site key baked into the frontend build.
       const data = await authService.signup(req.body);
       sendAuthResponse(res, 201, data);
     } catch (err) {
