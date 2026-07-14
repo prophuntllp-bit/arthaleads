@@ -23,7 +23,9 @@ fun signingProp(key: String): String? =
 
 android {
     namespace = "com.arthaleads.arthaleads_mobile"
-    compileSdk = flutter.compileSdkVersion
+    // file_picker's transitive flutter_plugin_android_lifecycle dependency requires
+    // compileSdk 36+ — bumped explicitly since Flutter's own default still lags behind.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
