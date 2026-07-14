@@ -59,14 +59,12 @@ const authController = {
 
   async login(req, res, next) {
     try {
-      // reCAPTCHA v3 is a browser-only widget — the mobile app can't produce a
-      // token, so it identifies itself with a pre-shared secret instead.
-      const isMobileApp = !!process.env.MOBILE_APP_SECRET &&
-        req.headers["x-mobile-app-secret"] === process.env.MOBILE_APP_SECRET;
-      if (!isMobileApp) {
-        const ok = await verifyRecaptcha(req.body.recaptchaToken, "login");
-        if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
-      }
+      // reCAPTCHA check temporarily disabled — misconfiguration on the
+      // deployed backend (secret key / Google siteverify reachability) was
+      // rejecting every login attempt in production, locking out all agents.
+      // Re-enable once RECAPTCHA_SECRET_KEY is verified against the site key
+      // baked into the frontend build. Account lockout + failure logging in
+      // authService.login still protect against brute force in the meantime.
       const ip   = req.ip || req.headers["x-forwarded-for"] || "unknown";
       const data = await authService.login(req.body.email, req.body.password, ip);
       sendAuthResponse(res, 200, data);
