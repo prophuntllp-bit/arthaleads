@@ -3,8 +3,11 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import 'help_screen.dart';
 
-/// Ticket thread — GET /tickets/:id, POST /tickets/:id/reply.
+/// Ticket thread — GET /tickets/:id, POST /tickets/:id/reply. Both the
+/// initial message and replies can carry attachments (image/PDF/doc, ≤600 KB
+/// each, base64 data URIs) — mirrors frontend/src/pages/HelpSupport.jsx.
 class TicketDetailScreen extends StatefulWidget {
   final String ticketId;
   const TicketDetailScreen({super.key, required this.ticketId});
@@ -19,6 +22,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Map<String, dynamic>? _ticket;
   bool _loading = true;
   bool _sending = false;
+  List<Attachment> _replyAttachments = [];
 
   @override
   void initState() {
@@ -54,10 +58,14 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     try {
-      final res = await _api.dio.post('/tickets/${widget.ticketId}/reply', data: {'body': text});
+      final res = await _api.dio.post('/tickets/${widget.ticketId}/reply', data: {
+        'body': text,
+        'attachments': _replyAttachments.map((a) => a.toJson()).toList(),
+      });
       setState(() {
         _ticket = (res.data['ticket'] as Map).cast<String, dynamic>();
         _replyCtrl.clear();
+        _replyAttachments = [];
       });
     } catch (e) {
       if (mounted) {
@@ -74,6 +82,23 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   String _fmt(String? iso) {
     final dt = DateTime.tryParse(iso ?? '');
     return dt == null ? '' : DateFormat('dd MMM, hh:mm a').format(dt);
+  }
+
+  Widget _attachmentsRow(List? raw) {
+    final list = (raw ?? []).cast<Map>();
+    if (list.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        children: list
+            .map((a) => attachmentChip(Attachment(
+                  url: a['url'] as String? ?? '',
+                  name: a['name'] as String? ?? 'attachment',
+                  size: (a['size'] as num?)?.toInt() ?? 0,
+                )))
+            .toList(),
+      ),
+    );
   }
 
   @override
@@ -98,6 +123,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_ticket?['description'] as String? ?? ''),
+                              _attachmentsRow(_ticket?['attachments'] as List?),
                               const SizedBox(height: 6),
                               Text(_fmt(_ticket?['createdAt'] as String?),
                                   style: Theme.of(context).textTheme.bodySmall),
@@ -127,6 +153,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
                                 const SizedBox(height: 2),
                                 Text(r['body'] as String? ?? ''),
+                                _attachmentsRow(r['attachments'] as List?),
                                 const SizedBox(height: 2),
                                 Text(_fmt(r['createdAt'] as String?), style: Theme.of(context).textTheme.bodySmall),
                               ],
@@ -147,22 +174,41 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                     top: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _replyCtrl,
-                              decoration: const InputDecoration(hintText: 'Type a reply…'),
-                              minLines: 1,
-                              maxLines: 4,
+                          if (_replyAttachments.isNotEmpty)
+                            Wrap(
+                              children: _replyAttachments
+                                  .map((a) => attachmentChip(a, onRemove: () => setState(() => _replyAttachments.remove(a))))
+                                  .toList(),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: _sending
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                                : const Icon(Icons.send_rounded, color: AppColors.primary),
-                            onPressed: _sending ? null : _reply,
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.attach_file, size: 20),
+                                tooltip: 'Attach file',
+                                onPressed: () async {
+                                  final picked = await pickAttachments(context, _replyAttachments);
+                                  setState(() => _replyAttachments = picked);
+                                },
+                              ),
+                              Expanded(
+                                child: TextField(
+                                  controller: _replyCtrl,
+                                  decoration: const InputDecoration(hintText: 'Type a reply…'),
+                                  minLines: 1,
+                                  maxLines: 4,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: _sending
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                                    : const Icon(Icons.send_rounded, color: AppColors.primary),
+                                onPressed: _sending ? null : _reply,
+                              ),
+                            ],
                           ),
                         ],
                       ),
