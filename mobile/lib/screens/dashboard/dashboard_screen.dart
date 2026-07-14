@@ -7,6 +7,31 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
 
+const _dateRangePresets = [
+  {'value': 'today', 'label': 'Today'},
+  {'value': 'last7days', 'label': 'Last 7 Days'},
+  {'value': 'last30days', 'label': 'Last 30 Days'},
+  {'value': 'thismonth', 'label': 'This Month'},
+  {'value': 'lastmonth', 'label': 'Last Month'},
+  {'value': 'thisyear', 'label': 'This Year'},
+  {'value': '', 'label': 'All Time'},
+];
+
+final _sourcePalette = <String, Color>{
+  'Facebook': const Color(0xFF1877F2),
+  'Google': const Color(0xFFEA4335),
+  'WhatsApp': const Color(0xFF25D366),
+  'Website': const Color(0xFF8B5CF6),
+  'Referral': const Color(0xFFEC4899),
+  'Manual': const Color(0xFF6B7280),
+};
+Color _sourceColor(String s, int i) {
+  const fallback = [
+    Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF14B8A6), Color(0xFFF97316),
+  ];
+  return _sourcePalette[s] ?? fallback[i % fallback.length];
+}
+
 /// Dashboard — GET /leads/analytics + /leads/hot + /leads/followups-due.
 /// Mobile-first condensation of the web dashboard's zoned layout.
 class DashboardScreen extends StatefulWidget {
@@ -24,6 +49,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _attendance;
   bool _loading = true;
   bool _clockBusy = false;
+  String _dateRange = 'last30days';
+  int? _goalOverride;
 
   @override
   void initState() {
@@ -44,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _loading = true);
     // Parallel fetch — mirrors the web dashboard's parallel-fetch fix.
     final results = await Future.wait<dynamic>([
-      _tryGet('/leads/analytics'),
+      _tryGet('/leads/analytics', _dateRange.isEmpty ? null : {'dateRange': _dateRange}),
       _tryGet('/leads/hot', {'limit': 5}),
       _tryGet('/leads/followups-due'),
       _tryGet('/attendance/status'),
@@ -60,6 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ? (dueRaw['leads'] as List).cast<Map<String, dynamic>>()
               : [];
       _attendance = (results[3]?.data as Map?)?.cast<String, dynamic>();
+      _goalOverride = null;
       _loading = false;
     });
   }
@@ -90,10 +118,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Future<void> _editGoal(int current) async {
+    final ctrl = TextEditingController(text: current > 0 ? '$current' : '');
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Monthly closing goal'),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'e.g. 20'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              final n = int.tryParse(ctrl.text.trim());
+              Navigator.pop(ctx, (n != null && n > 0) ? n : null);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    try {
+      await _api.dio.patch('/org/me/goal', data: {'monthlyClosingGoal': result});
+      if (mounted) setState(() => _goalOverride = result);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Failed to save goal')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    }
+  }
+
+  String get _dateRangeLabel =>
+      _dateRangePresets.firstWhere((p) => p['value'] == _dateRange, orElse: () => _dateRangePresets[2])['label']!;
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
     final a = _analytics;
+    final role = auth.user?['role'] as String?;
+    final isAdmin = role == 'admin' || role == 'manager' || role == 'super_admin';
 
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: AppColors.primary));
@@ -105,9 +176,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            'Hi, ${(auth.user?['name'] as String? ?? '').split(' ').first} 👋',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Hi, ${(auth.user?['name'] as String? ?? '').split(' ').first} 👋',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              PopupMenuButton<String>(
+                initialValue: _dateRange,
+                onSelected: (v) {
+                  setState(() => _dateRange = v);
+                  _load();
+                },
+                itemBuilder: (ctx) => _dateRangePresets
+                    .map((p) => PopupMenuItem(value: p['value'], child: Text(p['label']!)))
+                    .toList(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_today, size: 13, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(_dateRangeLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      const Icon(Icons.arrow_drop_down, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
 
@@ -146,13 +249,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _stat('Closed Won', '${a['allTimeClosedWon'] ?? 0}', Icons.emoji_events, AppColors.success),
                 _stat('Conversion', '${a['conversionRate'] ?? 0}%', Icons.trending_up, AppColors.primary),
                 _stat('Pipeline Value', fmtBudget(a['pipelineValue'] as num?), Icons.currency_rupee, const Color(0xFF8B5CF6)),
-                _stat('This Month', '${a['thisMonthLeads'] ?? 0}', Icons.calendar_month, const Color(0xFF0D9488)),
+                _stat('This Period', '${a['totalLeads'] ?? 0}', Icons.calendar_month, const Color(0xFF0D9488)),
               ],
             ),
             const SizedBox(height: 16),
 
             // ── Status breakdown ──
-            Text('Pipeline', style: Theme.of(context).textTheme.titleMedium),
+            Text('Pipeline · Leads by Status', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Card(
               child: Padding(
@@ -190,6 +293,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // ── Source breakdown ──
+            if (((a['bySource'] as Map?) ?? {}).values.any((v) => (v as num) > 0)) ...[
+              Text('Acquisition Mix · Leads by Source', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Builder(builder: (ctx) {
+                    final src = ((a['bySource'] as Map?) ?? {}).entries
+                        .where((e) => (e.value as num) > 0)
+                        .toList()
+                      ..sort((x, y) => (y.value as num).compareTo(x.value as num));
+                    final total = src.fold<num>(0, (s, e) => s + (e.value as num));
+                    return Column(
+                      children: [
+                        for (var i = 0; i < src.length; i++)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 100,
+                                  child: Text('${src[i].key}', style: Theme.of(ctx).textTheme.bodySmall,
+                                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ),
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: total > 0 ? (src[i].value as num) / total : 0,
+                                      minHeight: 8,
+                                      backgroundColor: _sourceColor(src[i].key, i).withValues(alpha: 0.12),
+                                      color: _sourceColor(src[i].key, i),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 40,
+                                  child: Text('${src[i].value}', textAlign: TextAlign.end,
+                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ],
 
           // ── Hot leads ──
@@ -226,6 +381,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     trailing: BookingChip(l['booking'] as String?),
                   ),
                 )),
+            const SizedBox(height: 16),
+          ],
+
+          // ── Admin Intelligence ──
+          if (isAdmin && a != null) ...[
+            const Divider(),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.admin_panel_settings, size: 15, color: Color(0xFF6366F1)),
+                const SizedBox(width: 6),
+                Text('Admin Intelligence',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: const Color(0xFF6366F1))),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Monthly goal
+            Builder(builder: (ctx) {
+              final goal = _goalOverride ?? (a['monthlyClosingGoal'] as num?)?.toInt() ?? 0;
+              final current = (a['thisMonthClosedWon'] as num?)?.toInt() ?? 0;
+              final pct = goal > 0 ? (current / goal * 100).clamp(0, 100).round() : 0;
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.track_changes, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: goal > 0
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text('Monthly Goal', style: Theme.of(ctx).textTheme.bodySmall),
+                                      const Spacer(),
+                                      Text('$current / $goal', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: pct / 100,
+                                      minHeight: 7,
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                                      color: pct >= 100 ? AppColors.success : AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text('No monthly goal set', style: Theme.of(ctx).textTheme.bodySmall),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit, size: 16),
+                        onPressed: () => _editGoal(goal),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+
+            // Top agents leaderboard
+            if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
+              Text('Top Agents', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Card(
+                child: Column(
+                  children: [
+                    for (final (i, ag) in ((a['byAgent'] as List).cast<Map<String, dynamic>>().take(5)).indexed)
+                      ListTile(
+                        dense: true,
+                        leading: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                          child: Text('${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.primary)),
+                        ),
+                        title: Text(ag['name'] as String? ?? '—', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        trailing: Text('${ag['count'] ?? 0} leads', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Recent activity
+            if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) ...[
+              Text('Team Activity', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 6),
+              Card(
+                child: Column(
+                  children: (a['recentActivity'] as List).cast<Map<String, dynamic>>().take(8).map((item) {
+                    return ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.circle, size: 8, color: AppColors.primary),
+                      title: Text(
+                        '${item['performedByName'] ?? 'System'} · ${item['description'] ?? ''}',
+                        style: const TextStyle(fontSize: 12),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(item['leadName'] as String? ?? '', style: const TextStyle(fontSize: 11)),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 32),
         ],
