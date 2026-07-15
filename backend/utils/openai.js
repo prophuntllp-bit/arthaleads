@@ -115,6 +115,9 @@ Automation -> click the "Facebook" tile in "Quick connect" -> click "Continue wi
 CONNECT WORDPRESS / WEBSITE FORMS (Admin/Manager only)
 Automation -> click the "Website Form" tile -> click "Add Site" -> copy the Webhook URL shown -> go to your WordPress plugin settings (MetForm / CF7 / WPForms / Elementor / Gravity Forms) -> paste the URL -> Save. Leads from that form now appear in the CRM automatically.
 
+CONNECT VISTROW VOICE (AI calling platform) (Admin/Manager only)
+Automation -> click the "Vistrow Voice" tile in "Quick connect" -> click "Add Voice Connection" -> a token (starts with "AW-") is generated -> click Copy -> in your Vistrow Voice account, open the Arthaleads integration and paste the token there -> Save. That's the whole setup — no coding needed. Every qualified call from Vistrow Voice now creates a lead automatically: it appears in Leads with the source "Vistrow Voice", and the call summary/transcript lands in the lead's Requirements field. You can add multiple connections (each gets its own token) and remove any with the trash icon. If leads stop arriving, generate a fresh token here and re-paste it into Vistrow Voice. The "Developer details" section in that popup is only for people wiring a custom (non-Vistrow) sender by hand — normal users can ignore it.
+
 SET UP AUTO-ROUTING RULES (Admin/Manager only)
 Automation -> scroll to "Routing Rules" section -> "Add Rule" -> pick Source (e.g. Facebook) -> pick assignment mode (Specific Agent or Round Robin) -> Save. Incoming leads from that source auto-assign.
 
@@ -441,7 +444,7 @@ PROJECTS (/projects)
 Group leads under a real-estate project. Each project has its own lead list, pipeline, stats.
 
 AUTOMATION (/automation) — Admin/Manager only
-Facebook Lead Ads (one-click OAuth), WordPress plugin (webhook), Routing Rules (auto-assign by source, round-robin or specific agent).
+Facebook Lead Ads (one-click OAuth), WordPress plugin (webhook), Vistrow Voice (AI calling platform — paste a token, no coding), Custom sources (token webhook for any partner/broker/vendor), Routing Rules (auto-assign by source, round-robin or specific agent).
 
 CALLS (/calls)
 EnableX telephony call log. One card per lead (groups all calls to that lead). Shows: lead name, phone, most recent call status, last call time, agent, duration, call-count badge. Click a card to open call history modal. Click a call in history to see full detail: recording player, AI Analysis (intent/sentiment/summary/key points/next action), call notes (editable), follow-up task scheduler, Call Back button for missed calls. Filter tabs: All / Answered / Missed / Initiated. Agent filter dropdown (Admin/Manager only - agents see only their own calls). Analytics section: 14-day daily volume chart + answered calls by agent table. Stats: Total Calls, Answered, Missed. Calls tab also appears inside every lead detail panel (4th tab after Activity). Auto-advances lead status New -> Contacted when an answered call is detected.
@@ -488,7 +491,7 @@ ROLES SUMMARY
 - Agent: own leads, follow-ups, attendance only
 
 LEAD STATUSES: New, Contacted, Site Visit, Negotiation, Closed Won, Closed Lost
-LEAD SOURCES: Facebook, Google, WhatsApp, Website, Manual, Referral, JustDial, 99acres, MagicBricks, Housing.com, Instagram
+LEAD SOURCES: Facebook, Google, WhatsApp, Website, Vistrow Voice, Custom, Manual, Referral, JustDial, 99acres, MagicBricks, Housing.com, Instagram
 
 ════════════════════════════════════════════════
 COMING SOON (planned - NOT yet in the CRM)
