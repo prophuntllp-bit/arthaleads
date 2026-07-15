@@ -282,13 +282,17 @@ const authService = {
     }
 
     if (updates.newPassword) {
-      if (!updates.currentPassword) {
-        throw new AppError("Current password is required to change password", 400);
-      }
+      // Google-only accounts have no password to confirm knowledge of —
+      // treat this as "set password" rather than "change password".
+      if (user.password) {
+        if (!updates.currentPassword) {
+          throw new AppError("Current password is required to change password", 400);
+        }
 
-      const isValidPassword = await user.comparePassword(updates.currentPassword);
-      if (!isValidPassword) {
-        throw new AppError("Current password is incorrect", 400);
+        const isValidPassword = await user.comparePassword(updates.currentPassword);
+        if (!isValidPassword) {
+          throw new AppError("Current password is incorrect", 400);
+        }
       }
 
       user.password = updates.newPassword;
