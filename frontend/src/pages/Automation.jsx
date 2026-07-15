@@ -1119,16 +1119,12 @@ function VoiceWizard({ open, onClose, onChanged }) {
             <div className="flex justify-center py-8"><Spinner /></div>
           ) : (
             <>
-              {/* Endpoint */}
-              <div>
-                <p className="text-xs text-app-soft mb-1">Webhook Endpoint</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{endpoint}</code>
-                  <button type="button" className="btn-secondary rounded-xl shrink-0" onClick={() => copyText(endpoint, "Endpoint")}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
+              {/* Intro (only before a connection exists) */}
+              {connections.length === 0 && (
+                <p className="text-sm text-app-soft">
+                  Create a connection to get your token, paste it into Vistrow Voice, and your calls will start showing up here as leads — automatically.
+                </p>
+              )}
 
               {/* Connections */}
               {connections.map((conn) => (
@@ -1146,40 +1142,49 @@ function VoiceWizard({ open, onClose, onChanged }) {
                 className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-violet-500 hover:text-violet-400 transition"
               >
                 {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
-                {adding ? "Creating…" : "Add Voice Connection"}
+                {adding ? "Creating…" : connections.length ? "Add Another Connection" : "Add Voice Connection"}
               </button>
 
-              {/* Payload / setup steps */}
+              {/* Friendly setup steps */}
+              <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--app-surface-low)" }}>
+                <p className="text-xs font-bold text-app-soft uppercase tracking-wider">How to connect</p>
+                {[
+                  'Click "Add Voice Connection" to generate your token.',
+                  "Copy the token shown above.",
+                  "In Vistrow Voice, open the Arthaleads integration and paste it in.",
+                  "That's it — qualified calls flow straight into your leads.",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold mt-0.5">{i + 1}</span>
+                    <p className="text-sm text-app-soft">{t}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Developer details — hidden by default, for manual/custom senders */}
               <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
                 <button
                   type="button"
                   onClick={() => setShowSteps((v) => !v)}
                   className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
-                  style={{ background: "var(--app-surface-low)" }}
                 >
-                  <span>Setup &amp; Payload</span>
+                  <span>Developer details (optional)</span>
                   <ChevronRight className={`h-4 w-4 transition-transform ${showSteps ? "rotate-90" : ""}`} />
                 </button>
                 {showSteps && (
                   <div className="px-4 py-3 space-y-3" style={{ borderTop: "1px solid var(--app-border)" }}>
-                    <p className="text-sm text-app-soft">
-                      Configure Vistrow Voice to <span className="font-semibold text-app">POST</span> JSON to the endpoint above.
-                      Put the token in the body — no auth header is needed.
-                    </p>
-                    <div className="flex items-start gap-2">
-                      <pre className="flex-1 overflow-x-auto rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{`{
-  "token":   "<your token above>",
-  "name":    "Ravi Kumar",
-  "phone":   "+919876543210",
-  "email":   "ravi@example.com",
-  "message": "Call summary / transcript"
-}`}</pre>
+                    <p className="text-xs text-app-soft">Only needed if you're wiring a custom sender by hand — the Vistrow Voice integration does this for you.</p>
+                    <div>
+                      <p className="text-xs text-app-soft mb-1">Endpoint</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{endpoint}</code>
+                        <button type="button" className="btn-secondary rounded-xl shrink-0" onClick={() => copyText(endpoint, "Endpoint")}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <ul className="space-y-1.5 text-xs text-app-soft">
-                      <li><span className="text-violet-400 font-semibold">name</span>, <span className="text-violet-400 font-semibold">phone</span> — required. <span className="text-violet-400 font-semibold">email</span> — optional.</li>
-                      <li><span className="text-violet-400 font-semibold">message</span> — becomes the lead's Requirements (put the call transcript/summary here).</li>
-                      <li>Leads land with source <span className="text-violet-400 font-semibold">Vistrow Voice</span> and auto-assign per your settings.</li>
-                    </ul>
+                    <pre className="overflow-x-auto rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{`POST { "token", "name", "phone", "email", "message" }`}</pre>
+                    <p className="text-xs text-app-soft"><span className="text-violet-400 font-semibold">message</span> becomes the lead's Requirements. Leads arrive as source <span className="text-violet-400 font-semibold">Vistrow Voice</span>.</p>
                   </div>
                 )}
               </div>
