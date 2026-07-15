@@ -51,8 +51,8 @@ const PLATFORM_PRESETS = {
   Custom: {
     mode: "webhook",
     status: "draft",
-    leadSourceLabel: "Other",
-    webhookPath: "/api/leads",
+    leadSourceLabel: "Custom",
+    webhookPath: "/webhook/lead",
     description: "Connect any other partner, broker, or vendor lead source.",
     icon: Link2,
     tone: "bg-orange-500/10 text-orange-400",
@@ -719,6 +719,24 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
           </div>
           <p className="mt-1 text-xs text-app-soft">POST leads to this endpoint with source set to <span className="text-orange-400">{form.leadSourceLabel || form.platform}</span>.</p>
         </div>
+        {form.platform === "Custom" && (
+          <div>
+            <label className="label">Auth Token</label>
+            {form.verifyToken ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs font-mono font-semibold text-orange-400" style={{ background: "var(--app-surface-low)" }}>{form.verifyToken}</code>
+                  <button type="button" className="btn-secondary rounded-xl" onClick={() => { navigator.clipboard.writeText(form.verifyToken); toast.success("Token copied"); }}>
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-app-soft">Send this in the request body as <code className="text-orange-400">token</code>. Keep it secret — anyone with it can post leads to your pipeline.</p>
+              </>
+            ) : (
+              <p className="text-xs text-app-soft">A unique auth token will be generated when you save this source. Reopen it here to copy the token.</p>
+            )}
+          </div>
+        )}
         <div>
           <label className="label">Notes</label>
           <textarea className="input min-h-[80px]" value={form.mappingNotes} onChange={set("mappingNotes")} placeholder="Notes about field mapping or setup details" />
@@ -1301,6 +1319,36 @@ export default function Automation() {
                             <Copy className="h-3.5 w-3.5" />
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  ) : item.platform === "Custom" ? (
+                    <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">API Endpoint</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
+                            {serverBase}/webhook/lead
+                          </code>
+                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}/webhook/lead`)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">Auth Token</p>
+                        {item.verifyToken ? (
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-orange-400" style={{ background: "var(--app-surface-low)" }}>
+                              {item.verifyToken}
+                            </code>
+                            <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(item.verifyToken)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-400">No token yet — click Edit, then Update to generate one.</p>
+                        )}
+                        <p className="mt-1 text-[11px] text-app-soft">POST <code className="text-orange-400">{`{ token, name, phone, email, message }`}</code> as JSON. <code className="text-orange-400">message</code> becomes the lead's requirements.</p>
                       </div>
                     </div>
                   ) : (

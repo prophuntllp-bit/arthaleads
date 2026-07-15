@@ -124,7 +124,7 @@ const createLeadSchema = Joi.object({
     .default("New"),
   priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
   source: Joi.string()
-    .valid("Facebook","Google","WhatsApp","Manual","Website","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other")
+    .valid("Facebook","Google","WhatsApp","Manual","Website","Custom","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other")
     .default("Manual"),
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),
