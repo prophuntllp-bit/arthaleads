@@ -620,7 +620,12 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
   try {
     // Accept token from body or query string for sender flexibility
     const token = req.body?.token || req.query?.token;
-    const { name, phone, email, message, source_name } = req.body || {};
+    const {
+      name, phone, email, message, source_name,
+      // Optional Vistrow Voice enrichment (all backward-compatible — a payload
+      // without any of these behaves exactly as before).
+      transcript, sentiment, duration_seconds, channel, language, agent_name, extracted_data,
+    } = req.body || {};
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
@@ -669,6 +674,36 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     const sourceLabel = automation.name || source_name || automation.leadSourceLabel || "Custom";
     const msg = message ? String(message).trim() : "";
 
+    // Build the optional Vistrow Voice payload. Everything here is defensive:
+    // any missing/malformed field is dropped, and if nothing usable is present
+    // `voiceCall` stays undefined so the lead is stored exactly as before.
+    const SENTIMENTS = ["positive", "neutral", "negative"];
+    const cleanTranscript = Array.isArray(transcript)
+      ? transcript
+          .filter((t) => t && typeof t === "object")
+          .map((t) => ({
+            speaker: (t.speaker === "Caller" || t.speaker === "Agent") ? t.speaker : String(t.speaker ?? ""),
+            text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
+          }))
+          .filter((t) => t.text.trim())
+      : [];
+    const durNum = Number(duration_seconds);
+    const hasExtracted = extracted_data && typeof extracted_data === "object"
+      && !Array.isArray(extracted_data) && Object.keys(extracted_data).length > 0;
+
+    let voiceCall;
+    if (cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
+        || channel || language || agent_name || hasExtracted) {
+      voiceCall = {};
+      if (cleanTranscript.length) voiceCall.transcript = cleanTranscript;
+      if (SENTIMENTS.includes(sentiment)) voiceCall.sentiment = sentiment;
+      if (Number.isFinite(durNum) && durNum > 0) voiceCall.durationSeconds = durNum;
+      if (channel && typeof channel === "string") voiceCall.channel = channel.trim();
+      if (language && typeof language === "string") voiceCall.language = language.trim();
+      if (agent_name && typeof agent_name === "string") voiceCall.agentName = agent_name.trim();
+      if (hasExtracted) voiceCall.extractedData = extracted_data;
+    }
+
     const lead = await Lead.create({
       name: String(name).trim(),
       phone: cleanPhone,
@@ -681,6 +716,8 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       assignedTo: assignee?._id || null,
       assignedToName: assignee?.name || "",
       leadSourceLabel: sourceLabel,
+      voiceCall, // undefined for non-voice payloads — Mongoose omits it
+
       notes: [
         {
           text: [
