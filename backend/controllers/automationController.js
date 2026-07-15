@@ -151,6 +151,111 @@ const automationController = {
     }
   },
 
+  // POST /api/automations/facebook/diagnose  { automationId? }
+  // Live-checks why Facebook leads may not be arriving: token validity and
+  // whether the Page is actually subscribed to the "leadgen" webhook field.
+  async diagnoseFacebook(req, res) {
+    try {
+      const { automationId } = req.body || {};
+      const q = { platform: "Facebook", orgId: req.user.orgId };
+      if (automationId) q._id = automationId;
+
+      const autos = await Automation.find(q);
+      if (!autos.length) {
+        return res.json({ success: true, results: [], message: "No Facebook connection found for this organisation." });
+      }
+
+      const appId = process.env.FB_APP_ID;
+      const appSecret = process.env.FB_APP_SECRET;
+      const V = "v23.0";
+      const results = [];
+
+      for (const a of autos) {
+        const pageId = a.pageId || "";
+        const token = a.accessToken || ""; // decrypted by the model getter
+        const checks = [];
+
+        checks.push({ key: "active", label: "Connection is active", ok: a.isActive !== false,
+          detail: a.isActive !== false ? "Active" : "This connection is paused — toggle it active." });
+        checks.push({ key: "page_id", label: "Page is selected", ok: !!pageId,
+          detail: pageId ? `Page: ${a.pageName || pageId}` : "No Page saved — reconnect and pick your Facebook Page." });
+        checks.push({ key: "app_creds", label: "Server has Meta app credentials", ok: !!(appId && appSecret),
+          detail: (appId && appSecret) ? "Configured" : "FB_APP_ID / FB_APP_SECRET are missing on the server." });
+        checks.push({ key: "token", label: "Access token stored", ok: !!token,
+          detail: token ? "Present" : "No token stored — reconnect Facebook." });
+
+        // Live token check
+        let tokenValid = false;
+        if (pageId && token) {
+          try {
+            const r = await fetch(`https://graph.facebook.com/${V}/${pageId}?fields=name&access_token=${encodeURIComponent(token)}`);
+            const j = await r.json();
+            tokenValid = !!(j.id || j.name);
+            checks.push({ key: "token_valid", label: "Token works with Meta", ok: tokenValid,
+              detail: tokenValid ? `Verified for "${j.name || pageId}"` : (j.error?.message || "Meta rejected the token — reconnect Facebook.") });
+          } catch (e) {
+            checks.push({ key: "token_valid", label: "Token works with Meta", ok: false, detail: e.message });
+          }
+        }
+
+        // Live page-subscription check (the usual culprit for "campaign live, no leads")
+        let subscribed = false;
+        if (pageId && token) {
+          try {
+            const r = await fetch(`https://graph.facebook.com/${V}/${pageId}/subscribed_apps?access_token=${encodeURIComponent(token)}`);
+            const j = await r.json();
+            const apps = Array.isArray(j.data) ? j.data : [];
+            const ours = apps.find((x) => String(x.id) === String(appId)) || (apps.length === 1 ? apps[0] : null);
+            const fields = ours?.subscribed_fields || [];
+            subscribed = fields.includes("leadgen");
+            checks.push({ key: "subscribed", label: "Page is subscribed to leadgen webhook", ok: subscribed,
+              detail: subscribed ? "Subscribed — leads should flow." :
+                (j.error?.message || (apps.length ? `App is on the Page but 'leadgen' isn't subscribed (has: ${fields.join(", ") || "none"}).` : "This Page is NOT subscribed to the app. Click Re-subscribe below.")) });
+          } catch (e) {
+            checks.push({ key: "subscribed", label: "Page is subscribed to leadgen webhook", ok: false, detail: e.message });
+          }
+        }
+
+        const allOk = checks.every((c) => c.ok);
+        results.push({
+          automationId: a._id,
+          name: a.name,
+          pageName: a.pageName || pageId,
+          checks,
+          allOk,
+          // Offer the one-click fix when the token works but the subscription is missing.
+          canResubscribe: tokenValid && !subscribed,
+        });
+      }
+
+      res.json({ success: true, results });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // POST /api/automations/facebook/resubscribe  { automationId }
+  // Re-subscribes a Page to the app's leadgen webhook using its stored token.
+  async resubscribeFacebook(req, res) {
+    try {
+      const { automationId } = req.body || {};
+      if (!automationId) return res.status(400).json({ success: false, message: "automationId is required" });
+
+      const a = await Automation.findOne({ _id: automationId, platform: "Facebook", orgId: req.user.orgId });
+      if (!a) return res.status(404).json({ success: false, message: "Connection not found" });
+      if (!a.pageId || !a.accessToken) {
+        return res.status(400).json({ success: false, message: "No Page/token to subscribe with. Reconnect Facebook first." });
+      }
+
+      await automationService.subscribePageWebhook(a.pageId, a.accessToken);
+      a.status = "connected";
+      await a.save();
+      res.json({ success: true, message: "Page re-subscribed to the leadgen webhook. New leads should now arrive." });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   async list(req, res, next) {
     try {
       const automations = await automationService.list(req.user.orgId);

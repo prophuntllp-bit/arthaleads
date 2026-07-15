@@ -1216,6 +1216,12 @@ export default function Automation() {
   // Vistrow Voice wizard state
   const [voiceWizardOpen, setVoiceWizardOpen] = useState(false);
 
+  // Facebook diagnostic state
+  const [diagFor, setDiagFor] = useState(null);      // the automation being diagnosed
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState(null); // { checks, allOk, canResubscribe, ... }
+  const [resubscribing, setResubscribing] = useState(false);
+
   // Non-FB source modal state
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
   const [sourceEditingItem, setSourceEditingItem] = useState(null);
@@ -1285,6 +1291,35 @@ export default function Automation() {
     } else {
       setSourceEditingItem(item);
       setSourceModalOpen(true);
+    }
+  };
+
+  const runDiagnostic = async (item) => {
+    setDiagFor(item);
+    setDiagResult(null);
+    setDiagLoading(true);
+    try {
+      const { data } = await api.post("/automations/facebook/diagnose", { automationId: item._id });
+      setDiagResult(data.results?.[0] || { checks: [], allOk: false, message: data.message });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Diagnostic failed");
+      setDiagFor(null);
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const resubscribeFb = async () => {
+    if (!diagFor) return;
+    setResubscribing(true);
+    try {
+      const { data } = await api.post("/automations/facebook/resubscribe", { automationId: diagFor._id });
+      toast.success(data.message || "Page re-subscribed.");
+      await runDiagnostic(diagFor); // re-check so the user sees it turn green
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Re-subscribe failed");
+    } finally {
+      setResubscribing(false);
     }
   };
 
@@ -1593,6 +1628,11 @@ export default function Automation() {
                     <button className="btn-secondary rounded-xl" onClick={() => openEdit(item)}>
                       <Pencil className="h-4 w-4" /> Edit
                     </button>
+                    {isFb && (
+                      <button className="btn-secondary rounded-xl" onClick={() => runDiagnostic(item)} title="Check why leads may not be arriving">
+                        <SearchCheck className="h-4 w-4" /> Diagnose
+                      </button>
+                    )}
                     {item.externalSourceUrl && (
                       <a href={item.externalSourceUrl} target="_blank" rel="noreferrer" className="btn-secondary rounded-xl">
                         <ExternalLink className="h-4 w-4" /> Open
@@ -1622,6 +1662,68 @@ export default function Automation() {
         onClose={() => setVoiceWizardOpen(false)}
         onChanged={loadItems}
       />
+
+      {/* Facebook Diagnostic */}
+      <Modal open={!!diagFor} onClose={() => { setDiagFor(null); setDiagResult(null); }} title="Facebook Lead Diagnostic" size="md">
+        {diagLoading ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Spinner />
+            <p className="text-sm text-app-soft">Checking your connection with Meta…</p>
+          </div>
+        ) : diagResult ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${diagResult.allOk ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
+                {diagResult.allOk ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                {diagResult.allOk ? "All checks passed" : "Problem found"}
+              </span>
+              <span className="text-sm text-app-soft truncate">{diagResult.pageName || diagResult.name}</span>
+            </div>
+
+            {(diagResult.checks || []).length === 0 && (
+              <p className="text-sm text-app-soft">{diagResult.message || "No Facebook connection to diagnose."}</p>
+            )}
+
+            <div className="space-y-2">
+              {(diagResult.checks || []).map((c) => (
+                <div key={c.key} className="flex items-start gap-3 rounded-xl p-3" style={{ background: "var(--app-surface-low)" }}>
+                  {c.ok
+                    ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-400" />
+                    : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-app">{c.label}</p>
+                    <p className="text-xs text-app-soft break-words">{c.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {diagResult.allOk && (diagResult.checks || []).length > 0 && (
+              <p className="text-xs text-app-soft">
+                Everything checks out on our side. If leads still don't arrive, the Meta App may be in <span className="font-semibold text-app">Development</span> mode
+                (real leads only deliver in Live mode), or the ad's lead form isn't the one selected here. Test with Meta's Lead Ads Testing Tool.
+              </p>
+            )}
+
+            {diagResult.canResubscribe && (
+              <button
+                onClick={resubscribeFb}
+                disabled={resubscribing}
+                className="btn-primary w-full rounded-xl flex items-center justify-center gap-2"
+              >
+                {resubscribing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                {resubscribing ? "Re-subscribing…" : "Re-subscribe Page to leadgen webhook"}
+              </button>
+            )}
+
+            <div className="flex justify-end">
+              <button className="btn-secondary rounded-xl" onClick={() => runDiagnostic(diagFor)}>
+                <RefreshCw className="h-4 w-4" /> Re-run
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Facebook Wizard */}
       <FacebookWizard
