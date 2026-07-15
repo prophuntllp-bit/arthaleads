@@ -12,6 +12,11 @@ function generateIngestToken() {
   return "AW-" + crypto.randomBytes(24).toString("hex");
 }
 
+// Platforms whose leads arrive via POST /webhook/lead, authenticated only by a
+// per-source token (no OAuth / user JWT). Keep this in sync with the webhook
+// lookup in routes/webhookRoutes.js.
+const TOKEN_INGEST_PLATFORMS = ["Custom", "Vistrow Voice"];
+
 const META_GRAPH_VERSION = "v23.0";
 
 const DEFAULTS = {
@@ -45,6 +50,12 @@ const DEFAULTS = {
     leadSourceLabel: "Custom",
     description: "Receive leads from any partner, broker, or vendor by POSTing to the lead webhook with your token.",
   },
+  "Vistrow Voice": {
+    mode: "webhook",
+    webhookPath: "/webhook/lead",
+    leadSourceLabel: "Vistrow Voice",
+    description: "Receive qualified leads from the Vistrow Voice AI calling platform via the lead webhook.",
+  },
 };
 
 function applyDefaults(payload = {}) {
@@ -66,10 +77,11 @@ const automationService = {
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
 
-    // Custom sources authenticate incoming webhook calls by a per-source token
-    // (there is no OAuth / user JWT on the ingestion path). Mint one on create
-    // if the caller didn't supply it, so the UI always has a token to show.
-    if (normalized.platform === "Custom" && !normalized.verifyToken) {
+    // Token-ingest sources (Custom, Vistrow Voice) authenticate incoming webhook
+    // calls by a per-source token (there is no OAuth / user JWT on the ingestion
+    // path). Mint one on create if the caller didn't supply it, so the UI always
+    // has a token to show.
+    if (TOKEN_INGEST_PLATFORMS.includes(normalized.platform) && !normalized.verifyToken) {
       normalized.verifyToken = generateIngestToken();
     }
 
@@ -139,11 +151,12 @@ const automationService = {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
 
-    // Custom sources: never lose the ingest token to an empty form field, and
-    // upgrade legacy records (created before /webhook/lead existed — they were
-    // saved with webhookPath "/api/leads" and no token). Minting only happens
-    // when there is genuinely no token, so re-saving never rotates a live one.
-    if (automation.platform === "Custom") {
+    // Token-ingest sources (Custom, Vistrow Voice): never lose the ingest token
+    // to an empty form field, and upgrade legacy records (created before
+    // /webhook/lead existed — they were saved with webhookPath "/api/leads" and
+    // no token). Minting only happens when there is genuinely no token, so
+    // re-saving never rotates a live one.
+    if (TOKEN_INGEST_PLATFORMS.includes(automation.platform)) {
       automation.verifyToken = automation.verifyToken || existingToken || generateIngestToken();
       automation.webhookPath = "/webhook/lead";
     }

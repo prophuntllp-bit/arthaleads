@@ -94,6 +94,63 @@ const automationController = {
     }
   },
 
+  // GET /api/automations/voice/connections - list Vistrow Voice connections (read-only)
+  async getVoiceConnections(req, res) {
+    try {
+      const automations = await Automation.find({
+        orgId: req.user.orgId,
+        platform: "Vistrow Voice",
+        isActive: true,
+      }).sort({ createdAt: 1 });
+
+      res.json({
+        success: true,
+        connections: automations.map((a) => ({
+          id: a._id,
+          name: a.name,
+          token: a.verifyToken,
+          status: a.status,
+          lastSyncAt: a.lastSyncAt,
+        })),
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // POST /api/automations/voice/create - add a new Vistrow Voice connection
+  async createVoiceConnection(req, res) {
+    try {
+      const { name } = req.body || {};
+      const automation = await Automation.create({
+        name: name || "Vistrow Voice",
+        platform: "Vistrow Voice",
+        mode: "webhook",
+        status: "draft",
+        leadSourceLabel: "Vistrow Voice",
+        webhookPath: "/webhook/lead",
+        verifyToken: generateWebsiteToken(),
+        description: "Receives qualified leads from the Vistrow Voice AI calling platform.",
+        isActive: true,
+        orgId: req.user.orgId,
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+      res.status(201).json({
+        success: true,
+        connection: {
+          id: automation._id,
+          name: automation.name,
+          token: automation.verifyToken,
+          status: automation.status,
+          lastSyncAt: automation.lastSyncAt,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   async list(req, res, next) {
     try {
       const automations = await automationService.list(req.user.orgId);

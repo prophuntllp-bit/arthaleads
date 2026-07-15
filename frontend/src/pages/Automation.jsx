@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic,
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
@@ -56,6 +56,16 @@ const PLATFORM_PRESETS = {
     description: "Connect any other partner, broker, or vendor lead source.",
     icon: Link2,
     tone: "bg-orange-500/10 text-orange-400",
+  },
+  "Vistrow Voice": {
+    mode: "webhook",
+    status: "draft",
+    leadSourceLabel: "Vistrow Voice",
+    webhookPath: "/webhook/lead",
+    description: "Qualified leads from the Vistrow Voice AI calling platform.",
+    icon: Mic,
+    tone: "bg-violet-500/10 text-violet-400",
+    label: "Vistrow Voice",
   },
 };
 
@@ -679,7 +689,7 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
                   description: preset.description || "",
                 }));
               }}
-              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook")}
+              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook" && p !== "Vistrow Voice")}
               style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
             />
           </div>
@@ -983,6 +993,208 @@ function WordPressIcon() {
   );
 }
 
+/* ─── Vistrow Voice: per-connection token card ─────────────────────────────── */
+function VoiceCard({ conn, onDelete }) {
+  const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isConnected = conn.status === "connected";
+
+  const copy = () => {
+    navigator.clipboard.writeText(conn.token);
+    setCopied(true);
+    toast.success("Token copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/automations/${conn.id}`);
+      onDelete(conn.id);
+      toast.success("Connection removed");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-violet-500"}`}>
+          <Mic className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>{conn.name}</p>
+          {conn.lastSyncAt && <p className={`text-xs ${isConnected ? "text-white/70" : "text-app-soft"}`}>Last lead: {new Date(conn.lastSyncAt).toLocaleString()}</p>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isConnected ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">✓ Connected</span>
+          ) : (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">Pending</span>
+          )}
+          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 px-4 py-3">
+        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-violet-400 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
+          {conn.token}
+        </code>
+        <button onClick={copy} className="btn-secondary rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 text-xs">
+          {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Vistrow Voice wizard ─────────────────────────────────────────────────── */
+function VoiceWizard({ open, onClose, onChanged }) {
+  const [loading, setLoading] = useState(false);
+  const [connections, setConnections] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+
+  const serverBase = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+  const endpoint = `${serverBase}/webhook/lead`;
+
+  const load = useCallback((isInitial = false) => {
+    if (isInitial) setLoading(true);
+    return api.get("/automations/voice/connections")
+      .then(({ data }) => setConnections(data.connections || []))
+      .catch(() => isInitial && toast.error("Failed to load connections"))
+      .finally(() => isInitial && setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    load(true);
+    const interval = setInterval(() => load(false), 5000);
+    return () => clearInterval(interval);
+  }, [open, load]);
+
+  const handleAdd = async () => {
+    setAdding(true);
+    try {
+      const { data } = await api.post("/automations/voice/create", { name: `Vistrow Voice ${connections.length + 1}` });
+      setConnections((prev) => [...prev, data.connection]);
+      onChanged?.();
+      toast.success("New token created — paste it into Vistrow Voice's webhook sender.");
+    } catch {
+      toast.error("Failed to create connection");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const copyText = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
+        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-violet-500">
+            <Mic className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-app">Vistrow Voice</h2>
+            <p className="text-xs text-app-soft">AI calling platform — each connection gets its own token</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+          {loading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <>
+              {/* Endpoint */}
+              <div>
+                <p className="text-xs text-app-soft mb-1">Webhook Endpoint</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{endpoint}</code>
+                  <button type="button" className="btn-secondary rounded-xl shrink-0" onClick={() => copyText(endpoint, "Endpoint")}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Connections */}
+              {connections.map((conn) => (
+                <VoiceCard
+                  key={conn.id}
+                  conn={conn}
+                  onDelete={(id) => { setConnections((prev) => prev.filter((c) => c.id !== id)); onChanged?.(); }}
+                />
+              ))}
+
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-violet-500 hover:text-violet-400 transition"
+              >
+                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
+                {adding ? "Creating…" : "Add Voice Connection"}
+              </button>
+
+              {/* Payload / setup steps */}
+              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSteps((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
+                  style={{ background: "var(--app-surface-low)" }}
+                >
+                  <span>Setup &amp; Payload</span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showSteps ? "rotate-90" : ""}`} />
+                </button>
+                {showSteps && (
+                  <div className="px-4 py-3 space-y-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <p className="text-sm text-app-soft">
+                      Configure Vistrow Voice to <span className="font-semibold text-app">POST</span> JSON to the endpoint above.
+                      Put the token in the body — no auth header is needed.
+                    </p>
+                    <div className="flex items-start gap-2">
+                      <pre className="flex-1 overflow-x-auto rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{`{
+  "token":   "<your token above>",
+  "name":    "Ravi Kumar",
+  "phone":   "+919876543210",
+  "email":   "ravi@example.com",
+  "message": "Call summary / transcript"
+}`}</pre>
+                    </div>
+                    <ul className="space-y-1.5 text-xs text-app-soft">
+                      <li><span className="text-violet-400 font-semibold">name</span>, <span className="text-violet-400 font-semibold">phone</span> — required. <span className="text-violet-400 font-semibold">email</span> — optional.</li>
+                      <li><span className="text-violet-400 font-semibold">message</span> — becomes the lead's Requirements (put the call transcript/summary here).</li>
+                      <li>Leads land with source <span className="text-violet-400 font-semibold">Vistrow Voice</span> and auto-assign per your settings.</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end px-6 pb-6">
+          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
@@ -995,6 +1207,9 @@ export default function Automation() {
 
   // WordPress wizard state
   const [wpWizardOpen, setWpWizardOpen] = useState(false);
+
+  // Vistrow Voice wizard state
+  const [voiceWizardOpen, setVoiceWizardOpen] = useState(false);
 
   // Non-FB source modal state
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
@@ -1060,6 +1275,8 @@ export default function Automation() {
     if (item.platform === "Facebook") {
       setFbEditingItem(item);
       setFbWizardOpen(true);
+    } else if (item.platform === "Vistrow Voice") {
+      setVoiceWizardOpen(true);
     } else {
       setSourceEditingItem(item);
       setSourceModalOpen(true);
@@ -1168,6 +1385,8 @@ export default function Automation() {
                   onClick={() => {
                     if (isWebsiteForm) {
                       setWpWizardOpen(true);
+                    } else if (platform === "Vistrow Voice") {
+                      setVoiceWizardOpen(true);
                     } else {
                       setSourceEditingItem(null);
                       setSourceModalOpen(true);
@@ -1321,7 +1540,7 @@ export default function Automation() {
                         </div>
                       </div>
                     </div>
-                  ) : item.platform === "Custom" ? (
+                  ) : (item.platform === "Custom" || item.platform === "Vistrow Voice") ? (
                     <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
                       <div>
                         <p className="text-xs text-app-soft mb-1">API Endpoint</p>
@@ -1390,6 +1609,13 @@ export default function Automation() {
         open={wpWizardOpen}
         onClose={() => setWpWizardOpen(false)}
         apiBase={apiBase}
+      />
+
+      {/* Vistrow Voice Wizard */}
+      <VoiceWizard
+        open={voiceWizardOpen}
+        onClose={() => setVoiceWizardOpen(false)}
+        onChanged={loadItems}
       />
 
       {/* Facebook Wizard */}

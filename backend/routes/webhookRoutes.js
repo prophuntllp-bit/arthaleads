@@ -632,10 +632,20 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: "Field 'phone' is required (min 7 chars)" });
     }
 
-    const automation = await Automation.findOne({ platform: "Custom", verifyToken: token, isActive: true });
+    // Token-ingest platforms (Custom, Vistrow Voice) share this endpoint and are
+    // disambiguated purely by their token. Keep in sync with TOKEN_INGEST_PLATFORMS
+    // in services/automationService.js.
+    const automation = await Automation.findOne({
+      platform: { $in: ["Custom", "Vistrow Voice"] },
+      verifyToken: token,
+      isActive: true,
+    });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     const orgId = automation.orgId;
+    // Stamp the lead's source from the matched connection so a Vistrow Voice
+    // token produces "Vistrow Voice" leads and a generic Custom token "Custom".
+    const leadSource = automation.platform === "Vistrow Voice" ? "Vistrow Voice" : "Custom";
 
     // Deduplication: same phone for this org within the last 2 minutes = a
     // double-fire from the sender — skip silently (same guard as website flow).
@@ -663,7 +673,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       name: String(name).trim(),
       phone: cleanPhone,
       email: (email && String(email).trim()) || "",
-      source: "Custom",
+      source: leadSource,
       status: "New",
       requirements: msg,
       orgId,
@@ -711,7 +721,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         type: "new_lead",
         title: "New Lead 📥",
         body: `${lead.name} came in from ${sourceLabel}`,
-        data: { url: "/leads", leadName: lead.name, source: "Custom" },
+        data: { url: "/leads", leadName: lead.name, source: leadSource },
       }, orgId).catch(() => {});
     }
 

@@ -32,6 +32,9 @@ router.post("/facebook/verify-system-token",    automationController.verifySyste
 router.get("/website/token", automationController.getWebsiteToken);
 router.post("/website/create", automationController.createWebsiteConnection);
 
+router.get("/voice/connections", automationController.getVoiceConnections);
+router.post("/voice/create", automationController.createVoiceConnection);
+
 router.route("/")
   .get(automationController.list)
   .post(validate(createAutomationSchema), automationController.create);
