@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
-import '../../widgets/chips.dart';
+import '../../widgets/buttons.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
+import '../leads/lead_form.dart';
 
 const _dateRangePresets = [
   {'value': 'today', 'label': 'Today'},
@@ -51,11 +53,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Map<String, dynamic>? _analytics;
   List<Map<String, dynamic>> _hot = [];
   List<Map<String, dynamic>> _due = [];
-  Map<String, dynamic>? _attendance;
   bool _loading = true;
-  bool _clockBusy = false;
   String _dateRange = 'last30days';
   int? _goalOverride;
+  List<String> _insights = [];
+  bool _insightsOpen = false;
+  bool _insightsLoading = false;
 
   @override
   void initState() {
@@ -82,7 +85,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       _tryGet('/leads/hot', {'limit': 5}),
       _tryGet('/leads/followups-due'),
-      _tryGet('/attendance/status'),
     ]);
     if (!mounted) return;
     setState(() {
@@ -95,47 +97,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : dueRaw is Map && dueRaw['leads'] is List
           ? (dueRaw['leads'] as List).cast<Map<String, dynamic>>()
           : [];
-      _attendance = (results[3]?.data as Map?)?.cast<String, dynamic>();
       _goalOverride = null;
       _loading = false;
     });
-  }
-
-  bool get _clockedIn {
-    final att = _attendance;
-    if (att == null) return false;
-    final data = att['data'];
-    if (data is Map) {
-      return data['clockedIn'] == true ||
-          (data['clockIn'] != null && data['clockOut'] == null);
-    }
-    return att['clockedIn'] == true;
-  }
-
-  Future<void> _clock() async {
-    setState(() => _clockBusy = true);
-    try {
-      await _api.dio.post(
-        _clockedIn ? '/attendance/clockout' : '/attendance/clockin',
-      );
-      final res = await _api.dio.get('/attendance/status');
-      if (mounted) {
-        setState(() => _attendance = (res.data as Map).cast<String, dynamic>());
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ApiClient.errorMessage(e, 'Attendance action failed'),
-            ),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _clockBusy = false);
-    }
   }
 
   Future<void> _editGoal(int current) async {
@@ -189,6 +153,546 @@ class _DashboardScreenState extends State<DashboardScreen> {
     orElse: () => _dateRangePresets[2],
   )['label']!;
 
+  Future<void> _openAddLead() async {
+    List<Map<String, dynamic>> agents = [];
+    if (context.read<AuthState>().isAdmin) {
+      try {
+        final res = await _api.dio.get('/auth/agents');
+        agents = (res.data['agents'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    final saved = await Navigator.of(context).push<bool>(
+      FadeSlidePageRoute(builder: (_) => LeadFormScreen(agents: agents)),
+    );
+    if (saved == true) _load();
+  }
+
+  Future<void> _generateInsights() async {
+    final a = _analytics;
+    if (a == null || _insightsLoading) return;
+    setState(() {
+      _insightsOpen = true;
+      _insightsLoading = true;
+    });
+    try {
+      final sources = ((a['bySource'] as Map?) ?? {}).entries.toList()
+        ..sort((x, y) => (y.value as num).compareTo(x.value as num));
+      final topSource = sources.isEmpty
+          ? 'N/A'
+          : '${sources.first.key} (${sources.first.value})';
+      final summary = [
+        'Total leads: ${a['allTimeTotal'] ?? 0}',
+        'New this period: ${a['totalLeads'] ?? 0}',
+        'Closed won this month: ${a['thisMonthClosedWon'] ?? 0}',
+        'Conversion: ${a['conversionRate'] ?? 0}%',
+        'Follow-ups today: ${a['todayFollowUps'] ?? 0}',
+        'Top source: $topSource',
+        'Pipeline value: ${a['pipelineValue'] ?? 0}',
+      ].join('. ');
+      final res = await _api.dio.post(
+        '/help/ask',
+        data: {
+          'question':
+              'Using only these CRM numbers: $summary. Give exactly 2 short insights: one positive and one action. Each on its own line, maximum 15 words.',
+          'page': '',
+        },
+      );
+      final answer = res.data['answer'] as String? ?? '';
+      final lines = answer
+          .split('\n')
+          .map((line) => line.replaceFirst(RegExp(r'^[•\-*]\s*'), '').trim())
+          .where((line) => line.isNotEmpty)
+          .take(2)
+          .toList();
+      if (mounted) setState(() => _insights = lines);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _insights = ['Insights are unavailable right now.']);
+      }
+    } finally {
+      if (mounted) setState(() => _insightsLoading = false);
+    }
+  }
+
+  Widget _dashboardHeader(
+    BuildContext context,
+    AuthState auth,
+    Map<String, dynamic>? analytics,
+  ) {
+    final bySource = (analytics?['bySource'] as Map?) ?? {};
+    final sources = <({String label, int count, Color color, IconData icon})>[
+      (
+        label: 'Facebook',
+        count: (bySource['Facebook'] as num?)?.toInt() ?? 0,
+        color: const Color(0xFF1877F2),
+        icon: Icons.facebook_rounded,
+      ),
+      (
+        label: 'Google',
+        count: (bySource['Google'] as num?)?.toInt() ?? 0,
+        color: const Color(0xFFEA4335),
+        icon: Icons.g_mobiledata_rounded,
+      ),
+      (
+        label: 'WhatsApp',
+        count: (bySource['WhatsApp'] as num?)?.toInt() ?? 0,
+        color: AppColors.whatsapp,
+        icon: Icons.chat_rounded,
+      ),
+      (
+        label: 'Website',
+        count:
+            ((bySource['Website'] ?? bySource['Website Form']) as num?)
+                ?.toInt() ??
+            0,
+        color: AppColors.purple,
+        icon: Icons.language_rounded,
+      ),
+      (
+        label: 'Other',
+        count:
+            ((bySource['Other'] ?? bySource['Custom']) as num?)?.toInt() ?? 0,
+        color: AppColors.warning,
+        icon: Icons.bolt_rounded,
+      ),
+    ].where((source) => source.count > 0).toList();
+
+    return SoftSurface(
+      radius: 28,
+      color: AppTheme.of(context).surface,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (sources.isNotEmpty) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final source in sources)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 7),
+                      child: _SourcePill(
+                        count: source.count,
+                        color: source.color,
+                        icon: source.icon,
+                        tooltip: source.label,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          Text('OVERVIEW', style: AppText.kicker(context)),
+          const SizedBox(height: 6),
+          Text(
+            '${_greeting()}, ${(auth.user?['name'] as String? ?? '').split(' ').first}',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.7,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              PopupMenuButton<String>(
+                initialValue: _dateRange,
+                onSelected: (value) {
+                  setState(() => _dateRange = value);
+                  _load();
+                },
+                itemBuilder: (ctx) => _dateRangePresets
+                    .map(
+                      (preset) => PopupMenuItem(
+                        value: preset['value'],
+                        child: Text(preset['label']!),
+                      ),
+                    )
+                    .toList(),
+                child: Container(
+                  width: 46,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.of(context).surfaceLow,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.of(context).borderStrong,
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.calendar_month_rounded,
+                    size: 19,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 9),
+              GradientButton(
+                onPressed: _openAddLead,
+                icon: Icons.add_rounded,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                child: const Text('New Lead'),
+              ),
+              const Spacer(),
+              Text(
+                _dateRangeLabel,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: AppTheme.of(context).textSoft,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _insights.isEmpty
+                ? _generateInsights
+                : () => setState(() => _insightsOpen = !_insightsOpen),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.045),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 15,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 7),
+                      const Text(
+                        'ARTHA AI',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.4,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'LIVE',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          _insightsLoading
+                              ? 'Analysing pipeline…'
+                              : _insights.isEmpty
+                              ? 'Tap for live insights'
+                              : '${_insights.length} insights ready',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.of(context).textSoft,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_insightsLoading)
+                        const AppSpinner(size: 14)
+                      else
+                        Icon(
+                          _insightsOpen
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          size: 18,
+                          color: AppTheme.of(context).textSoft,
+                        ),
+                    ],
+                  ),
+                  if (_insightsOpen && _insights.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: AppTheme.of(context).border),
+                    const SizedBox(height: 8),
+                    for (final insight in _insights)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 3),
+                              child: Icon(
+                                Icons.arrow_upward_rounded,
+                                size: 10,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                insight,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionRequiredSection(BuildContext context) {
+    final now = DateTime.now();
+    final overdue = _due.where((lead) {
+      final raw = lead['followUpDate'] as String?;
+      final date = raw == null ? null : DateTime.tryParse(raw);
+      return date != null &&
+          date.isBefore(DateTime(now.year, now.month, now.day));
+    }).length;
+    final hot = _hot.isEmpty ? null : _hot.first;
+
+    return Column(
+      children: [
+        const _SectionHeader(
+          label: 'Action Required',
+          color: AppColors.primary,
+        ),
+        const SizedBox(height: 12),
+        SoftSurface(
+          radius: 20,
+          color: AppColors.danger.withValues(alpha: 0.045),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.24)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.danger.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 20,
+                  color: AppColors.danger,
+                ),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$overdue overdue · ${_due.length} due today',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Across your team',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.of(context).textSoft,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
+            ],
+          ),
+        ),
+        if (hot != null) ...[
+          const SizedBox(height: 12),
+          SoftSurface(
+            radius: 20,
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.65),
+              width: 1.2,
+            ),
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(13),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 21,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Hot Today',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              '${_hot.length} ranked leads',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.of(context).textSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 17,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+                Divider(height: 1, color: AppTheme.of(context).border),
+                Padding(
+                  padding: const EdgeInsets.all(13),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.09),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          '${hot['_score'] ?? hot['score'] ?? 'HOT'}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.danger,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              str(hot['name']) ?? '—',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              [
+                                    str(hot['status']),
+                                    str(hot['priority']),
+                                    str(hot['location']),
+                                  ]
+                                  .whereType<String>()
+                                  .where((v) => v.isNotEmpty)
+                                  .join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.of(context).textSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Call',
+                        onPressed: () {
+                          final phone = str(hot['phone']);
+                          if (phone != null && phone.isNotEmpty) {
+                            launchUrl(Uri.parse('tel:$phone'));
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.call_rounded,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'WhatsApp',
+                        onPressed: () {
+                          final digits = (str(hot['phone']) ?? '').replaceAll(
+                            RegExp(r'\D'),
+                            '',
+                          );
+                          if (digits.isNotEmpty) {
+                            launchUrl(
+                              Uri.parse(
+                                'https://wa.me/${digits.length == 10 ? '91$digits' : digits}',
+                              ),
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.chat_rounded,
+                          color: AppColors.whatsapp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -207,157 +711,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          FadeSlideIn(
-            child: SoftSurface(
-              radius: 28,
-              color: AppTheme.of(context).surface,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text('OVERVIEW', style: AppText.kicker(context)),
-                      ),
-                      const SizedBox(width: 8),
-                      PopupMenuButton<String>(
-                        initialValue: _dateRange,
-                        onSelected: (v) {
-                          setState(() => _dateRange = v);
-                          _load();
-                        },
-                        itemBuilder: (ctx) => _dateRangePresets
-                            .map(
-                              (p) => PopupMenuItem(
-                                value: p['value'],
-                                child: Text(p['label']!),
-                              ),
-                            )
-                            .toList(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.09),
-                            borderRadius: BorderRadius.circular(AppRadii.pill),
-                            border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                size: 12,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                _dateRangeLabel,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 14,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_greeting()}, ${(auth.user?['name'] as String? ?? '').split(' ').first}',
-                    style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.6,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(height: 1, color: AppTheme.of(context).border),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          color:
-                              (_clockedIn
-                                      ? AppColors.success
-                                      : AppColors.primary)
-                                  .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(11),
-                        ),
-                        child: Icon(
-                          Icons.fingerprint_rounded,
-                          size: 19,
-                          color: _clockedIn
-                              ? AppColors.success
-                              : AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _clockedIn ? 'Clocked in' : 'Not clocked in',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              'Attendance',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: AppTheme.of(context).textSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                        height: 36,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _clockedIn
-                                ? AppColors.danger
-                                : AppColors.success,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: _clockBusy ? null : _clock,
-                          child: Text(
-                            _clockBusy
-                                ? '…'
-                                : (_clockedIn ? 'Clock Out' : 'Clock In'),
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          FadeSlideIn(child: _dashboardHeader(context, auth, a)),
           const SizedBox(height: 18),
 
           // ── Stat cards ──
@@ -403,14 +757,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: AppColors.warning,
                   ),
                   _MetricCard(
-                    label: 'This Period',
-                    value: '${a['totalLeads'] ?? 0}',
-                    sub: _dateRangeLabel,
-                    color: const Color(0xFF0D9488),
+                    label: 'Avg Response',
+                    value: _fmtResponse(a['avgResponseMs'] as num?),
+                    sub: 'First contact',
+                    color: AppColors.success,
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
+            _actionRequiredSection(context),
             const SizedBox(height: 20),
 
             // ── Status breakdown ──
@@ -566,73 +923,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
             ],
-          ],
-
-          // ── Hot leads ──
-          if (_hot.isNotEmpty) ...[
-            Text(
-              '🔥 Hot Today',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (final (i, l) in _hot.indexed)
-              FadeSlideIn(
-                delay: Duration(milliseconds: 30 * i),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SoftSurface(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(
-                        str(l['name']) ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        // _nextAction is a structured {action, icon, color} object
-                        str((l['_nextAction'] as Map?)?['action']) ??
-                            str(l['phone']) ??
-                            '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: StatusChip(str(l['status'])),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-          ],
-
-          // ── Follow-ups due ──
-          if (_due.isNotEmpty) ...[
-            Text(
-              '⏰ Follow-ups Due',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (final (i, l) in _due.indexed.take(5))
-              FadeSlideIn(
-                delay: Duration(milliseconds: 30 * i),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: SoftSurface(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(
-                        l['name'] as String? ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(l['phone'] as String? ?? ''),
-                      trailing: BookingChip(l['booking'] as String?),
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
           ],
 
           // ── Admin Intelligence ──
@@ -833,6 +1123,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (hour < 21) return 'Good evening';
     return 'Good night';
   }
+
+  String _fmtResponse(num? milliseconds) {
+    if (milliseconds == null || milliseconds <= 0) return 'No data';
+    final minutes = milliseconds / 60000;
+    if (minutes < 1) return '< 1 min';
+    if (minutes < 60) return '${minutes.round()} min';
+    final hours = minutes / 60;
+    return hours < 24
+        ? '${hours.toStringAsFixed(1)} hr'
+        : '${(hours / 24).toStringAsFixed(1)} d';
+  }
+}
+
+class _SourcePill extends StatelessWidget {
+  final int count;
+  final Color color;
+  final IconData icon;
+  final String tooltip;
+
+  const _SourcePill({
+    required this.count,
+    required this.color,
+    required this.icon,
+    required this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        height: 32,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 5),
+            Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _MetricCard extends StatelessWidget {
@@ -900,7 +1246,8 @@ class _MetricCard extends StatelessWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String label;
-  const _SectionHeader({required this.label});
+  final Color? color;
+  const _SectionHeader({required this.label, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -916,7 +1263,7 @@ class _SectionHeader extends StatelessWidget {
               fontSize: 9,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.4,
-              color: AppTheme.of(context).textSoft,
+              color: color ?? AppTheme.of(context).textSoft,
             ),
           ),
         ),

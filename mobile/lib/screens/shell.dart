@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/auth_state.dart';
 import '../core/push_service.dart';
 import '../core/theme.dart';
+import '../core/theme_state.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
@@ -183,7 +184,26 @@ class _ShellState extends State<Shell> {
     return AppBackdrop(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(current.label)),
+        appBar: AppBar(
+          title: Text(current.label),
+          actions: [
+            Consumer<ThemeState>(
+              builder: (context, theme, _) => IconButton(
+                tooltip: theme.isDark
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode',
+                onPressed: theme.toggle,
+                icon: Icon(
+                  theme.isDark
+                      ? Icons.dark_mode_rounded
+                      : Icons.light_mode_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ),
         drawer: Drawer(
           child: SafeArea(
             child: Column(
@@ -264,6 +284,22 @@ class _ShellState extends State<Shell> {
                   ),
                 ),
                 const Divider(height: 1),
+                Consumer<ThemeState>(
+                  builder: (context, theme, _) => ListTile(
+                    leading: Icon(
+                      theme.isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      color: AppColors.primary,
+                    ),
+                    title: Text(theme.isDark ? 'Dark Mode' : 'Light Mode'),
+                    trailing: Switch(
+                      value: theme.isDark,
+                      onChanged: theme.setDark,
+                    ),
+                    onTap: theme.toggle,
+                  ),
+                ),
                 ListTile(
                   leading: const Icon(
                     Icons.logout_rounded,

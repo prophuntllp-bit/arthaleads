@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'core/auth_state.dart';
 import 'core/push_service.dart';
 import 'core/theme.dart';
+import 'core/theme_state.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
 
@@ -14,8 +15,11 @@ void main() async {
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthState()..restore(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthState()..restore()),
+        ChangeNotifierProvider(create: (_) => ThemeState()..restore()),
+      ],
       child: const ArthaleadsApp(),
     ),
   );
@@ -26,12 +30,13 @@ class ArthaleadsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.watch<ThemeState>();
     return MaterialApp(
       title: 'Arthaleads',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
+      themeMode: theme.mode,
       home: const _AuthGate(),
     );
   }
@@ -46,7 +51,9 @@ class _AuthGate extends StatelessWidget {
 
     if (auth.restoring) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
       );
     }
     if (auth.orgBlockReason != null) {
@@ -78,7 +85,9 @@ class _OrgBlockedScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 trial ? 'Your trial has expired' : 'Organisation inactive',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),

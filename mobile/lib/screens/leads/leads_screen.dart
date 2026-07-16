@@ -1,5 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:qr/qr.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
@@ -33,6 +42,7 @@ class LeadsScreenState extends State<LeadsScreen> {
   int _pages = 1;
   bool _loading = false;
   bool _initialLoaded = false;
+  bool _importing = false;
 
   LeadFilters _filters = const LeadFilters();
 
@@ -70,12 +80,14 @@ class LeadsScreenState extends State<LeadsScreen> {
     final auth = context.read<AuthState>();
     try {
       final res = await _api.dio.get('/projects');
-      _projects = (res.data['data'] as List? ?? []).cast<Map<String, dynamic>>();
+      _projects = (res.data['data'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
     } catch (_) {}
     if (auth.isAdmin) {
       try {
         final res = await _api.dio.get('/auth/agents');
-        _agents = (res.data['agents'] as List? ?? []).cast<Map<String, dynamic>>();
+        _agents = (res.data['agents'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
       } catch (_) {}
     }
     try {
@@ -93,20 +105,27 @@ class LeadsScreenState extends State<LeadsScreen> {
     }
     setState(() => _loading = true);
     try {
-      final res = await _api.dio.get('/leads/unified', queryParameters: {
-        'page': _page,
-        'limit': 25,
-        if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
-        ..._filters.toParams(),
-      });
-      final rows = (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>();
+      final res = await _api.dio.get(
+        '/leads/unified',
+        queryParameters: {
+          'page': _page,
+          'limit': 25,
+          if (_searchCtrl.text.trim().isNotEmpty)
+            'search': _searchCtrl.text.trim(),
+          ..._filters.toParams(),
+        },
+      );
+      final rows = (res.data['leads'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
       setState(() {
         _leads.addAll(rows);
         _total = res.data['total'] as int? ?? 0;
         _pages = res.data['pages'] as int? ?? 1;
       });
     } catch (e) {
-      if (mounted) _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
+      if (mounted) {
+        _snack(ApiClient.errorMessage(e, 'Failed to load leads'), error: true);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -118,10 +137,12 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   void _snack(String msg, {bool error = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? AppColors.danger : null,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: error ? AppColors.danger : null,
+      ),
+    );
   }
 
   void _upsertRow(Map<String, dynamic> updated) {
@@ -146,17 +167,23 @@ class LeadsScreenState extends State<LeadsScreen> {
   Future<void> _bulkAssign() async {
     final agentId = await _pickFromList(
       title: 'Assign to agent',
-      options: _agents.map((a) => (a['_id'] as String, a['name'] as String? ?? '')).toList(),
+      options: _agents
+          .map((a) => (a['_id'] as String, a['name'] as String? ?? ''))
+          .toList(),
     );
     if (agentId == null) return;
     final sel = _splitSelection();
     try {
       if (sel.plainIds.isNotEmpty) {
-        final r = await _api.dio.post('/leads/bulk-assign',
-            data: {'ids': sel.plainIds, 'agentId': agentId});
+        final r = await _api.dio.post(
+          '/leads/bulk-assign',
+          data: {'ids': sel.plainIds, 'agentId': agentId},
+        );
         _snack(r.data['message'] as String? ?? 'Assigned');
       }
-      if (sel.skipped > 0) _snack('${sel.skipped} project lead(s) skipped', error: true);
+      if (sel.skipped > 0) {
+        _snack('${sel.skipped} project lead(s) skipped', error: true);
+      }
       setState(() => _selected.clear());
       _load(reset: true);
     } catch (e) {
@@ -173,27 +200,38 @@ class LeadsScreenState extends State<LeadsScreen> {
     final sel = _splitSelection();
     try {
       if (sel.plainIds.isNotEmpty) {
-        final r = await _api.dio.patch('/leads/bulk-status',
-            data: {'ids': sel.plainIds, 'status': status});
+        final r = await _api.dio.patch(
+          '/leads/bulk-status',
+          data: {'ids': sel.plainIds, 'status': status},
+        );
         _snack(r.data['message'] as String? ?? 'Updated');
       }
-      if (sel.skipped > 0) _snack('${sel.skipped} project lead(s) skipped', error: true);
+      if (sel.skipped > 0) {
+        _snack('${sel.skipped} project lead(s) skipped', error: true);
+      }
       setState(() => _selected.clear());
       _load(reset: true);
     } catch (e) {
-      _snack(ApiClient.errorMessage(e, 'Bulk status update failed'), error: true);
+      _snack(
+        ApiClient.errorMessage(e, 'Bulk status update failed'),
+        error: true,
+      );
     }
   }
 
   Future<void> _bulkTransfer() async {
     final projectId = await _pickFromList(
       title: 'Transfer to project',
-      options: _projects.map((p) => (p['_id'] as String, p['name'] as String? ?? '')).toList(),
+      options: _projects
+          .map((p) => (p['_id'] as String, p['name'] as String? ?? ''))
+          .toList(),
     );
     if (projectId == null) return;
     try {
-      final r = await _api.dio.post('/leads/bulk-transfer',
-          data: {'ids': _selected.toList(), 'toProjectId': projectId});
+      final r = await _api.dio.post(
+        '/leads/bulk-transfer',
+        data: {'ids': _selected.toList(), 'toProjectId': projectId},
+      );
       _snack(r.data['message'] as String? ?? 'Transferred');
       setState(() => _selected.clear());
       _load(reset: true);
@@ -209,10 +247,16 @@ class LeadsScreenState extends State<LeadsScreen> {
         title: const Text('Move to Dump?'),
         content: Text('${_selected.length} lead(s) will be moved to the Dump.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Move', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Move',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -224,7 +268,9 @@ class LeadsScreenState extends State<LeadsScreen> {
         await _api.dio.delete('/leads/bulk', data: {'ids': sel.plainIds});
         _snack('${sel.plainIds.length} lead(s) moved to Dump');
       }
-      if (sel.skipped > 0) _snack('${sel.skipped} project lead(s) skipped', error: true);
+      if (sel.skipped > 0) {
+        _snack('${sel.skipped} project lead(s) skipped', error: true);
+      }
       setState(() => _selected.clear());
       _load(reset: true);
     } catch (e) {
@@ -249,10 +295,12 @@ class LeadsScreenState extends State<LeadsScreen> {
               child: ListView(
                 shrinkWrap: true,
                 children: options
-                    .map((o) => ListTile(
-                          title: Text(o.$2),
-                          onTap: () => Navigator.pop(ctx, o.$1),
-                        ))
+                    .map(
+                      (o) => ListTile(
+                        title: Text(o.$2),
+                        onTap: () => Navigator.pop(ctx, o.$1),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -272,10 +320,16 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _whatsapp(Map<String, dynamic> lead) async {
-    final phone = (lead['phone'] as String? ?? '').replaceAll(RegExp(r'\D'), '');
+    final phone = (lead['phone'] as String? ?? '').replaceAll(
+      RegExp(r'\D'),
+      '',
+    );
     if (phone.isEmpty) return;
     final wa = phone.length == 10 ? '91$phone' : phone;
-    await launchUrl(Uri.parse('https://wa.me/$wa'), mode: LaunchMode.externalApplication);
+    await launchUrl(
+      Uri.parse('https://wa.me/$wa'),
+      mode: LaunchMode.externalApplication,
+    );
     _markContacted(lead);
   }
 
@@ -289,10 +343,19 @@ class LeadsScreenState extends State<LeadsScreen> {
     try {
       final isProject = lead['_type'] == 'project' && lead['projectId'] != null;
       final res = isProject
-          ? await _api.dio.patch('/projects/${lead['projectId']}/leads/${lead['_id']}', data: updates)
+          ? await _api.dio.patch(
+              '/projects/${lead['projectId']}/leads/${lead['_id']}',
+              data: updates,
+            )
           : await _api.dio.put('/leads/${lead['_id']}', data: updates);
-      _upsertRow({...lead, ...updates, ...(res.data['data'] as Map? ?? {}).cast<String, dynamic>()});
-    } catch (_) {/* silent — the call/chat still happened */}
+      _upsertRow({
+        ...lead,
+        ...updates,
+        ...(res.data['data'] as Map? ?? {}).cast<String, dynamic>(),
+      });
+    } catch (_) {
+      /* silent — the call/chat still happened */
+    }
   }
 
   Future<void> _openDetail(Map<String, dynamic> lead) async {
@@ -315,9 +378,149 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   Future<void> _openForm({Map<String, dynamic>? lead}) async {
     final saved = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => LeadFormScreen(lead: lead, agents: _agents)),
+      MaterialPageRoute(
+        builder: (_) => LeadFormScreen(lead: lead, agents: _agents),
+      ),
     );
     if (saved == true) _load(reset: true);
+  }
+
+  Future<void> _exportCsv() async {
+    final source = _selected.isEmpty
+        ? _leads
+        : _leads.where((lead) => _selected.contains(lead['_id'])).toList();
+    if (source.isEmpty) return;
+    final rows = <List<dynamic>>[
+      [
+        'Name',
+        'Phone',
+        'Email',
+        'Source',
+        'Lead Source',
+        'Status',
+        'Priority',
+        'Property Type',
+        'BHK',
+        'Purpose',
+        'Budget Min',
+        'Budget Max',
+        'Follow Up',
+        'Remark',
+        'Booking',
+        'Assigned To',
+        'Project',
+        'Created At',
+      ],
+      ...source.map(
+        (lead) => [
+          lead['name'] ?? '',
+          lead['phone'] ?? '',
+          lead['email'] ?? '',
+          lead['source'] ?? '',
+          lead['leadSourceLabel'] ?? '',
+          lead['status'] ?? '',
+          lead['priority'] ?? '',
+          lead['propertyType'] ?? '',
+          lead['bhk'] ?? '',
+          lead['purpose'] ?? '',
+          (lead['budget'] as Map?)?['min'] ?? '',
+          (lead['budget'] as Map?)?['max'] ?? '',
+          lead['followUpDate'] ?? '',
+          lead['remark'] ?? '',
+          lead['booking'] ?? '',
+          lead['assignedToName'] ?? '',
+          lead['projectName'] ?? '',
+          lead['createdAt'] ?? '',
+        ],
+      ),
+    ];
+    final csv = const ListToCsvConverter().convert(rows);
+    final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    await Share.shareXFiles([
+      XFile.fromData(
+        Uint8List.fromList(utf8.encode(csv)),
+        name: 'arthaleads-leads-$date.csv',
+        mimeType: 'text/csv',
+      ),
+    ]);
+  }
+
+  Future<void> _importCsv() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+      final path = picked?.files.single.path;
+      if (path == null) return;
+      setState(() => _importing = true);
+      final content = await File(path).readAsString();
+      final rows = const CsvToListConverter(
+        eol: '\n',
+      ).convert(content, shouldParseNumbers: false);
+      if (rows.isEmpty) return;
+      final headers = rows.first
+          .map((value) => value.toString().trim().toLowerCase())
+          .toList();
+      int column(List<String> names) =>
+          headers.indexWhere((header) => names.any(header.contains));
+      final name = column(['name', 'full name']);
+      final phone = column(['phone', 'mobile', 'contact']);
+      final email = column(['email']);
+      final source = column(['source', 'platform']);
+      final remark = column(['remark', 'note']);
+      if (name < 0 || phone < 0) {
+        _snack('CSV must include Name and Phone columns', error: true);
+        return;
+      }
+      String cell(List<dynamic> row, int index) =>
+          index >= 0 && index < row.length ? row[index].toString().trim() : '';
+      final leads = rows
+          .skip(1)
+          .map((row) {
+            return {
+              'name': cell(row, name),
+              'phone': cell(row, phone),
+              if (email >= 0) 'email': cell(row, email),
+              'source': source >= 0 && cell(row, source).isNotEmpty
+                  ? cell(row, source)
+                  : 'Manual',
+              if (remark >= 0) 'remark': cell(row, remark),
+              'status': 'New',
+            };
+          })
+          .where((lead) {
+            return (lead['name'] as String).isNotEmpty &&
+                (lead['phone'] as String).isNotEmpty;
+          })
+          .toList();
+      if (leads.isEmpty) {
+        _snack('No valid leads found in this file', error: true);
+        return;
+      }
+      final response = await _api.dio.post(
+        '/leads/import',
+        data: {'leads': leads},
+      );
+      _snack(
+        response.data['message']?.toString() ??
+            '${leads.length} leads imported',
+      );
+      await _load(reset: true);
+    } catch (error) {
+      _snack(ApiClient.errorMessage(error, 'Import failed'), error: true);
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Future<void> _showQrCode() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _OrgQrSheet(),
+    );
   }
 
   // ── UI ──────────────────────────────────────────────────────────────────────
@@ -327,9 +530,61 @@ class LeadsScreenState extends State<LeadsScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
-      floatingActionButton: _selectMode ? null : GradientFab(onPressed: () => _openForm()),
+      floatingActionButton: _selectMode
+          ? null
+          : GradientFab(onPressed: () => _openForm()),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Leads Management',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        '$_total active leads across your property funnel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton.outlined(
+                  tooltip: 'Import CSV',
+                  onPressed: _importing ? null : _importCsv,
+                  icon: _importing
+                      ? const SizedBox(
+                          width: 17,
+                          height: 17,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.upload_file_rounded, size: 19),
+                ),
+                const SizedBox(width: 4),
+                IconButton.outlined(
+                  tooltip: _selected.isEmpty
+                      ? 'Export visible leads'
+                      : 'Export ${_selected.length} selected',
+                  onPressed: _leads.isEmpty ? null : _exportCsv,
+                  icon: const Icon(Icons.download_rounded, size: 19),
+                ),
+                const SizedBox(width: 4),
+                IconButton.outlined(
+                  tooltip: 'Lead capture QR code',
+                  onPressed: _showQrCode,
+                  icon: const Icon(Icons.qr_code_2_rounded, size: 19),
+                ),
+              ],
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Row(
@@ -379,7 +634,10 @@ class LeadsScreenState extends State<LeadsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Text('$_total leads', style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  '$_total leads',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const Spacer(),
                 if (_selectMode)
                   TextButton(
@@ -393,28 +651,28 @@ class LeadsScreenState extends State<LeadsScreen> {
             child: !_initialLoaded
                 ? const Center(child: AppSpinner(size: 32))
                 : _leads.isEmpty
-                    ? const Center(child: Text('No leads found'))
-                    : RefreshIndicator(
-                        color: AppColors.primary,
-                        onRefresh: () => _load(reset: true),
-                        child: ListView.builder(
-                          controller: _scroll,
-                          padding: EdgeInsets.only(bottom: _selectMode ? 140 : 88),
-                          itemCount: _leads.length + (_loading ? 1 : 0),
-                          itemBuilder: (context, i) {
-                            if (i >= _leads.length) {
-                              return const Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Center(child: AppSpinner(size: 22)),
-                              );
-                            }
-                            return FadeSlideIn(
-                              delay: Duration(milliseconds: 20 * (i % 12)),
-                              child: _leadCard(_leads[i]),
-                            );
-                          },
-                        ),
-                      ),
+                ? const Center(child: Text('No leads found'))
+                : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: () => _load(reset: true),
+                    child: ListView.builder(
+                      controller: _scroll,
+                      padding: EdgeInsets.only(bottom: _selectMode ? 140 : 88),
+                      itemCount: _leads.length + (_loading ? 1 : 0),
+                      itemBuilder: (context, i) {
+                        if (i >= _leads.length) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: AppSpinner(size: 22)),
+                          );
+                        }
+                        return FadeSlideIn(
+                          delay: Duration(milliseconds: 20 * (i % 12)),
+                          child: _leadCard(_leads[i]),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -432,9 +690,12 @@ class LeadsScreenState extends State<LeadsScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: _selectMode
-            ? () => setState(() => selected ? _selected.remove(id) : _selected.add(id))
+            ? () => setState(
+                () => selected ? _selected.remove(id) : _selected.add(id),
+              )
             : () => _openDetail(lead),
-        onLongPress: () => setState(() => selected ? _selected.remove(id) : _selected.add(id)),
+        onLongPress: () =>
+            setState(() => selected ? _selected.remove(id) : _selected.add(id)),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -444,8 +705,12 @@ class LeadsScreenState extends State<LeadsScreen> {
                 children: [
                   if (_selectMode) ...[
                     Icon(
-                      selected ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color: selected ? AppColors.primary : Theme.of(context).disabledColor,
+                      selected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: selected
+                          ? AppColors.primary
+                          : Theme.of(context).disabledColor,
                       size: 22,
                     ),
                     const SizedBox(width: 8),
@@ -453,7 +718,10 @@ class LeadsScreenState extends State<LeadsScreen> {
                   Expanded(
                     child: Text(
                       lead['name'] as String? ?? '—',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -465,24 +733,45 @@ class LeadsScreenState extends State<LeadsScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.phone, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+                  Icon(
+                    Icons.phone,
+                    size: 13,
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
                   const SizedBox(width: 4),
-                  Text(lead['phone'] as String? ?? '', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    lead['phone'] as String? ?? '',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                   const SizedBox(width: 12),
-                  if (lead['projectName'] != null && (lead['projectName'] as String).isNotEmpty) ...[
-                    Icon(Icons.folder, size: 13, color: AppColors.primary.withValues(alpha: 0.8)),
+                  if (lead['projectName'] != null &&
+                      (lead['projectName'] as String).isNotEmpty) ...[
+                    Icon(
+                      Icons.folder,
+                      size: 13,
+                      color: AppColors.primary.withValues(alpha: 0.8),
+                    ),
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
                         lead['projectName'] as String,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.primary),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.primary,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ] else if (lead['source'] != null) ...[
-                    Icon(Icons.language, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+                    Icon(
+                      Icons.language,
+                      size: 13,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
                     const SizedBox(width: 4),
-                    Text(lead['source'] as String, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      lead['source'] as String,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ],
               ),
@@ -492,16 +781,26 @@ class LeadsScreenState extends State<LeadsScreen> {
                   BookingChip(lead['booking'] as String?),
                   if (followUp != null) ...[
                     const SizedBox(width: 6),
-                    Icon(Icons.alarm, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+                    Icon(
+                      Icons.alarm,
+                      size: 13,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
                     const SizedBox(width: 2),
                     Text(
-                      followUp.length >= 10 ? followUp.substring(0, 10) : followUp,
+                      followUp.length >= 10
+                          ? followUp.substring(0, 10)
+                          : followUp,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                   if ((lead['assignedToName'] as String? ?? '').isNotEmpty) ...[
                     const SizedBox(width: 6),
-                    Icon(Icons.person, size: 13, color: Theme.of(context).textTheme.bodySmall?.color),
+                    Icon(
+                      Icons.person,
+                      size: 13,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
                     const SizedBox(width: 2),
                     Flexible(
                       child: Text(
@@ -514,12 +813,20 @@ class LeadsScreenState extends State<LeadsScreen> {
                   const Spacer(),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.call, size: 19, color: AppColors.primary),
+                    icon: const Icon(
+                      Icons.call,
+                      size: 19,
+                      color: AppColors.primary,
+                    ),
                     onPressed: () => _call(lead),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.chat, size: 19, color: AppColors.whatsapp),
+                    icon: const Icon(
+                      Icons.chat,
+                      size: 19,
+                      color: AppColors.whatsapp,
+                    ),
                     onPressed: () => _whatsapp(lead),
                   ),
                 ],
@@ -534,21 +841,37 @@ class LeadsScreenState extends State<LeadsScreen> {
   Widget _bulkBar(AuthState auth) {
     return Container(
       padding: EdgeInsets.only(
-        left: 8, right: 8, top: 8,
+        left: 8,
+        right: 8,
+        top: 8,
         bottom: 8 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).cardTheme.color,
-        border: Border(top: BorderSide(color: Theme.of(context).dividerTheme.color ?? Colors.transparent)),
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
+          ),
+        ),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
             if (auth.isAdmin) ...[
-              _bulkBtn(Icons.person_add, 'Assign', AppColors.primary, _bulkAssign),
+              _bulkBtn(
+                Icons.person_add,
+                'Assign',
+                AppColors.primary,
+                _bulkAssign,
+              ),
               _bulkBtn(Icons.flag, 'Status', AppColors.info, _bulkStatus),
-              _bulkBtn(Icons.drive_file_move, 'Transfer', const Color(0xFF3B82F6), _bulkTransfer),
+              _bulkBtn(
+                Icons.drive_file_move,
+                'Transfer',
+                const Color(0xFF3B82F6),
+                _bulkTransfer,
+              ),
             ],
             _bulkBtn(Icons.delete, 'Delete', AppColors.danger, _bulkDelete),
           ],
@@ -557,7 +880,12 @@ class LeadsScreenState extends State<LeadsScreen> {
     );
   }
 
-  Widget _bulkBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _bulkBtn(
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: ElevatedButton.icon(
@@ -571,4 +899,192 @@ class LeadsScreenState extends State<LeadsScreen> {
       ),
     );
   }
+}
+
+class _OrgQrSheet extends StatefulWidget {
+  const _OrgQrSheet();
+
+  @override
+  State<_OrgQrSheet> createState() => _OrgQrSheetState();
+}
+
+class _OrgQrSheetState extends State<_OrgQrSheet> {
+  final _api = ApiClient.instance;
+  String? _url;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load({bool regenerate = false}) async {
+    setState(() => _loading = true);
+    try {
+      var response = regenerate
+          ? await _api.dio.post('/org/me/qr-token')
+          : await _api.dio.get('/org/me/qr-token');
+      var token = response.data['qrToken']?.toString();
+      if ((token == null || token.isEmpty) && !regenerate) {
+        response = await _api.dio.post('/org/me/qr-token');
+        token = response.data['qrToken']?.toString();
+      }
+      if (mounted) {
+        setState(() {
+          _url = token == null || token.isEmpty
+              ? null
+              : 'https://www.arthaleads.com/form/$token';
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(error, 'Failed to load QR code'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final url = _url;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 4, 22, 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Lead Capture QR Code',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Prospects can scan this to submit an enquiry directly to your CRM.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 18),
+            Container(
+              width: 260,
+              height: 260,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x1A000000), blurRadius: 18),
+                ],
+              ),
+              child: _loading
+                  ? const Center(child: AppSpinner(size: 32))
+                  : url == null
+                  ? const Center(child: Text('QR code unavailable'))
+                  : CustomPaint(painter: _QrPainter(url)),
+            ),
+            if (url != null && !_loading) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.only(left: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Theme.of(context).dividerColor),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        url,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Copy link',
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: url));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lead form link copied'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Share.share(url),
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: const Text('Share'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _load(regenerate: true),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Regenerate'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QrPainter extends CustomPainter {
+  _QrPainter(String data)
+    : image = QrImage(
+        QrCode.fromData(data: data, errorCorrectLevel: QrErrorCorrectLevel.M),
+      );
+
+  final QrImage image;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final module = size.shortestSide / image.moduleCount;
+    final paint = Paint()..color = const Color(0xFF111827);
+    for (var row = 0; row < image.moduleCount; row++) {
+      for (var column = 0; column < image.moduleCount; column++) {
+        if (image.isDark(row, column)) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              column * module,
+              row * module,
+              module + .2,
+              module + .2,
+            ),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _QrPainter oldDelegate) => false;
 }
