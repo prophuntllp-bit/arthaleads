@@ -63,7 +63,7 @@ const updateProfileSchema = Joi.object({
 
 const createAutomationSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
-  platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom").required(),
+  platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom", "Vistrow Voice").required(),
   mode: Joi.string().valid("webhook", "api", "form", "spreadsheet").optional(),
   status: Joi.string().valid("draft", "connected", "paused").optional(),
   description: Joi.string().allow("").max(500).optional(),
@@ -83,7 +83,7 @@ const createAutomationSchema = Joi.object({
 
 const updateAutomationSchema = Joi.object({
   name: Joi.string().min(2).max(100),
-  platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom"),
+  platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom", "Vistrow Voice"),
   mode: Joi.string().valid("webhook", "api", "form", "spreadsheet"),
   status: Joi.string().valid("draft", "connected", "paused"),
   description: Joi.string().allow("").max(500),
@@ -124,7 +124,7 @@ const createLeadSchema = Joi.object({
     .default("New"),
   priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
   source: Joi.string()
-    .valid("Facebook","Google","WhatsApp","Manual","Website","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other")
+    .valid("Facebook","Google","WhatsApp","Manual","Website","Custom","Vistrow Voice","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other")
     .default("Manual"),
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),

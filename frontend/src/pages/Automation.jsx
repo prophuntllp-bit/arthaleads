@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic,
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
@@ -51,11 +51,21 @@ const PLATFORM_PRESETS = {
   Custom: {
     mode: "webhook",
     status: "draft",
-    leadSourceLabel: "Other",
-    webhookPath: "/api/leads",
+    leadSourceLabel: "Custom",
+    webhookPath: "/webhook/lead",
     description: "Connect any other partner, broker, or vendor lead source.",
     icon: Link2,
     tone: "bg-orange-500/10 text-orange-400",
+  },
+  "Vistrow Voice": {
+    mode: "webhook",
+    status: "draft",
+    leadSourceLabel: "Vistrow Voice",
+    webhookPath: "/webhook/lead",
+    description: "Qualified leads from the Vistrow Voice AI calling platform.",
+    icon: Mic,
+    tone: "bg-violet-500/10 text-violet-400",
+    label: "Vistrow Voice",
   },
 };
 
@@ -679,7 +689,7 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
                   description: preset.description || "",
                 }));
               }}
-              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook")}
+              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook" && p !== "Vistrow Voice")}
               style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
             />
           </div>
@@ -719,6 +729,24 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
           </div>
           <p className="mt-1 text-xs text-app-soft">POST leads to this endpoint with source set to <span className="text-orange-400">{form.leadSourceLabel || form.platform}</span>.</p>
         </div>
+        {form.platform === "Custom" && (
+          <div>
+            <label className="label">Auth Token</label>
+            {form.verifyToken ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs font-mono font-semibold text-orange-400" style={{ background: "var(--app-surface-low)" }}>{form.verifyToken}</code>
+                  <button type="button" className="btn-secondary rounded-xl" onClick={() => { navigator.clipboard.writeText(form.verifyToken); toast.success("Token copied"); }}>
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-app-soft">Send this in the request body as <code className="text-orange-400">token</code>. Keep it secret — anyone with it can post leads to your pipeline.</p>
+              </>
+            ) : (
+              <p className="text-xs text-app-soft">A unique auth token will be generated when you save this source. Reopen it here to copy the token.</p>
+            )}
+          </div>
+        )}
         <div>
           <label className="label">Notes</label>
           <textarea className="input min-h-[80px]" value={form.mappingNotes} onChange={set("mappingNotes")} placeholder="Notes about field mapping or setup details" />
@@ -965,6 +993,213 @@ function WordPressIcon() {
   );
 }
 
+/* ─── Vistrow Voice: per-connection token card ─────────────────────────────── */
+function VoiceCard({ conn, onDelete }) {
+  const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isConnected = conn.status === "connected";
+
+  const copy = () => {
+    navigator.clipboard.writeText(conn.token);
+    setCopied(true);
+    toast.success("Token copied!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/automations/${conn.id}`);
+      onDelete(conn.id);
+      toast.success("Connection removed");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-violet-500"}`}>
+          <Mic className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>{conn.name}</p>
+          {conn.lastSyncAt && <p className={`text-xs ${isConnected ? "text-white/70" : "text-app-soft"}`}>Last lead: {new Date(conn.lastSyncAt).toLocaleString()}</p>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isConnected ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">✓ Connected</span>
+          ) : (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">Pending</span>
+          )}
+          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 px-4 py-3">
+        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-violet-400 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
+          {conn.token}
+        </code>
+        <button onClick={copy} className="btn-secondary rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 text-xs">
+          {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Vistrow Voice wizard ─────────────────────────────────────────────────── */
+function VoiceWizard({ open, onClose, onChanged }) {
+  const [loading, setLoading] = useState(false);
+  const [connections, setConnections] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [showSteps, setShowSteps] = useState(false);
+
+  const serverBase = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+  const endpoint = `${serverBase}/webhook/lead`;
+
+  const load = useCallback((isInitial = false) => {
+    if (isInitial) setLoading(true);
+    return api.get("/automations/voice/connections")
+      .then(({ data }) => setConnections(data.connections || []))
+      .catch(() => isInitial && toast.error("Failed to load connections"))
+      .finally(() => isInitial && setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    load(true);
+    const interval = setInterval(() => load(false), 5000);
+    return () => clearInterval(interval);
+  }, [open, load]);
+
+  const handleAdd = async () => {
+    setAdding(true);
+    try {
+      const { data } = await api.post("/automations/voice/create", { name: `Vistrow Voice ${connections.length + 1}` });
+      setConnections((prev) => [...prev, data.connection]);
+      onChanged?.();
+      toast.success("New token created — paste it into Vistrow Voice's webhook sender.");
+    } catch {
+      toast.error("Failed to create connection");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const copyText = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
+        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-violet-500">
+            <Mic className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-app">Vistrow Voice</h2>
+            <p className="text-xs text-app-soft">AI calling platform — each connection gets its own token</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+          {loading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <>
+              {/* Intro (only before a connection exists) */}
+              {connections.length === 0 && (
+                <p className="text-sm text-app-soft">
+                  Create a connection to get your token, paste it into Vistrow Voice, and your calls will start showing up here as leads — automatically.
+                </p>
+              )}
+
+              {/* Connections */}
+              {connections.map((conn) => (
+                <VoiceCard
+                  key={conn.id}
+                  conn={conn}
+                  onDelete={(id) => { setConnections((prev) => prev.filter((c) => c.id !== id)); onChanged?.(); }}
+                />
+              ))}
+
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-violet-500 hover:text-violet-400 transition"
+              >
+                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
+                {adding ? "Creating…" : connections.length ? "Add Another Connection" : "Add Voice Connection"}
+              </button>
+
+              {/* Friendly setup steps */}
+              <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--app-surface-low)" }}>
+                <p className="text-xs font-bold text-app-soft uppercase tracking-wider">How to connect</p>
+                {[
+                  'Click "Add Voice Connection" to generate your token.',
+                  "Copy the token shown above.",
+                  "In Vistrow Voice, open the Arthaleads integration and paste it in.",
+                  "That's it — qualified calls flow straight into your leads.",
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-xs font-bold mt-0.5">{i + 1}</span>
+                    <p className="text-sm text-app-soft">{t}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Developer details — hidden by default, for manual/custom senders */}
+              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSteps((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
+                >
+                  <span>Developer details (optional)</span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showSteps ? "rotate-90" : ""}`} />
+                </button>
+                {showSteps && (
+                  <div className="px-4 py-3 space-y-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <p className="text-xs text-app-soft">Only needed if you're wiring a custom sender by hand — the Vistrow Voice integration does this for you.</p>
+                    <div>
+                      <p className="text-xs text-app-soft mb-1">Endpoint</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 truncate rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{endpoint}</code>
+                        <button type="button" className="btn-secondary rounded-xl shrink-0" onClick={() => copyText(endpoint, "Endpoint")}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <pre className="overflow-x-auto rounded-xl px-3 py-2 text-xs text-violet-400" style={{ background: "var(--app-surface-low)" }}>{`POST { "token", "name", "phone", "email", "message" }`}</pre>
+                    <p className="text-xs text-app-soft"><span className="text-violet-400 font-semibold">message</span> becomes the lead's Requirements. Leads arrive as source <span className="text-violet-400 font-semibold">Vistrow Voice</span>.</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end px-6 pb-6">
+          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
@@ -977,6 +1212,15 @@ export default function Automation() {
 
   // WordPress wizard state
   const [wpWizardOpen, setWpWizardOpen] = useState(false);
+
+  // Vistrow Voice wizard state
+  const [voiceWizardOpen, setVoiceWizardOpen] = useState(false);
+
+  // Facebook diagnostic state
+  const [diagFor, setDiagFor] = useState(null);      // the automation being diagnosed
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagResult, setDiagResult] = useState(null); // { checks, allOk, canResubscribe, ... }
+  const [resubscribing, setResubscribing] = useState(false);
 
   // Non-FB source modal state
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
@@ -1042,9 +1286,40 @@ export default function Automation() {
     if (item.platform === "Facebook") {
       setFbEditingItem(item);
       setFbWizardOpen(true);
+    } else if (item.platform === "Vistrow Voice") {
+      setVoiceWizardOpen(true);
     } else {
       setSourceEditingItem(item);
       setSourceModalOpen(true);
+    }
+  };
+
+  const runDiagnostic = async (item) => {
+    setDiagFor(item);
+    setDiagResult(null);
+    setDiagLoading(true);
+    try {
+      const { data } = await api.post("/automations/facebook/diagnose", { automationId: item._id });
+      setDiagResult(data.results?.[0] || { checks: [], allOk: false, message: data.message });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Diagnostic failed");
+      setDiagFor(null);
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const resubscribeFb = async () => {
+    if (!diagFor) return;
+    setResubscribing(true);
+    try {
+      const { data } = await api.post("/automations/facebook/resubscribe", { automationId: diagFor._id });
+      toast.success(data.message || "Page re-subscribed.");
+      await runDiagnostic(diagFor); // re-check so the user sees it turn green
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Re-subscribe failed");
+    } finally {
+      setResubscribing(false);
     }
   };
 
@@ -1150,6 +1425,8 @@ export default function Automation() {
                   onClick={() => {
                     if (isWebsiteForm) {
                       setWpWizardOpen(true);
+                    } else if (platform === "Vistrow Voice") {
+                      setVoiceWizardOpen(true);
                     } else {
                       setSourceEditingItem(null);
                       setSourceModalOpen(true);
@@ -1303,6 +1580,36 @@ export default function Automation() {
                         </div>
                       </div>
                     </div>
+                  ) : (item.platform === "Custom" || item.platform === "Vistrow Voice") ? (
+                    <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">API Endpoint</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
+                            {serverBase}/webhook/lead
+                          </code>
+                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}/webhook/lead`)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">Auth Token</p>
+                        {item.verifyToken ? (
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-orange-400" style={{ background: "var(--app-surface-low)" }}>
+                              {item.verifyToken}
+                            </code>
+                            <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(item.verifyToken)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-400">No token yet — click Edit, then Update to generate one.</p>
+                        )}
+                        <p className="mt-1 text-[11px] text-app-soft">POST <code className="text-orange-400">{`{ token, name, phone, email, message }`}</code> as JSON. <code className="text-orange-400">message</code> becomes the lead's requirements.</p>
+                      </div>
+                    </div>
                   ) : (
                     <div className="rounded-xl p-3 stitch-surface-muted">
                       <p className="text-xs text-app-soft mb-2">API Endpoint</p>
@@ -1321,6 +1628,11 @@ export default function Automation() {
                     <button className="btn-secondary rounded-xl" onClick={() => openEdit(item)}>
                       <Pencil className="h-4 w-4" /> Edit
                     </button>
+                    {isFb && (
+                      <button className="btn-secondary rounded-xl" onClick={() => runDiagnostic(item)} title="Check why leads may not be arriving">
+                        <SearchCheck className="h-4 w-4" /> Diagnose
+                      </button>
+                    )}
                     {item.externalSourceUrl && (
                       <a href={item.externalSourceUrl} target="_blank" rel="noreferrer" className="btn-secondary rounded-xl">
                         <ExternalLink className="h-4 w-4" /> Open
@@ -1343,6 +1655,75 @@ export default function Automation() {
         onClose={() => setWpWizardOpen(false)}
         apiBase={apiBase}
       />
+
+      {/* Vistrow Voice Wizard */}
+      <VoiceWizard
+        open={voiceWizardOpen}
+        onClose={() => setVoiceWizardOpen(false)}
+        onChanged={loadItems}
+      />
+
+      {/* Facebook Diagnostic */}
+      <Modal open={!!diagFor} onClose={() => { setDiagFor(null); setDiagResult(null); }} title="Facebook Lead Diagnostic" size="md">
+        {diagLoading ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Spinner />
+            <p className="text-sm text-app-soft">Checking your connection with Meta…</p>
+          </div>
+        ) : diagResult ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${diagResult.allOk ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}`}>
+                {diagResult.allOk ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                {diagResult.allOk ? "All checks passed" : "Problem found"}
+              </span>
+              <span className="text-sm text-app-soft truncate">{diagResult.pageName || diagResult.name}</span>
+            </div>
+
+            {(diagResult.checks || []).length === 0 && (
+              <p className="text-sm text-app-soft">{diagResult.message || "No Facebook connection to diagnose."}</p>
+            )}
+
+            <div className="space-y-2">
+              {(diagResult.checks || []).map((c) => (
+                <div key={c.key} className="flex items-start gap-3 rounded-xl p-3" style={{ background: "var(--app-surface-low)" }}>
+                  {c.ok
+                    ? <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-emerald-400" />
+                    : <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-app">{c.label}</p>
+                    <p className="text-xs text-app-soft break-words">{c.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {diagResult.allOk && (diagResult.checks || []).length > 0 && (
+              <p className="text-xs text-app-soft">
+                Everything checks out on our side. If leads still don't arrive, the Meta App may be in <span className="font-semibold text-app">Development</span> mode
+                (real leads only deliver in Live mode), or the ad's lead form isn't the one selected here. Test with Meta's Lead Ads Testing Tool.
+              </p>
+            )}
+
+            {diagResult.canResubscribe && (
+              <button
+                onClick={resubscribeFb}
+                disabled={resubscribing}
+                className="btn-primary w-full rounded-xl flex items-center justify-center gap-2"
+              >
+                {resubscribing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                {resubscribing ? "Re-subscribing…" : "Re-subscribe Page to leadgen webhook"}
+              </button>
+            )}
+
+            <div className="flex justify-end">
+              <button className="btn-secondary rounded-xl" onClick={() => runDiagnostic(diagFor)}>
+                <RefreshCw className="h-4 w-4" /> Re-run
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
 
       {/* Facebook Wizard */}
       <FacebookWizard

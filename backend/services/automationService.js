@@ -1,8 +1,21 @@
 ﻿const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const Automation = require("../models/Automation");
 const OAuthSession = require("../models/OAuthSession");
 const User = require("../models/User");
 const { AppError } = require("../middlewares/errorHandler");
+
+// Mint a URL-safe token for token-authenticated ingestion sources
+// (Custom partner/vendor webhooks). Mirrors the Website Form flow's
+// generateWebsiteToken() in automationController.js.
+function generateIngestToken() {
+  return "AW-" + crypto.randomBytes(24).toString("hex");
+}
+
+// Platforms whose leads arrive via POST /webhook/lead, authenticated only by a
+// per-source token (no OAuth / user JWT). Keep this in sync with the webhook
+// lookup in routes/webhookRoutes.js.
+const TOKEN_INGEST_PLATFORMS = ["Custom", "Vistrow Voice"];
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -33,9 +46,15 @@ const DEFAULTS = {
   },
   Custom: {
     mode: "webhook",
-    webhookPath: "/api/leads",
-    leadSourceLabel: "Other",
-    description: "Use a custom data source and map it into your CRM lead fields.",
+    webhookPath: "/webhook/lead",
+    leadSourceLabel: "Custom",
+    description: "Receive leads from any partner, broker, or vendor by POSTing to the lead webhook with your token.",
+  },
+  "Vistrow Voice": {
+    mode: "webhook",
+    webhookPath: "/webhook/lead",
+    leadSourceLabel: "Vistrow Voice",
+    description: "Receive qualified leads from the Vistrow Voice AI calling platform via the lead webhook.",
   },
 };
 
@@ -57,6 +76,15 @@ const automationService = {
 
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
+
+    // Token-ingest sources (Custom, Vistrow Voice) authenticate incoming webhook
+    // calls by a per-source token (there is no OAuth / user JWT on the ingestion
+    // path). Mint one on create if the caller didn't supply it, so the UI always
+    // has a token to show.
+    if (TOKEN_INGEST_PLATFORMS.includes(normalized.platform) && !normalized.verifyToken) {
+      normalized.verifyToken = generateIngestToken();
+    }
+
     const automation = await Automation.create({
       ...normalized,
       orgId: actor.orgId,
@@ -95,6 +123,11 @@ const automationService = {
     const automation = await Automation.findOne({ _id: id, orgId: actor.orgId });
     if (!automation) throw new AppError("Automation source not found", 404);
 
+    // Snapshot the stored ingest token before the field copy below — the edit
+    // form submits verifyToken:"" for sources that don't manage it in the UI,
+    // which would otherwise clobber a live Custom-source token on every save.
+    const existingToken = automation.verifyToken;
+
     const normalized = applyDefaults({ ...automation.toObject(), ...payload });
     [
       "name",
@@ -117,6 +150,16 @@ const automationService = {
     ].forEach((key) => {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
+
+    // Token-ingest sources (Custom, Vistrow Voice): never lose the ingest token
+    // to an empty form field, and upgrade legacy records (created before
+    // /webhook/lead existed — they were saved with webhookPath "/api/leads" and
+    // no token). Minting only happens when there is genuinely no token, so
+    // re-saving never rotates a live one.
+    if (TOKEN_INGEST_PLATFORMS.includes(automation.platform)) {
+      automation.verifyToken = automation.verifyToken || existingToken || generateIngestToken();
+      automation.webhookPath = "/webhook/lead";
+    }
 
     // When a fresh userToken is saved, record expiry.
     // System user tokens (permanent) skip the 60-day window so the cron never touches them.

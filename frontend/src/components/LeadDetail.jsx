@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import CustomSelect from "./CustomSelect";
@@ -23,6 +23,25 @@ function Info({ label, value }) {
     </div>
   );
 }
+
+// Small labelled pill used for voice-call metadata (duration, channel, …)
+function MetaPill({ icon: Icon, children }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium text-app-soft"
+      style={{ borderColor: "var(--app-border)" }}
+    >
+      {Icon && <Icon className="h-3 w-3" />}
+      {children}
+    </span>
+  );
+}
+
+// Common ISO-639 codes Vistrow Voice sends → readable names (fallback: uppercased code)
+const LANG_NAMES = {
+  en: "English", hi: "Hindi", mr: "Marathi", ta: "Tamil", te: "Telugu",
+  kn: "Kannada", gu: "Gujarati", bn: "Bengali", ml: "Malayalam", pa: "Punjabi", ur: "Urdu",
+};
 
 export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const { setFocusedLead } = useCopilot();
@@ -121,6 +140,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   if (!lead) return null;
 
   const isProjectLead = lead._type === "project";
+
+  // Show the Transcript tab only for leads that came in via Vistrow Voice
+  // (voiceCall is set on ingestion). Non-voice leads never see the tab.
+  const vc = lead.voiceCall;
+  const hasVoice = !!(vc && (vc.transcript?.length || vc.sentiment || vc.channel || vc.durationSeconds || vc.agentName));
+  const tabList = ["info", "notes", "activity", "calls", ...(hasVoice ? ["transcript"] : [])];
 
   const refreshLead = async () => {
     if (isProjectLead) return null;
@@ -281,7 +306,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
         </div>
 
         <div className="flex flex-wrap gap-2 border-b pb-3" style={{ borderColor: "var(--app-border)" }}>
-          {["info", "notes", "activity", "calls"].map((item) => (
+          {tabList.map((item) => (
             <button
               key={item}
               className={item === tab ? "btn-primary rounded-xl" : "btn-secondary rounded-xl"}
@@ -502,6 +527,79 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             })}
           </div>
         )}
+
+        {tab === "transcript" && vc && (() => {
+          const sent = vc.sentiment;
+          const sentColor = sent === "positive" ? "#22c55e" : sent === "negative" ? "#ef4444" : "#a1a1aa";
+          const sentLabel = sent === "positive" ? "Positive" : sent === "negative" ? "Negative" : "Neutral";
+          const secs = Number(vc.durationSeconds) || 0;
+          const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
+          const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
+          const turns = vc.transcript || [];
+          const extracted = vc.extractedData && typeof vc.extractedData === "object" && !Array.isArray(vc.extractedData)
+            ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
+            : [];
+
+          return (
+            <div className="space-y-4">
+              {/* Metadata row */}
+              <div className="flex flex-wrap items-center gap-2">
+                {sent && (
+                  <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+                    style={{ background: `${sentColor}18`, color: sentColor }}>
+                    {sentLabel}
+                  </span>
+                )}
+                {dur && <MetaPill icon={Clock}>{dur}</MetaPill>}
+                {vc.channel && <MetaPill>{vc.channel}</MetaPill>}
+                {langLabel && <MetaPill>{langLabel}</MetaPill>}
+                {vc.agentName && <MetaPill icon={Mic}>{vc.agentName}</MetaPill>}
+              </div>
+
+              {/* Captured details (extracted_data) */}
+              {extracted.length > 0 && (
+                <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
+                  <p className="stitch-kicker mb-3">Captured Details</p>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {extracted.map(([k, v]) => (
+                      <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Transcript chat */}
+              {turns.length === 0 ? (
+                <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
+                  <AlignLeft className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
+                  <p className="text-sm font-semibold text-app">No transcript</p>
+                  <p className="text-xs text-app-soft mt-1">This call came in without a conversation transcript.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {turns.map((turn, i) => {
+                    const isCaller = turn.speaker === "Caller";
+                    return (
+                      <div key={i} className={`flex ${isCaller ? "justify-start" : "justify-end"}`}>
+                        <div className="max-w-[82%] rounded-2xl px-3.5 py-2"
+                          style={{
+                            background: isCaller ? "var(--app-surface-low)" : "rgba(249,115,22,0.10)",
+                            border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(249,115,22,0.22)"}`,
+                          }}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                            style={{ color: isCaller ? "var(--app-text-soft)" : "var(--app-primary)" }}>
+                            {turn.speaker || "—"}
+                          </p>
+                          <p className="text-sm text-app whitespace-pre-wrap break-words">{turn.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {tab === "activity" && (
           <div className="space-y-3">

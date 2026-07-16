@@ -601,6 +601,175 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
   }
 });
 
+// ── Custom source webhook ─────────────────────────────────────────────────────
+// POST /webhook/lead  { token, name, phone, email, message }
+// Generic token-authenticated lead ingestion for "Custom" sources (partners,
+// brokers, vendors, voice-AI bridges, etc). No user JWT — auth is the per-source
+// `token` matched against Automation.verifyToken, exactly like /webhook/website.
+// `message` is stored in the lead's `requirements` field (call transcript / notes).
+const customLeadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60, // 60 submissions per token per 15 min
+  keyGenerator: (req) => req.body?.token || req.query?.token || req.ip,
+  message: { success: false, message: "Too many submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
+  try {
+    // Accept token from body or query string for sender flexibility
+    const token = req.body?.token || req.query?.token;
+    const {
+      name, phone, email, message, source_name,
+      // Optional Vistrow Voice enrichment (all backward-compatible — a payload
+      // without any of these behaves exactly as before).
+      transcript, sentiment, duration_seconds, channel, language, agent_name, extracted_data,
+    } = req.body || {};
+
+    if (!token) return res.status(400).json({ success: false, message: "Missing token" });
+
+    // Validate required fields (mirror createLeadSchema: name/phone required, email optional)
+    if (!name || String(name).trim().length < 2) {
+      return res.status(400).json({ success: false, message: "Field 'name' is required (min 2 chars)" });
+    }
+    if (!phone || String(phone).trim().length < 7) {
+      return res.status(400).json({ success: false, message: "Field 'phone' is required (min 7 chars)" });
+    }
+
+    // Token-ingest platforms (Custom, Vistrow Voice) share this endpoint and are
+    // disambiguated purely by their token. Keep in sync with TOKEN_INGEST_PLATFORMS
+    // in services/automationService.js.
+    const automation = await Automation.findOne({
+      platform: { $in: ["Custom", "Vistrow Voice"] },
+      verifyToken: token,
+      isActive: true,
+    });
+    if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
+
+    const orgId = automation.orgId;
+    // Stamp the lead's source from the matched connection so a Vistrow Voice
+    // token produces "Vistrow Voice" leads and a generic Custom token "Custom".
+    const leadSource = automation.platform === "Vistrow Voice" ? "Vistrow Voice" : "Custom";
+
+    // Deduplication: same phone for this org within the last 2 minutes = a
+    // double-fire from the sender — skip silently (same guard as website flow).
+    const cleanPhone = String(phone).trim();
+    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
+    if (recent) {
+      logger.info(`[custom webhook] duplicate skipped: ${name} | ${cleanPhone} | original: ${recent.createdAt}`);
+      return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
+    }
+
+    // Respect the org's Auto Lead Assignment setting
+    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    let assignee = null;
+    if (org?.autoAssign !== false) {
+      try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
+    }
+
+    // The connection name the admin gave (e.g. "Shapoorji Pallonji Treetopia")
+    // is the primary source label; source_name from the payload is a fallback.
+    const sourceLabel = automation.name || source_name || automation.leadSourceLabel || "Custom";
+    const msg = message ? String(message).trim() : "";
+
+    // Build the optional Vistrow Voice payload. Everything here is defensive:
+    // any missing/malformed field is dropped, and if nothing usable is present
+    // `voiceCall` stays undefined so the lead is stored exactly as before.
+    const SENTIMENTS = ["positive", "neutral", "negative"];
+    const cleanTranscript = Array.isArray(transcript)
+      ? transcript
+          .filter((t) => t && typeof t === "object")
+          .map((t) => ({
+            speaker: (t.speaker === "Caller" || t.speaker === "Agent") ? t.speaker : String(t.speaker ?? ""),
+            text: typeof t.text === "string" ? t.text : String(t.text ?? ""),
+          }))
+          .filter((t) => t.text.trim())
+      : [];
+    const durNum = Number(duration_seconds);
+    const hasExtracted = extracted_data && typeof extracted_data === "object"
+      && !Array.isArray(extracted_data) && Object.keys(extracted_data).length > 0;
+
+    let voiceCall;
+    if (cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
+        || channel || language || agent_name || hasExtracted) {
+      voiceCall = {};
+      if (cleanTranscript.length) voiceCall.transcript = cleanTranscript;
+      if (SENTIMENTS.includes(sentiment)) voiceCall.sentiment = sentiment;
+      if (Number.isFinite(durNum) && durNum > 0) voiceCall.durationSeconds = durNum;
+      if (channel && typeof channel === "string") voiceCall.channel = channel.trim();
+      if (language && typeof language === "string") voiceCall.language = language.trim();
+      if (agent_name && typeof agent_name === "string") voiceCall.agentName = agent_name.trim();
+      if (hasExtracted) voiceCall.extractedData = extracted_data;
+    }
+
+    const lead = await Lead.create({
+      name: String(name).trim(),
+      phone: cleanPhone,
+      email: (email && String(email).trim()) || "",
+      source: leadSource,
+      status: "New",
+      requirements: msg,
+      orgId,
+      createdBy: assignee?._id || automation.createdBy || null,
+      assignedTo: assignee?._id || null,
+      assignedToName: assignee?.name || "",
+      leadSourceLabel: sourceLabel,
+      voiceCall, // undefined for non-voice payloads — Mongoose omits it
+
+      notes: [
+        {
+          text: [
+            msg ? `Message: ${msg}` : null,
+            `Source: ${sourceLabel}`,
+          ].filter(Boolean).join("\n") || "Lead received from custom source",
+          addedBy: assignee?._id || null,
+          addedByName: assignee?.name || "",
+        },
+      ],
+      activities: [
+        {
+          type: "created",
+          description: assignee
+            ? `Lead received from custom source (${sourceLabel}) - auto-assigned to ${assignee.name}`
+            : `Lead received from custom source (${sourceLabel}) - unassigned (auto-assignment disabled)`,
+          performedBy: assignee?._id || null,
+          performedByName: assignee?.name || "",
+          meta: { automationId: automation._id?.toString(), sourceName: source_name || "" },
+        },
+      ],
+    });
+
+    automation.status = "connected";
+    automation.lastSyncAt = new Date();
+    await automation.save();
+
+    // Push notification — targeted to assignee if assigned, broadcast otherwise
+    if (assignee?._id) {
+      sendPushToUser(assignee._id, {
+        type: "lead_assigned",
+        title: `New Lead: ${lead.name}`,
+        body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
+        data: { url: "/leads" },
+      }).catch(() => {});
+    } else {
+      sendPushToAll({
+        type: "new_lead",
+        title: "New Lead 📥",
+        body: `${lead.name} came in from ${sourceLabel}`,
+        data: { url: "/leads", leadName: lead.name, source: leadSource },
+      }, orgId).catch(() => {});
+    }
+
+    logger.info(`[custom webhook] lead created: ${lead.name} | ${cleanPhone} | source: ${sourceLabel}`);
+    res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
+  } catch (err) {
+    logger.error(`[custom webhook] error: ${err.message}`);
+    res.status(500).json({ success: false, message: "Failed to process lead" });
+  }
+});
+
 // ── Website plugin registration (called when plugin saves settings) ───────────
 // POST /webhook/website/register  { token, site_name, site_url, forms: [] }
 router.post("/website/register", express.json(), async (req, res) => {

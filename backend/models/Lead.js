@@ -36,6 +36,34 @@ const formResponseSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ── Vistrow Voice (AI calling) sub-schemas ──────────────────────────────────────
+// Populated only for leads that arrive via POST /webhook/lead with a transcript.
+// Absent on every other lead — the frontend hides the Transcript tab when unset.
+const voiceTurnSchema = new mongoose.Schema(
+  {
+    // "Caller" | "Agent" — kept as a free string (no enum) so an unexpected
+    // speaker value can never make webhook ingestion throw.
+    speaker: { type: String, default: "" },
+    text:    { type: String, default: "" },
+  },
+  { _id: false }
+);
+
+const voiceCallSchema = new mongoose.Schema(
+  {
+    transcript:      { type: [voiceTurnSchema], default: undefined },
+    sentiment:       { type: String, enum: ["positive", "neutral", "negative"], default: undefined },
+    durationSeconds: { type: Number, default: undefined },
+    channel:         { type: String, trim: true, default: undefined },
+    language:        { type: String, trim: true, default: undefined },
+    agentName:       { type: String, trim: true, default: undefined },
+    // Free-form dict of whatever the voice agent captured (budget/location/…).
+    // Schema is intentionally variable — stored raw, never normalized.
+    extractedData:   { type: mongoose.Schema.Types.Mixed, default: undefined },
+  },
+  { _id: false }
+);
+
 // ── Main Lead Schema ───────────────────────────────────────────────────────────
 
 const leadSchema = new mongoose.Schema(
@@ -104,7 +132,7 @@ const leadSchema = new mongoose.Schema(
     // ── Lead Source ───────────────────────────────────────────────────────────
     source: {
       type: String,
-      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"],
+      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"],
       default: "Manual",
     },
 
@@ -148,6 +176,10 @@ const leadSchema = new mongoose.Schema(
     sourcePage:      { type: String, trim: true, default: "" }, // full page URL where the form was submitted
     sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")
     requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
+
+    // ── Vistrow Voice (AI calling) transcript & metadata ───────────────────────
+    // Set only for leads ingested via /webhook/lead with voice data. Unset otherwise.
+    voiceCall: { type: voiceCallSchema, default: undefined },
 
     // ── Response Time Tracking ────────────────────────────────────────────────
     firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"

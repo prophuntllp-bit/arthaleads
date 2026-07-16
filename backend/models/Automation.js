@@ -11,7 +11,7 @@ const automationSchema = new mongoose.Schema(
     },
     platform: {
       type: String,
-      enum: ["Facebook", "Google", "WhatsApp", "Website Form", "Custom"],
+      enum: ["Facebook", "Google", "WhatsApp", "Website Form", "Custom", "Vistrow Voice"],
       required: true,
     },
     mode: {
