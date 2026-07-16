@@ -41,7 +41,10 @@ class _GradientButtonState extends State<GradientButton> {
           const SizedBox(
             width: 16,
             height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
           )
         else if (widget.icon != null)
           Icon(widget.icon, size: 18, color: Colors.white),
@@ -82,34 +85,15 @@ class _GradientButtonState extends State<GradientButton> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: _pressed ? 0.25 : 0.35),
+                  color: AppColors.primary.withValues(
+                    alpha: _pressed ? 0.25 : 0.35,
+                  ),
                   blurRadius: _pressed ? 16 : 24,
                   offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: Stack(
-              children: [
-                // Glossy top highlight, mirrors the web's `::after` overlay.
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 14,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.button)),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.white.withValues(alpha: 0.18), Colors.transparent],
-                      ),
-                    ),
-                  ),
-                ),
-                Center(child: content),
-              ],
-            ),
+            child: Center(child: content),
           ),
         ),
       ),
@@ -124,7 +108,12 @@ class GradientFab extends StatelessWidget {
   final IconData icon;
   final String? label;
 
-  const GradientFab({super.key, required this.onPressed, this.icon = Icons.add, this.label});
+  const GradientFab({
+    super.key,
+    required this.onPressed,
+    this.icon = Icons.add,
+    this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +124,13 @@ class GradientFab extends StatelessWidget {
         end: Alignment.bottomRight,
         colors: [AppColors.primaryDeep, AppColors.primary],
       ),
-      boxShadow: [BoxShadow(color: Color(0x59FF6B00), blurRadius: 20, offset: Offset(0, 8))],
+      boxShadow: [
+        BoxShadow(
+          color: Color(0x59FF6B00),
+          blurRadius: 20,
+          offset: Offset(0, 8),
+        ),
+      ],
     );
 
     if (label == null) {
@@ -144,7 +139,10 @@ class GradientFab extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         shape: const CircleBorder(),
-        child: Ink(decoration: gradient, child: Center(child: Icon(icon, color: Colors.white))),
+        child: Ink(
+          decoration: gradient,
+          child: Center(child: Icon(icon, color: Colors.white)),
+        ),
       );
     }
 
@@ -152,7 +150,9 @@ class GradientFab extends StatelessWidget {
       onPressed: onPressed,
       backgroundColor: Colors.transparent,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.pill)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
       label: Ink(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadii.pill),
@@ -161,7 +161,13 @@ class GradientFab extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [AppColors.primaryDeep, AppColors.primary],
           ),
-          boxShadow: const [BoxShadow(color: Color(0x59FF6B00), blurRadius: 20, offset: Offset(0, 8))],
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x59FF6B00),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -170,7 +176,14 @@ class GradientFab extends StatelessWidget {
             children: [
               Icon(icon, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Text(label!, style: const TextStyle(fontFamily: 'Inter', color: Colors.white, fontWeight: FontWeight.w600)),
+              Text(
+                label!,
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -214,9 +227,17 @@ class SecondaryButton extends StatelessWidget {
             mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (icon != null) ...[Icon(icon, size: 18, color: t.text), const SizedBox(width: 8)],
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: t.text),
+                const SizedBox(width: 8),
+              ],
               DefaultTextStyle(
-                style: TextStyle(fontFamily: 'Inter', color: t.text, fontSize: 14, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: t.text,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
                 child: child,
               ),
             ],
@@ -234,7 +255,13 @@ class GhostButton extends StatelessWidget {
   final IconData? icon;
   final Color? color;
 
-  const GhostButton({super.key, required this.onPressed, required this.child, this.icon, this.color});
+  const GhostButton({
+    super.key,
+    required this.onPressed,
+    required this.child,
+    this.icon,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -253,9 +280,17 @@ class GhostButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[Icon(icon, size: 18, color: c), const SizedBox(width: 6)],
+              if (icon != null) ...[
+                Icon(icon, size: 18, color: c),
+                const SizedBox(width: 6),
+              ],
               DefaultTextStyle(
-                style: TextStyle(fontFamily: 'Inter', color: c, fontSize: 14, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: c,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
                 child: child,
               ),
             ],

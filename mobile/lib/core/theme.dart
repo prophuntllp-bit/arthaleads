@@ -394,21 +394,21 @@ ThemeData buildTheme(Brightness brightness) {
         borderRadius: BorderRadius.circular(AppRadii.button),
       ),
     ),
-    // Every existing showModalBottomSheet/showDialog call site gets the
-    // web's glass-look surface + radii for free — no per-call-site changes.
+    // Overlay surfaces stay opaque so text never competes with the screen
+    // beneath them. Scrolling cards keep the lighter glass-look treatment.
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: t.surfaceHigh,
+      backgroundColor: t.surfaceSolid,
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadii.modal),
         ),
       ),
-      modalBackgroundColor: t.surfaceHigh,
+      modalBackgroundColor: t.surfaceSolid,
       modalElevation: 0,
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: t.surfaceHigh,
+      backgroundColor: t.surfaceSolid,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.card),
@@ -426,7 +426,7 @@ ThemeData buildTheme(Brightness brightness) {
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: t.surfaceHigh,
+      color: t.surfaceSolid,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
