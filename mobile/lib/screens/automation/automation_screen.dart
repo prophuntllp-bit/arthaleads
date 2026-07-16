@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
+import '../../widgets/buttons.dart';
 import 'automation_form.dart';
 import 'routing_rules_screen.dart';
 
@@ -161,14 +163,9 @@ class _AutomationScreenState extends State<AutomationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: GradientFab(onPressed: () => _openForm()),
       body: _loading
-        ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+        ? const Center(child: AppSpinner(size: 32))
         : Column(
             children: [
               Padding(

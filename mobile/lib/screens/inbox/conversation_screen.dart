@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 
 /// WhatsApp message thread — GET /whatsapp/conversations/:id/messages,
 /// POST /whatsapp/send, PATCH /whatsapp/conversations/:id (bot/status).
@@ -207,7 +208,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         children: [
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: AppSpinner(size: 32))
                 : _messages.isEmpty
                     ? const Center(child: Text('No messages yet'))
                     : ListView.builder(

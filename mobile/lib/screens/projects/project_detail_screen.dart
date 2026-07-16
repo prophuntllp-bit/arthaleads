@@ -12,6 +12,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
 import 'project_form.dart';
 
@@ -448,7 +449,7 @@ class _LeadsTabState extends State<_LeadsTab> {
           ),
           Expanded(
             child: _loading && _leads.isEmpty
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: AppSpinner(size: 32))
                 : _leads.isEmpty
                     ? const Center(child: Text('No leads here'))
                     : RefreshIndicator(

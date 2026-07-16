@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 
 const _platformDefaults = {
   'Google': ('/api/leads', 'Use this endpoint from Google Ads landing pages or lead form bridges.'),
@@ -197,9 +198,11 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            ElevatedButton(
+            GradientButton(
+              fullWidth: true,
+              loading: _saving,
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : (_isEdit ? 'Save Changes' : 'Add Source')),
+              child: Text(_isEdit ? 'Save Changes' : 'Add Source'),
             ),
           ],
         ),

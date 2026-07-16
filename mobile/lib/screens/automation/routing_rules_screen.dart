@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 const _matchFields = ['form_id', 'campaign_id', 'adset_id', 'ad_id'];
 
@@ -135,33 +137,31 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                 onChanged: (v) => setSheet(() => assignTo = v),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (labelCtrl.text.trim().isEmpty || valueCtrl.text.trim().isEmpty || assignTo == null) {
-                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('All fields are required')));
-                      return;
+              GradientButton(
+                fullWidth: true,
+                onPressed: () async {
+                  if (labelCtrl.text.trim().isEmpty || valueCtrl.text.trim().isEmpty || assignTo == null) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('All fields are required')));
+                    return;
+                  }
+                  try {
+                    await _api.dio.post('/routing-rules', data: {
+                      'label': labelCtrl.text.trim(),
+                      'matchField': matchField,
+                      'matchValue': valueCtrl.text.trim(),
+                      'assignTo': assignTo,
+                    });
+                    if (ctx.mounted) Navigator.pop(ctx, true);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                        content: Text(ApiClient.errorMessage(e, 'Failed to create rule')),
+                        backgroundColor: AppColors.danger,
+                      ));
                     }
-                    try {
-                      await _api.dio.post('/routing-rules', data: {
-                        'label': labelCtrl.text.trim(),
-                        'matchField': matchField,
-                        'matchValue': valueCtrl.text.trim(),
-                        'assignTo': assignTo,
-                      });
-                      if (ctx.mounted) Navigator.pop(ctx, true);
-                    } catch (e) {
-                      if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                          content: Text(ApiClient.errorMessage(e, 'Failed to create rule')),
-                          backgroundColor: AppColors.danger,
-                        ));
-                      }
-                    }
-                  },
-                  child: const Text('Create Rule'),
-                ),
+                  }
+                },
+                child: const Text('Create Rule'),
               ),
               const SizedBox(height: 16),
             ],
@@ -176,11 +176,9 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Lead Routing Rules')),
-      floatingActionButton: _planError == null
-          ? FloatingActionButton(onPressed: _addRule, child: const Icon(Icons.add))
-          : null,
+      floatingActionButton: _planError == null ? GradientFab(onPressed: _addRule) : null,
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : _planError != null
               ? Padding(
                   padding: const EdgeInsets.all(24),

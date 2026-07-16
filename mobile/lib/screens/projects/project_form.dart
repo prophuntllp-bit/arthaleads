@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 
 /// Add / edit a project — POST /projects or PUT /projects/:id.
 /// Images/amenities/BHK types are entered as comma-separated lists rather
@@ -126,9 +127,11 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            ElevatedButton(
+            GradientButton(
+              fullWidth: true,
+              loading: _saving,
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : (isEdit ? 'Save Changes' : 'Add Project')),
+              child: Text(isEdit ? 'Save Changes' : 'Add Project'),
             ),
           ],
         ),

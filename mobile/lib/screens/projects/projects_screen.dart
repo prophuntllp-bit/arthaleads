@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 import 'project_detail_screen.dart';
 import 'project_form.dart';
 
@@ -86,14 +88,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: GradientFab(onPressed: () => _openForm()),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : _projects.isEmpty
               ? const Center(child: Text('No projects yet — tap + to add one'))
               : RefreshIndicator(
@@ -108,7 +105,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           .map((u) => u is Map ? u['name'] as String? ?? '' : '')
                           .where((n) => n.isNotEmpty)
                           .join(', ');
-                      return Card(
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: 20 * (i % 12)),
+                        child: Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         child: ListTile(
                           leading: Container(
@@ -152,6 +151,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             );
                             _load();
                           },
+                        ),
                         ),
                       );
                     },

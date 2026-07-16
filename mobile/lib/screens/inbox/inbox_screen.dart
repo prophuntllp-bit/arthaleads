@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 import 'conversation_screen.dart';
 
 const _filters = [
@@ -171,7 +172,7 @@ class _InboxScreenState extends State<InboxScreen> {
         ),
         Expanded(
           child: _loading && _conversations.isEmpty
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(child: AppSpinner(size: 32))
               : _conversations.isEmpty
                   ? const Center(child: Text('No conversations yet'))
                   : RefreshIndicator(
@@ -185,7 +186,9 @@ class _InboxScreenState extends State<InboxScreen> {
                           final unread = (c['unreadCount'] as num?)?.toInt() ?? 0;
                           final contactName = c['contactName'] as String? ?? c['contactPhone'] as String? ?? '—';
                           final botEnabled = c['botEnabled'] == true;
-                          return ListTile(
+                          return FadeSlideIn(
+                            delay: Duration(milliseconds: 15 * (i % 15)),
+                            child: ListTile(
                             leading: Stack(
                               clipBehavior: Clip.none,
                               children: [
@@ -257,6 +260,7 @@ class _InboxScreenState extends State<InboxScreen> {
                               );
                               _load(reset: true, silent: true);
                             },
+                          ),
                           );
                         },
                       ),
