@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 
 /// Full call history + AI analysis for one lead.
 /// GET /calls/lead/:leadId, POST /calls/:leadId/:activityId/summarize,
@@ -124,7 +125,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,

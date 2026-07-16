@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 import 'invoice_pdf.dart';
 
 /// Invoices — GET /invoices, PATCH /invoices/:id/status, PATCH /invoices/:id/number.
@@ -195,7 +196,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         const SizedBox(height: 4),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(child: AppSpinner(size: 32))
               : filtered.isEmpty
                   ? const Center(child: Text('No invoices yet'))
                   : RefreshIndicator(
@@ -211,7 +212,9 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                               ? inv['customInvoiceNumber']
                               : inv['invoiceNumber'];
                           final generating = _generatingId == inv['_id'];
-                          return Card(
+                          return FadeSlideIn(
+                            delay: Duration(milliseconds: 20 * (i % 12)),
+                            child: Card(
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -279,6 +282,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                   ),
                                 ],
                               ),
+                            ),
                             ),
                           );
                         },

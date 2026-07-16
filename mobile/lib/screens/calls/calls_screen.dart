@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 import 'call_history_screen.dart';
 
 /// Calls — GET /calls (per-lead call history), GET /calls/stats,
@@ -179,7 +180,7 @@ class _CallsScreenState extends State<CallsScreen> {
     if (_analyticsLoading) {
       return const Padding(
         padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        child: Center(child: AppSpinner(size: 32)),
       );
     }
     final volumeByDay = (_analytics?['volumeByDay'] as List? ?? []).cast<Map>();
@@ -347,7 +348,7 @@ class _CallsScreenState extends State<CallsScreen> {
         ),
         Expanded(
           child: _loading && _calls.isEmpty
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(child: AppSpinner(size: 32))
               : _calls.isEmpty
                   ? const Center(child: Text('No calls yet'))
                   : RefreshIndicator(
@@ -360,7 +361,9 @@ class _CallsScreenState extends State<CallsScreen> {
                           final row = _calls[i];
                           final color = _statusColor(row['lastStatus'] as String?);
                           final calling = _callingLeadId == row['leadId'];
-                          return Card(
+                          return FadeSlideIn(
+                            delay: Duration(milliseconds: 20 * (i % 12)),
+                            child: Card(
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             child: ListTile(
                               onTap: () => Navigator.of(context).push(MaterialPageRoute(
@@ -423,6 +426,7 @@ class _CallsScreenState extends State<CallsScreen> {
                                       style: Theme.of(context).textTheme.bodySmall),
                                 ],
                               ),
+                            ),
                             ),
                           );
                         },

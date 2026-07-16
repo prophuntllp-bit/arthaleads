@@ -14,6 +14,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 /// Attendance — GET /attendance/status, POST /attendance/clockin, /clockout,
 /// GET /attendance (history), GET /attendance/team-today, GET /attendance/export,
@@ -266,30 +268,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   onChanged: (v) => setSheet(() => requireSelfie = v),
                 ),
                 const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await _api.dio.patch('/org/me/attendance-settings', data: {
-                          'shiftStartTime': startCtrl.text.trim(),
-                          'shiftEndTime': endCtrl.text.trim(),
-                          'bufferMinutes': int.tryParse(bufferCtrl.text) ?? 15,
-                          'requireSelfie': requireSelfie,
-                        });
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _load();
-                      } catch (e) {
-                        if (ctx.mounted) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                            content: Text(ApiClient.errorMessage(e, 'Failed to save')),
-                            backgroundColor: AppColors.danger,
-                          ));
-                        }
+                GradientButton(
+                  fullWidth: true,
+                  onPressed: () async {
+                    try {
+                      await _api.dio.patch('/org/me/attendance-settings', data: {
+                        'shiftStartTime': startCtrl.text.trim(),
+                        'shiftEndTime': endCtrl.text.trim(),
+                        'bufferMinutes': int.tryParse(bufferCtrl.text) ?? 15,
+                        'requireSelfie': requireSelfie,
+                      });
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      _load();
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                          content: Text(ApiClient.errorMessage(e, 'Failed to save')),
+                          backgroundColor: AppColors.danger,
+                        ));
                       }
-                    },
-                    child: const Text('Save'),
-                  ),
+                    }
+                  },
+                  child: const Text('Save'),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -332,7 +332,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final done = clockIn != null && clockOut != null;
 
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const Center(child: AppSpinner(size: 32));
     }
 
     return Column(
