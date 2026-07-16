@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 const _unitTypes = ['Flat', 'Plot', 'Villa', 'Shop', 'Office', 'Other'];
 
@@ -401,7 +403,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton(
+                  GradientButton(
+                    fullWidth: true,
                     onPressed: () async {
                       if (customerCtrl.text.trim().isEmpty) return;
                       if (projectCtrl.text.trim().isEmpty) return;
@@ -463,12 +466,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
     final countPaid = _bookings.where((b) => b['status'] == 'payment_received').length;
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: GradientFab(onPressed: () => _openForm()),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
@@ -516,7 +516,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       child: Center(child: Text('No bookings yet')),
                     )
                   else
-                    for (final b in _filtered) _bookingCard(b),
+                    for (final (i, b) in _filtered.indexed)
+                      FadeSlideIn(delay: Duration(milliseconds: 20 * (i % 12)), child: _bookingCard(b)),
                 ],
               ),
             ),

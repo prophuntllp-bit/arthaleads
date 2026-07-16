@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 /// Team — GET/POST/PATCH/DELETE /auth/users. Unlike most other admin-only
 /// screens, the backend restricts this strictly to role === "admin" (not
@@ -159,7 +161,8 @@ class _TeamScreenState extends State<TeamScreen> {
                   onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
+                GradientButton(
+                  fullWidth: true,
                   onPressed: () async {
                     final data = {
                       'name': nameCtrl.text.trim(),
@@ -210,12 +213,9 @@ class _TeamScreenState extends State<TeamScreen> {
     }
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        child: const Icon(Icons.person_add_rounded),
-      ),
+      floatingActionButton: GradientFab(onPressed: () => _openForm(), icon: Icons.person_add_rounded),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
@@ -226,7 +226,9 @@ class _TeamScreenState extends State<TeamScreen> {
                   final u = _users[i];
                   final active = u['isActive'] != false;
                   final roleColor = _roleColor(u['role'] as String?);
-                  return Card(
+                  return FadeSlideIn(
+                    delay: Duration(milliseconds: 20 * (i % 12)),
+                    child: Card(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: ListTile(
                       onTap: () => _openForm(user: u),
@@ -256,6 +258,7 @@ class _TeamScreenState extends State<TeamScreen> {
                           ),
                         ],
                       ),
+                    ),
                     ),
                   );
                 },

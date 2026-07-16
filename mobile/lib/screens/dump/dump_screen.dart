@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/motion.dart';
 
 /// Dump Leads — GET /leads/dump (deleted/lost pipeline leads + "Not
 /// Interested" project leads, merged). Restore/permanent-delete branch by
@@ -340,7 +341,7 @@ class _DumpScreenState extends State<DumpScreen> {
         ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+              ? const Center(child: AppSpinner(size: 32))
               : filtered.isEmpty
                   ? Center(child: Text(_search.isNotEmpty ? 'No matches' : 'Dump is empty'))
                   : RefreshIndicator(

@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 const _billingRequired = ['address', 'gstNo', 'pan', 'bankAccountName', 'bankAccountNo', 'bankIfsc'];
 
@@ -440,9 +442,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        ElevatedButton(
+        GradientButton(
+          fullWidth: true,
+          loading: _savingProfile,
           onPressed: _savingProfile ? null : _saveProfile,
-          child: Text(_savingProfile ? 'Saving…' : 'Save Changes'),
+          child: const Text('Save Changes'),
         ),
         const SizedBox(height: 24),
       ],
@@ -527,9 +531,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _billingField('bankIfsc', 'IFSC Code', mono: true, numbers: true),
         _billingField('bankName', 'Bank Name'),
         _billingField('bankBranch', 'Branch / Address'),
-        ElevatedButton(
+        GradientButton(
+          fullWidth: true,
+          loading: _savingBilling,
           onPressed: _savingBilling ? null : _saveBilling,
-          child: Text(_savingBilling ? 'Saving…' : 'Save Billing Details'),
+          child: const Text('Save Billing Details'),
         ),
         const SizedBox(height: 24),
         const Divider(),
@@ -582,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       'completed': Color(0xFF6B7280),
     };
 
-    if (_loadingAccess) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_loadingAccess) return const Center(child: AppSpinner(size: 32));
 
     return RefreshIndicator(
       color: AppColors.primary,
