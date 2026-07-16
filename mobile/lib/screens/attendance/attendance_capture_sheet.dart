@@ -365,13 +365,7 @@ class _AttendanceCaptureSheetState extends State<AttendanceCaptureSheet>
           if (scale < 1) scale = 1 / scale;
           return Transform.scale(
             scale: scale,
-            child: Center(
-              child: Transform(
-                alignment: Alignment.center,
-                transform: Matrix4.diagonal3Values(-1, 1, 1),
-                child: CameraPreview(controller),
-              ),
-            ),
+            child: Center(child: CameraPreview(controller)),
           );
         },
       );
