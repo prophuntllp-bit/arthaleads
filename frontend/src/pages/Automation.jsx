@@ -1264,12 +1264,100 @@ function GoogleCard({ conn, endpoint, onDelete, copyText }) {
   );
 }
 
+/* ─── Google Ads: OAuth-connected account card ─────────────────────────────── */
+function GoogleOAuthCard({ conn, onDelete, onSync }) {
+  const [syncing, setSyncing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const isConnected = conn.status === "connected";
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await onSync(conn.id);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/automations/${conn.id}`);
+      onDelete(conn.id);
+      toast.success("Connection removed");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-red-500"}`}>
+          <SearchCheck className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>{conn.name}</p>
+          <p className={`text-xs truncate ${isConnected ? "text-white/70" : "text-app-soft"}`}>
+            {conn.googleCustomerName || "Google Ads account"}{conn.googleCustomerId ? ` · ${conn.googleCustomerId}` : ""}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white" style={!isConnected ? { background: "rgba(249,115,22,0.2)", color: "#fb923c" } : undefined}>
+            {isConnected ? "✓ Connected" : "Pending"}
+          </span>
+          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <p className="text-xs text-app-soft">
+          {conn.lastSyncAt ? `Last synced: ${new Date(conn.lastSyncAt).toLocaleString()}` : "Not synced yet"}
+        </p>
+        <button onClick={handleSync} disabled={syncing} className="btn-secondary rounded-xl px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0">
+          {syncing ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          {syncing ? "Syncing…" : "Sync now"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Google Ads wizard ─────────────────────────────────────────────────────── */
+function GoogleGIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
+        c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24
+        c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+      <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039
+        l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36
+        c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+      <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571
+        c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+    </svg>
+  );
+}
+
 function GoogleWizard({ open, onClose, onChanged }) {
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState([]);
   const [adding, setAdding] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // OAuth ("Sign in with Google") state
+  const [oauthConnecting, setOauthConnecting] = useState(false);
+  const [pendingOAuth, setPendingOAuth] = useState(null); // { customers, accessToken, refreshToken }
+  const [pendingCustomerId, setPendingCustomerId] = useState("");
+  const [pendingName, setPendingName] = useState("");
+  const [savingOAuth, setSavingOAuth] = useState(false);
+  const popupTimerRef = useRef(null);
 
   const serverBase = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
   const endpoint = `${serverBase}/webhook/google`;
@@ -1289,6 +1377,102 @@ function GoogleWizard({ open, onClose, onChanged }) {
     return () => clearInterval(interval);
   }, [open, load]);
 
+  useEffect(() => {
+    if (!open) { setPendingOAuth(null); setOauthConnecting(false); }
+  }, [open]);
+
+  // Listen for the OAuth popup result (postMessage primary, storage fallback)
+  useEffect(() => {
+    const handleResult = (result) => {
+      clearInterval(popupTimerRef.current);
+      setOauthConnecting(false);
+
+      if (result.type === "google_oauth_success") {
+        const customers = result.customers || [];
+        if (!customers.length) {
+          toast.error("No Google Ads accounts found for this login. Make sure you signed in with an account that has access to an Ads account.");
+          return;
+        }
+        setPendingOAuth({ customers, accessToken: result.accessToken, refreshToken: result.refreshToken });
+        setPendingCustomerId(customers[0].id);
+        setPendingName(customers[0].name !== customers[0].id ? customers[0].name : "Google Ads");
+        toast.success("Google connected! Choose your Ads account.");
+      }
+      if (result.type === "google_oauth_error") {
+        toast.error(result.message || "Google connection failed. Please try again.");
+      }
+    };
+
+    const onMessage = (e) => {
+      const d = e.data;
+      if (!d || typeof d.type !== "string" || !d.type.startsWith("google_oauth")) return;
+      handleResult(d);
+    };
+    const onStorage = (e) => {
+      if (e.key !== "google_oauth_result" || !e.newValue) return;
+      let result;
+      try { result = JSON.parse(e.newValue); } catch { return; }
+      localStorage.removeItem("google_oauth_result");
+      handleResult(result);
+    };
+
+    window.addEventListener("message", onMessage);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
+
+  useEffect(() => () => clearInterval(popupTimerRef.current), []);
+
+  const openGoogleOAuth = () => {
+    setOauthConnecting(true);
+    const url = `${serverBase}/api/automations/google/connect`;
+    const popup = window.open(url, `arthaleads-google-oauth-${Date.now()}`, "width=520,height=680,resizable=yes,scrollbars=yes");
+
+    if (!popup) {
+      setOauthConnecting(false);
+      toast.error("Please allow popups for this site, then try again.");
+      return;
+    }
+
+    clearInterval(popupTimerRef.current);
+    popupTimerRef.current = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(popupTimerRef.current);
+        setOauthConnecting((prev) => {
+          if (prev) toast("Google window closed. Click 'Sign in with Google' to try again.", { icon: "ℹ️" });
+          return false;
+        });
+      }
+    }, 600);
+  };
+
+  const handleSaveOAuth = async () => {
+    if (!pendingCustomerId) { toast.error("Please choose a Google Ads account"); return; }
+    if (!pendingName.trim()) { toast.error("Please give this connection a name"); return; }
+    setSavingOAuth(true);
+    try {
+      const chosen = pendingOAuth.customers.find((c) => c.id === pendingCustomerId);
+      await api.post("/automations/google/oauth-create", {
+        name: pendingName.trim(),
+        customerId: pendingCustomerId,
+        customerName: chosen?.name || pendingCustomerId,
+        accessToken: pendingOAuth.accessToken,
+        refreshToken: pendingOAuth.refreshToken,
+      });
+      toast.success("Google Ads account connected! First lead sync will run shortly.");
+      setPendingOAuth(null);
+      onChanged?.();
+      await load(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save. Please try again.");
+    } finally {
+      setSavingOAuth(false);
+    }
+  };
+
   const handleAdd = async () => {
     setAdding(true);
     try {
@@ -1303,12 +1487,26 @@ function GoogleWizard({ open, onClose, onChanged }) {
     }
   };
 
+  const handleSyncNow = async (id) => {
+    try {
+      const { data } = await api.post(`/automations/google/${id}/sync`);
+      toast.success(data.message || "Synced");
+      await load(false);
+      onChanged?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Sync failed");
+    }
+  };
+
   const copyText = (text, label) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied`);
   };
 
   if (!open) return null;
+
+  const oauthConns = connections.filter((c) => c.mode === "oauth");
+  const webhookConns = connections.filter((c) => c.mode !== "oauth");
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -1319,23 +1517,49 @@ function GoogleWizard({ open, onClose, onChanged }) {
             <SearchCheck className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-app">Google Ads Lead Form</h2>
-            <p className="text-xs text-app-soft">Native webhook — no login required, each connection gets its own key</p>
+            <h2 className="text-lg font-bold text-app">Google Ads</h2>
+            <p className="text-xs text-app-soft">Sign in with Google — or connect manually via webhook</p>
           </div>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
           {loading ? (
             <div className="flex justify-center py-8"><Spinner /></div>
+          ) : pendingOAuth ? (
+            /* ── Step: choose which Ads account to link ── */
+            <div className="space-y-4">
+              <p className="text-sm text-app-soft">Choose the Google Ads account to pull leads from.</p>
+              <div>
+                <label className="label">Google Ads Account</label>
+                <CustomSelect
+                  value={pendingCustomerId}
+                  onChange={setPendingCustomerId}
+                  options={pendingOAuth.customers.map((c) => ({ value: c.id, label: c.name !== c.id ? `${c.name} (${c.id})` : c.id }))}
+                  style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
+                />
+              </div>
+              <div>
+                <label className="label">Connection Name</label>
+                <input className="input" value={pendingName} onChange={(e) => setPendingName(e.target.value)} placeholder="e.g. Acme Realty Ads" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" className="btn-secondary flex-1 rounded-xl" onClick={() => setPendingOAuth(null)}>Cancel</button>
+                <button type="button" className="btn-primary flex-1 rounded-xl" onClick={handleSaveOAuth} disabled={savingOAuth}>
+                  {savingOAuth ? <><Spinner size="sm" /> Saving…</> : "Connect"}
+                </button>
+              </div>
+            </div>
           ) : (
             <>
-              {connections.length === 0 && (
-                <p className="text-sm text-app-soft">
-                  Create a connection to get a Webhook URL and Key, then paste both into your Google Ads Lead Form extension. No sign-in or approval needed.
-                </p>
-              )}
-
-              {connections.map((conn) => (
+              {oauthConns.map((conn) => (
+                <GoogleOAuthCard
+                  key={conn.id}
+                  conn={conn}
+                  onSync={handleSyncNow}
+                  onDelete={(id) => { setConnections((prev) => prev.filter((c) => c.id !== id)); onChanged?.(); }}
+                />
+              ))}
+              {webhookConns.map((conn) => (
                 <GoogleCard
                   key={conn.id}
                   conn={conn}
@@ -1347,42 +1571,71 @@ function GoogleWizard({ open, onClose, onChanged }) {
 
               <button
                 type="button"
-                onClick={handleAdd}
-                disabled={adding}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-red-500 hover:text-red-400 transition"
+                onClick={openGoogleOAuth}
+                disabled={oauthConnecting}
+                className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-3 text-sm font-semibold border transition disabled:opacity-60"
+                style={{ background: "var(--app-surface-low)", borderColor: "var(--app-border)", color: "var(--app-text)" }}
               >
-                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
-                {adding ? "Creating…" : connections.length ? "Add Another Connection" : "Add Google Ads Connection"}
+                {oauthConnecting ? <Spinner size="sm" /> : <GoogleGIcon />}
+                {oauthConnecting ? "Waiting for Google…" : "Sign in with Google"}
               </button>
-
-              <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--app-surface-low)" }}>
-                <p className="text-xs font-bold text-app-soft uppercase tracking-wider">How to connect</p>
-                {[
-                  'Click "Add Google Ads Connection" to generate your Webhook URL and Key.',
-                  "In Google Ads, open Tools & Settings → Conversions → Lead form extension.",
-                  "Select your form → Webhook integration → paste the Webhook URL and Key → Save.",
-                  'Click "Send test lead" in Google Ads to verify — it appears here labeled as a test.',
-                ].map((t, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-xs font-bold mt-0.5">{i + 1}</span>
-                    <p className="text-sm text-app-soft">{t}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-xs text-app-soft text-center -mt-2">
+                Requires a Google Ads Developer Token on the account — ask your admin if this isn't set up yet.
+              </p>
 
               <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
                 <button
                   type="button"
-                  onClick={() => setShowAdvanced((v) => !v)}
+                  onClick={() => setShowManual((v) => !v)}
                   className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
                 >
-                  <span>Developer details (optional)</span>
-                  <ChevronRight className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
+                  <span>Or connect manually via webhook</span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showManual ? "rotate-90" : ""}`} />
                 </button>
-                {showAdvanced && (
-                  <div className="px-4 py-3 space-y-2" style={{ borderTop: "1px solid var(--app-border)" }}>
-                    <p className="text-xs text-app-soft">This is Google Ads' own webhook payload — you don't need to build anything, Google sends this automatically once connected.</p>
-                    <p className="text-xs text-app-soft">Standard fields recognized: <span className="text-red-400 font-semibold">FULL_NAME</span> (or FIRST_NAME + LAST_NAME), <span className="text-red-400 font-semibold">PHONE_NUMBER</span>, <span className="text-red-400 font-semibold">EMAIL</span>. Any other question is saved as a custom answer on the lead.</p>
+                {showManual && (
+                  <div className="px-4 py-4 space-y-4" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <p className="text-xs text-app-soft">No sign-in or Developer Token needed — Google pushes leads to a URL you paste into the Lead Form extension.</p>
+
+                    <button
+                      type="button"
+                      onClick={handleAdd}
+                      disabled={adding}
+                      className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-red-500 hover:text-red-400 transition"
+                    >
+                      {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
+                      {adding ? "Creating…" : webhookConns.length ? "Add Another Connection" : "Add Google Ads Connection"}
+                    </button>
+
+                    <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--app-surface-low)" }}>
+                      {[
+                        'Click "Add Google Ads Connection" to generate your Webhook URL and Key.',
+                        "In Google Ads, open Tools & Settings → Conversions → Lead form extension.",
+                        "Select your form → Webhook integration → paste the Webhook URL and Key → Save.",
+                        'Click "Send test lead" in Google Ads to verify — it appears here labeled as a test.',
+                      ].map((t, i) => (
+                        <div key={i} className="flex items-start gap-3">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-xs font-bold mt-0.5">{i + 1}</span>
+                          <p className="text-sm text-app-soft">{t}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced((v) => !v)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
+                      >
+                        <span>Developer details (optional)</span>
+                        <ChevronRight className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
+                      </button>
+                      {showAdvanced && (
+                        <div className="px-4 py-3 space-y-2" style={{ borderTop: "1px solid var(--app-border)" }}>
+                          <p className="text-xs text-app-soft">This is Google Ads' own webhook payload — you don't need to build anything, Google sends this automatically once connected.</p>
+                          <p className="text-xs text-app-soft">Standard fields recognized: <span className="text-red-400 font-semibold">FULL_NAME</span> (or FIRST_NAME + LAST_NAME), <span className="text-red-400 font-semibold">PHONE_NUMBER</span>, <span className="text-red-400 font-semibold">EMAIL</span>. Any other question is saved as a custom answer on the lead.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1784,6 +2037,17 @@ export default function Automation() {
                           </button>
                         </div>
                       </div>
+                    </div>
+                  ) : item.platform === "Google" && item.mode === "oauth" ? (
+                    <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
+                      <div>
+                        <p className="text-xs text-app-soft mb-0.5">Google Ads Account</p>
+                        <p className="font-semibold text-sm text-app truncate">{item.googleCustomerName || "Not selected"}</p>
+                        {item.googleCustomerId && <p className="text-xs text-app-soft">{item.googleCustomerId}</p>}
+                      </div>
+                      <p className="text-xs text-app-soft">
+                        {item.lastSyncAt ? `Last synced: ${new Date(item.lastSyncAt).toLocaleString()}` : "Not synced yet"} — click Edit to sync now.
+                      </p>
                     </div>
                   ) : item.platform === "Google" ? (
                     <div className="rounded-xl p-3 stitch-surface-muted space-y-3">

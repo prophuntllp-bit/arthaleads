@@ -270,7 +270,10 @@ const automationController = {
         connections: automations.map((a) => ({
           id: a._id,
           name: a.name,
-          token: a.verifyToken, // this is the "Webhook Key" in Google Ads' UI
+          mode: a.mode, // "webhook" (URL+Key) or "oauth" (Sign in with Google)
+          token: a.verifyToken, // this is the "Webhook Key" in Google Ads' UI — empty for oauth-mode
+          googleCustomerId: a.googleCustomerId || "",
+          googleCustomerName: a.googleCustomerName || "",
           status: a.status,
           lastSyncAt: a.lastSyncAt,
         })),
