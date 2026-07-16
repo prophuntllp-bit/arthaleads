@@ -256,11 +256,17 @@ ThemeData buildTheme(Brightness brightness) {
       centerTitle: false,
       toolbarHeight: 58,
       systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarColor: AppColors.primary,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: AppColors.primary,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarColor: t.bg,
+        statusBarIconBrightness: brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: brightness,
+        systemNavigationBarColor: t.bg,
+        systemNavigationBarDividerColor: t.border,
+        systemNavigationBarIconBrightness: brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        systemNavigationBarContrastEnforced: false,
       ),
       titleTextStyle: TextStyle(
         fontFamily: 'Inter',
