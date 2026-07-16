@@ -106,6 +106,15 @@ class _ShellState extends State<Shell> {
     if (match != -1) setState(() => _index = match);
   }
 
+  void _navigateToLabel(String label) {
+    final auth = context.read<AuthState>();
+    final visible = _items
+        .where((item) => !item.adminOnly || auth.isAdmin)
+        .toList();
+    final index = visible.indexWhere((item) => item.label == label);
+    if (index != -1) setState(() => _index = index);
+  }
+
   static final List<_NavItem> _items = [
     _NavItem(
       'Dashboard',
@@ -181,10 +190,9 @@ class _ShellState extends State<Shell> {
     final visible = _items.where((i) => !i.adminOnly || auth.isAdmin).toList();
     if (_index >= visible.length) _index = 0;
     final current = visible[_index];
-    final currentScreen = _screenCache.putIfAbsent(
-      current.label,
-      current.builder,
-    );
+    final currentScreen = current.label == 'Dashboard'
+        ? DashboardScreen(onNavigate: _navigateToLabel)
+        : _screenCache.putIfAbsent(current.label, current.builder);
 
     return AppBackdrop(
       child: Scaffold(

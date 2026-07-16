@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -9,6 +12,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
+import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_form.dart';
 
 const _dateRangePresets = [
@@ -42,28 +46,62 @@ Color _sourceColor(String s, int i) {
 /// Dashboard — GET /leads/analytics + /leads/hot + /leads/followups-due.
 /// Mobile-first condensation of the web dashboard's zoned layout.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  const DashboardScreen({super.key, this.onNavigate});
+
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   final _api = ApiClient.instance;
   Map<String, dynamic>? _analytics;
   List<Map<String, dynamic>> _hot = [];
   List<Map<String, dynamic>> _due = [];
+  List<Map<String, dynamic>> _stale = [];
+  List<Map<String, dynamic>> _projects = [];
+  List<Map<String, dynamic>> _team = [];
+  List<Map<String, dynamic>> _automations = [];
+  Map<String, dynamic>? _attendance;
+  bool _requireSelfie = true;
   bool _loading = true;
+  bool _refreshing = false;
+  bool _analyticsError = false;
+  bool _clocking = false;
   String _dateRange = 'last30days';
   int? _goalOverride;
   List<String> _insights = [];
   bool _insightsOpen = false;
   bool _insightsLoading = false;
+  Timer? _refreshTimer;
+  DateTime? _lastLoadedAt;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) _load(background: true);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        (_lastLoadedAt == null ||
+            DateTime.now().difference(_lastLoadedAt!).inSeconds > 20)) {
+      _load(background: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   /// Swallow individual widget failures — one failed panel must not blank the page.
@@ -75,8 +113,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool background = false}) async {
+    if (_refreshing) return;
+    setState(() {
+      _refreshing = true;
+      if (!background && _analytics == null) _loading = true;
+    });
     // Parallel fetch — mirrors the web dashboard's parallel-fetch fix.
     final results = await Future.wait<dynamic>([
       _tryGet(
@@ -85,10 +127,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       _tryGet('/leads/hot', {'limit': 5}),
       _tryGet('/leads/followups-due'),
+      _tryGet('/leads/stale'),
+      _tryGet('/projects/stats'),
+      _tryGet('/attendance/team-today'),
+      _tryGet('/automations'),
+      _tryGet('/attendance/status'),
     ]);
     if (!mounted) return;
+    final analytics = (results[0]?.data['data'] as Map?)
+        ?.cast<String, dynamic>();
     setState(() {
-      _analytics = (results[0]?.data['data'] as Map?)?.cast<String, dynamic>();
+      if (analytics != null) _analytics = analytics;
+      _analyticsError = analytics == null;
       _hot = ((results[1]?.data['data'] as List?) ?? [])
           .cast<Map<String, dynamic>>();
       final dueRaw = results[2]?.data['data'];
@@ -97,8 +147,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : dueRaw is Map && dueRaw['leads'] is List
           ? (dueRaw['leads'] as List).cast<Map<String, dynamic>>()
           : [];
+      _stale = ((results[3]?.data['data'] as List?) ?? [])
+          .cast<Map<String, dynamic>>();
+      _projects = ((results[4]?.data['data'] as List?) ?? [])
+          .cast<Map<String, dynamic>>();
+      _team = ((results[5]?.data['data'] as List?) ?? [])
+          .cast<Map<String, dynamic>>();
+      _automations = ((results[6]?.data['automations'] as List?) ?? [])
+          .cast<Map<String, dynamic>>();
+      _attendance = (results[7]?.data['data'] as Map?)?.cast<String, dynamic>();
+      _requireSelfie =
+          results[7]?.data['requireSelfie'] as bool? ?? _requireSelfie;
       _goalOverride = null;
       _loading = false;
+      _refreshing = false;
+      _lastLoadedAt = DateTime.now();
     });
   }
 
@@ -167,6 +230,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
       FadeSlidePageRoute(builder: (_) => LeadFormScreen(agents: agents)),
     );
     if (saved == true) _load();
+  }
+
+  Future<void> _clockAttendance() async {
+    if (_clocking) return;
+    final clockedIn =
+        _attendance?['clockIn'] != null && _attendance?['clockOut'] == null;
+    AttendanceCaptureResult proof = const AttendanceCaptureResult();
+    if (_requireSelfie) {
+      final captured = await showModalBottomSheet<AttendanceCaptureResult>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: AppTheme.of(context).surfaceSolid,
+        barrierColor: Colors.black.withValues(alpha: .78),
+        builder: (_) => FractionallySizedBox(
+          heightFactor: .94,
+          child: AttendanceCaptureSheet(
+            clockIn: !clockedIn,
+            requiredProof: true,
+          ),
+        ),
+      );
+      if (captured == null) return;
+      proof = captured;
+    }
+    setState(() => _clocking = true);
+    try {
+      final response = await _api.dio.post(
+        '/attendance/${clockedIn ? 'clockout' : 'clockin'}',
+        data: {
+          if (proof.selfie != null) 'selfie': proof.selfie,
+          if (proof.latitude != null) 'lat': proof.latitude,
+          if (proof.longitude != null) 'lng': proof.longitude,
+          if (proof.accuracy != null) 'accuracy': proof.accuracy,
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _attendance = (response.data['data'] as Map?)
+              ?.cast<String, dynamic>();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(error, 'Attendance action failed'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _clocking = false);
+    }
   }
 
   Future<void> _generateInsights() async {
@@ -478,9 +597,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final now = DateTime.now();
     final overdue = _due.where((lead) {
       final raw = lead['followUpDate'] as String?;
-      final date = raw == null ? null : DateTime.tryParse(raw);
+      final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
       return date != null &&
           date.isBefore(DateTime(now.year, now.month, now.day));
+    }).length;
+    final dueToday = _due.where((lead) {
+      final raw = lead['followUpDate'] as String?;
+      final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
+      return date != null &&
+          date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day;
     }).length;
     final hot = _hot.isEmpty ? null : _hot.first;
 
@@ -517,7 +644,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$overdue overdue · ${_due.length} due today',
+                      '$overdue overdue · $dueToday due today',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -693,6 +820,548 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _attendanceCard(BuildContext context) {
+    final clockIn = DateTime.tryParse(
+      '${_attendance?['clockIn'] ?? ''}',
+    )?.toLocal();
+    final clockOut = DateTime.tryParse(
+      '${_attendance?['clockOut'] ?? ''}',
+    )?.toLocal();
+    final working = clockIn != null && clockOut == null;
+    final done = clockIn != null && clockOut != null;
+    return SoftSurface(
+      radius: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            working ? Icons.timer_outlined : Icons.fingerprint_rounded,
+            color: working ? AppColors.success : AppColors.primary,
+            size: 28,
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  working
+                      ? 'Clocked in ${DateFormat('hh:mm a').format(clockIn)}'
+                      : done
+                      ? 'Attendance completed'
+                      : 'Not clocked in',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Text(
+                  working
+                      ? 'Tap to clock out'
+                      : done
+                      ? '${DateFormat('hh:mm a').format(clockIn)} – ${DateFormat('hh:mm a').format(clockOut)}'
+                      : 'Selfie and location may be required',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: AppTheme.of(context).textSoft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!done)
+            FilledButton(
+              onPressed: _clocking ? null : _clockAttendance,
+              style: FilledButton.styleFrom(
+                backgroundColor: working ? AppColors.danger : AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 13,
+                  vertical: 9,
+                ),
+              ),
+              child: _clocking
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(working ? 'Clock Out' : 'Clock In'),
+            )
+          else
+            IconButton(
+              onPressed: () => widget.onNavigate?.call('Attendance'),
+              icon: const Icon(Icons.arrow_forward_rounded),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _upcomingSection(BuildContext context, Map<String, dynamic> data) {
+    final items = (data['upcomingItems'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
+    if (items.isEmpty) return const SizedBox.shrink();
+    return SoftSurface(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          ListTile(
+            dense: true,
+            leading: const Icon(
+              Icons.calendar_month_rounded,
+              color: Color(0xFF6366F1),
+            ),
+            title: const Text(
+              'Upcoming 48 hours',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+            trailing: _smallBadge('${items.length}', const Color(0xFF6366F1)),
+          ),
+          Divider(height: 1, color: AppTheme.of(context).border),
+          for (final item in items.take(6))
+            ListTile(
+              dense: true,
+              onTap: () => widget.onNavigate?.call('Leads'),
+              title: Text(
+                item['name']?.toString() ?? 'Lead',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                '${item['followUpDate'] != null ? 'Follow-up' : 'Site visit'} · ${item['assignedToName'] ?? 'Unassigned'}',
+              ),
+              trailing: Text(
+                _shortDate(item['followUpDate'] ?? item['siteVisitDate']),
+                style: const TextStyle(
+                  color: Color(0xFF6366F1),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _staleSection(BuildContext context) {
+    if (_stale.isEmpty) return const SizedBox.shrink();
+    return SoftSurface(
+      border: Border.all(color: AppColors.warning.withValues(alpha: .3)),
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(
+              Icons.history_rounded,
+              color: AppColors.warning,
+            ),
+            title: Text(
+              '${_stale.length} stale lead${_stale.length == 1 ? '' : 's'} need attention',
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+            subtitle: const Text('No activity in 7+ days'),
+            trailing: TextButton(
+              onPressed: () => widget.onNavigate?.call('Leads'),
+              child: const Text('View all'),
+            ),
+          ),
+          for (final lead in _stale.take(4))
+            ListTile(
+              dense: true,
+              onTap: () => widget.onNavigate?.call('Leads'),
+              leading: _smallBadge(
+                '${_daysAgo(lead['updatedAt'])}d',
+                AppColors.warning,
+              ),
+              title: Text(
+                lead['name']?.toString() ?? 'Lead',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                [
+                  lead['status'],
+                  lead['source'],
+                  lead['assignedToName'],
+                ].where((value) => value != null).join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: IconButton(
+                onPressed: () {
+                  final phone = lead['phone']?.toString();
+                  if (phone != null && phone.isNotEmpty) {
+                    launchUrl(Uri.parse('tel:$phone'));
+                  }
+                },
+                icon: const Icon(Icons.call_outlined, size: 19),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _forecastSection(BuildContext context, Map<String, dynamic> data) {
+    final pipeline = (data['pipelineValue'] as num?)?.toDouble() ?? 0;
+    final conversion = (data['conversionRate'] as num?)?.toDouble() ?? 0;
+    final monthWon = (data['thisMonthClosedWon'] as num?)?.toInt() ?? 0;
+    final goal =
+        (_goalOverride ?? data['monthlyClosingGoal'] as num?)?.toInt() ?? 0;
+    final days = DateUtils.getDaysInMonth(
+      DateTime.now().year,
+      DateTime.now().month,
+    );
+    final pace = (monthWon / DateTime.now().day * days).round();
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('FORECAST', style: AppText.kicker(context)),
+          const SizedBox(height: 3),
+          const Text(
+            'Revenue & Closing Pace',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 2.1,
+            children: [
+              _miniMetric(
+                'Expected Revenue',
+                fmtBudget(pipeline * conversion / 100),
+                'At ${conversion.toStringAsFixed(1)}%',
+                AppColors.success,
+              ),
+              _miniMetric(
+                'Month Leads',
+                '${data['thisMonthLeads'] ?? 0}',
+                'Last: ${data['lastMonthLeads'] ?? 0}',
+                const Color(0xFF6366F1),
+              ),
+              _miniMetric(
+                'Closings',
+                '$monthWon / ${data['lastMonthClosedWon'] ?? 0}',
+                'This / last month',
+                AppColors.primary,
+              ),
+              _miniMetric(
+                'Projected Pace',
+                '$pace',
+                goal == 0
+                    ? 'No goal set'
+                    : pace >= goal
+                    ? 'On track'
+                    : 'Behind goal',
+                goal > 0 && pace < goal ? AppColors.danger : AppColors.success,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _liveOperationsSection(BuildContext context) {
+    final working = _team.where((row) {
+      final attendance = row['attendance'] as Map?;
+      return attendance?['clockIn'] != null && attendance?['clockOut'] == null;
+    }).length;
+    final done = _team.where((row) {
+      final attendance = row['attendance'] as Map?;
+      return attendance?['clockIn'] != null && attendance?['clockOut'] != null;
+    }).length;
+    final live = _automations
+        .where(
+          (item) => item['status'] == 'connected' && item['isActive'] != false,
+        )
+        .length;
+    return Column(
+      children: [
+        if (_team.isNotEmpty)
+          _summaryCard(
+            Icons.groups_rounded,
+            'Agent Status Today',
+            '$working working · $done completed · ${_team.length - working - done} absent',
+            AppColors.success,
+            'Attendance',
+          ),
+        if (_team.isNotEmpty &&
+            (_automations.isNotEmpty || _projects.isNotEmpty))
+          const SizedBox(height: 10),
+        if (_automations.isNotEmpty)
+          _summaryCard(
+            Icons.bolt_rounded,
+            'Automation Health',
+            '$live live · ${_automations.length - live} off',
+            AppColors.primary,
+            'Automation',
+          ),
+        if (_automations.isNotEmpty && _projects.isNotEmpty)
+          const SizedBox(height: 10),
+        if (_projects.isNotEmpty)
+          _summaryCard(
+            Icons.apartment_rounded,
+            'Project-wise Leads',
+            '${_projects.length} active projects',
+            const Color(0xFF6366F1),
+            'Projects',
+          ),
+      ],
+    );
+  }
+
+  Widget _weeklyTrendSection(BuildContext context, Map<String, dynamic> data) {
+    final raw = (data['recentDailyLeads'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
+    final counts = <String, int>{
+      for (final item in raw)
+        item['_id']?.toString() ?? '': (item['count'] as num?)?.toInt() ?? 0,
+    };
+    final now = DateTime.now();
+    final days = List.generate(7, (index) {
+      final date = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: 6 - index));
+      final key = DateFormat('yyyy-MM-dd').format(date);
+      return (date: date, count: counts[key] ?? 0);
+    });
+    final maxCount = days.fold<int>(
+      1,
+      (max, item) => item.count > max ? item.count : max,
+    );
+    final total = days.fold<int>(0, (sum, item) => sum + item.count);
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TRENDS', style: AppText.kicker(context)),
+                    const Text(
+                      'Leads This Week',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '$total',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'last 7 days',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: AppTheme.of(context).textSoft,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 92,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (final item in days)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${item.count}',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Container(
+                            height: 52 * item.count / maxCount + 3,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            DateFormat('E').format(item.date),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: AppTheme.of(context).textSoft,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dropoffSection(BuildContext context, Map<String, dynamic> data) {
+    const stages = [
+      'New',
+      'Contacted',
+      'Interested',
+      'Site Visit',
+      'Negotiation',
+      'Closed Won',
+    ];
+    final values = (data['allTimeByStatus'] as Map?) ?? {};
+    final total = stages.fold<int>(
+      0,
+      (sum, stage) => sum + ((values[stage] as num?)?.toInt() ?? 0),
+    );
+    if (total == 0) return const SizedBox.shrink();
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('CONVERSION', style: AppText.kicker(context)),
+          const SizedBox(height: 3),
+          const Text(
+            'Pipeline Drop-off',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+          ),
+          const SizedBox(height: 12),
+          for (final stage in stages) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(stage, style: const TextStyle(fontSize: 11)),
+                ),
+                Text(
+                  '${values[stage] ?? 0}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: ((values[stage] as num?)?.toDouble() ?? 0) / total,
+              minHeight: 7,
+              borderRadius: BorderRadius.circular(99),
+              backgroundColor: AppTheme.of(context).surfaceLow,
+              color: statusColor(stage),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _miniMetric(
+    String label,
+    String value,
+    String sub,
+    Color color,
+  ) => Container(
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      color: AppTheme.of(context).surfaceLow,
+      borderRadius: BorderRadius.circular(13),
+      border: Border.all(color: AppTheme.of(context).border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(fontSize: 8, color: AppTheme.of(context).textSoft),
+        ),
+        Text(
+          value,
+          maxLines: 1,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+        ),
+        Text(
+          sub,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 8, color: AppTheme.of(context).textSoft),
+        ),
+      ],
+    ),
+  );
+
+  Widget _summaryCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color,
+    String destination,
+  ) => SoftSurface(
+    padding: EdgeInsets.zero,
+    child: ListTile(
+      onTap: () => widget.onNavigate?.call(destination),
+      leading: Icon(icon, color: color),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.arrow_forward_rounded, size: 18),
+    ),
+  );
+
+  Widget _smallBadge(String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color),
+    ),
+  );
+
+  String _shortDate(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    return date == null ? '—' : DateFormat('d MMM').format(date);
+  }
+
+  int _daysAgo(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    return date == null ? 0 : DateTime.now().difference(date).inDays;
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -712,6 +1381,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           FadeSlideIn(child: _dashboardHeader(context, auth, a)),
+          const SizedBox(height: 10),
+          _attendanceCard(context),
+          if (_analyticsError) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: .08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.danger.withValues(alpha: .25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_off_rounded, color: AppColors.danger),
+                  const SizedBox(width: 9),
+                  const Expanded(
+                    child: Text(
+                      'Dashboard data could not refresh. Showing the latest available information.',
+                    ),
+                  ),
+                  TextButton(onPressed: _load, child: const Text('Retry')),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
 
           // ── Stat cards ──
@@ -731,6 +1427,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     value: '${a['allTimeTotal'] ?? 0}',
                     sub: 'All time',
                     color: AppColors.primary,
+                    onTap: () => widget.onNavigate?.call('Leads'),
                   ),
                   _MetricCard(
                     label: 'Pipeline',
@@ -743,18 +1440,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     value: '${a['allTimeNew'] ?? 0}',
                     sub: 'Uncontacted',
                     color: const Color(0xFF6366F1),
+                    onTap: () => widget.onNavigate?.call('Leads'),
                   ),
                   _MetricCard(
                     label: 'Closed Won',
                     value: '${a['allTimeClosedWon'] ?? 0}',
                     sub: '${a['conversionRate'] ?? 0}% conversion',
                     color: AppColors.success,
+                    onTap: () => widget.onNavigate?.call('Leads'),
                   ),
                   _MetricCard(
                     label: 'Follow-ups',
                     value: '${a['todayFollowUps'] ?? 0}',
                     sub: 'Due today',
                     color: AppColors.warning,
+                    onTap: () => widget.onNavigate?.call('Follow-ups'),
                   ),
                   _MetricCard(
                     label: 'Avg Response',
@@ -768,7 +1468,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 20),
 
             _actionRequiredSection(context),
+            if ((a['upcomingItems'] as List?)?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 12),
+              _upcomingSection(context, a),
+            ],
             const SizedBox(height: 20),
+
+            if (isAdmin) ...[
+              const _SectionHeader(
+                label: 'Admin Intelligence',
+                color: Color(0xFF6366F1),
+              ),
+              const SizedBox(height: 12),
+              if (_stale.isNotEmpty) ...[
+                _staleSection(context),
+                const SizedBox(height: 12),
+              ],
+              _forecastSection(context, a),
+              const SizedBox(height: 12),
+              _weeklyTrendSection(context, a),
+              const SizedBox(height: 12),
+              _liveOperationsSection(context),
+              const SizedBox(height: 20),
+            ],
 
             // ── Status breakdown ──
             const _SectionHeader(label: 'Performance'),
@@ -923,6 +1645,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 16),
             ],
+            _dropoffSection(context, a),
+            const SizedBox(height: 16),
           ],
 
           // ── Admin Intelligence ──
@@ -1186,17 +1910,19 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final String sub;
   final Color color;
+  final VoidCallback? onTap;
 
   const _MetricCard({
     required this.label,
     required this.value,
     required this.sub,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SoftSurface(
+    final content = SoftSurface(
       radius: 18,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       child: Column(
@@ -1239,6 +1965,15 @@ class _MetricCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+    if (onTap == null) return content;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: content,
       ),
     );
   }
