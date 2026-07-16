@@ -35,6 +35,9 @@ router.post("/website/create", automationController.createWebsiteConnection);
 router.get("/voice/connections", automationController.getVoiceConnections);
 router.post("/voice/create", automationController.createVoiceConnection);
 
+router.get("/google/connections", automationController.getGoogleConnections);
+router.post("/google/create", automationController.createGoogleConnection);
+
 router.post("/facebook/diagnose", automationController.diagnoseFacebook);
 router.post("/facebook/resubscribe", automationController.resubscribeFacebook);
 

@@ -770,6 +770,190 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
   }
 });
 
+// ── Google Ads Lead Form Extension webhook ────────────────────────────────────
+// POST /webhook/google
+// This is Google's own native webhook integration for Lead Form ad extensions
+// (Google Ads -> Tools & Settings -> Conversions -> Lead form extension ->
+// Webhook integration). No OAuth — the admin pastes a Webhook URL + Key into
+// Google's UI, and Google POSTs this shape on every form submission:
+//   { google_key, is_test, lead_id, campaign_id, campaign_name, adgroup_id,
+//     adgroup_name, creative_id, gcl_id, api_version,
+//     user_column_data: [{ column_id, column_name, string_value }, ...] }
+// Google expects a fast 200 response; a wrong Key is the one case we still
+// reject with 401 since a correctly configured integration never sends one.
+const googleLeadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120, // Lead Form ads can burst harder than a single WordPress site
+  keyGenerator: (req) => req.body?.google_key || req.ip,
+  message: { success: false, message: "Too many submissions, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Known standard column IDs Google sends for built-in question types.
+// Anything not in this map is treated as a custom question (its column_name
+// is the human-readable question text the advertiser configured).
+const GOOGLE_NAME_KEYS  = ["FULL_NAME"];
+const GOOGLE_FIRST_KEYS = ["FIRST_NAME"];
+const GOOGLE_LAST_KEYS  = ["LAST_NAME"];
+const GOOGLE_PHONE_KEYS = ["PHONE_NUMBER", "WORK_PHONE_NUMBER"];
+const GOOGLE_EMAIL_KEYS = ["EMAIL", "WORK_EMAIL"];
+const GOOGLE_STANDARD_KEYS = new Set([
+  ...GOOGLE_NAME_KEYS, ...GOOGLE_FIRST_KEYS, ...GOOGLE_LAST_KEYS,
+  ...GOOGLE_PHONE_KEYS, ...GOOGLE_EMAIL_KEYS,
+]);
+
+router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
+  try {
+    const {
+      google_key, is_test, lead_id, campaign_id, campaign_name,
+      adgroup_id, adgroup_name, gcl_id, user_column_data,
+    } = req.body || {};
+
+    if (!google_key) return res.status(400).json({ success: false, message: "Missing google_key" });
+
+    const automation = await Automation.findOne({ platform: "Google", verifyToken: google_key, isActive: true });
+    if (!automation) return res.status(401).json({ success: false, message: "Invalid google_key" });
+
+    const orgId = automation.orgId;
+
+    // Flatten Google's column array into a lookup by column_id (uppercased —
+    // Google's own standard IDs already are, this just guards against case drift).
+    const columns = Array.isArray(user_column_data) ? user_column_data : [];
+    const byId = new Map();
+    for (const c of columns) {
+      if (c && c.column_id) byId.set(String(c.column_id).toUpperCase(), c);
+    }
+    const valueOf = (keys) => {
+      for (const k of keys) {
+        const v = byId.get(k)?.string_value;
+        if (v) return String(v).trim();
+      }
+      return "";
+    };
+
+    const fullName = valueOf(GOOGLE_NAME_KEYS)
+      || [valueOf(GOOGLE_FIRST_KEYS), valueOf(GOOGLE_LAST_KEYS)].filter(Boolean).join(" ").trim();
+    const phone = valueOf(GOOGLE_PHONE_KEYS);
+    const email = valueOf(GOOGLE_EMAIL_KEYS);
+
+    // Everything else is a custom question the advertiser configured in the form.
+    const customFields = columns.filter((c) => c?.column_id && !GOOGLE_STANDARD_KEYS.has(String(c.column_id).toUpperCase()) && c.string_value);
+    const formResponses = customFields.map((c) => ({
+      fieldKey: String(c.column_id),
+      label: c.column_name || String(c.column_id).replace(/_/g, " "),
+      value: String(c.string_value),
+    }));
+    const requirements = customFields.map((c) => `${c.column_name || c.column_id}: ${c.string_value}`).join(" · ");
+
+    const isTestLead = is_test === true || is_test === "true";
+    const name = isTestLead
+      ? "Test Lead (Google)"
+      : (fullName || "Google Lead");
+
+    if (!isTestLead && (!phone || phone.length < 7)) {
+      // A real submission with no usable phone isn't actionable as a lead —
+      // still return 200 so Google doesn't retry/disable the integration.
+      logger.warn(`[google webhook] lead ${lead_id || "unknown"} skipped: no usable phone_number in user_column_data`);
+      return res.status(200).json({ success: true, message: "Lead received (no phone — not saved)" });
+    }
+
+    // Dedup: same phone for this org within the last 2 minutes = a double-fire.
+    const cleanPhone = phone || "N/A (test)";
+    if (phone) {
+      const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+      const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
+      if (recent) {
+        logger.info(`[google webhook] duplicate skipped: ${name} | ${cleanPhone}`);
+        return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
+      }
+    }
+
+    const org = await Organization.findById(orgId).select("autoAssign").lean();
+    let assignee = null;
+    if (!isTestLead && org?.autoAssign !== false) {
+      try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
+    }
+
+    const sourceLabel = isTestLead
+      ? `${automation.name || "Google Ads"} - Test`
+      : (automation.name || automation.leadSourceLabel || "Google");
+
+    const noteText = isTestLead
+      ? `⚠️ Google Test Lead — sent via the "Send test lead" button in Google Ads. Real leads from your Lead Form ad will include name, phone, and any custom question answers.\n\nLead ID: ${lead_id || "unknown"}`
+      : [
+          `✅ Lead imported from Google Ads Lead Form.`,
+          `Name: ${name || "-"}`,
+          `Phone: ${cleanPhone}`,
+          `Email: ${email || "-"}`,
+          requirements ? `\nForm Answers:\n${customFields.map((c) => `${c.column_name || c.column_id}: ${c.string_value}`).join("\n")}` : "",
+          `Lead ID: ${lead_id || "unknown"}`,
+        ].filter(Boolean).join("\n");
+
+    const lead = await Lead.create({
+      name,
+      phone: cleanPhone,
+      email,
+      source: "Google",
+      status: "New",
+      requirements: isTestLead ? "" : requirements,
+      formResponses: isTestLead ? [] : formResponses,
+      orgId,
+      createdBy: assignee?._id || automation.createdBy || null,
+      assignedTo: assignee?._id || null,
+      assignedToName: assignee?.name || "",
+      leadSourceLabel: sourceLabel,
+      notes: [{ text: noteText, addedBy: assignee?._id || null, addedByName: assignee?.name || "" }],
+      activities: [
+        {
+          type: "created",
+          description: assignee
+            ? `Lead received from Google Ads Lead Form - auto-assigned to ${assignee.name}`
+            : "Lead received from Google Ads Lead Form - unassigned",
+          performedBy: assignee?._id || null,
+          performedByName: assignee?.name || "",
+          meta: {
+            automationId: automation._id?.toString(),
+            campaignId: campaign_id ? String(campaign_id) : "",
+            campaignName: campaign_name || "",
+            adgroupId: adgroup_id ? String(adgroup_id) : "",
+            adgroupName: adgroup_name || "",
+            gclId: gcl_id || "",
+          },
+        },
+      ],
+    });
+
+    automation.status = "connected";
+    automation.lastSyncAt = new Date();
+    await automation.save();
+
+    if (assignee?._id) {
+      sendPushToUser(assignee._id, {
+        type: "lead_assigned",
+        title: `New Google Lead: ${lead.name}`,
+        body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
+        data: { url: "/leads" },
+      }).catch(() => {});
+    } else if (!isTestLead) {
+      sendPushToAll({
+        type: "new_lead",
+        title: "New Google Lead 🔍",
+        body: `${lead.name} submitted a Google Ads lead form`,
+        data: { url: "/leads", leadName: lead.name, source: "Google" },
+      }, orgId).catch(() => {});
+    }
+
+    logger.info(`[google webhook] lead created: ${lead.name} | ${cleanPhone} | test: ${isTestLead}`);
+    res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
+  } catch (err) {
+    logger.error(`[google webhook] error: ${err.message}`);
+    // Still 200 — a malformed request from Google itself shouldn't cause
+    // Google to retry/disable the whole integration over one bad payload.
+    res.status(200).json({ success: false, message: "Failed to process lead" });
+  }
+});
+
 // ── Website plugin registration (called when plugin saves settings) ───────────
 // POST /webhook/website/register  { token, site_name, site_url, forms: [] }
 router.post("/website/register", express.json(), async (req, res) => {

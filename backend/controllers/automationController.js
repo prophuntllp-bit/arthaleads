@@ -256,6 +256,63 @@ const automationController = {
     }
   },
 
+  // GET /api/automations/google/connections - list Google Ads connections (read-only)
+  async getGoogleConnections(req, res) {
+    try {
+      const automations = await Automation.find({
+        orgId: req.user.orgId,
+        platform: "Google",
+        isActive: true,
+      }).sort({ createdAt: 1 });
+
+      res.json({
+        success: true,
+        connections: automations.map((a) => ({
+          id: a._id,
+          name: a.name,
+          token: a.verifyToken, // this is the "Webhook Key" in Google Ads' UI
+          status: a.status,
+          lastSyncAt: a.lastSyncAt,
+        })),
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // POST /api/automations/google/create - add a new Google Ads Lead Form connection
+  async createGoogleConnection(req, res) {
+    try {
+      const { name } = req.body || {};
+      const automation = await Automation.create({
+        name: name || "Google Ads",
+        platform: "Google",
+        mode: "webhook",
+        status: "draft",
+        leadSourceLabel: "Google",
+        webhookPath: "/webhook/google",
+        verifyToken: generateWebsiteToken(),
+        description: "Receives leads from a Google Ads Lead Form extension via webhook.",
+        isActive: true,
+        orgId: req.user.orgId,
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+      res.status(201).json({
+        success: true,
+        connection: {
+          id: automation._id,
+          name: automation.name,
+          token: automation.verifyToken,
+          status: automation.status,
+          lastSyncAt: automation.lastSyncAt,
+        },
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   async list(req, res, next) {
     try {
       const automations = await automationService.list(req.user.orgId);

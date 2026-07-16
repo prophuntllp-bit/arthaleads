@@ -21,11 +21,11 @@ const PLATFORM_PRESETS = {
     tone: "bg-blue-500/10 text-blue-400",
   },
   Google: {
-    mode: "api",
+    mode: "webhook",
     status: "draft",
     leadSourceLabel: "Google",
-    webhookPath: "/api/leads",
-    description: "Connect Google Ads landing pages or lead bridges into the CRM API.",
+    webhookPath: "/webhook/google",
+    description: "Google Ads Lead Form extension — no OAuth, just a webhook URL and key.",
     icon: SearchCheck,
     tone: "bg-red-500/10 text-red-400",
   },
@@ -71,11 +71,11 @@ const PLATFORM_PRESETS = {
 
 const emptyNonFbForm = {
   name: "",
-  platform: "Google",
+  platform: "WhatsApp",
   mode: "api",
   status: "draft",
+  leadSourceLabel: "WhatsApp",
   description: "",
-  leadSourceLabel: "Google",
   externalSourceId: "",
   externalSourceUrl: "",
   webhookPath: "/api/leads",
@@ -689,7 +689,7 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
                   description: preset.description || "",
                 }));
               }}
-              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook" && p !== "Vistrow Voice")}
+              options={Object.keys(PLATFORM_PRESETS).filter((p) => p !== "Facebook" && p !== "Vistrow Voice" && p !== "Google")}
               style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
             />
           </div>
@@ -1200,6 +1200,204 @@ function VoiceWizard({ open, onClose, onChanged }) {
   );
 }
 
+/* ─── Google Ads: per-connection card ──────────────────────────────────────── */
+function GoogleCard({ conn, endpoint, onDelete, copyText }) {
+  const [deleting, setDeleting] = useState(false);
+  const isConnected = conn.status === "connected";
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${conn.name}" from Arthaleads? This cannot be undone.`)) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/automations/${conn.id}`);
+      onDelete(conn.id);
+      toast.success("Connection removed");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border overflow-hidden ${isConnected ? "border-emerald-500/30" : "border-[var(--app-border)]"}`}>
+      <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-red-500"}`}>
+          <SearchCheck className="h-4 w-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>{conn.name}</p>
+          {conn.lastSyncAt && <p className={`text-xs ${isConnected ? "text-white/70" : "text-app-soft"}`}>Last lead: {new Date(conn.lastSyncAt).toLocaleString()}</p>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isConnected ? (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white">✓ Connected</span>
+          ) : (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">Pending</span>
+          )}
+          <button onClick={handleDelete} disabled={deleting} className={`p-1.5 rounded-lg hover:bg-black/10 transition ${isConnected ? "text-white/60 hover:text-white" : "text-app-soft hover:text-red-400"}`}>
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <div className="px-4 py-3 space-y-2.5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">Webhook URL</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-red-400" style={{ background: "var(--app-surface-low)" }}>{endpoint}</code>
+            <button onClick={() => copyText(endpoint, "Webhook URL")} className="btn-secondary rounded-xl px-2.5 py-1.5 shrink-0">
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1">Key</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-red-400" style={{ background: "var(--app-surface-low)" }}>{conn.token}</code>
+            <button onClick={() => copyText(conn.token, "Key")} className="btn-secondary rounded-xl px-2.5 py-1.5 shrink-0">
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Google Ads wizard ─────────────────────────────────────────────────────── */
+function GoogleWizard({ open, onClose, onChanged }) {
+  const [loading, setLoading] = useState(false);
+  const [connections, setConnections] = useState([]);
+  const [adding, setAdding] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const serverBase = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
+  const endpoint = `${serverBase}/webhook/google`;
+
+  const load = useCallback((isInitial = false) => {
+    if (isInitial) setLoading(true);
+    return api.get("/automations/google/connections")
+      .then(({ data }) => setConnections(data.connections || []))
+      .catch(() => isInitial && toast.error("Failed to load connections"))
+      .finally(() => isInitial && setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    load(true);
+    const interval = setInterval(() => load(false), 5000);
+    return () => clearInterval(interval);
+  }, [open, load]);
+
+  const handleAdd = async () => {
+    setAdding(true);
+    try {
+      const { data } = await api.post("/automations/google/create", { name: `Google Ads ${connections.length + 1}` });
+      setConnections((prev) => [...prev, data.connection]);
+      onChanged?.();
+      toast.success("New connection created — paste the URL and Key into Google Ads.");
+    } catch {
+      toast.error("Failed to create connection");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const copyText = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied`);
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
+        <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-red-500">
+            <SearchCheck className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-app">Google Ads Lead Form</h2>
+            <p className="text-xs text-app-soft">Native webhook — no login required, each connection gets its own key</p>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto max-h-[70vh]">
+          {loading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <>
+              {connections.length === 0 && (
+                <p className="text-sm text-app-soft">
+                  Create a connection to get a Webhook URL and Key, then paste both into your Google Ads Lead Form extension. No sign-in or approval needed.
+                </p>
+              )}
+
+              {connections.map((conn) => (
+                <GoogleCard
+                  key={conn.id}
+                  conn={conn}
+                  endpoint={endpoint}
+                  copyText={copyText}
+                  onDelete={(id) => { setConnections((prev) => prev.filter((c) => c.id !== id)); onChanged?.(); }}
+                />
+              ))}
+
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold border-2 border-dashed border-[var(--app-border)] text-app-soft hover:border-red-500 hover:text-red-400 transition"
+              >
+                {adding ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
+                {adding ? "Creating…" : connections.length ? "Add Another Connection" : "Add Google Ads Connection"}
+              </button>
+
+              <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--app-surface-low)" }}>
+                <p className="text-xs font-bold text-app-soft uppercase tracking-wider">How to connect</p>
+                {[
+                  'Click "Add Google Ads Connection" to generate your Webhook URL and Key.',
+                  "In Google Ads, open Tools & Settings → Conversions → Lead form extension.",
+                  "Select your form → Webhook integration → paste the Webhook URL and Key → Save.",
+                  'Click "Send test lead" in Google Ads to verify — it appears here labeled as a test.',
+                ].map((t, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500/20 text-red-400 text-xs font-bold mt-0.5">{i + 1}</span>
+                    <p className="text-sm text-app-soft">{t}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--app-border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-xs font-bold text-app-soft uppercase tracking-wider hover:text-app transition"
+                >
+                  <span>Developer details (optional)</span>
+                  <ChevronRight className={`h-4 w-4 transition-transform ${showAdvanced ? "rotate-90" : ""}`} />
+                </button>
+                {showAdvanced && (
+                  <div className="px-4 py-3 space-y-2" style={{ borderTop: "1px solid var(--app-border)" }}>
+                    <p className="text-xs text-app-soft">This is Google Ads' own webhook payload — you don't need to build anything, Google sends this automatically once connected.</p>
+                    <p className="text-xs text-app-soft">Standard fields recognized: <span className="text-red-400 font-semibold">FULL_NAME</span> (or FIRST_NAME + LAST_NAME), <span className="text-red-400 font-semibold">PHONE_NUMBER</span>, <span className="text-red-400 font-semibold">EMAIL</span>. Any other question is saved as a custom answer on the lead.</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end px-6 pb-6">
+          <button type="button" className="btn-secondary rounded-xl" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
@@ -1215,6 +1413,9 @@ export default function Automation() {
 
   // Vistrow Voice wizard state
   const [voiceWizardOpen, setVoiceWizardOpen] = useState(false);
+
+  // Google Ads wizard state
+  const [googleWizardOpen, setGoogleWizardOpen] = useState(false);
 
   // Facebook diagnostic state
   const [diagFor, setDiagFor] = useState(null);      // the automation being diagnosed
@@ -1288,6 +1489,8 @@ export default function Automation() {
       setFbWizardOpen(true);
     } else if (item.platform === "Vistrow Voice") {
       setVoiceWizardOpen(true);
+    } else if (item.platform === "Google") {
+      setGoogleWizardOpen(true);
     } else {
       setSourceEditingItem(item);
       setSourceModalOpen(true);
@@ -1427,6 +1630,8 @@ export default function Automation() {
                       setWpWizardOpen(true);
                     } else if (platform === "Vistrow Voice") {
                       setVoiceWizardOpen(true);
+                    } else if (platform === "Google") {
+                      setGoogleWizardOpen(true);
                     } else {
                       setSourceEditingItem(null);
                       setSourceModalOpen(true);
@@ -1580,6 +1785,36 @@ export default function Automation() {
                         </div>
                       </div>
                     </div>
+                  ) : item.platform === "Google" ? (
+                    <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">Webhook URL</p>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-red-400" style={{ background: "var(--app-surface-low)" }}>
+                            {serverBase}/webhook/google
+                          </code>
+                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}/webhook/google`)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-app-soft mb-1">Key</p>
+                        {item.verifyToken ? (
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-red-400" style={{ background: "var(--app-surface-low)" }}>
+                              {item.verifyToken}
+                            </code>
+                            <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(item.verifyToken)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-400">No key yet — click Edit, then Update to generate one.</p>
+                        )}
+                        <p className="mt-1 text-[11px] text-app-soft">Paste both into Google Ads → Lead form extension → Webhook integration.</p>
+                      </div>
+                    </div>
                   ) : (item.platform === "Custom" || item.platform === "Vistrow Voice") ? (
                     <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
                       <div>
@@ -1660,6 +1895,13 @@ export default function Automation() {
       <VoiceWizard
         open={voiceWizardOpen}
         onClose={() => setVoiceWizardOpen(false)}
+        onChanged={loadItems}
+      />
+
+      {/* Google Ads Wizard */}
+      <GoogleWizard
+        open={googleWizardOpen}
+        onClose={() => setGoogleWizardOpen(false)}
         onChanged={loadItems}
       />
 

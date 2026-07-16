@@ -12,10 +12,16 @@ function generateIngestToken() {
   return "AW-" + crypto.randomBytes(24).toString("hex");
 }
 
-// Platforms whose leads arrive via POST /webhook/lead, authenticated only by a
-// per-source token (no OAuth / user JWT). Keep this in sync with the webhook
-// lookup in routes/webhookRoutes.js.
-const TOKEN_INGEST_PLATFORMS = ["Custom", "Vistrow Voice"];
+// Platforms authenticated only by a per-source token/key (no OAuth / user JWT).
+// Each maps to its own ingestion route in routes/webhookRoutes.js — Google uses
+// Google Ads' own webhook payload shape, so it gets a dedicated endpoint rather
+// than sharing /webhook/lead's generic {name,phone,email,message} contract.
+const TOKEN_INGEST_WEBHOOK_PATH = {
+  Custom: "/webhook/lead",
+  "Vistrow Voice": "/webhook/lead",
+  Google: "/webhook/google",
+};
+const TOKEN_INGEST_PLATFORMS = Object.keys(TOKEN_INGEST_WEBHOOK_PATH);
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -27,10 +33,10 @@ const DEFAULTS = {
     description: "Receive Meta Lead Ads leads directly into the CRM through the Facebook webhook.",
   },
   Google: {
-    mode: "api",
-    webhookPath: "/api/leads",
+    mode: "webhook",
+    webhookPath: "/webhook/google",
     leadSourceLabel: "Google",
-    description: "Use this endpoint from Google Ads landing pages or lead form bridges.",
+    description: "Receive Google Ads Lead Form submissions directly — no OAuth, just a webhook URL and key.",
   },
   WhatsApp: {
     mode: "api",
@@ -77,10 +83,10 @@ const automationService = {
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
 
-    // Token-ingest sources (Custom, Vistrow Voice) authenticate incoming webhook
-    // calls by a per-source token (there is no OAuth / user JWT on the ingestion
-    // path). Mint one on create if the caller didn't supply it, so the UI always
-    // has a token to show.
+    // Token-ingest sources (Custom, Vistrow Voice, Google) authenticate incoming
+    // webhook calls by a per-source token/key (there is no OAuth / user JWT on
+    // the ingestion path). Mint one on create if the caller didn't supply it, so
+    // the UI always has a token to show.
     if (TOKEN_INGEST_PLATFORMS.includes(normalized.platform) && !normalized.verifyToken) {
       normalized.verifyToken = generateIngestToken();
     }
@@ -151,14 +157,14 @@ const automationService = {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
 
-    // Token-ingest sources (Custom, Vistrow Voice): never lose the ingest token
-    // to an empty form field, and upgrade legacy records (created before
-    // /webhook/lead existed — they were saved with webhookPath "/api/leads" and
-    // no token). Minting only happens when there is genuinely no token, so
-    // re-saving never rotates a live one.
-    if (TOKEN_INGEST_PLATFORMS.includes(automation.platform)) {
+    // Token-ingest sources (Custom, Vistrow Voice, Google): never lose the
+    // ingest token to an empty form field, and upgrade legacy records (created
+    // before their dedicated webhook existed — they were saved with webhookPath
+    // "/api/leads" and no token). Minting only happens when there is genuinely
+    // no token, so re-saving never rotates a live one.
+    if (TOKEN_INGEST_WEBHOOK_PATH[automation.platform]) {
       automation.verifyToken = automation.verifyToken || existingToken || generateIngestToken();
-      automation.webhookPath = "/webhook/lead";
+      automation.webhookPath = TOKEN_INGEST_WEBHOOK_PATH[automation.platform];
     }
 
     // When a fresh userToken is saved, record expiry.
