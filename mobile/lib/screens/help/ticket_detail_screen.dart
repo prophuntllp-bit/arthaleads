@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 import 'help_screen.dart';
 
 /// Ticket thread — GET /tickets/:id, POST /tickets/:id/reply. Both the
@@ -109,7 +110,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(_ticket?['subject'] as String? ?? 'Ticket')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(child: AppSpinner(size: 32))
           : Column(
               children: [
                 Expanded(

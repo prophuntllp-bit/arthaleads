@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/motion.dart';
 
 const _steps = [
   ('Share your link', 'Send your unique referral link to other real estate teams, brokers, or channel partners.', Icons.ios_share),
@@ -149,7 +150,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     final code = _code(auth.org);
     final link = code != null ? 'https://arthaleads.com/signup?ref=$code' : '';
 
-    if (_loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_loading) return const Center(child: AppSpinner(size: 32));
 
     return RefreshIndicator(
       color: AppColors.primary,

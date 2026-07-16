@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 
 /// Tasks — GET /tasks, POST /tasks, PATCH /tasks/:id, PATCH /tasks/:id/complete,
 /// DELETE /tasks/:id. Mirrors frontend/src/pages/Tasks.jsx: clickable summary
@@ -326,7 +328,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                ElevatedButton(
+                GradientButton(
+                  fullWidth: true,
                   onPressed: () async {
                     final agentName = _agents
                         .where((a) => a['_id'] == assignedTo)
@@ -383,12 +386,7 @@ class _TasksScreenState extends State<TasksScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
-      floatingActionButton: auth.isAdmin
-          ? FloatingActionButton(
-              onPressed: () => _openForm(),
-              child: const Icon(Icons.add_rounded),
-            )
-          : null,
+      floatingActionButton: auth.isAdmin ? GradientFab(onPressed: () => _openForm()) : null,
       body: Column(
         children: [
           Padding(
@@ -450,7 +448,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: AppSpinner(size: 32))
                 : _tasks.isEmpty
                     ? const Center(child: Text('No tasks here'))
                     : RefreshIndicator(
@@ -465,7 +463,9 @@ class _TasksScreenState extends State<TasksScreen> {
                             final due = DateTime.tryParse(t['dueDate'] as String? ?? '')?.toLocal();
                             final leadName = t['leadName'] as String?;
                             final projectName = t['projectName'] as String?;
-                            return Dismissible(
+                            return FadeSlideIn(
+                              delay: Duration(milliseconds: 20 * (i % 12)),
+                              child: Dismissible(
                               key: ValueKey(t['_id']),
                               direction: auth.isAdmin
                                   ? DismissDirection.endToStart
@@ -543,6 +543,7 @@ class _TasksScreenState extends State<TasksScreen> {
                                   ),
                                   isThreeLine: (leadName ?? '').isNotEmpty || (projectName ?? '').isNotEmpty,
                                 ),
+                              ),
                               ),
                             );
                           },

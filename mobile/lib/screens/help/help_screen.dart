@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
+import '../../widgets/motion.dart';
 import 'ticket_detail_screen.dart';
 
 const _maxAttachBytes = 600 * 1024;
@@ -298,7 +300,8 @@ class _HelpScreenState extends State<HelpScreen> {
                     label: const Text('Attach screenshot or file'),
                   ),
                 const SizedBox(height: 16),
-                ElevatedButton(
+                GradientButton(
+                  fullWidth: true,
                   onPressed: () async {
                     if (subjectCtrl.text.trim().isEmpty) return;
                     if (descCtrl.text.trim().length < 20) {
@@ -638,7 +641,7 @@ class _HelpScreenState extends State<HelpScreen> {
           if (_loadingTickets)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              child: Center(child: AppSpinner(size: 32)),
             )
           else if (_tickets.isEmpty)
             const Padding(
@@ -646,8 +649,10 @@ class _HelpScreenState extends State<HelpScreen> {
               child: Center(child: Text('No support tickets yet')),
             )
           else
-            for (final t in _tickets)
-              Card(
+            for (final (i, t) in _tickets.indexed)
+              FadeSlideIn(
+                delay: Duration(milliseconds: 20 * (i % 12)),
+                child: Card(
                 margin: const EdgeInsets.only(bottom: 6),
                 child: ListTile(
                   title: Text(t['subject'] as String? ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -669,6 +674,7 @@ class _HelpScreenState extends State<HelpScreen> {
                         MaterialPageRoute(builder: (_) => TicketDetailScreen(ticketId: t['_id'] as String)));
                     _loadTickets();
                   },
+                ),
                 ),
               ),
         ],
