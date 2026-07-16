@@ -9,6 +9,7 @@ const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule     = require("../models/RoutingRule");
 const Organization    = require("../models/Organization");
+const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 
 const router = express.Router();
 
@@ -790,19 +791,6 @@ const googleLeadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Known standard column IDs Google sends for built-in question types.
-// Anything not in this map is treated as a custom question (its column_name
-// is the human-readable question text the advertiser configured).
-const GOOGLE_NAME_KEYS  = ["FULL_NAME"];
-const GOOGLE_FIRST_KEYS = ["FIRST_NAME"];
-const GOOGLE_LAST_KEYS  = ["LAST_NAME"];
-const GOOGLE_PHONE_KEYS = ["PHONE_NUMBER", "WORK_PHONE_NUMBER"];
-const GOOGLE_EMAIL_KEYS = ["EMAIL", "WORK_EMAIL"];
-const GOOGLE_STANDARD_KEYS = new Set([
-  ...GOOGLE_NAME_KEYS, ...GOOGLE_FIRST_KEYS, ...GOOGLE_LAST_KEYS,
-  ...GOOGLE_PHONE_KEYS, ...GOOGLE_EMAIL_KEYS,
-]);
-
 router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
   try {
     const {
@@ -817,34 +805,8 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
 
     const orgId = automation.orgId;
 
-    // Flatten Google's column array into a lookup by column_id (uppercased —
-    // Google's own standard IDs already are, this just guards against case drift).
-    const columns = Array.isArray(user_column_data) ? user_column_data : [];
-    const byId = new Map();
-    for (const c of columns) {
-      if (c && c.column_id) byId.set(String(c.column_id).toUpperCase(), c);
-    }
-    const valueOf = (keys) => {
-      for (const k of keys) {
-        const v = byId.get(k)?.string_value;
-        if (v) return String(v).trim();
-      }
-      return "";
-    };
-
-    const fullName = valueOf(GOOGLE_NAME_KEYS)
-      || [valueOf(GOOGLE_FIRST_KEYS), valueOf(GOOGLE_LAST_KEYS)].filter(Boolean).join(" ").trim();
-    const phone = valueOf(GOOGLE_PHONE_KEYS);
-    const email = valueOf(GOOGLE_EMAIL_KEYS);
-
-    // Everything else is a custom question the advertiser configured in the form.
-    const customFields = columns.filter((c) => c?.column_id && !GOOGLE_STANDARD_KEYS.has(String(c.column_id).toUpperCase()) && c.string_value);
-    const formResponses = customFields.map((c) => ({
-      fieldKey: String(c.column_id),
-      label: c.column_name || String(c.column_id).replace(/_/g, " "),
-      value: String(c.string_value),
-    }));
-    const requirements = customFields.map((c) => `${c.column_name || c.column_id}: ${c.string_value}`).join(" · ");
+    const { fullName, phone, email, formResponses, requirements, customFields } =
+      mapGoogleLeadFields(fromWebhookColumns(user_column_data));
 
     const isTestLead = is_test === true || is_test === "true";
     const name = isTestLead
@@ -886,7 +848,7 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
           `Name: ${name || "-"}`,
           `Phone: ${cleanPhone}`,
           `Email: ${email || "-"}`,
-          requirements ? `\nForm Answers:\n${customFields.map((c) => `${c.column_name || c.column_id}: ${c.string_value}`).join("\n")}` : "",
+          requirements ? `\nForm Answers:\n${customFields.map((e) => `${e.label || e.id}: ${e.value}`).join("\n")}` : "",
           `Lead ID: ${lead_id || "unknown"}`,
         ].filter(Boolean).join("\n");
 

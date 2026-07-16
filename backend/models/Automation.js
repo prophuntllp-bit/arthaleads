@@ -16,7 +16,7 @@ const automationSchema = new mongoose.Schema(
     },
     mode: {
       type: String,
-      enum: ["webhook", "api", "form", "spreadsheet"],
+      enum: ["webhook", "api", "form", "spreadsheet", "oauth"],
       default: "api",
     },
     status: {
@@ -58,6 +58,22 @@ const automationSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 120,
+      default: "",
+    },
+    // ── Google Ads OAuth (mode: "oauth") ─────────────────────────────────────
+    // The Ads account this connection reads leads from via the Google Ads API.
+    // Distinct from the webhook-mode Google connections (mode: "webhook"),
+    // which don't need an account ID since Google pushes to us directly.
+    googleCustomerId: {
+      type: String,
+      trim: true,
+      maxlength: 40,
+      default: "",
+    },
+    googleCustomerName: {
+      type: String,
+      trim: true,
+      maxlength: 200,
       default: "",
     },
     externalSourceUrl: {

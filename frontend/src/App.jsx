@@ -283,6 +283,7 @@ const NotFound       = lazy(() => import("./pages/NotFound"));
 const Privacy        = lazy(() => import("./pages/Privacy"));
 const Terms          = lazy(() => import("./pages/Terms"));
 const FbCallback     = lazy(() => import("./pages/FbCallback"));
+const GoogleCallback = lazy(() => import("./pages/GoogleCallback"));
 const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
@@ -580,6 +581,7 @@ export default function App() {
         <Route path="/compare"              element={<Compare />} />
         <Route path="/pricing"              element={<Pricing />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
+        <Route path="/google-callback"      element={<GoogleCallback />} />
         <Route path="/forgot-password"      element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/blog"                 element={<PublicBlog />} />

@@ -421,6 +421,135 @@ const automationController = {
       next(err);
     }
   },
+
+  // ── Google Ads OAuth ("Sign in with Google") ──────────────────────────────
+  async googleConnect(req, res, next) {
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    try {
+      const rawToken = req.cookies?.crm_token || req.query.token || "";
+      const user = await automationService.verifyPopupToken(rawToken);
+      const state = automationService.createGoogleState({ userId: user._id.toString() });
+      const authUrl = automationService.getGoogleAuthUrl(state);
+      res.redirect(authUrl);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async googleCallback(req, res) {
+    const frontendOrigin = automationService.getFrontendOrigin();
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+
+    try {
+      const { code, state, error, error_description } = req.query;
+
+      if (error) {
+        const gMsg = error_description ? decodeURIComponent(error_description.replace(/\+/g, " ")) : error;
+        throw new Error(`Google declined the connection: ${gMsg}`);
+      }
+      if (!code || !state) throw new Error("Missing Google callback data");
+
+      automationService.verifyGoogleState(state); // throws if invalid/expired
+      const { customers, accessToken, refreshToken } = await automationService.getGoogleConnectionData(code);
+
+      if (!refreshToken) {
+        // Happens if the user has an existing unrevoked grant and Google skips
+        // re-showing consent despite prompt=consent — ask them to revoke access
+        // at myaccount.google.com/permissions and try again.
+        throw new Error("Google did not return a refresh token. Please revoke Arthaleads' access at myaccount.google.com/permissions and reconnect.");
+      }
+
+      const sessionId = crypto.randomBytes(16).toString("hex");
+      await automationService.storeOAuthResult(sessionId, { type: "success", customers, accessToken, refreshToken });
+      return res.redirect(`${frontendOrigin}/google-callback?session=${sessionId}`);
+    } catch (err) {
+      const sessionId = crypto.randomBytes(16).toString("hex");
+      await automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Google connection failed" });
+      return res.redirect(`${frontendOrigin}/google-callback?session=${sessionId}`);
+    }
+  },
+
+  async getGoogleOAuthResult(req, res) {
+    const { session } = req.query;
+    if (!session) return res.status(400).json({ error: "Missing session" });
+    const result = await automationService.getOAuthResult(session);
+    if (!result) return res.status(404).json({ error: "Session not found or expired" });
+    return res.json(result);
+  },
+
+  // POST /api/automations/google/:id/sync — pull leads right now instead of
+  // waiting for the 5-minute cron. Same logic either way (pollOneGoogleAdsConnection).
+  async syncGoogleAdsConnection(req, res, next) {
+    try {
+      const automation = await Automation.findOne({ _id: req.params.id, orgId: req.user.orgId, platform: "Google", mode: "oauth" });
+      if (!automation) return next(new AppError("Connection not found", 404));
+
+      const { pollOneGoogleAdsConnection } = require("../utils/googleAdsPoller");
+      const result = await pollOneGoogleAdsConnection(automation);
+
+      if (result.error) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+      res.json({
+        success: true,
+        message: result.created
+          ? `Synced — ${result.created} new lead(s) imported.`
+          : "Synced — no new leads since last check.",
+        ...result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/automations/google/oauth-create — final step after the user picks
+  // an Ads account in the wizard. Creates (or updates, if editingId) the
+  // Automation doc with mode "oauth" — distinct from the webhook-mode Google
+  // connections, which don't carry an accessToken/refreshToken at all.
+  async createGoogleOAuthConnection(req, res, next) {
+    try {
+      const { name, customerId, customerName, accessToken, refreshToken, editingId } = req.body || {};
+      if (!customerId) return next(new AppError("customerId is required", 400));
+      if (!refreshToken && !editingId) return next(new AppError("refreshToken is required", 400));
+
+      const payload = {
+        name: name || customerName || "Google Ads",
+        platform: "Google",
+        mode: "oauth",
+        status: "connected",
+        leadSourceLabel: "Google",
+        googleCustomerId: customerId,
+        googleCustomerName: customerName || "",
+        accessToken: accessToken || "",
+        isActive: true,
+      };
+      // Keep the existing refresh token if this is a re-auth of the same
+      // connection and Google didn't re-issue one — but a fresh code exchange
+      // in googleCallback always requires refreshToken above, so this only
+      // matters if a future edit flow calls this without re-running OAuth.
+      if (refreshToken) payload.userToken = refreshToken;
+
+      let automation;
+      if (editingId) {
+        automation = await Automation.findOne({ _id: editingId, orgId: req.user.orgId, platform: "Google" });
+        if (!automation) return next(new AppError("Connection not found", 404));
+        Object.assign(automation, payload);
+        automation.updatedBy = req.user._id;
+        await automation.save();
+      } else {
+        automation = await Automation.create({
+          ...payload,
+          orgId: req.user.orgId,
+          createdBy: req.user._id,
+          updatedBy: req.user._id,
+        });
+      }
+
+      res.status(201).json({ success: true, automation });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = automationController;

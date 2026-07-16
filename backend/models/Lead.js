@@ -177,6 +177,12 @@ const leadSchema = new mongoose.Schema(
     sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")
     requirements:    { type: String, trim: true, default: "" }, // extracted from form answers (custom questions)
 
+    // Upstream system's unique ID for this record, for integrations that pull
+    // data on a schedule rather than receive a push (e.g. Google Ads API
+    // polling — dedupes by lead_form_submission_data.resource_name). Push-based
+    // webhooks dedupe by recent phone number instead and leave this unset.
+    externalId: { type: String, trim: true, default: "", index: true },
+
     // ── Vistrow Voice (AI calling) transcript & metadata ───────────────────────
     // Set only for leads ingested via /webhook/lead with voice data. Unset otherwise.
     voiceCall: { type: voiceCallSchema, default: undefined },

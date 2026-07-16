@@ -24,6 +24,7 @@ const TOKEN_INGEST_WEBHOOK_PATH = {
 const TOKEN_INGEST_PLATFORMS = Object.keys(TOKEN_INGEST_WEBHOOK_PATH);
 
 const META_GRAPH_VERSION = "v23.0";
+const GOOGLE_ADS_API_VERSION = "v17";
 
 const DEFAULTS = {
   Facebook: {
@@ -83,11 +84,14 @@ const automationService = {
   async create(payload, actor) {
     const normalized = applyDefaults(payload);
 
-    // Token-ingest sources (Custom, Vistrow Voice, Google) authenticate incoming
-    // webhook calls by a per-source token/key (there is no OAuth / user JWT on
-    // the ingestion path). Mint one on create if the caller didn't supply it, so
-    // the UI always has a token to show.
-    if (TOKEN_INGEST_PLATFORMS.includes(normalized.platform) && !normalized.verifyToken) {
+    // Token-ingest sources (Custom, Vistrow Voice, Google-webhook) authenticate
+    // incoming webhook calls by a per-source token/key (there is no OAuth / user
+    // JWT on the ingestion path). Mint one on create if the caller didn't supply
+    // it, so the UI always has a token to show. Google can also be mode "oauth"
+    // (created directly via createGoogleOAuthConnection, not through this
+    // generic path) — that variant authenticates via a refresh token instead
+    // and must never get a webhook Key/path assigned.
+    if (TOKEN_INGEST_PLATFORMS.includes(normalized.platform) && normalized.mode !== "oauth" && !normalized.verifyToken) {
       normalized.verifyToken = generateIngestToken();
     }
 
@@ -157,12 +161,15 @@ const automationService = {
       if (normalized[key] !== undefined) automation[key] = normalized[key];
     });
 
-    // Token-ingest sources (Custom, Vistrow Voice, Google): never lose the
-    // ingest token to an empty form field, and upgrade legacy records (created
-    // before their dedicated webhook existed — they were saved with webhookPath
-    // "/api/leads" and no token). Minting only happens when there is genuinely
-    // no token, so re-saving never rotates a live one.
-    if (TOKEN_INGEST_WEBHOOK_PATH[automation.platform]) {
+    // Token-ingest sources (Custom, Vistrow Voice, Google-webhook): never lose
+    // the ingest token to an empty form field, and upgrade legacy records
+    // (created before their dedicated webhook existed — they were saved with
+    // webhookPath "/api/leads" and no token). Minting only happens when there
+    // is genuinely no token, so re-saving never rotates a live one. Google can
+    // also be mode "oauth" (created via createGoogleOAuthConnection, not this
+    // generic path) — that variant must never get a webhook Key/path forced
+    // onto it, since it authenticates via a refresh token instead.
+    if (TOKEN_INGEST_WEBHOOK_PATH[automation.platform] && automation.mode !== "oauth") {
       automation.verifyToken = automation.verifyToken || existingToken || generateIngestToken();
       automation.webhookPath = TOKEN_INGEST_WEBHOOK_PATH[automation.platform];
     }
@@ -422,6 +429,148 @@ const automationService = {
     }));
 
     return { pages, systemToken: token };
+  },
+
+  // ── Google Ads OAuth ─────────────────────────────────────────────────────────
+  // "Sign in with Google" -> Ads API polling, as an alternative to the manual
+  // webhook (URL+Key pasted into Google Ads' UI). Requires the org to have set
+  // up a Google Cloud OAuth Client and been granted a Google Ads Developer
+  // Token — both are external approvals only the account owner can request;
+  // see GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_ADS_DEVELOPER_TOKEN.
+  createGoogleState({ userId }) {
+    return jwt.sign(
+      { userId, type: "google_oauth" },
+      process.env.JWT_SECRET,
+      { expiresIn: "10m" }
+    );
+  },
+
+  verifyGoogleState(state) {
+    try {
+      const decoded = jwt.verify(state, process.env.JWT_SECRET);
+      if (decoded.type !== "google_oauth") throw new Error("Invalid state type");
+      return { userId: decoded.userId };
+    } catch {
+      throw new AppError("Invalid Google OAuth state", 400);
+    }
+  },
+
+  getGoogleRedirectUri() {
+    return process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/automations/google/callback";
+  },
+
+  getGoogleAuthUrl(state) {
+    if (!process.env.GOOGLE_CLIENT_ID) throw new AppError("GOOGLE_CLIENT_ID is not configured", 500);
+
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      redirect_uri: this.getGoogleRedirectUri(),
+      response_type: "code",
+      scope: "https://www.googleapis.com/auth/adwords",
+      access_type: "offline", // required to receive a refresh_token
+      prompt: "consent",      // forces the consent screen so a refresh_token is issued every time (not just first-ever auth)
+      state,
+    });
+
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  },
+
+  async exchangeGoogleCode(code) {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      throw new AppError("Google OAuth credentials are not configured", 500);
+    }
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: this.getGoogleRedirectUri(),
+      code,
+      grant_type: "authorization_code",
+    });
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    const json = await resp.json();
+    if (!resp.ok || !json.access_token) {
+      throw new AppError(json.error_description || json.error || "Failed to exchange Google OAuth code", 400);
+    }
+    // refresh_token is only returned when access_type=offline + prompt=consent
+    // (both set above), and even then only reliably on this first exchange.
+    return { accessToken: json.access_token, refreshToken: json.refresh_token || "", expiresIn: json.expires_in };
+  },
+
+  async refreshGoogleAccessToken(refreshToken) {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      throw new AppError("Google OAuth credentials are not configured", 500);
+    }
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    });
+    const resp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    const json = await resp.json();
+    if (!resp.ok || !json.access_token) {
+      throw new AppError(json.error_description || json.error || "Failed to refresh Google access token", 400);
+    }
+    return json.access_token;
+  },
+
+  // Lists the Ads accounts (customer IDs) reachable from this Google login,
+  // then best-effort resolves each one's descriptive name via a GAQL query.
+  // A customer that fails the name lookup (e.g. no direct access, MCC-only)
+  // still appears, just labeled by its bare ID.
+  async fetchGoogleAdsAccounts(accessToken) {
+    if (!process.env.GOOGLE_ADS_DEVELOPER_TOKEN) {
+      throw new AppError("GOOGLE_ADS_DEVELOPER_TOKEN is not configured", 500);
+    }
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "developer-token": process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+    };
+
+    const listResp = await fetch(
+      `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers:listAccessibleCustomers`,
+      { headers }
+    );
+    const listJson = await listResp.json();
+    if (!listResp.ok) {
+      throw new AppError(listJson.error?.message || "Failed to list Google Ads accounts", 400);
+    }
+
+    const customerIds = (listJson.resourceNames || []).map((rn) => rn.split("/")[1]).filter(Boolean);
+
+    const customers = await Promise.all(customerIds.map(async (id) => {
+      try {
+        const gaqlResp = await fetch(
+          `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${id}/googleAds:search`,
+          {
+            method: "POST",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({ query: "SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1" }),
+          }
+        );
+        const gaqlJson = await gaqlResp.json();
+        const name = gaqlJson.results?.[0]?.customer?.descriptiveName;
+        return { id, name: name || id };
+      } catch {
+        return { id, name: id };
+      }
+    }));
+
+    return customers;
+  },
+
+  async getGoogleConnectionData(code) {
+    const { accessToken, refreshToken } = await this.exchangeGoogleCode(code);
+    const customers = await this.fetchGoogleAdsAccounts(accessToken);
+    return { customers, accessToken, refreshToken };
   },
 
   async storeOAuthResult(sessionId, data) {

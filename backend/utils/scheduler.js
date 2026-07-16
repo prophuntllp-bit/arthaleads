@@ -6,6 +6,7 @@ const Task = require("../models/Task");
 const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
+const { pollGoogleAdsLeads } = require("./googleAdsPoller");
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -267,6 +268,12 @@ cron.schedule("30 20 * * *", () => {
 // ── Daily 10 AM IST (UTC 04:30): Facebook token proactive refresh ─────────────
 cron.schedule("30 4 * * *", () => {
   refreshFacebookTokens().catch((err) => logger.error(`[fb-token-refresh] cron failed: ${err.message}`));
+});
+
+// ── Every 5 minutes: pull new leads for OAuth-connected Google Ads accounts ───
+// (webhook-mode Google connections don't need this — Google pushes to them directly)
+cron.schedule("*/5 * * * *", () => {
+  pollGoogleAdsLeads().catch((err) => logger.error(`[google-ads-poll] cron failed: ${err.message}`));
 });
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };

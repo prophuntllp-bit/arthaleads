@@ -12,6 +12,10 @@ const router = express.Router();
 router.get("/facebook/connect", automationController.facebookConnect);
 router.get("/facebook/callback", automationController.facebookCallback);
 
+// Public OAuth endpoints for Google Ads (same reasoning — Google redirects here directly)
+router.get("/google/connect", automationController.googleConnect);
+router.get("/google/callback", automationController.googleCallback);
+
 // Meta-required compliance endpoints (public, no auth)
 router.post("/facebook/deauthorize", (req, res) => res.sendStatus(200));
 router.post("/facebook/delete", (req, res) => {
@@ -37,6 +41,10 @@ router.post("/voice/create", automationController.createVoiceConnection);
 
 router.get("/google/connections", automationController.getGoogleConnections);
 router.post("/google/create", automationController.createGoogleConnection);
+
+router.get("/google/oauth-result", automationController.getGoogleOAuthResult);
+router.post("/google/oauth-create", automationController.createGoogleOAuthConnection);
+router.post("/google/:id/sync", automationController.syncGoogleAdsConnection);
 
 router.post("/facebook/diagnose", automationController.diagnoseFacebook);
 router.post("/facebook/resubscribe", automationController.resubscribeFacebook);
