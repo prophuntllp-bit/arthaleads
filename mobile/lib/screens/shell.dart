@@ -32,14 +32,21 @@ class _ArthaFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 52,
-      height: 52,
+      width: 46,
+      height: 46,
       child: FloatingActionButton(
         heroTag: 'artha-fab',
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ArthaChatScreen()),
+        elevation: 8,
+        backgroundColor: AppColors.primaryDeep,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
         ),
-        child: ClipOval(
+        onPressed: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
           child: Image.asset('assets/images/ai_avatar.png', fit: BoxFit.cover),
         ),
       ),
@@ -90,29 +97,79 @@ class _ShellState extends State<Shell> {
     PushService.instance.pendingRoute.value = null;
     final normalized = path.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '');
     final match = _items.indexWhere(
-      (i) => normalized.contains(i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '')),
+      (i) => normalized.contains(
+        i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), ''),
+      ),
     );
     if (match != -1) setState(() => _index = match);
   }
 
   static final List<_NavItem> _items = [
-    _NavItem('Dashboard', Icons.dashboard_rounded, () => const DashboardScreen()),
+    _NavItem(
+      'Dashboard',
+      Icons.dashboard_rounded,
+      () => const DashboardScreen(),
+    ),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
-    _NavItem('Follow-ups', Icons.event_repeat_rounded, () => const FollowUpsScreen()),
-    _NavItem('Pipeline', Icons.view_kanban_rounded, () => const PipelineScreen()),
+    _NavItem(
+      'Follow-ups',
+      Icons.event_repeat_rounded,
+      () => const FollowUpsScreen(),
+    ),
+    _NavItem(
+      'Pipeline',
+      Icons.view_kanban_rounded,
+      () => const PipelineScreen(),
+    ),
     _NavItem('Projects', Icons.folder_rounded, () => const ProjectsScreen()),
     _NavItem('Tasks', Icons.task_alt_rounded, () => const TasksScreen()),
     _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
     _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),
-    _NavItem('Attendance', Icons.fingerprint_rounded, () => const AttendanceScreen()),
-    _NavItem('Bookings', Icons.receipt_long_rounded, () => const BookingsScreen()),
+    _NavItem(
+      'Attendance',
+      Icons.fingerprint_rounded,
+      () => const AttendanceScreen(),
+    ),
+    _NavItem(
+      'Bookings',
+      Icons.receipt_long_rounded,
+      () => const BookingsScreen(),
+    ),
     _NavItem('Dump', Icons.delete_sweep_rounded, () => const DumpScreen()),
-    _NavItem('Team', Icons.groups_rounded, () => const TeamScreen(), adminOnly: true),
-    _NavItem('Performance', Icons.trending_up_rounded, () => const PerformanceScreen(), adminOnly: true),
-    _NavItem('Invoices', Icons.request_quote_rounded, () => const InvoicesScreen(), adminOnly: true),
-    _NavItem('Automation', Icons.bolt_rounded, () => const AutomationScreen(), adminOnly: true),
-    _NavItem('Referrals', Icons.card_giftcard_rounded, () => const ReferralsScreen()),
-    _NavItem('Help & Support', Icons.support_agent_rounded, () => const HelpScreen()),
+    _NavItem(
+      'Team',
+      Icons.groups_rounded,
+      () => const TeamScreen(),
+      adminOnly: true,
+    ),
+    _NavItem(
+      'Performance',
+      Icons.trending_up_rounded,
+      () => const PerformanceScreen(),
+      adminOnly: true,
+    ),
+    _NavItem(
+      'Invoices',
+      Icons.request_quote_rounded,
+      () => const InvoicesScreen(),
+      adminOnly: true,
+    ),
+    _NavItem(
+      'Automation',
+      Icons.bolt_rounded,
+      () => const AutomationScreen(),
+      adminOnly: true,
+    ),
+    _NavItem(
+      'Referrals',
+      Icons.card_giftcard_rounded,
+      () => const ReferralsScreen(),
+    ),
+    _NavItem(
+      'Help & Support',
+      Icons.support_agent_rounded,
+      () => const HelpScreen(),
+    ),
     _NavItem('Settings', Icons.settings_rounded, () => const SettingsScreen()),
   ];
 
@@ -123,97 +180,116 @@ class _ShellState extends State<Shell> {
     if (_index >= visible.length) _index = 0;
     final current = visible[_index];
 
-    return Scaffold(
-      appBar: AppBar(title: Text(current.label)),
-      drawer: Drawer(
-        child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                      child: Text(
-                        (auth.user?['name'] as String? ?? '?').isNotEmpty
-                            ? (auth.user!['name'] as String)[0].toUpperCase()
-                            : '?',
-                        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            auth.user?['name'] as String? ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                            overflow: TextOverflow.ellipsis,
+    return AppBackdrop(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(title: Text(current.label)),
+        drawer: Drawer(
+          child: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.15,
+                        ),
+                        child: Text(
+                          (auth.user?['name'] as String? ?? '?').isNotEmpty
+                              ? (auth.user!['name'] as String)[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
                           ),
-                          Text(
-                            auth.org?['name'] as String? ?? auth.role,
-                            style: Theme.of(context).textTheme.bodySmall,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: visible.length,
-                  itemBuilder: (context, i) {
-                    final item = visible[i];
-                    final selected = i == _index;
-                    return ListTile(
-                      leading: Icon(item.icon, color: selected ? AppColors.primary : null),
-                      title: Text(
-                        item.label,
-                        style: TextStyle(
-                          fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                          color: selected ? AppColors.primary : null,
                         ),
                       ),
-                      selected: selected,
-                      selectedTileColor: AppColors.primary.withValues(alpha: 0.08),
-                      onTap: () {
-                        setState(() => _index = i);
-                        Navigator.pop(context);
-                      },
-                    );
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              auth.user?['name'] as String? ?? '',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              auth.org?['name'] as String? ?? auth.role,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: visible.length,
+                    itemBuilder: (context, i) {
+                      final item = visible[i];
+                      final selected = i == _index;
+                      return ListTile(
+                        leading: Icon(
+                          item.icon,
+                          color: selected ? AppColors.primary : null,
+                        ),
+                        title: Text(
+                          item.label,
+                          style: TextStyle(
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w400,
+                            color: selected ? AppColors.primary : null,
+                          ),
+                        ),
+                        selected: selected,
+                        selectedTileColor: AppColors.primary.withValues(
+                          alpha: 0.08,
+                        ),
+                        onTap: () {
+                          setState(() => _index = i);
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: AppColors.danger,
+                  ),
+                  title: const Text(
+                    'Log out',
+                    style: TextStyle(color: AppColors.danger),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await context.read<AuthState>().logout();
                   },
                 ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.logout_rounded, color: AppColors.danger),
-                title: const Text('Log out', style: TextStyle(color: AppColors.danger)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await context.read<AuthState>().logout();
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-      body: Stack(
-        children: [
-          current.builder(),
-          // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
-          // overlaps each screen's own "+" FAB, which all sit bottom-right.
-          Positioned(
-            left: 16,
-            bottom: 16,
-            child: _ArthaFab(),
-          ),
-        ],
+        body: Stack(
+          children: [
+            current.builder(),
+            // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
+            // overlaps each screen's own "+" FAB, which all sit bottom-right.
+            Positioned(left: 14, bottom: 14, child: _ArthaFab()),
+          ],
+        ),
       ),
     );
   }

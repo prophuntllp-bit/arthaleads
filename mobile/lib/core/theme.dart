@@ -9,7 +9,9 @@ class AppColors {
 
   // Dark theme surfaces
   static const darkBg = Color(0xFF111113);
-  static const darkSurface = Color(0x9E1E1D20); // rgba(30,29,32,0.62) approx blended for opaque contexts
+  static const darkSurface = Color(
+    0x9E1E1D20,
+  ); // rgba(30,29,32,0.62) approx blended for opaque contexts
   static const darkSurfaceSolid = Color(0xFF1E1D20);
   static const darkSurfaceLow = Color(0xAD16151A); // rgba(22,21,24,0.68)
   static const darkSurfaceHigh = Color(0xD62A282E); // rgba(42,40,46,0.84)
@@ -139,37 +141,87 @@ class AppTheme {
 /// there either — these are the specific sizes/weights used across the app).
 class AppText {
   static TextStyle kicker(BuildContext context) => TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2.2,
-        color: AppTheme.of(context).textSoft,
-      );
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 2.2,
+    color: AppTheme.of(context).textSoft,
+  );
 
   static TextStyle statValue(BuildContext context) => TextStyle(
-        fontSize: 26,
-        fontWeight: FontWeight.w700,
-        color: AppTheme.of(context).text,
-        height: 1.1,
-      );
+    fontSize: 26,
+    fontWeight: FontWeight.w700,
+    color: AppTheme.of(context).text,
+    height: 1.1,
+  );
 
   static TextStyle label(BuildContext context) => TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: AppTheme.of(context).text,
-      );
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppTheme.of(context).text,
+  );
 
   static TextStyle badge(BuildContext context, {Color? color}) => TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: color ?? AppTheme.of(context).text,
-      );
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    color: color ?? AppTheme.of(context).text,
+  );
 
   static TextStyle tableHeader(BuildContext context) => TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-        color: AppTheme.of(context).textSoft,
-      );
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 1.4,
+    color: AppTheme.of(context).textSoft,
+  );
+}
+
+/// Static app canvas matching the layered radial background used by the web.
+/// It sits behind the Scaffold and does not add work to scrolling cards.
+class AppBackdrop extends StatelessWidget {
+  final Widget child;
+
+  const AppBackdrop({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    return ColoredBox(
+      color: t.bg,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(-0.9, -0.95),
+                radius: 1.25,
+                colors: [
+                  AppColors.primary.withValues(alpha: t.isDark ? 0.12 : 0.18),
+                  Colors.transparent,
+                ],
+                stops: const [0, 0.62],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.95, 1),
+                radius: 1.2,
+                colors: [
+                  AppColors.primaryDeep.withValues(
+                    alpha: t.isDark ? 0.13 : 0.14,
+                  ),
+                  Colors.transparent,
+                ],
+                stops: const [0, 0.62],
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
 }
 
 ThemeData buildTheme(Brightness brightness) {
@@ -183,8 +235,9 @@ ThemeData buildTheme(Brightness brightness) {
     surface: t.surfaceSolid,
   );
 
-  final baseTextTheme = (dark ? Typography.whiteMountainView : Typography.blackMountainView)
-      .apply(fontFamily: 'Inter', bodyColor: t.text, displayColor: t.text);
+  final baseTextTheme =
+      (dark ? Typography.whiteMountainView : Typography.blackMountainView)
+          .apply(fontFamily: 'Inter', bodyColor: t.text, displayColor: t.text);
 
   return ThemeData(
     useMaterial3: true,
@@ -194,14 +247,17 @@ ThemeData buildTheme(Brightness brightness) {
     colorScheme: scheme,
     scaffoldBackgroundColor: t.bg,
     appBarTheme: AppBarTheme(
-      backgroundColor: t.bg,
+      backgroundColor: Colors.transparent,
       foregroundColor: t.text,
       elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
       centerTitle: false,
+      toolbarHeight: 58,
       titleTextStyle: TextStyle(
         fontFamily: 'Inter',
         color: t.text,
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: FontWeight.w700,
       ),
     ),
@@ -222,7 +278,11 @@ ThemeData buildTheme(Brightness brightness) {
       filled: true,
       fillColor: t.surfaceSolid,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      hintStyle: TextStyle(color: t.textSoft, fontSize: 14, fontFamily: 'Inter'),
+      hintStyle: TextStyle(
+        color: t.textSoft,
+        fontSize: 14,
+        fontFamily: 'Inter',
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppRadii.input),
         borderSide: BorderSide(color: t.border),
@@ -242,8 +302,14 @@ ThemeData buildTheme(Brightness brightness) {
         foregroundColor: Colors.white,
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.button)),
-        textStyle: const TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.button),
+        ),
+        textStyle: const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -253,7 +319,9 @@ ThemeData buildTheme(Brightness brightness) {
     listTileTheme: ListTileThemeData(iconColor: t.textSoft),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.button)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.button),
+      ),
     ),
     // Every existing showModalBottomSheet/showDialog call site gets the
     // web's glass-look surface + radii for free — no per-call-site changes.
@@ -261,7 +329,9 @@ ThemeData buildTheme(Brightness brightness) {
       backgroundColor: t.surfaceHigh,
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.modal)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadii.modal),
+        ),
       ),
       modalBackgroundColor: t.surfaceHigh,
       modalElevation: 0,
@@ -269,14 +339,32 @@ ThemeData buildTheme(Brightness brightness) {
     dialogTheme: DialogThemeData(
       backgroundColor: t.surfaceHigh,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadii.card)),
-      titleTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w700, color: t.text),
-      contentTextStyle: TextStyle(fontFamily: 'Inter', fontSize: 14, color: t.text),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.card),
+      ),
+      titleTextStyle: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 17,
+        fontWeight: FontWeight.w700,
+        color: t.text,
+      ),
+      contentTextStyle: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: 14,
+        color: t.text,
+      ),
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: t.surfaceHigh,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    drawerTheme: DrawerThemeData(
+      backgroundColor: dark ? const Color(0xFF18171C) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
+      ),
     ),
   );
 }
