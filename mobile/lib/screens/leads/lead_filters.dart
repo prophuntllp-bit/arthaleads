@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
+import '../../widgets/buttons.dart';
 
 /// Filter model for GET /leads/unified — field names match the query params.
 class LeadFilters {
@@ -173,7 +174,8 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               onChanged: (v) => setState(() => f = f.copyWith(followUpToday: v)),
             ),
             const SizedBox(height: 12),
-            ElevatedButton(
+            GradientButton(
+              fullWidth: true,
               onPressed: () => Navigator.pop(context, f),
               child: const Text('Apply Filters'),
             ),

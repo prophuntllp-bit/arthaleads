@@ -6,7 +6,9 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/motion.dart';
 import 'lead_detail_sheet.dart';
 import 'lead_filters.dart';
 import 'lead_form.dart';
@@ -325,14 +327,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
-      floatingActionButton: _selectMode
-          ? null
-          : FloatingActionButton(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              onPressed: () => _openForm(),
-              child: const Icon(Icons.add),
-            ),
+      floatingActionButton: _selectMode ? null : GradientFab(onPressed: () => _openForm()),
       body: Column(
         children: [
           Padding(
@@ -396,7 +391,7 @@ class LeadsScreenState extends State<LeadsScreen> {
           ),
           Expanded(
             child: !_initialLoaded
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+                ? const Center(child: AppSpinner(size: 32))
                 : _leads.isEmpty
                     ? const Center(child: Text('No leads found'))
                     : RefreshIndicator(
@@ -410,15 +405,13 @@ class LeadsScreenState extends State<LeadsScreen> {
                             if (i >= _leads.length) {
                               return const Padding(
                                 padding: EdgeInsets.all(16),
-                                child: Center(
-                                  child: SizedBox(
-                                    width: 22, height: 22,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                                  ),
-                                ),
+                                child: Center(child: AppSpinner(size: 22)),
                               );
                             }
-                            return _leadCard(_leads[i]);
+                            return FadeSlideIn(
+                              delay: Duration(milliseconds: 20 * (i % 12)),
+                              child: _leadCard(_leads[i]),
+                            );
                           },
                         ),
                       ),

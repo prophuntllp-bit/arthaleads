@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/glass.dart';
+import '../../widgets/motion.dart';
 
 /// Performance — GET /auth/performance (admin/manager). Leaderboard of
 /// team members with dual Main Pipeline / Project Pipeline breakdown.
@@ -79,12 +81,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   Widget _smallTile(String label, dynamic value, {bool highlight = false, String? note}) {
     final isNum = value is num;
-    return Container(
+    return SoftSurface(
+      radius: 10,
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
+      boxShadow: const [],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -131,7 +131,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+    if (_loading) return const Center(child: AppSpinner(size: 32));
     if (_members.isEmpty) return const Center(child: Text('No team performance data yet'));
 
     final members = _displayMembers;
@@ -202,7 +202,8 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               child: Center(child: Text('No data for this agent.')),
             ),
 
-          for (final m in members) ..._memberCard(m),
+          for (final (i, m) in members.indexed)
+            FadeSlideIn(delay: Duration(milliseconds: 40 * i), child: Column(children: _memberCard(m))),
         ],
       ),
     );
@@ -215,11 +216,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
     final hasProject = ((project['totalAssigned'] as num?) ?? 0) > 0;
 
     return [
-      Card(
+      SoftSurface(
         margin: const EdgeInsets.only(bottom: 12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
+        padding: const EdgeInsets.all(14),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Name/role header
@@ -268,7 +268,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               // Main Pipeline
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).dividerColor),
+                  border: Border.all(color: AppTheme.of(context).border),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -319,7 +319,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               // Project Pipeline
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).dividerColor),
+                  border: Border.all(color: AppTheme.of(context).border),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -383,7 +383,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               ),
             ],
           ),
-        ),
       ),
     ];
   }

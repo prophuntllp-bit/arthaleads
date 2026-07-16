@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
+import 'badges.dart';
 
 class StatusChip extends StatelessWidget {
   final String? status;
@@ -9,8 +10,7 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (status == null || status!.isEmpty) return const SizedBox.shrink();
-    final c = statusColor(status);
-    return _pill(status!, c);
+    return Pill(status!, statusColor(status));
   }
 }
 
@@ -21,7 +21,7 @@ class PriorityChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (priority == null || priority!.isEmpty) return const SizedBox.shrink();
-    return _pill(priority!, priorityColor(priority));
+    return Pill(priority!, priorityColor(priority));
   }
 }
 
@@ -33,21 +33,6 @@ class BookingChip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (booking == null || booking!.isEmpty) return const SizedBox.shrink();
     final opt = bookingOptions.where((o) => o.value == booking).firstOrNull;
-    return _pill(booking!, opt?.color ?? const Color(0xFF6B7280));
+    return Pill(booking!, opt?.color ?? const Color(0xFF6B7280));
   }
-}
-
-Widget _pill(String label, Color color) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: color.withValues(alpha: 0.35)),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-    ),
-  );
 }

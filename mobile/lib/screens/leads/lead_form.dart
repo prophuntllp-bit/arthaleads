@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 
 /// Add / edit a lead. Plain leads: POST /leads or PUT /leads/:id (full field set).
 /// Project leads: PATCH /projects/:pid/leads/:id — ProjectLead only stores a reduced
@@ -194,9 +195,11 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            ElevatedButton(
+            GradientButton(
+              fullWidth: true,
+              loading: _saving,
               onPressed: _saving ? null : _save,
-              child: Text(_saving ? 'Saving…' : (isEdit ? 'Save Changes' : 'Add Lead')),
+              child: Text(isEdit ? 'Save Changes' : 'Add Lead'),
             ),
           ],
         ),

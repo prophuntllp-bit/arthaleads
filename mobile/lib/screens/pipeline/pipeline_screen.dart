@@ -10,6 +10,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/motion.dart';
 
 /// Pipeline — kanban-style stage view. Reuses GET /leads/unified (same data
 /// as Leads/Follow-ups) grouped client-side by status, mirroring
@@ -157,7 +158,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const Center(child: AppSpinner(size: 32));
     }
 
     final grouped = <String, List<Map<String, dynamic>>>{
@@ -255,7 +256,9 @@ class _PipelineScreenState extends State<PipelineScreen> {
                           itemCount: stageLeads.length,
                           itemBuilder: (context, i) {
                             final lead = stageLeads[i];
-                            return Card(
+                            return FadeSlideIn(
+                              delay: Duration(milliseconds: 20 * (i % 10)),
+                              child: Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(16),
@@ -328,6 +331,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                     ],
                                   ),
                                 ),
+                              ),
                               ),
                             );
                           },

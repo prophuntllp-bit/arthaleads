@@ -5,7 +5,10 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/cards.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/glass.dart';
+import '../../widgets/motion.dart';
 
 const _dateRangePresets = [
   {'value': 'today', 'label': 'Today'},
@@ -167,7 +170,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final isAdmin = role == 'admin' || role == 'manager' || role == 'super_admin';
 
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const Center(child: AppSpinner(size: 32));
     }
 
     return RefreshIndicator(
@@ -193,12 +196,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 itemBuilder: (ctx) => _dateRangePresets
                     .map((p) => PopupMenuItem(value: p['value'], child: Text(p['label']!)))
                     .toList(),
-                child: Container(
+                child: SoftSurface(
+                  radius: AppRadii.pill,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -215,20 +215,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
 
           // ── Clock in/out ──
-          Card(
-            child: ListTile(
-              leading: Icon(
-                Icons.fingerprint,
-                color: _clockedIn ? AppColors.success : AppColors.primary,
-              ),
-              title: Text(_clockedIn ? 'Clocked in' : 'Not clocked in'),
-              trailing: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _clockedIn ? AppColors.danger : AppColors.success,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          FadeSlideIn(
+            child: SoftSurface(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.fingerprint,
+                  color: _clockedIn ? AppColors.success : AppColors.primary,
                 ),
-                onPressed: _clockBusy ? null : _clock,
-                child: Text(_clockBusy ? '…' : (_clockedIn ? 'Clock Out' : 'Clock In')),
+                title: Text(_clockedIn ? 'Clocked in' : 'Not clocked in'),
+                trailing: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _clockedIn ? AppColors.danger : AppColors.success,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                  onPressed: _clockBusy ? null : _clock,
+                  child: Text(_clockBusy ? '…' : (_clockedIn ? 'Clock Out' : 'Clock In')),
+                ),
               ),
             ),
           ),
@@ -236,31 +240,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // ── Stat cards ──
           if (a != null) ...[
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 1.9,
-              children: [
-                _stat('Total Leads', '${a['allTimeTotal'] ?? 0}', Icons.people, AppColors.info),
-                _stat('Follow-ups Today', '${a['todayFollowUps'] ?? 0}', Icons.alarm, AppColors.warning),
-                _stat('Closed Won', '${a['allTimeClosedWon'] ?? 0}', Icons.emoji_events, AppColors.success),
-                _stat('Conversion', '${a['conversionRate'] ?? 0}%', Icons.trending_up, AppColors.primary),
-                _stat('Pipeline Value', fmtBudget(a['pipelineValue'] as num?), Icons.currency_rupee, const Color(0xFF8B5CF6)),
-                _stat('This Period', '${a['totalLeads'] ?? 0}', Icons.calendar_month, const Color(0xFF0D9488)),
-              ],
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 40),
+              child: GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.9,
+                children: [
+                  StatCard(label: 'Total Leads', value: '${a['allTimeTotal'] ?? 0}', icon: Icons.people, color: AppColors.info),
+                  StatCard(label: 'Follow-ups Today', value: '${a['todayFollowUps'] ?? 0}', icon: Icons.alarm, color: AppColors.warning),
+                  StatCard(label: 'Closed Won', value: '${a['allTimeClosedWon'] ?? 0}', icon: Icons.emoji_events, color: AppColors.success),
+                  StatCard(label: 'Conversion', value: '${a['conversionRate'] ?? 0}%', icon: Icons.trending_up, color: AppColors.primary),
+                  StatCard(label: 'Pipeline Value', value: fmtBudget(a['pipelineValue'] as num?), icon: Icons.currency_rupee, color: const Color(0xFF8B5CF6)),
+                  StatCard(label: 'This Period', value: '${a['totalLeads'] ?? 0}', icon: Icons.calendar_month, color: const Color(0xFF0D9488)),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
 
             // ── Status breakdown ──
             Text('Pipeline · Leads by Status', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
+            SoftSurface(
+              padding: const EdgeInsets.all(12),
+              child: Column(
                   children: statusOptions.map((s) {
                     final count = ((a['allTimeByStatus'] as Map?) ?? {})[s] as int? ?? 0;
                     final total = a['allTimeTotal'] as int? ?? 1;
@@ -289,7 +295,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     );
                   }).toList(),
-                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -298,10 +303,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (((a['bySource'] as Map?) ?? {}).values.any((v) => (v as num) > 0)) ...[
               Text('Acquisition Mix · Leads by Source', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Builder(builder: (ctx) {
+              SoftSurface(
+                padding: const EdgeInsets.all(12),
+                child: Builder(builder: (ctx) {
                     final src = ((a['bySource'] as Map?) ?? {}).entries
                         .where((e) => (e.value as num) > 0)
                         .toList()
@@ -341,7 +345,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     );
                   }),
-                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -351,37 +354,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_hot.isNotEmpty) ...[
             Text('🔥 Hot Today', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            ..._hot.map((l) => Card(
-                  child: ListTile(
-                    dense: true,
-                    title: Text(str(l['name']) ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(
-                      // _nextAction is a structured {action, icon, color} object
-                      str((l['_nextAction'] as Map?)?['action']) ?? str(l['phone']) ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            for (final (i, l) in _hot.indexed)
+              FadeSlideIn(
+                delay: Duration(milliseconds: 30 * i),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SoftSurface(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(str(l['name']) ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                        // _nextAction is a structured {action, icon, color} object
+                        str((l['_nextAction'] as Map?)?['action']) ?? str(l['phone']) ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: StatusChip(str(l['status'])),
                     ),
-                    trailing: StatusChip(str(l['status'])),
                   ),
-                )),
-            const SizedBox(height: 16),
+                ),
+              ),
+            const SizedBox(height: 8),
           ],
 
           // ── Follow-ups due ──
           if (_due.isNotEmpty) ...[
             Text('⏰ Follow-ups Due', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            ..._due.take(5).map((l) => Card(
-                  child: ListTile(
-                    dense: true,
-                    title: Text(l['name'] as String? ?? '—',
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(l['phone'] as String? ?? ''),
-                    trailing: BookingChip(l['booking'] as String?),
+            for (final (i, l) in _due.indexed.take(5))
+              FadeSlideIn(
+                delay: Duration(milliseconds: 30 * i),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SoftSurface(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(l['name'] as String? ?? '—',
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(l['phone'] as String? ?? ''),
+                      trailing: BookingChip(l['booking'] as String?),
+                    ),
                   ),
-                )),
-            const SizedBox(height: 16),
+                ),
+              ),
+            const SizedBox(height: 8),
           ],
 
           // ── Admin Intelligence ──
@@ -403,10 +424,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               final goal = _goalOverride ?? (a['monthlyClosingGoal'] as num?)?.toInt() ?? 0;
               final current = (a['thisMonthClosedWon'] as num?)?.toInt() ?? 0;
               final pct = goal > 0 ? (current / goal * 100).clamp(0, 100).round() : 0;
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
+              return SoftSurface(
+                padding: const EdgeInsets.all(14),
+                child: Row(
                     children: [
                       const Icon(Icons.track_changes, size: 18, color: AppColors.primary),
                       const SizedBox(width: 10),
@@ -442,7 +462,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                ),
               );
             }),
             const SizedBox(height: 12),
@@ -451,7 +470,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
               Text('Top Agents', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 6),
-              Card(
+              SoftSurface(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Column(
                   children: [
                     for (final (i, ag) in ((a['byAgent'] as List).cast<Map<String, dynamic>>().take(5)).indexed)
@@ -475,7 +495,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if ((a['recentActivity'] as List?)?.isNotEmpty ?? false) ...[
               Text('Team Activity', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 6),
-              Card(
+              SoftSurface(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Column(
                   children: (a['recentActivity'] as List).cast<Map<String, dynamic>>().take(8).map((item) {
                     return ListTile(
@@ -496,46 +517,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
           const SizedBox(height: 32),
         ],
-      ),
-    );
-  }
-
-  Widget _stat(String label, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value.isEmpty ? '—' : value,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  Text(label,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
