@@ -75,6 +75,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _index = 0;
+  final Map<String, Widget> _screenCache = {};
 
   @override
   void initState() {
@@ -180,6 +181,10 @@ class _ShellState extends State<Shell> {
     final visible = _items.where((i) => !i.adminOnly || auth.isAdmin).toList();
     if (_index >= visible.length) _index = 0;
     final current = visible[_index];
+    final currentScreen = _screenCache.putIfAbsent(
+      current.label,
+      current.builder,
+    );
 
     return AppBackdrop(
       child: Scaffold(
@@ -320,7 +325,7 @@ class _ShellState extends State<Shell> {
         ),
         body: Stack(
           children: [
-            current.builder(),
+            currentScreen,
             // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
             // overlaps each screen's own "+" FAB, which all sit bottom-right.
             Positioned(left: 14, bottom: 14, child: _ArthaFab()),
