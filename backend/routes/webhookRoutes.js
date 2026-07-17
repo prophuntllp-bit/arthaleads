@@ -740,9 +740,11 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
       ].filter(Boolean).join("\n");
 
-      // Requirements = the concise extracted summary (what the caller wants),
-      // falling back to the flattened message only if nothing was extracted.
-      reqText = extractedLines.length ? extractedLines.join(" · ") : msg;
+      // Requirements = the concise extracted summary (what the caller wants).
+      // Never fall back to the raw message/transcript here — it's already
+      // fully available in the Transcript tab; dumping it into Requirements
+      // just floods the Leads table with a wall of transcript text.
+      reqText = extractedLines.length ? extractedLines.join(" · ") : "";
     } else {
       noteText = [
         msg ? `Message: ${msg}` : null,
