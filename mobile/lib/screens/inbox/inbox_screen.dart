@@ -122,7 +122,7 @@ class _InboxScreenState extends State<InboxScreen> {
               Text('WhatsApp not connected', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
               Text(
-                'Connect your WhatsApp number from the web app (Automation → WhatsApp) to start receiving messages here.',
+                'Connect your WhatsApp number from Automation to start receiving messages here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),

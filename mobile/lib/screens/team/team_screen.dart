@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
@@ -34,13 +37,18 @@ class _TeamScreenState extends State<TeamScreen> {
     setState(() => _loading = true);
     try {
       final res = await _api.dio.get('/auth/users');
-      setState(() => _users = (res.data['users'] as List? ?? []).cast<Map<String, dynamic>>());
+      setState(
+        () => _users = (res.data['users'] as List? ?? [])
+            .cast<Map<String, dynamic>>(),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to load team')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to load team')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -52,14 +60,17 @@ class _TeamScreenState extends State<TeamScreen> {
       final res = await _api.dio.patch('/auth/users/${user['_id']}/toggle');
       setState(() {
         final idx = _users.indexWhere((u) => u['_id'] == user['_id']);
-        if (idx != -1) _users[idx] = (res.data['user'] as Map).cast<String, dynamic>();
+        if (idx != -1)
+          _users[idx] = (res.data['user'] as Map).cast<String, dynamic>();
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to update status')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to update status')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -71,10 +82,16 @@ class _TeamScreenState extends State<TeamScreen> {
         title: const Text('Remove team member?'),
         content: Text('"${user['name']}" will lose access to Arthaleads.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -85,10 +102,12 @@ class _TeamScreenState extends State<TeamScreen> {
       setState(() => _users.removeWhere((u) => u['_id'] == user['_id']));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to remove member')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to remove member')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -104,12 +123,38 @@ class _TeamScreenState extends State<TeamScreen> {
     }
   }
 
+  ImageProvider<Object>? _avatarProvider(String? value) {
+    final avatar = value?.trim() ?? '';
+    if (avatar.isEmpty) return null;
+    if (avatar.startsWith('data:image/') && avatar.contains(',')) {
+      try {
+        return MemoryImage(
+          base64Decode(avatar.substring(avatar.indexOf(',') + 1)),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+    final uri = Uri.tryParse(avatar);
+    return uri != null && uri.hasScheme ? NetworkImage(avatar) : null;
+  }
+
   Future<void> _openForm({Map<String, dynamic>? user}) async {
-    final nameCtrl = TextEditingController(text: user?['name'] as String? ?? '');
-    final emailCtrl = TextEditingController(text: user?['email'] as String? ?? '');
-    final phoneCtrl = TextEditingController(text: user?['phone'] as String? ?? '');
+    final nameCtrl = TextEditingController(
+      text: user?['name'] as String? ?? '',
+    );
+    final emailCtrl = TextEditingController(
+      text: user?['email'] as String? ?? '',
+    );
+    final phoneCtrl = TextEditingController(
+      text: user?['phone'] as String? ?? '',
+    );
     final passwordCtrl = TextEditingController();
+    final avatarCtrl = TextEditingController(
+      text: user?['avatar'] as String? ?? '',
+    );
     String role = user?['role'] as String? ?? 'agent';
+    bool isActive = user?['isActive'] != false;
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -117,17 +162,24 @@ class _TeamScreenState extends State<TeamScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(
-            left: 16, right: 16, top: 16,
+            left: 16,
+            right: 16,
+            top: 16,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
           ),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(user == null ? 'Add Team Member' : 'Edit Team Member',
-                    style: Theme.of(ctx).textTheme.titleLarge),
+                Text(
+                  user == null ? 'Add Team Member' : 'Edit Team Member',
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: emailCtrl,
@@ -135,12 +187,78 @@ class _TeamScreenState extends State<TeamScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 12),
-                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Phone (optional)')),
+                TextField(
+                  controller: phoneCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone (optional)',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: avatarCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'Avatar URL',
+                    suffixIcon: IconButton(
+                      tooltip: 'Choose image',
+                      icon: const Icon(Icons.photo_library_outlined),
+                      onPressed: () async {
+                        final picked = await ImagePicker().pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 72,
+                          maxWidth: 600,
+                        );
+                        if (picked == null) return;
+                        final bytes = await picked.readAsBytes();
+                        if (bytes.length > 1500000) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please choose an image smaller than 1.5 MB',
+                                ),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+                        final mime = picked.name.toLowerCase().endsWith('.png')
+                            ? 'image/png'
+                            : 'image/jpeg';
+                        setSheetState(
+                          () => avatarCtrl.text =
+                              'data:$mime;base64,${base64Encode(bytes)}',
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                if (avatarCtrl.text.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundImage: _avatarProvider(avatarCtrl.text),
+                        child: _avatarProvider(avatarCtrl.text) == null
+                            ? const Icon(Icons.person)
+                            : null,
+                      ),
+                      TextButton.icon(
+                        onPressed: () => setSheetState(avatarCtrl.clear),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Remove'),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: passwordCtrl,
                   decoration: InputDecoration(
-                    labelText: user == null ? 'Password' : 'New password (leave blank to keep current)',
+                    labelText: user == null
+                        ? 'Password'
+                        : 'New password (leave blank to keep current)',
                   ),
                   obscureText: true,
                 ),
@@ -149,41 +267,83 @@ class _TeamScreenState extends State<TeamScreen> {
                   initialValue: role,
                   decoration: const InputDecoration(labelText: 'Role'),
                   items: [
-                    const DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                    const DropdownMenuItem(value: 'manager', child: Text('Manager')),
-                    const DropdownMenuItem(value: 'agent', child: Text('Agent')),
+                    const DropdownMenuItem(
+                      value: 'admin',
+                      child: Text('Admin'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'manager',
+                      child: Text('Manager'),
+                    ),
+                    const DropdownMenuItem(
+                      value: 'agent',
+                      child: Text('Agent'),
+                    ),
                     // Not a normally assignable role — included only so editing an
                     // existing super_admin's other fields doesn't crash the dropdown
                     // (initialValue must match exactly one item) or silently demote them.
                     if (role == 'super_admin')
-                      const DropdownMenuItem(value: 'super_admin', child: Text('Super Admin')),
+                      const DropdownMenuItem(
+                        value: 'super_admin',
+                        child: Text('Super Admin'),
+                      ),
                   ],
                   onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
+                ),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Active account'),
+                  subtitle: const Text('Inactive members cannot sign in'),
+                  value: isActive,
+                  onChanged: (value) => setSheetState(() => isActive = value),
                 ),
                 const SizedBox(height: 16),
                 GradientButton(
                   fullWidth: true,
                   onPressed: () async {
+                    if (nameCtrl.text.trim().isEmpty ||
+                        emailCtrl.text.trim().isEmpty ||
+                        (user == null && passwordCtrl.text.length < 8)) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Name, email and a password of at least 8 characters are required',
+                          ),
+                          backgroundColor: AppColors.danger,
+                        ),
+                      );
+                      return;
+                    }
                     final data = {
                       'name': nameCtrl.text.trim(),
                       'email': emailCtrl.text.trim(),
                       'phone': phoneCtrl.text.trim(),
                       'role': role,
-                      if (passwordCtrl.text.isNotEmpty) 'password': passwordCtrl.text,
+                      'avatar': avatarCtrl.text.trim(),
+                      'isActive': isActive,
+                      if (passwordCtrl.text.isNotEmpty)
+                        'password': passwordCtrl.text,
                     };
                     try {
                       if (user == null) {
                         await _api.dio.post('/auth/users', data: data);
                       } else {
-                        await _api.dio.patch('/auth/users/${user['_id']}', data: data);
+                        await _api.dio.patch(
+                          '/auth/users/${user['_id']}',
+                          data: data,
+                        );
                       }
                       if (ctx.mounted) Navigator.pop(ctx, true);
                     } catch (e) {
                       if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-                          content: Text(ApiClient.errorMessage(e, 'Save failed')),
-                          backgroundColor: AppColors.danger,
-                        ));
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ApiClient.errorMessage(e, 'Save failed'),
+                            ),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
                       }
                     }
                   },
@@ -207,13 +367,19 @@ class _TeamScreenState extends State<TeamScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text('Team management is available to admins only.', textAlign: TextAlign.center),
+          child: Text(
+            'Team management is available to admins only.',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
 
     return Scaffold(
-      floatingActionButton: GradientFab(onPressed: () => _openForm(), icon: Icons.person_add_rounded),
+      floatingActionButton: GradientFab(
+        onPressed: () => _openForm(),
+        icon: Icons.person_add_rounded,
+      ),
       body: _loading
           ? const Center(child: AppSpinner(size: 32))
           : RefreshIndicator(
@@ -229,36 +395,60 @@ class _TeamScreenState extends State<TeamScreen> {
                   return FadeSlideIn(
                     delay: Duration(milliseconds: 20 * (i % 12)),
                     child: Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: ListTile(
-                      onTap: () => _openForm(user: u),
-                      leading: CircleAvatar(
-                        backgroundColor: roleColor.withValues(alpha: 0.15),
-                        child: Text(
-                          (u['name'] as String? ?? '?').isNotEmpty
-                              ? (u['name'] as String)[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(color: roleColor, fontWeight: FontWeight.w700),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      child: ListTile(
+                        onTap: () => _openForm(user: u),
+                        leading: CircleAvatar(
+                          backgroundColor: roleColor.withValues(alpha: 0.15),
+                          backgroundImage: _avatarProvider(
+                            u['avatar'] as String?,
+                          ),
+                          child: _avatarProvider(u['avatar'] as String?) == null
+                              ? Text(
+                                  (u['name'] as String? ?? '?').isNotEmpty
+                                      ? (u['name'] as String)[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    color: roleColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        title: Text(
+                          u['name'] as String? ?? '—',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: active
+                                ? null
+                                : Theme.of(context).disabledColor,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${u['email'] ?? ''} · ${u['role'] ?? ''}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Switch(
+                              value: active,
+                              activeThumbColor: AppColors.success,
+                              onChanged: (_) => _toggleActive(u),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: AppColors.danger,
+                                size: 20,
+                              ),
+                              onPressed: () => _delete(u),
+                            ),
+                          ],
                         ),
                       ),
-                      title: Text(u['name'] as String? ?? '—',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: active ? null : Theme.of(context).disabledColor)),
-                      subtitle: Text('${u['email'] ?? ''} · ${u['role'] ?? ''}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Switch(
-                            value: active,
-                            activeThumbColor: AppColors.success,
-                            onChanged: (_) => _toggleActive(u),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 20),
-                            onPressed: () => _delete(u),
-                          ),
-                        ],
-                      ),
-                    ),
                     ),
                   );
                 },

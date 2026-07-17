@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
@@ -48,6 +50,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   Map<String, dynamic> _summary = {};
   bool _loading = true;
   bool _copied = false;
+  double _calcCount = 1;
 
   @override
   void initState() {
@@ -109,6 +112,32 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
         "I use Arthaleads to manage my real estate leads — it's brilliant. "
         "Sign up with my link and we both get a free month: $link";
     await Share.share(msg);
+  }
+
+  Future<void> _shareWhatsApp(String link) async {
+    final message = Uri.encodeComponent(
+      "I use Arthaleads to manage my real estate leads — it's brilliant. "
+      'Sign up with my link and we both get a free month: $link',
+    );
+    await launchUrl(
+      Uri.parse('https://wa.me/?text=$message'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> _shareEmail(String link, String userName) async {
+    await launchUrl(
+      Uri(
+        scheme: 'mailto',
+        queryParameters: {
+          'subject': 'Try Arthaleads CRM — we both get a free month',
+          'body':
+              'Hi,\n\nI use Arthaleads to manage my real estate leads and thought you would find it useful.\n'
+              'Sign up with my link and we both get a free month:\n\n$link\n\nCheers,\n$userName',
+        },
+      ),
+      mode: LaunchMode.externalApplication,
+    );
   }
 
   String _statusLabel(String? s) {
@@ -352,6 +381,32 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _shareWhatsApp(link),
+                            icon: const FaIcon(
+                              FontAwesomeIcons.whatsapp,
+                              size: 16,
+                            ),
+                            label: const Text('WhatsApp'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _shareEmail(
+                              link,
+                              auth.user?['name'] as String? ?? '',
+                            ),
+                            icon: const Icon(Icons.email_outlined, size: 16),
+                            label: const Text('Email'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ],
               ),
@@ -360,6 +415,91 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
           const SizedBox(height: 16),
 
           // ── My referrals list ──
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'How much can you earn?',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Estimate free months from referrals who subscribe.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text(
+                        'Referrals who subscribe',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${_calcCount.round()}',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _calcCount,
+                    min: 1,
+                    max: 12,
+                    divisions: 11,
+                    label: '${_calcCount.round()}',
+                    onChanged: (value) => setState(() => _calcCount = value),
+                  ),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'You could earn',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        Text(
+                          '${_calcCount.round().clamp(1, 6)} free month${_calcCount.round().clamp(1, 6) == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        if (_calcCount > 6)
+                          Text(
+                            'Capped at 6 per year — resets annually',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           Row(
             children: [
               Text(

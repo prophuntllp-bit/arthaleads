@@ -232,6 +232,8 @@ class _ShellState extends State<Shell> {
     final current = visible[_index];
     final currentScreen = current.label == 'Dashboard'
         ? DashboardScreen(onNavigate: _navigateToLabel)
+        : current.label == 'Bookings'
+        ? BookingsScreen(onNavigate: _navigateToLabel)
         : _screenCache.putIfAbsent(current.label, current.builder);
 
     return PopScope(

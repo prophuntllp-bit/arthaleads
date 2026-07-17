@@ -15,8 +15,8 @@ const _platformDefaults = {
 const _serverBase = 'https://api.arthaleads.com';
 
 /// Add / edit a non-Facebook lead source (Google, WhatsApp, Website, Custom).
-/// Facebook requires a browser OAuth round-trip and stays web-only; editing
-/// an existing Facebook connection here is limited to name/page/form.
+/// Facebook sources are created through the native System User Token wizard;
+/// existing source metadata can be edited here.
 class AutomationFormScreen extends StatefulWidget {
   final Map<String, dynamic>? automation;
 
@@ -109,7 +109,7 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 6),
                 child: Text('Facebook connections only allow editing name, page, and form here — '
-                    'reconnecting/OAuth stays on the web app.',
+                    'use the Facebook button on Automation to reconnect with a new System User Token.',
                     style: TextStyle(fontSize: 12, color: AppColors.warning)),
               ),
             Padding(

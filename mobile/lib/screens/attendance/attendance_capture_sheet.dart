@@ -365,12 +365,7 @@ class _AttendanceCaptureSheetState extends State<AttendanceCaptureSheet>
           if (scale < 1) scale = 1 / scale;
           return Transform.scale(
             scale: scale,
-            child: Transform.flip(
-              // CameraPreview mirrors front cameras by default. Attendance
-              // proof must show the real captured orientation, not a mirror.
-              flipX: _camera?.lensDirection == CameraLensDirection.front,
-              child: Center(child: CameraPreview(controller)),
-            ),
+            child: Center(child: CameraPreview(controller)),
           );
         },
       );
