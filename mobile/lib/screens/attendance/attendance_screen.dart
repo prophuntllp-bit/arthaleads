@@ -37,7 +37,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   bool _loading = true;
   bool _acting = false;
   bool _teamLoading = false;
-  bool _showTeam = false;
+  String _view = 'my';
+  String? _recordUserId;
   Timer? _ticker;
   DateTime? _from;
   DateTime? _to;
@@ -64,12 +65,17 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final auth = Provider.of<AuthState>(context, listen: false);
+      final currentUserId = auth.user?['_id']?.toString();
       final results = await Future.wait([
         _api.dio.get('/attendance/status'),
         _api.dio.get(
           '/attendance',
           queryParameters: {
             'limit': 30,
+            if (_view == 'my' && currentUserId != null) 'userId': currentUserId,
+            if (_view == 'records' && _recordUserId != null)
+              'userId': _recordUserId,
             if (_from != null) 'from': DateFormat('yyyy-MM-dd').format(_from!),
             if (_to != null) 'to': DateFormat('yyyy-MM-dd').format(_to!),
           },
@@ -202,6 +208,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
         '/attendance/export',
         options: Options(responseType: ResponseType.bytes),
         queryParameters: {
+          if (_view == 'records' && _recordUserId != null)
+            'userId': _recordUserId,
           if (_from != null) 'from': DateFormat('yyyy-MM-dd').format(_from!),
           if (_to != null) 'to': DateFormat('yyyy-MM-dd').format(_to!),
         },
@@ -633,15 +641,25 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: SegmentedButton<bool>(
+                  child: SegmentedButton<String>(
                     segments: const [
-                      ButtonSegment(value: false, label: Text('My Attendance')),
-                      ButtonSegment(value: true, label: Text('Team Today')),
+                      ButtonSegment(value: 'my', label: Text('My')),
+                      ButtonSegment(value: 'team', label: Text('Team Today')),
+                      ButtonSegment(
+                        value: 'records',
+                        label: Text('All Records'),
+                      ),
                     ],
-                    selected: {_showTeam},
+                    selected: {_view},
                     onSelectionChanged: (sel) {
-                      setState(() => _showTeam = sel.first);
-                      if (_showTeam && _team.isEmpty) _loadTeam();
+                      setState(() => _view = sel.first);
+                      if (_view == 'team' && _team.isEmpty) _loadTeam();
+                      if (_view == 'records') {
+                        if (_team.isEmpty) _loadTeam();
+                        _load();
+                      } else if (_view == 'my') {
+                        _load();
+                      }
                     },
                   ),
                 ),
@@ -659,9 +677,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             ),
           ),
         Expanded(
-          child: _showTeam
+          child: _view == 'team'
               ? _teamTodayView()
-              : _myAttendanceView(auth, clockIn, clockOut, clockedIn, done),
+              : _myAttendanceView(
+                  auth,
+                  clockIn,
+                  clockOut,
+                  clockedIn,
+                  done,
+                  recordsOnly: _view == 'records',
+                ),
         ),
       ],
     );
@@ -959,8 +984,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     DateTime? clockIn,
     DateTime? clockOut,
     bool clockedIn,
-    bool done,
-  ) {
+    bool done, {
+    bool recordsOnly = false,
+  }) {
     final totalMins = _history.fold<int>(
       0,
       (s, r) => s + ((r['totalMinutes'] as int?) ?? 0),
@@ -968,6 +994,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     final daysPresent = _history.where((r) => r['clockIn'] != null).length;
     final avgMins = daysPresent > 0 ? totalMins ~/ daysPresent : 0;
     final lateCount = _history.where((r) => r['isLate'] == true).length;
+    final fullDays = _history.where((r) => r['dayType'] == 'full').length;
+    final halfDays = _history.where((r) => r['dayType'] == 'half').length;
 
     return RefreshIndicator(
       color: AppColors.primary,
@@ -975,114 +1003,165 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Text(
-                    DateFormat('EEEE, d MMMM').format(DateTime.now()),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  if (clockedIn) ...[
+          if (!recordsOnly)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
                     Text(
-                      _fmtDuration(DateTime.now().difference(clockIn!)),
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                      DateFormat('EEEE, d MMMM').format(DateTime.now()),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    if (clockedIn) ...[
+                      Text(
+                        _fmtDuration(DateTime.now().difference(clockIn!)),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Clocked in at ${_fmtTime(clockIn)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ] else if (done) ...[
-                    Icon(
-                      Icons.check_circle_rounded,
-                      color: AppColors.success,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Done for today',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_fmtTime(clockIn)} → ${_fmtTime(clockOut)}  ·  ${_fmtMinutes(_today?['totalMinutes'] as int?)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ] else ...[
-                    Icon(
-                      Icons.schedule_rounded,
-                      color: Theme.of(context).disabledColor,
-                      size: 40,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Not clocked in yet',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                  if (_requireSelfie && !done) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Selfie + location required to clock ${clockedIn ? 'out' : 'in'}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontStyle: FontStyle.italic,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Clocked in at ${_fmtTime(clockIn)}',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _acting || done
-                          ? null
-                          : (clockedIn ? _clockOut : _clockIn),
-                      style: clockedIn
-                          ? ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.danger,
-                            )
-                          : null,
-                      icon: _acting
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                    ] else if (done) ...[
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: AppColors.success,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Done for today',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_fmtTime(clockIn)} → ${_fmtTime(clockOut)}  ·  ${_fmtMinutes(_today?['totalMinutes'] as int?)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ] else ...[
+                      Icon(
+                        Icons.schedule_rounded,
+                        color: Theme.of(context).disabledColor,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Not clocked in yet',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                    if (_requireSelfie && !done) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Selfie + location required to clock ${clockedIn ? 'out' : 'in'}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _acting || done
+                            ? null
+                            : (clockedIn ? _clockOut : _clockIn),
+                        style: clockedIn
+                            ? ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.danger,
+                              )
+                            : null,
+                        icon: _acting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(
+                                clockedIn
+                                    ? Icons.logout_rounded
+                                    : Icons.login_rounded,
                               ),
-                            )
-                          : Icon(
-                              clockedIn
-                                  ? Icons.logout_rounded
-                                  : Icons.login_rounded,
-                            ),
-                      label: Text(
-                        _acting
-                            ? 'Please wait…'
-                            : done
-                            ? 'Completed'
-                            : (clockedIn ? 'Clock Out' : 'Clock In'),
+                        label: Text(
+                          _acting
+                              ? 'Please wait…'
+                              : done
+                              ? 'Completed'
+                              : (clockedIn ? 'Clock Out' : 'Clock In'),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 16),
-          Row(
+          if (recordsOnly) ...[
+            DropdownButtonFormField<String>(
+              initialValue: _recordUserId,
+              decoration: const InputDecoration(
+                labelText: 'Team member',
+                prefixIcon: Icon(Icons.person_search_outlined),
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('All members'),
+                ),
+                ..._team.map((row) {
+                  final user = (row['user'] as Map).cast<String, dynamic>();
+                  return DropdownMenuItem<String>(
+                    value: user['_id'].toString(),
+                    child: Text(user['name']?.toString() ?? 'Member'),
+                  );
+                }),
+              ],
+              onChanged: (value) {
+                setState(() => _recordUserId = value);
+                _load();
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(child: _statTile('Days Present', '$daysPresent')),
-              const SizedBox(width: 8),
-              Expanded(child: _statTile('Avg Hours', _fmtMinutes(avgMins))),
-              const SizedBox(width: 8),
-              Expanded(child: _statTile('Late', '$lateCount')),
+              SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                child: _statTile('Total Hours', _fmtMinutes(totalMins)),
+              ),
+              SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                child: _statTile('Days Present', '$daysPresent'),
+              ),
+              SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                child: _statTile('Avg Hours / Day', _fmtMinutes(avgMins)),
+              ),
+              if (recordsOnly) ...[
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                  child: _statTile('Full Days', '$fullDays'),
+                ),
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                  child: _statTile('Half Days', '$halfDays'),
+                ),
+              ],
+              SizedBox(
+                width: (MediaQuery.sizeOf(context).width - 48) / 2,
+                child: _statTile('Late', '$lateCount'),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1099,12 +1178,12 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ),
                 ),
               ),
-              if (auth.isAdmin) ...[
+              if (auth.isAdmin && recordsOnly) ...[
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: _exportCsv,
                   icon: const Icon(Icons.download, size: 16),
-                  label: const Text('CSV'),
+                  label: const Text('Download Report'),
                 ),
               ],
             ],
@@ -1129,11 +1208,35 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
+                  onTap: recordsOnly
+                      ? () {
+                          final user =
+                              (r['userId'] as Map?)?.cast<String, dynamic>() ??
+                              const <String, dynamic>{};
+                          _showTeamMember({'user': user, 'attendance': r});
+                        }
+                      : null,
+                  leading: recordsOnly && r['userId'] is Map
+                      ? CircleAvatar(
+                          child: Text(
+                            ((r['userId'] as Map)['name']?.toString() ?? '?')
+                                .substring(0, 1)
+                                .toUpperCase(),
+                          ),
+                        )
+                      : null,
                   title: Text(
-                    r['date'] as String? ?? '—',
+                    recordsOnly && r['userId'] is Map
+                        ? (r['userId'] as Map)['name']?.toString() ??
+                              'Team member'
+                        : r['date']?.toString() ?? '—',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text('${_fmtTime(inT)} → ${_fmtTime(outT)}'),
+                  subtitle: Text(
+                    recordsOnly
+                        ? '${r['date'] ?? ''}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
+                        : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
+                  ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,

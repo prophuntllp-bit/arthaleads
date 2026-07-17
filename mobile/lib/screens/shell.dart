@@ -12,6 +12,7 @@ import 'automation/automation_screen.dart';
 import 'bookings/bookings_screen.dart';
 import 'calls/calls_screen.dart';
 import 'dashboard/dashboard_screen.dart';
+import 'developers/developers_screen.dart';
 import 'dump/dump_screen.dart';
 import 'followups/followups_screen.dart';
 import 'help/help_screen.dart';
@@ -167,6 +168,11 @@ class _ShellState extends State<Shell> {
       () => const PipelineScreen(),
     ),
     _NavItem('Projects', Icons.folder_rounded, () => const ProjectsScreen()),
+    _NavItem(
+      'Developers',
+      Icons.apartment_rounded,
+      () => const DevelopersScreen(),
+    ),
     _NavItem('Tasks', Icons.task_alt_rounded, () => const TasksScreen()),
     _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
     _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),

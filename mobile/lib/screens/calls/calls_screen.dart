@@ -48,7 +48,8 @@ class _CallsScreenState extends State<CallsScreen> {
     _loadAgents();
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400 &&
-          !_loading && _page < _pages) {
+          !_loading &&
+          _page < _pages) {
         _page += 1;
         _load();
       }
@@ -66,7 +67,12 @@ class _CallsScreenState extends State<CallsScreen> {
     if (!context.read<AuthState>().isAdmin) return;
     try {
       final res = await _api.dio.get('/auth/agents');
-      if (mounted) setState(() => _agents = (res.data['agents'] as List? ?? []).cast<Map<String, dynamic>>());
+      if (mounted) {
+        setState(
+          () => _agents = (res.data['agents'] as List? ?? [])
+              .cast<Map<String, dynamic>>(),
+        );
+      }
     } catch (_) {}
   }
 
@@ -78,19 +84,26 @@ class _CallsScreenState extends State<CallsScreen> {
     setState(() => _loading = true);
     try {
       final futures = <Future>[
-        _api.dio.get('/calls', queryParameters: {
-          'page': _page,
-          'limit': 30,
-          if (_statusFilter != 'all') 'status': _statusFilter,
-          if (_agentFilter.isNotEmpty) 'agentId': _agentFilter,
-          if (_searchCtrl.text.trim().isNotEmpty) 'search': _searchCtrl.text.trim(),
-        }),
+        _api.dio.get(
+          '/calls',
+          queryParameters: {
+            'page': _page,
+            'limit': 30,
+            if (_statusFilter != 'all') 'status': _statusFilter,
+            if (_agentFilter.isNotEmpty) 'agentId': _agentFilter,
+            if (_searchCtrl.text.trim().isNotEmpty)
+              'search': _searchCtrl.text.trim(),
+          },
+        ),
       ];
       if (reset) futures.add(_api.dio.get('/calls/stats'));
 
       final results = await Future.wait(futures);
       setState(() {
-        _calls.addAll((results[0].data['calls'] as List? ?? []).cast<Map<String, dynamic>>());
+        _calls.addAll(
+          (results[0].data['calls'] as List? ?? [])
+              .cast<Map<String, dynamic>>(),
+        );
         _pages = results[0].data['pages'] as int? ?? 1;
         if (results.length > 1) {
           _stats = (results[1].data as Map).cast<String, dynamic>();
@@ -98,10 +111,12 @@ class _CallsScreenState extends State<CallsScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to load calls')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to load calls')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -113,19 +128,26 @@ class _CallsScreenState extends State<CallsScreen> {
     if (leadId == null || _callingLeadId != null) return;
     setState(() => _callingLeadId = leadId);
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': leadId});
+      final res = await _api.dio.post(
+        '/calls/initiate',
+        data: {'leadId': leadId},
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(res.data['message'] as String? ?? 'Calling…'),
-          backgroundColor: AppColors.success,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.data['message'] as String? ?? 'Calling…'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Call failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Call failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _callingLeadId = null);
@@ -141,10 +163,14 @@ class _CallsScreenState extends State<CallsScreen> {
         setState(() => _analytics = (res.data as Map).cast<String, dynamic>());
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Failed to load analytics')),
-            backgroundColor: AppColors.danger,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                ApiClient.errorMessage(e, 'Failed to load analytics'),
+              ),
+              backgroundColor: AppColors.danger,
+            ),
+          );
         }
       } finally {
         if (mounted) setState(() => _analyticsLoading = false);
@@ -185,8 +211,14 @@ class _CallsScreenState extends State<CallsScreen> {
       );
     }
     final volumeByDay = (_analytics?['volumeByDay'] as List? ?? []).cast<Map>();
-    final durationByAgent = (_analytics?['durationByAgent'] as List? ?? []).cast<Map>();
-    final maxTotal = volumeByDay.fold<int>(1, (m, d) => (d['total'] as num? ?? 0).toInt() > m ? (d['total'] as num).toInt() : m);
+    final durationByAgent = (_analytics?['durationByAgent'] as List? ?? [])
+        .cast<Map>();
+    final maxTotal = volumeByDay.fold<int>(
+      1,
+      (m, d) => (d['total'] as num? ?? 0).toInt() > m
+          ? (d['total'] as num).toInt()
+          : m,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -194,7 +226,10 @@ class _CallsScreenState extends State<CallsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (volumeByDay.isEmpty)
-            const Text('No call data in the last 30 days', style: TextStyle(fontSize: 12))
+            const Text(
+              'No call data in the last 30 days',
+              style: TextStyle(fontSize: 12),
+            )
           else
             SizedBox(
               height: 60,
@@ -223,7 +258,10 @@ class _CallsScreenState extends State<CallsScreen> {
               ),
             ),
           const SizedBox(height: 4),
-          Text('Daily volume (last 30 days)', style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            'Daily volume (last 30 days)',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           if (durationByAgent.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text('Per-agent', style: Theme.of(context).textTheme.labelLarge),
@@ -233,9 +271,16 @@ class _CallsScreenState extends State<CallsScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    Expanded(child: Text(a['name'] as String? ?? '—', style: const TextStyle(fontSize: 13))),
-                    Text('${a['totalCalls']} calls · avg ${avg ~/ 60}m ${avg % 60}s',
-                        style: Theme.of(context).textTheme.bodySmall),
+                    Expanded(
+                      child: Text(
+                        a['name'] as String? ?? '—',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                    Text(
+                      '${a['totalCalls']} calls · avg ${avg ~/ 60}m ${avg % 60}s',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               );
@@ -257,7 +302,14 @@ class _CallsScreenState extends State<CallsScreen> {
         ),
         child: Column(
           children: [
-            Text('${value ?? 0}', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: color)),
+            Text(
+              '${value ?? 0}',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: color,
+              ),
+            ),
             Text(label, style: TextStyle(fontSize: 11, color: color)),
           ],
         ),
@@ -279,6 +331,12 @@ class _CallsScreenState extends State<CallsScreen> {
               _statCard('Answered', _stats['answered'], AppColors.success),
               const SizedBox(width: 8),
               _statCard('Missed', _stats['missed'], AppColors.danger),
+              const SizedBox(width: 4),
+              IconButton.filledTonal(
+                tooltip: 'Refresh calls',
+                onPressed: _loading ? null : () => _load(reset: true),
+                icon: const Icon(Icons.refresh_rounded),
+              ),
             ],
           ),
         ),
@@ -289,8 +347,14 @@ class _CallsScreenState extends State<CallsScreen> {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: _toggleAnalytics,
-                icon: Icon(_analyticsOpen ? Icons.expand_less : Icons.bar_chart, size: 18),
-                label: const Text('Call Analytics', style: TextStyle(fontSize: 13)),
+                icon: Icon(
+                  _analyticsOpen ? Icons.expand_less : Icons.bar_chart,
+                  size: 18,
+                ),
+                label: const Text(
+                  'Call Analytics',
+                  style: TextStyle(fontSize: 13),
+                ),
               ),
             ),
           ),
@@ -313,17 +377,19 @@ class _CallsScreenState extends State<CallsScreen> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              ..._statusTabs.map((s) => Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(s[0].toUpperCase() + s.substring(1)),
-                      selected: _statusFilter == s,
-                      onSelected: (_) {
-                        setState(() => _statusFilter = s);
-                        _load(reset: true);
-                      },
-                    ),
-                  )),
+              ..._statusTabs.map(
+                (s) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(s[0].toUpperCase() + s.substring(1)),
+                    selected: _statusFilter == s,
+                    onSelected: (_) {
+                      setState(() => _statusFilter = s);
+                      _load(reset: true);
+                    },
+                  ),
+                ),
+              ),
               if (_agents.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
@@ -332,11 +398,16 @@ class _CallsScreenState extends State<CallsScreen> {
                     underline: const SizedBox.shrink(),
                     hint: const Text('Agent', style: TextStyle(fontSize: 13)),
                     items: [
-                      const DropdownMenuItem(value: '', child: Text('All Agents')),
-                      ..._agents.map((a) => DropdownMenuItem(
-                            value: a['_id'] as String,
-                            child: Text(a['name'] as String? ?? ''),
-                          )),
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('All Agents'),
+                      ),
+                      ..._agents.map(
+                        (a) => DropdownMenuItem(
+                          value: a['_id'] as String,
+                          child: Text(a['name'] as String? ?? ''),
+                        ),
+                      ),
                     ],
                     onChanged: (v) {
                       setState(() => _agentFilter = v ?? '');
@@ -351,88 +422,127 @@ class _CallsScreenState extends State<CallsScreen> {
           child: _loading && _calls.isEmpty
               ? const Center(child: AppSpinner(size: 32))
               : _calls.isEmpty
-                  ? const Center(child: Text('No calls yet'))
-                  : RefreshIndicator(
-                      color: AppColors.primary,
-                      onRefresh: () => _load(reset: true),
-                      child: ListView.builder(
-                        controller: _scroll,
-                        itemCount: _calls.length,
-                        itemBuilder: (context, i) {
-                          final row = _calls[i];
-                          final color = _statusColor(row['lastStatus'] as String?);
-                          final calling = _callingLeadId == row['leadId'];
-                          return FadeSlideIn(
-                            delay: Duration(milliseconds: 20 * (i % 12)),
-                            child: Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            child: ListTile(
-                              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              ? const Center(child: Text('No calls yet'))
+              : RefreshIndicator(
+                  color: AppColors.primary,
+                  onRefresh: () => _load(reset: true),
+                  child: ListView.builder(
+                    controller: _scroll,
+                    itemCount: _calls.length,
+                    itemBuilder: (context, i) {
+                      final row = _calls[i];
+                      final color = _statusColor(row['lastStatus'] as String?);
+                      final calling = _callingLeadId == row['leadId'];
+                      return FadeSlideIn(
+                        delay: Duration(milliseconds: 20 * (i % 12)),
+                        child: Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          child: ListTile(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
                                 builder: (_) => CallHistoryScreen(
                                   leadId: row['leadId'] as String,
                                   leadName: row['leadName'] as String? ?? '—',
                                   leadPhone: row['leadPhone'] as String?,
                                 ),
-                              )),
-                              title: Text(row['leadName'] as String? ?? '—',
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(row['leadPhone'] as String? ?? ''),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: color.withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(999),
-                                          border: Border.all(color: color.withValues(alpha: 0.35)),
+                              ),
+                            ),
+                            title: Text(
+                              row['leadName'] as String? ?? '—',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(row['leadPhone'] as String? ?? ''),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: color.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
                                         ),
-                                        child: Text(
-                                          row['lastStatus'] as String? ?? '—',
-                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
+                                        border: Border.all(
+                                          color: color.withValues(alpha: 0.35),
                                         ),
                                       ),
+                                      child: Text(
+                                        row['lastStatus'] as String? ?? '—',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: color,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _fmtDate(row['lastCallAt'] as String?),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                    if (_fmtDuration(
+                                      row['lastDuration'],
+                                    ).isNotEmpty) ...[
                                       const SizedBox(width: 8),
-                                      Text(_fmtDate(row['lastCallAt'] as String?),
-                                          style: Theme.of(context).textTheme.bodySmall),
-                                      if (_fmtDuration(row['lastDuration']).isNotEmpty) ...[
-                                        const SizedBox(width: 8),
-                                        Text(_fmtDuration(row['lastDuration']),
-                                            style: Theme.of(context).textTheme.bodySmall),
-                                      ],
+                                      Text(
+                                        _fmtDuration(row['lastDuration']),
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
                                     ],
-                                  ),
-                                ],
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: calling
-                                        ? const SizedBox(
-                                            width: 18, height: 18,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                                          )
-                                        : Icon(FontAwesomeIcons.phone.data, color: AppColors.primary),
-                                    onPressed: calling ? null : () => _call(row),
-                                  ),
-                                  Text('${row['callCount'] ?? 0} calls',
-                                      style: Theme.of(context).textTheme.bodySmall),
-                                ],
-                              ),
+                                  ],
+                                ),
+                              ],
                             ),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: calling
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.primary,
+                                          ),
+                                        )
+                                      : Icon(
+                                          FontAwesomeIcons.phone.data,
+                                          color: AppColors.primary,
+                                        ),
+                                  onPressed: calling ? null : () => _call(row),
+                                ),
+                                Text(
+                                  '${row['callCount'] ?? 0} calls',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
     );

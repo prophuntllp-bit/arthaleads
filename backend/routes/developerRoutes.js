@@ -17,7 +17,7 @@ router.get("/", async (req, res, next) => {
 // POST /api/developers
 router.post("/", async (req, res, next) => {
   try {
-    const { name, address, pan, cin, gstNo, reraNumbers,
+    const { name, address, pan, cin, gstNo, logo, reraNumbers,
             defaultBrokeragePercent, defaultFosIncentive, defaultEoiIncentive, invoiceTemplate } = req.body;
     if (!name?.trim()) return res.status(400).json({ success: false, message: "Developer name is required." });
     const dev = await Developer.create({
@@ -28,6 +28,7 @@ router.post("/", async (req, res, next) => {
       pan:       pan?.trim()   || "",
       cin:       cin?.trim()   || "",
       gstNo:     gstNo?.trim() || "",
+      logo:      typeof logo === "string" ? logo : "",
       reraNumbers: Array.isArray(reraNumbers) ? reraNumbers.filter(Boolean).map(r => String(r).trim()) : [],
       defaultBrokeragePercent: Number(defaultBrokeragePercent) || 2,
       defaultFosIncentive:     Number(defaultFosIncentive)     || 0,
@@ -44,13 +45,14 @@ router.put("/:id", async (req, res, next) => {
     const dev = await Developer.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!dev) return res.status(404).json({ success: false, message: "Developer not found." });
 
-    const { name, address, pan, cin, gstNo, reraNumbers,
+    const { name, address, pan, cin, gstNo, logo, reraNumbers,
             defaultBrokeragePercent, defaultFosIncentive, defaultEoiIncentive, invoiceTemplate } = req.body;
     if (name?.trim()) dev.name = name.trim();
     if (address   !== undefined) dev.address   = address?.trim()  || "";
     if (pan       !== undefined) dev.pan       = pan?.trim()      || "";
     if (cin       !== undefined) dev.cin       = cin?.trim()      || "";
     if (gstNo     !== undefined) dev.gstNo     = gstNo?.trim()    || "";
+    if (logo      !== undefined) dev.logo      = typeof logo === "string" ? logo : "";
     if (Array.isArray(reraNumbers)) dev.reraNumbers = reraNumbers.filter(Boolean).map(r => String(r).trim());
     if (defaultBrokeragePercent !== undefined) dev.defaultBrokeragePercent = Number(defaultBrokeragePercent) || 2;
     if (defaultFosIncentive     !== undefined) dev.defaultFosIncentive     = Number(defaultFosIncentive)     || 0;

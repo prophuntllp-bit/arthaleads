@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
@@ -18,7 +19,12 @@ class CallHistoryScreen extends StatefulWidget {
   final String leadName;
   final String? leadPhone;
 
-  const CallHistoryScreen({super.key, required this.leadId, required this.leadName, this.leadPhone});
+  const CallHistoryScreen({
+    super.key,
+    required this.leadId,
+    required this.leadName,
+    this.leadPhone,
+  });
 
   @override
   State<CallHistoryScreen> createState() => _CallHistoryScreenState();
@@ -65,13 +71,20 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     setState(() => _loading = true);
     try {
       final res = await _api.dio.get('/calls/lead/${widget.leadId}');
-      setState(() => _calls = (res.data['calls'] as List? ?? []).cast<Map<String, dynamic>>());
+      setState(
+        () => _calls = (res.data['calls'] as List? ?? [])
+            .cast<Map<String, dynamic>>(),
+      );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to load call history')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Failed to load call history'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -85,10 +98,12 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       setState(() => _pattern = (res.data as Map).cast<String, dynamic>());
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Pattern analysis failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Pattern analysis failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _patternLoading = false);
@@ -99,19 +114,26 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     final phone = widget.leadPhone;
     if (phone == null || phone.isEmpty) return;
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': widget.leadId});
+      final res = await _api.dio.post(
+        '/calls/initiate',
+        data: {'leadId': widget.leadId},
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(res.data['message'] as String? ?? 'Calling…'),
-          backgroundColor: AppColors.success,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.data['message'] as String? ?? 'Calling…'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Call failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Call failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -122,7 +144,10 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       appBar: AppBar(
         title: Text(widget.leadName),
         actions: [
-          IconButton(icon: Icon(FontAwesomeIcons.phone.data), onPressed: _callBack),
+          IconButton(
+            icon: Icon(FontAwesomeIcons.phone.data),
+            onPressed: _callBack,
+          ),
         ],
       ),
       body: _loading
@@ -143,12 +168,16 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                       child: Center(child: Text('No calls yet')),
                     )
                   else
-                    ..._calls.asMap().entries.map((e) => _CallCard(
-                          leadId: widget.leadId,
-                          index: _calls.length - e.key,
-                          call: e.value,
-                          onChanged: (updated) => setState(() => _calls[e.key] = updated),
-                        )),
+                    ..._calls.asMap().entries.map(
+                      (e) => _CallCard(
+                        leadId: widget.leadId,
+                        leadName: widget.leadName,
+                        index: _calls.length - e.key,
+                        call: e.value,
+                        onChanged: (updated) =>
+                            setState(() => _calls[e.key] = updated),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -160,9 +189,17 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       return OutlinedButton.icon(
         onPressed: _patternLoading ? null : _generatePattern,
         icon: _patternLoading
-            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
             : const Icon(Icons.auto_awesome, size: 18),
-        label: Text(_patternLoading ? 'Analysing…' : 'Analyse call pattern (${_calls.length} calls)'),
+        label: Text(
+          _patternLoading
+              ? 'Analysing…'
+              : 'Analyse call pattern (${_calls.length} calls)',
+        ),
       );
     }
     return Container(
@@ -176,19 +213,34 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_pattern!['headline'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            _pattern!['headline'] as String? ?? '',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 6),
-          Text(_pattern!['summary'] as String? ?? '', style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            _pattern!['summary'] as String? ?? '',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           if ((_pattern!['recommendation'] as String? ?? '').isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.lightbulb_outline, size: 16, color: AppColors.primary),
+                const Icon(
+                  Icons.lightbulb_outline,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(_pattern!['recommendation'] as String,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    _pattern!['recommendation'] as String,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -201,11 +253,18 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
 
 class _CallCard extends StatefulWidget {
   final String leadId;
+  final String leadName;
   final int index;
   final Map<String, dynamic> call;
   final void Function(Map<String, dynamic>) onChanged;
 
-  const _CallCard({required this.leadId, required this.index, required this.call, required this.onChanged});
+  const _CallCard({
+    required this.leadId,
+    required this.leadName,
+    required this.index,
+    required this.call,
+    required this.onChanged,
+  });
 
   @override
   State<_CallCard> createState() => _CallCardState();
@@ -213,7 +272,9 @@ class _CallCard extends StatefulWidget {
 
 class _CallCardState extends State<_CallCard> {
   final _api = ApiClient.instance;
-  late final _notesCtrl = TextEditingController(text: (widget.call['meta'] as Map?)?['notes'] as String? ?? '');
+  late final _notesCtrl = TextEditingController(
+    text: (widget.call['meta'] as Map?)?['notes'] as String? ?? '',
+  );
   bool _analysing = false;
   bool _transcriptOpen = false;
   bool _savingNotes = false;
@@ -243,10 +304,12 @@ class _CallCardState extends State<_CallCard> {
         if (mounted) setState(() => _playerReady = true);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Could not play recording: $e'),
-            backgroundColor: AppColors.danger,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not play recording: $e'),
+              backgroundColor: AppColors.danger,
+            ),
+          );
         }
         return;
       }
@@ -261,15 +324,19 @@ class _CallCardState extends State<_CallCard> {
   Future<void> _analyse() async {
     setState(() => _analysing = true);
     try {
-      final res = await _api.dio.post('/calls/${widget.leadId}/${widget.call['activityId']}/summarize');
+      final res = await _api.dio.post(
+        '/calls/${widget.leadId}/${widget.call['activityId']}/summarize',
+      );
       final meta = (res.data['meta'] as Map? ?? {}).cast<String, dynamic>();
       widget.onChanged({...widget.call, 'meta': meta});
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Analysis failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Analysis failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _analysing = false);
@@ -288,14 +355,18 @@ class _CallCardState extends State<_CallCard> {
         'meta': {..._meta, 'notes': _notesCtrl.text.trim()},
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Note saved')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to save note')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to save note')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _savingNotes = false);
@@ -311,20 +382,95 @@ class _CallCardState extends State<_CallCard> {
       lastDate: now.add(const Duration(days: 365)),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 10, minute: 0));
-    final dt = DateTime(date.year, date.month, date.day, time?.hour ?? 10, time?.minute ?? 0);
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 10, minute: 0),
+    );
+    final dt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time?.hour ?? 10,
+      time?.minute ?? 0,
+    );
+    if (!mounted) return;
+    final titleCtrl = TextEditingController(
+      text: 'Follow up with ${widget.leadName}',
+    );
+    final descriptionCtrl = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Create follow-up task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(labelText: 'Task title'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: descriptionCtrl,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_available_outlined),
+              title: Text(DateFormat('dd MMM yyyy, hh:mm a').format(dt)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Create Task'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      titleCtrl.dispose();
+      descriptionCtrl.dispose();
+      return;
+    }
     try {
-      await _api.dio.post('/calls/${widget.leadId}/followup', data: {'dueDate': dt.toIso8601String()});
+      await _api.dio.post(
+        '/calls/${widget.leadId}/followup',
+        data: {
+          'title': titleCtrl.text.trim(),
+          'dueDate': dt.toIso8601String(),
+          'description': descriptionCtrl.text.trim(),
+        },
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Follow-up task created')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Follow-up task created')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to create follow-up')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Failed to create follow-up'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
+    } finally {
+      titleCtrl.dispose();
+      descriptionCtrl.dispose();
     }
   }
 
@@ -374,23 +520,39 @@ class _CallCardState extends State<_CallCard> {
           children: [
             Row(
               children: [
-                Text('Call ${widget.index}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  'Call ${widget.index}',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(color: color.withValues(alpha: 0.35)),
                   ),
-                  child: Text(status ?? '—', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                  child: Text(
+                    status ?? '—',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 if (isMissed)
                   TextButton.icon(
                     onPressed: () async {
                       try {
-                        await _api.dio.post('/calls/initiate', data: {'leadId': widget.leadId});
+                        await _api.dio.post(
+                          '/calls/initiate',
+                          data: {'leadId': widget.leadId},
+                        );
                       } catch (_) {}
                     },
                     icon: Icon(FontAwesomeIcons.phone.data, size: 16),
@@ -400,9 +562,10 @@ class _CallCardState extends State<_CallCard> {
             ),
             const SizedBox(height: 4),
             Text(
-              [_fmtDate(widget.call['createdAt'] as String?), _fmtDuration(_meta['duration'])]
-                  .where((s) => s.isNotEmpty)
-                  .join(' · '),
+              [
+                _fmtDate(widget.call['createdAt'] as String?),
+                _fmtDuration(_meta['duration']),
+              ].where((s) => s.isNotEmpty).join(' · '),
               style: Theme.of(context).textTheme.bodySmall,
             ),
 
@@ -412,7 +575,10 @@ class _CallCardState extends State<_CallCard> {
                 children: [
                   IconButton.filledTonal(
                     onPressed: _togglePlay,
-                    icon: Icon(_playing ? Icons.pause : Icons.play_arrow, size: 20),
+                    icon: Icon(
+                      _playing ? Icons.pause : Icons.play_arrow,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -424,19 +590,31 @@ class _CallCardState extends State<_CallCard> {
                               final dur = _player!.duration ?? Duration.zero;
                               return Slider(
                                 value: dur.inMilliseconds > 0
-                                    ? pos.inMilliseconds.clamp(0, dur.inMilliseconds).toDouble()
+                                    ? pos.inMilliseconds
+                                          .clamp(0, dur.inMilliseconds)
+                                          .toDouble()
                                     : 0,
-                                max: dur.inMilliseconds > 0 ? dur.inMilliseconds.toDouble() : 1,
-                                onChanged: (v) => _player!.seek(Duration(milliseconds: v.toInt())),
+                                max: dur.inMilliseconds > 0
+                                    ? dur.inMilliseconds.toDouble()
+                                    : 1,
+                                onChanged: (v) => _player!.seek(
+                                  Duration(milliseconds: v.toInt()),
+                                ),
                               );
                             },
                           )
-                        : const Text('Tap play to load recording', style: TextStyle(fontSize: 12)),
+                        : const Text(
+                            'Tap play to load recording',
+                            style: TextStyle(fontSize: 12),
+                          ),
                   ),
                   IconButton(
                     tooltip: 'Open externally',
                     icon: const Icon(Icons.open_in_new, size: 18),
-                    onPressed: () => launchUrl(Uri.parse(recordingUrl), mode: LaunchMode.externalApplication),
+                    onPressed: () => launchUrl(
+                      Uri.parse(recordingUrl),
+                      mode: LaunchMode.externalApplication,
+                    ),
                   ),
                 ],
               ),
@@ -448,16 +626,28 @@ class _CallCardState extends State<_CallCard> {
                 onTap: () => setState(() => _transcriptOpen = !_transcriptOpen),
                 child: Row(
                   children: [
-                    Icon(_transcriptOpen ? Icons.expand_less : Icons.expand_more, size: 18),
+                    Icon(
+                      _transcriptOpen ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                    ),
                     const SizedBox(width: 4),
-                    const Text('Transcript', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const Text(
+                      'Transcript',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
               if (_transcriptOpen)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text(transcript, style: Theme.of(context).textTheme.bodySmall),
+                  child: Text(
+                    transcript,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
             ],
 
@@ -468,45 +658,102 @@ class _CallCardState extends State<_CallCard> {
                   if (intent != null)
                     Container(
                       margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: (_intentColors[intent] ?? Colors.grey).withValues(alpha: 0.12),
+                        color: (_intentColors[intent] ?? Colors.grey)
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(_intentLabels[intent] ?? intent,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _intentColors[intent])),
+                      child: Text(
+                        _intentLabels[intent] ?? intent,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _intentColors[intent],
+                        ),
+                      ),
                     ),
                   if (sentiment != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: (_sentimentColors[sentiment] ?? Colors.grey).withValues(alpha: 0.12),
+                        color: (_sentimentColors[sentiment] ?? Colors.grey)
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text(sentiment,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _sentimentColors[sentiment])),
+                      child: Text(
+                        sentiment,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _sentimentColors[sentiment],
+                        ),
+                      ),
                     ),
                 ],
               ),
               const SizedBox(height: 6),
-              Text(_meta['summary'] as String? ?? '', style: Theme.of(context).textTheme.bodySmall),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      _meta['summary'] as String? ?? '',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Copy summary',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      Clipboard.setData(
+                        ClipboardData(text: _meta['summary']?.toString() ?? ''),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Summary copied')),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_outlined, size: 17),
+                  ),
+                ],
+              ),
               if (keyPoints.isNotEmpty) ...[
                 const SizedBox(height: 6),
-                ...keyPoints.map((k) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Text('•  $k', style: Theme.of(context).textTheme.bodySmall),
-                    )),
+                ...keyPoints.map(
+                  (k) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      '•  $k',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
               ],
               if ((_meta['nextAction'] as String? ?? '').isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.arrow_forward, size: 14, color: AppColors.primary),
+                    const Icon(
+                      Icons.arrow_forward,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(_meta['nextAction'] as String,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      child: Text(
+                        _meta['nextAction'] as String,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -515,7 +762,11 @@ class _CallCardState extends State<_CallCard> {
               TextButton.icon(
                 onPressed: _analysing ? null : _analyse,
                 icon: _analysing
-                    ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.refresh, size: 14),
                 label: const Text('Regenerate', style: TextStyle(fontSize: 12)),
               ),
@@ -523,7 +774,11 @@ class _CallCardState extends State<_CallCard> {
               OutlinedButton.icon(
                 onPressed: _analysing ? null : _analyse,
                 icon: _analysing
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.auto_awesome, size: 16),
                 label: Text(_analysing ? 'Analysing…' : 'Generate AI Analysis'),
               ),
@@ -539,7 +794,11 @@ class _CallCardState extends State<_CallCard> {
                 isDense: true,
                 suffixIcon: IconButton(
                   icon: _savingNotes
-                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.save_outlined, size: 18),
                   onPressed: _savingNotes ? null : _saveNotes,
                 ),
@@ -551,7 +810,10 @@ class _CallCardState extends State<_CallCard> {
               child: TextButton.icon(
                 onPressed: _scheduleFollowUp,
                 icon: const Icon(Icons.event_available, size: 16),
-                label: const Text('Schedule Follow-up', style: TextStyle(fontSize: 12)),
+                label: const Text(
+                  'Schedule Follow-up',
+                  style: TextStyle(fontSize: 12),
+                ),
               ),
             ),
           ],

@@ -9,6 +9,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/page_header.dart';
+import '../leads/lead_detail_sheet.dart';
 
 /// Follow-ups — GET /followups?section=past|present|future.
 /// Mirrors frontend/src/pages/FollowUps.jsx (Past / Today / Future tabs).
@@ -28,6 +29,9 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   int _pages = 1;
   bool _loading = true;
   bool _sortDesc = false;
+  bool _myOnly = false;
+  DateTime? _from;
+  DateTime? _to;
   final _scroll = ScrollController();
   final _searchCtrl = TextEditingController();
 
@@ -72,6 +76,11 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
           'page': _page,
           'limit': 50,
           'sort': _sortDesc ? 'desc' : 'asc',
+          if (_myOnly) 'myOnly': true,
+          if (_section == 'future' && _from != null)
+            'from': DateFormat('yyyy-MM-dd').format(_from!),
+          if (_section == 'future' && _to != null)
+            'to': DateFormat('yyyy-MM-dd').format(_to!),
           if (_searchCtrl.text.trim().isNotEmpty)
             'search': _searchCtrl.text.trim(),
         },
@@ -97,6 +106,26 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _pickRangeDate({required bool from}) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (from ? _from : _to) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (from) {
+        _from = picked;
+        if (_to != null && _to!.isBefore(picked)) _to = picked;
+      } else {
+        _to = picked;
+        if (_from != null && _from!.isAfter(picked)) _from = picked;
+      }
+    });
+    _load(reset: true);
   }
 
   Future<void> _reschedule(Map<String, dynamic> lead) async {
@@ -188,9 +217,28 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
     return DateFormat('dd MMM, hh:mm a').format(dt);
   }
 
+  Future<void> _openDetail(Map<String, dynamic> lead) async {
+    final result = await showModalBottomSheet<dynamic>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => LeadDetailSheet(
+        lead: lead,
+        projects: const [],
+        onUpdated: (updated) {
+          final index = _leads.indexWhere(
+            (item) => item['_id'] == updated['_id'],
+          );
+          if (index != -1 && mounted) setState(() => _leads[index] = updated);
+        },
+      ),
+    );
+    if (result == true) _load(reset: true);
+  }
+
   @override
   Widget build(BuildContext context) {
-    context.watch<AuthState>();
+    final auth = context.watch<AuthState>();
 
     return Column(
       children: [
@@ -235,21 +283,84 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                   onSubmitted: (_) => _load(reset: true),
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: _sortDesc ? 'Latest first' : 'Earliest first',
-                onPressed: () {
-                  setState(() => _sortDesc = !_sortDesc);
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Row(
+            children: [
+              if (auth.isAdmin) ...[
+                const Icon(Icons.person_outline, size: 18),
+                const SizedBox(width: 4),
+                const Text('My Leads'),
+                Switch.adaptive(
+                  value: _myOnly,
+                  onChanged: (value) {
+                    setState(() => _myOnly = value);
+                    _load(reset: true);
+                  },
+                ),
+              ],
+              const Spacer(),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.arrow_downward, size: 15),
+                    label: Text('Latest', style: TextStyle(fontSize: 11)),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.arrow_upward, size: 15),
+                    label: Text('Earliest', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+                selected: {_sortDesc},
+                onSelectionChanged: (value) {
+                  setState(() => _sortDesc = value.first);
                   _load(reset: true);
                 },
-                icon: Icon(
-                  _sortDesc ? Icons.arrow_downward : Icons.arrow_upward,
-                  size: 18,
-                ),
               ),
             ],
           ),
         ),
+        if (_section == 'future')
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _dateFilter(
+                    'From',
+                    _from,
+                    () => _pickRangeDate(from: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _dateFilter(
+                    'To',
+                    _to,
+                    () => _pickRangeDate(from: false),
+                  ),
+                ),
+                if (_from != null || _to != null)
+                  IconButton(
+                    tooltip: 'Clear date range',
+                    onPressed: () {
+                      setState(() {
+                        _from = null;
+                        _to = null;
+                      });
+                      _load(reset: true);
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+              ],
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Align(
@@ -282,6 +393,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                           vertical: 4,
                         ),
                         child: ListTile(
+                          onTap: () => _openDetail(lead),
                           title: Text(
                             lead['name'] as String? ?? '—',
                             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -339,6 +451,16 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _dateFilter(String label, DateTime? value, VoidCallback onTap) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.calendar_month, size: 17),
+      label: Text(
+        value == null ? label : DateFormat('dd MMM yyyy').format(value),
+      ),
     );
   }
 }
