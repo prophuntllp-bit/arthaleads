@@ -705,13 +705,59 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       if (hasExtracted) voiceCall.extractedData = extracted_data;
     }
 
+    // Build the note + requirements.
+    // For voice leads (Vistrow) the full transcript already lives in the
+    // Transcript tab (lead.voiceCall.transcript), so the note instead carries
+    // the useful *extracted* details (budget/location/timeline/…) and call
+    // metadata (sentiment/duration/channel/agent/language) — not a copy of the
+    // transcript. Non-voice Custom leads keep the plain message behaviour.
+    let noteText;
+    let reqText;
+    if (voiceCall) {
+      const vc = voiceCall;
+      const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+      const durStr = Number.isFinite(vc.durationSeconds) && vc.durationSeconds > 0
+        ? `${Math.floor(vc.durationSeconds / 60)}m ${Math.round(vc.durationSeconds % 60)}s`.replace(/^0m /, "")
+        : null;
+      const metaBits = [
+        vc.sentiment ? `Sentiment: ${cap(vc.sentiment)}` : null,
+        durStr ? `Duration: ${durStr}` : null,
+        vc.language ? `Language: ${vc.language}` : null,
+        vc.channel ? `Channel: ${vc.channel}` : null,
+        vc.agentName ? `Agent: ${vc.agentName}` : null,
+      ].filter(Boolean);
+
+      const extractedEntries = vc.extractedData && typeof vc.extractedData === "object"
+        ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
+        : [];
+      const extractedLines = extractedEntries.map(([k, v]) =>
+        `${k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`);
+
+      noteText = [
+        `📞 ${sourceLabel} call summary`,
+        metaBits.length ? metaBits.join(" · ") : null,
+        extractedLines.length ? `\nCaptured details:\n${extractedLines.join("\n")}` : null,
+        cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
+      ].filter(Boolean).join("\n");
+
+      // Requirements = the concise extracted summary (what the caller wants),
+      // falling back to the flattened message only if nothing was extracted.
+      reqText = extractedLines.length ? extractedLines.join(" · ") : msg;
+    } else {
+      noteText = [
+        msg ? `Message: ${msg}` : null,
+        `Source: ${sourceLabel}`,
+      ].filter(Boolean).join("\n") || "Lead received from custom source";
+      reqText = msg;
+    }
+
     const lead = await Lead.create({
       name: String(name).trim(),
       phone: cleanPhone,
       email: (email && String(email).trim()) || "",
       source: leadSource,
       status: "New",
-      requirements: msg,
+      requirements: reqText,
       orgId,
       createdBy: assignee?._id || automation.createdBy || null,
       assignedTo: assignee?._id || null,
@@ -721,10 +767,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
 
       notes: [
         {
-          text: [
-            msg ? `Message: ${msg}` : null,
-            `Source: ${sourceLabel}`,
-          ].filter(Boolean).join("\n") || "Lead received from custom source",
+          text: noteText,
           addedBy: assignee?._id || null,
           addedByName: assignee?.name || "",
         },
