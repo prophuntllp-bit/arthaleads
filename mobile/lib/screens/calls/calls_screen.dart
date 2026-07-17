@@ -210,7 +210,11 @@ class _CallsScreenState extends State<CallsScreen> {
         child: Center(child: AppSpinner(size: 32)),
       );
     }
-    final volumeByDay = (_analytics?['volumeByDay'] as List? ?? []).cast<Map>();
+    final allVolumeByDay = (_analytics?['volumeByDay'] as List? ?? [])
+        .cast<Map>();
+    final volumeByDay = allVolumeByDay.length > 14
+        ? allVolumeByDay.sublist(allVolumeByDay.length - 14)
+        : allVolumeByDay;
     final durationByAgent = (_analytics?['durationByAgent'] as List? ?? [])
         .cast<Map>();
     final maxTotal = volumeByDay.fold<int>(
@@ -227,7 +231,7 @@ class _CallsScreenState extends State<CallsScreen> {
         children: [
           if (volumeByDay.isEmpty)
             const Text(
-              'No call data in the last 30 days',
+              'No calls in the last 30 days.',
               style: TextStyle(fontSize: 12),
             )
           else
@@ -259,12 +263,23 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
           const SizedBox(height: 4),
           Text(
-            'Daily volume (last 30 days)',
+            'Daily call volume (last 14 days)',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          if (durationByAgent.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('Per-agent', style: Theme.of(context).textTheme.labelLarge),
+          const SizedBox(height: 12),
+          Text(
+            'Answered calls by agent',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          if (durationByAgent.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'No answered calls with duration yet.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            )
+          else
             ...durationByAgent.map((a) {
               final avg = (a['avgDuration'] as num? ?? 0).toInt();
               return Padding(
@@ -285,7 +300,6 @@ class _CallsScreenState extends State<CallsScreen> {
                 ),
               );
             }),
-          ],
         ],
       ),
     );

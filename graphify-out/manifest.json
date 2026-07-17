@@ -1476,8 +1476,8 @@
     "hash": "f23aaff9ea59cbfbf5b9bbed701f9066"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\calls\\calls_screen.dart": {
-    "mtime": 1784270562.0180087,
-    "hash": "2987bf8ffea7241b4c3af55bc92efccf"
+    "mtime": 1784275691.4500167,
+    "hash": "bed7095f047203f7cf94807da425d955"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\calls\\call_history_screen.dart": {
     "mtime": 1784270487.9927323,
@@ -2147,6 +2147,14 @@
     "mtime": 1784275054.6265376,
     "hash": "3c6168633e04b381791903b75129a15a"
   },
+  "E:\\PROPHUNT CRM\\mobile\\native-calls-analytics.png": {
+    "mtime": 1784275638.15258,
+    "hash": "7753cefff5557b39bb1375094f7edd97"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\native-calls.png": {
+    "mtime": 1784275616.7980886,
+    "hash": "6a79995a8dab9f9553bc8bfaaa9fc9a6"
+  },
   "E:\\PROPHUNT CRM\\mobile\\native-current.png": {
     "mtime": 1784274999.8884816,
     "hash": "911036e6f0c2947543018759c3ecea0e"
@@ -2174,6 +2182,10 @@
   "E:\\PROPHUNT CRM\\mobile\\native-routing-form2.png": {
     "mtime": 1784275355.0419137,
     "hash": "538a29abac2536568815811438fcbfda"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\web-calls.png": {
+    "mtime": 1784275592.4123895,
+    "hash": "b5c64f2ea0863a14dba3565b4c869aa0"
   },
   "E:\\PROPHUNT CRM\\mobile\\web-followups.png": {
     "mtime": 1784274424.687106,
