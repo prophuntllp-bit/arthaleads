@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
@@ -171,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                        : Icon(FontAwesomeIcons.google.data, size: 20),
                     label: const Text('Continue with Google'),
                   ),
                 ],

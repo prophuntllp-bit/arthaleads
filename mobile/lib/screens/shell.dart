@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
@@ -76,6 +77,8 @@ class Shell extends StatefulWidget {
 class _ShellState extends State<Shell> {
   int _index = 0;
   final Map<String, Widget> _screenCache = {};
+  final List<String> _navigationHistory = [];
+  DateTime? _lastBackPressed;
 
   @override
   void initState() {
@@ -112,7 +115,38 @@ class _ShellState extends State<Shell> {
         .where((item) => !item.adminOnly || auth.isAdmin)
         .toList();
     final index = visible.indexWhere((item) => item.label == label);
-    if (index != -1) setState(() => _index = index);
+    if (index != -1 && index != _index) {
+      _navigationHistory.add(visible[_index].label);
+      setState(() => _index = index);
+    }
+  }
+
+  void _handleBack(List<_NavItem> visible) {
+    while (_navigationHistory.isNotEmpty) {
+      final previous = _navigationHistory.removeLast();
+      final index = visible.indexWhere((item) => item.label == previous);
+      if (index != -1 && index != _index) {
+        setState(() => _index = index);
+        return;
+      }
+    }
+    if (_index != 0) {
+      setState(() => _index = 0);
+      return;
+    }
+    final now = DateTime.now();
+    if (_lastBackPressed != null &&
+        now.difference(_lastBackPressed!) < const Duration(seconds: 2)) {
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackPressed = now;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Press back again to exit'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   static final List<_NavItem> _items = [
@@ -194,150 +228,160 @@ class _ShellState extends State<Shell> {
         ? DashboardScreen(onNavigate: _navigateToLabel)
         : _screenCache.putIfAbsent(current.label, current.builder);
 
-    return AppBackdrop(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(current.label),
-          actions: [
-            Consumer<ThemeState>(
-              builder: (context, theme, _) => IconButton(
-                tooltip: theme.isDark
-                    ? 'Switch to light mode'
-                    : 'Switch to dark mode',
-                onPressed: theme.toggle,
-                icon: Icon(
-                  theme.isDark
-                      ? Icons.dark_mode_rounded
-                      : Icons.light_mode_rounded,
-                  color: AppColors.primary,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBack(visible);
+      },
+      child: AppBackdrop(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            title: Text(current.label),
+            actions: [
+              Consumer<ThemeState>(
+                builder: (context, theme, _) => IconButton(
+                  tooltip: theme.isDark
+                      ? 'Switch to light mode'
+                      : 'Switch to dark mode',
+                  onPressed: theme.toggle,
+                  icon: Icon(
+                    theme.isDark
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 6),
-          ],
-        ),
-        drawer: Drawer(
-          child: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.primary.withValues(
-                          alpha: 0.15,
-                        ),
-                        child: Text(
-                          (auth.user?['name'] as String? ?? '?').isNotEmpty
-                              ? (auth.user!['name'] as String)[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
+              const SizedBox(width: 6),
+            ],
+          ),
+          drawer: Drawer(
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.15,
+                          ),
+                          child: Text(
+                            (auth.user?['name'] as String? ?? '?').isNotEmpty
+                                ? (auth.user!['name'] as String)[0]
+                                      .toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              auth.user?['name'] as String? ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                auth.user?['name'] as String? ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              auth.org?['name'] as String? ?? auth.role,
-                              style: Theme.of(context).textTheme.bodySmall,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              Text(
+                                auth.org?['name'] as String? ?? auth.role,
+                                style: Theme.of(context).textTheme.bodySmall,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: visible.length,
-                    itemBuilder: (context, i) {
-                      final item = visible[i];
-                      final selected = i == _index;
-                      return ListTile(
-                        leading: Icon(
-                          item.icon,
-                          color: selected ? AppColors.primary : null,
-                        ),
-                        title: Text(
-                          item.label,
-                          style: TextStyle(
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w400,
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: visible.length,
+                      itemBuilder: (context, i) {
+                        final item = visible[i];
+                        final selected = i == _index;
+                        return ListTile(
+                          leading: Icon(
+                            item.icon,
                             color: selected ? AppColors.primary : null,
                           ),
-                        ),
-                        selected: selected,
-                        selectedTileColor: AppColors.primary.withValues(
-                          alpha: 0.08,
-                        ),
-                        onTap: () {
-                          setState(() => _index = i);
-                          Navigator.pop(context);
-                        },
-                      );
+                          title: Text(
+                            item.label,
+                            style: TextStyle(
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                              color: selected ? AppColors.primary : null,
+                            ),
+                          ),
+                          selected: selected,
+                          selectedTileColor: AppColors.primary.withValues(
+                            alpha: 0.08,
+                          ),
+                          onTap: () {
+                            if (i != _index) {
+                              _navigationHistory.add(visible[_index].label);
+                            }
+                            setState(() => _index = i);
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Consumer<ThemeState>(
+                    builder: (context, theme, _) => ListTile(
+                      leading: Icon(
+                        theme.isDark
+                            ? Icons.dark_mode_rounded
+                            : Icons.light_mode_rounded,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(theme.isDark ? 'Dark Mode' : 'Light Mode'),
+                      trailing: Switch(
+                        value: theme.isDark,
+                        onChanged: theme.setDark,
+                      ),
+                      onTap: theme.toggle,
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.logout_rounded,
+                      color: AppColors.danger,
+                    ),
+                    title: const Text(
+                      'Log out',
+                      style: TextStyle(color: AppColors.danger),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await context.read<AuthState>().logout();
                     },
                   ),
-                ),
-                const Divider(height: 1),
-                Consumer<ThemeState>(
-                  builder: (context, theme, _) => ListTile(
-                    leading: Icon(
-                      theme.isDark
-                          ? Icons.dark_mode_rounded
-                          : Icons.light_mode_rounded,
-                      color: AppColors.primary,
-                    ),
-                    title: Text(theme.isDark ? 'Dark Mode' : 'Light Mode'),
-                    trailing: Switch(
-                      value: theme.isDark,
-                      onChanged: theme.setDark,
-                    ),
-                    onTap: theme.toggle,
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.logout_rounded,
-                    color: AppColors.danger,
-                  ),
-                  title: const Text(
-                    'Log out',
-                    style: TextStyle(color: AppColors.danger),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await context.read<AuthState>().logout();
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        body: Stack(
-          children: [
-            currentScreen,
-            // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
-            // overlaps each screen's own "+" FAB, which all sit bottom-right.
-            Positioned(left: 14, bottom: 14, child: _ArthaFab()),
-          ],
+          body: Stack(
+            children: [
+              currentScreen,
+              // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
+              // overlaps each screen's own "+" FAB, which all sit bottom-right.
+              Positioned(left: 14, bottom: 14, child: _ArthaFab()),
+            ],
+          ),
         ),
       ),
     );

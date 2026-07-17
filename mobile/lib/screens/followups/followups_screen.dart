@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -302,8 +303,8 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(
-                                  Icons.call,
+                                icon: Icon(
+                                  FontAwesomeIcons.phone.data,
                                   size: 20,
                                   color: AppColors.primary,
                                 ),

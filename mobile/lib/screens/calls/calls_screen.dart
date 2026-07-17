@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -419,7 +420,7 @@ class _CallsScreenState extends State<CallsScreen> {
                                             width: 18, height: 18,
                                             child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                                           )
-                                        : const Icon(Icons.call, color: AppColors.primary),
+                                        : Icon(FontAwesomeIcons.phone.data, color: AppColors.primary),
                                     onPressed: calling ? null : () => _call(row),
                                   ),
                                   Text('${row['callCount'] ?? 0} calls',

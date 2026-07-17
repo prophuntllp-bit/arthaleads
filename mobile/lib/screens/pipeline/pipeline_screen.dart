@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -390,8 +391,10 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                         );
                                                       }
                                                     },
-                                                    child: const Icon(
-                                                      Icons.call,
+                                                    child: Icon(
+                                                      FontAwesomeIcons
+                                                          .phone
+                                                          .data,
                                                       size: 16,
                                                       color: AppColors.primary,
                                                     ),
@@ -400,8 +403,10 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                   InkWell(
                                                     onTap: () =>
                                                         _whatsapp(lead),
-                                                    child: const Icon(
-                                                      Icons.chat,
+                                                    child: Icon(
+                                                      FontAwesomeIcons
+                                                          .whatsapp
+                                                          .data,
                                                       size: 16,
                                                       color: AppColors.whatsapp,
                                                     ),

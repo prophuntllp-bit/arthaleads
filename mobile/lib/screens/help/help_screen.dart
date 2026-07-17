@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
@@ -589,10 +590,10 @@ class _HelpScreenState extends State<HelpScreen> {
   }
 
   Widget _supportTab() {
-    const supportCards = [
+    final supportCards = [
       (Icons.phone_outlined, 'Call Support', '+91 80801 97945', 'For urgent CRM access or lead routing issues.'),
       (Icons.email_outlined, 'Email Support', 'support@arthaleads.com', 'Share screenshots or export files for faster debugging.'),
-      (Icons.chat_outlined, 'WhatsApp Help', '+91 80801 97945', 'Quick help for day-to-day sales team questions.'),
+      (FontAwesomeIcons.whatsapp.data, 'WhatsApp Help', '+91 80801 97945', 'Quick help for day-to-day sales team questions.'),
     ];
     return RefreshIndicator(
       color: AppColors.primary,

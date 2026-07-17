@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -734,7 +735,7 @@ class LeadsScreenState extends State<LeadsScreen> {
               Row(
                 children: [
                   Icon(
-                    Icons.phone,
+                    FontAwesomeIcons.phone.data,
                     size: 13,
                     color: Theme.of(context).textTheme.bodySmall?.color,
                   ),
@@ -763,7 +764,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                     ),
                   ] else if (lead['source'] != null) ...[
                     Icon(
-                      Icons.language,
+                      FontAwesomeIcons.globe.data,
                       size: 13,
                       color: Theme.of(context).textTheme.bodySmall?.color,
                     ),
@@ -813,8 +814,8 @@ class LeadsScreenState extends State<LeadsScreen> {
                   const Spacer(),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(
-                      Icons.call,
+                    icon: Icon(
+                      FontAwesomeIcons.phone.data,
                       size: 19,
                       color: AppColors.primary,
                     ),
@@ -822,8 +823,8 @@ class LeadsScreenState extends State<LeadsScreen> {
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(
-                      Icons.chat,
+                    icon: Icon(
+                      FontAwesomeIcons.whatsapp.data,
                       size: 19,
                       color: AppColors.whatsapp,
                     ),

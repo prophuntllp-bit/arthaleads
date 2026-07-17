@@ -1,16 +1,16 @@
-# Graph Report - PROPHUNT CRM  (2026-07-16)
+# Graph Report - PROPHUNT CRM  (2026-07-17)
 
 ## Corpus Check
-- 440 files · ~1,964,225 words
+- 440 files · ~1,965,456 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5306 nodes · 13115 edges · 206 communities (178 shown, 28 thin omitted)
+- 5315 nodes · 13217 edges · 207 communities (176 shown, 31 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 99 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `5ce24dba`
+- Built from commit: `268a7be1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -185,22 +185,23 @@
 - [[_COMMUNITY_Community 196|Community 196]]
 - [[_COMMUNITY_Community 197|Community 197]]
 - [[_COMMUNITY_Community 198|Community 198]]
+- [[_COMMUNITY_Community 199|Community 199]]
 - [[_COMMUNITY_Community 200|Community 200]]
 - [[_COMMUNITY_Community 201|Community 201]]
 - [[_COMMUNITY_Community 203|Community 203]]
 - [[_COMMUNITY_Community 204|Community 204]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `package:flutter/material.dart` - 134 edges
-2. `../core/theme.dart` - 130 edges
+1. `package:flutter/material.dart` - 135 edges
+2. `../core/theme.dart` - 131 edges
 3. `x()` - 106 edges
 4. `../../core/api_client.dart` - 92 edges
 5. `useAuth()` - 88 edges
 6. `r` - 71 edges
-7. `C` - 63 edges
-8. `usePublicTheme()` - 63 edges
-9. `../../widgets/motion.dart` - 60 edges
-10. `package:intl/intl.dart` - 54 edges
+7. `dashboard/dashboard_screen.dart` - 65 edges
+8. `C` - 63 edges
+9. `usePublicTheme()` - 63 edges
+10. `../../widgets/motion.dart` - 61 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `ky()` --calls--> `$r()`  [INFERRED]
@@ -214,11 +215,11 @@
 - `pipeline/pipeline_screen.dart` --defines--> `Card`  [EXTRACTED]
   mobile/lib/screens/shell.dart → pipeline/pipeline_screen.dart
 
-## Communities (206 total, 28 thin omitted)
+## Communities (207 total, 31 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (261): $, _1, _2, a0(), Af(), ap, b0(), b1 (+253 more)
+Nodes (226): $, _1, _2, a0(), Af(), ap, b0(), b1 (+218 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.08
@@ -233,16 +234,16 @@ Cohesion: 0.18
 Nodes (20): { AppError }, authService, crypto, jwt, Lead, logger, Organization, Project (+12 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.05
-Nodes (83): AuthProvider(), AboutUs, AdminLayout(), AdminLogin, ApiDocs, App(), applyBrandColor(), Attendance (+75 more)
+Cohesion: 0.07
+Nodes (50): CopilotProvider(), AboutUs, AdminLayout(), AdminLogin, ApiDocs, App(), BlogCategories, BlogEditor (+42 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.05
-Nodes (18): PRESET_COLORS, BILLING_FIELDS, BILLING_REQUIRED, INDIAN_BANKS, Settings(), MRR_PRICES, PLAN_COLORS, TARGETS (+10 more)
+Nodes (51): aD(), ag(), ar(), Cx(), dg(), eM(), fD(), fl() (+43 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.14
-Nodes (16): bi(), cr(), HA(), Hv(), ia, iy(), Jn(), Kr() (+8 more)
+Cohesion: 0.12
+Nodes (20): eC(), gg(), Gm(), Hm(), Hv(), ia, Jm(), Jn() (+12 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.18
@@ -250,7 +251,7 @@ Nodes (21): About(), AcresLogo(), Contact(), ContactForm(), FbLogo(), FEAT_FILTE
 
 ### Community 8 - "Community 8"
 Cohesion: 0.06
-Nodes (44): Info(), LANG_NAMES, LeadDetail(), initialForm, SOURCES, FormField(), getPlatform(), Modal() (+36 more)
+Nodes (45): Info(), LANG_NAMES, LeadDetail(), initialForm, SOURCES, FormField(), getPlatform(), Modal() (+37 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.14
@@ -258,71 +259,71 @@ Nodes (11): Organization, allowed, apiKeyAuth, digits, express, filter, Lead, or
 
 ### Community 10 - "Community 10"
 Cohesion: 0.02
-Nodes (118): AC(), Ai, al(), ap(), ay, b1(), bA(), Bc() (+110 more)
+Nodes (134): aA(), AC(), Ai, aj(), al(), ap(), ay, b1() (+126 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.15
-Nodes (35): attendance/attendance_screen.dart, dart:typed_data, ApiClient, errorMessage, Function, AttendanceScreen, _AttendanceScreenState, _badge (+27 more)
+Cohesion: 0.14
+Nodes (36): attendance/attendance_screen.dart, dart:typed_data, ApiClient, errorMessage, Function, ThemeState, AttendanceScreen, _AttendanceScreenState (+28 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.11
-Nodes (21): Automation, automationService, fetchSubmissions(), { getNextAssignee }, Lead, logger, { mapGoogleLeadFields, fromApiFields }, Organization (+13 more)
+Cohesion: 0.06
+Nodes (35): { AppError }, { invalidateAnalyticsCache }, Lead, leadController, leadService, { sendPushToAll }, { sendPushToAll, sendPushToUser }, Automation (+27 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.03
-Nodes (62): A, p, R, u, A(), I(), o, x (+54 more)
+Cohesion: 0.02
+Nodes (65): A, p, R, u, a, t, A(), I() (+57 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.08
-Nodes (73): a(), b(), be(), bm(), Bv(), $c(), ce(), Ci() (+65 more)
+Cohesion: 0.07
+Nodes (53): Be(), bg(), Bn(), Bo(), cg(), dg(), dr(), dw() (+45 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.14
-Nodes (16): Automation(), emptyNonFbForm, FacebookIcon(), FacebookIcon2(), FacebookWizard(), FORM_PLUGINS, LeadRoutingSection(), MATCH_FIELD_LABELS (+8 more)
+Cohesion: 0.11
+Nodes (22): ConfirmDialog(), EmptyState(), PageLoader(), Automation(), emptyNonFbForm, FacebookIcon(), FacebookIcon2(), FacebookWizard() (+14 more)
 
 ### Community 16 - "Community 16"
-Cohesion: 0.06
-Nodes (40): AMENITY_OPTIONS, BHK_OPTIONS, AppDatePicker(), ConfirmDialog(), EmptyState(), PageLoader(), RTh(), useColumnResize() (+32 more)
+Cohesion: 0.09
+Nodes (31): RTh(), useColumnResize(), BOOKING_COLORS, fmtLocalTime(), FollowUps(), FU_BOOKING_OPTIONS, FU_COL_DEFAULTS, FUDate() (+23 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.05
-Nodes (47): { AppError }, authorize(), _csrfAllowedOrigins, _getCachedOrg(), invalidateOrgCache(), jwt, Organization, _orgCache (+39 more)
+Cohesion: 0.04
+Nodes (44): followupController, followupService, { AppError }, _csrfAllowedOrigins, _getCachedOrg(), invalidateOrgCache(), jwt, Organization (+36 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.06
-Nodes (27): bookingSchema, mongoose, developerSchema, mongoose, Counter, invoiceSchema, mongoose, Booking (+19 more)
+Cohesion: 0.07
+Nodes (23): bookingSchema, mongoose, developerSchema, mongoose, Counter, invoiceSchema, mongoose, Booking (+15 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.05
-Nodes (18): AppSelect(), CalcPreview(), EMPTY_FORM, fmtINR(), STATUS_COLORS, STATUS_LABELS, UNIT_TYPES, EMPTY (+10 more)
+Cohesion: 0.07
+Nodes (12): AppSelect(), EMPTY, ACTION_LABELS, ALL_ACTIONS, ACTION_LABELS, ALL_ACTIONS, fmtBytes(), fmtDate() (+4 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.06
-Nodes (56): E(), Ee(), ge(), j(), k(), M(), ne(), Oe() (+48 more)
+Cohesion: 0.08
+Nodes (40): E(), Ee(), ge(), j(), k(), M(), ne(), Oe() (+32 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.21
 Nodes (5): BLOCK_TYPES, BlogEditor(), genId(), newBlock(), parseMarkdown()
 
 ### Community 22 - "Community 22"
-Cohesion: 0.12
-Nodes (21): Ag(), constructor(), d0(), f0(), He, My, o, subscribe() (+13 more)
+Cohesion: 0.07
+Nodes (23): C, d0(), f0(), He, _w(), x, A(), D() (+15 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.02
-Nodes (114): Ai(), Al(), as(), at(), ax(), b2(), bf(), bh() (+106 more)
+Cohesion: 0.03
+Nodes (109): Xu(), Ai(), Al(), au(), bh(), bi(), bl(), bu() (+101 more)
 
 ### Community 24 - "Community 24"
 Cohesion: 0.06
 Nodes (37): AiUsage, ALLOWED, Automation, { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, importLeadsSchema }, customFields, customLines, cutoff, { draftWhatsAppMessage } (+29 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.06
-Nodes (34): accessor(), bx, concat(), cx(), delete(), df, Dp(), f (+26 more)
+Cohesion: 0.07
+Nodes (28): at, G(), j(), je(), K(), L(), lt, N() (+20 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.03
-Nodes (55): m, C, e, r, a, t, e, t (+47 more)
+Nodes (58): m, e, r, a, t, e, t, Ag() (+50 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.09
@@ -333,24 +334,24 @@ Cohesion: 0.6
 Nodes (3): extractName(), extractPhone(), ShareTarget()
 
 ### Community 29 - "Community 29"
-Cohesion: 0.07
-Nodes (43): { AppError }, { invalidateAnalyticsCache }, Lead, leadController, leadService, { sendPushToAll }, { sendPushToAll, sendPushToUser }, getForm() (+35 more)
+Cohesion: 0.11
+Nodes (29): getForm(), { getNextAssignee }, Lead, Organization, Project, { sendPushToAll }, submitLead(), mongoose (+21 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.45
 Nodes (11): copy, data, idbGetAll(), notifData, notifyClients, notifyClientsToRefresh(), openSyncDB(), queueRequest() (+3 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.09
-Nodes (44): sr(), c2(), ch(), Cl(), dh(), dm(), eu(), fd() (+36 more)
+Cohesion: 0.06
+Nodes (80): fA(), qD(), sr(), _2(), a2(), b2(), c2(), ch() (+72 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.05
 Nodes (44): AiUsage, { AppError }, AuditLog, Automation, { invalidateOrgCache }, jwt, Lead, mongoose (+36 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.11
-Nodes (47): conversation_screen.dart, dart:async, Align, build, ConversationScreen, _ConversationScreenState, dispose, _fmtTime (+39 more)
+Cohesion: 0.16
+Nodes (28): conversation_screen.dart, Align, build, ConversationScreen, _ConversationScreenState, dispose, _fmtTime, Icon (+20 more)
 
 ### Community 34 - "Community 34"
 Cohesion: 0.08
@@ -358,59 +359,59 @@ Nodes (54): Align, ArthaChatScreen, _ArthaChatScreenState, _BotBubble, build, _C
 
 ### Community 35 - "Community 35"
 Cohesion: 0.03
-Nodes (36): at, G(), j(), je(), K(), L(), lt, N() (+28 more)
+Nodes (42): j(), O, te(), U, V, X, c, e (+34 more)
 
 ### Community 36 - "Community 36"
-Cohesion: 0.11
-Nodes (23): ThemeState, build, Center, PlaceholderScreen, SizedBox, build, dispose, _field (+15 more)
+Cohesion: 0.4
+Nodes (4): build, Center, PlaceholderScreen, SizedBox
 
 ### Community 38 - "Community 38"
 Cohesion: 0.15
 Nodes (12): code:jsx (<CustomSelect), code:jsx (<DateTimePicker), code:css (.stitch-table-fixed tbody td {), CustomSelect in forms/modals, DateTimePicker in forms/modals, Fixed-layout tables — MANDATORY rule, Form inputs (.input class), Git Workflow (+4 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.09
-Nodes (31): { sendPushToUser }, Task, taskController, mongoose, taskSchema, buildEmail(), COLLECTIONS, fmtBytes() (+23 more)
+Cohesion: 0.08
+Nodes (36): logFormat, logger, path, transports, winston, { sendPushToUser }, Task, taskController (+28 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.1
-Nodes (30): ag(), bp(), dp(), eg(), er(), fn(), fp(), gs() (+22 more)
+Cohesion: 0.13
+Nodes (36): $1(), A1(), c1(), ce(), d1(), ep(), f1(), ff() (+28 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.04
-Nodes (34): ee(), K, N(), oe(), q, V, X, Z() (+26 more)
+Nodes (36): ee(), K, N(), oe(), q, V, X, Z() (+28 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.04
-Nodes (35): $(), at, be, dt(), et, fe, Ge, it (+27 more)
+Nodes (31): ae, ce, de, L, le, me, ne, oe (+23 more)
 
 ### Community 48 - "Community 48"
 Cohesion: 0.16
 Nodes (35): build, _bulkBar, _bulkBtn, Card, cell, Color, column, Container (+27 more)
 
 ### Community 49 - "Community 49"
-Cohesion: 0.09
-Nodes (30): _1(), aM(), dk(), eg(), fT(), gR(), H1(), jA() (+22 more)
+Cohesion: 0.06
+Nodes (31): AdminSidebar(), NAV, ImpersonationBanner(), OnboardingChecklist(), STEPS, BUSINESS_TYPES, COMPANY_SIZES, OnboardingGate() (+23 more)
 
 ### Community 50 - "Community 50"
 Cohesion: 0.09
 Nodes (29): AttendanceCapture(), getCamPermissionHint(), getLocPermissionHint(), getLocUnavailableMsg(), isAndroid(), isIOS(), UpgradeWall(), addDays() (+21 more)
 
 ### Community 52 - "Community 52"
-Cohesion: 0.27
-Nodes (16): build, DateFormat, dispose, DraggableScrollableSheet, _fmtDate, Function, launchUrl, LeadDetailSheet (+8 more)
+Cohesion: 0.1
+Nodes (45): badges.dart, ../core/constants.dart, BookingOption, Color, fmtBudget, priorityColor, statusColor, build (+37 more)
 
 ### Community 54 - "Community 54"
-Cohesion: 0.06
-Nodes (29): j(), O, te(), U, V, X, ae, ce (+21 more)
+Cohesion: 0.08
+Nodes (41): ag(), ax(), bc(), cf(), cp(), Da(), dp(), eg() (+33 more)
 
 ### Community 55 - "Community 55"
-Cohesion: 0.21
-Nodes (24): call_history_screen.dart, build, _CallCard, _CallCardState, CallHistoryScreen, _CallHistoryScreenState, Card, Container (+16 more)
+Cohesion: 0.11
+Nodes (44): call_history_screen.dart, calls/calls_screen.dart, build, _CallCard, _CallCardState, CallHistoryScreen, _CallHistoryScreenState, Card (+36 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.06
-Nodes (19): Ae, Ce, Fe, O, Pe, Se, Te, X (+11 more)
+Cohesion: 0.03
+Nodes (43): Ae, Ce, Fe, O, Pe, Se, Te, X (+35 more)
 
 ### Community 57 - "Community 57"
 Cohesion: 0.15
@@ -421,8 +422,8 @@ Cohesion: 0.08
 Nodes (51): $(), bt(), Ct(), de(), dt(), e(), Ee(), Et() (+43 more)
 
 ### Community 59 - "Community 59"
-Cohesion: 0.08
-Nodes (40): ae(), ax(), b0(), br(), by(), C0(), Dr(), Dv() (+32 more)
+Cohesion: 0.13
+Nodes (23): ae(), b0(), by(), ej(), it(), lT(), mT(), o0() (+15 more)
 
 ### Community 60 - "Community 60"
 Cohesion: 0.1
@@ -430,11 +431,11 @@ Nodes (11): e1(), i1, Jw(), km(), Lm(), Qw(), Vw(), ww() (+3 more)
 
 ### Community 63 - "Community 63"
 Cohesion: 0.1
-Nodes (45): badges.dart, ../../core/auth_state.dart, build, Card, Column, DateFormat, dispose, _fmtDate (+37 more)
+Nodes (57): ../../core/auth_state.dart, dart:async, build, Card, Column, DateFormat, dispose, _fmtDate (+49 more)
 
 ### Community 64 - "Community 64"
-Cohesion: 0.16
-Nodes (29): am(), ba(), bo(), Br(), em(), gm(), hn(), jm() (+21 more)
+Cohesion: 0.08
+Nodes (54): am(), ba(), bf(), bo(), bp(), Br(), bx(), Cl() (+46 more)
 
 ### Community 65 - "Community 65"
 Cohesion: 0.08
@@ -442,15 +443,15 @@ Nodes (17): calcDelta(), Dashboard(), fmtINR(), fmtResponseTime(), getGreeting()
 
 ### Community 66 - "Community 66"
 Cohesion: 0.07
-Nodes (63): _0(), Ae(), af(), Ap(), bc(), Bn(), c0(), c1() (+55 more)
+Nodes (47): Ae(), af(), Ap(), ca(), cn(), cx(), df(), dg() (+39 more)
 
 ### Community 67 - "Community 67"
-Cohesion: 0.27
-Nodes (10): aw(), cw(), Dm(), fw(), Jl(), lw(), ow(), sw() (+2 more)
+Cohesion: 0.12
+Nodes (19): aw(), cD(), cw(), dD(), Dm(), fw(), Ix(), Jl() (+11 more)
 
 ### Community 68 - "Community 68"
-Cohesion: 0.06
-Nodes (27): followupController, followupService, mongoose, noteSchema, projectLeadSchema, AiUsage, countMap, crypto (+19 more)
+Cohesion: 0.1
+Nodes (21): mongoose, schema, AiUsage, countMap, crypto, { draftWhatsAppMessage }, express, month (+13 more)
 
 ### Community 69 - "Community 69"
 Cohesion: 0.05
@@ -465,16 +466,16 @@ Cohesion: 0.07
 Nodes (13): $, A, B(), G(), I, J, K(), M() (+5 more)
 
 ### Community 72 - "Community 72"
-Cohesion: 0.05
-Nodes (84): aA(), aD(), aO(), bb(), bf(), bO(), ca(), ci() (+76 more)
+Cohesion: 0.07
+Nodes (61): aO(), bf(), bO(), ca(), cO(), dO(), ea(), ef() (+53 more)
 
 ### Community 73 - "Community 73"
 Cohesion: 0.07
 Nodes (26): arthaleads_mobile, Getting Started, AI Features, Arthaleads CRM, Build for production, code:block1 (arthaleads/), code:bash (# Frontend), code:bash (# From workspace root — starts both frontend and backend) (+18 more)
 
 ### Community 74 - "Community 74"
-Cohesion: 0.16
-Nodes (26): dart:ui, build, _clearDates, Column, Container, _fmtDate, Icon, initState (+18 more)
+Cohesion: 0.2
+Nodes (21): build, Center, _clearDates, Color, Column, Container, _fmtDate, Icon (+13 more)
 
 ### Community 75 - "Community 75"
 Cohesion: 0.1
@@ -485,16 +486,16 @@ Nodes (37): actIdx, actMatch, { apiKey: _k, ...safe }, axios, basicAuth(), { bui
 }, callLines (+29 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.04
-Nodes (41): a, e, i, o, at, ct(), dt(), ee (+33 more)
+Cohesion: 0.07
+Nodes (23): i, o, at, ct(), dt(), ee, fe(), ge() (+15 more)
 
 ### Community 77 - "Community 77"
 Cohesion: 0.07
 Nodes (47): ae, an(), bn, Dt, En(), Et(), fn, g() (+39 more)
 
 ### Community 78 - "Community 78"
-Cohesion: 0.09
-Nodes (41): $1(), A1(), d1(), d2(), E1(), ep(), ex(), ff() (+33 more)
+Cohesion: 0.08
+Nodes (25): { AppError }, projectController, projectService, { AppError }, Ticket, ticketController, AppError, logger (+17 more)
 
 ### Community 79 - "Community 79"
 Cohesion: 0.24
@@ -513,32 +514,32 @@ Cohesion: 0.07
 Nodes (20): e, y, Ae, B, Be, Ce, Fe, je (+12 more)
 
 ### Community 83 - "Community 83"
-Cohesion: 0.09
-Nodes (30): bD(), dE(), dg(), Dx(), fl(), gl(), hn(), jD() (+22 more)
+Cohesion: 0.11
+Nodes (23): bD(), bj(), dE(), Dx(), gl(), hn(), jD(), ke() (+15 more)
 
 ### Community 84 - "Community 84"
 Cohesion: 0.25
 Nodes (6): ThemeProvider(), minDisplay, reactReady, splash, setupCapacitorPush(), setupNativeFeel()
 
 ### Community 85 - "Community 85"
-Cohesion: 0.1
-Nodes (56): fA(), _2(), A0(), a2(), Aa(), Ac(), Ar(), av() (+48 more)
+Cohesion: 0.07
+Nodes (90): _0(), a(), A0(), Aa(), Ac(), Ar(), as(), at() (+82 more)
 
 ### Community 86 - "Community 86"
-Cohesion: 0.06
-Nodes (34): mongoose, schema, AiUsage, { answerHelpQuestion }, capMatch, express, { fetchPageContext }, followUpDate (+26 more)
+Cohesion: 0.08
+Nodes (26): AiUsage, { answerHelpQuestion }, capMatch, express, { fetchPageContext }, followUpDate, Lead, leadId (+18 more)
 
 ### Community 87 - "Community 87"
 Cohesion: 0.1
 Nodes (20): usePublicTheme(), ApiDocs(), ENDPOINTS, METHOD_COLORS, CATEGORIES, Compare(), COMPETITORS, Contact() (+12 more)
 
 ### Community 88 - "Community 88"
-Cohesion: 0.26
-Nodes (17): ../core/constants.dart, BookingOption, Color, fmtBudget, priorityColor, statusColor, build, dispose (+9 more)
+Cohesion: 0.11
+Nodes (32): be(), Bv(), c0(), Cv(), fe(), fs(), ft(), Gc() (+24 more)
 
 ### Community 89 - "Community 89"
-Cohesion: 0.05
-Nodes (36): AdminSidebar(), NAV, ImpersonationBanner(), OnboardingChecklist(), STEPS, BUSINESS_TYPES, COMPANY_SIZES, OnboardingGate() (+28 more)
+Cohesion: 0.04
+Nodes (17): PRESET_COLORS, BILLING_FIELDS, BILLING_REQUIRED, INDIAN_BANKS, Settings(), MRR_PRICES, PLAN_COLORS, FEATURES (+9 more)
 
 ### Community 90 - "Community 90"
 Cohesion: 0.08
@@ -557,8 +558,8 @@ Cohesion: 0.26
 Nodes (22): build, Card, Color, Container, DateFormat, _daysUntil, Expanded, Icon (+14 more)
 
 ### Community 94 - "Community 94"
-Cohesion: 0.06
-Nodes (55): a0(), af(), At(), C1(), cE(), Cl(), d0(), e0() (+47 more)
+Cohesion: 0.09
+Nodes (33): af(), At(), d0(), el(), ex(), f0(), fg(), fr() (+25 more)
 
 ### Community 95 - "Community 95"
 Cohesion: 0.21
@@ -569,26 +570,26 @@ Cohesion: 0.09
 Nodes (19): mongoose, waConversationSchema, mongoose, waMessageSchema, { apiKey: _k, ...safe }, axios, express, filter (+11 more)
 
 ### Community 97 - "Community 97"
-Cohesion: 0.14
-Nodes (21): authController, express, { protect, authorize }, router, {
+Cohesion: 0.06
+Nodes (40): authorize(), { AppError }, authController, express, { protect, authorize }, router, {
   signupSchema,
   loginSchema,
   createUserSchema,
   updateUserSchema,
   updateProfileSchema,
-}, validate, addNoteSchema, assignLeadSchema (+13 more)
+}, validate (+32 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.1
-Nodes (25): Bt(), cD(), clamp(), dD(), formatHsl(), gE(), gi(), gv() (+17 more)
+Cohesion: 0.06
+Nodes (31): applyBrandColor(), Attendance, Automation, CaseStudies, Contact, Dashboard, FbCallback, FollowUps (+23 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.15
 Nodes (17): { AppError }, AuditLog, authController, authService, cookieOptions(), crypto, jwt, normPhone() (+9 more)
 
 ### Community 100 - "Community 100"
-Cohesion: 0.27
-Nodes (5): NAV_COMPANY, NAV_RESOURCES, NavInner(), PublicNav(), resourcesLinks
+Cohesion: 0.14
+Nodes (10): NAV_COMPANY, NAV_RESOURCES, NavInner(), PublicNav(), resourcesLinks, COMPONENTS, INCIDENTS, SEVERITY_META (+2 more)
 
 ### Community 101 - "Community 101"
 Cohesion: 0.15
@@ -603,20 +604,20 @@ Cohesion: 0.09
 Nodes (22): 10. Demo / test data, 11. Known gaps / outstanding follow-ups for the next agent, 12. Git workflow reminder, 1. Why this app exists, 2. Tech stack, 3. Directory structure, 4. Navigation shell, 5. API client & auth (`lib/core/api_client.dart`, `lib/core/auth_state.dart`) (+14 more)
 
 ### Community 104 - "Community 104"
-Cohesion: 0.13
-Nodes (15): logFormat, logger, path, transports, winston, ALLOWED_MIME, getResend(), logger (+7 more)
+Cohesion: 0.21
+Nodes (10): ALLOWED_MIME, getResend(), logger, { Resend }, sanitize(), submitApplication(), YEAR, express (+2 more)
 
 ### Community 105 - "Community 105"
-Cohesion: 0.07
-Nodes (34): bE(), dj(), dn(), eC(), ef(), Fj(), fn(), gg() (+26 more)
+Cohesion: 0.06
+Nodes (52): _1(), a_(), _b(), bE(), ci(), dj(), dk(), ee() (+44 more)
 
 ### Community 106 - "Community 106"
-Cohesion: 0.14
-Nodes (22): cr(), dg(), Et(), Fc(), Fo(), fx(), g0(), hx() (+14 more)
+Cohesion: 0.11
+Nodes (16): a, e, A(), ce, de, E, fe, g() (+8 more)
 
 ### Community 107 - "Community 107"
-Cohesion: 0.17
-Nodes (19): a_(), e_(), j_(), j0(), qO(), wb(), b(), ct() (+11 more)
+Cohesion: 0.07
+Nodes (41): aM(), ax(), bi(), br(), C0(), C1(), cr(), dl() (+33 more)
 
 ### Community 108 - "Community 108"
 Cohesion: 0.14
@@ -627,32 +628,32 @@ Cohesion: 0.2
 Nodes (9): FAKE_LEADS, FAQItem(), FAQS, FEATURES, FORM_PLUGINS, INSTALL_STEPS, SUPPORTED_FORMS, WordPressPlugin() (+1 more)
 
 ### Community 110 - "Community 110"
-Cohesion: 0.21
-Nodes (8): HelpBot(), PAGE_COPILOT, TICKET_CATEGORIES, CopilotContext, CopilotProvider(), useCopilot(), QUICK_ANSWERS, TOURS
+Cohesion: 0.28
+Nodes (5): HelpBot(), PAGE_COPILOT, TICKET_CATEGORIES, QUICK_ANSWERS, TOURS
 
 ### Community 111 - "Community 111"
-Cohesion: 0.06
-Nodes (52): Ju, qu, Xu(), Yu(), su, an(), au(), bu() (+44 more)
+Cohesion: 0.1
+Nodes (32): an(), Bn(), Cc(), cg(), d2(), es(), Ev(), Fc() (+24 more)
 
 ### Community 112 - "Community 112"
 Cohesion: 0.12
 Nodes (18): { AppError }, blocksToText(), BlogCategory, blogController, BlogPost, BlogTag, escapeRegex(), slugify() (+10 more)
 
 ### Community 113 - "Community 113"
-Cohesion: 0.1
-Nodes (18): { AppError }, allOk, Automation, automationController, automationService, base, { createAutomationSchema, updateAutomationSchema }, expiresAt (+10 more)
+Cohesion: 0.14
+Nodes (21): a0(), Bc(), cE(), Cl(), e0(), fy(), g_(), hl() (+13 more)
 
 ### Community 115 - "Community 115"
 Cohesion: 0.2
 Nodes (8): Careers(), CULTURE, EXP_OPTIONS, JobCard(), JOBS, PERKS, STATS, useVisible()
 
 ### Community 117 - "Community 117"
-Cohesion: 0.11
-Nodes (18): automationSchema, enc(), { encryptField, decryptField }, mongoose, update, mongoose, routingRuleSchema, Automation (+10 more)
+Cohesion: 0.19
+Nodes (17): k1(), _p(), Sp(), x1(), b(), ct(), H(), it() (+9 more)
 
 ### Community 118 - "Community 118"
-Cohesion: 0.15
-Nodes (11): Spinner(), Login(), PhoneOtpPanel(), toE164(), Signup(), toE164(), app, auth (+3 more)
+Cohesion: 0.16
+Nodes (12): Spinner(), Login(), PhoneOtpPanel(), toE164(), Signup(), toE164(), TARGETS, app (+4 more)
 
 ### Community 119 - "Community 119"
 Cohesion: 0.27
@@ -660,19 +661,19 @@ Nodes (8): AboutUs(), AboutUsInner(), STATS, STORY_POINTS, storyPoints, TIMELINE
 
 ### Community 120 - "Community 120"
 Cohesion: 0.14
-Nodes (32): ../core/push_service.dart, ../core/theme_state.dart, ArthaleadsApp, _AuthGate, build, main, MaterialApp, _OrgBlockedScreen (+24 more)
+Nodes (34): ../core/push_service.dart, ../core/theme_state.dart, ArthaleadsApp, _AuthGate, build, main, MaterialApp, _OrgBlockedScreen (+26 more)
 
 ### Community 121 - "Community 121"
 Cohesion: 0.44
 Nodes (8): BlogPostInner(), fmtDate(), PublicBlogPost(), RenderBlock(), sanitizeHtml(), setMeta(), TableOfContents(), useSEO()
 
 ### Community 123 - "Community 123"
-Cohesion: 0.07
-Nodes (20): a, t, e, t, c(), k(), M(), O() (+12 more)
+Cohesion: 0.09
+Nodes (16): c(), k(), M(), O(), p(), R(), L, w (+8 more)
 
 ### Community 124 - "Community 124"
-Cohesion: 0.24
-Nodes (20): calls/calls_screen.dart, _analyticsSection, build, CallsScreen, _CallsScreenState, Card, Column, DateFormat (+12 more)
+Cohesion: 0.11
+Nodes (9): AMENITY_OPTIONS, BHK_OPTIONS, AppDatePicker(), CalcPreview(), EMPTY_FORM, fmtINR(), STATUS_COLORS, STATUS_LABELS (+1 more)
 
 ### Community 126 - "Community 126"
 Cohesion: 0.54
@@ -683,20 +684,20 @@ Cohesion: 0.19
 Nodes (11): PublicFooter(), PublicThemeContext, PublicThemeProvider(), FAQItem(), faqs, HelpGuide(), HelpGuideInner(), steps (+3 more)
 
 ### Community 128 - "Community 128"
-Cohesion: 0.14
-Nodes (12): aw, Ae, Ce, De(), J, ke, Le, m() (+4 more)
+Cohesion: 0.25
+Nodes (4): ContactBox(), LegalLayout(), Section(), useSEO()
 
 ### Community 130 - "Community 130"
-Cohesion: 0.08
-Nodes (18): bcrypt, mongoose, obj, ROLES, User, userSchema, Lead, LEADS (+10 more)
+Cohesion: 0.05
+Nodes (33): mongoose, routingRuleSchema, bcrypt, mongoose, obj, ROLES, User, userSchema (+25 more)
 
 ### Community 132 - "Community 132"
 Cohesion: 0.5
 Nodes (4): main(), mongoose, prompt(), readline
 
 ### Community 133 - "Community 133"
-Cohesion: 0.25
-Nodes (4): ContactBox(), LegalLayout(), Section(), useSEO()
+Cohesion: 0.16
+Nodes (9): buildCells(), DateTimePicker(), DAY_HDRS, fmtDisplay(), MONTHS, pad2(), EMPTY_FORM, PRIORITY_META (+1 more)
 
 ### Community 167 - "Community 167"
 Cohesion: 0.15
@@ -707,24 +708,24 @@ Cohesion: 0.08
 Nodes (24): 1 · Cover (identity · move: diagonal accent · left), 2 · Dashboard (data · move: 3-up metric grid · the dense frame), 3 · Bar Ranking (data · move: cobalt bars · left), 4 · Pull Quote (quote · move: concentric rings · centered), 5 · Split + Highlight (content · move: asymmetric split · left), 6 · Closing / CTA (closer · move: centered rings + CTA), Approved Entities, Aspect-Ratio Behavior (+16 more)
 
 ### Community 169 - "Community 169"
-Cohesion: 0.28
-Nodes (9): bj(), dS(), kj(), Lj(), mj(), qj(), Rn(), Rs() (+1 more)
+Cohesion: 0.24
+Nodes (5): PROVIDERS, Bubble(), ConvItem(), fmt(), Inbox()
 
 ### Community 170 - "Community 170"
 Cohesion: 0.26
 Nodes (19): bookings/bookings_screen.dart, applyDeveloperDefaults, _bookingCard, BookingsScreen, _BookingsScreenState, build, calcRow, Card (+11 more)
 
 ### Community 171 - "Community 171"
-Cohesion: 0.06
-Nodes (34): { AppError }, Automation, automationController, automationService, crypto, { AppError }, projectController, projectService (+26 more)
+Cohesion: 0.08
+Nodes (27): { AppError }, Automation, automationController, automationService, crypto, automationSchema, enc(), { encryptField, decryptField } (+19 more)
 
 ### Community 172 - "Community 172"
-Cohesion: 0.23
-Nodes (10): activitySchema, formResponseSchema, Lead, leadSchema, mongoose, noteSchema, voiceCallSchema, voiceTurnSchema (+2 more)
+Cohesion: 0.09
+Nodes (22): activitySchema, formResponseSchema, Lead, leadSchema, mongoose, noteSchema, voiceCallSchema, voiceTurnSchema (+14 more)
 
 ### Community 173 - "Community 173"
-Cohesion: 0.08
-Nodes (48): ../attendance/attendance_capture_sheet.dart, dashboard/dashboard_screen.dart, _actionRequiredSection, AppSpinner, _attendanceCard, build, Card, Center (+40 more)
+Cohesion: 0.07
+Nodes (62): ../attendance/attendance_capture_sheet.dart, dart:ui, dashboard/dashboard_screen.dart, _actionRequiredSection, AppSpinner, _attendanceCard, build, Card (+54 more)
 
 ### Community 174 - "Community 174"
 Cohesion: 0.23
@@ -735,8 +736,8 @@ Cohesion: 0.39
 Nodes (7): empty, arthaleads_connection_status(), arthaleads_detected_plugins(), arthaleads_get_site_name(), arthaleads_get_token(), arthaleads_send_lead(), arthaleads_settings_page()
 
 ### Community 176 - "Community 176"
-Cohesion: 0.16
-Nodes (9): buildCells(), DateTimePicker(), DAY_HDRS, fmtDisplay(), MONTHS, pad2(), EMPTY_FORM, PRIORITY_META (+1 more)
+Cohesion: 0.31
+Nodes (6): mongoose, pushSubscriptionSchema, express, { protect }, PushSubscription, router
 
 ### Community 177 - "Community 177"
 Cohesion: 0.48
@@ -751,8 +752,8 @@ Cohesion: 0.31
 Nodes (11): amountInWords(), DetailedInvoicePDF(), fmtDate(), fmtINR(), Invoices(), Letterhead(), parseBrand(), SimpleInvoicePDF() (+3 more)
 
 ### Community 180 - "Community 180"
-Cohesion: 0.05
-Nodes (61): __(), ab(), ar(), bx(), cb(), cT(), Cx(), db() (+53 more)
+Cohesion: 0.06
+Nodes (52): __(), ab(), bb(), bx(), cb(), cT(), db(), df() (+44 more)
 
 ### Community 182 - "Community 182"
 Cohesion: 0.41
@@ -765,10 +766,6 @@ Nodes (10): CallDetailPanel(), Calls(), fmt(), INTENT_STYLE, LeadCallCard(), PAT
 ### Community 184 - "Community 184"
 Cohesion: 0.18
 Nodes (9): counterSchema, mongoose, Counter, d, mo, mongoose, now, ticketSchema (+1 more)
-
-### Community 185 - "Community 185"
-Cohesion: 0.29
-Nodes (5): COMPONENTS, INCIDENTS, SEVERITY_META, Status(), STATUS_META
 
 ### Community 190 - "Community 190"
 Cohesion: 0.15
@@ -791,16 +788,12 @@ Cohesion: 0.32
 Nodes (6): DateRangePicker(), DAYS, MONTHS, presetDates(), PRESETS, toIST()
 
 ### Community 196 - "Community 196"
-Cohesion: 0.31
-Nodes (6): mongoose, pushSubscriptionSchema, express, { protect }, PushSubscription, router
+Cohesion: 0.41
+Nodes (9): build, dispose, _field, FilterChip, Padding, ProjectFormScreen, _ProjectFormScreenState, Scaffold (+1 more)
 
 ### Community 197 - "Community 197"
-Cohesion: 0.26
-Nodes (12): build, dispose, Expanded, ForgotPasswordScreen, _ForgotPasswordScreenState, Icon, LoginScreen, _LoginScreenState (+4 more)
-
-### Community 198 - "Community 198"
-Cohesion: 0.25
-Nodes (7): express, list, now, Organization, { protect }, router, summary
+Cohesion: 0.24
+Nodes (13): build, dispose, Expanded, ForgotPasswordScreen, _ForgotPasswordScreenState, Icon, LoginScreen, _LoginScreenState (+5 more)
 
 ### Community 200 - "Community 200"
 Cohesion: 0.5
@@ -811,21 +804,21 @@ Cohesion: 0.5
 Nodes (3): Arthaleads – Lead Management CRM for Real Estate | India's #1 Property CRM, Brand Summary, What's in This Capture
 
 ## Knowledge Gaps
-- **1163 isolated node(s):** `Sentry`, `winston`, `path`, `logFormat`, `transports` (+1158 more)
+- **1150 isolated node(s):** `Sentry`, `winston`, `path`, `logFormat`, `transports` (+1145 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `r` connect `Community 26` to `Community 0`, `Community 128`, `Community 35`, `Community 199`, `Community 10`, `Community 76`, `Community 13`, `Community 46`, `Community 47`, `Community 82`, `Community 20`, `Community 54`, `Community 22`, `Community 56`, `Community 25`, `Community 58`, `Community 123`?**
+- **Why does `r` connect `Community 26` to `Community 0`, `Community 35`, `Community 105`, `Community 10`, `Community 106`, `Community 76`, `Community 13`, `Community 46`, `Community 47`, `Community 82`, `Community 20`, `Community 22`, `Community 56`, `Community 25`, `Community 58`, `Community 123`?**
   _High betweenness centrality (0.018) - this node is a cross-community bridge._
-- **Why does `sr()` connect `Community 31` to `Community 64`, `Community 98`, `Community 66`, `Community 10`, `Community 14`, `Community 111`, `Community 78`, `Community 180`, `Community 20`?**
+- **Why does `sr()` connect `Community 31` to `Community 64`, `Community 67`, `Community 5`, `Community 10`, `Community 111`, `Community 180`, `Community 85`, `Community 23`?**
   _High betweenness centrality (0.010) - this node is a cross-community bridge._
-- **Why does `C` connect `Community 26` to `Community 0`, `Community 128`, `Community 35`, `Community 76`, `Community 13`, `Community 46`, `Community 47`, `Community 82`, `Community 20`, `Community 54`, `Community 56`, `Community 123`?**
+- **Why does `C` connect `Community 35` to `Community 0`, `Community 105`, `Community 106`, `Community 76`, `Community 13`, `Community 46`, `Community 47`, `Community 82`, `Community 22`, `Community 56`, `Community 25`, `Community 26`, `Community 123`?**
   _High betweenness centrality (0.005) - this node is a cross-community bridge._
 - **What connects `Sentry`, `winston`, `path` to the rest of the system?**
-  _1163 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1150 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

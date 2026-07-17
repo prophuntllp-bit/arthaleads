@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -121,7 +122,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
       appBar: AppBar(
         title: Text(widget.leadName),
         actions: [
-          IconButton(icon: const Icon(Icons.call), onPressed: _callBack),
+          IconButton(icon: Icon(FontAwesomeIcons.phone.data), onPressed: _callBack),
         ],
       ),
       body: _loading
@@ -392,7 +393,7 @@ class _CallCardState extends State<_CallCard> {
                         await _api.dio.post('/calls/initiate', data: {'leadId': widget.leadId});
                       } catch (_) {}
                     },
-                    icon: const Icon(Icons.call, size: 16),
+                    icon: Icon(FontAwesomeIcons.phone.data, size: 16),
                     label: const Text('Call Back'),
                   ),
               ],

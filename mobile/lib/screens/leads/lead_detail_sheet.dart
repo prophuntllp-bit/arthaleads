@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -263,7 +264,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 mode: LaunchMode.externalApplication,
               );
             },
-            icon: const Icon(Icons.chat, size: 16),
+            icon: Icon(FontAwesomeIcons.whatsapp.data, size: 16),
             label: const Text('Send'),
           ),
         ],
@@ -432,7 +433,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
 
               // ── Read-only info ──
               if (!_isProject) ...[
-                _row('Source', lead['source'] as String? ?? '—', icon: Icons.language),
+                _row('Source', lead['source'] as String? ?? '—', icon: FontAwesomeIcons.globe.data),
                 if (budget != null && (budget['min'] != null || budget['max'] != null))
                   _row(
                     'Budget',

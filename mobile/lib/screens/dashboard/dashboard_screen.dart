@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -75,6 +76,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<String> _insights = [];
   bool _insightsOpen = false;
   bool _insightsLoading = false;
+  bool _dueExpanded = false;
   Timer? _refreshTimer;
   DateTime? _lastLoadedAt;
 
@@ -346,19 +348,19 @@ class _DashboardScreenState extends State<DashboardScreen>
         label: 'Facebook',
         count: (bySource['Facebook'] as num?)?.toInt() ?? 0,
         color: const Color(0xFF1877F2),
-        icon: Icons.facebook_rounded,
+        icon: FontAwesomeIcons.facebookF.data,
       ),
       (
         label: 'Google',
         count: (bySource['Google'] as num?)?.toInt() ?? 0,
         color: const Color(0xFFEA4335),
-        icon: Icons.g_mobiledata_rounded,
+        icon: FontAwesomeIcons.google.data,
       ),
       (
         label: 'WhatsApp',
         count: (bySource['WhatsApp'] as num?)?.toInt() ?? 0,
         color: AppColors.whatsapp,
-        icon: Icons.chat_rounded,
+        icon: FontAwesomeIcons.whatsapp.data,
       ),
       (
         label: 'Website',
@@ -367,14 +369,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ?.toInt() ??
             0,
         color: AppColors.purple,
-        icon: Icons.language_rounded,
+        icon: FontAwesomeIcons.globe.data,
       ),
       (
         label: 'Other',
         count:
             ((bySource['Other'] ?? bySource['Custom']) as num?)?.toInt() ?? 0,
         color: AppColors.warning,
-        icon: Icons.bolt_rounded,
+        icon: FontAwesomeIcons.bolt.data,
       ),
     ].where((source) => source.count > 0).toList();
 
@@ -595,20 +597,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _actionRequiredSection(BuildContext context) {
     final now = DateTime.now();
-    final overdue = _due.where((lead) {
+    final overdueLeads = _due.where((lead) {
       final raw = lead['followUpDate'] as String?;
       final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
       return date != null &&
           date.isBefore(DateTime(now.year, now.month, now.day));
-    }).length;
-    final dueToday = _due.where((lead) {
+    }).toList();
+    final todayLeads = _due.where((lead) {
       final raw = lead['followUpDate'] as String?;
       final date = raw == null ? null : DateTime.tryParse(raw)?.toLocal();
       return date != null &&
           date.year == now.year &&
           date.month == now.month &&
           date.day == now.day;
-    }).length;
+    }).toList();
+    final overdue = overdueLeads.length;
+    final dueToday = todayLeads.length;
     final hot = _hot.isEmpty ? null : _hot.first;
 
     return Column(
@@ -622,45 +626,109 @@ class _DashboardScreenState extends State<DashboardScreen>
           radius: 20,
           color: AppColors.danger.withValues(alpha: 0.045),
           border: Border.all(color: AppColors.danger.withValues(alpha: 0.24)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
+          padding: EdgeInsets.zero,
+          child: Column(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.danger.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 20,
-                  color: AppColors.danger,
+              InkWell(
+                onTap: () => setState(() => _dueExpanded = !_dueExpanded),
+                borderRadius: BorderRadius.circular(20),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 20,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$overdue overdue · $dueToday due today',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Across your team',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.of(context).textSoft,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        _dueExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$overdue overdue · $dueToday due today',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
+              if (_dueExpanded) ...[
+                Divider(height: 1, color: AppTheme.of(context).border),
+                if (overdueLeads.isEmpty && todayLeads.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('No follow-ups require action.'),
+                  ),
+                for (final lead in [...overdueLeads, ...todayLeads].take(8))
+                  ListTile(
+                    dense: true,
+                    onTap: () => widget.onNavigate?.call('Follow-ups'),
+                    leading: _smallBadge(
+                      overdueLeads.contains(lead) ? 'OVERDUE' : 'TODAY',
+                      overdueLeads.contains(lead)
+                          ? AppColors.danger
+                          : AppColors.warning,
                     ),
-                    Text(
-                      'Across your team',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.of(context).textSoft,
-                      ),
+                    title: Text(
+                      lead['name']?.toString() ?? 'Lead',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
+                    subtitle: Text(
+                      '${lead['assignedToName'] ?? 'Unassigned'} · ${_followUpTime(lead['followUpDate'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      tooltip: 'Call',
+                      onPressed: () {
+                        final phone = lead['phone']?.toString();
+                        if (phone != null && phone.isNotEmpty) {
+                          launchUrl(Uri.parse('tel:$phone'));
+                        }
+                      },
+                      icon: Icon(FontAwesomeIcons.phone.data, size: 17),
+                    ),
+                  ),
+                if (overdueLeads.length + todayLeads.length > 8)
+                  TextButton(
+                    onPressed: () => widget.onNavigate?.call('Follow-ups'),
+                    child: Text(
+                      'View all ${overdueLeads.length + todayLeads.length} follow-ups',
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
@@ -783,8 +851,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             launchUrl(Uri.parse('tel:$phone'));
                           }
                         },
-                        icon: const Icon(
-                          Icons.call_rounded,
+                        icon: Icon(
+                          FontAwesomeIcons.phone.data,
                           color: AppColors.primary,
                         ),
                       ),
@@ -804,8 +872,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                             );
                           }
                         },
-                        icon: const Icon(
-                          Icons.chat_rounded,
+                        icon: Icon(
+                          FontAwesomeIcons.whatsapp.data,
                           color: AppColors.whatsapp,
                         ),
                       ),
@@ -995,7 +1063,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     launchUrl(Uri.parse('tel:$phone'));
                   }
                 },
-                icon: const Icon(Icons.call_outlined, size: 19),
+                icon: Icon(FontAwesomeIcons.phone.data, size: 17),
               ),
             ),
         ],
@@ -1098,7 +1166,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 10),
         if (_automations.isNotEmpty)
           _summaryCard(
-            Icons.bolt_rounded,
+            FontAwesomeIcons.bolt.data,
             'Automation Health',
             '$live live · ${_automations.length - live} off',
             AppColors.primary,
@@ -1355,6 +1423,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _shortDate(dynamic value) {
     final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
     return date == null ? '—' : DateFormat('d MMM').format(date);
+  }
+
+  String _followUpTime(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    return date == null ? 'No time' : DateFormat('d MMM, hh:mm a').format(date);
   }
 
   int _daysAgo(dynamic value) {

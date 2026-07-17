@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
@@ -26,12 +27,12 @@ class _AutomationScreenState extends State<AutomationScreen> {
   List<Map<String, dynamic>> _automations = [];
   bool _loading = true;
 
-  static const _platformIcons = {
-    'Facebook': Icons.facebook_rounded,
-    'Google': Icons.g_mobiledata_rounded,
-    'WhatsApp': Icons.chat_rounded,
-    'Website Form': Icons.language_rounded,
-    'Custom': Icons.bolt_rounded,
+  static final _platformIcons = {
+    'Facebook': FontAwesomeIcons.facebookF.data,
+    'Google': FontAwesomeIcons.google.data,
+    'WhatsApp': FontAwesomeIcons.whatsapp.data,
+    'Website Form': FontAwesomeIcons.globe.data,
+    'Custom': FontAwesomeIcons.bolt.data,
   };
 
   @override
@@ -198,7 +199,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   itemBuilder: (context, i) {
                     final a = _automations[i];
                     final active = a['isActive'] != false;
-                    final icon = _platformIcons[a['platform']] ?? Icons.bolt_rounded;
+                    final icon = _platformIcons[a['platform']] ?? FontAwesomeIcons.bolt.data;
                     final endpoint = a['platform'] != 'Facebook' && (a['webhookPath'] as String? ?? '').isNotEmpty
                         ? '$_serverBase${a['webhookPath']}'
                         : null;

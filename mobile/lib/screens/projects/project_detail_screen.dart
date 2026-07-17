@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -483,14 +484,14 @@ class _LeadsTabState extends State<_LeadsTab> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.call, size: 20, color: AppColors.primary),
+                                      icon: Icon(FontAwesomeIcons.phone.data, size: 18, color: AppColors.primary),
                                       onPressed: () {
                                         final p = lead['phone'] as String?;
                                         if (p != null) launchUrl(Uri.parse('tel:$p'));
                                       },
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.chat, size: 20, color: AppColors.whatsapp),
+                                      icon: Icon(FontAwesomeIcons.whatsapp.data, size: 19, color: AppColors.whatsapp),
                                       onPressed: () {
                                         final p = (lead['phone'] as String? ?? '').replaceAll(RegExp(r'\D'), '');
                                         if (p.isEmpty) return;
