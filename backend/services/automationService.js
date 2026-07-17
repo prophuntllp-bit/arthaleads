@@ -224,10 +224,10 @@ const automationService = {
     return user;
   },
 
-  createFacebookState({ userId }) {
+  createFacebookState({ userId, mobile = false }) {
     // Only embed userId - never the session JWT (which would leak via URL/browser history)
     return jwt.sign(
-      { userId, type: "facebook_oauth" },
+      { userId, mobile, type: "facebook_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -237,7 +237,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "facebook_oauth") throw new Error("Invalid state type");
-      return { userId: decoded.userId };
+      return { userId: decoded.userId, mobile: decoded.mobile === true };
     } catch {
       throw new AppError("Invalid Facebook OAuth state", 400);
     }
@@ -437,9 +437,9 @@ const automationService = {
   // up a Google Cloud OAuth Client and been granted a Google Ads Developer
   // Token — both are external approvals only the account owner can request;
   // see GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_ADS_DEVELOPER_TOKEN.
-  createGoogleState({ userId }) {
+  createGoogleState({ userId, mobile = false }) {
     return jwt.sign(
-      { userId, type: "google_oauth" },
+      { userId, mobile, type: "google_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -449,7 +449,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "google_oauth") throw new Error("Invalid state type");
-      return { userId: decoded.userId };
+      return { userId: decoded.userId, mobile: decoded.mobile === true };
     } catch {
       throw new AppError("Invalid Google OAuth state", 400);
     }

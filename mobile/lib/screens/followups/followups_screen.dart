@@ -34,6 +34,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   DateTime? _to;
   final _scroll = ScrollController();
   final _searchCtrl = TextEditingController();
+  int _loadGeneration = 0;
 
   static const _sections = [
     ('past', 'Past', Icons.history, AppColors.danger),
@@ -63,6 +64,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
   }
 
   Future<void> _load({bool reset = false}) async {
+    final generation = reset ? ++_loadGeneration : _loadGeneration;
     if (reset) {
       _page = 1;
       _leads.clear();
@@ -76,7 +78,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
           'page': _page,
           'limit': 50,
           'sort': _sortDesc ? 'desc' : 'asc',
-          if (_myOnly) 'myOnly': true,
+          if (_myOnly) 'myOnly': 'true',
           if (_section == 'future' && _from != null)
             'from': DateFormat('yyyy-MM-dd').format(_from!),
           if (_section == 'future' && _to != null)
@@ -85,6 +87,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
             'search': _searchCtrl.text.trim(),
         },
       );
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _leads.addAll(
           (res.data['leads'] as List? ?? []).cast<Map<String, dynamic>>(),

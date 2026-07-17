@@ -362,7 +362,10 @@ const automationController = {
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
       // Pass only userId - never embed the session token in the OAuth state (URL-visible)
-      const state = automationService.createFacebookState({ userId: user._id.toString() });
+      const state = automationService.createFacebookState({
+        userId: user._id.toString(),
+        mobile: req.query.mobile === "1",
+      });
       const authUrl = automationService.getFacebookAuthUrl(state);
       res.redirect(authUrl);
     } catch (err) {
@@ -374,9 +377,16 @@ const automationController = {
     const frontendOrigin = automationService.getFrontendOrigin();
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
 
+    let mobile = false;
     try {
       console.log(`[facebookCallback] query params: ${JSON.stringify(req.query)}`);
       const { code, state, error, error_description } = req.query;
+
+      // Preserve the native callback target even when the provider returns an
+      // error (for example, when the user cancels the consent screen).
+      if (state) {
+        mobile = automationService.verifyFacebookState(state).mobile;
+      }
 
       // Facebook returns ?error= when the user denies or the app lacks App Review approval
       if (error) {
@@ -390,6 +400,7 @@ const automationController = {
       if (!code || !state) throw new Error("Missing Facebook callback data");
 
       const statePayload = automationService.verifyFacebookState(state);
+      mobile = statePayload.mobile;
       const { pages, freshToken } = await automationService.getFacebookConnectionData(code);
 
       console.log(`[facebookCallback] pages fetched: ${pages.length} | userId: ${statePayload.userId}`);
@@ -398,11 +409,15 @@ const automationController = {
 
       const sessionId = require("crypto").randomBytes(16).toString("hex");
       await automationService.storeOAuthResult(sessionId, { type: "success", pages, freshToken });
-      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
+      return res.redirect(mobile
+        ? `arthaleads://facebook-callback?session=${sessionId}`
+        : `${frontendOrigin}/fb-callback?session=${sessionId}`);
     } catch (err) {
       const sessionId = require("crypto").randomBytes(16).toString("hex");
       await automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Facebook connection failed" });
-      return res.redirect(`${frontendOrigin}/fb-callback?session=${sessionId}`);
+      return res.redirect(mobile
+        ? `arthaleads://facebook-callback?session=${sessionId}`
+        : `${frontendOrigin}/fb-callback?session=${sessionId}`);
     }
   },
 
@@ -431,7 +446,10 @@ const automationController = {
     try {
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
-      const state = automationService.createGoogleState({ userId: user._id.toString() });
+      const state = automationService.createGoogleState({
+        userId: user._id.toString(),
+        mobile: req.query.mobile === "1",
+      });
       const authUrl = automationService.getGoogleAuthUrl(state);
       res.redirect(authUrl);
     } catch (err) {
@@ -443,8 +461,15 @@ const automationController = {
     const frontendOrigin = automationService.getFrontendOrigin();
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
 
+    let mobile = false;
     try {
       const { code, state, error, error_description } = req.query;
+
+      // Provider-declined flows still need to return to the APK rather than
+      // falling through to the web callback page.
+      if (state) {
+        mobile = automationService.verifyGoogleState(state).mobile;
+      }
 
       if (error) {
         const gMsg = error_description ? decodeURIComponent(error_description.replace(/\+/g, " ")) : error;
@@ -452,7 +477,8 @@ const automationController = {
       }
       if (!code || !state) throw new Error("Missing Google callback data");
 
-      automationService.verifyGoogleState(state); // throws if invalid/expired
+      const statePayload = automationService.verifyGoogleState(state); // throws if invalid/expired
+      mobile = statePayload.mobile;
       const { customers, accessToken, refreshToken } = await automationService.getGoogleConnectionData(code);
 
       if (!refreshToken) {
@@ -464,11 +490,15 @@ const automationController = {
 
       const sessionId = crypto.randomBytes(16).toString("hex");
       await automationService.storeOAuthResult(sessionId, { type: "success", customers, accessToken, refreshToken });
-      return res.redirect(`${frontendOrigin}/google-callback?session=${sessionId}`);
+      return res.redirect(mobile
+        ? `arthaleads://google-callback?session=${sessionId}`
+        : `${frontendOrigin}/google-callback?session=${sessionId}`);
     } catch (err) {
       const sessionId = crypto.randomBytes(16).toString("hex");
       await automationService.storeOAuthResult(sessionId, { type: "error", message: err.message || "Google connection failed" });
-      return res.redirect(`${frontendOrigin}/google-callback?session=${sessionId}`);
+      return res.redirect(mobile
+        ? `arthaleads://google-callback?session=${sessionId}`
+        : `${frontendOrigin}/google-callback?session=${sessionId}`);
     }
   },
 

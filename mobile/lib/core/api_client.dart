@@ -102,6 +102,7 @@ class ApiClient {
   }
 
   bool get hasToken => _token != null;
+  String? get token => _token;
 
   Future<void> setToken(String token) async {
     _token = token;

@@ -12,8 +12,11 @@ const followupService = {
     // myOnly=true lets admin/manager opt-in to the same per-user scope.
     // Project leads have no individual owner — excluded entirely when scopedToSelf.
     const scopedToSelf = user.role === "agent" || myOnly;
+    // "My Leads" means ownership/assignment, not "records I happened to
+    // create". Admins commonly import or create leads for the whole team, so
+    // including createdBy made the toggle appear to do nothing for them.
     const selfCond = scopedToSelf
-      ? [{ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }]
+      ? [{ assignedTo: user._id }]
       : [];
 
     const searchCond = search

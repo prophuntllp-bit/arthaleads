@@ -6,10 +6,22 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 
 const _platformDefaults = {
-  'Google': ('/api/leads', 'Use this endpoint from Google Ads landing pages or lead form bridges.'),
-  'WhatsApp': ('/api/leads', 'Push WhatsApp enquiries into the lead API with source set to WhatsApp.'),
-  'Website Form': ('/api/leads', 'Connect website or landing page forms to the lead create API.'),
-  'Custom': ('/api/leads', 'Use a custom data source and map it into your CRM lead fields.'),
+  'Google': (
+    '/api/leads',
+    'Use this endpoint from Google Ads landing pages or lead form bridges.',
+  ),
+  'WhatsApp': (
+    '/api/leads',
+    'Push WhatsApp enquiries into the lead API with source set to WhatsApp.',
+  ),
+  'Website Form': (
+    '/api/leads',
+    'Connect website or landing page forms to the lead create API.',
+  ),
+  'Custom': (
+    '/api/leads',
+    'Use a custom data source and map it into your CRM lead fields.',
+  ),
 };
 
 const _serverBase = 'https://api.arthaleads.com';
@@ -19,8 +31,13 @@ const _serverBase = 'https://api.arthaleads.com';
 /// existing source metadata can be edited here.
 class AutomationFormScreen extends StatefulWidget {
   final Map<String, dynamic>? automation;
+  final String? initialPlatform;
 
-  const AutomationFormScreen({super.key, this.automation});
+  const AutomationFormScreen({
+    super.key,
+    this.automation,
+    this.initialPlatform,
+  });
 
   @override
   State<AutomationFormScreen> createState() => _AutomationFormScreenState();
@@ -28,12 +45,25 @@ class AutomationFormScreen extends StatefulWidget {
 
 class _AutomationFormScreenState extends State<AutomationFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.automation?['name'] as String? ?? '');
-  late final _description = TextEditingController(text: widget.automation?['description'] as String? ?? '');
-  late final _leadSourceLabel = TextEditingController(text: widget.automation?['leadSourceLabel'] as String? ?? '');
-  late final _pageId = TextEditingController(text: widget.automation?['pageId'] as String? ?? '');
-  late final _formId = TextEditingController(text: widget.automation?['formId'] as String? ?? '');
-  late String _platform = widget.automation?['platform'] as String? ?? 'Google';
+  late final _name = TextEditingController(
+    text: widget.automation?['name'] as String? ?? '',
+  );
+  late final _description = TextEditingController(
+    text: widget.automation?['description'] as String? ?? '',
+  );
+  late final _leadSourceLabel = TextEditingController(
+    text: widget.automation?['leadSourceLabel'] as String? ?? '',
+  );
+  late final _pageId = TextEditingController(
+    text: widget.automation?['pageId'] as String? ?? '',
+  );
+  late final _formId = TextEditingController(
+    text: widget.automation?['formId'] as String? ?? '',
+  );
+  late String _platform =
+      widget.automation?['platform'] as String? ??
+      widget.initialPlatform ??
+      'Google';
   bool _saving = false;
 
   bool get _isEdit => widget.automation != null;
@@ -50,7 +80,9 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
   }
 
   String get _webhookPath =>
-      widget.automation?['webhookPath'] as String? ?? _platformDefaults[_platform]?.$1 ?? '/api/leads';
+      widget.automation?['webhookPath'] as String? ??
+      _platformDefaults[_platform]?.$1 ??
+      '/api/leads';
 
   String get _endpoint => '$_serverBase$_webhookPath';
 
@@ -60,24 +92,31 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
     final body = {
       'name': _name.text.trim(),
       if (!_isEdit) 'platform': _platform,
-      if (_description.text.trim().isNotEmpty) 'description': _description.text.trim(),
-      if (_leadSourceLabel.text.trim().isNotEmpty) 'leadSourceLabel': _leadSourceLabel.text.trim(),
+      if (_description.text.trim().isNotEmpty)
+        'description': _description.text.trim(),
+      if (_leadSourceLabel.text.trim().isNotEmpty)
+        'leadSourceLabel': _leadSourceLabel.text.trim(),
       if (_isFacebook) 'pageId': _pageId.text.trim(),
       if (_isFacebook) 'formId': _formId.text.trim(),
     };
     try {
       if (_isEdit) {
-        await ApiClient.instance.dio.patch('/automations/${widget.automation!['_id']}', data: body);
+        await ApiClient.instance.dio.patch(
+          '/automations/${widget.automation!['_id']}',
+          data: body,
+        );
       } else {
         await ApiClient.instance.dio.post('/automations', data: body);
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Save failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Save failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -98,7 +137,10 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: DropdownButtonFormField<String>(
                   initialValue: _platform,
-                  decoration: const InputDecoration(labelText: 'Platform', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Platform',
+                    isDense: true,
+                  ),
                   items: _platformDefaults.keys
                       .map((p) => DropdownMenuItem(value: p, child: Text(p)))
                       .toList(),
@@ -108,15 +150,20 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
             else if (_isFacebook)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 6),
-                child: Text('Facebook connections only allow editing name, page, and form here — '
-                    'use the Facebook button on Automation to reconnect with a new System User Token.',
-                    style: TextStyle(fontSize: 12, color: AppColors.warning)),
+                child: Text(
+                  'Facebook connections only allow editing name, page, and form here — '
+                  'use the Facebook button on Automation to reconnect with a new System User Token.',
+                  style: TextStyle(fontSize: 12, color: AppColors.warning),
+                ),
               ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: TextFormField(
                 controller: _name,
-                decoration: const InputDecoration(labelText: 'Name *', isDense: true),
+                decoration: const InputDecoration(
+                  labelText: 'Name *',
+                  isDense: true,
+                ),
                 validator: (v) => v!.trim().isEmpty ? 'Required' : null,
               ),
             ),
@@ -125,14 +172,20 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: TextFormField(
                   controller: _pageId,
-                  decoration: const InputDecoration(labelText: 'Facebook Page ID', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Facebook Page ID',
+                    isDense: true,
+                  ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: TextFormField(
                   controller: _formId,
-                  decoration: const InputDecoration(labelText: 'Lead Form ID', isDense: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Lead Form ID',
+                    isDense: true,
+                  ),
                 ),
               ),
             ] else ...[
@@ -142,7 +195,9 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                   controller: _leadSourceLabel,
                   decoration: InputDecoration(
                     labelText: 'Lead Source Label',
-                    hintText: _platformDefaults[_platform]?.$1 == null ? '' : _platform,
+                    hintText: _platformDefaults[_platform]?.$1 == null
+                        ? ''
+                        : _platform,
                     isDense: true,
                   ),
                 ),
@@ -166,25 +221,39 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardTheme.color,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerTheme.color ?? Colors.transparent),
+                  border: Border.all(
+                    color:
+                        Theme.of(context).dividerTheme.color ??
+                        Colors.transparent,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Endpoint', style: Theme.of(context).textTheme.labelLarge),
+                    Text(
+                      'Endpoint',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         Expanded(
-                          child: Text(_endpoint,
-                              style: const TextStyle(fontSize: 12, color: AppColors.primary),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            _endpoint,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.primary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         IconButton(
                           icon: const Icon(Icons.copy, size: 16),
                           onPressed: () {
                             Clipboard.setData(ClipboardData(text: _endpoint));
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Copied')),
+                            );
                           },
                         ),
                       ],
