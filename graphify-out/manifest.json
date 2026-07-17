@@ -1552,12 +1552,12 @@
     "hash": "7ba483a9fe1bb14ff37a50d32ed54afd"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\projects\\projects_screen.dart": {
-    "mtime": 1784189745.7499638,
-    "hash": "e4d68af315656720d6708e1488c7fac7"
+    "mtime": 1784277616.5919778,
+    "hash": "7662a8288371c0bcf73b970b6a34692a"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\projects\\project_detail_screen.dart": {
-    "mtime": 1784268038.821156,
-    "hash": "351927f09a99d8effb1baa395ad83f3e"
+    "mtime": 1784277616.5579784,
+    "hash": "24a3f6b605831b3df3c9bb9074cdd418"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\projects\\project_form.dart": {
     "mtime": 1784270453.0669167,
@@ -2131,6 +2131,14 @@
     "mtime": 1784272650.0444455,
     "hash": "9c7bd1a76424b6cc3c39c4f9867cfc84"
   },
+  "E:\\PROPHUNT CRM\\mobile\\c.png": {
+    "mtime": 1784280311.125095,
+    "hash": "8ca0c7516eb3cf794279f9944a16d704"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\c2.png": {
+    "mtime": 1784280345.1283646,
+    "hash": "55e86c7ee240c50d5f8aacbdb8ee471e"
+  },
   "E:\\PROPHUNT CRM\\mobile\\device-current.png": {
     "mtime": 1784272600.8767426,
     "hash": "6a52e05ba2de4db574847d7128f425ed"
@@ -2190,6 +2198,22 @@
   "E:\\PROPHUNT CRM\\mobile\\web-followups.png": {
     "mtime": 1784274424.687106,
     "hash": "da93dc695f52c10f1429ea33d7dfbf03"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\web-now.png": {
+    "mtime": 1784280118.1717417,
+    "hash": "96996d5018287d6a95e4c7a391be4c36"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\web-project-detail.png": {
+    "mtime": 1784277507.360241,
+    "hash": "53f8d8edd4df710ee434a00161f804e5"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\web-projects-live.png": {
+    "mtime": 1784277488.3137748,
+    "hash": "67de2f2fd188b0cb4ec21089239be0ef"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\web-projects.png": {
+    "mtime": 1784277430.0464284,
+    "hash": "983af3ca40b9646066bdeaca22efc924"
   },
   "E:\\PROPHUNT CRM\\mobile\\web-reference-current.png": {
     "mtime": 1784274370.545492,

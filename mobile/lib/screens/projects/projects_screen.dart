@@ -74,9 +74,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Archive project?'),
+        title: const Text('Delete Project'),
         content: Text(
-          '"${p['name']}" will be archived and hidden from the list.',
+          'Are you sure you want to delete "${p['name']}"? '
+          'All imported leads will remain but the project will be removed.',
         ),
         actions: [
           TextButton(
@@ -86,7 +87,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
-              'Archive',
+              'Delete',
               style: TextStyle(color: AppColors.danger),
             ),
           ),
@@ -101,7 +102,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Failed to archive')),
+            content: Text(
+              ApiClient.errorMessage(e, 'Failed to delete project'),
+            ),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -201,7 +204,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       ),
                                       PopupMenuItem(
                                         value: 'delete',
-                                        child: Text('Archive'),
+                                        child: Text('Delete'),
                                       ),
                                     ],
                                   ),
