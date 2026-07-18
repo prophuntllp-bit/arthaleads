@@ -380,7 +380,21 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                   child: CircularProgressIndicator(color: AppColors.primary),
                 )
               : _leads.isEmpty
-              ? const Center(child: Text('No follow-ups here'))
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.event_repeat_rounded, size: 40, color: AppColors.primary.withValues(alpha: 0.3)),
+                      const SizedBox(height: 8),
+                      const Text('No follow-ups here', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Nothing to show for this section right now.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                )
               : RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: () => _load(reset: true),
@@ -405,15 +419,49 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_fmtDate(followUp as String?)),
-                              if ((lead['booking'] as String? ?? '').isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: BookingChip(
-                                    lead['booking'] as String?,
-                                  ),
+                              if ((lead['projectName'] as String? ?? '').isNotEmpty)
+                                Text(
+                                  lead['projectName'] as String,
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600),
                                 ),
+                              if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
+                                Text(
+                                  'Assigned to ${lead['assignedToName']}',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                ),
+                              if ((lead['remark'] as String? ?? lead['remark1'] as String? ?? '').isNotEmpty)
+                                Text(
+                                  (lead['remark'] ?? lead['remark1']) as String,
+                                  style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Wrap(
+                                  spacing: 6,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    if ((lead['source'] as String? ?? '').isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blueGrey.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          lead['source'] as String,
+                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                                        ),
+                                      ),
+                                    if ((lead['booking'] as String? ?? '').isNotEmpty)
+                                      BookingChip(lead['booking'] as String?),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
+                          isThreeLine: true,
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

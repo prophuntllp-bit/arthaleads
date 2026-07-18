@@ -7,6 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/page_header.dart';
 
 class DevelopersScreen extends StatefulWidget {
   const DevelopersScreen({super.key});
@@ -97,7 +98,6 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: AppSpinner(size: 32));
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
@@ -105,14 +105,44 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
         icon: const Icon(Icons.add),
         label: const Text('Add Developer'),
       ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          const PageHeader(
+            title: 'Developers',
+            subtitle: 'Builder profiles used for brokerage invoices',
+            icon: Icons.apartment_rounded,
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: AppSpinner(size: 32))
+                : RefreshIndicator(
         onRefresh: _load,
         child: _developers.isEmpty
             ? ListView(
-                children: const [
-                  SizedBox(height: 180),
-                  Icon(Icons.apartment_outlined, size: 54),
-                  Center(child: Text('No developers added yet')),
+                children: [
+                  const SizedBox(height: 100),
+                  Icon(Icons.apartment_outlined, size: 54, color: AppColors.primary.withValues(alpha: 0.3)),
+                  const SizedBox(height: 8),
+                  const Center(
+                    child: Text('No developers added yet', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      'Add your first builder/developer to start creating invoices.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openForm(),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Developer'),
+                    ),
+                  ),
                 ],
               )
             : ListView.builder(
@@ -181,6 +211,11 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
                                   'GST: ${d['gstNo']}',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
+                              if ((d['cin']?.toString() ?? '').isNotEmpty)
+                                Text(
+                                  'CIN: ${d['cin']}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                               Text(
                                 'Brokerage: ${d['defaultBrokeragePercent'] ?? 2}%',
                                 style: Theme.of(context).textTheme.bodySmall,
@@ -191,6 +226,40 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
                               ),
                             ],
                           ),
+                          if (((d['defaultFosIncentive'] as num?) ?? 0) > 0 ||
+                              ((d['defaultEoiIncentive'] as num?) ?? 0) > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Wrap(
+                                spacing: 6,
+                                children: [
+                                  if (((d['defaultFosIncentive'] as num?) ?? 0) > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        'FOS ₹${d['defaultFosIncentive']}',
+                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF6366F1)),
+                                      ),
+                                    ),
+                                  if (((d['defaultEoiIncentive'] as num?) ?? 0) > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(999),
+                                      ),
+                                      child: Text(
+                                        'EOI ₹${d['defaultEoiIncentive']}',
+                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.success),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           if ((d['reraNumbers'] as List? ?? []).isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
@@ -215,6 +284,9 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
                   );
                 },
               ),
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -398,7 +470,21 @@ class _DeveloperFormState extends State<_DeveloperForm> {
         _field('cin', 'CIN'),
         Row(
           children: [
-            Expanded(child: _field('rera', 'Add RERA number')),
+            Expanded(
+              child: TextField(
+                controller: _c['rera'],
+                decoration: const InputDecoration(labelText: 'Add RERA number'),
+                onSubmitted: (v) {
+                  final trimmed = v.trim();
+                  if (trimmed.isNotEmpty && !_rera.contains(trimmed)) {
+                    setState(() {
+                      _rera.add(trimmed);
+                      _c['rera']!.clear();
+                    });
+                  }
+                },
+              ),
+            ),
             IconButton.filledTonal(
               onPressed: () {
                 final v = _c['rera']!.text.trim();
@@ -438,8 +524,14 @@ class _DeveloperFormState extends State<_DeveloperForm> {
           initialValue: _template,
           decoration: const InputDecoration(labelText: 'Invoice Template'),
           items: const [
-            DropdownMenuItem(value: 'detailed', child: Text('Detailed')),
-            DropdownMenuItem(value: 'simple', child: Text('Simple')),
+            DropdownMenuItem(
+              value: 'detailed',
+              child: Text('Detailed (with brokerage breakdown)'),
+            ),
+            DropdownMenuItem(
+              value: 'simple',
+              child: Text('Simple (flat amount)'),
+            ),
           ],
           onChanged: (v) => _template = v ?? 'detailed',
         ),

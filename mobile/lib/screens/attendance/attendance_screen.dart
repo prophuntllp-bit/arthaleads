@@ -42,11 +42,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   Timer? _ticker;
   DateTime? _from;
   DateTime? _to;
+  Map<String, dynamic>? _shiftSettings;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadShiftSettings();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted &&
           _today?['clockIn'] != null &&
@@ -129,6 +131,28 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     } finally {
       if (mounted) setState(() => _teamLoading = false);
     }
+  }
+
+  Future<void> _loadShiftSettings() async {
+    try {
+      final res = await _api.dio.get('/org/me/attendance-settings');
+      final s = (res.data['settings'] as Map? ?? res.data as Map)
+          .cast<String, dynamic>();
+      if (mounted) setState(() => _shiftSettings = s);
+    } catch (_) {
+      // Header summary is optional — silently skip if unavailable.
+    }
+  }
+
+  String? get _shiftSummary {
+    final s = _shiftSettings;
+    if (s == null) return null;
+    final start = s['shiftStartTime'] as String? ?? '09:30';
+    final end = s['shiftEndTime'] as String? ?? '19:00';
+    final buffer = s['bufferMinutes'] ?? 15;
+    final half = _fmtMinutes((s['halfDayMinutes'] as num?)?.toInt() ?? 240);
+    final full = _fmtMinutes((s['fullDayMinutes'] as num?)?.toInt() ?? 480);
+    return 'Shift: $start - $end · ${buffer}m grace · $half half · $full full';
   }
 
   Future<void> _clockIn() => _startPunch('/attendance/clockin', true);
@@ -570,6 +594,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                       );
                       if (ctx.mounted) Navigator.pop(ctx);
                       _load();
+                      _loadShiftSettings();
                     } catch (e) {
                       if (ctx.mounted) {
                         ScaffoldMessenger.of(ctx).showSnackBar(
@@ -635,6 +660,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
 
     return Column(
       children: [
+        if (_shiftSummary != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              _shiftSummary!,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         if (auth.isAdmin)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -693,6 +726,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
   }
 
   Widget _teamTodayView() {
+    final clockIn = _time(_today?['clockIn']);
+    final clockOut = _time(_today?['clockOut']);
+    final clockedIn = clockIn != null && clockOut == null;
+    final done = clockIn != null && clockOut != null;
+
     if (_teamLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primary),
@@ -701,41 +739,169 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _loadTeam,
-      child: ListView.builder(
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        itemCount: _team.length,
-        itemBuilder: (context, i) {
-          final row = _team[i];
-          final user = (row['user'] as Map).cast<String, dynamic>();
-          final att = (row['attendance'] as Map?)?.cast<String, dynamic>();
-          final inT = _time(att?['clockIn']);
-          final outT = _time(att?['clockOut']);
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              onTap: () => _showTeamMember(row),
-              title: Text(
-                user['name'] as String? ?? '—',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                att == null
-                    ? 'Not clocked in'
-                    : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
-              ),
-              trailing: Wrap(
-                spacing: 4,
+        children: [
+          _statusCard(clockIn, clockOut, clockedIn, done),
+          const SizedBox(height: 16),
+          if (_team.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
                 children: [
-                  if (att?['isLate'] == true) _badge('Late', AppColors.warning),
-                  if (att?['isEarlyLeave'] == true)
-                    _badge('Early leave', AppColors.danger),
-                  if (att != null && outT == null && inT != null)
-                    _badge('Working', AppColors.success),
+                  Icon(
+                    Icons.groups_outlined,
+                    size: 40,
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'No team members found',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
+            )
+          else
+            ..._team.map((row) {
+              final user = (row['user'] as Map).cast<String, dynamic>();
+              final att = (row['attendance'] as Map?)?.cast<String, dynamic>();
+              final inT = _time(att?['clockIn']);
+              final outT = _time(att?['clockOut']);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  onTap: () => _showTeamMember(row),
+                  title: Text(
+                    user['name'] as String? ?? '—',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    att == null
+                        ? 'Not clocked in'
+                        : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
+                  ),
+                  trailing: Wrap(
+                    spacing: 4,
+                    children: [
+                      if (att?['isLate'] == true) _badge('Late', AppColors.warning),
+                      if (att?['isEarlyLeave'] == true)
+                        _badge('Early leave', AppColors.danger),
+                      if (att != null && outT == null && inT != null)
+                        _badge('Working', AppColors.success),
+                      if (att?['overtimeMinutes'] != null &&
+                          (att!['overtimeMinutes'] as num) > 0)
+                        _badge('OT', AppColors.info),
+                      if (att?['dayType'] != null)
+                        _badge(att!['dayType'] as String, const Color(0xFF6B7280)),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusCard(
+    DateTime? clockIn,
+    DateTime? clockOut,
+    bool clockedIn,
+    bool done,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Text(
+              DateFormat('EEEE, d MMMM').format(DateTime.now()),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-          );
-        },
+            const SizedBox(height: 12),
+            if (clockedIn) ...[
+              Text(
+                _fmtDuration(DateTime.now().difference(clockIn!)),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Clocked in at ${_fmtTime(clockIn)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else if (done) ...[
+              Icon(
+                Icons.check_circle_rounded,
+                color: AppColors.success,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Done for today',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_fmtTime(clockIn)} → ${_fmtTime(clockOut)}  ·  ${_fmtMinutes(_today?['totalMinutes'] as int?)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ] else ...[
+              Icon(
+                Icons.schedule_rounded,
+                color: Theme.of(context).disabledColor,
+                size: 40,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Not clocked in yet',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+            if (_requireSelfie && !done) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Selfie + location required to clock ${clockedIn ? 'out' : 'in'}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _acting || done
+                    ? null
+                    : (clockedIn ? _clockOut : _clockIn),
+                style: clockedIn
+                    ? ElevatedButton.styleFrom(backgroundColor: AppColors.danger)
+                    : null,
+                icon: _acting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(clockedIn ? Icons.logout_rounded : Icons.login_rounded),
+                label: Text(
+                  _acting
+                      ? 'Please wait…'
+                      : done
+                      ? 'Completed'
+                      : (clockedIn ? 'Clock Out' : 'Clock In'),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1003,107 +1169,7 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (!recordsOnly)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Text(
-                      DateFormat('EEEE, d MMMM').format(DateTime.now()),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    if (clockedIn) ...[
-                      Text(
-                        _fmtDuration(DateTime.now().difference(clockIn!)),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Clocked in at ${_fmtTime(clockIn)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ] else if (done) ...[
-                      Icon(
-                        Icons.check_circle_rounded,
-                        color: AppColors.success,
-                        size: 40,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Done for today',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${_fmtTime(clockIn)} → ${_fmtTime(clockOut)}  ·  ${_fmtMinutes(_today?['totalMinutes'] as int?)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ] else ...[
-                      Icon(
-                        Icons.schedule_rounded,
-                        color: Theme.of(context).disabledColor,
-                        size: 40,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Not clocked in yet',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                    if (_requireSelfie && !done) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        'Selfie + location required to clock ${clockedIn ? 'out' : 'in'}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _acting || done
-                            ? null
-                            : (clockedIn ? _clockOut : _clockIn),
-                        style: clockedIn
-                            ? ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.danger,
-                              )
-                            : null,
-                        icon: _acting
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Icon(
-                                clockedIn
-                                    ? Icons.logout_rounded
-                                    : Icons.login_rounded,
-                              ),
-                        label: Text(
-                          _acting
-                              ? 'Please wait…'
-                              : done
-                              ? 'Completed'
-                              : (clockedIn ? 'Clock Out' : 'Clock In'),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          _statusCard(clockIn, clockOut, clockedIn, done),
           const SizedBox(height: 16),
           if (recordsOnly) ...[
             DropdownButtonFormField<String>(
@@ -1208,14 +1274,13 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  onTap: recordsOnly
-                      ? () {
-                          final user =
-                              (r['userId'] as Map?)?.cast<String, dynamic>() ??
-                              const <String, dynamic>{};
-                          _showTeamMember({'user': user, 'attendance': r});
-                        }
-                      : null,
+                  onTap: () {
+                    final user = recordsOnly
+                        ? ((r['userId'] as Map?)?.cast<String, dynamic>() ??
+                              const <String, dynamic>{})
+                        : (auth.user ?? const <String, dynamic>{});
+                    _showTeamMember({'user': user, 'attendance': r});
+                  },
                   leading: recordsOnly && r['userId'] is Map
                       ? CircleAvatar(
                           child: Text(
@@ -1232,11 +1297,24 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                         : r['date']?.toString() ?? '—',
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  subtitle: Text(
-                    recordsOnly
-                        ? '${r['date'] ?? ''}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
-                        : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        recordsOnly
+                            ? '${r['date'] ?? ''}  ·  ${_fmtTime(inT)} → ${_fmtTime(outT)}'
+                            : '${_fmtTime(inT)} → ${_fmtTime(outT)}',
+                      ),
+                      if ((r['note'] as String? ?? '').isNotEmpty)
+                        Text(
+                          r['note'] as String,
+                          style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ),
+                  isThreeLine: (r['note'] as String? ?? '').isNotEmpty,
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,

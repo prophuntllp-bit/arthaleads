@@ -70,6 +70,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     return '₹${n.toStringAsFixed(0)}';
   }
 
+  String _fmtDate(dynamic v) {
+    final dt = DateTime.tryParse(v?.toString() ?? '');
+    if (dt == null) return '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month - 1]} ${dt.year}';
+  }
+
   Future<void> _changeStatus(Map<String, dynamic> inv) async {
     final selected = await showModalBottomSheet<String>(
       context: context,
@@ -92,6 +99,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     try {
       await _api.dio.patch('/invoices/${inv['_id']}/status', data: {'status': selected});
       setState(() => inv['status'] = selected);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Invoice marked as "${_statusLabels[selected]}".'),
+          backgroundColor: AppColors.success,
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -127,6 +140,12 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
         final i = _invoices.indexWhere((x) => x['_id'] == inv['_id']);
         if (i != -1) _invoices[i] = (res.data['data'] as Map).cast<String, dynamic>();
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Invoice number updated.'),
+          backgroundColor: AppColors.success,
+        ));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -198,7 +217,22 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
           child: _loading
               ? const Center(child: AppSpinner(size: 32))
               : filtered.isEmpty
-                  ? const Center(child: Text('No invoices yet'))
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.receipt_long_outlined, size: 40, color: AppColors.primary.withValues(alpha: 0.3)),
+                          const SizedBox(height: 8),
+                          const Text('No invoices yet', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Create a booking first, then generate an invoice from the Bookings page.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    )
                   : RefreshIndicator(
                       color: AppColors.primary,
                       onRefresh: _load,
@@ -225,16 +259,30 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                     onTap: () => _changeStatus(inv),
                                     title: Text(inv['customerName'] as String? ?? '—',
                                         style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    subtitle: Row(
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Expanded(child: Text('${inv['projectName'] ?? ''}')),
+                                        if ((inv['jointBuyerName'] as String? ?? '').isNotEmpty)
+                                          Text(inv['jointBuyerName'] as String,
+                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                        Text(
+                                          '${inv['projectName'] ?? ''} · ${inv['unitType'] ?? ''} ${inv['unitNo'] ?? ''}'
+                                          '${(inv['tower'] as String? ?? '').isNotEmpty ? ' • ${inv['tower']}' : ''}',
+                                        ),
+                                        if ((inv['developerName'] as String? ?? '').isNotEmpty)
+                                          Text(inv['developerName'] as String,
+                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                       ],
                                     ),
+                                    isThreeLine: (inv['jointBuyerName'] as String? ?? '').isNotEmpty ||
+                                        (inv['developerName'] as String? ?? '').isNotEmpty,
                                     trailing: Column(
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Text(_fmtMoney(inv['totalBill']), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                        Text('Brok: ${_fmtMoney(inv['totalBrokerage'])}',
+                                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                                         const SizedBox(height: 4),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -265,6 +313,13 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                                             ],
                                           ),
                                         ),
+                                        if ((inv['invoiceDate'] ?? inv['createdAt']) != null) ...[
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '· ${_fmtDate(inv['invoiceDate'] ?? inv['createdAt'])}',
+                                            style: Theme.of(context).textTheme.bodySmall,
+                                          ),
+                                        ],
                                         const Spacer(),
                                         TextButton.icon(
                                           onPressed: generating ? null : () => _downloadPdf(inv),
