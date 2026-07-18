@@ -790,17 +790,21 @@ export default function Leads() {
   const FB_META = new Set([
     "id", "created_time", "ad_id", "ad_name", "adset_id", "adset_name",
     "campaign_id", "campaign_name", "form_id", "form_name", "is_organic", "platform",
+    "lead_status", // Meta's own resolution status (e.g. "CREATED"), not a real form question
   ]);
-  // Mandatory contact columns (always present)
-  const FB_CONTACT = new Set(["full_name", "phone_number", "email", "street_address", "city"]);
+  // Mandatory contact columns (always present). Meta's export has used both
+  // "phone_number" (older format) and "phone" (current Ads Manager export,
+  // values prefixed "p:" e.g. "p:+919876543210") — accept either.
+  const FB_CONTACT = new Set(["full_name", "phone_number", "phone", "email", "street_address", "city"]);
 
   const isFbCsv = (headers) =>
-    headers.includes("full_name") && headers.includes("phone_number");
+    headers.includes("full_name") && (headers.includes("phone_number") || headers.includes("phone"));
 
   // Underscores → spaces, collapse whitespace
   const fbClean = (v = "") => String(v).replace(/_/g, " ").replace(/\s+/g, " ").trim();
 
   // "₹80_lakh_–_₹1_cr" → { min: 8000000, max: 10000000 }
+  // "₹60l_–_₹70l" (abbreviated form, current Meta export) → { min: 6000000, max: 7000000 }
   const parseFbBudget = (v = "") => {
     const s = String(v).replace(/[₹,\s]/g, "").toLowerCase();
     const parts = s.split(/[–\-]+/);
@@ -810,7 +814,9 @@ export default function Leads() {
       const n = parseFloat(cleaned);
       if (isNaN(n) || n === 0) return 0;
       if (cleaned.includes("cr")) return Math.round(n * 10_000_000);
-      if (cleaned.includes("lakh") || cleaned.includes("lac")) return Math.round(n * 100_000);
+      // "lakh"/"lac" spelled out, or Meta's abbreviated "l" suffix (e.g. "60l").
+      // endsWith("l") is safe here — "lakh" ends in "h", "lac" ends in "c".
+      if (cleaned.includes("lakh") || cleaned.includes("lac") || cleaned.endsWith("l")) return Math.round(n * 100_000);
       return Math.round(n);
     };
     return { min: toINR(parts[0]), max: toINR(parts[1] || parts[0]), currency: "INR" };
@@ -856,7 +862,7 @@ export default function Leads() {
 
     return {
       name: String(row.full_name || "").replace(/^"|"$/g, "").trim(),
-      phone: String(row.phone_number || "").replace(/^p:/i, "").trim(),
+      phone: String(row.phone_number || row.phone || "").replace(/^p:/i, "").trim(),
       email: String(row.email || "").trim(),
       source: "Facebook",
       preferredLocation: location,
@@ -903,7 +909,13 @@ export default function Leads() {
       if (isFbCsv(headers)) {
         // Auto-detected Facebook Lead Form export
         const questionCols = headers.filter((h) => !FB_META.has(h) && !FB_CONTACT.has(h));
-        leadsToImport = rows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
+        // Meta's own "Send test lead" button in Ads Manager generates a row with
+        // literal placeholder text ("<test lead: dummy data for ...>") in every
+        // field of the export — filter those out, they aren't real leads.
+        const realRows = rows.filter((row) =>
+          !Object.values(row).some((v) => typeof v === "string" && v.includes("<test lead"))
+        );
+        leadsToImport = realRows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
         if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
         toast(`Facebook format detected - ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
       } else {
