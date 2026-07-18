@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import '../automation/automation_screen.dart';
 import 'conversation_screen.dart';
 
 const _filters = [
@@ -111,20 +113,45 @@ class _InboxScreenState extends State<InboxScreen> {
   @override
   Widget build(BuildContext context) {
     if (_connected == false) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wechat, size: 48, color: AppColors.whatsapp),
-              SizedBox(height: 12),
-              Text('WhatsApp not connected', style: TextStyle(fontWeight: FontWeight.w700)),
-              SizedBox(height: 6),
-              Text(
-                'Connect your WhatsApp number from Automation to start receiving messages here.',
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.whatsapp.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(Icons.wechat, size: 32, color: AppColors.whatsapp),
+              ),
+              const SizedBox(height: 14),
+              const Text('WhatsApp not connected', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              const SizedBox(height: 6),
+              const Text(
+                'Connect your number to start receiving and sending messages here.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 18),
+              GradientButton(
+                icon: Icons.link_rounded,
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => Scaffold(
+                        appBar: AppBar(title: const Text('Automation')),
+                        body: const AutomationScreen(),
+                      ),
+                    ),
+                  );
+                  _checkConnected();
+                },
+                child: const Text('Connect WhatsApp'),
               ),
             ],
           ),

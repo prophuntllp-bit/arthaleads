@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import 'call_history_screen.dart';
 
@@ -32,13 +33,17 @@ class _CallsScreenState extends State<CallsScreen> {
   String? _callingLeadId;
   final _scroll = ScrollController();
 
-  static const _statusTabs = ['all', 'answered', 'missed', 'initiated'];
+  static const _statusTabs = [
+    ('all', 'All Calls'),
+    ('answered', 'Answered'),
+    ('missed', 'Missed'),
+    ('initiated', 'Initiated'),
+  ];
   String _statusFilter = 'all';
   String _agentFilter = '';
   List<Map<String, dynamic>> _agents = [];
 
-  bool _analyticsOpen = false;
-  bool _analyticsLoading = false;
+  bool _analyticsLoading = true;
   Map<String, dynamic>? _analytics;
 
   @override
@@ -46,6 +51,7 @@ class _CallsScreenState extends State<CallsScreen> {
     super.initState();
     _load(reset: true);
     _loadAgents();
+    _loadAnalytics();
     _scroll.addListener(() {
       if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 400 &&
           !_loading &&
@@ -154,29 +160,24 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
-  Future<void> _toggleAnalytics() async {
-    setState(() => _analyticsOpen = !_analyticsOpen);
-    if (_analyticsOpen && _analytics == null) {
-      setState(() => _analyticsLoading = true);
-      try {
-        final res = await _api.dio.get('/calls/analytics');
+  Future<void> _loadAnalytics() async {
+    setState(() => _analyticsLoading = true);
+    try {
+      final res = await _api.dio.get('/calls/analytics');
+      if (mounted) {
         setState(() => _analytics = (res.data as Map).cast<String, dynamic>());
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                ApiClient.errorMessage(e, 'Failed to load analytics'),
-              ),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _analyticsLoading = false);
       }
+    } catch (_) {
+      // Analytics is a secondary panel — fail quietly, keep the call list usable.
+    } finally {
+      if (mounted) setState(() => _analyticsLoading = false);
     }
   }
+
+  Future<void> _refresh() => Future.wait([
+    _load(reset: true),
+    _loadAnalytics(),
+  ]);
 
   Color _statusColor(String? s) {
     switch (s) {
@@ -203,11 +204,209 @@ class _CallsScreenState extends State<CallsScreen> {
     return '${s ~/ 60}m ${s % 60}s';
   }
 
+  static const _monthAbbr = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  Widget _volumeByDayCard(List<Map> volumeByDay) {
+    final maxTotal = volumeByDay.fold<int>(
+      1,
+      (m, d) =>
+          (d['total'] as num? ?? 0).toInt() > m ? (d['total'] as num).toInt() : m,
+    );
+    return SoftSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('DAILY CALL VOLUME (LAST 14 DAYS)', style: AppText.kicker(context)),
+          const SizedBox(height: 12),
+          if (volumeByDay.isEmpty)
+            Text(
+              'No calls in the last 30 days.',
+              style: Theme.of(context).textTheme.bodySmall,
+            )
+          else ...[
+            ...volumeByDay.map((d) {
+              final id = (d['_id'] as Map?) ?? {};
+              final month = (id['m'] as num?)?.toInt();
+              final day = (id['d'] as num?)?.toInt();
+              final label = month != null && day != null
+                  ? '$day ${_monthAbbr[(month - 1).clamp(0, 11)]}'
+                  : '';
+              final total = (d['total'] as num? ?? 0).toInt();
+              final answered = (d['answered'] as num? ?? 0).toInt();
+              final missed = (d['missed'] as num? ?? 0).toInt();
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 34,
+                      child: Text(
+                        label,
+                        textAlign: TextAlign.right,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 8,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: (answered * 1000 / maxTotal).round().clamp(
+                                0,
+                                1000,
+                              ),
+                              child: answered > 0
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                        color: AppColors.success.withValues(
+                                          alpha: 0.7,
+                                        ),
+                                        borderRadius: BorderRadius.circular(99),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                            Expanded(
+                              flex: (missed * 1000 / maxTotal).round().clamp(
+                                0,
+                                1000,
+                              ),
+                              child: missed > 0
+                                  ? Container(
+                                      decoration: BoxDecoration(
+                                        color: AppColors.danger.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(99),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                            Expanded(
+                              flex:
+                                  1000 -
+                                  (answered * 1000 / maxTotal).round().clamp(
+                                    0,
+                                    1000,
+                                  ) -
+                                  (missed * 1000 / maxTotal).round().clamp(
+                                    0,
+                                    1000,
+                                  ),
+                              child: const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 20,
+                      child: Text(
+                        '$total',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _legendDot(AppColors.success.withValues(alpha: 0.7), 'Answered'),
+                const SizedBox(width: 12),
+                _legendDot(AppColors.danger.withValues(alpha: 0.5), 'Missed'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 4),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
+
+  Widget _agentDurationCard(List<Map> durationByAgent) {
+    return SoftSurface(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ANSWERED CALLS BY AGENT', style: AppText.kicker(context)),
+          const SizedBox(height: 12),
+          if (durationByAgent.isEmpty)
+            Text(
+              'No answered calls with duration yet.',
+              style: Theme.of(context).textTheme.bodySmall,
+            )
+          else
+            for (var i = 0; i < durationByAgent.length; i++)
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  border: i < durationByAgent.length - 1
+                      ? Border(
+                          bottom: BorderSide(
+                            color: AppTheme.of(context).border,
+                          ),
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        durationByAgent[i]['name'] as String? ?? 'Unknown',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    Text(
+                      '${durationByAgent[i]['totalCalls']} calls',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    if ((durationByAgent[i]['avgDuration'] as num? ?? 0) >
+                        0) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_fmtDuration(durationByAgent[i]['avgDuration'])} avg',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
   Widget _analyticsSection() {
-    if (_analyticsLoading) {
+    if (_analyticsLoading && _analytics == null) {
       return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: AppSpinner(size: 32)),
+        padding: EdgeInsets.all(24),
+        child: Center(child: AppSpinner(size: 28)),
       );
     }
     final allVolumeByDay = (_analytics?['volumeByDay'] as List? ?? [])
@@ -217,89 +416,14 @@ class _CallsScreenState extends State<CallsScreen> {
         : allVolumeByDay;
     final durationByAgent = (_analytics?['durationByAgent'] as List? ?? [])
         .cast<Map>();
-    final maxTotal = volumeByDay.fold<int>(
-      1,
-      (m, d) => (d['total'] as num? ?? 0).toInt() > m
-          ? (d['total'] as num).toInt()
-          : m,
-    );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (volumeByDay.isEmpty)
-            const Text(
-              'No calls in the last 30 days.',
-              style: TextStyle(fontSize: 12),
-            )
-          else
-            SizedBox(
-              height: 60,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: volumeByDay.map((d) {
-                  final total = (d['total'] as num? ?? 0).toInt();
-                  final answered = (d['answered'] as num? ?? 0).toInt();
-                  final h = maxTotal > 0 ? (total / maxTotal) * 50 : 0.0;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 1),
-                      child: Tooltip(
-                        message: '$total calls, $answered answered',
-                        child: Container(
-                          height: h < 3 ? 3 : h,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          const SizedBox(height: 4),
-          Text(
-            'Daily call volume (last 14 days)',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          _volumeByDayCard(volumeByDay),
           const SizedBox(height: 12),
-          Text(
-            'Answered calls by agent',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          if (durationByAgent.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'No answered calls with duration yet.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            )
-          else
-            ...durationByAgent.map((a) {
-              final avg = (a['avgDuration'] as num? ?? 0).toInt();
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        a['name'] as String? ?? '—',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    Text(
-                      '${a['totalCalls']} calls · avg ${avg ~/ 60}m ${avg % 60}s',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              );
-            }),
+          _agentDurationCard(durationByAgent),
         ],
       ),
     );
@@ -331,6 +455,46 @@ class _CallsScreenState extends State<CallsScreen> {
     );
   }
 
+  Widget _emptyState() {
+    final tab = _statusTabs.firstWhere((s) => s.$1 == _statusFilter).$2;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.phone_disabled_rounded,
+                color: AppColors.primary,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No calls yet',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _statusFilter == 'all'
+                  ? "Make your first call from any lead's profile. Recordings and AI summaries will appear here."
+                  : 'No $tab calls found.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -339,78 +503,108 @@ class _CallsScreenState extends State<CallsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _statCard('Total', _stats['total'], AppColors.info),
-              const SizedBox(width: 8),
-              _statCard('Answered', _stats['answered'], AppColors.success),
-              const SizedBox(width: 8),
-              _statCard('Missed', _stats['missed'], AppColors.danger),
-              const SizedBox(width: 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('ENABLEX TELEPHONY', style: AppText.kicker(context)),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Calls',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               IconButton.filledTonal(
                 tooltip: 'Refresh calls',
-                onPressed: _loading ? null : () => _load(reset: true),
-                icon: const Icon(Icons.refresh_rounded),
+                onPressed: _loading ? null : _refresh,
+                icon: _loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(2),
+                        child: AppSpinner(size: 16),
+                      )
+                    : const Icon(Icons.refresh_rounded),
               ),
             ],
           ),
         ),
-        if (auth.isAdmin) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _toggleAnalytics,
-                icon: Icon(
-                  _analyticsOpen ? Icons.expand_less : Icons.bar_chart,
-                  size: 18,
-                ),
-                label: const Text(
-                  'Call Analytics',
-                  style: TextStyle(fontSize: 13),
-                ),
-              ),
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              _statCard('Total Calls', _stats['total'], AppColors.info),
+              const SizedBox(width: 8),
+              _statCard('Answered', _stats['answered'], AppColors.success),
+              const SizedBox(width: 8),
+              _statCard('Missed', _stats['missed'], AppColors.danger),
+            ],
           ),
-          if (_analyticsOpen) _analyticsSection(),
-        ],
+        ),
+        const SizedBox(height: 4),
+        _analyticsSection(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: TextField(
             controller: _searchCtrl,
             decoration: const InputDecoration(
-              hintText: 'Search name or phone…',
+              hintText: 'Search lead name or phone…',
               prefixIcon: Icon(Icons.search_rounded, size: 20),
             ),
             onSubmitted: (_) => _load(reset: true),
           ),
         ),
-        SizedBox(
-          height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
-              ..._statusTabs.map(
-                (s) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(s[0].toUpperCase() + s.substring(1)),
-                    selected: _statusFilter == s,
-                    onSelected: (_) {
-                      setState(() => _statusFilter = s);
-                      _load(reset: true);
-                    },
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+          child: SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                ..._statusTabs.map(
+                  ((String, String) s) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(s.$2),
+                      selected: _statusFilter == s.$1,
+                      onSelected: (_) {
+                        setState(() => _statusFilter = s.$1);
+                        _load(reset: true);
+                      },
+                    ),
                   ),
                 ),
-              ),
-              if (_agents.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: DropdownButton<String>(
-                    value: _agentFilter.isEmpty ? '' : _agentFilter,
-                    underline: const SizedBox.shrink(),
-                    hint: const Text('Agent', style: TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+        ),
+        if (auth.isAdmin && _agents.length > 1)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.filter_alt_outlined,
+                  size: 16,
+                  color: AppTheme.of(context).textSoft,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _agentFilter.isEmpty ? '' : _agentFilter,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                     items: [
                       const DropdownMenuItem(
                         value: '',
@@ -429,14 +623,22 @@ class _CallsScreenState extends State<CallsScreen> {
                     },
                   ),
                 ),
-            ],
+                if (_agentFilter.isNotEmpty)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _agentFilter = '');
+                      _load(reset: true);
+                    },
+                    child: const Text('Clear'),
+                  ),
+              ],
+            ),
           ),
-        ),
         Expanded(
           child: _loading && _calls.isEmpty
               ? const Center(child: AppSpinner(size: 32))
               : _calls.isEmpty
-              ? const Center(child: Text('No calls yet'))
+              ? _emptyState()
               : RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: () => _load(reset: true),
