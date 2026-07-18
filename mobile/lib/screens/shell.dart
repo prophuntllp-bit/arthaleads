@@ -6,6 +6,7 @@ import '../core/auth_state.dart';
 import '../core/push_service.dart';
 import '../core/theme.dart';
 import '../core/theme_state.dart';
+import '../widgets/header_actions.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
@@ -247,6 +248,8 @@ class _ShellState extends State<Shell> {
           appBar: AppBar(
             title: Text(current.label),
             actions: [
+              const HeaderSearchButton(),
+              const HeaderAlertsButton(),
               Consumer<ThemeState>(
                 builder: (context, theme, _) => IconButton(
                   tooltip: theme.isDark

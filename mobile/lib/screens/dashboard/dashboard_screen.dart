@@ -1299,10 +1299,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     const stages = [
       'New',
       'Contacted',
-      'Interested',
       'Site Visit',
       'Negotiation',
       'Closed Won',
+      'Closed Lost',
     ];
     final values = (data['allTimeByStatus'] as Map?) ?? {};
     final total = stages.fold<int>(
@@ -1333,6 +1333,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    '${(((values[stage] as num?)?.toDouble() ?? 0) / total * 100).round()}%',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.of(context).textSoft,
+                    ),
                   ),
                 ),
               ],
