@@ -229,6 +229,22 @@ class _BookingsScreenState extends State<BookingsScreen> {
     String? developerId =
         devIdFromBooking ??
         (_developers.isNotEmpty ? _developers.first['_id'] as String : null);
+
+    // For a brand-new booking the developer above is auto-selected (first in
+    // the list), so its brokerage/FOS/EOI defaults must be applied up front —
+    // otherwise they'd only ever load if the user reopened the dropdown.
+    if (!editing && developerId != null) {
+      final defaultDev = _developers.firstWhere(
+        (d) => d['_id'] == developerId,
+        orElse: () => {},
+      );
+      if (defaultDev.isNotEmpty) {
+        brokeragePctCtrl.text = (defaultDev['defaultBrokeragePercent'] ?? 2)
+            .toString();
+        fosCtrl.text = (defaultDev['defaultFosIncentive'] ?? 0).toString();
+        eoiCtrl.text = (defaultDev['defaultEoiIncentive'] ?? 0).toString();
+      }
+    }
     String unitType = booking?['unitType'] as String? ?? 'Flat';
     String gstType = booking?['gstType'] as String? ?? 'CGST_SGST';
     bool manualBrokerage = false;

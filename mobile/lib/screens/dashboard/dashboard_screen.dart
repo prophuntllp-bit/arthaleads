@@ -615,7 +615,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     }).toList();
     final overdue = overdueLeads.length;
     final dueToday = todayLeads.length;
-    final hot = _hot.isEmpty ? null : _hot.first;
 
     return Column(
       children: [
@@ -734,7 +733,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
         ),
-        if (hot != null) ...[
+        if (_hot.isNotEmpty) ...[
           const SizedBox(height: 12),
           SoftSurface(
             radius: 20,
@@ -792,96 +791,96 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ],
                   ),
                 ),
-                Divider(height: 1, color: AppTheme.of(context).border),
-                Padding(
-                  padding: const EdgeInsets.all(13),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.danger.withValues(alpha: 0.09),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          '${hot['_score'] ?? hot['score'] ?? 'HOT'}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.danger,
+                for (final hot in _hot) ...[
+                  Divider(height: 1, color: AppTheme.of(context).border),
+                  Padding(
+                    padding: const EdgeInsets.all(13),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.09),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            '${hot['_score'] ?? hot['score'] ?? 'HOT'}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.danger,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 11),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              str(hot['name']) ?? '—',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                str(hot['name']) ?? '—',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                            ),
-                            Text(
-                              [
-                                    str(hot['status']),
-                                    str(hot['priority']),
-                                    str(hot['location']),
-                                  ]
-                                  .whereType<String>()
-                                  .where((v) => v.isNotEmpty)
-                                  .join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.of(context).textSoft,
+                              Text(
+                                [
+                                      str(hot['status']),
+                                      str(hot['priority']),
+                                      str(hot['location']),
+                                    ]
+                                    .whereType<String>()
+                                    .where((v) => v.isNotEmpty)
+                                    .join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.of(context).textSoft,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'Call',
-                        onPressed: () {
-                          final phone = str(hot['phone']);
-                          if (phone != null && phone.isNotEmpty) {
-                            launchUrl(Uri.parse('tel:$phone'));
-                          }
-                        },
-                        icon: Icon(
-                          FontAwesomeIcons.phone.data,
-                          color: AppColors.primary,
+                        IconButton(
+                          tooltip: 'Call',
+                          onPressed: () {
+                            final phone = str(hot['phone']);
+                            if (phone != null && phone.isNotEmpty) {
+                              launchUrl(Uri.parse('tel:$phone'));
+                            }
+                          },
+                          icon: Icon(
+                            FontAwesomeIcons.phone.data,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'WhatsApp',
-                        onPressed: () {
-                          final digits = (str(hot['phone']) ?? '').replaceAll(
-                            RegExp(r'\D'),
-                            '',
-                          );
-                          if (digits.isNotEmpty) {
-                            launchUrl(
-                              Uri.parse(
-                                'https://wa.me/${digits.length == 10 ? '91$digits' : digits}',
-                              ),
-                              mode: LaunchMode.externalApplication,
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          FontAwesomeIcons.whatsapp.data,
-                          color: AppColors.whatsapp,
+                        IconButton(
+                          tooltip: 'WhatsApp',
+                          onPressed: () {
+                            final digits = (str(hot['phone']) ?? '')
+                                .replaceAll(RegExp(r'\D'), '');
+                            if (digits.isNotEmpty) {
+                              launchUrl(
+                                Uri.parse(
+                                  'https://wa.me/${digits.length == 10 ? '91$digits' : digits}',
+                                ),
+                                mode: LaunchMode.externalApplication,
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            FontAwesomeIcons.whatsapp.data,
+                            color: AppColors.whatsapp,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -1852,6 +1851,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             .indexed)
                       ListTile(
                         dense: true,
+                        onTap: () => widget.onNavigate?.call('Performance'),
                         leading: CircleAvatar(
                           radius: 14,
                           backgroundColor: AppColors.primary.withValues(
@@ -1903,6 +1903,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       .map((item) {
                         return ListTile(
                           dense: true,
+                          onTap: () => widget.onNavigate?.call('Leads'),
                           leading: const Icon(
                             Icons.circle,
                             size: 8,

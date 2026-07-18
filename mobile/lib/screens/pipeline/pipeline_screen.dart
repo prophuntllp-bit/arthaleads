@@ -364,6 +364,22 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                               ),
+                                              if ((lead['projectName']
+                                                          as String? ??
+                                                      '')
+                                                  .isNotEmpty)
+                                                Text(
+                                                  lead['projectName']
+                                                      as String,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF8B5CF6),
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               const SizedBox(height: 4),
                                               Row(
                                                 children: [
@@ -414,12 +430,44 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                 ],
                                               ),
                                               if ((lead['priority']
-                                                          as String? ??
-                                                      '')
-                                                  .isNotEmpty) ...[
+                                                              as String? ??
+                                                          '')
+                                                      .isNotEmpty ||
+                                                  (lead['source']
+                                                              as String? ??
+                                                          '')
+                                                      .isNotEmpty) ...[
                                                 const SizedBox(height: 6),
-                                                PriorityChip(
-                                                  lead['priority'] as String?,
+                                                Wrap(
+                                                  spacing: 6,
+                                                  runSpacing: 4,
+                                                  crossAxisAlignment:
+                                                      WrapCrossAlignment
+                                                          .center,
+                                                  children: [
+                                                    if ((lead['priority']
+                                                                as String? ??
+                                                            '')
+                                                        .isNotEmpty)
+                                                      PriorityChip(
+                                                        lead['priority']
+                                                            as String?,
+                                                      ),
+                                                    if ((lead['source']
+                                                                as String? ??
+                                                            '')
+                                                        .isNotEmpty)
+                                                      Text(
+                                                        lead['source']
+                                                            as String,
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          color: Colors
+                                                              .grey
+                                                              .shade600,
+                                                        ),
+                                                      ),
+                                                  ],
                                                 ),
                                               ],
                                               if (((lead['followUpDate'] ??

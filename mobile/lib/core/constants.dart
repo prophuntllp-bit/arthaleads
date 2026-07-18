@@ -37,20 +37,24 @@ const bookingOptions = [
   BookingOption('Commercial', 'Commercial', Color(0xFF4F46E5)),
 ];
 
+// Matches frontend/src/pages/LeadPipeline.jsx's STAGE_META, which is the
+// same status→color mapping frontend/src/utils/constants.js's STATUS_COLORS
+// resolves to (blue/amber/violet/orange/emerald/rose) — kept as one shared
+// map so every screen's status badge/column agrees with web.
 Color statusColor(String? status) {
   switch (status) {
     case 'New':
-      return const Color(0xFF3B82F6);
+      return const Color(0xFF38BDF8);
     case 'Contacted':
-      return const Color(0xFF8B5CF6);
+      return const Color(0xFFFBBF24);
     case 'Site Visit':
-      return const Color(0xFF0D9488);
+      return const Color(0xFFA78BFA);
     case 'Negotiation':
-      return const Color(0xFFD97706);
+      return const Color(0xFFFB923C);
     case 'Closed Won':
-      return const Color(0xFF16A34A);
+      return const Color(0xFF34D399);
     case 'Closed Lost':
-      return const Color(0xFFEF4444);
+      return const Color(0xFFFB7185);
     default:
       return const Color(0xFF6B7280);
   }
