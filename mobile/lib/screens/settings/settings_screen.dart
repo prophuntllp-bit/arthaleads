@@ -4,12 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+
+/// Force-uppercases input as the user types — matches web's onChange
+/// transform for GST/PAN/CIN/IFSC (frontend/src/pages/Settings.jsx:351-353).
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
 
 const _billingRequired = [
   'address',
@@ -243,6 +256,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _removeLogo() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove organisation logo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
     try {
       await _api.dio.patch('/org/me/logo', data: {'logo': ''});
       setState(() => _logo = null);
@@ -431,7 +461,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<bool> _confirmDisconnectEnableX() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disconnect EnableX telephony?'),
+        content: const Text(
+          'Click-to-call, recordings, and AI call summaries will stop working until you reconnect.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Disconnect', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
   Future<void> _updateEnableXFlag(String key, bool value) async {
+    if (key == 'enabled' && value == false && !await _confirmDisconnectEnableX()) {
+      return;
+    }
     try {
       await _api.dio.patch('/calls/settings', data: {key: value});
       setState(() {
@@ -767,6 +823,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         textCapitalization: numbers
             ? TextCapitalization.characters
             : TextCapitalization.none,
+        inputFormatters: numbers ? [_UpperCaseTextFormatter()] : null,
         decoration: InputDecoration(labelText: required ? '$label *' : label),
       ),
     );
@@ -868,7 +925,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 8),
         _billingField('gstNo', 'GST Number', mono: true, numbers: true),
         _billingField('pan', 'PAN Number', mono: true, numbers: true),
-        _billingField('cin', 'CIN', mono: true),
+        _billingField('cin', 'CIN', mono: true, numbers: true),
         _billingField('rera', 'RERA Reg. No.', mono: true),
         const SizedBox(height: 8),
         Text(
@@ -1023,6 +1080,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text(
           'EnableX credentials',
           style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: 4),
+        GestureDetector(
+          onTap: () => launchUrl(
+            Uri.parse('https://portal.enablex.io'),
+            mode: LaunchMode.externalApplication,
+          ),
+          child: const Text(
+            'Get your APP ID and APP KEY from the EnableX partner portal →',
+            style: TextStyle(fontSize: 11, color: AppColors.primary),
+          ),
         ),
         const SizedBox(height: 8),
         TextField(

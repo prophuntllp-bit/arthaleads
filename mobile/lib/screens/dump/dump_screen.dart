@@ -371,25 +371,65 @@ class _DumpScreenState extends State<DumpScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(lead['phone'] as String? ?? ''),
+                                  if ((lead['email'] as String? ?? '').isNotEmpty)
+                                    Text(lead['email'] as String,
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                                   if ((lead['projectName'] as String? ?? '').isNotEmpty)
                                     Text(lead['projectName'] as String,
                                         style: const TextStyle(fontSize: 11, color: Color(0xFF8B5CF6), fontWeight: FontWeight.w600)),
+                                  if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
+                                    Text('Assigned to ${lead['assignedToName']}',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                  if ((lead['remark'] as String? ?? lead['remark1'] as String? ?? '').isNotEmpty)
+                                    Text(
+                                      (lead['remark'] ?? lead['remark1']) as String,
+                                      style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   const SizedBox(height: 4),
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 4,
                                     children: [
+                                      if ((lead['source'] as String? ?? '').isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blueGrey.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(999),
+                                          ),
+                                          child: Text(lead['source'] as String,
+                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
+                                        ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: (lead['isDeleted'] == true ? AppColors.danger : AppColors.warning).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          lead['isDeleted'] == true ? 'Deleted' : 'Not Interested',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: lead['isDeleted'] == true ? AppColors.danger : AppColors.warning,
+                                          ),
+                                        ),
+                                      ),
                                       if ((lead['status'] as String? ?? '').isNotEmpty)
                                         StatusChip(lead['status'] as String?),
-                                      if ((lead['booking'] as String? ?? '').isNotEmpty) ...[
-                                        const SizedBox(width: 6),
+                                      if ((lead['booking'] as String? ?? '').isNotEmpty)
                                         BookingChip(lead['booking'] as String?),
-                                      ],
-                                      const Spacer(),
-                                      Text(_fmtDate(lead['updatedAt'] as String? ?? lead['createdAt'] as String?),
-                                          style: Theme.of(context).textTheme.bodySmall),
                                     ],
                                   ),
+                                  const SizedBox(height: 2),
+                                  Text(_fmtDate(lead['createdAt'] as String?),
+                                      style: Theme.of(context).textTheme.bodySmall),
                                 ],
                               ),
+                              isThreeLine: true,
                               trailing: canDelete
                                   ? Row(
                                       mainAxisSize: MainAxisSize.min,

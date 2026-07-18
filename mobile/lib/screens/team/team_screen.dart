@@ -9,6 +9,15 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/page_header.dart';
+
+const _planLimits = {
+  'starter': 3,
+  'growth': 20,
+  'trial': 20,
+  'pro': 20,
+  'enterprise': 999999,
+};
 
 /// Team — GET/POST/PATCH/DELETE /auth/users. Unlike most other admin-only
 /// screens, the backend restricts this strictly to role === "admin" (not
@@ -189,9 +198,10 @@ class _TeamScreenState extends State<TeamScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone (optional)',
+                  decoration: InputDecoration(
+                    labelText: user == null ? 'Phone' : 'Phone (optional)',
                   ),
+                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -303,16 +313,37 @@ class _TeamScreenState extends State<TeamScreen> {
                   onPressed: () async {
                     if (nameCtrl.text.trim().isEmpty ||
                         emailCtrl.text.trim().isEmpty ||
-                        (user == null && passwordCtrl.text.length < 8)) {
+                        (user == null && phoneCtrl.text.trim().length < 10)) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Name, email and a password of at least 8 characters are required',
+                            'Name, email and a valid phone number are required',
                           ),
                           backgroundColor: AppColors.danger,
                         ),
                       );
                       return;
+                    }
+                    if (user == null || passwordCtrl.text.isNotEmpty) {
+                      final pwd = passwordCtrl.text;
+                      final strong =
+                          pwd.length >= 8 &&
+                          RegExp(r'[A-Z]').hasMatch(pwd) &&
+                          RegExp(r'[0-9]').hasMatch(pwd) &&
+                          RegExp(
+                            r'[!@#$%^&*()\-_=+{};:,<.>?/\\|\[\]~`]',
+                          ).hasMatch(pwd);
+                      if (!strong) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Password must be 8+ chars with 1 uppercase, 1 number, 1 special character',
+                            ),
+                            backgroundColor: AppColors.danger,
+                          ),
+                        );
+                        return;
+                      }
                     }
                     final data = {
                       'name': nameCtrl.text.trim(),
@@ -360,6 +391,36 @@ class _TeamScreenState extends State<TeamScreen> {
     if (saved == true) _load();
   }
 
+  Widget _countPill(String label, int count, Color color) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              '$count',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: color,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10.5, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
@@ -375,14 +436,85 @@ class _TeamScreenState extends State<TeamScreen> {
       );
     }
 
+    final admins = _users.where((u) => u['role'] == 'admin').length;
+    final managers = _users.where((u) => u['role'] == 'manager').length;
+    final agents = _users.where((u) => u['role'] == 'agent').length;
+    final plan = auth.org?['plan'] as String?;
+    final memberLimit = auth.role == 'super_admin'
+        ? 999999
+        : (_planLimits[plan] ?? 999999);
+    final atLimit = _users.length >= memberLimit;
+
     return Scaffold(
       floatingActionButton: GradientFab(
-        onPressed: () => _openForm(),
+        onPressed: () {
+          if (atLimit) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Member limit reached ($memberLimit) for your plan. Upgrade to add more.',
+                ),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+            return;
+          }
+          _openForm();
+        },
         icon: Icons.person_add_rounded,
       ),
-      body: _loading
-          ? const Center(child: AppSpinner(size: 32))
-          : RefreshIndicator(
+      body: Column(
+        children: [
+          PageHeader(
+            title: 'Team Management',
+            subtitle: memberLimit >= 999999
+                ? '${_users.length} members'
+                : '${_users.length}/$memberLimit members',
+            icon: Icons.groups_rounded,
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(13, 8, 13, 4),
+            child: Row(
+              children: [
+                _countPill('Admins', admins, AppColors.primary),
+                _countPill('Managers', managers, AppColors.info),
+                _countPill('Agents', agents, const Color(0xFF6B7280)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: AppSpinner(size: 32))
+                : _users.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.groups_outlined,
+                            size: 40,
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No team members found',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Add your first team member to get started.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _load,
               child: ListView.builder(
@@ -454,6 +586,9 @@ class _TeamScreenState extends State<TeamScreen> {
                 },
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }

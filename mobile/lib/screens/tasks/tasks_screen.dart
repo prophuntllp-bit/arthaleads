@@ -195,6 +195,31 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
+  String _priorityLabel(String? p) {
+    switch (p) {
+      case 'critical':
+        return 'Critical';
+      case 'high':
+        return 'High';
+      case 'medium':
+        return 'Medium';
+      case 'low':
+        return 'Low';
+      default:
+        return p ?? '—';
+    }
+  }
+
+  String? _dueBadge(DateTime? due, bool completed) {
+    if (due == null || completed) return null;
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+    if (due.isBefore(todayStart)) return 'Overdue';
+    if (due.isBefore(todayEnd)) return 'Today';
+    return null;
+  }
+
   Future<Map<String, dynamic>?> _searchLead(String query) async {
     if (query.trim().length < 2) return null;
     try {
@@ -445,6 +470,24 @@ class _TasksScreenState extends State<TasksScreen> {
                 GradientButton(
                   fullWidth: true,
                   onPressed: () async {
+                    if (titleCtrl.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('Title is required'),
+                          backgroundColor: AppColors.danger,
+                        ),
+                      );
+                      return;
+                    }
+                    if (assignedTo == null || assignedTo!.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please assign this task to someone'),
+                          backgroundColor: AppColors.danger,
+                        ),
+                      );
+                      return;
+                    }
                     final agentName = _agents
                         .where((a) => a['_id'] == assignedTo)
                         .map((a) => a['name'] as String? ?? '')
@@ -616,7 +659,16 @@ class _TasksScreenState extends State<TasksScreen> {
             child: _loading
                 ? const Center(child: AppSpinner(size: 32))
                 : _tasks.isEmpty
-                ? const Center(child: Text('No tasks here'))
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.task_alt_rounded, size: 40, color: AppColors.primary.withValues(alpha: 0.3)),
+                        const SizedBox(height: 8),
+                        const Text('No tasks here', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  )
                 : RefreshIndicator(
                     color: AppColors.primary,
                     onRefresh: _load,
@@ -648,8 +700,30 @@ class _TasksScreenState extends State<TasksScreen> {
                               ),
                             ),
                             confirmDismiss: (_) async {
-                              _delete(t);
-                              return true;
+                              final ok = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: const Text('Delete task?'),
+                                  content: Text(
+                                    '"${t['title']}" will be permanently deleted. This cannot be undone.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: const Text(
+                                        'Delete',
+                                        style: TextStyle(color: AppColors.danger),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (ok == true) _delete(t);
+                              return ok == true;
                             },
                             child: Card(
                               margin: const EdgeInsets.symmetric(
@@ -680,10 +754,38 @@ class _TasksScreenState extends State<TasksScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (due != null)
-                                      Text(
-                                        DateFormat(
-                                          'dd MMM, hh:mm a',
-                                        ).format(due),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            DateFormat(
+                                              'dd MMM, hh:mm a',
+                                            ).format(due),
+                                          ),
+                                          if (_dueBadge(due, completed) != null) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: (_dueBadge(due, completed) == 'Overdue'
+                                                        ? AppColors.danger
+                                                        : AppColors.warning)
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius: BorderRadius.circular(999),
+                                              ),
+                                              child: Text(
+                                                _dueBadge(due, completed)!,
+                                                style: TextStyle(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: _dueBadge(due, completed) == 'Overdue'
+                                                      ? AppColors.danger
+                                                      : AppColors.warning,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                     if ((t['assignedToName'] as String? ?? '')
                                         .isNotEmpty)
@@ -757,15 +859,31 @@ class _TasksScreenState extends State<TasksScreen> {
                                       ),
                                   ],
                                 ),
-                                trailing: Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: _priorityColor(
-                                      t['priority'] as String?,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _priorityColor(
+                                          t['priority'] as String?,
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _priorityLabel(t['priority'] as String?),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: _priorityColor(
+                                          t['priority'] as String?,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 isThreeLine:
                                     (leadName ?? '').isNotEmpty ||

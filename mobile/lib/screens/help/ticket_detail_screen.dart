@@ -85,6 +85,35 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     return dt == null ? '' : DateFormat('dd MMM, hh:mm a').format(dt);
   }
 
+  Color _statusColor(String? s) {
+    switch (s) {
+      case 'open': return AppColors.info;
+      case 'in-progress': return AppColors.warning;
+      case 'resolved': return AppColors.success;
+      default: return const Color(0xFF6B7280);
+    }
+  }
+
+  Color _priorityColor(String? p) {
+    switch (p) {
+      case 'urgent': return AppColors.danger;
+      case 'high': return const Color(0xFFEA580C);
+      case 'medium': return AppColors.info;
+      default: return const Color(0xFF6B7280);
+    }
+  }
+
+  Widget _metaPill(String label, Color color) => Container(
+        margin: const EdgeInsets.only(right: 6, bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+      );
+
   Widget _attachmentsRow(List? raw) {
     final list = (raw ?? []).cast<Map>();
     if (list.isEmpty) return const SizedBox.shrink();
@@ -110,13 +139,35 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(_ticket?['subject'] as String? ?? 'Ticket')),
       body: _loading
-          ? const Center(child: AppSpinner(size: 32))
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppSpinner(size: 32),
+                  SizedBox(height: 10),
+                  Text('Loading ticket…', style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            )
           : Column(
               children: [
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      Row(
+                        children: [
+                          if ((_ticket?['ticketNumber'] as String?)?.isNotEmpty == true)
+                            _metaPill(_ticket!['ticketNumber'] as String, const Color(0xFF6B7280)),
+                          if ((_ticket?['status'] as String?)?.isNotEmpty == true)
+                            _metaPill(_ticket!['status'] as String, _statusColor(_ticket?['status'] as String?)),
+                          if ((_ticket?['priority'] as String?)?.isNotEmpty == true)
+                            _metaPill(_ticket!['priority'] as String, _priorityColor(_ticket?['priority'] as String?)),
+                          if ((_ticket?['category'] as String?)?.isNotEmpty == true)
+                            _metaPill(_ticket!['category'] as String, AppColors.primary),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(12),
@@ -126,7 +177,7 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                               Text(_ticket?['description'] as String? ?? ''),
                               _attachmentsRow(_ticket?['attachments'] as List?),
                               const SizedBox(height: 6),
-                              Text(_fmt(_ticket?['createdAt'] as String?),
+                              Text('Opened ${_fmt(_ticket?['createdAt'] as String?)}',
                                   style: Theme.of(context).textTheme.bodySmall),
                             ],
                           ),
@@ -168,7 +219,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
                 if (closed)
                   const Padding(
                     padding: EdgeInsets.all(12),
-                    child: Text('This ticket is closed.', style: TextStyle(color: AppColors.danger)),
+                    child: Text(
+                      'This ticket is closed. Raise a new ticket if you need further help.',
+                      style: TextStyle(color: AppColors.danger),
+                      textAlign: TextAlign.center,
+                    ),
                   )
                 else
                   SafeArea(

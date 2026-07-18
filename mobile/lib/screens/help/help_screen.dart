@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -591,9 +592,9 @@ class _HelpScreenState extends State<HelpScreen> {
 
   Widget _supportTab() {
     final supportCards = [
-      (Icons.phone_outlined, 'Call Support', '+91 80801 97945', 'For urgent CRM access or lead routing issues.'),
-      (Icons.email_outlined, 'Email Support', 'support@arthaleads.com', 'Share screenshots or export files for faster debugging.'),
-      (FontAwesomeIcons.whatsapp.data, 'WhatsApp Help', '+91 80801 97945', 'Quick help for day-to-day sales team questions.'),
+      (Icons.phone_outlined, 'Call Support', '+91 80801 97945', 'For urgent CRM access or lead routing issues.', Uri(scheme: 'tel', path: '+918080197945')),
+      (Icons.email_outlined, 'Email Support', 'support@arthaleads.com', 'Share screenshots or export files for faster debugging.', Uri(scheme: 'mailto', path: 'support@arthaleads.com')),
+      (FontAwesomeIcons.whatsapp.data, 'WhatsApp Help', '+91 80801 97945', 'Quick help for day-to-day sales team questions.', Uri.parse('https://wa.me/918080197945')),
     ];
     return RefreshIndicator(
       color: AppColors.primary,
@@ -601,30 +602,35 @@ class _HelpScreenState extends State<HelpScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          for (final (icon, title, detail, note) in supportCards)
+          for (final (icon, title, detail, note, uri) in supportCards)
             Card(
               margin: const EdgeInsets.only(bottom: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                      child: Icon(icon, size: 18, color: AppColors.primary),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                          Text(detail, style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
-                          Text(note, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                        ],
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => launchUrl(uri, mode: LaunchMode.externalApplication),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+                        child: Icon(icon, size: 18, color: AppColors.primary),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            Text(detail, style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text(note, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey.shade400),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -645,9 +651,17 @@ class _HelpScreenState extends State<HelpScreen> {
               child: Center(child: AppSpinner(size: 32)),
             )
           else if (_tickets.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('No support tickets yet')),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  Icon(Icons.confirmation_num_outlined, size: 36, color: AppColors.primary.withValues(alpha: 0.3)),
+                  const SizedBox(height: 8),
+                  const Text('No tickets yet', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text('Raise a ticket if you need help with anything', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                ],
+              ),
             )
           else
             for (final (i, t) in _tickets.indexed)
@@ -658,7 +672,8 @@ class _HelpScreenState extends State<HelpScreen> {
                 child: ListTile(
                   title: Text(t['subject'] as String? ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(
-                    '${t['ticketNumber'] ?? ''} · ${DateFormat('dd MMM yyyy').format(DateTime.tryParse(t['createdAt'] as String? ?? '') ?? DateTime.now())}',
+                    '${t['ticketNumber'] ?? ''} · ${t['category'] ?? ''} · ${t['priority'] ?? ''} · '
+                    '${DateFormat('dd MMM yyyy').format(DateTime.tryParse(t['createdAt'] as String? ?? '') ?? DateTime.now())}',
                   ),
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

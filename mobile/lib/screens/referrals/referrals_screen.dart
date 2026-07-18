@@ -10,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/page_header.dart';
 
 const _steps = [
   (
@@ -50,7 +51,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   Map<String, dynamic> _summary = {};
   bool _loading = true;
   bool _copied = false;
-  double _calcCount = 1;
+  double _calcCount = 3;
 
   @override
   void initState() {
@@ -223,9 +224,25 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     final code = _code(auth.org);
     final link = code != null ? 'https://arthaleads.com/signup?ref=$code' : '';
 
-    if (_loading) return const Center(child: AppSpinner(size: 32));
-
-    return RefreshIndicator(
+    return Column(
+      children: [
+        PageHeader(
+          title: 'Refer & Earn',
+          subtitle: 'Invite other teams and earn free months together',
+          icon: Icons.card_giftcard,
+          trailing: _loading
+              ? const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: AppSpinner(size: 18),
+                )
+              : IconButton(
+                  tooltip: 'Refresh',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _load,
+                ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
       color: AppColors.primary,
       onRefresh: _load,
       child: ListView(
@@ -427,7 +444,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Estimate free months from referrals who subscribe.',
+                    'Drag to estimate free months based on referrals who subscribe.',
                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 12),
@@ -546,7 +563,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Share your link above to get started',
+                    "Share your referral link above. When someone signs up using "
+                    "your link, they'll appear here with their status.",
+                    textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
@@ -694,6 +713,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
           ),
         ],
       ),
+          ),
+        ),
+      ],
     );
   }
 }
