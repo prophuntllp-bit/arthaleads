@@ -473,6 +473,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ],
           ),
+          if (auth.isAdmin) ...[
           const SizedBox(height: 14),
           InkWell(
             borderRadius: BorderRadius.circular(16),
@@ -590,6 +591,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
+          ],
         ],
       ),
     );
@@ -1831,7 +1833,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               },
             ),
             const SizedBox(height: 12),
+          ],
 
+          // ── Team — visible to every role, not just admins (matches web) ──
+          if (a != null) ...[
             // Top agents leaderboard
             if ((a['byAgent'] as List?)?.isNotEmpty ?? false) ...[
               Text('Top Agents', style: Theme.of(context).textTheme.titleSmall),

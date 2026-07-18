@@ -7,9 +7,11 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/upgrade_wall.dart';
 
 /// Performance — GET /auth/performance (admin/manager). Leaderboard of
 /// team members with dual Main Pipeline / Project Pipeline breakdown.
@@ -510,6 +512,16 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final org = context.watch<AuthState>().org;
+    if (!canAccess(org, 'growth')) {
+      return UpgradeWall(
+        org: org,
+        feature: 'Analytics & Reports',
+        description:
+            'View team performance, conversion rates, booking metrics and individual agent tracking.',
+      );
+    }
+
     if (_loading) return const Center(child: AppSpinner(size: 32));
     if (_members.isEmpty)
       return const Center(child: Text('No team performance data yet'));

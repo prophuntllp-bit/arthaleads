@@ -6,10 +6,12 @@ import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
@@ -113,17 +115,20 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final canManage = context.watch<AuthState>().isAdmin;
     return Scaffold(
       appBar: AppBar(
         title: Text(_project['name'] as String? ?? 'Project'),
         actions: [
-          PopupMenuButton<String>(
-            onSelected: (v) => v == 'edit' ? _editProject() : _deleteProject(),
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(value: 'edit', child: Text('Edit Project')),
-              PopupMenuItem(value: 'delete', child: Text('Delete Project')),
-            ],
-          ),
+          if (canManage)
+            PopupMenuButton<String>(
+              onSelected: (v) =>
+                  v == 'edit' ? _editProject() : _deleteProject(),
+              itemBuilder: (ctx) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit Project')),
+                PopupMenuItem(value: 'delete', child: Text('Delete Project')),
+              ],
+            ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -575,11 +580,12 @@ class _LeadsTabState extends State<_LeadsTab> {
                     onSubmitted: (_) => _load(reset: true),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.upload_file, size: 20),
-                  tooltip: 'Import CSV',
-                  onPressed: _importCsv,
-                ),
+                if (context.watch<AuthState>().isAdmin)
+                  IconButton(
+                    icon: const Icon(Icons.upload_file, size: 20),
+                    tooltip: 'Import CSV',
+                    onPressed: _importCsv,
+                  ),
                 IconButton(
                   icon: const Icon(Icons.download, size: 20),
                   tooltip: 'Export CSV',
@@ -713,7 +719,7 @@ class _LeadsTabState extends State<_LeadsTab> {
           ),
         ],
       ),
-      bottomSheet: widget.isProspective && _selectMode
+      bottomSheet: widget.isProspective && _selectMode && context.watch<AuthState>().isAdmin
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(

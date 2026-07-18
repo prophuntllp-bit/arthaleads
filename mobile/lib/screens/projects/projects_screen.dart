@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
@@ -114,8 +116,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canManage = context.watch<AuthState>().isAdmin;
     return Scaffold(
-      floatingActionButton: GradientFab(onPressed: () => _openForm()),
+      floatingActionButton: canManage
+          ? GradientFab(onPressed: () => _openForm())
+          : null,
       body: Column(
         children: [
           PageHeader(
@@ -192,22 +197,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                       color: AppColors.primary,
                                     ),
                                   ),
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(Icons.more_vert, size: 20),
-                                    onSelected: (v) => v == 'edit'
-                                        ? _openForm(project: p)
-                                        : _delete(p),
-                                    itemBuilder: (ctx) => const [
-                                      PopupMenuItem(
-                                        value: 'edit',
-                                        child: Text('Edit'),
+                                  if (canManage)
+                                    PopupMenuButton<String>(
+                                      icon: const Icon(
+                                        Icons.more_vert,
+                                        size: 20,
                                       ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
+                                      onSelected: (v) => v == 'edit'
+                                          ? _openForm(project: p)
+                                          : _delete(p),
+                                      itemBuilder: (ctx) => const [
+                                        PopupMenuItem(
+                                          value: 'edit',
+                                          child: Text('Edit'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'delete',
+                                          child: Text('Delete'),
+                                        ),
+                                      ],
+                                    ),
                                 ],
                               ),
                               onTap: () async {
