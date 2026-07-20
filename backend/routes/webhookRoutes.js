@@ -71,7 +71,7 @@ function verifyFbSignature(req, res, buf) {
 async function getFacebookLeadFields(leadgenId, accessToken) {
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: "field_data,created_time,ad_id,adgroup_id,form_id,page_id",
+    fields: "field_data,created_time,ad_id,adset_id,form_id,page_id",
   });
 
   const response = await fetch(`https://graph.facebook.com/v23.0/${leadgenId}?${params.toString()}`);
@@ -393,7 +393,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           $or: [
             { matchField: "form_id",     matchValue: String(leadData.form_id     || leadDetails.form_id     || "") },
             { matchField: "campaign_id", matchValue: String(leadData.campaign_id || "") },
-            { matchField: "adset_id",    matchValue: String(leadData.adset_id    || "") },
+            { matchField: "adset_id",    matchValue: String(leadData.adset_id    || leadDetails.adset_id    || "") },
             { matchField: "ad_id",       matchValue: String(leadData.ad_id       || leadDetails.ad_id       || "") },
           ].filter((c) => c.matchValue),
         });
