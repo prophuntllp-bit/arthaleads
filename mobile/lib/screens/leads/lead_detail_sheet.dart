@@ -7,7 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/badges.dart';
 import '../../widgets/chips.dart';
+import '../calls/call_history_screen.dart';
 
 const _fbErrorPattern = 'Facebook lead received but field data could not be fetched';
 
@@ -39,6 +41,8 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   bool _saving = false;
   bool _retrying = false;
   bool _drafting = false;
+  bool _calling = false;
+  String _tab = 'info';
   final _noteCtrl = TextEditingController();
 
   @override
@@ -327,6 +331,46 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }
   }
 
+  Map<String, dynamic>? get _voiceCall =>
+      (lead['voiceCall'] as Map?)?.cast<String, dynamic>();
+
+  bool get _hasVoice {
+    final vc = _voiceCall;
+    if (vc == null) return false;
+    return (vc['transcript'] as List?)?.isNotEmpty == true ||
+        (vc['sentiment'] as String? ?? '').isNotEmpty ||
+        (vc['channel'] as String? ?? '').isNotEmpty ||
+        vc['durationSeconds'] != null ||
+        (vc['agentName'] as String? ?? '').isNotEmpty;
+  }
+
+  List<Map<String, dynamic>> get _activities =>
+      ((lead['activities'] as List?) ?? []).cast<Map<String, dynamic>>();
+
+  Future<void> _callLead() async {
+    final phone = lead['phone'] as String?;
+    if (phone == null || phone.isEmpty || _calling) return;
+    setState(() => _calling = true);
+    try {
+      final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
+          backgroundColor: AppColors.success,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _calling = false);
+    }
+  }
+
   String _fmtDate(String? iso) {
     if (iso == null || iso.isEmpty) return '—';
     final dt = DateTime.tryParse(iso)?.toLocal();
@@ -385,8 +429,68 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: (lead['phone'] as String? ?? '').isEmpty ? null : _callLead,
+                      icon: _calling
+                          ? const SizedBox(
+                              width: 14, height: 14,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.call_outlined, size: 18),
+                      label: Text(_calling ? 'Calling…' : 'Call'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CallHistoryScreen(
+                            leadId: lead['_id'] as String,
+                            leadName: lead['name'] as String? ?? '—',
+                            leadPhone: lead['phone'] as String?,
+                          ),
+                        ),
+                      ),
+                      icon: const Icon(Icons.history, size: 18),
+                      label: const Text('Call History'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Info', style: TextStyle(fontSize: 12)),
+                    selected: _tab == 'info',
+                    onSelected: (_) => setState(() => _tab = 'info'),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Activity', style: TextStyle(fontSize: 12)),
+                    selected: _tab == 'activity',
+                    onSelected: (_) => setState(() => _tab = 'activity'),
+                  ),
+                  if (_hasVoice)
+                    ChoiceChip(
+                      label: const Text('Transcript', style: TextStyle(fontSize: 12)),
+                      selected: _tab == 'transcript',
+                      onSelected: (_) => setState(() => _tab = 'transcript'),
+                    ),
+                ],
+              ),
               const SizedBox(height: 16),
 
+              if (_tab == 'activity') ..._activityTab(),
+              if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
+
+              if (_tab == 'info') ...[
               // ── Booking ──
               Text('Booking', style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 6),
@@ -545,6 +649,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   IconButton.filled(onPressed: _addNote, icon: const Icon(Icons.send, size: 18)),
                 ],
               ),
+              ], // if (_tab == 'info')
             ],
           ),
           if (_saving)
@@ -571,5 +676,232 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       trailing: onTap != null ? const Icon(Icons.edit, size: 16) : null,
       onTap: onTap,
     );
+  }
+
+  Color _sentimentColor(String? s) =>
+      s == 'positive' ? AppColors.success : s == 'negative' ? AppColors.danger : Colors.grey;
+
+  String _sentimentLabel(String? s) =>
+      s == 'positive' ? 'Positive' : s == 'negative' ? 'Negative' : 'Neutral';
+
+  Color _callStatusColor(String? s) =>
+      s == 'answered' ? AppColors.success : s == 'missed' ? AppColors.danger : Colors.orange;
+
+  /// Mirrors LeadDetail.jsx's `tab === "activity"` — reverse-chronological
+  /// activity feed with inline call-specific rendering (status/sentiment
+  /// pills, AI summary, collapsible transcript, tap-to-open recording).
+  List<Widget> _activityTab() {
+    final t = AppTheme.of(context);
+    if (_activities.isEmpty) {
+      return const [Text('No activity yet.')];
+    }
+    return _activities.reversed.map((item) {
+      final isCall = item['type'] == 'called';
+      final meta = (item['meta'] as Map?)?.cast<String, dynamic>() ?? {};
+      final status = meta['status'] as String?;
+      final sentiment = meta['sentiment'] as String?;
+      final recordingUrl = meta['recordingUrl'] as String?;
+      final summary = meta['summary'] as String?;
+      final transcript = meta['transcript'] as String?;
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: t.surfaceLow,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: t.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isCall) ...[
+                    Icon(Icons.call, size: 16, color: Colors.orange),
+                    const SizedBox(width: 6),
+                  ],
+                  Expanded(
+                    child: Text(item['description'] as String? ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${item['performedByName'] ?? 'System'} · ${_fmtDate(item['createdAt'] as String?)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (isCall && (status != null || sentiment != null)) ...[
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    if (status != null) Pill(status.toUpperCase(), _callStatusColor(status)),
+                    if (sentiment != null) Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
+                  ],
+                ),
+              ],
+              if (isCall && recordingUrl != null && recordingUrl.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => launchUrl(Uri.parse(recordingUrl), mode: LaunchMode.externalApplication),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.mic, size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text('Play recording',
+                          style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ],
+              if (isCall && (summary ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.indigo.withValues(alpha: 0.18)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_awesome, size: 12, color: Colors.indigo),
+                          const SizedBox(width: 4),
+                          const Text('AI SUMMARY',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.indigo)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(summary!, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+              if (isCall && (transcript ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('View Transcript', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  expandedAlignment: Alignment.centerLeft,
+                  children: [
+                    Text(transcript!, style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  /// Mirrors LeadDetail.jsx's `tab === "transcript"` — sentiment/duration/
+  /// channel/language/agent meta pills, extracted-data grid, then a chat-style
+  /// turn-by-turn transcript (Caller left, Agent right).
+  List<Widget> _transcriptTab() {
+    final t = AppTheme.of(context);
+    final vc = _voiceCall!;
+    final sentiment = vc['sentiment'] as String?;
+    final secs = (vc['durationSeconds'] as num?)?.toInt() ?? 0;
+    final dur = secs > 0 ? '${secs ~/ 60}m ${secs % 60}s'.replaceFirst('0m ', '') : null;
+    final channel = vc['channel'] as String?;
+    final language = vc['language'] as String?;
+    final agentName = vc['agentName'] as String?;
+    final turns = ((vc['transcript'] as List?) ?? []).cast<Map>();
+    final extracted = (vc['extractedData'] as Map?)
+            ?.cast<String, dynamic>()
+            .entries
+            .where((e) => e.value != null && e.value != '')
+            .toList() ??
+        const [];
+
+    return [
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          if ((sentiment ?? '').isNotEmpty) Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
+          if (dur != null) Pill(dur, Colors.grey, icon: Icons.schedule),
+          if ((channel ?? '').isNotEmpty) Pill(channel!, Colors.grey),
+          if ((language ?? '').isNotEmpty) Pill(language!.toUpperCase(), Colors.grey),
+          if ((agentName ?? '').isNotEmpty) Pill(agentName!, Colors.grey, icon: Icons.mic),
+        ],
+      ),
+      if (extracted.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: t.surfaceLow,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: t.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('CAPTURED DETAILS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              const SizedBox(height: 8),
+              for (final e in extracted)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: _row(
+                    e.key.replaceAll('_', ' ').replaceAllMapped(
+                        RegExp(r'\b\w'), (m) => m.group(0)!.toUpperCase()),
+                    e.value.toString(),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+      const SizedBox(height: 12),
+      if (turns.isEmpty)
+        const Text('No transcript — this call came in without a conversation transcript.')
+      else
+        for (final turn in turns)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Align(
+              alignment: (turn['speaker'] == 'Caller') ? Alignment.centerLeft : Alignment.centerRight,
+              child: Container(
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: (turn['speaker'] == 'Caller') ? t.surfaceLow : AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: (turn['speaker'] == 'Caller') ? t.border : AppColors.primary.withValues(alpha: 0.22),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text((turn['speaker'] as String? ?? '—').toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: (turn['speaker'] == 'Caller') ? t.textSoft : AppColors.primary,
+                        )),
+                    const SizedBox(height: 2),
+                    Text(turn['text'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    ];
   }
 }
