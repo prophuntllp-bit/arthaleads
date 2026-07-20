@@ -22,6 +22,7 @@ import '../../widgets/motion.dart';
 import 'lead_detail_sheet.dart';
 import 'lead_filters.dart';
 import 'lead_form.dart';
+import 'wa_broadcast_sheet.dart';
 
 /// Unified Leads list — mirrors frontend/src/pages/Leads.jsx.
 /// Rows come from GET /leads/unified and are tagged `_type: lead|project`.
@@ -239,6 +240,17 @@ class LeadsScreenState extends State<LeadsScreen> {
     } catch (e) {
       _snack(ApiClient.errorMessage(e, 'Bulk transfer failed'), error: true);
     }
+  }
+
+  void _bulkWhatsApp() {
+    final list = _leads
+        .where((l) => _selected.contains(l['_id']) && (l['phone'] as String? ?? '').isNotEmpty)
+        .toList();
+    if (list.isEmpty) {
+      _snack('No selected leads have a phone number', error: true);
+      return;
+    }
+    showWaBroadcastSheet(context, list);
   }
 
   Future<void> _bulkDelete() async {
@@ -874,6 +886,12 @@ class LeadsScreenState extends State<LeadsScreen> {
                 _bulkTransfer,
               ),
             ],
+            _bulkBtn(
+              Icons.chat,
+              'WhatsApp',
+              const Color(0xFF25D366),
+              _bulkWhatsApp,
+            ),
             _bulkBtn(Icons.delete, 'Delete', AppColors.danger, _bulkDelete),
           ],
         ),
