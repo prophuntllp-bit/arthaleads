@@ -11,20 +11,11 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/date_range_picker.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_form.dart';
-
-const _dateRangePresets = [
-  {'value': 'today', 'label': 'Today'},
-  {'value': 'last7days', 'label': 'Last 7 Days'},
-  {'value': 'last30days', 'label': 'Last 30 Days'},
-  {'value': 'thismonth', 'label': 'This Month'},
-  {'value': 'lastmonth', 'label': 'Last Month'},
-  {'value': 'thisyear', 'label': 'This Year'},
-  {'value': '', 'label': 'All Time'},
-];
 
 final _sourcePalette = <String, Color>{
   'Facebook': const Color(0xFF1877F2),
@@ -71,7 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _refreshing = false;
   bool _analyticsError = false;
   bool _clocking = false;
-  String _dateRange = 'last30days';
+  dynamic _dateRange = 'last30days';
   int? _goalOverride;
   List<String> _insights = [];
   bool _insightsOpen = false;
@@ -123,10 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
     // Parallel fetch — mirrors the web dashboard's parallel-fetch fix.
     final results = await Future.wait<dynamic>([
-      _tryGet(
-        '/leads/analytics',
-        _dateRange.isEmpty ? null : {'dateRange': _dateRange},
-      ),
+      _tryGet('/leads/analytics', dateRangeParams(_dateRange)),
       _tryGet('/leads/hot', {'limit': 5}),
       _tryGet('/leads/followups-due'),
       _tryGet('/leads/stale'),
@@ -213,10 +201,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  String get _dateRangeLabel => _dateRangePresets.firstWhere(
-    (p) => p['value'] == _dateRange,
-    orElse: () => _dateRangePresets[2],
-  )['label']!;
+  String get _dateRangeLabel => dateRangeLabel(_dateRange);
 
   Future<void> _openAddLead() async {
     List<Map<String, dynamic>> agents = [];
@@ -422,36 +407,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 16),
           Row(
             children: [
-              PopupMenuButton<String>(
-                initialValue: _dateRange,
-                onSelected: (value) {
+              DateRangePicker(
+                value: _dateRange,
+                onChanged: (value) {
                   setState(() => _dateRange = value);
                   _load();
                 },
-                itemBuilder: (ctx) => _dateRangePresets
-                    .map(
-                      (preset) => PopupMenuItem(
-                        value: preset['value'],
-                        child: Text(preset['label']!),
-                      ),
-                    )
-                    .toList(),
-                child: Container(
-                  width: 46,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.of(context).surfaceLow,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppTheme.of(context).borderStrong,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.calendar_month_rounded,
-                    size: 19,
-                    color: AppColors.primary,
-                  ),
-                ),
               ),
               const SizedBox(width: 9),
               GradientButton(
