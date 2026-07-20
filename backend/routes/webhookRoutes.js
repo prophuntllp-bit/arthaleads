@@ -69,9 +69,15 @@ function verifyFbSignature(req, res, buf) {
 }
 
 async function getFacebookLeadFields(leadgenId, accessToken) {
+  // field_data is the only thing genuinely missing from the webhook payload (withheld
+  // for privacy - you must fetch it separately). ad_id/form_id/adset_id/page_id/created_time
+  // are already present on the raw webhook `leadData` itself, and some of them (e.g. page_id)
+  // aren't even valid queryable fields on this Graph API object - requesting them here just
+  // risks Graph rejecting the whole call over one bad field name, as page_id and adgroup_id
+  // both did.
   const params = new URLSearchParams({
     access_token: accessToken,
-    fields: "field_data,created_time,ad_id,adset_id,form_id,page_id",
+    fields: "field_data",
   });
 
   const response = await fetch(`https://graph.facebook.com/v23.0/${leadgenId}?${params.toString()}`);
