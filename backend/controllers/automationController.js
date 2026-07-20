@@ -170,6 +170,39 @@ const automationController = {
       const V = "v23.0";
       const results = [];
 
+      // App-level webhook subscription (Meta App Dashboard -> Webhooks product).
+      // Distinct from the per-page "subscribed_apps" check below: that controls
+      // whether THIS page sends events to our app; this controls whether our
+      // app has a working callback URL registered with Meta at all. Both must
+      // be true for leads to arrive — same for every automation, so computed
+      // once and copied into each result rather than re-fetched per page.
+      let appWebhookCheck = null;
+      if (appId && appSecret) {
+        try {
+          const r = await fetch(
+            `https://graph.facebook.com/${V}/${appId}/subscriptions?access_token=${encodeURIComponent(`${appId}|${appSecret}`)}`
+          );
+          const j = await r.json();
+          const subs = Array.isArray(j.data) ? j.data : [];
+          const pageSub = subs.find((s) => s.object === "page");
+          const hasLeadgen = !!pageSub?.fields?.some((f) => (f.name || f) === "leadgen");
+          const expectedUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/webhook`;
+          const urlMatches = pageSub?.callback_url === expectedUrl;
+
+          const ok = !!(pageSub?.active && hasLeadgen && urlMatches);
+          let detail;
+          if (!pageSub) detail = "No 'page' object subscription found in Meta App Dashboard -> Webhooks. This must be configured there — re-subscribing a page (above) cannot create it.";
+          else if (!pageSub.active) detail = "The app's page-webhook subscription is inactive in Meta App Dashboard -> Webhooks.";
+          else if (!hasLeadgen) detail = `'leadgen' field isn't subscribed at the app level (has: ${(pageSub.fields || []).map((f) => f.name || f).join(", ") || "none"}). Add it in App Dashboard -> Webhooks -> Page.`;
+          else if (!urlMatches) detail = `Callback URL registered with Meta is "${pageSub.callback_url}" but this server expects "${expectedUrl}" — Meta is sending events to the wrong place.`;
+          else detail = `Active, subscribed to leadgen, callback URL matches "${expectedUrl}".`;
+
+          appWebhookCheck = { key: "app_webhook", label: "App's webhook subscription is correctly configured", ok, detail };
+        } catch (e) {
+          appWebhookCheck = { key: "app_webhook", label: "App's webhook subscription is correctly configured", ok: false, detail: e.message };
+        }
+      }
+
       for (const a of autos) {
         const pageId = a.pageId || "";
         const token = a.accessToken || ""; // decrypted by the model getter
@@ -215,6 +248,8 @@ const automationController = {
             checks.push({ key: "subscribed", label: "Page is subscribed to leadgen webhook", ok: false, detail: e.message });
           }
         }
+
+        if (appWebhookCheck) checks.push(appWebhookCheck);
 
         const allOk = checks.every((c) => c.ok);
         results.push({
