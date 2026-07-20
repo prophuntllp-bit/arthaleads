@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/qr_sheet.dart';
 import 'project_detail_screen.dart';
 import 'project_form.dart';
 
@@ -114,6 +115,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
+  Future<void> _showQrCode(Map<String, dynamic> p) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => QrSheet(
+        endpoint: '/projects/${p['_id']}/qr-token',
+        title: 'QR Code',
+        description: p['name'] as String? ?? '',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final canManage = context.watch<AuthState>().isAdmin;
@@ -203,13 +217,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                         Icons.more_vert,
                                         size: 20,
                                       ),
-                                      onSelected: (v) => v == 'edit'
-                                          ? _openForm(project: p)
-                                          : _delete(p),
+                                      onSelected: (v) => switch (v) {
+                                        'edit' => _openForm(project: p),
+                                        'qr' => _showQrCode(p),
+                                        _ => _delete(p),
+                                      },
                                       itemBuilder: (ctx) => const [
                                         PopupMenuItem(
                                           value: 'edit',
                                           child: Text('Edit'),
+                                        ),
+                                        PopupMenuItem(
+                                          value: 'qr',
+                                          child: Text('QR Code'),
                                         ),
                                         PopupMenuItem(
                                           value: 'delete',
