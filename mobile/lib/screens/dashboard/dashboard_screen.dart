@@ -14,6 +14,7 @@ import '../../widgets/buttons.dart';
 import '../../widgets/date_range_picker.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/onboarding_checklist.dart';
 import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_form.dart';
 
@@ -1430,6 +1431,10 @@ class _DashboardScreenState extends State<DashboardScreen>
         children: [
           FadeSlideIn(child: _dashboardHeader(context, auth, a)),
           const SizedBox(height: 10),
+          OnboardingChecklist(
+            totalLeads: (a?['allTimeTotal'] as num?)?.toInt() ?? 0,
+            onNavigate: (label) => widget.onNavigate?.call(label),
+          ),
           _attendanceCard(context),
           if (_analyticsError) ...[
             const SizedBox(height: 10),
