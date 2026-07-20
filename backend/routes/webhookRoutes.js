@@ -156,6 +156,13 @@ async function autoRefreshPageToken(auto) {
 async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
   const primaryAutomationId = primaryAutomation?._id;
 
+  // Every attempt below records its failure here (not just the loop in step 4) so the
+  // final message reflects the REAL Graph API error instead of a generic guess, and so
+  // the "was this just a test lead" check in step 6 works even for orgs with only one
+  // Facebook automation (where step 4's loop would otherwise run over zero candidates).
+  const errors = [];
+  const record = (label, e) => errors.push({ type: e.isAuthError ? "auth" : "other", message: e.message, automation: label });
+
   // 1️⃣ Try the App Access Token first — permanent, never expires, works for all
   //    pages that called subscribed_apps at connect time. This is the scalable path
   //    for a multi-tenant CRM: no per-user token required after initial setup.
@@ -166,6 +173,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
       return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
     } catch (appErr) {
       logger.warn(`Facebook webhook: App Token failed for lead ${leadgenId}: ${appErr.message}`);
+      record("App Token", appErr);
     }
   }
 
@@ -181,6 +189,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
       } else {
         logger.warn(`Facebook webhook: stored page token failed for lead ${leadgenId} (${err.message})`);
       }
+      record(primaryAutomation?.name || "Stored page token", err);
     }
   }
 
@@ -194,6 +203,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
         return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
       } catch (e) {
         logger.warn(`Facebook webhook: auto-refreshed primary token also failed for lead ${leadgenId}: ${e.message}`);
+        record(`${primaryAutomation?.name || "Primary"} (refreshed)`, e);
       }
     }
   }
@@ -207,7 +217,6 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     _id: { $ne: primaryAutomationId },
   });
 
-  const errors = [];
   for (const auto of allAutomations) {
     try {
       const result = await getFacebookLeadFields(leadgenId, auto.accessToken);
@@ -255,7 +264,7 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
     leadDetails: null,
     isAuthError: true,
     isTestLead: false,
-    fetchError: "All access tokens failed. Please reconnect Facebook in Automation settings.",
+    fetchError: errorSummary || "All access tokens failed. Please reconnect Facebook in Automation settings.",
   };
 }
 
@@ -407,7 +416,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           }
         }
 
-        await Lead.create({
+        const createdLead = await Lead.create({
           name,
           phone: fieldMap.phone_number || fieldMap.phone || (isTestLead ? "N/A (test)" : "N/A"),
           email: fieldMap.email || "",
@@ -450,6 +459,61 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           automation.status = "connected";
           automation.lastSyncAt = new Date();
           await automation.save();
+        }
+
+        // Self-heal: the fetch failure is often transient (e.g. a permission change on
+        // Meta's side that hasn't fully propagated yet) rather than a genuinely dead
+        // token — retrying once shortly after has repeatedly recovered leads that failed
+        // on the first attempt. Runs after the response is sent so it never delays the
+        // webhook ack or risks Meta re-delivering (and duplicating) the event.
+        if (isAuthError) {
+          const leadId = createdLead._id;
+          const gid = leadData.leadgen_id;
+          setTimeout(async () => {
+            try {
+              const retryResult = await fetchLeadWithFallback(gid, accessToken, automation, orgId);
+              if (!retryResult.leadDetails) {
+                logger.warn(`Facebook webhook: auto-retry still failed for lead ${gid}: ${retryResult.fetchError}`);
+                return;
+              }
+              const fm2 = Object.fromEntries((retryResult.leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
+              const cf2 = (retryResult.leadDetails.field_data || []).filter((f) => !STANDARD_FIELDS.has(f.name) && f.values?.[0]);
+              const req2 = cf2.map((f) => `${f.name.replace(/_/g, " ")}: ${f.values?.[0]}`).join(" · ");
+              const fr2 = cf2.map((f) => ({
+                fieldKey: f.name,
+                label: f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                value: f.values?.[0] || "",
+              }));
+              const name2 = fm2.full_name || [fm2.first_name, fm2.last_name].filter(Boolean).join(" ").trim() || "Facebook Lead";
+              const lines2 = cf2.map((f) => `${f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${f.values?.[0]}`).join("\n");
+              await Lead.updateOne({ _id: leadId }, {
+                $set: {
+                  name: name2,
+                  phone: fm2.phone_number || fm2.phone || "N/A",
+                  email: fm2.email || "",
+                  requirements: req2,
+                  formResponses: fr2,
+                },
+                $push: {
+                  notes: {
+                    text: [
+                      `✅ Field data recovered on automatic retry.`,
+                      `Name: ${name2 || "-"}`,
+                      `Phone: ${fm2.phone_number || fm2.phone || "N/A"}`,
+                      `Email: ${fm2.email || "-"}`,
+                      lines2 ? `\nForm Answers:\n${lines2}` : "",
+                      `Lead ID: ${gid || "unknown"}`,
+                    ].filter(Boolean).join("\n"),
+                    addedBy: null,
+                    addedByName: "System",
+                  },
+                },
+              });
+              logger.info(`Facebook webhook: auto-retry recovered field data for lead ${gid} (leadId=${leadId})`);
+            } catch (e) {
+              logger.error(`Facebook webhook: auto-retry threw for lead ${gid}: ${e.message}`);
+            }
+          }, 45000);
         }
 
         // Send push notification — targeted to assignee if assigned, broadcast otherwise
