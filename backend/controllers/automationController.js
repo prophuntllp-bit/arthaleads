@@ -251,6 +251,24 @@ const automationController = {
 
         if (appWebhookCheck) checks.push(appWebhookCheck);
 
+        // lastSyncAt is only ever set on the success path (after a lead is
+        // actually created for this Page — see the Facebook webhook handler
+        // in routes/webhookRoutes.js). So this is the one thing the checks
+        // above genuinely cannot prove: whether Meta has ever actually
+        // delivered a webhook call here, as opposed to everything merely
+        // being *configured* correctly. If Facebook Ads Manager shows leads
+        // but this has never fired, the gap is on Meta's delivery side, not
+        // anything visible from our end.
+        const connectedDaysAgo = Math.floor((Date.now() - new Date(a.createdAt)) / (24 * 60 * 60 * 1000));
+        checks.push({
+          key: "last_lead",
+          label: "Last lead successfully received",
+          ok: !!a.lastSyncAt,
+          detail: a.lastSyncAt
+            ? new Date(a.lastSyncAt).toLocaleString()
+            : `Never — connected ${connectedDaysAgo === 0 ? "today" : `${connectedDaysAgo} day(s) ago`}. If Ads Manager shows leads generated but this stays "Never", Meta isn't successfully delivering webhook events for this Page despite the config above being correct — worth a message to Meta support with the Page ID and a timestamp of a known lead.`,
+        });
+
         const allOk = checks.every((c) => c.ok);
         results.push({
           automationId: a._id,
