@@ -178,9 +178,18 @@ class _AutomationScreenState extends State<AutomationScreen> {
     }
   }
 
+  static const _wpBlue = Color(0xFF21759B);
+  static const _voicePurple = Color(0xFF8B5CF6);
+  static const _wpPlugins = [
+    'Contact Form 7', 'WPForms', 'Elementor', 'Gravity Forms',
+    'Ninja Forms', 'Forminator', 'Fluent Forms',
+  ];
+
   Future<void> _openTokenManager(String kind) async {
     final website = kind == 'website';
     final google = kind == 'google';
+    final voice = !website && !google;
+    final accent = website ? _wpBlue : voice ? _voicePurple : AppColors.primary;
     final title = website
         ? 'WordPress / Website Forms'
         : google
@@ -199,6 +208,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
     var loading = true;
     var adding = false;
     var requested = false;
+    var showExtra = false;
     var connections = <Map<String, dynamic>>[];
 
     Future<void> fetchConnections(
@@ -252,136 +262,364 @@ class _AutomationScreenState extends State<AutomationScreen> {
                     Expanded(
                       child: loading
                           ? const Center(child: AppSpinner(size: 30))
-                          : connections.isEmpty
-                          ? const Center(child: Text('No connections yet'))
-                          : ListView.builder(
-                              itemCount: connections.length,
-                              itemBuilder: (_, index) {
-                                final connection = connections[index];
-                                final token =
-                                    connection['token']?.toString() ?? '';
-                                return Card(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                connection['name']
-                                                        ?.toString() ??
-                                                    'Connection',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w700,
+                          : ListView(
+                              children: [
+                                if (connections.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(child: Text('No connections yet')),
+                                  ),
+                                for (var index = 0; index < connections.length; index++)
+                                  Builder(builder: (_) {
+                                    final connection = connections[index];
+                                    final token = connection['token']?.toString() ?? '';
+                                    final connected = connection['status']?.toString() == 'connected';
+                                    final siteUrl = connection['siteUrl']?.toString();
+                                    final lastSync = connection['lastSyncAt']?.toString();
+                                    return Card(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                        side: BorderSide(
+                                          color: connected ? AppColors.success.withValues(alpha: 0.4) : Colors.transparent,
+                                        ),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Container(
+                                            color: connected ? AppColors.success : null,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        connection['siteName']?.toString() ?? connection['name']?.toString() ?? 'Connection',
+                                                        style: TextStyle(
+                                                          fontWeight: FontWeight.w700,
+                                                          color: connected ? Colors.white : null,
+                                                        ),
+                                                      ),
+                                                      if (website && siteUrl != null && siteUrl.isNotEmpty)
+                                                        Text(siteUrl,
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: connected ? Colors.white70 : AppTheme.of(ctx).textSoft,
+                                                            )),
+                                                      if (lastSync != null && lastSync.isNotEmpty)
+                                                        Text('Last lead: ${DateTime.tryParse(lastSync)?.toLocal() ?? lastSync}',
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: connected ? Colors.white70 : AppTheme.of(ctx).textSoft,
+                                                            )),
+                                                    ],
+                                                  ),
                                                 ),
-                                              ),
+                                                if (!connected)
+                                                  Text('draft',
+                                                      style: TextStyle(fontSize: 11, color: accent, fontWeight: FontWeight.w700)),
+                                                IconButton(
+                                                  tooltip: 'Delete',
+                                                  icon: Icon(Icons.delete_outline,
+                                                      color: connected ? Colors.white : AppColors.danger, size: 20),
+                                                  onPressed: () async {
+                                                    await _api.dio.delete('/automations/${connection['id']}');
+                                                    setSheetState(() => connections.removeAt(index));
+                                                    _load();
+                                                  },
+                                                ),
+                                              ],
                                             ),
-                                            Text(
-                                              connection['status']
-                                                      ?.toString() ??
-                                                  'draft',
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: AppColors.primary,
-                                              ),
-                                            ),
-                                            IconButton(
-                                              tooltip: 'Delete',
-                                              icon: const Icon(
-                                                Icons.delete_outline,
-                                                color: AppColors.danger,
-                                                size: 20,
-                                              ),
-                                              onPressed: () async {
-                                                await _api.dio.delete(
-                                                  '/automations/${connection['id']}',
-                                                );
-                                                setSheetState(
-                                                  () => connections.removeAt(
-                                                    index,
-                                                  ),
-                                                );
-                                                _load();
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        SelectableText(
-                                          token,
-                                          style: const TextStyle(fontSize: 11),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            TextButton.icon(
-                                              onPressed: () =>
-                                                  Clipboard.setData(
-                                                    ClipboardData(text: token),
-                                                  ),
-                                              icon: const Icon(
-                                                Icons.copy,
-                                                size: 15,
-                                              ),
-                                              label: const Text('Copy token'),
-                                            ),
-                                            TextButton.icon(
-                                              onPressed: () =>
-                                                  Clipboard.setData(
-                                                    ClipboardData(
-                                                      text: endpoint,
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                SelectableText(token, style: const TextStyle(fontSize: 11)),
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    TextButton.icon(
+                                                      onPressed: () => Clipboard.setData(ClipboardData(text: token)),
+                                                      icon: const Icon(Icons.copy, size: 15),
+                                                      label: const Text('Copy token'),
                                                     ),
+                                                    TextButton.icon(
+                                                      onPressed: () => Clipboard.setData(ClipboardData(text: endpoint)),
+                                                      icon: const Icon(Icons.link, size: 15),
+                                                      label: const Text('Copy endpoint'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                const SizedBox(height: 4),
+                                OutlinedButton.icon(
+                                  onPressed: adding
+                                      ? null
+                                      : () async {
+                                          setSheetState(() => adding = true);
+                                          try {
+                                            final res = await _api.dio.post(
+                                              '$path/create',
+                                              data: {
+                                                'name': website
+                                                    ? 'WordPress Site ${connections.length + 1}'
+                                                    : google
+                                                    ? 'Google Ads ${connections.length + 1}'
+                                                    : 'Vistrow Voice ${connections.length + 1}',
+                                              },
+                                            );
+                                            final created = (res.data['connection'] as Map).cast<String, dynamic>();
+                                            setSheetState(() => connections.add(created));
+                                            _load();
+                                          } finally {
+                                            setSheetState(() => adding = false);
+                                          }
+                                        },
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                                  ),
+                                  icon: adding
+                                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.add),
+                                  label: Text(
+                                    adding
+                                        ? 'Creating…'
+                                        : connections.isEmpty
+                                            ? (website ? 'Create Connection' : voice ? 'Add Voice Connection' : 'Create Connection')
+                                            : 'Add Another Connection',
+                                  ),
+                                ),
+                                if (website) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: AppTheme.of(ctx).border),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        InkWell(
+                                          onTap: () => setSheetState(() => showExtra = !showExtra),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(14),
+                                            child: Row(
+                                              children: [
+                                                const Expanded(
+                                                  child: Text('SETUP STEPS',
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                                ),
+                                                Icon(showExtra ? Icons.expand_less : Icons.expand_more, size: 20),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (showExtra)
+                                          for (final (i, step) in const [
+                                            'In your WordPress admin → Plugins → Add New',
+                                            'Search for "Arthaleads" and install the plugin',
+                                            'Activate it, then click "Arthaleads CRM" in the left sidebar',
+                                            "Copy your site's token above and paste it into the Account Token field",
+                                            'Enter your website name, then click Save',
+                                            'Leads will now flow into Arthaleads automatically',
+                                          ].indexed)
+                                            Padding(
+                                              padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                                              child: Row(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Container(
+                                                    width: 20,
+                                                    height: 20,
+                                                    alignment: Alignment.center,
+                                                    decoration: BoxDecoration(
+                                                      color: accent.withValues(alpha: 0.15),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Text('${i + 1}',
+                                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
                                                   ),
-                                              icon: const Icon(
-                                                Icons.link,
-                                                size: 15,
-                                              ),
-                                              label: const Text(
-                                                'Copy endpoint',
+                                                  const SizedBox(width: 10),
+                                                  Expanded(child: Text(step, style: const TextStyle(fontSize: 12.5))),
+                                                ],
                                               ),
                                             ),
-                                          ],
-                                        ),
                                       ],
                                     ),
                                   ),
-                                );
-                              },
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      for (final p in _wpPlugins)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.cyan.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(999),
+                                            border: Border.all(color: Colors.cyan.withValues(alpha: 0.25)),
+                                          ),
+                                          child: Text('✓ $p',
+                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.cyan)),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                                if (voice) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.of(ctx).surfaceLow,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('HOW TO CONNECT',
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                        const SizedBox(height: 10),
+                                        for (final (i, step) in const [
+                                          'Tap "Add Voice Connection" to generate your token.',
+                                          'Copy the token shown above.',
+                                          'In Vistrow Voice, open the Arthaleads integration and paste it in.',
+                                          "That's it — qualified calls flow straight into your leads.",
+                                        ].indexed)
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 8),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Container(
+                                                  width: 20,
+                                                  height: 20,
+                                                  alignment: Alignment.center,
+                                                  decoration: BoxDecoration(
+                                                    color: accent.withValues(alpha: 0.15),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Text('${i + 1}',
+                                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accent)),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Expanded(child: Text(step, style: const TextStyle(fontSize: 12.5))),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: AppTheme.of(ctx).border),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        InkWell(
+                                          onTap: () => setSheetState(() => showExtra = !showExtra),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(14),
+                                            child: Row(
+                                              children: [
+                                                const Expanded(
+                                                  child: Text('DEVELOPER DETAILS (OPTIONAL)',
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                                ),
+                                                Icon(showExtra ? Icons.expand_less : Icons.expand_more, size: 20),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (showExtra)
+                                          Padding(
+                                            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  "Only needed if you're wiring a custom sender by hand — the Vistrow Voice integration does this for you.",
+                                                  style: TextStyle(fontSize: 11.5, color: AppTheme.of(ctx).textSoft),
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text('Endpoint',
+                                                    style: TextStyle(fontSize: 11, color: AppTheme.of(ctx).textSoft)),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                                        decoration: BoxDecoration(
+                                                          color: AppTheme.of(ctx).surfaceLow,
+                                                          borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                        child: Text(endpoint,
+                                                            style: TextStyle(fontSize: 11, color: accent),
+                                                            overflow: TextOverflow.ellipsis),
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      onPressed: () => Clipboard.setData(ClipboardData(text: endpoint)),
+                                                      icon: const Icon(Icons.copy, size: 16),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Container(
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.of(ctx).surfaceLow,
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Text(
+                                                    'POST { "token", "name", "phone", "email", "message" }',
+                                                    style: TextStyle(fontSize: 11, color: accent, fontFamily: 'monospace'),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text.rich(
+                                                  TextSpan(
+                                                    style: TextStyle(fontSize: 11.5, color: AppTheme.of(ctx).textSoft),
+                                                    children: [
+                                                      TextSpan(
+                                                          text: 'message',
+                                                          style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
+                                                      const TextSpan(text: " becomes the lead's Requirements. Leads arrive as source "),
+                                                      TextSpan(
+                                                          text: 'Vistrow Voice',
+                                                          style: TextStyle(color: accent, fontWeight: FontWeight.w700)),
+                                                      const TextSpan(text: '.'),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
-                    ),
-                    GradientButton(
-                      fullWidth: true,
-                      loading: adding,
-                      onPressed: adding
-                          ? null
-                          : () async {
-                              setSheetState(() => adding = true);
-                              try {
-                                final res = await _api.dio.post(
-                                  '$path/create',
-                                  data: {
-                                    'name': website
-                                        ? 'WordPress Site ${connections.length + 1}'
-                                        : google
-                                        ? 'Google Ads ${connections.length + 1}'
-                                        : 'Vistrow Voice ${connections.length + 1}',
-                                  },
-                                );
-                                final created = (res.data['connection'] as Map)
-                                    .cast<String, dynamic>();
-                                setSheetState(() => connections.add(created));
-                                _load();
-                              } finally {
-                                setSheetState(() => adding = false);
-                              }
-                            },
-                      child: Text(
-                        connections.isEmpty
-                            ? 'Create Connection'
-                            : 'Add Another Connection',
-                      ),
                     ),
                   ],
                 ),
