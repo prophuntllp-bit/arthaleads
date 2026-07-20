@@ -26,6 +26,8 @@ class PerformanceScreen extends StatefulWidget {
 class _PerformanceScreenState extends State<PerformanceScreen> {
   final _api = ApiClient.instance;
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _volumeByDay = [];
+  List<Map<String, dynamic>> _durationByAgent = [];
   bool _loading = true;
   bool _refreshing = false;
   bool _exporting = false;
@@ -37,6 +39,24 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   void initState() {
     super.initState();
     _load();
+    _loadCallAnalytics();
+  }
+
+  Future<void> _loadCallAnalytics() async {
+    try {
+      final res = await _api.dio.get('/calls/analytics');
+      if (!mounted) return;
+      setState(() {
+        _volumeByDay = ((res.data['volumeByDay'] as List?) ?? [])
+            .cast<Map>()
+            .map((m) => m.cast<String, dynamic>())
+            .toList();
+        _durationByAgent = ((res.data['durationByAgent'] as List?) ?? [])
+            .cast<Map>()
+            .map((m) => m.cast<String, dynamic>())
+            .toList();
+      });
+    } catch (_) {}
   }
 
   List<Map<String, dynamic>> get _displayMembers => _filterMemberId.isEmpty
@@ -648,6 +668,11 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           ),
           const SizedBox(height: 12),
 
+          if (_volumeByDay.isNotEmpty || _durationByAgent.isNotEmpty) ...[
+            _callAnalyticsCard(),
+            const SizedBox(height: 12),
+          ],
+
           if (members.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
@@ -659,6 +684,145 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               delay: Duration(milliseconds: 40 * i),
               child: Column(children: _memberCard(m)),
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors Performance.jsx's "Call Analytics" card — GET /calls/analytics
+  /// (last 30 days, agent-agnostic). Daily volume is stacked answered/missed
+  /// bars for the most recent 14 days; agent stats list total answered calls
+  /// + average duration.
+  Widget _callAnalyticsCard() {
+    final t = AppTheme.of(context);
+    final last14 = _volumeByDay.length > 14
+        ? _volumeByDay.sublist(_volumeByDay.length - 14)
+        : _volumeByDay;
+    final maxTotal = last14.isEmpty
+        ? 1
+        : last14
+            .map((d) => (d['total'] as num?)?.toInt() ?? 0)
+            .reduce((a, b) => a > b ? a : b)
+            .clamp(1, 1 << 30);
+
+    return SoftSurface(
+      radius: AppRadii.card,
+      color: t.surface,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.call, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              const Text('Call Analytics', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              const SizedBox(width: 6),
+              Text('· last 30 days', style: TextStyle(fontSize: 11, color: t.textSoft)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (last14.isNotEmpty) ...[
+            Text('DAILY VOLUME',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: t.textSoft)),
+            const SizedBox(height: 8),
+            for (final d in last14) _volumeRow(d, maxTotal, t),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _legendDot(AppColors.success, 'Answered', t),
+                const SizedBox(width: 14),
+                _legendDot(AppColors.danger.withValues(alpha: 0.6), 'Missed', t),
+              ],
+            ),
+            const SizedBox(height: 18),
+          ],
+          Text('ANSWERED CALLS BY AGENT',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: t.textSoft)),
+          const SizedBox(height: 8),
+          if (_durationByAgent.isEmpty)
+            Text('No answered calls yet.', style: TextStyle(fontSize: 12, color: t.textSoft))
+          else
+            for (final a in _durationByAgent) _agentRow(a, t),
+        ],
+      ),
+    );
+  }
+
+  Widget _volumeRow(Map<String, dynamic> d, num maxTotal, AppTheme t) {
+    final id = (d['_id'] as Map?)?.cast<String, dynamic>() ?? {};
+    final date = DateTime(
+      (id['y'] as num?)?.toInt() ?? DateTime.now().year,
+      (id['m'] as num?)?.toInt() ?? 1,
+      (id['d'] as num?)?.toInt() ?? 1,
+    );
+    final total = (d['total'] as num?)?.toInt() ?? 0;
+    final answered = (d['answered'] as num?)?.toInt() ?? 0;
+    final missed = (d['missed'] as num?)?.toInt() ?? 0;
+    final label = DateFormat('d MMM').format(date);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          SizedBox(width: 36, child: Text(label, style: TextStyle(fontSize: 9, color: t.textSoft), textAlign: TextAlign.right)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                height: 10,
+                color: t.surfaceLow,
+                child: Row(
+                  children: [
+                    Expanded(flex: answered, child: Container(color: AppColors.success.withValues(alpha: 0.7))),
+                    Expanded(flex: missed, child: Container(color: AppColors.danger.withValues(alpha: 0.5))),
+                    Expanded(
+                      flex: (maxTotal.toInt() - answered - missed).clamp(0, 1 << 30),
+                      child: const SizedBox(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          SizedBox(width: 18, child: Text('$total', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700), textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label, AppTheme t) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 9, color: t.textSoft)),
+      ],
+    );
+  }
+
+  Widget _agentRow(Map<String, dynamic> a, AppTheme t) {
+    final avgDuration = (a['avgDuration'] as num?)?.toDouble() ?? 0;
+    final durationLabel = avgDuration > 0
+        ? '${avgDuration ~/ 60}m${(avgDuration % 60).round()}s avg'
+        : null;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.border))),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(a['name'] as String? ?? 'Unknown',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+          ),
+          Text('${a['totalCalls'] ?? 0}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          if (durationLabel != null) ...[
+            const SizedBox(width: 4),
+            Text(durationLabel, style: TextStyle(fontSize: 10, color: t.textSoft)),
+          ],
         ],
       ),
     );
