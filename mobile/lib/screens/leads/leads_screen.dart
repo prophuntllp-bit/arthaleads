@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/chips.dart';
@@ -69,13 +70,36 @@ class LeadsScreenState extends State<LeadsScreen> {
         _load();
       }
     });
+    DeepLink.openLeadId.addListener(_handleDeepLink);
+    if (DeepLink.openLeadId.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
+    }
   }
 
   @override
   void dispose() {
+    DeepLink.openLeadId.removeListener(_handleDeepLink);
     _scroll.dispose();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  /// Dashboard (and eventually push notifications) can ask this tab to open
+  /// a specific lead's detail sheet once it's visible — see core/deep_link.dart.
+  Future<void> _handleDeepLink() async {
+    final id = DeepLink.openLeadId.value;
+    if (id == null) return;
+    DeepLink.openLeadId.value = null;
+    if (!mounted) return;
+    try {
+      final res = await _api.dio.get('/leads/$id');
+      final lead = (res.data['data'] as Map?)?.cast<String, dynamic>();
+      if (lead != null && mounted) _openDetail(lead);
+    } catch (e) {
+      if (mounted) {
+        _snack(ApiClient.errorMessage(e, 'Could not open lead'), error: true);
+      }
+    }
   }
 
   Future<void> _loadMeta() async {

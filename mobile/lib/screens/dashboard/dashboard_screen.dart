@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
+import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/date_range_picker.dart';
@@ -17,6 +18,7 @@ import '../../widgets/motion.dart';
 import '../../widgets/onboarding_checklist.dart';
 import '../attendance/attendance_capture_sheet.dart';
 import '../leads/lead_form.dart';
+import '../projects/project_detail_screen.dart';
 
 final _sourcePalette = <String, Color>{
   'Facebook': const Color(0xFF1877F2),
@@ -203,6 +205,54 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   String get _dateRangeLabel => dateRangeLabel(_dateRange);
+
+  /// Deep-links into the specific record on another tab (Shell caches tab
+  /// screens, so DeepLink is how an already-built screen finds out it
+  /// should open something after the tab switch — see core/deep_link.dart).
+  void _openLead(String? id) {
+    if (id != null && id.isNotEmpty) DeepLink.openLeadId.value = id;
+    widget.onNavigate?.call('Leads');
+  }
+
+  void _focusAgent(String? id) {
+    if (id != null && id.isNotEmpty) DeepLink.focusAgentId.value = id;
+    widget.onNavigate?.call('Performance');
+  }
+
+  Future<void> _openProject(String id) async {
+    try {
+      final res = await _api.dio.get('/projects/$id');
+      final project = (res.data['data'] as Map?)?.cast<String, dynamic>();
+      if (project != null && mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => ProjectDetailScreen(project: project)),
+        );
+        return;
+      }
+    } catch (_) {}
+    widget.onNavigate?.call('Projects');
+  }
+
+  IconData _platformIcon(String? platform) {
+    switch (platform) {
+      case 'Facebook':
+        return FontAwesomeIcons.facebookF.data;
+      case 'Google':
+        return FontAwesomeIcons.google.data;
+      case 'WhatsApp':
+        return FontAwesomeIcons.whatsapp.data;
+      case 'Website':
+        return FontAwesomeIcons.globe.data;
+      default:
+        return FontAwesomeIcons.bolt.data;
+    }
+  }
+
+  /// Mirrors web's calcDelta(current, previous) used on the Total Leads card.
+  int? _calcDelta(int? current, int? previous) {
+    if (previous == null || previous == 0) return null;
+    return (((current ?? 0) - previous) / previous * 100).round();
+  }
 
   Future<void> _openAddLead() async {
     List<Map<String, dynamic>> agents = [];
@@ -505,6 +555,37 @@ class _DashboardScreenState extends State<DashboardScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      if (_insightsOpen &&
+                          _insights.isNotEmpty &&
+                          !_insightsLoading)
+                        InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: _generateInsights,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 3,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.bolt_rounded,
+                                  size: 11,
+                                  color: AppTheme.of(context).textSoft,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'Refresh',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.of(context).textSoft,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       if (_insightsLoading)
                         const AppSpinner(size: 14)
                       else
@@ -657,7 +738,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 for (final lead in [...overdueLeads, ...todayLeads].take(8))
                   ListTile(
                     dense: true,
-                    onTap: () => widget.onNavigate?.call('Follow-ups'),
+                    onTap: () => _openLead(lead['_id'] as String?),
                     leading: _smallBadge(
                       overdueLeads.contains(lead) ? 'OVERDUE' : 'TODAY',
                       overdueLeads.contains(lead)
@@ -755,7 +836,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
                 for (final hot in _hot) ...[
                   Divider(height: 1, color: AppTheme.of(context).border),
-                  Padding(
+                  InkWell(
+                    onTap: () => _openLead(str(hot['_id'])),
+                    child: Padding(
                     padding: const EdgeInsets.all(13),
                     child: Row(
                       children: [
@@ -841,6 +924,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ],
               ],
@@ -955,7 +1039,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           for (final item in items.take(6))
             ListTile(
               dense: true,
-              onTap: () => widget.onNavigate?.call('Leads'),
+              onTap: () => _openLead(item['_id'] as String?),
               title: Text(
                 item['name']?.toString() ?? 'Lead',
                 style: const TextStyle(fontWeight: FontWeight.w700),
@@ -1001,7 +1085,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           for (final lead in _stale.take(4))
             ListTile(
               dense: true,
-              onTap: () => widget.onNavigate?.call('Leads'),
+              onTap: () => _openLead(lead['_id'] as String?),
               leading: _smallBadge(
                 '${_daysAgo(lead['updatedAt'])}d',
                 AppColors.warning,
@@ -1101,51 +1185,379 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _liveOperationsSection(BuildContext context) {
-    final working = _team.where((row) {
-      final attendance = row['attendance'] as Map?;
-      return attendance?['clockIn'] != null && attendance?['clockOut'] == null;
-    }).length;
-    final done = _team.where((row) {
-      final attendance = row['attendance'] as Map?;
-      return attendance?['clockIn'] != null && attendance?['clockOut'] != null;
-    }).length;
-    final live = _automations
-        .where(
-          (item) => item['status'] == 'connected' && item['isActive'] != false,
-        )
-        .length;
     return Column(
       children: [
-        if (_team.isNotEmpty)
-          _summaryCard(
-            Icons.groups_rounded,
-            'Agent Status Today',
-            '$working working · $done completed · ${_team.length - working - done} absent',
-            AppColors.success,
-            'Attendance',
-          ),
-        if (_team.isNotEmpty &&
-            (_automations.isNotEmpty || _projects.isNotEmpty))
-          const SizedBox(height: 10),
-        if (_automations.isNotEmpty)
-          _summaryCard(
-            FontAwesomeIcons.bolt.data,
-            'Automation Health',
-            '$live live · ${_automations.length - live} off',
-            AppColors.primary,
-            'Automation',
-          ),
-        if (_automations.isNotEmpty && _projects.isNotEmpty)
-          const SizedBox(height: 10),
-        if (_projects.isNotEmpty)
-          _summaryCard(
-            Icons.apartment_rounded,
-            'Project-wise Leads',
-            '${_projects.length} active projects',
-            const Color(0xFF6366F1),
-            'Projects',
-          ),
+        if (_projects.isNotEmpty) ...[
+          _projectBreakdownWidget(context),
+          const SizedBox(height: 12),
+        ],
+        if (_team.isNotEmpty) ...[
+          _liveAgentStatusWidget(context),
+          const SizedBox(height: 12),
+        ],
+        if (_automations.isNotEmpty) _automationHealthWidget(context),
       ],
+    );
+  }
+
+  /// Mirrors web's ProjectBreakdownWidget — per-project lead count + %-won
+  /// progress bar, tapping opens that project's detail screen directly.
+  Widget _projectBreakdownWidget(BuildContext context) {
+    final t = AppTheme.of(context);
+    final projects = [..._projects]
+      ..sort(
+        (a, b) => ((b['totalLeads'] as num?) ?? 0).compareTo(
+          (a['totalLeads'] as num?) ?? 0,
+        ),
+      );
+    return SoftSurface(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.apartment_rounded,
+                size: 15,
+                color: Color(0xFF6366F1),
+              ),
+            ),
+            title: const Text(
+              'Project-wise Leads',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+            ),
+            subtitle: Text(
+              '${projects.length} active project${projects.length == 1 ? '' : 's'}',
+            ),
+            trailing: TextButton(
+              onPressed: () => widget.onNavigate?.call('Projects'),
+              child: const Text('View all'),
+            ),
+          ),
+          Divider(height: 1, color: t.border),
+          for (final p in projects.take(6))
+            Builder(
+              builder: (context) {
+                final total = (p['totalLeads'] as num?)?.toInt() ?? 0;
+                final won = (p['closedWon'] as num?)?.toInt() ?? 0;
+                final pct = total > 0
+                    ? ((won / total) * 100).clamp(0, 100).round()
+                    : 0;
+                return ListTile(
+                  dense: true,
+                  onTap: () => _openProject(p['_id'] as String),
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          p['name'] as String? ?? '—',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '$total leads',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(99),
+                            child: LinearProgressIndicator(
+                              value: pct / 100,
+                              minHeight: 6,
+                              backgroundColor: t.surfaceLow,
+                              color: pct >= 50
+                                  ? AppColors.success
+                                  : AppColors.warning,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$pct% won',
+                          style: TextStyle(fontSize: 10, color: t.textSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors web's LiveAgentStatusWidget — per-agent clock-in status grid.
+  Widget _liveAgentStatusWidget(BuildContext context) {
+    final t = AppTheme.of(context);
+    final clockedIn = _team.where((row) {
+      final a = row['attendance'] as Map?;
+      return a?['clockIn'] != null && a?['clockOut'] == null;
+    }).length;
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('LIVE', style: AppText.kicker(context)),
+                    const Text(
+                      'Agent Status Today',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _smallBadge('$clockedIn online', AppColors.success),
+              const SizedBox(width: 6),
+              TextButton(
+                onPressed: () => widget.onNavigate?.call('Attendance'),
+                child: const Text('Attendance →'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final row in _team)
+                Builder(
+                  builder: (context) {
+                    final user = (row['user'] as Map?)?.cast<String, dynamic>() ?? {};
+                    final a = (row['attendance'] as Map?)?.cast<String, dynamic>();
+                    final isIn = a?['clockIn'] != null && a?['clockOut'] == null;
+                    final isDone = a?['clockIn'] != null && a?['clockOut'] != null;
+                    final color = isIn
+                        ? AppColors.success
+                        : isDone
+                        ? const Color(0xFF6366F1)
+                        : Colors.grey;
+                    final clockInTime = a?['clockIn'] != null
+                        ? DateFormat(
+                            'hh:mm a',
+                          ).format(DateTime.parse(a!['clockIn'] as String).toLocal())
+                        : null;
+                    return Container(
+                      width: 158,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: t.surfaceLow,
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: t.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              CircleAvatar(
+                                radius: 15,
+                                backgroundColor: color.withValues(alpha: 0.14),
+                                child: Text(
+                                  ((user['name'] as String? ?? '?').isNotEmpty
+                                          ? user['name'] as String
+                                          : '?')[0]
+                                      .toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    color: color,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: -1,
+                                right: -1,
+                                child: Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: t.surfaceLow,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  user['name'] as String? ?? '—',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  isIn
+                                      ? 'In since $clockInTime'
+                                      : isDone
+                                      ? 'Done for today'
+                                      : 'Not checked in',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: t.textSoft,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors web's AutomationHealthWidget — per-connection live/off status.
+  Widget _automationHealthWidget(BuildContext context) {
+    final t = AppTheme.of(context);
+    final active = _automations
+        .where((a) => a['status'] == 'connected' && a['isActive'] != false)
+        .length;
+    final inactive = _automations.length - active;
+    return SoftSurface(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('INTEGRATIONS', style: AppText.kicker(context)),
+                    const Text(
+                      'Automation Health',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (active > 0) _smallBadge('$active live', AppColors.success),
+              if (active > 0 && inactive > 0) const SizedBox(width: 6),
+              if (inactive > 0) _smallBadge('$inactive off', AppColors.danger),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final a in _automations.take(6))
+                Builder(
+                  builder: (context) {
+                    final isLive =
+                        a['status'] == 'connected' && a['isActive'] != false;
+                    return Container(
+                      width: 158,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: t.surfaceLow,
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(color: t.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _platformIcon(a['platform'] as String?),
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (a['name'] as String?)?.isNotEmpty == true
+                                      ? a['name'] as String
+                                      : a['platform'] as String? ?? '—',
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  a['platform'] as String? ?? '',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    color: t.textSoft,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isLive
+                                  ? AppColors.success
+                                  : AppColors.danger,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1367,23 +1779,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     ),
   );
 
-  Widget _summaryCard(
-    IconData icon,
-    String title,
-    String subtitle,
-    Color color,
-    String destination,
-  ) => SoftSurface(
-    padding: EdgeInsets.zero,
-    child: ListTile(
-      onTap: () => widget.onNavigate?.call(destination),
-      leading: Icon(icon, color: color),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.arrow_forward_rounded, size: 18),
-    ),
-  );
-
   Widget _smallBadge(String label, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: BoxDecoration(
@@ -1435,6 +1830,55 @@ class _DashboardScreenState extends State<DashboardScreen>
             totalLeads: (a?['allTimeTotal'] as num?)?.toInt() ?? 0,
             onNavigate: (label) => widget.onNavigate?.call(label),
           ),
+          if (role == 'agent' &&
+              a != null &&
+              ((a['allTimeTotal'] as num?)?.toInt() ?? 0) == 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: AppColors.warning,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'No leads assigned to you yet',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Ask your manager to assign leads so they appear here.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppTheme.of(context).textSoft,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           _attendanceCard(context),
           if (_analyticsError) ...[
             const SizedBox(height: 10),
@@ -1475,12 +1919,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                 crossAxisSpacing: 10,
                 childAspectRatio: 1.85,
                 children: [
-                  _MetricCard(
-                    label: 'Total Leads',
-                    value: '${a['allTimeTotal'] ?? 0}',
-                    sub: 'All time',
-                    color: AppColors.primary,
-                    onTap: () => widget.onNavigate?.call('Leads'),
+                  Builder(
+                    builder: (context) {
+                      final delta = _calcDelta(
+                        (a['thisMonthLeads'] as num?)?.toInt(),
+                        (a['lastMonthLeads'] as num?)?.toInt(),
+                      );
+                      return _MetricCard(
+                        label: 'Total Leads',
+                        value: '${a['allTimeTotal'] ?? 0}',
+                        sub: delta != null
+                            ? '${delta >= 0 ? '↑' : '↓'} ${delta.abs()}% vs last month'
+                            : 'All time',
+                        subColor: delta == null
+                            ? null
+                            : delta >= 0
+                            ? AppColors.success
+                            : AppColors.danger,
+                        color: AppColors.primary,
+                        onTap: () => widget.onNavigate?.call('Leads'),
+                      );
+                    },
                   ),
                   _MetricCard(
                     label: 'Pipeline',
@@ -1817,7 +2276,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             .indexed)
                       ListTile(
                         dense: true,
-                        onTap: () => widget.onNavigate?.call('Performance'),
+                        onTap: () => _focusAgent(ag['_id'] as String?),
                         leading: CircleAvatar(
                           radius: 14,
                           backgroundColor: AppColors.primary.withValues(
@@ -1869,7 +2328,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       .map((item) {
                         return ListTile(
                           dense: true,
-                          onTap: () => widget.onNavigate?.call('Leads'),
+                          onTap: () => _openLead(item['leadId'] as String?),
                           leading: const Icon(
                             Icons.circle,
                             size: 8,
@@ -1968,6 +2427,7 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final String sub;
   final Color color;
+  final Color? subColor;
   final VoidCallback? onTap;
 
   const _MetricCard({
@@ -1975,6 +2435,7 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     required this.sub,
     required this.color,
+    this.subColor,
     this.onTap,
   });
 
@@ -2017,7 +2478,8 @@ class _MetricCard extends StatelessWidget {
             sub,
             style: TextStyle(
               fontSize: 9.5,
-              color: AppTheme.of(context).textSoft,
+              fontWeight: subColor != null ? FontWeight.w700 : FontWeight.w400,
+              color: subColor ?? AppTheme.of(context).textSoft,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

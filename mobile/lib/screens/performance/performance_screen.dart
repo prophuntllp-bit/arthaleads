@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/deep_link.dart';
 import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/glass.dart';
@@ -34,12 +35,50 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   DateTime? _dateFrom;
   DateTime? _dateTo;
   String _filterMemberId = '';
+  String? _focusedMemberId;
+  final Map<String, GlobalKey> _memberKeys = {};
 
   @override
   void initState() {
     super.initState();
     _load();
     _loadCallAnalytics();
+    DeepLink.focusAgentId.addListener(_maybeApplyFocus);
+  }
+
+  @override
+  void dispose() {
+    DeepLink.focusAgentId.removeListener(_maybeApplyFocus);
+    super.dispose();
+  }
+
+  GlobalKey _keyFor(String id) => _memberKeys.putIfAbsent(id, () => GlobalKey());
+
+  /// Dashboard's Top Agents leaderboard sets DeepLink.focusAgentId before
+  /// switching tabs — scroll to and briefly highlight that member's card.
+  /// Called both from the listener (already-cached screen) and after _load()
+  /// resolves (first-ever visit, where the member list wasn't ready yet).
+  void _maybeApplyFocus() {
+    final id = DeepLink.focusAgentId.value;
+    if (id == null) return;
+    if (!_members.any((m) => m['_id'] == id)) return;
+    DeepLink.focusAgentId.value = null;
+    setState(() => _focusedMemberId = id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _memberKeys[id]?.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 400),
+          alignment: 0.1,
+        );
+      }
+    });
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted && _focusedMemberId == id) {
+        setState(() => _focusedMemberId = null);
+      }
+    });
   }
 
   Future<void> _loadCallAnalytics() async {
@@ -81,6 +120,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
         ),
       );
       if (mounted) setState(() => _members = list);
+      _maybeApplyFocus();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -681,8 +721,11 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
           for (final (i, m) in members.indexed)
             FadeSlideIn(
+              key: _keyFor(m['_id'] as String),
               delay: Duration(milliseconds: 40 * i),
-              child: Column(children: _memberCard(m)),
+              child: Column(
+                children: _memberCard(m, isFocused: m['_id'] == _focusedMemberId),
+              ),
             ),
         ],
       ),
@@ -828,7 +871,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
     );
   }
 
-  List<Widget> _memberCard(Map<String, dynamic> m) {
+  List<Widget> _memberCard(Map<String, dynamic> m, {bool isFocused = false}) {
     final pipeline = (m['pipeline'] as Map?)?.cast<String, dynamic>() ?? {};
     final project = (m['project'] as Map?)?.cast<String, dynamic>() ?? {};
     final hasPipeline = ((pipeline['totalAssigned'] as num?) ?? 0) > 0;
@@ -838,6 +881,9 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
       SoftSurface(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
+        border: isFocused
+            ? Border.all(color: AppColors.primary, width: 2)
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
