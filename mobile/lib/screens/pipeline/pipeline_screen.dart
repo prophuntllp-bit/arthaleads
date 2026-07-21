@@ -341,6 +341,14 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                 itemCount: stageLeads.length,
                                 itemBuilder: (context, i) {
                                   final lead = stageLeads[i];
+                                  // `remark` is a fixed Contacted/Not-Contacted
+                                  // status, not a note — mirror web's note
+                                  // preview (remark1 + remark2 + remarkNote).
+                                  final noteText = [
+                                    lead['remark1'],
+                                    lead['remark2'],
+                                    lead['remarkNote'],
+                                  ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
                                   return FadeSlideIn(
                                     delay: Duration(
                                       milliseconds: 20 * (i % 10),
@@ -405,6 +413,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                         launchUrl(
                                                           Uri.parse('tel:$p'),
                                                         );
+                                                        _markContacted(lead);
                                                       }
                                                     },
                                                     child: Icon(
@@ -506,20 +515,10 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                   ],
                                                 ),
                                               ],
-                                              if ((lead['remark'] as String? ??
-                                                          '')
-                                                      .isNotEmpty ||
-                                                  (lead['remark1'] as String? ??
-                                                          '')
-                                                      .isNotEmpty) ...[
+                                              if (noteText.isNotEmpty) ...[
                                                 const SizedBox(height: 4),
                                                 Text(
-                                                  (lead['remark'] as String? ??
-                                                              '')
-                                                          .isNotEmpty
-                                                      ? lead['remark'] as String
-                                                      : lead['remark1']
-                                                            as String,
+                                                  noteText,
                                                   style: Theme.of(context)
                                                       .textTheme
                                                       .bodySmall

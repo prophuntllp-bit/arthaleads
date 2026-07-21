@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -60,10 +61,21 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
   late final _formId = TextEditingController(
     text: widget.automation?['formId'] as String? ?? '',
   );
+  late final _externalSourceId = TextEditingController(
+    text: widget.automation?['externalSourceId'] as String? ?? '',
+  );
+  late final _externalSourceUrl = TextEditingController(
+    text: widget.automation?['externalSourceUrl'] as String? ?? '',
+  );
+  late final _mappingNotes = TextEditingController(
+    text: widget.automation?['mappingNotes'] as String? ?? '',
+  );
   late String _platform =
       widget.automation?['platform'] as String? ??
       widget.initialPlatform ??
       'Google';
+  late String _status = widget.automation?['status'] as String? ?? 'draft';
+  late bool _isActive = widget.automation?['isActive'] as bool? ?? true;
   bool _saving = false;
 
   bool get _isEdit => widget.automation != null;
@@ -76,6 +88,9 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
     _leadSourceLabel.dispose();
     _pageId.dispose();
     _formId.dispose();
+    _externalSourceId.dispose();
+    _externalSourceUrl.dispose();
+    _mappingNotes.dispose();
     super.dispose();
   }
 
@@ -98,6 +113,13 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
         'leadSourceLabel': _leadSourceLabel.text.trim(),
       if (_isFacebook) 'pageId': _pageId.text.trim(),
       if (_isFacebook) 'formId': _formId.text.trim(),
+      if (!_isFacebook) ...{
+        'status': _status,
+        'externalSourceId': _externalSourceId.text.trim(),
+        'externalSourceUrl': _externalSourceUrl.text.trim(),
+        'mappingNotes': _mappingNotes.text.trim(),
+        'isActive': _isActive,
+      },
     };
     try {
       if (_isEdit) {
@@ -191,6 +213,22 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
             ] else ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
+                child: DropdownButtonFormField<String>(
+                  initialValue: _status,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                    DropdownMenuItem(value: 'connected', child: Text('Connected')),
+                    DropdownMenuItem(value: 'paused', child: Text('Paused')),
+                  ],
+                  onChanged: (v) => setState(() => _status = v ?? 'draft'),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: TextFormField(
                   controller: _leadSourceLabel,
                   decoration: InputDecoration(
@@ -199,6 +237,38 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                         ? ''
                         : _platform,
                     isDense: true,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: TextFormField(
+                  controller: _externalSourceId,
+                  decoration: const InputDecoration(
+                    labelText: 'External Source ID',
+                    hintText: 'Campaign or partner ID',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: TextFormField(
+                  controller: _externalSourceUrl,
+                  decoration: InputDecoration(
+                    labelText: 'External Source URL',
+                    hintText: 'Landing page URL',
+                    isDense: true,
+                    suffixIcon: _externalSourceUrl.text.trim().isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Open',
+                            icon: const Icon(Icons.open_in_new, size: 18),
+                            onPressed: () => launchUrl(
+                              Uri.parse(_externalSourceUrl.text.trim()),
+                              mode: LaunchMode.externalApplication,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -264,6 +334,81 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                     ),
                   ],
                 ),
+              ),
+              if (_platform == 'Custom') ...[
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final token = widget.automation?['verifyToken'] as String?;
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardTheme.color,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Auth Token', style: Theme.of(context).textTheme.labelLarge),
+                          const SizedBox(height: 6),
+                          if (token != null && token.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    token,
+                                    style: const TextStyle(fontSize: 12, color: AppColors.primary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.copy, size: 16),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: token));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Token copied')),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'Send this in the request body as "token". Keep it secret.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ] else
+                            Text(
+                              'A unique auth token will be generated when you save this source. Reopen it here to copy the token.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: TextFormField(
+                  controller: _mappingNotes,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    hintText: 'Notes about field mapping or setup details',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('This source is active'),
+                value: _isActive,
+                onChanged: (v) => setState(() => _isActive = v),
               ),
             ],
             const SizedBox(height: 20),

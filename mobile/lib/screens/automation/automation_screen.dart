@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
@@ -1634,6 +1635,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
     );
   }
 
+  String _fmtSyncDate(dynamic value) {
+    final date = DateTime.tryParse(value?.toString() ?? '')?.toLocal();
+    return date == null ? '—' : DateFormat('d MMM yyyy, hh:mm a').format(date);
+  }
+
   Widget _connectionCard(Map<String, dynamic> a) {
     final active = a['isActive'] != false;
     final platform = a['platform']?.toString() ?? 'Custom';
@@ -1719,6 +1725,123 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 ],
               ),
               if (tokenBadge != null) tokenBadge,
+            ] else if (platform == 'Website Form') ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.of(context).surfaceLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if ((a['siteName'] as String? ?? '').isNotEmpty ||
+                        (a['siteUrl'] as String? ?? '').isNotEmpty) ...[
+                      Text(
+                        'Connected Website',
+                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                      ),
+                      Text(
+                        (a['siteName'] as String?)?.isNotEmpty == true
+                            ? a['siteName'] as String
+                            : 'WordPress Site',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      if ((a['siteUrl'] as String? ?? '').isNotEmpty)
+                        Text(
+                          a['siteUrl'] as String,
+                          style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                        ),
+                      const SizedBox(height: 6),
+                    ],
+                    if ((a['connectedForms'] as List?)?.isNotEmpty ?? false) ...[
+                      Text(
+                        'Active Forms',
+                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: (a['connectedForms'] as List)
+                            .map(
+                              (f) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(color: AppColors.success.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  '✓ $f',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.success),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    if (endpoint != null)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              endpoint,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 11, color: AppColors.primary),
+                            ),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => Clipboard.setData(ClipboardData(text: endpoint)),
+                            icon: const Icon(Icons.copy, size: 16),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ] else if (platform == 'Google' && a['mode'] == 'oauth') ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.of(context).surfaceLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Google Ads Account',
+                      style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                    ),
+                    Text(
+                      (a['googleCustomerName'] as String?)?.isNotEmpty == true
+                          ? a['googleCustomerName'] as String
+                          : 'Not selected',
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if ((a['googleCustomerId'] as String? ?? '').isNotEmpty)
+                      Text(
+                        a['googleCustomerId'] as String,
+                        style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      a['lastSyncAt'] != null
+                          ? 'Last synced: ${_fmtSyncDate(a['lastSyncAt'])} — Edit to sync now.'
+                          : 'Not synced yet — Edit to sync now.',
+                      style: TextStyle(fontSize: 11, color: AppTheme.of(context).textSoft),
+                    ),
+                  ],
+                ),
+              ),
             ] else if (endpoint != null) ...[
               const SizedBox(height: 8),
               Row(
