@@ -517,7 +517,7 @@ class _LeadsTabState extends State<_LeadsTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${res.data['imported'] ?? dataRows.length}, '
+              'Imported ${res.data['inserted'] ?? dataRows.length}, '
               '${res.data['duplicates'] ?? 0} duplicate(s) skipped',
             ),
           ),

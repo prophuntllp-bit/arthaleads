@@ -59,12 +59,14 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   List<Map<String, dynamic>> get _fbNotes =>
       _notes.where((n) => (n['text'] as String? ?? '').contains(_fbErrorPattern)).toList();
 
-  Future<void> _patch(Map<String, dynamic> updates, {bool refreshList = false}) async {
+  Future<void> _patch(Map<String, dynamic> updates, {bool refreshList = false, bool usePut = false}) async {
     setState(() => _saving = true);
     try {
       final res = _isProject
           ? await _api.dio.patch('/projects/${lead['projectId']}/leads/${lead['_id']}', data: updates)
-          : await _api.dio.patch('/leads/${lead['_id']}', data: updates);
+          : usePut
+              ? await _api.dio.put('/leads/${lead['_id']}', data: updates)
+              : await _api.dio.patch('/leads/${lead['_id']}', data: updates);
       final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
       setState(() => lead = {...lead, ...updates, ...fresh});
       widget.onUpdated(lead);
@@ -98,10 +100,37 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       ),
     );
     if (v != null && v != (lead[field] ?? '')) {
-      // Plain-lead remark note maps to `remarkNote` on the PATCH route
-      final key = (!_isProject && field == 'remark') ? 'remarkNote' : field;
-      await _patch({key: v});
+      await _patch({field: v});
       setState(() => lead[field] = v);
+    }
+  }
+
+  /// `remark` is a fixed Contacted/Not Contacted status (matching web's
+  /// ContactStatusCell/RemarkCell), not free text — plain leads save it via
+  /// PUT /leads/:id, project leads via the dedicated remark endpoint which
+  /// also stamps remarkUpdatedBy/At for the audit trail.
+  Future<void> _setContactStatus(String v) async {
+    if (v == (lead['remark'] as String? ?? '')) return;
+    setState(() => _saving = true);
+    try {
+      final res = _isProject
+          ? await _api.dio.patch(
+              '/projects/${lead['projectId']}/leads/${lead['_id']}/remark',
+              data: {'remark': v, 'remarkNote': lead['remarkNote'] ?? ''},
+            )
+          : await _api.dio.put('/leads/${lead['_id']}', data: {'remark': v});
+      final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
+      setState(() => lead = {...lead, 'remark': v, ...fresh});
+      widget.onUpdated(lead);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Failed to save remark')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -290,7 +319,9 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       ),
     );
     if (v != null && v != lead['status']) {
-      await _patch({'status': v});
+      // Plain leads' PATCH /leads/:id allow-list excludes `status` (only PUT
+      // supports full-schema fields) — project leads' PATCH route does allow it.
+      await _patch({'status': v}, usePut: !_isProject);
       setState(() => lead['status'] = v);
     }
   }
@@ -523,17 +554,41 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 icon: Icons.alarm_add,
               ),
 
+              // ── Contact status (fixed Contacted/Not Contacted, matching web) ──
+              Text('Contact Status', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Contacted', style: TextStyle(fontSize: 12)),
+                    selected: (lead['remark'] as String? ?? '') == 'Contacted',
+                    selectedColor: AppColors.success.withValues(alpha: 0.2),
+                    onSelected: (_) => _setContactStatus('Contacted'),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Not Contacted', style: TextStyle(fontSize: 12)),
+                    selected: (lead['remark'] as String? ?? '') == 'Not Contacted',
+                    selectedColor: AppColors.danger.withValues(alpha: 0.2),
+                    onSelected: (_) => _setContactStatus('Not Contacted'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
               // ── Remarks ──
-              _row('Remark', lead['remark'] as String? ?? '—',
-                  onTap: () => _editText('remark', 'Remark'), icon: Icons.notes),
               _row('Remark 1', lead['remark1'] as String? ?? '—',
                   onTap: () => _editText('remark1', 'Remark 1'), icon: Icons.notes),
               _row('Remark 2', lead['remark2'] as String? ?? '—',
                   onTap: () => _editText('remark2', 'Remark 2'), icon: Icons.notes),
-              _row('Remark 3', lead['remark3'] as String? ?? '—',
-                  onTap: () => _editText('remark3', 'Remark 3'), icon: Icons.notes),
-              _row('Remark 4', lead['remark4'] as String? ?? '—',
-                  onTap: () => _editText('remark4', 'Remark 4'), icon: Icons.notes),
+              // Remark 3/4 only exist on project leads — the plain-lead PATCH
+              // route's allow-list doesn't support them (would 400).
+              if (_isProject) ...[
+                _row('Remark 3', lead['remark3'] as String? ?? '—',
+                    onTap: () => _editText('remark3', 'Remark 3'), icon: Icons.notes),
+                _row('Remark 4', lead['remark4'] as String? ?? '—',
+                    onTap: () => _editText('remark4', 'Remark 4'), icon: Icons.notes),
+              ],
 
               // ── Read-only info ──
               if (!_isProject) ...[

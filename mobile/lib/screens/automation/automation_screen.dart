@@ -639,51 +639,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
       );
       final results = (res.data['results'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      final checks = results.isEmpty
-          ? <Map<String, dynamic>>[]
-          : (results.first['checks'] as List? ?? [])
-                .cast<Map<String, dynamic>>();
+      final diag = results.isEmpty
+          ? {'checks': [], 'message': res.data['message']}
+          : results.first;
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Facebook Diagnostics'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: checks.isEmpty
-                ? Text(
-                    res.data['message']?.toString() ?? 'No diagnostic results',
-                  )
-                : ListView(
-                    shrinkWrap: true,
-                    children: checks
-                        .map(
-                          (check) => ListTile(
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(
-                              check['ok'] == true
-                                  ? Icons.check_circle
-                                  : Icons.error_outline,
-                              color: check['ok'] == true
-                                  ? AppColors.success
-                                  : AppColors.danger,
-                            ),
-                            title: Text(check['label']?.toString() ?? ''),
-                            subtitle: Text(check['detail']?.toString() ?? ''),
-                          ),
-                        )
-                        .toList(),
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
+      await _showFacebookDiagnosticDialog(automation, diag);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -696,7 +656,95 @@ class _AutomationScreenState extends State<AutomationScreen> {
     }
   }
 
-  Future<void> _resubscribeFacebook(Map<String, dynamic> automation) async {
+  Future<void> _showFacebookDiagnosticDialog(
+    Map<String, dynamic> automation,
+    Map<String, dynamic> diag,
+  ) async {
+    final checks = (diag['checks'] as List? ?? []).cast<Map<String, dynamic>>();
+    final canResubscribe = diag['canResubscribe'] == true;
+    var resubscribing = false;
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return AlertDialog(
+            title: const Text('Facebook Diagnostics'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (checks.isEmpty)
+                    Text(
+                      diag['message']?.toString() ?? 'No diagnostic results',
+                    )
+                  else
+                    ...checks.map(
+                      (check) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          check['ok'] == true
+                              ? Icons.check_circle
+                              : Icons.error_outline,
+                          color: check['ok'] == true
+                              ? AppColors.success
+                              : AppColors.danger,
+                        ),
+                        title: Text(check['label']?.toString() ?? ''),
+                        subtitle: Text(check['detail']?.toString() ?? ''),
+                      ),
+                    ),
+                  if (canResubscribe) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: resubscribing
+                            ? null
+                            : () async {
+                                setSheetState(() => resubscribing = true);
+                                final ok = await _resubscribeFacebook(automation);
+                                if (!ctx.mounted) return;
+                                Navigator.pop(ctx);
+                                // Re-check so the user sees it turn green, matching web.
+                                if (ok) _diagnoseFacebook(automation);
+                              },
+                        icon: resubscribing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.refresh, size: 18),
+                        label: Text(
+                          resubscribing
+                              ? 'Re-subscribing…'
+                              : 'Re-subscribe Page to leadgen webhook',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<bool> _resubscribeFacebook(Map<String, dynamic> automation) async {
     try {
       await _api.dio.post(
         '/automations/facebook/resubscribe',
@@ -711,6 +759,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
         );
       }
       _load();
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -720,6 +769,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
           ),
         );
       }
+      return false;
     }
   }
 
