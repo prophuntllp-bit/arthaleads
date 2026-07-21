@@ -107,21 +107,25 @@ const leadController = {
 
   async bulkImport(req, res, next) {
     try {
-      const imported = await leadService.bulkImport(req.body.leads, req.user);
+      const { inserted, duplicates } = await leadService.bulkImport(req.body.leads, req.user);
       invalidateAnalyticsCache(req.user.orgId);
+      const message = duplicates > 0
+        ? `${inserted.length} lead(s) imported, ${duplicates} duplicate(s) skipped`
+        : `${inserted.length} lead(s) imported successfully`;
       res.status(201).json({
         success: true,
-        count: imported.length,
-        message: `${imported.length} lead(s) imported successfully`,
-        data: imported,
+        count: inserted.length,
+        duplicates,
+        message,
+        data: inserted,
       });
       // Single notification for bulk import - scoped to this org
-      if (imported.length > 0) {
+      if (inserted.length > 0) {
         sendPushToAll({
           type: "bulk_import",
-          title: `${imported.length} New Leads Added`,
-          body: `${req.user.name} just imported ${imported.length} leads. Check now!`,
-          data: { count: imported.length },
+          title: `${inserted.length} New Leads Added`,
+          body: `${req.user.name} just imported ${inserted.length} leads. Check now!`,
+          data: { count: inserted.length },
         }, req.user.orgId).catch(() => {});
       }
     } catch (err) {

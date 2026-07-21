@@ -431,6 +431,32 @@ const leadService = {
 
   // ── Analytics ──────────────────────────────────────────────────────────────
   async bulkImport(leads, user) {
+    // Normalize phone to digits only so format differences don't create false
+    // duplicates, e.g. "+91 98765-43210", "9876543210", "098765 43210" all match
+    // (mirrors projectService.importLeads' Prospective-leads dedup logic)
+    const normalizePhone = (p) => String(p).replace(/\D/g, "").replace(/^91(\d{10})$/, "$1");
+
+    // Fetch every phone already in this org for O(1) lookup
+    const existing = await Lead.find({ orgId: user.orgId, isDeleted: { $ne: true } }, "phone").lean();
+    const existingSet = new Set(existing.map((l) => normalizePhone(l.phone)));
+
+    // Split: also deduplicate within the file itself (same number appearing twice)
+    const seenInBatch = new Set();
+    const newLeads = [];
+    let duplicates = 0;
+
+    for (const item of leads) {
+      const norm = normalizePhone(item.phone);
+      if (existingSet.has(norm) || seenInBatch.has(norm)) {
+        duplicates++;
+      } else {
+        seenInBatch.add(norm);
+        newLeads.push(item);
+      }
+    }
+
+    if (!newLeads.length) return { inserted: [], duplicates };
+
     // Check if org has auto-assign enabled
     const org = await Organization.findById(user.orgId).select("autoAssign").lean();
     const shouldAutoAssign = org?.autoAssign !== false;
@@ -443,7 +469,7 @@ const leadService = {
       try { autoAssignee = await getNextAssignee(user.orgId); } catch { /* no agents */ }
     }
 
-    for (const item of leads) {
+    for (const item of newLeads) {
       if (item.assignedTo && !assigneeCache[item.assignedTo]) {
         const agent = await User.findOne({ _id: item.assignedTo, orgId: user.orgId });
         if (!agent) throw new AppError(`Assigned agent not found: ${item.assignedTo}`, 404);
@@ -452,7 +478,7 @@ const leadService = {
     }
 
     // Phase 2: build all docs in memory
-    const docs = leads.map((item) => {
+    const docs = newLeads.map((item) => {
       // Use explicit assignee if provided, otherwise auto-assign
       const effectiveAssignee = item.assignedTo
         ? { _id: item.assignedTo, name: assigneeCache[item.assignedTo] || "" }
@@ -478,7 +504,7 @@ const leadService = {
 
     // Phase 3: insertMany is atomic per batch; if it throws, nothing is persisted
     const inserted = await Lead.insertMany(docs, { ordered: true });
-    return inserted;
+    return { inserted, duplicates };
   },
 
   async getAllUnified(query, user) {
