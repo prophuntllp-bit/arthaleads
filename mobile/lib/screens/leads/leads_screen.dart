@@ -86,20 +86,12 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   /// Dashboard (and eventually push notifications) can ask this tab to open
   /// a specific lead's detail sheet once it's visible — see core/deep_link.dart.
-  Future<void> _handleDeepLink() async {
+  /// _openDetail does its own full-lead fetch, so this just hands off the id.
+  void _handleDeepLink() {
     final id = DeepLink.openLeadId.value;
     if (id == null) return;
     DeepLink.openLeadId.value = null;
-    if (!mounted) return;
-    try {
-      final res = await _api.dio.get('/leads/$id');
-      final lead = (res.data['data'] as Map?)?.cast<String, dynamic>();
-      if (lead != null && mounted) _openDetail(lead);
-    } catch (e) {
-      if (mounted) {
-        _snack(ApiClient.errorMessage(e, 'Could not open lead'), error: true);
-      }
-    }
+    _openDetail({'_id': id});
   }
 
   Future<void> _loadMeta() async {
@@ -278,11 +270,18 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _bulkDelete() async {
+    // super_admin permanently hard-deletes leads — everyone else soft-deletes
+    // to Dump. Matches web's ConfirmDialog exactly.
+    final isSuperAdmin = context.read<AuthState>().role == 'super_admin';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Move to Dump?'),
-        content: Text('${_selected.length} lead(s) will be moved to the Dump.'),
+        title: Text(isSuperAdmin ? 'Delete leads?' : 'Move to Dump?'),
+        content: Text(
+          isSuperAdmin
+              ? '${_selected.length} lead(s) will be permanently deleted. This cannot be undone.'
+              : '${_selected.length} lead(s) will be moved to the Dump.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -290,9 +289,9 @@ class LeadsScreenState extends State<LeadsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Move',
-              style: TextStyle(color: AppColors.danger),
+            child: Text(
+              isSuperAdmin ? 'Delete' : 'Move',
+              style: const TextStyle(color: AppColors.danger),
             ),
           ),
         ],
@@ -303,7 +302,9 @@ class LeadsScreenState extends State<LeadsScreen> {
     try {
       if (sel.plainIds.isNotEmpty) {
         await _api.dio.delete('/leads/bulk', data: {'ids': sel.plainIds});
-        _snack('${sel.plainIds.length} lead(s) moved to Dump');
+        _snack(
+          '${sel.plainIds.length} lead(s) ${isSuperAdmin ? 'deleted' : 'moved to Dump'}',
+        );
       }
       if (sel.skipped > 0) {
         _snack('${sel.skipped} project lead(s) skipped', error: true);
@@ -396,12 +397,37 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _openDetail(Map<String, dynamic> lead) async {
+    // /leads/unified's list projection is deliberately narrow (perf) and
+    // omits several Info-tab-only fields (propertyType, bhk, purpose,
+    // preferredLocation, streetAddress, city, followUpNote, remarkNote,
+    // formResponses) — fetch the full doc before opening so those aren't
+    // silently blank. Project-lead rows are already complete, skip the fetch.
+    var detail = lead;
+    if (lead['_type'] != 'project') {
+      try {
+        final res = await _api.dio.get('/leads/${lead['_id']}');
+        final fresh = (res.data['data'] as Map?)?.cast<String, dynamic>();
+        if (fresh != null) detail = {...lead, ...fresh};
+      } catch (e) {
+        // A deep-linked open only ever has {'_id': id} — with no fetch and
+        // no list-row data to fall back on, there's nothing worth showing.
+        if (lead['name'] == null) {
+          if (mounted) {
+            _snack(ApiClient.errorMessage(e, 'Could not open lead'), error: true);
+          }
+          return;
+        }
+        // Otherwise this came from a list-row tap — fall back to that data
+        // rather than blocking the sheet over a transient network error.
+      }
+    }
+    if (!mounted) return;
     final result = await showModalBottomSheet<dynamic>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => LeadDetailSheet(
-        lead: lead,
+        lead: detail,
         projects: _projects,
         onUpdated: _upsertRow,
       ),

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/badges.dart';
@@ -327,16 +329,26 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   }
 
   Future<void> _deleteLead() async {
+    // super_admin permanently hard-deletes (both plain and project leads) —
+    // everyone else soft-deletes to Dump. Matches web's ConfirmDialog exactly.
+    final isSuperAdmin = context.read<AuthState>().role == 'super_admin';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Move to Dump?'),
-        content: Text('"${lead['name']}" will be moved to the Dump.'),
+        title: Text(isSuperAdmin ? 'Delete Lead?' : 'Move to Dump?'),
+        content: Text(
+          isSuperAdmin
+              ? '"${lead['name']}" will be permanently deleted. This cannot be undone.'
+              : '"${lead['name']}" will be moved to the Dump.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Move', style: TextStyle(color: AppColors.danger)),
+            child: Text(
+              isSuperAdmin ? 'Delete' : 'Move',
+              style: const TextStyle(color: AppColors.danger),
+            ),
           ),
         ],
       ),
@@ -349,13 +361,15 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
         await _api.dio.delete('/leads/bulk', data: {'ids': [lead['_id']]});
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Moved to Dump')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(isSuperAdmin ? 'Lead deleted' : 'Moved to Dump'),
+        ));
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to move to Dump')),
+          content: Text(ApiClient.errorMessage(e, 'Failed to delete lead')),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -590,8 +604,20 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     onTap: () => _editText('remark4', 'Remark 4'), icon: Icons.notes),
               ],
 
-              // ── Read-only info ──
+              // ── Read-only info (plain leads only — LeadDetail.jsx's Info tab) ──
               if (!_isProject) ...[
+                if ((lead['propertyType'] as String? ?? '').isNotEmpty)
+                  _row('Property Type', lead['propertyType'] as String, icon: Icons.home_outlined),
+                if ((lead['bhk'] as String? ?? '').isNotEmpty)
+                  _row('BHK', lead['bhk'] as String, icon: Icons.meeting_room_outlined),
+                if ((lead['purpose'] as String? ?? '').isNotEmpty)
+                  _row('Purpose', lead['purpose'] as String, icon: Icons.flag_outlined),
+                if ((lead['preferredLocation'] as String? ?? '').isNotEmpty)
+                  _row('Preferred Location', lead['preferredLocation'] as String, icon: Icons.place_outlined),
+                if ((lead['streetAddress'] as String? ?? '').isNotEmpty)
+                  _row('Street Address', lead['streetAddress'] as String, icon: Icons.signpost_outlined),
+                if ((lead['city'] as String? ?? '').isNotEmpty)
+                  _row('City', lead['city'] as String, icon: Icons.location_city_outlined),
                 _row('Source', lead['source'] as String? ?? '—', icon: FontAwesomeIcons.globe.data),
                 if (budget != null && (budget['min'] != null || budget['max'] != null))
                   _row(
@@ -601,6 +627,21 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   ),
                 if ((lead['requirements'] as String? ?? '').isNotEmpty)
                   _row('Requirements', lead['requirements'] as String, icon: Icons.list_alt),
+                _row('Created On', _fmtDate(lead['createdAt'] as String?), icon: Icons.event_note_outlined),
+                if ((lead['followUpNote'] as String? ?? '').isNotEmpty)
+                  _row('Follow-up Note', lead['followUpNote'] as String, icon: Icons.sticky_note_2_outlined),
+                if ((lead['remarkNote'] as String? ?? '').isNotEmpty)
+                  _row('Remark / Imported Info', lead['remarkNote'] as String, icon: Icons.description_outlined),
+                if ((lead['formResponses'] as List?)?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 8),
+                  Text('FORM QUESTIONS', style: AppText.kicker(context)),
+                  const SizedBox(height: 4),
+                  for (final item in (lead['formResponses'] as List).cast<Map<String, dynamic>>())
+                    _row(
+                      item['label'] as String? ?? '—',
+                      (item['value'] as String? ?? '').isNotEmpty ? item['value'] as String : '—',
+                    ),
+                ],
               ],
               if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
                 _row('Assigned to', lead['assignedToName'] as String, icon: Icons.person),
