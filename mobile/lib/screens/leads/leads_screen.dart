@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
@@ -22,6 +21,7 @@ import '../../widgets/qr_sheet.dart';
 import 'lead_detail_sheet.dart';
 import 'lead_filters.dart';
 import 'lead_form.dart';
+import 'lead_import.dart';
 import 'wa_broadcast_sheet.dart';
 
 /// Unified Leads list — mirrors frontend/src/pages/Leads.jsx.
@@ -462,64 +462,24 @@ class LeadsScreenState extends State<LeadsScreen> {
     try {
       final picked = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['csv'],
+        allowedExtensions: ['csv', 'xlsx', 'xls', 'txt'],
       );
       final path = picked?.files.single.path;
       if (path == null) return;
       setState(() => _importing = true);
-      final content = await File(path).readAsString();
-      final rows = const CsvToListConverter(
-        eol: '\n',
-      ).convert(content, shouldParseNumbers: false);
-      if (rows.isEmpty) return;
-      final headers = rows.first
-          .map((value) => value.toString().trim().toLowerCase())
-          .toList();
-      int column(List<String> names) =>
-          headers.indexWhere((header) => names.any(header.contains));
-      final name = column(['name', 'full name']);
-      final phone = column(['phone', 'mobile', 'contact']);
-      final email = column(['email']);
-      final source = column(['source', 'platform']);
-      final remark = column(['remark', 'note']);
-      if (name < 0 || phone < 0) {
-        _snack('CSV must include Name and Phone columns', error: true);
-        return;
-      }
-      String cell(List<dynamic> row, int index) =>
-          index >= 0 && index < row.length ? row[index].toString().trim() : '';
-      final leads = rows
-          .skip(1)
-          .map((row) {
-            return {
-              'name': cell(row, name),
-              'phone': cell(row, phone),
-              if (email >= 0) 'email': cell(row, email),
-              'source': source >= 0 && cell(row, source).isNotEmpty
-                  ? cell(row, source)
-                  : 'Manual',
-              if (remark >= 0) 'remark': cell(row, remark),
-              'status': 'New',
-            };
-          })
-          .where((lead) {
-            return (lead['name'] as String).isNotEmpty &&
-                (lead['phone'] as String).isNotEmpty;
-          })
-          .toList();
-      if (leads.isEmpty) {
-        _snack('No valid leads found in this file', error: true);
-        return;
-      }
+      final result = await parseLeadImportFile(path, _agents);
       final response = await _api.dio.post(
         '/leads/import',
-        data: {'leads': leads},
+        data: {'leads': result.leads},
       );
+      if (result.notice != null) _snack(result.notice!);
       _snack(
         response.data['message']?.toString() ??
-            '${leads.length} leads imported',
+            '${result.leads.length} leads imported',
       );
       await _load(reset: true);
+    } on ImportEmptyException catch (e) {
+      _snack(e.message, error: true);
     } catch (error) {
       _snack(ApiClient.errorMessage(error, 'Import failed'), error: true);
     } finally {
