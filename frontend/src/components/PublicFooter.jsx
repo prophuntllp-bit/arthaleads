@@ -86,7 +86,15 @@ export default function PublicFooter() {
 
         <div style={{ borderTop: `1px solid ${border}`, paddingTop: "1.5rem" }} className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <p style={{ color: text }} className="text-xs">© {new Date().getFullYear()} Arthaleads · Pune, India</p>
-          <p style={{ color: text }} className="text-xs">Built for Indian real estate.</p>
+          <a
+            href="https://www.vistrow.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: text }}
+            className="text-xs hover:text-[#ff6b00] transition-colors"
+          >
+            A Product by Vistrow
+          </a>
         </div>
       </div>
     </footer>
