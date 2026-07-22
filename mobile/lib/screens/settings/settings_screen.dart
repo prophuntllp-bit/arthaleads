@@ -54,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
   String? _avatar;
+  bool _avatarBroken = false;
   bool _obscureCurrent = true;
   bool _obscureNew = true;
   bool _savingProfile = false;
@@ -78,6 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       k: TextEditingController(),
   };
   String? _logo;
+  bool _logoBroken = false;
   bool _savingBilling = false;
   bool _billingInitialized = false;
   bool _autoAssign = true;
@@ -158,7 +160,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _pickAvatar() async {
     final uri = await _pickImageAsDataUri();
-    if (uri != null) setState(() => _avatar = uri);
+    if (uri != null) {
+      setState(() {
+        _avatar = uri;
+        _avatarBroken = false;
+      });
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -231,7 +238,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _pickLogo() async {
     final uri = await _pickImageAsDataUri();
     if (uri == null) return;
-    setState(() => _logo = uri);
+    setState(() {
+      _logo = uri;
+      _logoBroken = false;
+    });
     try {
       await _api.dio.patch('/org/me/logo', data: {'logo': uri});
       if (mounted) await context.read<AuthState>().refresh();
@@ -567,7 +577,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String fallback,
     required VoidCallback onPick,
     VoidCallback? onRemove,
+    bool broken = false,
+    VoidCallback? onBroken,
   }) {
+    final showImage = preview != null && preview.isNotEmpty && !broken;
     return Row(
       children: [
         Stack(
@@ -578,14 +591,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 color: AppColors.primary.withValues(alpha: 0.1),
-                image: preview != null && preview.isNotEmpty
+                image: showImage
                     ? DecorationImage(
                         image: _imageProvider(preview),
                         fit: BoxFit.cover,
+                        onError: onBroken == null
+                            ? null
+                            : (_, _) => onBroken(),
                       )
                     : null,
               ),
-              child: preview == null || preview.isEmpty
+              child: !showImage
                   ? Center(
                       child: Text(
                         fallback,
@@ -711,7 +727,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ? (auth.user!['name'] as String)[0].toUpperCase()
               : '?',
           onPick: _pickAvatar,
-          onRemove: () => setState(() => _avatar = ''),
+          onRemove: () => setState(() {
+            _avatar = '';
+            _avatarBroken = false;
+          }),
+          broken: _avatarBroken,
+          onBroken: () {
+            if (mounted) setState(() => _avatarBroken = true);
+          },
         ),
         const SizedBox(height: 8),
         Text(
@@ -897,6 +920,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fallback: 'A',
           onPick: _pickLogo,
           onRemove: _logo != null && _logo!.isNotEmpty ? _removeLogo : null,
+          broken: _logoBroken,
+          onBroken: () {
+            if (mounted) setState(() => _logoBroken = true);
+          },
         ),
         const SizedBox(height: 20),
         Text(

@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/initials_avatar.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -533,22 +534,18 @@ class _TeamScreenState extends State<TeamScreen> {
                       ),
                       child: ListTile(
                         onTap: () => _openForm(user: u),
-                        leading: CircleAvatar(
+                        leading: InitialsAvatar(
                           backgroundColor: roleColor.withValues(alpha: 0.15),
-                          backgroundImage: _avatarProvider(
-                            u['avatar'] as String?,
+                          avatarValue: u['avatar'] as String?,
+                          fallback: Text(
+                            (u['name'] as String? ?? '?').isNotEmpty
+                                ? (u['name'] as String)[0].toUpperCase()
+                                : '?',
+                            style: TextStyle(
+                              color: roleColor,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                          child: _avatarProvider(u['avatar'] as String?) == null
-                              ? Text(
-                                  (u['name'] as String? ?? '?').isNotEmpty
-                                      ? (u['name'] as String)[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    color: roleColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                )
-                              : null,
                         ),
                         title: Text(
                           u['name'] as String? ?? '—',

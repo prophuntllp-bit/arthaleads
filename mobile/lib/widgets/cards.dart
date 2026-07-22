@@ -59,7 +59,7 @@ class StatCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.textSoft),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

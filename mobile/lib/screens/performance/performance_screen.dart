@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -14,6 +12,7 @@ import '../../core/plan.dart';
 import '../../core/theme.dart';
 import '../../widgets/cards.dart';
 import '../../widgets/glass.dart';
+import '../../widgets/initials_avatar.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/upgrade_wall.dart';
 
@@ -162,22 +161,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
   }
 
   String _fmtDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
-
-  ImageProvider<Object>? _avatarProvider(String? value) {
-    final avatar = value?.trim() ?? '';
-    if (avatar.isEmpty) return null;
-    if (avatar.startsWith('data:image/') && avatar.contains(',')) {
-      try {
-        return MemoryImage(
-          base64Decode(avatar.substring(avatar.indexOf(',') + 1)),
-        );
-      } catch (_) {
-        return null;
-      }
-    }
-    final uri = Uri.tryParse(avatar);
-    return uri != null && uri.hasScheme ? NetworkImage(avatar) : null;
-  }
 
   int _metricTotal(String section, String field) => _displayMembers.fold<int>(
     0,
@@ -1029,19 +1012,17 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
             // Name/role header
             Row(
               children: [
-                CircleAvatar(
+                InitialsAvatar(
                   radius: 20,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                  backgroundImage: _avatarProvider(m['avatar'] as String?),
-                  child: _avatarProvider(m['avatar'] as String?) == null
-                      ? Text(
-                          (m['name'] as String? ?? '?')[0].toUpperCase(),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        )
-                      : null,
+                  avatarValue: m['avatar'] as String?,
+                  fallback: Text(
+                    (m['name'] as String? ?? '?')[0].toUpperCase(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
