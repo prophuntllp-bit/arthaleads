@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
@@ -163,6 +164,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             )
                             .where((n) => n.isNotEmpty)
                             .join(', ');
+                        final priceMin = p['priceMin'] as num?;
+                        final priceMax = p['priceMax'] as num?;
+                        final priceLabel = (priceMin == null && priceMax == null)
+                            ? ''
+                            : [
+                                if (priceMin != null) fmtBudget(priceMin),
+                                if (priceMax != null) fmtBudget(priceMax),
+                              ].join(' – ');
+                        final bhk = (p['bhkTypes'] as List?)?.cast<String>() ?? [];
                         return FadeSlideIn(
                           delay: Duration(milliseconds: 20 * (i % 12)),
                           child: Card(
@@ -191,15 +201,69 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              subtitle: Text(
-                                [
-                                  if ((p['location'] as String? ?? '')
-                                      .isNotEmpty)
-                                    p['location'] as String,
-                                  if (assigned.isNotEmpty) 'Agents: $assigned',
-                                ].join(' · '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    [
+                                      if ((p['location'] as String? ?? '')
+                                          .isNotEmpty)
+                                        p['location'] as String,
+                                      if (assigned.isNotEmpty)
+                                        'Agents: $assigned',
+                                    ].join(' · '),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (priceLabel.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        priceLabel,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  if (bhk.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Wrap(
+                                        spacing: 4,
+                                        runSpacing: 4,
+                                        children: bhk
+                                            .map(
+                                              (b) => Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Theme.of(context)
+                                                        .dividerColor,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        999,
+                                                      ),
+                                                ),
+                                                child: Text(
+                                                  b,
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                      ),
+                                    ),
+                                ],
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,

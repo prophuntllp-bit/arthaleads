@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
@@ -18,6 +17,7 @@ import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
 import 'project_form.dart';
+import 'project_lead_import.dart';
 
 /// Project detail — Info / Leads / Prospective tabs, mirroring
 /// frontend/src/pages/ProjectDetail.jsx. Leads tab = fresh leads
@@ -276,8 +276,12 @@ class _LeadsTabState extends State<_LeadsTab> {
   int _page = 1;
   int _pages = 1;
   bool _loading = true;
+  bool _exporting = false;
   final Set<String> _selected = {};
   bool get _selectMode => _selected.isNotEmpty;
+  String _bookingFilter = '';
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
 
   String get _projectId => widget.project['_id'] as String;
 
@@ -325,6 +329,11 @@ class _LeadsTabState extends State<_LeadsTab> {
           'isProspective': widget.isProspective,
           if (_searchCtrl.text.trim().isNotEmpty)
             'search': _searchCtrl.text.trim(),
+          if (_bookingFilter.isNotEmpty) 'bookingIn': _bookingFilter,
+          if (widget.isProspective && _dateFrom != null)
+            'followUpFrom': _dateFrom!.toIso8601String(),
+          if (widget.isProspective && _dateTo != null)
+            'followUpTo': _dateTo!.toIso8601String(),
         },
       );
       setState(() {
@@ -346,6 +355,31 @@ class _LeadsTabState extends State<_LeadsTab> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _setBookingFilter(String v) {
+    setState(() => _bookingFilter = v);
+    _load(reset: true);
+  }
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (isFrom ? _dateFrom : _dateTo) ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    setState(() => isFrom ? _dateFrom = picked : _dateTo = picked);
+    _load(reset: true);
+  }
+
+  void _clearDates() {
+    setState(() {
+      _dateFrom = null;
+      _dateTo = null;
+    });
+    _load(reset: true);
   }
 
   Future<void> _openDetail(Map<String, dynamic> lead) async {
@@ -458,72 +492,32 @@ class _LeadsTabState extends State<_LeadsTab> {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['csv'],
+        allowedExtensions: ['csv', 'txt', 'xlsx', 'xls'],
       );
       final path = result?.files.single.path;
       if (path == null) return;
-      final content = await File(path).readAsString();
-      final rows = const CsvToListConverter(
-        eol: '\n',
-      ).convert(content, shouldParseNumbers: false);
-      if (rows.isEmpty) return;
-      final header = rows.first
-          .map((h) => h.toString().trim().toLowerCase())
-          .toList();
-      final nameIdx = header.indexWhere((h) => h.contains('name'));
-      final phoneIdx = header.indexWhere(
-        (h) => h.contains('phone') || h.contains('mobile'),
-      );
-      final emailIdx = header.indexWhere((h) => h.contains('email'));
-      if (nameIdx == -1 || phoneIdx == -1) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('CSV must have Name and Phone columns'),
-              backgroundColor: AppColors.danger,
-            ),
-          );
-        }
-        return;
-      }
-      final dataRows = rows
-          .skip(1)
-          .map(
-            (r) => {
-              'name': nameIdx < r.length ? r[nameIdx].toString().trim() : '',
-              'phone': phoneIdx < r.length ? r[phoneIdx].toString().trim() : '',
-              if (emailIdx != -1 && emailIdx < r.length)
-                'email': r[emailIdx].toString().trim(),
-            },
-          )
-          .where(
-            (r) =>
-                (r['name'] ?? '').toString().isNotEmpty &&
-                (r['phone'] ?? '').toString().isNotEmpty,
-          )
-          .toList();
-      if (dataRows.isEmpty) {
-        if (mounted)
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('No valid rows found')));
-        return;
-      }
+      final parsed = await parseProjectLeadImportFile(path);
       final res = await _api.dio.post(
         '/projects/$_projectId/leads/import',
-        data: {'rows': dataRows},
+        data: {'rows': parsed.rows},
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${res.data['inserted'] ?? dataRows.length}, '
+              'Imported ${res.data['inserted'] ?? parsed.rows.length}, '
               '${res.data['duplicates'] ?? 0} duplicate(s) skipped',
             ),
           ),
         );
       }
       _load(reset: true);
+    } on ProjectImportEmptyException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: AppColors.danger),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -537,26 +531,110 @@ class _LeadsTabState extends State<_LeadsTab> {
   }
 
   Future<void> _exportCsv() async {
-    final rows = [
-      ['Name', 'Phone', 'Email', 'Booking', 'Status'],
-      ..._leads.map(
-        (l) => [
-          l['name'] ?? '',
-          l['phone'] ?? '',
-          l['email'] ?? '',
-          l['booking'] ?? '',
-          l['status'] ?? '',
-        ],
-      ),
-    ];
-    final csv = const ListToCsvConverter().convert(rows);
-    await Share.shareXFiles([
-      XFile.fromData(
-        Uint8List.fromList(utf8.encode(csv)),
-        name: '${widget.project['name']}_leads.csv',
-        mimeType: 'text/csv',
-      ),
-    ]);
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      List<Map<String, dynamic>> sourceLeads;
+      if (_selected.isNotEmpty) {
+        sourceLeads = _leads.where((l) => _selected.contains(l['_id'])).toList();
+      } else {
+        final res = await _api.dio.get(
+          '/projects/$_projectId/leads',
+          queryParameters: {
+            'page': 1,
+            'limit': 9999,
+            'isProspective': widget.isProspective,
+            if (_searchCtrl.text.trim().isNotEmpty)
+              'search': _searchCtrl.text.trim(),
+            if (_bookingFilter.isNotEmpty) 'bookingIn': _bookingFilter,
+            if (widget.isProspective && _dateFrom != null)
+              'followUpFrom': _dateFrom!.toIso8601String(),
+            if (widget.isProspective && _dateTo != null)
+              'followUpTo': _dateTo!.toIso8601String(),
+          },
+        );
+        sourceLeads = (res.data['leads'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
+      }
+      if (sourceLeads.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('No leads to export')));
+        }
+        return;
+      }
+      String fmtDate(dynamic v) {
+        if (v == null) return '';
+        final d = DateTime.tryParse(v.toString());
+        if (d == null) return '';
+        return '${d.day}/${d.month}/${d.year}';
+      }
+
+      final header = [
+        'Name',
+        'Phone',
+        'WhatsApp',
+        'Email',
+        'Source',
+        'Status',
+        'Follow Up',
+        'Follow Up 2',
+        'Remark 1',
+        'Remark 2',
+        if (widget.isProspective) ...['Remark 3', 'Remark 4'],
+        'Note',
+        if (widget.isProspective) ...['Updated By', 'Updated At'],
+      ];
+      final rows = [
+        header,
+        ...sourceLeads.map(
+          (l) => [
+            l['name'] ?? '',
+            l['phone'] ?? '',
+            l['whatsapp'] ?? '',
+            l['email'] ?? '',
+            l['source'] ?? '',
+            l['booking'] ?? '',
+            fmtDate(l['followUp']),
+            fmtDate(l['followUp2']),
+            l['remark1'] ?? '',
+            l['remark2'] ?? '',
+            if (widget.isProspective) ...[l['remark3'] ?? '', l['remark4'] ?? ''],
+            l['remarkNote'] ?? '',
+            if (widget.isProspective) ...[
+              (l['remarkUpdatedBy'] is Map
+                  ? l['remarkUpdatedBy']['name']
+                  : null) ??
+                  '',
+              fmtDate(l['remarkUpdatedAt']),
+            ],
+          ],
+        ),
+      ];
+      final csv = const ListToCsvConverter().convert(rows);
+      final tabLabel = widget.isProspective ? 'Prospective' : 'Leads';
+      final projectName = (widget.project['name'] as String? ?? 'project')
+          .replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+      await Share.shareXFiles([
+        XFile.fromData(
+          Uint8List.fromList(utf8.encode(csv)),
+          name: '${tabLabel}_$projectName.csv',
+          mimeType: 'text/csv',
+        ),
+      ]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Export failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -586,14 +664,85 @@ class _LeadsTabState extends State<_LeadsTab> {
                     tooltip: 'Import CSV',
                     onPressed: _importCsv,
                   ),
-                IconButton(
-                  icon: const Icon(Icons.download, size: 20),
-                  tooltip: 'Export CSV',
-                  onPressed: _exportCsv,
-                ),
+                _exporting
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.download, size: 20),
+                        tooltip: 'Export CSV',
+                        onPressed: _exportCsv,
+                      ),
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            child: SizedBox(
+              height: 32,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: bookingOptions
+                    .map(
+                      (o) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          label: Text(
+                            o.value.isEmpty ? 'All' : o.label,
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          selected: _bookingFilter == o.value,
+                          onSelected: (_) => _setBookingFilter(o.value),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          if (widget.isProspective)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today, size: 13),
+                      label: Text(
+                        _dateFrom != null
+                            ? '${_dateFrom!.day}/${_dateFrom!.month}/${_dateFrom!.year}'
+                            : 'Follow-up From',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      onPressed: () => _pickDate(isFrom: true),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.calendar_today, size: 13),
+                      label: Text(
+                        _dateTo != null
+                            ? '${_dateTo!.day}/${_dateTo!.month}/${_dateTo!.year}'
+                            : 'Follow-up To',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      onPressed: () => _pickDate(isFrom: false),
+                    ),
+                  ),
+                  if (_dateFrom != null || _dateTo != null)
+                    IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: _clearDates,
+                    ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
             child: Row(
@@ -633,16 +782,14 @@ class _LeadsTabState extends State<_LeadsTab> {
                             vertical: 4,
                           ),
                           child: ListTile(
-                            leading: widget.isProspective
-                                ? Icon(
-                                    selected
-                                        ? Icons.check_circle
-                                        : Icons.radio_button_unchecked,
-                                    color: selected
-                                        ? AppColors.primary
-                                        : Theme.of(context).disabledColor,
-                                  )
-                                : null,
+                            leading: Icon(
+                              selected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: selected
+                                  ? AppColors.primary
+                                  : Theme.of(context).disabledColor,
+                            ),
                             title: Text(
                               lead['name'] as String? ?? '—',
                               style: const TextStyle(
@@ -697,20 +844,18 @@ class _LeadsTabState extends State<_LeadsTab> {
                                 ),
                               ],
                             ),
-                            onTap: widget.isProspective && _selectMode
+                            onTap: _selectMode
                                 ? () => setState(
                                     () => selected
                                         ? _selected.remove(id)
                                         : _selected.add(id),
                                   )
                                 : () => _openDetail(lead),
-                            onLongPress: widget.isProspective
-                                ? () => setState(
-                                    () => selected
-                                        ? _selected.remove(id)
-                                        : _selected.add(id),
-                                  )
-                                : null,
+                            onLongPress: () => setState(
+                              () => selected
+                                  ? _selected.remove(id)
+                                  : _selected.add(id),
+                            ),
                           ),
                         );
                       },
@@ -719,7 +864,7 @@ class _LeadsTabState extends State<_LeadsTab> {
           ),
         ],
       ),
-      bottomSheet: widget.isProspective && _selectMode && context.watch<AuthState>().isAdmin
+      bottomSheet: _selectMode && context.watch<AuthState>().isAdmin
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
@@ -734,14 +879,16 @@ class _LeadsTabState extends State<_LeadsTab> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _bulkStatus,
-                      icon: const Icon(Icons.flag, size: 16),
-                      label: const Text('Status'),
+                  if (widget.isProspective) ...[
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _bulkStatus,
+                        icon: const Icon(Icons.flag, size: 16),
+                        label: const Text('Status'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
