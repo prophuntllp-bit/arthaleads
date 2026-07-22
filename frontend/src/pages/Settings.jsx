@@ -1,8 +1,7 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
-         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Phone, Pencil, Trash2, Lock, RefreshCw } from "lucide-react";
-import EnableXSettings from "../components/EnableXSettings";
+         Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Pencil, Trash2, Lock, RefreshCw } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import CustomSelect from "../components/CustomSelect";
@@ -687,21 +686,6 @@ export default function Settings() {
                   style={{ transform: autoAssign ? "translateX(22px)" : "translateX(4px)" }} />
               </button>
             </div>
-          </section>
-
-          {/* Telephony */}
-          <section className="card p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "rgba(249,115,22,0.12)" }}>
-                <Phone className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-app">Telephony Integration</h2>
-                <p className="text-xs text-app-soft">Connect EnableX for click-to-call, recordings and AI summaries</p>
-              </div>
-            </div>
-            <EnableXSettings />
           </section>
 
         </div>

@@ -277,6 +277,7 @@ const LeadPipeline   = lazy(() => import("./pages/LeadPipeline"));
 const Team           = lazy(() => import("./pages/Team"));
 const Performance    = lazy(() => import("./pages/Performance"));
 const Automation     = lazy(() => import("./pages/Automation"));
+const TelephonyIntegration = lazy(() => import("./pages/TelephonyIntegration"));
 const Settings       = lazy(() => import("./pages/Settings"));
 const HelpSupport    = lazy(() => import("./pages/HelpSupport"));
 const NotFound       = lazy(() => import("./pages/NotFound"));
@@ -633,6 +634,7 @@ export default function App() {
           {/* Admin + Manager only */}
           <Route element={<RequireRole roles={["admin", "manager"]} />}>
             <Route path="/automation"  element={<Automation />} />
+            <Route path="/automation/telephony" element={<TelephonyIntegration />} />
             <Route path="/performance" element={<Performance />} />
             <Route path="/dump-leads"  element={<DumpLeads />} />
           </Route>

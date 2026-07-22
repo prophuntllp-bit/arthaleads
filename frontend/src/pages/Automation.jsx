@@ -1,9 +1,9 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   CheckCircle2, ChevronRight, Copy, ExternalLink, Globe2,
-  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic,
+  Link2, MessageCircle, Pencil, Plus, SearchCheck, Trash2, Webhook, Download, RefreshCw, ShieldCheck, AlertTriangle, Mic, Phone,
 } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
@@ -1738,6 +1738,7 @@ function FormLabelsEditor({ item, onUpdated }) {
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1983,6 +1984,20 @@ export default function Automation() {
                 </button>
               );
             })}
+
+          {/* Telephony (EnableX) - not a lead source, so it links out to its own page
+              instead of opening one of the wizard modals above. */}
+          <button
+            type="button"
+            className="card p-5 text-left transition hover:-translate-y-1 hover:border-orange-500/30"
+            onClick={() => navigate("/automation/telephony")}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(249,115,22,0.12)" }}>
+              <Phone className="h-5 w-5 text-orange-500" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold text-app">Telephony</h3>
+            <p className="mt-1 text-xs text-app-soft">EnableX · Click-to-call & recordings</p>
+          </button>
         </div>
       </section>
 
