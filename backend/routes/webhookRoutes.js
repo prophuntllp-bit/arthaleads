@@ -16,6 +16,11 @@ const router = express.Router();
 // One alert per org per hour — prevents push spam when token is dead and leads keep arriving
 const tokenAlertCooldown = new Map(); // orgId → lastAlertTimestamp
 
+// Alert admins once per unmapped form_id, the first time a lead from a form with
+// no manual name arrives - so a new campaign gets noticed instead of relying on
+// someone to spot an unfamiliar form ID buried in the Notes tab.
+const unmappedFormAlerted = new Set(); // `${orgId}:${formId}`
+
 // Public, unauthenticated lead-capture endpoint used by the WordPress plugin
 // and custom website forms. The `token` is embedded in the plugin's own
 // config, so it isn't a secret strong enough to stop a scraper who finds it
@@ -417,6 +422,22 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           : formId
           ? `Form ID: ${formId} (add a name for this in Automation → Facebook → Form Names)`
           : "";
+
+        // First lead from a form with no manual name yet - likely a brand new
+        // campaign. Alert once per form_id rather than relying on someone to spot
+        // an unfamiliar ID buried in the Notes tab.
+        if (!formName && formId) {
+          const alertKey = `${automation.orgId}:${formId}`;
+          if (!unmappedFormAlerted.has(alertKey)) {
+            unmappedFormAlerted.add(alertKey);
+            sendPushToAll({
+              type: "facebook_form_unmapped",
+              title: "New Facebook campaign detected",
+              body: `A lead came in from a form we don't have a name for yet (ID: ${formId}). Add one in Automation → Facebook → Form Names.`,
+              data: { url: "/automation" },
+            }, automation.orgId).catch((e) => logger.warn("Push notification failed:", e.message));
+          }
+        }
 
         // Extract custom form answers (exclude standard contact fields)
         const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone", "name"]);
