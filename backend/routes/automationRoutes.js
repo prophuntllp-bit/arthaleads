@@ -48,6 +48,8 @@ router.post("/google/:id/sync", automationController.syncGoogleAdsConnection);
 
 router.post("/facebook/diagnose", automationController.diagnoseFacebook);
 router.post("/facebook/resubscribe", automationController.resubscribeFacebook);
+router.post("/facebook/:id/form-labels", automationController.addFormLabel);
+router.delete("/facebook/:id/form-labels/:formId", automationController.removeFormLabel);
 
 router.route("/")
   .get(automationController.list)

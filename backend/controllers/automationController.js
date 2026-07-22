@@ -309,6 +309,44 @@ const automationController = {
     }
   },
 
+  // POST /api/automations/facebook/:id/form-labels  { formId, label }
+  // Facebook's Graph API can't read a Lead Form's own name with the permissions
+  // this app has, so admins map form_id -> a friendly campaign name here once;
+  // the webhook uses it directly instead of trying (and failing) to fetch it live.
+  async addFormLabel(req, res) {
+    try {
+      const { formId, label } = req.body || {};
+      if (!formId || !label) return res.status(400).json({ success: false, message: "formId and label are required" });
+
+      const a = await Automation.findOne({ _id: req.params.id, platform: "Facebook", orgId: req.user.orgId });
+      if (!a) return res.status(404).json({ success: false, message: "Connection not found" });
+
+      const trimmedId = String(formId).trim();
+      a.formLabels = (a.formLabels || []).filter((f) => f.formId !== trimmedId);
+      a.formLabels.push({ formId: trimmedId, label: String(label).trim() });
+      await a.save();
+
+      res.json({ success: true, formLabels: a.formLabels });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
+  // DELETE /api/automations/facebook/:id/form-labels/:formId
+  async removeFormLabel(req, res) {
+    try {
+      const a = await Automation.findOne({ _id: req.params.id, platform: "Facebook", orgId: req.user.orgId });
+      if (!a) return res.status(404).json({ success: false, message: "Connection not found" });
+
+      a.formLabels = (a.formLabels || []).filter((f) => f.formId !== req.params.formId);
+      await a.save();
+
+      res.json({ success: true, formLabels: a.formLabels });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+
   // GET /api/automations/google/connections - list Google Ads connections (read-only)
   async getGoogleConnections(req, res) {
     try {

@@ -60,6 +60,19 @@ const automationSchema = new mongoose.Schema(
       maxlength: 120,
       default: "",
     },
+    // Manual form_id -> friendly name mapping for Facebook Lead Ads. Graph API
+    // can't read a Lead Form's own name field with the permissions this app has
+    // (reading a submitted lead's field_data needs a different, narrower scope
+    // than reading the form object itself) - so admins map it once here instead
+    // of waiting on a Meta App Review for a broader permission.
+    formLabels: {
+      type: [{
+        formId: { type: String, trim: true, required: true },
+        label: { type: String, trim: true, required: true, maxlength: 120 },
+        _id: false,
+      }],
+      default: [],
+    },
     // ── Google Ads OAuth (mode: "oauth") ─────────────────────────────────────
     // The Ads account this connection reads leads from via the Google Ads API.
     // Distinct from the webhook-mode Google connections (mode: "webhook"),

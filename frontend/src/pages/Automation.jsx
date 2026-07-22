@@ -1651,6 +1651,90 @@ function GoogleWizard({ open, onClose, onChanged }) {
   );
 }
 
+/* ─── FormLabelsEditor ─────────────────────────────────────────────────────────
+   Facebook's Graph API can't tell us a Lead Form's own name with the
+   permissions this app has - reading a submitted lead's answers needs a
+   different, narrower scope than reading the form object itself. So instead
+   of waiting on a Meta App Review for a broader permission, admins map each
+   form_id to a friendly name here once; the webhook uses it directly. */
+function FormLabelsEditor({ item, onUpdated }) {
+  const [formId, setFormId] = useState("");
+  const [label, setLabel] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const addLabel = async () => {
+    if (!formId.trim() || !label.trim()) return;
+    setSaving(true);
+    try {
+      const { data } = await api.post(`/automations/facebook/${item._id}/form-labels`, {
+        formId: formId.trim(),
+        label: label.trim(),
+      });
+      onUpdated(item._id, data.formLabels);
+      setFormId("");
+      setLabel("");
+      toast.success("Form name saved");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to save form name");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeLabel = async (fid) => {
+    try {
+      const { data } = await api.delete(`/automations/facebook/${item._id}/form-labels/${encodeURIComponent(fid)}`);
+      onUpdated(item._id, data.formLabels);
+    } catch {
+      toast.error("Failed to remove form name");
+    }
+  };
+
+  return (
+    <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
+      <p className="text-xs font-semibold text-app">Form Names</p>
+      <p className="text-[10px] leading-relaxed text-app-soft">
+        Facebook can't auto-detect a lead form's name for us. Paste each form's ID (visible in Meta's Lead Ads tools, next to the form) and a label so agents know which campaign a lead came from.
+      </p>
+      {(item.formLabels || []).length > 0 && (
+        <div className="space-y-1">
+          {item.formLabels.map((f) => (
+            <div key={f.formId} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 text-xs" style={{ background: "var(--app-surface-low)" }}>
+              <span className="truncate"><strong>{f.label}</strong> · {f.formId}</span>
+              <button onClick={() => removeLabel(f.formId)} className="shrink-0 text-app-soft hover:text-red-400">
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-1.5">
+        <input
+          className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}
+          placeholder="Form ID"
+          value={formId}
+          onChange={(e) => setFormId(e.target.value)}
+        />
+        <input
+          className="min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}
+          placeholder="Name (e.g. Mahalunge NX)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+        <button
+          onClick={addLabel}
+          disabled={saving || !formId.trim() || !label.trim()}
+          className="btn-secondary rounded-lg px-2 shrink-0 disabled:opacity-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Automation page ─────────────────────────────────────────────────── */
 export default function Automation() {
   const location = useLocation();
@@ -2005,6 +2089,12 @@ export default function Automation() {
                             Last refreshed: {new Date(item.tokenRefreshedAt).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                           </p>
                         )}
+                        <FormLabelsEditor
+                          item={item}
+                          onUpdated={(id, formLabels) =>
+                            setItems((prev) => prev.map((i) => (i._id === id ? { ...i, formLabels } : i)))
+                          }
+                        />
                       </div>
                     );
                   })() : item.platform === "Website Form" ? (

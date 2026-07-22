@@ -400,11 +400,23 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         // Resolve which specific form/campaign this lead came from - one Facebook
         // automation often covers every form on a Page, so agents otherwise only see
         // the generic Page-level connection name and can't tell campaigns apart.
+        // Graph API can't read a Lead Form's own name field with the permissions this
+        // app has (confirmed: fails identically on App Token and a Page Token that
+        // successfully fetches the lead's own field_data), so admin-entered mappings
+        // (Automation → Facebook → Form Names) are the primary source; the live fetch
+        // is only a best-effort fallback in case that ever changes.
         const formId = leadData.form_id || leadDetails.form_id || "";
-        const { name: formName, error: formNameError } = await getFacebookFormName(formId, accessToken);
-        // Temporary diagnostic line - shows why the form name is missing instead of
-        // just omitting it silently. Remove once form name resolution is confirmed working.
-        const formDebugLine = formName ? `Form: ${formName}` : `Form: (unresolved - ${formNameError})`;
+        const manualLabel = formId ? (automation?.formLabels || []).find((f) => f.formId === formId)?.label : null;
+        let formName = manualLabel || "";
+        if (!formName && formId) {
+          const resolved = await getFacebookFormName(formId, accessToken);
+          formName = resolved.name;
+        }
+        const formLine = formName
+          ? `Form: ${formName}`
+          : formId
+          ? `Form ID: ${formId} (add a name for this in Automation → Facebook → Form Names)`
+          : "";
 
         // Extract custom form answers (exclude standard contact fields)
         const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone", "name"]);
@@ -430,15 +442,15 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         ).join("\n");
 
         const noteText = isTestLead
-          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\n${formDebugLine}\nLead ID: ${leadData.leadgen_id || "unknown"}`
+          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\n${formLine ? `${formLine}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}`
           : isAuthError
-          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\n${formDebugLine}\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
+          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\n${formLine ? `${formLine}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
           : [
               `✅ Facebook lead imported from Meta Lead Ads.`,
               `Name: ${name || "-"}`,
               `Phone: ${fieldMap.phone_number || fieldMap.phone || "N/A"}`,
               `Email: ${fieldMap.email || "-"}`,
-              formDebugLine,
+              formLine,
               customLines ? `\nForm Answers:\n${customLines}` : "",
               `Lead ID: ${leadData.leadgen_id || "unknown"}`,
             ].filter(Boolean).join("\n");
