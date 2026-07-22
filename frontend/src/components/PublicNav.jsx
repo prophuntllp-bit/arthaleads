@@ -217,13 +217,26 @@ function NavInner({ onScrollTo }) {
         <div className="flex items-center justify-between h-16 lg:h-20">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <img src="/logo.png" alt="Arthaleads" className="w-9 h-9 rounded-xl object-cover" />
-            <div>
-              <span style={{ color: isDark ? "#fff" : "#111827" }} className="font-bold text-lg leading-none">Artha</span>
-              <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
-            </div>
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
+              <img src="/logo.png" alt="Arthaleads" className="w-9 h-9 rounded-xl object-cover" />
+              <div>
+                <span style={{ color: isDark ? "#fff" : "#111827" }} className="font-bold text-lg leading-none">Artha</span>
+                <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
+              </div>
+            </Link>
+            <a
+              href="https://www.vistrow.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:inline-block pl-3 text-[11px] font-medium transition-colors"
+              style={{ color: textMuted, borderLeft: `1px solid ${isDark ? "rgba(255,255,255,0.15)" : "#d1d5db"}` }}
+              onMouseEnter={e => (e.currentTarget.style.color = "#ff6b00")}
+              onMouseLeave={e => (e.currentTarget.style.color = textMuted)}
+            >
+              by Vistrow
+            </a>
+          </div>
 
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-5 xl:gap-6">
