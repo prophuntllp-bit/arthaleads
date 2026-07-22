@@ -93,7 +93,7 @@ export default function PublicFooter() {
             style={{ color: text }}
             className="text-xs hover:text-[#ff6b00] transition-colors"
           >
-            A Product by Vistrow
+            By Vistrow
           </a>
         </div>
       </div>
