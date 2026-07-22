@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:csv/csv.dart';
+import 'package:excel/excel.dart' as xlsx;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -46,6 +47,7 @@ class LeadsScreenState extends State<LeadsScreen> {
   bool _loading = false;
   bool _initialLoaded = false;
   bool _importing = false;
+  bool _exporting = false;
 
   LeadFilters _filters = const LeadFilters();
 
@@ -448,64 +450,132 @@ class LeadsScreenState extends State<LeadsScreen> {
     if (saved == true) _load(reset: true);
   }
 
-  Future<void> _exportCsv() async {
-    final source = _selected.isEmpty
-        ? _leads
-        : _leads.where((lead) => _selected.contains(lead['_id'])).toList();
-    if (source.isEmpty) return;
-    final rows = <List<dynamic>>[
-      [
-        'Name',
-        'Phone',
-        'Email',
-        'Source',
-        'Lead Source',
-        'Status',
-        'Priority',
-        'Property Type',
-        'BHK',
-        'Purpose',
-        'Budget Min',
-        'Budget Max',
-        'Follow Up',
-        'Remark',
-        'Booking',
-        'Assigned To',
-        'Project',
-        'Created At',
-      ],
-      ...source.map(
-        (lead) => [
-          lead['name'] ?? '',
-          lead['phone'] ?? '',
-          lead['email'] ?? '',
-          lead['source'] ?? '',
-          lead['leadSourceLabel'] ?? '',
-          lead['status'] ?? '',
-          lead['priority'] ?? '',
-          lead['propertyType'] ?? '',
-          lead['bhk'] ?? '',
-          lead['purpose'] ?? '',
-          (lead['budget'] as Map?)?['min'] ?? '',
-          (lead['budget'] as Map?)?['max'] ?? '',
-          lead['followUpDate'] ?? '',
-          lead['remark'] ?? '',
-          lead['booking'] ?? '',
-          lead['assignedToName'] ?? '',
-          lead['projectName'] ?? '',
-          lead['createdAt'] ?? '',
-        ],
-      ),
-    ];
-    final csv = const ListToCsvConverter().convert(rows);
-    final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    await Share.shareXFiles([
-      XFile.fromData(
-        Uint8List.fromList(utf8.encode(csv)),
-        name: 'arthaleads-leads-$date.csv',
-        mimeType: 'text/csv',
-      ),
-    ]);
+  static const _exportHeader = [
+    'Name',
+    'Phone',
+    'Email',
+    'Source',
+    'Lead Source',
+    'Status',
+    'Priority',
+    'Property Type',
+    'BHK',
+    'Purpose',
+    'Budget Min',
+    'Budget Max',
+    'Follow Up',
+    'Follow Up 2',
+    'Follow Up Note',
+    'Remark',
+    'Remark 1',
+    'Remark 2',
+    'Booking',
+    'Assigned To',
+    'Project',
+    'Created At',
+  ];
+
+  List<dynamic> _exportRow(Map<String, dynamic> lead) => [
+    lead['name'] ?? '',
+    lead['phone'] ?? '',
+    lead['email'] ?? '',
+    lead['source'] ?? '',
+    lead['leadSourceLabel'] ?? '',
+    lead['status'] ?? '',
+    lead['priority'] ?? '',
+    lead['propertyType'] ?? '',
+    lead['bhk'] ?? '',
+    lead['purpose'] ?? '',
+    (lead['budget'] as Map?)?['min'] ?? '',
+    (lead['budget'] as Map?)?['max'] ?? '',
+    lead['followUpDate'] ?? '',
+    lead['followUp2'] ?? '',
+    lead['followUpNote'] ?? '',
+    lead['remark'] ?? '',
+    lead['remark1'] ?? '',
+    lead['remark2'] ?? '',
+    lead['booking'] ?? '',
+    lead['assignedToName'] ?? '',
+    lead['projectName'] ?? '',
+    lead['createdAt'] ?? '',
+  ];
+
+  /// Mirrors Leads.jsx's exportRows: respects current filters/search when
+  /// nothing is selected, narrows to the selection otherwise, and fetches
+  /// the full matching set server-side rather than just what's scrolled
+  /// into view locally.
+  Future<void> _exportLeads({required bool asExcel}) async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      List<Map<String, dynamic>> source;
+      if (_selected.isNotEmpty) {
+        source = _leads.where((l) => _selected.contains(l['_id'])).toList();
+      } else {
+        final res = await _api.dio.get(
+          '/leads/unified',
+          queryParameters: {
+            'page': 1,
+            'limit': 9999,
+            if (_searchCtrl.text.trim().isNotEmpty)
+              'search': _searchCtrl.text.trim(),
+            ..._filters.toParams(),
+          },
+        );
+        source = (res.data['leads'] as List? ?? [])
+            .cast<Map<String, dynamic>>();
+      }
+      if (source.isEmpty) {
+        _snack('No leads to export');
+        return;
+      }
+
+      final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      if (asExcel) {
+        final wb = xlsx.Excel.createExcel();
+        final sheet = wb.getDefaultSheet() ?? 'Sheet1';
+        wb.rename(sheet, 'Leads');
+        wb.appendRow(
+          'Leads',
+          _exportHeader.map((h) => xlsx.TextCellValue(h)).toList(),
+        );
+        for (final lead in source) {
+          wb.appendRow(
+            'Leads',
+            _exportRow(
+              lead,
+            ).map((v) => xlsx.TextCellValue(v.toString())).toList(),
+          );
+        }
+        final bytes = wb.save();
+        if (bytes == null) throw Exception('Failed to build workbook');
+        await Share.shareXFiles([
+          XFile.fromData(
+            Uint8List.fromList(bytes),
+            name: 'arthaleads-leads-$date.xlsx',
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ]);
+      } else {
+        final rows = <List<dynamic>>[
+          _exportHeader,
+          ...source.map(_exportRow),
+        ];
+        final csv = const ListToCsvConverter().convert(rows);
+        await Share.shareXFiles([
+          XFile.fromData(
+            Uint8List.fromList(utf8.encode(csv)),
+            name: 'arthaleads-leads-$date.csv',
+            mimeType: 'text/csv',
+          ),
+        ]);
+      }
+    } catch (e) {
+      _snack(ApiClient.errorMessage(e, 'Export failed'), error: true);
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   Future<void> _importCsv() async {
@@ -596,13 +666,36 @@ class LeadsScreenState extends State<LeadsScreen> {
                       : const Icon(Icons.upload_file_rounded, size: 19),
                 ),
                 const SizedBox(width: 4),
-                IconButton.outlined(
-                  tooltip: _selected.isEmpty
-                      ? 'Export visible leads'
-                      : 'Export ${_selected.length} selected',
-                  onPressed: _leads.isEmpty ? null : _exportCsv,
-                  icon: const Icon(Icons.download_rounded, size: 19),
-                ),
+                _exporting
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: SizedBox(
+                          width: 19,
+                          height: 19,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : PopupMenuButton<bool>(
+                        tooltip: _selected.isEmpty
+                            ? 'Export leads'
+                            : 'Export ${_selected.length} selected',
+                        enabled: _leads.isNotEmpty,
+                        onSelected: (asExcel) =>
+                            _exportLeads(asExcel: asExcel),
+                        itemBuilder: (ctx) => const [
+                          PopupMenuItem(value: false, child: Text('Export CSV')),
+                          PopupMenuItem(value: true, child: Text('Export Excel')),
+                        ],
+                        child: IgnorePointer(
+                          child: IconButton.outlined(
+                            onPressed: _leads.isEmpty ? null : () {},
+                            icon: const Icon(
+                              Icons.download_rounded,
+                              size: 19,
+                            ),
+                          ),
+                        ),
+                      ),
                 const SizedBox(width: 4),
                 IconButton.outlined(
                   tooltip: 'Lead capture QR code',
