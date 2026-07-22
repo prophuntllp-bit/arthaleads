@@ -7,9 +7,9 @@ const Lead = require("../models/Lead");
 const leadController = {
   async create(req, res, next) {
     try {
-      const lead = await leadService.create(req.body, req.user);
+      const { lead, duplicate } = await leadService.create(req.body, req.user);
       invalidateAnalyticsCache(req.user.orgId);
-      res.status(201).json({ success: true, data: lead });
+      res.status(201).json({ success: true, data: lead, duplicate: duplicate || null });
       // Send push notification for new manual lead - scoped to this org
       sendPushToAll({
         type: "new_lead",
@@ -17,6 +17,15 @@ const leadController = {
         body: `${lead.source} lead added by ${req.user.name}`,
         data: { source: lead.source },
       }, req.user.orgId).catch(() => {});
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async checkDuplicate(req, res, next) {
+    try {
+      const duplicate = await leadService.findDuplicateByPhone(req.query.phone, req.user.orgId, req.query.excludeId);
+      res.json({ success: true, duplicate: duplicate || null });
     } catch (err) {
       next(err);
     }

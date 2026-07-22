@@ -117,7 +117,35 @@ const logActivity = (lead, type, description, user, meta = {}) => {
   });
 };
 
+// Last-10-digits match so "+91 98765 43210", "09876543210" and "9876543210" are
+// all recognised as the same number regardless of how each source formatted it.
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "").slice(-10);
+}
+
 const leadService = {
+  // ── Duplicate check ────────────────────────────────────────────────────────
+  // Used both by create() (to flag a new lead as a possible duplicate without
+  // blocking it - agents may legitimately be logging a repeat inquiry) and by
+  // the real-time /leads/check-duplicate endpoint the Add Lead form calls as
+  // the agent types a phone number.
+  async findDuplicateByPhone(phone, orgId, excludeId) {
+    const last10 = normalizePhone(phone);
+    if (last10.length < 10) return null;
+
+    const filter = {
+      orgId,
+      isDeleted: { $ne: true },
+      phone: { $regex: escapeRegex(last10) + "$" },
+    };
+    if (excludeId) filter._id = { $ne: excludeId };
+
+    return Lead.findOne(filter)
+      .select("name phone status assignedToName source createdAt")
+      .sort({ createdAt: -1 })
+      .lean();
+  },
+
   // ── Create ─────────────────────────────────────────────────────────────────
   async create(data, user) {
     let assignedToName = "";
@@ -157,8 +185,21 @@ const leadService = {
       });
     }
 
+    // Flag (don't block) - an agent may legitimately be re-logging a repeat
+    // inquiry, so the duplicate is only surfaced as a warning, not prevented.
+    const duplicate = await leadService.findDuplicateByPhone(data.phone, user.orgId);
+    if (duplicate) {
+      logActivity(
+        lead,
+        "duplicate_flagged",
+        `Possible duplicate of existing lead "${duplicate.name}" (same phone number, created ${new Date(duplicate.createdAt).toLocaleDateString()})`,
+        user,
+        { existingLeadId: duplicate._id }
+      );
+    }
+
     await lead.save();
-    return lead;
+    return { lead, duplicate };
   },
 
   // ── Distinct website domains — powers the "Website" source sub-menu on the

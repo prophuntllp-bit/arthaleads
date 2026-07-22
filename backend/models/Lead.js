@@ -16,7 +16,7 @@ const activitySchema = new mongoose.Schema(
   {
     type: {
       type: String,
-      enum: ["created", "status_changed", "assigned", "note_added", "follow_up_set", "site_visit", "called", "emailed"],
+      enum: ["created", "status_changed", "assigned", "note_added", "follow_up_set", "site_visit", "called", "emailed", "duplicate_flagged"],
       required: true,
     },
     description: { type: String, required: true },

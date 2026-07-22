@@ -110,6 +110,11 @@ router.post("/backfill-source-domain", authorize("admin"), async (req, res, next
   } catch (err) { next(err); }
 });
 
+// GET /api/leads/check-duplicate?phone=...&excludeId=... — real-time check the
+// Add/Edit Lead form calls as the agent types a phone number. Must be registered
+// before /:id so "check-duplicate" isn't swallowed as a lead id.
+router.get("/check-duplicate", leadController.checkDuplicate);
+
 router.route("/")
   .get(leadController.getAll)
   .post(validate(createLeadSchema), leadController.create);

@@ -35,8 +35,32 @@ const initialForm = {
 export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) {
   const [form, setForm] = useState(initialForm);
   const [loading, setLoading] = useState(false);
+  const [duplicate, setDuplicate] = useState(null);
+
+  // Real-time duplicate check — debounced so it only fires once the agent pauses
+  // typing a full number. Purely informational: it never blocks saving, since an
+  // agent may legitimately be logging a genuine repeat inquiry.
+  useEffect(() => {
+    const digits = form.phone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      setDuplicate(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const { data } = await api.get("/leads/check-duplicate", {
+          params: { phone: form.phone, excludeId: lead?._id },
+        });
+        setDuplicate(data.duplicate);
+      } catch {
+        // silent - this is a convenience check, not critical to saving the lead
+      }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [form.phone, lead?._id]);
 
   useEffect(() => {
+    setDuplicate(null);
     if (!lead) {
       setForm(initialForm);
       return;
@@ -103,6 +127,9 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         : await api.post("/leads", payload);
 
       toast.success(lead ? "Lead updated" : "Lead created");
+      if (!lead && data.duplicate) {
+        toast(`Note: this phone number matches an existing lead — ${data.duplicate.name}`, { icon: "⚠️", duration: 5000 });
+      }
       onSaved(data.data);
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to save lead");
@@ -127,6 +154,11 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         <FormField label="Phone">
           <input className="input" value={form.phone} onChange={setValue("phone")} required />
         </FormField>
+        {duplicate && (
+          <div className="md:col-span-2 -mt-2 rounded-xl px-4 py-2 text-sm" style={{ background: "rgba(234,88,12,0.1)", color: "#c2410c" }}>
+            ⚠️ A lead with this phone number already exists — <strong>{duplicate.name}</strong> ({duplicate.status}, {duplicate.source}), added {new Date(duplicate.createdAt).toLocaleDateString()}. You can still save this as a new lead if needed.
+          </div>
+        )}
         <FormField label="Email">
           <input className="input" type="email" value={form.email} onChange={setValue("email")} />
         </FormField>
