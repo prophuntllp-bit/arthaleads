@@ -111,28 +111,38 @@ async function getFacebookLeadFields(leadgenId, accessToken) {
 const formNameCache = new Map(); // formId -> { name, ts }
 const FORM_NAME_CACHE_TTL = 24 * 60 * 60 * 1000;
 
+// Returns { name, error } rather than swallowing failures - the previous
+// silent-empty-string version made a real fetch failure indistinguishable from
+// "no form_id in the payload" or a still-warming cache, which cost real time
+// diagnosing why the form name wasn't appearing. Surfacing the reason directly
+// in the lead note (below) is what actually found the last two Graph API bugs.
 async function getFacebookFormName(formId, fallbackToken) {
-  if (!formId) return "";
+  if (!formId) return { name: "", error: "no form_id in webhook payload" };
   const cached = formNameCache.get(formId);
-  if (cached && Date.now() - cached.ts < FORM_NAME_CACHE_TTL) return cached.name;
+  if (cached && Date.now() - cached.ts < FORM_NAME_CACHE_TTL) return { name: cached.name, error: null };
 
   const tokens = [];
-  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) tokens.push(`${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`);
-  if (fallbackToken) tokens.push(fallbackToken);
+  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) tokens.push({ label: "App Token", token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}` });
+  if (fallbackToken) tokens.push({ label: "Page Token", token: fallbackToken });
 
-  for (const token of tokens) {
+  const errors = [];
+  for (const { label, token } of tokens) {
     try {
       const params = new URLSearchParams({ access_token: token, fields: "name" });
       const r = await fetch(`https://graph.facebook.com/v23.0/${formId}?${params.toString()}`);
       const j = await r.json();
       if (r.ok && j.name) {
         formNameCache.set(formId, { name: j.name, ts: Date.now() });
-        return j.name;
+        return { name: j.name, error: null };
       }
-    } catch { /* try next token */ }
+      errors.push(`${label}: ${j?.error?.message || JSON.stringify(j)}`);
+    } catch (e) {
+      errors.push(`${label}: ${e.message}`);
+    }
   }
-  logger.warn(`Facebook webhook: could not resolve form name for form ${formId}`);
-  return "";
+  const errorSummary = errors.join("; ") || "no tokens available to try";
+  logger.warn(`Facebook webhook: could not resolve form name for form ${formId}: ${errorSummary}`);
+  return { name: "", error: errorSummary };
 }
 
 async function findFacebookAutomationByPayload(leadData) {
@@ -391,7 +401,10 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         // automation often covers every form on a Page, so agents otherwise only see
         // the generic Page-level connection name and can't tell campaigns apart.
         const formId = leadData.form_id || leadDetails.form_id || "";
-        const formName = await getFacebookFormName(formId, accessToken);
+        const { name: formName, error: formNameError } = await getFacebookFormName(formId, accessToken);
+        // Temporary diagnostic line - shows why the form name is missing instead of
+        // just omitting it silently. Remove once form name resolution is confirmed working.
+        const formDebugLine = formName ? `Form: ${formName}` : `Form: (unresolved - ${formNameError})`;
 
         // Extract custom form answers (exclude standard contact fields)
         const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone", "name"]);
@@ -417,15 +430,15 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         ).join("\n");
 
         const noteText = isTestLead
-          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\n${formName ? `Form: ${formName}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}`
+          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\n${formDebugLine}\nLead ID: ${leadData.leadgen_id || "unknown"}`
           : isAuthError
-          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\n${formName ? `Form: ${formName}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
+          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\n${formDebugLine}\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
           : [
               `✅ Facebook lead imported from Meta Lead Ads.`,
               `Name: ${name || "-"}`,
               `Phone: ${fieldMap.phone_number || fieldMap.phone || "N/A"}`,
               `Email: ${fieldMap.email || "-"}`,
-              formName ? `Form: ${formName}` : "",
+              formDebugLine,
               customLines ? `\nForm Answers:\n${customLines}` : "",
               `Lead ID: ${leadData.leadgen_id || "unknown"}`,
             ].filter(Boolean).join("\n");
