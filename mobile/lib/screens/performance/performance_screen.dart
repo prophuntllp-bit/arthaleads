@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -10,6 +12,7 @@ import '../../core/auth_state.dart';
 import '../../core/deep_link.dart';
 import '../../core/plan.dart';
 import '../../core/theme.dart';
+import '../../widgets/cards.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/upgrade_wall.dart';
@@ -160,10 +163,35 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   String _fmtDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
 
+  ImageProvider<Object>? _avatarProvider(String? value) {
+    final avatar = value?.trim() ?? '';
+    if (avatar.isEmpty) return null;
+    if (avatar.startsWith('data:image/') && avatar.contains(',')) {
+      try {
+        return MemoryImage(
+          base64Decode(avatar.substring(avatar.indexOf(',') + 1)),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+    final uri = Uri.tryParse(avatar);
+    return uri != null && uri.hasScheme ? NetworkImage(avatar) : null;
+  }
+
   int _metricTotal(String section, String field) => _displayMembers.fold<int>(
     0,
     (sum, member) =>
         sum + ((((member[section] as Map?)?[field]) as num?)?.toInt() ?? 0),
+  );
+
+  /// Mirrors Performance.jsx's on-screen `totals` — sums the backend's
+  /// pre-combined top-level totalAssigned/siteVisits/closedWon fields
+  /// (pipeline + project already merged server-side), not the PDF's
+  /// separate pipeline/project section sums.
+  int _screenTotal(String field) => _displayMembers.fold<int>(
+    0,
+    (sum, member) => sum + ((member[field] as num?)?.toInt() ?? 0),
   );
 
   Future<void> _downloadReport() async {
@@ -254,6 +282,59 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                 ],
               ),
             );
+        pw.Widget progressRow(String label, num pct, PdfColor color) {
+          final clamped = pct.clamp(0, 100);
+          return pw.Container(
+            margin: const pw.EdgeInsets.only(top: 8),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.SizedBox(
+                  width: 62,
+                  child: pw.Text(
+                    label,
+                    style: pw.TextStyle(fontSize: 7, color: muted),
+                  ),
+                ),
+                pw.Expanded(
+                  child: pw.Stack(
+                    children: [
+                      pw.Container(
+                        height: 4,
+                        decoration: pw.BoxDecoration(
+                          color: border,
+                          borderRadius: pw.BorderRadius.circular(999),
+                        ),
+                      ),
+                      pw.Container(
+                        height: 4,
+                        width: 120 * (clamped / 100),
+                        decoration: pw.BoxDecoration(
+                          color: color,
+                          borderRadius: pw.BorderRadius.circular(999),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.SizedBox(
+                  width: 26,
+                  child: pw.Text(
+                    '$pct%',
+                    style: pw.TextStyle(
+                      fontSize: 7,
+                      fontWeight: pw.FontWeight.bold,
+                      color: color,
+                    ),
+                    textAlign: pw.TextAlign.right,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -283,6 +364,11 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                 ),
               ],
             ),
+            progressRow(
+              'Conversion Rate',
+              (pipeline['conversionRate'] as num?) ?? 0,
+              orange,
+            ),
             pw.SizedBox(height: 9),
             pw.Text(
               'PROJECT PIPELINE',
@@ -307,8 +393,108 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                 ),
               ],
             ),
+            pw.SizedBox(height: 6),
+            pw.Row(
+              children: [
+                pw.Expanded(child: cell('Call Back', project['callBack'])),
+                pw.Expanded(
+                  child: cell('Not Interested', project['notInterested']),
+                ),
+                pw.Expanded(
+                  child: cell('Not Reachable', project['notReachable']),
+                ),
+              ],
+            ),
+            progressRow(
+              'Booking Rate',
+              (project['conversionRate'] as num?) ?? 0,
+              PdfColors.indigo500,
+            ),
           ],
         );
+      }
+
+      List<pw.Widget> pdfBody() {
+        return [
+          pw.Row(
+            children: [
+              metric(
+                'Total Leads',
+                totalLeads,
+                'Pipeline + Project combined',
+                orange,
+              ),
+              pw.SizedBox(width: 9),
+              metric(
+                'Site Visits',
+                totalVisits,
+                'Across all pipelines',
+                PdfColors.blue500,
+              ),
+              pw.SizedBox(width: 9),
+              metric(
+                'Closed / Booked',
+                totalWon,
+                'Won + project bookings',
+                PdfColors.green600,
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 20),
+          pw.Text(
+            'AGENT PERFORMANCE BREAKDOWN',
+            style: pw.TextStyle(
+              fontSize: 9,
+              fontWeight: pw.FontWeight.bold,
+              color: muted,
+            ),
+          ),
+          pw.SizedBox(height: 10),
+          for (final member in _displayMembers)
+            pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 12),
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: border),
+                borderRadius: pw.BorderRadius.circular(10),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            member['name']?.toString() ?? '—',
+                            style: pw.TextStyle(
+                              fontSize: 12,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                          pw.Text(
+                            member['email']?.toString() ?? '',
+                            style: pw.TextStyle(fontSize: 7, color: muted),
+                          ),
+                        ],
+                      ),
+                      pw.Text(
+                        '${member['role'] ?? ''} · ${member['isActive'] == false ? 'Inactive' : 'Active'}',
+                        style: pw.TextStyle(fontSize: 7, color: muted),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 10),
+                  statTable(
+                    (member['pipeline'] as Map?) ?? {},
+                    (member['project'] as Map?) ?? {},
+                  ),
+                ],
+              ),
+            ),
+        ];
       }
 
       document.addPage(
@@ -364,7 +550,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                       ),
                     ),
                     pw.Text(
-                      range,
+                      '${_displayMembers.length} team member${_displayMembers.length != 1 ? 's' : ''} · $range',
                       style: const pw.TextStyle(
                         color: PdfColors.white,
                         fontSize: 7,
@@ -388,86 +574,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               ),
             ],
           ),
-          build: (context) => [
-            pw.Row(
-              children: [
-                metric(
-                  'Total Leads',
-                  totalLeads,
-                  'Pipeline + Project combined',
-                  orange,
-                ),
-                pw.SizedBox(width: 9),
-                metric(
-                  'Site Visits',
-                  totalVisits,
-                  'Across all pipelines',
-                  PdfColors.blue500,
-                ),
-                pw.SizedBox(width: 9),
-                metric(
-                  'Closed / Booked',
-                  totalWon,
-                  'Won + project bookings',
-                  PdfColors.green600,
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-            pw.Text(
-              'AGENT PERFORMANCE BREAKDOWN',
-              style: pw.TextStyle(
-                fontSize: 9,
-                fontWeight: pw.FontWeight.bold,
-                color: muted,
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            for (final member in _displayMembers)
-              pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 12),
-                padding: const pw.EdgeInsets.all(12),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: border),
-                  borderRadius: pw.BorderRadius.circular(10),
-                ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              member['name']?.toString() ?? '—',
-                              style: pw.TextStyle(
-                                fontSize: 12,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                            pw.Text(
-                              member['email']?.toString() ?? '',
-                              style: pw.TextStyle(fontSize: 7, color: muted),
-                            ),
-                          ],
-                        ),
-                        pw.Text(
-                          '${member['role'] ?? ''} · ${member['isActive'] == false ? 'Inactive' : 'Active'}',
-                          style: pw.TextStyle(fontSize: 7, color: muted),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 10),
-                    statTable(
-                      (member['pipeline'] as Map?) ?? {},
-                      (member['project'] as Map?) ?? {},
-                    ),
-                  ],
-                ),
-              ),
-          ],
+          build: (context) => pdfBody(),
         ),
       );
       await Printing.sharePdf(
@@ -708,6 +815,38 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
           ),
           const SizedBox(height: 12),
 
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  label: 'Total Leads',
+                  value: '${_screenTotal('totalAssigned')}',
+                  icon: Icons.people_alt_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: StatCard(
+                  label: 'Site Visits',
+                  value: '${_screenTotal('siteVisits')}',
+                  icon: Icons.track_changes_rounded,
+                  color: AppColors.info,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: StatCard(
+                  label: 'Closed / Booked',
+                  value: '${_screenTotal('closedWon')}',
+                  icon: Icons.emoji_events_rounded,
+                  color: AppColors.success,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
           if (_volumeByDay.isNotEmpty || _durationByAgent.isNotEmpty) ...[
             _callAnalyticsCard(),
             const SizedBox(height: 12),
@@ -893,13 +1032,16 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                  child: Text(
-                    (m['name'] as String? ?? '?')[0].toUpperCase(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
-                    ),
-                  ),
+                  backgroundImage: _avatarProvider(m['avatar'] as String?),
+                  child: _avatarProvider(m['avatar'] as String?) == null
+                      ? Text(
+                          (m['name'] as String? ?? '?')[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
