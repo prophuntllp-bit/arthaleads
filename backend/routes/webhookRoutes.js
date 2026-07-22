@@ -102,6 +102,39 @@ async function getFacebookLeadFields(leadgenId, accessToken) {
   return json;
 }
 
+// ── Lead form name lookup ──────────────────────────────────────────────────────
+// A single Facebook automation often covers every form on a Page, so the
+// automation's own name ("PropHunt LLP - Lead Ads") doesn't tell an agent which
+// specific campaign/form a lead came from. The form's name (e.g. "Mahalunge NX |
+// Site Visit Booking") does. Cached per form_id since the same form generates
+// many leads and its name essentially never changes.
+const formNameCache = new Map(); // formId -> { name, ts }
+const FORM_NAME_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+async function getFacebookFormName(formId, fallbackToken) {
+  if (!formId) return "";
+  const cached = formNameCache.get(formId);
+  if (cached && Date.now() - cached.ts < FORM_NAME_CACHE_TTL) return cached.name;
+
+  const tokens = [];
+  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) tokens.push(`${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`);
+  if (fallbackToken) tokens.push(fallbackToken);
+
+  for (const token of tokens) {
+    try {
+      const params = new URLSearchParams({ access_token: token, fields: "name" });
+      const r = await fetch(`https://graph.facebook.com/v23.0/${formId}?${params.toString()}`);
+      const j = await r.json();
+      if (r.ok && j.name) {
+        formNameCache.set(formId, { name: j.name, ts: Date.now() });
+        return j.name;
+      }
+    } catch { /* try next token */ }
+  }
+  logger.warn(`Facebook webhook: could not resolve form name for form ${formId}`);
+  return "";
+}
+
 async function findFacebookAutomationByPayload(leadData) {
   // Narrow by pageId at the DB level so MongoDB can use the compound index
   // { platform:1, isActive:1, pageId:1 } rather than scanning every tenant.
@@ -354,6 +387,12 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 
         const fieldMap = Object.fromEntries((leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
 
+        // Resolve which specific form/campaign this lead came from - one Facebook
+        // automation often covers every form on a Page, so agents otherwise only see
+        // the generic Page-level connection name and can't tell campaigns apart.
+        const formId = leadData.form_id || leadDetails.form_id || "";
+        const formName = await getFacebookFormName(formId, accessToken);
+
         // Extract custom form answers (exclude standard contact fields)
         const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number", "phone", "name"]);
         const customFields = (leadDetails.field_data || []).filter((f) => !STANDARD_FIELDS.has(f.name) && f.values?.[0]);
@@ -378,14 +417,15 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         ).join("\n");
 
         const noteText = isTestLead
-          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\nLead ID: ${leadData.leadgen_id || "unknown"}`
+          ? `⚠️ Facebook Test Lead - Sent via Meta's testing tool. The lead ID is simulated and cannot be retrieved from the Graph API. Real leads from your Facebook ad form will include name, phone, email, and all form fields.\n\n${formName ? `Form: ${formName}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}`
           : isAuthError
-          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\nLead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
+          ? `⚠️ Facebook lead received but field data could not be fetched - the page access token has expired or been revoked.\n\nAction required: Go to CRM → Automation → Facebook and reconnect your Facebook account to refresh the token.\n\n${formName ? `Form: ${formName}\n` : ""}Lead ID: ${leadData.leadgen_id || "unknown"}\nError: ${fetchError}`
           : [
               `✅ Facebook lead imported from Meta Lead Ads.`,
               `Name: ${name || "-"}`,
               `Phone: ${fieldMap.phone_number || fieldMap.phone || "N/A"}`,
               `Email: ${fieldMap.email || "-"}`,
+              formName ? `Form: ${formName}` : "",
               customLines ? `\nForm Answers:\n${customLines}` : "",
               `Lead ID: ${leadData.leadgen_id || "unknown"}`,
             ].filter(Boolean).join("\n");
@@ -434,9 +474,8 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           createdBy: assignee?._id || null,
           assignedTo: assignee?._id || null,
           assignedToName: assignee?.name || "",
-          leadSourceLabel: isTestLead
-            ? `${automation?.name || "Facebook Lead Ads"} - Test`
-            : (automation?.name || "Facebook Lead Ads"),
+          leadSourceLabel: [automation?.name || "Facebook Lead Ads", formName, isTestLead ? "Test" : ""]
+            .filter(Boolean).join(" · "),
           notes: [
             {
               text: noteText,
@@ -507,6 +546,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
                       `Name: ${name2 || "-"}`,
                       `Phone: ${fm2.phone_number || fm2.phone || "N/A"}`,
                       `Email: ${fm2.email || "-"}`,
+                      formName ? `Form: ${formName}` : "",
                       lines2 ? `\nForm Answers:\n${lines2}` : "",
                       `Lead ID: ${gid || "unknown"}`,
                     ].filter(Boolean).join("\n"),
