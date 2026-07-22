@@ -330,6 +330,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
 
         {tab === "info" && (
           <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+            {lead.leadSourceLabel && <Info label="Source Detail" value={lead.leadSourceLabel} />}
             <Info label="Property Type" value={lead.propertyType} />
             <Info label="BHK" value={lead.bhk} />
             <Info label="Purpose" value={lead.purpose} />
