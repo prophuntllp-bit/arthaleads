@@ -167,13 +167,18 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     // The actual call control happens via the REST API below, not via this body.
     res.json({});
 
-    // Notify the agent in-app so they know their phone is about to ring
+    // Notify the agent in-app so they know their phone is about to ring. Awaited
+    // (rather than fire-and-forget) and given a short head start before the
+    // accept/connect calls below actually make the phone ring - push delivery
+    // isn't instant, and without this gap the physical ring can beat the
+    // notification to the lock screen, defeating the point of sending it.
     if (agentUserId) {
-      sendPushToUser(String(agentUserId), {
+      await sendPushToUser(String(agentUserId), {
         title: "Incoming Call",
         body:  lead ? `${lead.name} is calling — pick up your phone` : `Inbound call — pick up your phone`,
         data:  { type: "inbound_call", leadId: lead ? String(lead._id) : null },
       }).catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 1200));
     }
 
     // EnableX inbound calls aren't auto-answered once a custom Event URL is
