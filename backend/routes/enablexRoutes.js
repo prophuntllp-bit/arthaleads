@@ -166,6 +166,7 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
           to:          agentPhone,
           custom_data: ownerRef,
           event_url:   webhookUrl,
+          record:      true,         // outbound calls already record via /call - inbound bridges need it here too
         }, basicAuth(org));
         console.info("[enablex inbound] connect OK:", voiceId, "→ agent", agentPhone,
           JSON.stringify(connectResp.data).slice(0, 200));
@@ -192,6 +193,7 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
             agentPhone:     agentPhone,   // normalized agent phone (used for future inbound routing)
             routedToPhone:  agentPhone,   // actual phone we bridged to (not the virtual DID)
             routedToAgent:  agentName || "",
+            voiceId,                     // required so the "disconnected" webhook can fetch this call's recording
           },
         });
         doc.markModified("activities");
