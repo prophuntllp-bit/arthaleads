@@ -17,9 +17,13 @@ export default function EnableXSettings() {
   const [togglingAI,     setTogglingAI]     = useState(false);
   const [inboundUrl,     setInboundUrl]     = useState("");
 
+  // Must point at the API server (api.arthaleads.com), not the CRM web app's own
+  // origin (www.arthaleads.com) - the web app has no /api proxy, so EnableX's
+  // webhook calls would silently fail to reach the backend if pasted from there.
+  const serverBase = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
   const webhookUrl = orgId
-    ? `${window.location.origin}/api/calls/webhook/${orgId}`
-    : `${window.location.origin}/api/calls/webhook`;
+    ? `${serverBase}/api/calls/webhook/${orgId}`
+    : `${serverBase}/api/calls/webhook`;
 
   useEffect(() => {
     api.get("/calls/settings").then(r => {
