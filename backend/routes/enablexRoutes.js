@@ -263,6 +263,19 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       return;
     }
 
+    // EnableX fires "recording_complete" and "disconnected" within the same
+    // instant, both trying to save the same lead document - confirmed live via a
+    // Mongoose VersionError ("No matching document found... version 5") when both
+    // landed concurrently. "disconnected" already carries the same recording_url
+    // inline (verified in the same event), so recording_complete is redundant -
+    // skip it entirely rather than risk racing the duration/status save that only
+    // "disconnected" performs. Same reasoning as the existing bridge_disconnected
+    // skip below.
+    if (eventType === "recording_complete") {
+      console.info(`${logPrefix} skipping recording_complete (redundant with disconnected's inline recording_url)`);
+      return;
+    }
+
     let lead, actIdx = -1;
     if (ownerRef?.startsWith("lead_")) {
       const leadId = ownerRef.split("_")[1];

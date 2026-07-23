@@ -621,4 +621,4 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
   }
 }
 
-module.exports = { draftWhatsAppMessage, answerHelpQuestion };
+module.exports = { draftWhatsAppMessage, answerHelpQuestion, getClient };
