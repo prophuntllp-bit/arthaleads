@@ -188,7 +188,7 @@ function AISummarySection({ initialMeta, leadId, activityId, callStatus }) {
 }
 
 // ── Call detail panel (shown inside the history modal) ────────────────────────
-function CallDetailPanel({ call, leadId, leadName, onBack }) {
+function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
   const meta   = call.meta || {};
   const status = meta.status || "initiated";
   const ss     = STATUS_STYLE[status] || STATUS_STYLE.initiated;
@@ -228,7 +228,7 @@ function CallDetailPanel({ call, leadId, leadName, onBack }) {
   const callBack = async () => {
     setCalling(true);
     try {
-      await api.post("/calls/initiate", { leadId });
+      await api.post("/calls/initiate", isProjectLead ? { projectLeadId: leadId } : { leadId });
       toast.success("Calling back — check your phone.");
       onBack();
     } catch (err) {
@@ -450,6 +450,7 @@ function LeadCallModal({ lead, onClose }) {
               call={activeCall}
               leadId={lead.leadId}
               leadName={lead.leadName}
+              isProjectLead={lead.isProjectLead}
               onBack={() => setActiveCall(null)}
             />
           ) : loading ? (

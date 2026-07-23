@@ -11,6 +11,23 @@ const noteSchema = new mongoose.Schema(
   { _id: true }
 );
 
+// Same shape as Lead's activitySchema — needed so EnableX calling (recordings,
+// AI call summary, duration/status tracking) works identically for project leads.
+const activitySchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["created", "status_changed", "note_added", "called"],
+      required: true,
+    },
+    description:     { type: String, required: true },
+    performedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    performedByName: { type: String },
+    meta:            { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { timestamps: true }
+);
+
 const projectLeadSchema = new mongoose.Schema(
   {
     project: {
@@ -71,6 +88,10 @@ const projectLeadSchema = new mongoose.Schema(
 
     // Notes added by agents (same structure as Lead.notes)
     notes: [noteSchema],
+
+    // Call history (same structure as Lead.activities) — powers EnableX
+    // click-to-call, recordings, and AI call summaries for project leads.
+    activities: [activitySchema],
 
     // Set to true when booking reaches Interested/Site Visit Booked - never unset
     isProspective: { type: Boolean, default: false, index: true },

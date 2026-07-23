@@ -162,7 +162,7 @@ export function toWaNumber(phone = "") {
 }
 
 // Orange call icon + phone number - tap to dial
-export function PhoneActions({ phone, lead, onContact }) {
+export function PhoneActions({ phone, lead, projectLead, onContact }) {
   const [dialOpen,  setDialOpen]  = useState(false);
   const [hoverOpen, setHoverOpen] = useState(false);
   const [dialPos,   setDialPos]   = useState({});
@@ -202,10 +202,11 @@ export function PhoneActions({ phone, lead, onContact }) {
 
   const callIVR = async () => {
     setDialOpen(false);
-    if (!lead?._id) return;
+    const targetId = lead?._id || projectLead?._id;
+    if (!targetId) return;
     setCalling(true);
     try {
-      await api.post("/calls/initiate", { leadId: lead._id });
+      await api.post("/calls/initiate", lead?._id ? { leadId: targetId } : { projectLeadId: targetId });
       toast.success("Call initiated — check your phone.");
       onContact?.();
     } catch (err) {
@@ -251,7 +252,7 @@ export function PhoneActions({ phone, lead, onContact }) {
             pointerEvents: "none",
           }}
         >
-          {lead?.name && <p className="text-sm font-semibold text-app truncate">{lead.name}</p>}
+          {(lead?.name || projectLead?.name) && <p className="text-sm font-semibold text-app truncate">{lead?.name || projectLead?.name}</p>}
           <p className="text-[11px] text-app-soft mt-0.5">Click to choose how to call</p>
         </div>,
         document.body
@@ -271,10 +272,10 @@ export function PhoneActions({ phone, lead, onContact }) {
           }}>
             <p className="px-4 pt-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-app-soft border-b"
               style={{ borderColor:"var(--app-border)" }}>
-              Call {lead?.name || phone}
+              Call {lead?.name || projectLead?.name || phone}
             </p>
             <div className="p-2 space-y-0.5">
-              {lead?._id && (
+              {(lead?._id || projectLead?._id) && (
                 <button onClick={callIVR}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
                   style={{ color:"#f97316" }}

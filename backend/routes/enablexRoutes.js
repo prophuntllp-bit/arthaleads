@@ -6,6 +6,7 @@ const router    = express.Router(); // v2 — bridge call, all authenticated use
 const { protect, authorize } = require("../middlewares/auth");
 const Organization = require("../models/Organization");
 const Lead         = require("../models/Lead");
+const ProjectLead  = require("../models/ProjectLead");
 const User         = require("../models/User");
 const Task         = require("../models/Task");
 const { getClient: getOpenAI } = require("../utils/openai");
@@ -45,6 +46,19 @@ async function startRecording(org, voiceId, label) {
     console.error(`[enablex recording] start FAILED (${label}) voice_id=${voiceId}:`, e.response?.status, JSON.stringify(e.response?.data));
     return null;
   }
+}
+
+// Regular Leads and Project leads (a separate model, see ProjectLead.js) share an
+// identically-shaped `activities` array, so every call-history endpoint below
+// needs to work against whichever one a given id actually belongs to. ObjectIds
+// are globally unique, so trying Lead first and falling back to ProjectLead is
+// safe - they'll never collide.
+async function findLeadOrProjectLead(id, orgId, { lean = false } = {}) {
+  let doc = await (lean ? Lead.findOne({ _id: id, orgId }).lean() : Lead.findOne({ _id: id, orgId }));
+  if (doc) return { doc, Model: Lead };
+  doc = await (lean ? ProjectLead.findOne({ _id: id, orgId }).lean() : ProjectLead.findOne({ _id: id, orgId }));
+  if (doc) return { doc, Model: ProjectLead };
+  return { doc: null, Model: null };
 }
 
 // ── Public: inbound call answer URL ──────────────────────────────────────────
@@ -276,14 +290,23 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       return;
     }
 
+    // ownerRef's prefix tells us which model this call belongs to - "lead_" for
+    // regular Leads, "projectlead_" for Project leads (a separate model with its
+    // own _id namespace, see /initiate). Both have an identically-shaped
+    // activities array, so the rest of this function treats `lead` generically.
     let lead, actIdx = -1;
-    if (ownerRef?.startsWith("lead_")) {
-      const leadId = ownerRef.split("_")[1];
-      lead = await Lead.findOne({ _id: leadId, orgId });
+    if (ownerRef?.startsWith("projectlead_")) {
+      const id = ownerRef.split("_")[1];
+      lead = await ProjectLead.findOne({ _id: id, orgId });
+      if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
+    } else if (ownerRef?.startsWith("lead_")) {
+      const id = ownerRef.split("_")[1];
+      lead = await Lead.findOne({ _id: id, orgId });
       if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     }
     if ((!lead || actIdx < 0) && eventVoiceId) {
       lead = await Lead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+      if (!lead) lead = await ProjectLead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
       if (lead) {
         actIdx = lead.activities.findIndex(a => a.meta?.voiceId === eventVoiceId);
         if (actIdx >= 0) ownerRef = lead.activities[actIdx].meta?.ownerRef || ownerRef;
@@ -466,57 +489,62 @@ router.get("/", async (req, res, next) => {
       ...(agentId ? { "activities.performedBy": new mongoose.Types.ObjectId(agentId) } : {}),
     };
 
-    const [rows, totalRows] = await Promise.all([
-      Lead.aggregate([
-        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)), ...searchCond } },
-        { $unwind: "$activities" },
-        { $match: actMatch },
-        { $sort: { "activities.createdAt": -1 } },
-        { $group: {
-          _id:             "$_id",
-          leadName:        { $first: "$name" },
-          leadPhone:       { $first: "$phone" },
-          leadStatus:      { $first: "$status" },
-          callCount:       { $sum: 1 },
-          lastCallAt:      { $first: "$activities.createdAt" },
-          lastStatus:      { $first: "$activities.meta.status" },
-          lastDuration:    { $first: "$activities.meta.duration" },
-          lastPerformedBy: { $first: "$activities.performedByName" },
-          lastActivityId:  { $first: "$activities._id" },
-        }},
-        { $sort: { lastCallAt: -1 } },
-        { $skip:  skip },
-        { $limit: Number(limit) },
-        { $project: {
-          _id:             0,
-          leadId:          "$_id",
-          leadName:        1,
-          leadPhone:       1,
-          leadStatus:      1,
-          callCount:       1,
-          lastCallAt:      1,
-          lastStatus:      1,
-          lastDuration:    1,
-          lastPerformedBy: 1,
-          lastActivityId:  1,
-        }},
-      ]),
-      // Count unique leads (not individual calls)
-      Lead.aggregate([
-        { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)), ...searchCond } },
-        { $unwind: "$activities" },
-        { $match: actMatch },
-        { $group: { _id: "$_id" } },
-        { $count: "total" },
-      ]),
+    // Project leads (ProjectLead model) can also be called now, and need to show
+    // up in this same list - grouped per-model here, then merged/re-sorted/
+    // paginated in JS since Mongo can't do a single aggregation across two
+    // different collections.
+    const groupCallsByLead = (Model) => Model.aggregate([
+      { $match: { orgId: new mongoose.Types.ObjectId(String(orgId)), ...searchCond } },
+      { $unwind: "$activities" },
+      { $match: actMatch },
+      { $sort: { "activities.createdAt": -1 } },
+      { $group: {
+        _id:             "$_id",
+        leadName:        { $first: "$name" },
+        leadPhone:       { $first: "$phone" },
+        leadStatus:      { $first: "$status" },
+        callCount:       { $sum: 1 },
+        lastCallAt:      { $first: "$activities.createdAt" },
+        lastStatus:      { $first: "$activities.meta.status" },
+        lastDuration:    { $first: "$activities.meta.duration" },
+        lastPerformedBy: { $first: "$activities.performedByName" },
+        lastActivityId:  { $first: "$activities._id" },
+      }},
+      { $project: {
+        _id:             0,
+        leadId:          "$_id",
+        leadName:        1,
+        leadPhone:       1,
+        leadStatus:      1,
+        callCount:       1,
+        lastCallAt:      1,
+        lastStatus:      1,
+        lastDuration:    1,
+        lastPerformedBy: 1,
+        lastActivityId:  1,
+      }},
     ]);
+
+    const [leadRows, projectLeadRows] = await Promise.all([
+      groupCallsByLead(Lead),
+      groupCallsByLead(ProjectLead),
+    ]);
+
+    // Tag which model each row came from so the frontend knows whether to send
+    // leadId or projectLeadId back on actions like "Call back".
+    const merged = [
+      ...leadRows.map((r) => ({ ...r, isProjectLead: false })),
+      ...projectLeadRows.map((r) => ({ ...r, isProjectLead: true })),
+    ].sort((a, b) => new Date(b.lastCallAt) - new Date(a.lastCallAt));
+    const total = merged.length;
+    const rows  = merged.slice(skip, skip + Number(limit));
 
     res.json({
       success: true,
       calls:   rows,
-      total:   totalRows[0]?.total || 0,
+      total,
       page:    Number(page),
-      pages:   Math.ceil((totalRows[0]?.total || 0) / Number(limit)),
+      pages:   Math.ceil(total / Number(limit)),
     });
   } catch (err) { next(err); }
 });
@@ -526,22 +554,24 @@ router.get("/stats", async (req, res, next) => {
   try {
     const mongoose = require("mongoose");
     const orgId    = new mongoose.Types.ObjectId(String(req.user.orgId));
-    const [answered, missed, total] = await Promise.all([
-      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
-        { $match: { "activities.type": "called", "activities.meta.status": "answered" } },
-        { $count: "total" }]),
-      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
-        { $match: { "activities.type": "called", "activities.meta.status": "missed" } },
-        { $count: "total" }]),
-      Lead.aggregate([{ $match: { orgId } }, { $unwind: "$activities" },
-        { $match: { "activities.type": "called" } },
-        { $count: "total" }]),
+    const countFor = (Model, extraMatch) => Model.aggregate([
+      { $match: { orgId } }, { $unwind: "$activities" },
+      { $match: { "activities.type": "called", ...extraMatch } },
+      { $count: "total" },
+    ]);
+    const [answered, missed, total, answeredPL, missedPL, totalPL] = await Promise.all([
+      countFor(Lead,        { "activities.meta.status": "answered" }),
+      countFor(Lead,        { "activities.meta.status": "missed" }),
+      countFor(Lead,        {}),
+      countFor(ProjectLead, { "activities.meta.status": "answered" }),
+      countFor(ProjectLead, { "activities.meta.status": "missed" }),
+      countFor(ProjectLead, {}),
     ]);
     res.json({
       success:  true,
-      total:    total[0]?.total    || 0,
-      answered: answered[0]?.total || 0,
-      missed:   missed[0]?.total   || 0,
+      total:    (total[0]?.total    || 0) + (totalPL[0]?.total    || 0),
+      answered: (answered[0]?.total || 0) + (answeredPL[0]?.total || 0),
+      missed:   (missed[0]?.total   || 0) + (missedPL[0]?.total   || 0),
     });
   } catch (err) { next(err); }
 });
@@ -549,8 +579,7 @@ router.get("/stats", async (req, res, next) => {
 // GET /api/calls/lead/:leadId — full call history for one lead
 router.get("/lead/:leadId", async (req, res, next) => {
   try {
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId })
-      .select("name phone status activities").lean();
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const calls = lead.activities
@@ -574,8 +603,7 @@ router.post("/lead/:leadId/summary", async (req, res, next) => {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ success: false, message: "OpenAI not configured." });
     }
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId })
-      .select("name phone status activities").lean();
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId, { lean: true });
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
 
     const calls = lead.activities
@@ -690,18 +718,28 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 // POST /api/calls/initiate
 router.post("/initiate", protect, async (req, res, next) => {
   try {
-    const { leadId } = req.body;
-    if (!leadId) return res.status(400).json({ success: false, message: "leadId is required." });
+    const { leadId, projectLeadId } = req.body;
+    if (!leadId && !projectLeadId) {
+      return res.status(400).json({ success: false, message: "leadId or projectLeadId is required." });
+    }
+
+    // Project leads are a separate model (ProjectLead) from regular Leads, with
+    // no shared _id - ownerRef's prefix ("lead_" vs "projectlead_") is what tells
+    // processCallStateEvent() which collection to update when EnableX's webhook
+    // events come back.
+    const isProjectLead = !!projectLeadId;
+    const targetId = projectLeadId || leadId;
+    const Model = isProjectLead ? ProjectLead : Lead;
 
     const [org, lead] = await Promise.all([
       Organization.findById(req.user.orgId).select("enablex name").lean(),
-      Lead.findOne({ _id: leadId, orgId: req.user.orgId }),
+      Model.findOne({ _id: targetId, orgId: req.user.orgId }),
     ]);
 
     if (!org?.enablex?.enabled || !org.enablex.appId || !org.enablex.apiKey) {
       return res.status(400).json({ success: false, message: "EnableX telephony is not configured. Go to Settings → Organization → Telephony." });
     }
-    if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
+    if (!lead)       return res.status(404).json({ success: false, message: isProjectLead ? "Project lead not found." : "Lead not found." });
     if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
     const agentPhone = req.user.phone ? normalizePhone(req.user.phone) : null;
@@ -709,7 +747,7 @@ router.post("/initiate", protect, async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Add your phone number in Settings → My Profile before making calls." });
     }
 
-    const ownerRef   = `lead_${leadId}_${Date.now()}`;
+    const ownerRef   = `${isProjectLead ? "projectlead" : "lead"}_${targetId}_${Date.now()}`;
     // Use api.arthaleads.com — Vercel (www) has no /api proxy, so EnableX webhooks must target Railway directly
     const webhookUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${req.user.orgId}`;
     const leadPhone  = normalizePhone(lead.phone);   // digits only, e.g. "917020950304"
@@ -795,33 +833,67 @@ router.get("/analytics", async (req, res, next) => {
     const orgId       = new mongoose.Types.ObjectId(String(req.user.orgId));
     const thirtyAgo   = new Date(); thirtyAgo.setDate(thirtyAgo.getDate() - 30);
 
-    const [volumeByDay, durationByAgent] = await Promise.all([
-      Lead.aggregate([
-        { $match: { orgId } },
-        { $unwind: "$activities" },
-        { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo } } },
-        { $group: {
-          _id:      { y: { $year: "$activities.createdAt" }, m: { $month: "$activities.createdAt" }, d: { $dayOfMonth: "$activities.createdAt" } },
-          total:    { $sum: 1 },
-          answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
-          missed:   { $sum: { $cond: [{ $eq: ["$activities.meta.status", "missed"]   }, 1, 0] } },
-        }},
-        { $sort: { "_id.y": 1, "_id.m": 1, "_id.d": 1 } },
-      ]),
-      Lead.aggregate([
-        { $match: { orgId } },
-        { $unwind: "$activities" },
-        { $match: { "activities.type": "called", "activities.meta.status": "answered", "activities.meta.duration": { $gt: 0 } } },
-        { $group: {
-          _id:         "$activities.performedBy",
-          name:        { $first: "$activities.performedByName" },
-          totalCalls:  { $sum: 1 },
-          avgDuration: { $avg: "$activities.meta.duration" },
-          totalDuration:{ $sum: "$activities.meta.duration" },
-        }},
-        { $sort: { totalCalls: -1 } },
-      ]),
+    const volumeByDayFor = (Model) => Model.aggregate([
+      { $match: { orgId } },
+      { $unwind: "$activities" },
+      { $match: { "activities.type": "called", "activities.createdAt": { $gte: thirtyAgo } } },
+      { $group: {
+        _id:      { y: { $year: "$activities.createdAt" }, m: { $month: "$activities.createdAt" }, d: { $dayOfMonth: "$activities.createdAt" } },
+        total:    { $sum: 1 },
+        answered: { $sum: { $cond: [{ $eq: ["$activities.meta.status", "answered"] }, 1, 0] } },
+        missed:   { $sum: { $cond: [{ $eq: ["$activities.meta.status", "missed"]   }, 1, 0] } },
+      }},
     ]);
+
+    const durationByAgentFor = (Model) => Model.aggregate([
+      { $match: { orgId } },
+      { $unwind: "$activities" },
+      { $match: { "activities.type": "called", "activities.meta.status": "answered", "activities.meta.duration": { $gt: 0 } } },
+      { $group: {
+        _id:          "$activities.performedBy",
+        name:         { $first: "$activities.performedByName" },
+        totalCalls:   { $sum: 1 },
+        totalDuration:{ $sum: "$activities.meta.duration" },
+      }},
+    ]);
+
+    // Project leads (ProjectLead model) can also be called now - merge their
+    // aggregation into the same per-day / per-agent buckets rather than a
+    // separate chart, since Mongo can't aggregate across two collections at once.
+    const [volLead, volPL, durLead, durPL] = await Promise.all([
+      volumeByDayFor(Lead), volumeByDayFor(ProjectLead),
+      durationByAgentFor(Lead), durationByAgentFor(ProjectLead),
+    ]);
+
+    const volMap = new Map();
+    for (const row of [...volLead, ...volPL]) {
+      const key = `${row._id.y}-${row._id.m}-${row._id.d}`;
+      const existing = volMap.get(key);
+      if (existing) {
+        existing.total    += row.total;
+        existing.answered += row.answered;
+        existing.missed   += row.missed;
+      } else {
+        volMap.set(key, { ...row });
+      }
+    }
+    const volumeByDay = [...volMap.values()].sort((a, b) =>
+      a._id.y - b._id.y || a._id.m - b._id.m || a._id.d - b._id.d);
+
+    const durMap = new Map();
+    for (const row of [...durLead, ...durPL]) {
+      const key = String(row._id);
+      const existing = durMap.get(key);
+      if (existing) {
+        existing.totalCalls    += row.totalCalls;
+        existing.totalDuration += row.totalDuration;
+      } else {
+        durMap.set(key, { ...row });
+      }
+    }
+    const durationByAgent = [...durMap.values()]
+      .map((r) => ({ ...r, avgDuration: r.totalDuration / r.totalCalls }))
+      .sort((a, b) => b.totalCalls - a.totalCalls);
 
     res.json({ success: true, volumeByDay, durationByAgent });
   } catch (err) { next(err); }
@@ -831,7 +903,7 @@ router.get("/analytics", async (req, res, next) => {
 router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
   try {
     const { notes } = req.body;
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId });
+    const { doc: lead } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
@@ -845,15 +917,15 @@ router.patch("/:leadId/:activityId/notes", async (req, res, next) => {
 // POST /api/calls/:leadId/:activityId/summarize — on-demand AI analysis
 router.post("/:leadId/:activityId/summarize", async (req, res, next) => {
   try {
-    const lead = await Lead.findOne({ _id: req.params.leadId, orgId: req.user.orgId });
+    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
     const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
     if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
     const recordingUrl = lead.activities[idx].meta?.recordingUrl;
     if (!recordingUrl) return res.status(400).json({ success: false, message: "No recording available for this call." });
     if (!process.env.OPENAI_API_KEY) return res.status(400).json({ success: false, message: "OpenAI not configured on this server." });
-    await transcribeAndSummarize(String(lead._id), idx, recordingUrl);
-    const updated = await Lead.findById(lead._id).lean();
+    await transcribeAndSummarize(String(lead._id), idx, recordingUrl, Model);
+    const updated = await Model.findById(lead._id).lean();
     res.json({ success: true, meta: updated.activities[idx]?.meta || {} });
   } catch (err) { next(err); }
 });
@@ -883,7 +955,7 @@ router.post("/:leadId/followup", async (req, res, next) => {
 });
 
 // ── AI transcription + summarization (runs async after webhook) ──────────────
-async function transcribeAndSummarize(leadId, actIdx, recordingUrl) {
+async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead) {
   const { Readable } = require("stream");
 
   const openai = getOpenAI();
@@ -898,7 +970,7 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl) {
 
   const [transcription, lead] = await Promise.all([
     openai.audio.transcriptions.create({ file: stream, model: "whisper-1" }),
-    Lead.findById(leadId),
+    Model.findById(leadId),
   ]);
 
   if (!lead || !lead.activities[actIdx]) return;
@@ -983,7 +1055,8 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   const org = await Organization.findById(orgId).select("enablex").lean();
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
 
-  const lead = await Lead.findOne({ orgId, "activities.meta.ownerRef": ownerRef });
+  const Model = ownerRef?.startsWith("projectlead_") ? ProjectLead : Lead;
+  const lead = await Model.findOne({ orgId, "activities.meta.ownerRef": ownerRef });
   if (!lead) return;
   const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
   if (actIdx < 0 || lead.activities[actIdx].meta?.recordingUrl) return;
@@ -1010,7 +1083,7 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   // Auto-transcribe + AI analysis
   const dur = Number(lead.activities[actIdx].meta?.duration ?? 0);
   if (process.env.OPENAI_API_KEY && dur > 10) {
-    transcribeAndSummarize(String(lead._id), actIdx, recordingUrl).catch(() => {});
+    transcribeAndSummarize(String(lead._id), actIdx, recordingUrl, Model).catch(() => {});
   }
 }
 

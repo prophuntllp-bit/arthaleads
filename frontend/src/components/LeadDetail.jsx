@@ -114,7 +114,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     if (!lead?._id || calling) return;
     setCalling(true);
     try {
-      const { data } = await api.post("/calls/initiate", { leadId: lead._id });
+      const payload = lead._type === "project" ? { projectLeadId: lead._id } : { leadId: lead._id };
+      const { data } = await api.post("/calls/initiate", payload);
       toast.success(data.message || "Call initiated — check your phone.");
       await refreshLead();
     } catch (err) {
@@ -460,7 +461,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                           onClick={async () => {
                             setCalling(true);
                             try {
-                              await api.post("/calls/initiate", { leadId: lead._id });
+                              const payload = lead._type === "project" ? { projectLeadId: lead._id } : { leadId: lead._id };
+                              await api.post("/calls/initiate", payload);
                               toast.success("Calling back — check your phone.");
                             } catch (err) {
                               toast.error(err.response?.data?.message || "Call failed");
