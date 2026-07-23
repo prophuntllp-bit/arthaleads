@@ -64,14 +64,19 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     "voiceId:", voiceId, "params:", JSON.stringify(params));
 
   // EnableX hits this same Answer URL again for later call-state callbacks
-  // (e.g. "disconnected") on the inbound leg itself, not just the initial
-  // "incomingcall" ring. Only the initial ring should trigger routing +
-  // a connect action — anything else should just be acknowledged, otherwise
-  // we re-run the lookup, log a duplicate activity, and send a pointless
-  // second connect action for a call that already ended.
+  // (e.g. "disconnected", "recording_complete") on the inbound leg itself, not
+  // just the initial "incomingcall" ring - only the initial ring should trigger
+  // routing + a connect action (re-running that for every later callback would
+  // log a duplicate activity and send a pointless second connect on an already-
+  // bridged or ended call). But those later callbacks still need to reach the
+  // same processing /webhook/:orgId does for outbound calls - duration tracking
+  // and recordings never worked for inbound calls before this, because they
+  // were previously just acknowledged and dropped here.
   if (params.state && params.state !== "incomingcall") {
-    console.info("[enablex inbound] ignoring state callback:", params.state);
-    return res.json({});
+    console.info("[enablex inbound] forwarding state callback to shared handler:", params.state);
+    res.json({});
+    processCallStateEvent(orgId, params, "[enablex inbound]");
+    return;
   }
 
   try {
@@ -188,7 +193,9 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
         }, basicAuth(org));
         console.info("[enablex inbound] connect OK:", voiceId, "→ agent", agentPhone,
           JSON.stringify(connectResp.data).slice(0, 200));
-        await startRecording(org, voiceId, "inbound");
+        // Recording start is handled uniformly in processCallStateEvent's "connected"
+        // branch once EnableX's own "connected" callback arrives (forwarded here from
+        // below) - not fired directly here, to avoid starting it twice.
       } catch (connectErr) {
         console.error("[enablex inbound] connect FAILED:", connectErr.response?.status,
           JSON.stringify(connectErr.response?.data));
@@ -226,40 +233,50 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
   }
 });
 
-// ── Public webhook (EnableX + recording server post here, no JWT) ─────────────
-// Must be registered BEFORE the protect middleware below.
-router.post("/webhook/:orgId", express.json(), async (req, res) => {
-  res.sendStatus(200); // acknowledge immediately
-
+// ── Shared call-state event processing ────────────────────────────────────────
+// Used by BOTH /webhook/:orgId (outbound calls - EnableX calls this because we
+// pass event_url on the /call API) AND /inbound/:orgId (inbound calls - EnableX
+// sends every state callback here too, to whatever URL is configured as the
+// number's Event URL, not just the initial ring). Previously /inbound/:orgId
+// ignored everything except the first "incomingcall" ring, so inbound calls
+// never got duration tracking or a recording - this is what actually processes
+// "connected", "disconnected", "recording_complete" etc. for both directions.
+async function processCallStateEvent(orgId, event, logPrefix) {
   try {
-    const { orgId } = req.params;
-    const event     = req.body;
     // Log every webhook so we can see EnableX's exact event structure
-    console.info("[enablex webhook] orgId:", orgId, "body:", JSON.stringify(event).slice(0, 500));
+    console.info(`${logPrefix} orgId:`, orgId, "body:", JSON.stringify(event).slice(0, 500));
 
-    // custom_data is echoed by EnableX from outbound call payload;
-    // recording server sends it back when pushing the Cloudinary URL.
-    const ownerRef  = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
+    // custom_data is echoed by EnableX on outbound call events, but inbound-leg
+    // callbacks (bridged/disconnected on the number's Event URL) come back with
+    // no custom_data at all - fall back to matching by voice_id (stored in
+    // meta.voiceId for both directions) when it's missing.
+    let ownerRef = event?.custom_data || event?.owner_ref || event?.data?.owner_ref;
+    const eventVoiceId = event?.voice_id || event?.voiceId || event?.data?.voice_id || event?.data?.voiceId;
     // EnableX sends: state="connected"|"disconnected" (not type/event_type/voice_event)
     const eventType = (event?.state || event?.type || event?.event_type || event?.voice_event || event?.name || "").toLowerCase();
 
     if (eventType === "stream_stopped") {
-      const stoppedVoiceId = event?.voice_id || event?.voiceId || event?.data?.voice_id || event?.data?.voiceId;
-      if (stoppedVoiceId) {
-        const finalized = await stopCallStream(stoppedVoiceId);
-        console.info("[call-stream] stream_stopped finalized", stoppedVoiceId, finalized);
+      if (eventVoiceId) {
+        const finalized = await stopCallStream(eventVoiceId);
+        console.info("[call-stream] stream_stopped finalized", eventVoiceId, finalized);
       }
       return;
     }
 
-    if (!ownerRef?.startsWith("lead_")) return;
-
-    const leadId = ownerRef.split("_")[1];
-    const lead   = await Lead.findOne({ _id: leadId, orgId });
-    if (!lead) return;
-
-    const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
-    if (actIdx < 0) return;
+    let lead, actIdx = -1;
+    if (ownerRef?.startsWith("lead_")) {
+      const leadId = ownerRef.split("_")[1];
+      lead = await Lead.findOne({ _id: leadId, orgId });
+      if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
+    }
+    if ((!lead || actIdx < 0) && eventVoiceId) {
+      lead = await Lead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+      if (lead) {
+        actIdx = lead.activities.findIndex(a => a.meta?.voiceId === eventVoiceId);
+        if (actIdx >= 0) ownerRef = lead.activities[actIdx].meta?.ownerRef || ownerRef;
+      }
+    }
+    if (!lead || actIdx < 0) return;
 
     let dirty = false;
 
@@ -275,7 +292,7 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       if (legVoiceId && !lead.activities[actIdx].meta?.recordingStartRequested) {
         const orgForRecording = await Organization.findById(orgId).select("enablex").lean();
         if (orgForRecording?.enablex?.appId && orgForRecording?.enablex?.apiKey) {
-          await startRecording(orgForRecording, legVoiceId, "outbound");
+          await startRecording(orgForRecording, legVoiceId, lead.activities[actIdx].meta?.direction || "outbound");
           lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingStartRequested: true };
           lead.markModified("activities");
           await lead.save();
@@ -318,28 +335,27 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       return;
     }
 
-    // ── Recording push from our Cloudinary recording server ─────────────────
-    // Payload: { custom_data, recording_url, duration?, transcript? }
-    const recordingUrl = event?.recording_url
-      ?? event?.data?.recording_url
-      ?? event?.data?.recording_link
-      ?? event?.recording_link
-      ?? null;
+    // ── Recording ready — EnableX pushes the URL directly in the event body
+    // (confirmed live: arrives on a "recording_complete" event and again inline on
+    // "disconnected"). No need to poll a separate lookup endpoint - that one needs a
+    // service_id we don't have and always 404'd. EnableX's URL itself needs Basic
+    // Auth to download though, so re-host it on Cloudinary rather than saving the
+    // raw URL directly - the browser's audio player and Whisper can't send those
+    // credentials.
+    const rawRecordingUrl = event?.recording_url ?? event?.data?.recording_url ?? null;
+    const legVoiceIdForRecording = event?.voice_id || event?.voiceId || null;
 
-    if (recordingUrl && !lead.activities[actIdx].meta?.recordingUrl) {
-      lead.activities[actIdx].meta = {
-        ...lead.activities[actIdx].meta,
-        recordingUrl,
-      };
+    if (rawRecordingUrl
+      && !lead.activities[actIdx].meta?.recordingUrl
+      && !lead.activities[actIdx].meta?.recordingSaveRequested) {
+      lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingSaveRequested: true };
       dirty = true;
-
-      // Start AI transcription if transcript not already present
-      if (!lead.activities[actIdx].meta?.transcript && process.env.OPENAI_API_KEY) {
-        const dur = Number(event?.duration ?? lead.activities[actIdx].meta?.duration ?? 0);
-        if (dur > 10) {
-          transcribeAndSummarize(String(lead._id), actIdx, recordingUrl).catch(() => {});
-        }
-      }
+      // Delay so this request's own save (below) finishes first - avoids a
+      // Mongoose version conflict writing to the same lead document at once.
+      setTimeout(() => {
+        saveRecordingFromEnablexUrl(orgId, ownerRef, rawRecordingUrl, legVoiceIdForRecording)
+          .catch(e => console.error("[enablex recording] save failed:", e.message));
+      }, 3000);
     }
 
     // ── Call hangup / completion event (duration + status) ──────────────────
@@ -395,13 +411,6 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
           .catch(e => console.info("[enablex] terminate agent leg:", e.response?.status || e.message));
       }
 
-      // Schedule recording fetch from EnableX → upload to Cloudinary (after call processes)
-      if (callStatus === "answered" && storedVoiceId && dur > 5) {
-        setTimeout(() => {
-          fetchAndSaveRecording(orgId, storedVoiceId, ownerRef)
-            .catch(e => console.error("[enablex] fetchAndSaveRecording:", e.message));
-        }, 20000);
-      }
     }
 
     if (dirty) {
@@ -409,8 +418,15 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       await lead.save();
     }
   } catch (err) {
-    console.error("[enablex webhook]", err.message);
+    console.error(`${logPrefix} error:`, err.message);
   }
+}
+
+// ── Public webhook (EnableX + recording server post here, no JWT) ─────────────
+// Must be registered BEFORE the protect middleware below.
+router.post("/webhook/:orgId", express.json(), async (req, res) => {
+  res.sendStatus(200); // acknowledge immediately
+  processCallStateEvent(req.params.orgId, req.body, "[enablex webhook]");
 });
 
 // ── Authenticated routes ─────────────────────────────────────────────────────
@@ -939,8 +955,11 @@ ${transcript.slice(0, 3000)}`,
   await lead.save();
 }
 
-// ── Fetch recording from EnableX → upload to Cloudinary → save URL + auto-transcribe ──
-async function fetchAndSaveRecording(orgId, voiceId, ownerRef) {
+// ── Download EnableX's recording URL (pushed directly on the webhook event) →
+// upload to Cloudinary → save URL + auto-transcribe. EnableX's own recording URL
+// needs Basic Auth to fetch, so it can't be used directly by the browser player
+// or by Whisper - re-hosting on Cloudinary is what makes both work.
+async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl, voiceId) {
   const { v2: cloudinary } = require("cloudinary");
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -951,46 +970,25 @@ async function fetchAndSaveRecording(orgId, voiceId, ownerRef) {
   const org = await Organization.findById(orgId).select("enablex").lean();
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
 
-  // EnableX needs time to process — retry up to 4 times with 15s gaps
-  let fileUrl = null;
-  for (let attempt = 0; attempt < 4; attempt++) {
-    if (attempt > 0) await new Promise(r => setTimeout(r, 15000));
-    try {
-      const resp = await axios.get(`${ENABLEX_BASE}/recording/${voiceId}`, basicAuth(org));
-      const d    = resp.data;
-      fileUrl    = d?.file_url || d?.recording_url || d?.url || d?.data?.file_url || d?.data?.url;
-      if (fileUrl) break;
-    } catch (e) {
-      console.warn(`[enablex recording] attempt ${attempt + 1}:`, e.response?.status, e.message);
-    }
-  }
-
-  if (!fileUrl) {
-    console.warn("[enablex recording] no recording URL for voice_id:", voiceId);
-    return;
-  }
-
-  // Download audio and upload to Cloudinary (we host it — not EnableX)
-  const audioResp = await axios.get(fileUrl, {
-    responseType: "arraybuffer",
-    timeout:      60000,
-    ...basicAuth(org),
-  });
-  const dataUri = `data:audio/mpeg;base64,${Buffer.from(audioResp.data).toString("base64")}`;
-  const result  = await cloudinary.uploader.upload(dataUri, {
-    resource_type: "video",
-    folder:        "arthaleads/call-recordings",
-    public_id:     `call-${voiceId}`,
-    overwrite:     true,
-  });
-  const recordingUrl = result.secure_url;
-  console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
-
-  // Save URL to lead activity
   const lead = await Lead.findOne({ orgId, "activities.meta.ownerRef": ownerRef });
   if (!lead) return;
   const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
   if (actIdx < 0 || lead.activities[actIdx].meta?.recordingUrl) return;
+
+  const audioResp = await axios.get(enablexRecordingUrl, {
+    responseType: "arraybuffer",
+    timeout:      60000,
+    ...basicAuth(org),
+  });
+  const dataUri = `data:audio/wav;base64,${Buffer.from(audioResp.data).toString("base64")}`;
+  const result  = await cloudinary.uploader.upload(dataUri, {
+    resource_type: "video",
+    folder:        "arthaleads/call-recordings",
+    public_id:     `call-${voiceId || ownerRef}`,
+    overwrite:     true,
+  });
+  const recordingUrl = result.secure_url;
+  console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
 
   lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingUrl };
   lead.markModified("activities");
