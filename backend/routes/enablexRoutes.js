@@ -29,6 +29,24 @@ function normalizePhone(phone) {
   return d;
 }
 
+// Recording is controlled by EnableX as its own explicit start/stop API, NOT by a
+// "record" flag inline on the /call or /connect payload (that field is apparently
+// silently ignored - every recording fetch has 404'd regardless of it being set).
+// Logging the full response here so we can see the real recording/reference id
+// EnableX returns, since their docs site blocks automated fetches and existing
+// code guessed at a GET path that doesn't match their documented one
+// (GET /voice/v1/recording/{service_id}/{recording_id}, not /recording/{voice_id}).
+async function startRecording(org, voiceId, label) {
+  try {
+    const resp = await axios.put(`${ENABLEX_BASE}/call/${voiceId}/recording`, { start: true }, basicAuth(org));
+    console.info(`[enablex recording] start requested (${label}) voice_id=${voiceId}:`, JSON.stringify(resp.data));
+    return resp.data;
+  } catch (e) {
+    console.error(`[enablex recording] start FAILED (${label}) voice_id=${voiceId}:`, e.response?.status, JSON.stringify(e.response?.data));
+    return null;
+  }
+}
+
 // ── Public: inbound call answer URL ──────────────────────────────────────────
 // EnableX calls this (GET or POST) when someone dials the virtual number.
 // We look up who last called that phone number and bridge the inbound call
@@ -170,6 +188,7 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
         }, basicAuth(org));
         console.info("[enablex inbound] connect OK:", voiceId, "→ agent", agentPhone,
           JSON.stringify(connectResp.data).slice(0, 200));
+        await startRecording(org, voiceId, "inbound");
       } catch (connectErr) {
         console.error("[enablex inbound] connect FAILED:", connectErr.response?.status,
           JSON.stringify(connectErr.response?.data));
@@ -250,6 +269,18 @@ router.post("/webhook/:orgId", express.json(), async (req, res) => {
       const legVoiceId = event?.voice_id || event?.voiceId || event?.data?.voice_id || event?.data?.voiceId;
       console.info("[enablex webhook] leg connected — voice_id:", legVoiceId,
         "from:", event.from, "to:", event.to);
+
+      // Recording is its own explicit start/stop call, not something the initial
+      // /call payload's "record" field actually triggers — see startRecording().
+      if (legVoiceId && !lead.activities[actIdx].meta?.recordingStartRequested) {
+        const orgForRecording = await Organization.findById(orgId).select("enablex").lean();
+        if (orgForRecording?.enablex?.appId && orgForRecording?.enablex?.apiKey) {
+          await startRecording(orgForRecording, legVoiceId, "outbound");
+          lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingStartRequested: true };
+          lead.markModified("activities");
+          await lead.save();
+        }
+      }
 
       if (diagnosticsEnabled() && legVoiceId) {
         const currentDiagnostics = lead.activities[actIdx].meta?.recordingDiagnostics || {};
@@ -527,6 +558,7 @@ router.post("/lead/:leadId/summary", async (req, res, next) => {
     }
 
     // Build a concise chronological context string for GPT
+    const fmt = (s) => `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
     const callLines = calls.map((c, i) => {
       const m = c.meta || {};
       const parts = [`Call ${i + 1} (${new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`];
