@@ -109,30 +109,42 @@ export function SoftPhoneProvider({ children }) {
       try { if (stream) room.subscribe(stream); } catch (err) { console.error("[softphone] subscribe failed", err); }
     });
 
-    // Subscription confirmed → play the lead's audio locally + mark connected.
+    // The lead's remote stream arriving = they answered. This is the honest
+    // "In call" trigger (the agent's own audio must NOT flip us to connected).
     on("stream-subscribed", (e) => {
       const stream = e?.stream || e?.data?.stream;
       try { stream?.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ }
       markActive();
     });
 
-    // Fallback signal that the lead is on the call.
-    on("active-talkers-updated", (e) => {
-      const list = e?.message?.activeList;
-      if (Array.isArray(list) && list.length > 0) markActive();
-      // Ensure any remote stream is playing (covers browsers that miss stream-subscribed).
+    // Keep remote (lead) audio playing; only counts as "answered" if a remote
+    // stream actually exists (it won't until the lead picks up).
+    on("active-talkers-updated", () => {
       try {
         const streams = room.remoteStreams?.getAll?.() || {};
-        Object.values(streams).forEach((st) => { try { st.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } });
+        const list = Object.values(streams);
+        list.forEach((st) => { try { st.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } });
+        if (list.length > 0) markActive();
       } catch { /* noop */ }
     });
 
-    // Outbound PSTN dial-out result events.
-    on("outbound-call-state", (e) => console.info("[softphone] outbound-call-state", e?.message || e));
+    // Outbound PSTN dial-out lifecycle — surfaces WHY the lead leg ends.
+    on("outbound-call-state", (e) => {
+      const msg = e?.message || e?.data || e || {};
+      console.info("[softphone] outbound-call-state", JSON.stringify(msg));
+      const state = String(msg.state || msg.status || msg.call_state || "").toLowerCase();
+      if (/answer|connect|bridge|active/.test(state)) markActive();
+      if (/disconnect|fail|no.?answer|busy|reject|cancel|timeout|unavailable|decline/.test(state)) {
+        toast.error(`Lead didn't connect${state ? ` (${state})` : ""}.`);
+        endCall("remote");
+      }
+    });
     on("outbound-call-success", () => console.info("[softphone] outbound-call placed"));
     on("outbound-call-failed", (e) => {
-      console.error("[softphone] outbound-call-failed", e?.message || e);
-      toast.error("The lead's number could not be reached.");
+      const msg = e?.message || e?.data || e || {};
+      const reason = msg.reason || msg.description || msg.state || "unreachable";
+      console.error("[softphone] outbound-call-failed", JSON.stringify(msg));
+      toast.error(`Lead's number failed (${reason}).`);
       endCall("error");
     });
 
@@ -224,7 +236,9 @@ export function SoftPhoneProvider({ children }) {
         setStatus("ringing");
         try {
           // makeOutboundCall(number, caller_id, options, callback). result===0 = initiated.
-          room.makeOutboundCall(leadPhone, callerId, undefined, (resp) => {
+          // early_media:true exchanges ringback before answer (some carriers drop
+          // the leg otherwise); silent_join:false so the lead joins as a talker.
+          room.makeOutboundCall(leadPhone, callerId, { early_media: true, silent_join: false }, (resp) => {
             if (!resp || resp.result !== 0) {
               console.error("[softphone] makeOutboundCall rejected", resp);
               toast.error("Couldn't dial the lead's number (dial-out may not be enabled on EnableX).");
