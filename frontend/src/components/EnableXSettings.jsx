@@ -391,11 +391,12 @@ export default function EnableXSettings() {
 
           <div className="rounded-xl px-3 py-2.5 text-xs text-app-soft"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            <p className="font-semibold text-app mb-1">Two one-time setup steps on EnableX's side:</p>
+            <p className="font-semibold text-app mb-1">Setup on EnableX's side:</p>
             <ol className="list-decimal list-inside space-y-0.5">
-              <li>Download the <strong>EnxRtc.js</strong> Web SDK from your EnableX dashboard and add it to the app at <code>frontend/public/vendor/EnxRtc.js</code>.</li>
-              <li>Whitelist <code>www.arthaleads.com</code> in your EnableX project's allowed domains so it can issue call tokens.</li>
+              <li>In your EnableX <strong>Video</strong> project → <strong>PSTN Integration</strong>, add a phone number — it becomes the caller ID and lets the browser dial leads out.</li>
+              <li>The <strong>EnxRtc.js</strong> Web SDK is already bundled with the app — nothing to download.</li>
             </ol>
+            <p className="mt-1.5">No domain whitelisting is needed: call tokens are minted server-side with your Video App ID/Key.</p>
           </div>
         </div>
       </div>

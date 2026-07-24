@@ -3,23 +3,20 @@
 The in-app soft phone ("Call in browser") loads EnableX's browser SDK from
 `/vendor/EnxRtc.js` **on demand** (only when an agent starts an in-app call).
 
-EnableX distributes this SDK as a file you download from your dashboard — there
-is no clean web npm package. To enable in-app calling:
+`EnxRtc.js` is already vendored here (the official build from EnableX's public
+sample repos). If you ever need a newer build, download the latest `EnxRtc.js`
+from your EnableX dashboard (Video → Web SDK / Toolkit) and replace this file —
+keep the same filename/path.
 
-1. Log into your EnableX dashboard → **Video** → **Web SDK / Toolkit** and
-   download the latest `EnxRtc.js`.
-2. Place it in this folder as:
+## What the soft phone needs on EnableX's side
 
-   ```
-   frontend/public/vendor/EnxRtc.js
-   ```
+- An EnableX **Video** project; its **App ID / App Key** go into
+  Arthaleads → Automation → Telephony → In-app calling.
+- A phone number added under the Video project's **PSTN Integration** tab — it
+  becomes the caller ID and enables dialing leads' phones into the room.
 
-3. In your EnableX project settings, whitelist the app's domain
-   (`www.arthaleads.com`) so it is allowed to request call tokens.
+No domain whitelisting is required: call tokens are minted server-side by the
+backend using the Video App ID/Key, and that token is what authorizes the
+browser to join the room.
 
-Until the file is present, the "Call in browser" option still appears (when an
-admin has enabled it in Automation → Telephony) but will show a clear error
-telling the user the SDK file is missing — it never affects the existing
-PSTN "Call via EnableX IVR" flow.
-
-This file (README.md) is safe to keep in the repo; it is not served as code.
+This README is safe to keep in the repo; it is not served as code.
