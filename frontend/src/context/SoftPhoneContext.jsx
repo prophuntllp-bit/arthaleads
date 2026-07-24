@@ -99,9 +99,33 @@ export function SoftPhoneProvider({ children }) {
   }, []);
 
   // ── Attach EnableX room event listeners (real EnxRtc event names). ────────────
-  const attachRoomListeners = useCallback((room) => {
+  const attachRoomListeners = useCallback((room, localStream) => {
     if (!room?.addEventListener) return;
     const on = (evt, fn) => { try { room.addEventListener(evt, fn); } catch { /* noop */ } };
+    // Some events fire on the stream rather than the room — attach to both.
+    const onAny = (evt, fn) => {
+      try { room.addEventListener(evt, fn); } catch { /* noop */ }
+      try { localStream?.addEventListener?.(evt, fn); } catch { /* noop */ }
+    };
+
+    // ── Media / ICE / network failures ──────────────────────────────────────────
+    // A ~5s drop before the lead can answer is almost always the agent's WebRTC
+    // media path failing to establish (mobile/CGNAT networks with no UDP/TURN).
+    // Surface it as what it really is instead of a misleading "lead timeout".
+    const mediaFail = (label) => (e) => {
+      console.error(`[softphone] ${label}`, (() => { try { return JSON.stringify(e).slice(0, 200); } catch { return ""; } })());
+      toast.error("Call dropped — your device couldn't establish the audio connection. Try Wi-Fi or a desktop browser.");
+      endCall("error");
+    };
+    onAny("ice-failed",                mediaFail("ice-failed"));
+    onAny("media-connection-failed",   mediaFail("media-connection-failed"));
+    on("connection-lost",              mediaFail("connection-lost"));
+    on("network-reconnect-failed",     mediaFail("network-reconnect-failed"));
+    on("network-reconnect-timeout",    mediaFail("network-reconnect-timeout"));
+    on("network-disconnected", (e) => console.warn("[softphone] network-disconnected", e));
+    on("network-reconnecting", ()  => console.info("[softphone] network-reconnecting"));
+    on("network-reconnected",  ()  => console.info("[softphone] network-reconnected"));
+    onAny("ice-success",       ()  => console.info("[softphone] ice-success (media path OK)"));
 
     // A new stream (the dialed-in lead's audio) was added → subscribe to receive it.
     on("stream-added", (e) => {
@@ -226,7 +250,7 @@ export function SoftPhoneProvider({ children }) {
         }
         const room = success.room;
         roomRef.current = room;
-        attachRoomListeners(room);
+        attachRoomListeners(room, localStream);
 
         // Subscribe to any streams already present (normally none for a fresh call).
         try { (success.streams || []).forEach((s) => room.subscribe(s)); } catch { /* noop */ }
