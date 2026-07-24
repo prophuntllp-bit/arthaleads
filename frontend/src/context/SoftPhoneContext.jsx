@@ -109,45 +109,39 @@ export function SoftPhoneProvider({ children }) {
       try { if (stream) room.subscribe(stream); } catch (err) { console.error("[softphone] subscribe failed", err); }
     });
 
-    // The lead's remote stream arriving = they answered. This is the honest
-    // "In call" trigger (the agent's own audio must NOT flip us to connected).
-    on("stream-subscribed", (e) => {
-      const stream = e?.stream || e?.data?.stream;
-      try { stream?.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ }
-      markActive();
-    });
-
-    // Keep remote (lead) audio playing; only counts as "answered" if a remote
-    // stream actually exists (it won't until the lead picks up).
+    // Audio playback is DECOUPLED from answer detection. With early_media the
+    // ringback stream arrives before the lead answers, so a stream appearing does
+    // NOT mean "answered" — it just means "play whatever audio EnableX sends"
+    // (ringback, then the lead's voice). Whether the call is actually answered is
+    // driven solely by the dial-state machine below.
+    const playRemote = (stream) => { try { stream?.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } };
+    on("stream-subscribed", (e) => playRemote(e?.stream || e?.data?.stream));
     on("active-talkers-updated", () => {
-      try {
-        const streams = room.remoteStreams?.getAll?.() || {};
-        const list = Object.values(streams);
-        list.forEach((st) => { try { st.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } });
-        if (list.length > 0) markActive();
-      } catch { /* noop */ }
+      try { Object.values(room.remoteStreams?.getAll?.() || {}).forEach(playRemote); } catch { /* noop */ }
     });
 
-    // Outbound PSTN dial-out lifecycle — surfaces WHY the lead leg ends.
-    // NOTE: "answered" is NOT inferred from this event (states like "connecting"
-    // are ambiguous). The only trusted "answered" signal is the lead's remote
-    // stream arriving (stream-subscribed / active-talkers), handled above.
-    on("outbound-call-state", (e) => {
-      const msg = e?.message || e?.data || e || {};
-      console.info("[softphone] outbound-call-state", JSON.stringify(msg));
-      const state = String(msg.state || msg.status || msg.call_state || "").toLowerCase();
-      // Match only unambiguous terminal states (avoid "connecting"/"disconnected"
-      // ambiguity by requiring word-ish boundaries on the failure tokens).
-      if (/\b(no.?answer|busy|reject|cancel|timeout|unavailable|declin|fail)/.test(state)
-          || /disconnected|hangup|ended/.test(state)) {
-        toast.error(`Lead didn't connect${state ? ` (${state})` : ""}.`);
+    // ── Outbound PSTN dial-out state machine (the real EnxRtc event) ────────────
+    // EnableX dispatches "dial-state-events" with message.status:
+    //   dialing → proceeding (ringback) → connected (ANSWERED) → disconnected/
+    //   failed/timeout (ENDED). "connected" is the ONLY trusted answered signal.
+    const handleDialState = (e) => {
+      const msg    = e?.message || e?.data || e || {};
+      const status = String(msg.status || msg.state || msg.call_state || "").toLowerCase();
+      console.info("[softphone] dial-state", status, JSON.stringify(msg));
+      if (status === "connected") { markActive(); return; }      // lead answered
+      if (status === "dialing" || status === "proceeding") return; // still ringing
+      if (/fail|timeout|disconnect|no.?answer|busy|reject|cancel|declin|unavailable/.test(status)) {
+        // Ended: after answer this is a normal hang-up; before answer it's the
+        // reason the lead didn't connect. Surface it either way.
+        if (!connectedAtRef.current) toast.error(`Lead didn't connect${status ? ` (${status})` : ""}.`);
         endCall("remote");
       }
-    });
-    on("outbound-call-success", () => console.info("[softphone] outbound-call placed"));
+    };
+    on("dial-state-events",   handleDialState);   // primary
+    on("outbound-call-state", handleDialState);   // alias in some SDK builds
     on("outbound-call-failed", (e) => {
       const msg = e?.message || e?.data || e || {};
-      const reason = msg.reason || msg.description || msg.state || "unreachable";
+      const reason = msg.reason || msg.description || msg.status || msg.state || "unreachable";
       console.error("[softphone] outbound-call-failed", JSON.stringify(msg));
       toast.error(`Lead's number failed (${reason}).`);
       endCall("error");
