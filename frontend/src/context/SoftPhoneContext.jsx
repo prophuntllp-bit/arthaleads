@@ -138,7 +138,9 @@ export function SoftPhoneProvider({ children }) {
     // NOT mean "answered" — it just means "play whatever audio EnableX sends"
     // (ringback, then the lead's voice). Whether the call is actually answered is
     // driven solely by the dial-state machine below.
-    const playRemote = (stream) => { try { stream?.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } };
+    // stream.play(elementId) — element only. Passing an options object here throws
+    // "invalid param" in this SDK build, so keep it to the element id.
+    const playRemote = (stream) => { try { stream?.play?.(REMOTE_AUDIO_ID); } catch { /* noop */ } };
     on("stream-subscribed", (e) => playRemote(e?.stream || e?.data?.stream));
     on("active-talkers-updated", () => {
       try { Object.values(room.remoteStreams?.getAll?.() || {}).forEach(playRemote); } catch { /* noop */ }
