@@ -1124,13 +1124,38 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
   stream.name  = "recording.mp3";
 
   const [transcription, lead] = await Promise.all([
-    openai.audio.transcriptions.create({ file: stream, model: "whisper-1" }),
+    openai.audio.transcriptions.create({
+      file:        stream,
+      model:       "whisper-1",
+      temperature: 0,   // deterministic — Whisper invents far less on silence/ringback
+      prompt:      "This is a real estate sales phone call between an agent and a customer, in English, Hindi or Marathi.",
+    }),
     Model.findById(leadId),
   ]);
 
   if (!lead || !lead.activities[actIdx]) return;
 
-  const transcript = transcription.text || "";
+  const transcript = (transcription.text || "").trim();
+
+  // Guard: a call with no real speech (silence, ringback, a quick test) makes
+  // Whisper hallucinate a few garbage words. Don't fabricate a summary from it —
+  // mark it clearly instead. Count only tokens that contain actual letters.
+  const realWords = transcript.split(/\s+/).filter(t => /[\p{L}]{2,}/u.test(t));
+  if (realWords.length < 6) {
+    lead.activities[actIdx].meta = {
+      ...lead.activities[actIdx].meta,
+      transcript,
+      summary:    "No clear conversation was captured on this call.",
+      keyPoints:  [],
+      nextAction: null,
+      intent:     "unclear",
+      sentiment:  "neutral",
+      noSpeech:   true,
+    };
+    lead.markModified("activities");
+    await lead.save();
+    return;
+  }
 
   // Quick sentiment heuristic before calling GPT (saves token cost)
   const lower    = transcript.toLowerCase();
@@ -1148,6 +1173,12 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
 - "keyPoints": array of 2-3 short bullet strings (lead's requirements, budget, timeline if mentioned)
 - "nextAction": one specific recommended action for the sales agent
 - "intent": exactly one of "interested" | "site_visit" | "negotiation" | "not_interested" | "follow_up" | "unclear"
+
+IMPORTANT: The transcript is auto-generated and may be garbled, empty, or contain
+no real conversation (e.g. the call wasn't truly answered). If it is not a coherent,
+intelligible conversation, DO NOT invent any details — instead return summary
+"No clear conversation was captured on this call.", keyPoints [], nextAction null,
+and intent "unclear".
 
 Return ONLY the JSON, no markdown, no explanation.
 
@@ -1224,6 +1255,7 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   const dataUri = `data:audio/wav;base64,${Buffer.from(audioResp.data).toString("base64")}`;
   const result  = await cloudinary.uploader.upload(dataUri, {
     resource_type: "video",
+    format:        "mp3",   // transcode WAV → MP3; browsers scrub/show duration for MP3 (a raw .wav often shows 0:00)
     folder:        "arthaleads/call-recordings",
     public_id:     `call-${voiceId || ownerRef}`,
     overwrite:     true,
