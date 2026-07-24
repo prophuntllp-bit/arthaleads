@@ -88,51 +88,60 @@ export function SoftPhoneProvider({ children }) {
     if (reason === "remote") toast("Call ended");
   }, [teardown, reportEnd]);
 
-  // ── Attach EnableX room event listeners. Defensive — event names/shapes vary
-  // slightly across SDK builds, so every handler is guarded. ────────────────────
+  // Lead answered / media is flowing → mark active and start the timer.
+  const markActive = useCallback(() => {
+    if (connectedAtRef.current) return;        // already active
+    connectedAtRef.current = Date.now();
+    setStatus("active");
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - connectedAtRef.current) / 1000));
+    }, 1000);
+  }, []);
+
+  // ── Attach EnableX room event listeners (real EnxRtc event names). ────────────
   const attachRoomListeners = useCallback((room) => {
     if (!room?.addEventListener) return;
-
     const on = (evt, fn) => { try { room.addEventListener(evt, fn); } catch { /* noop */ } };
 
-    // Room is up → dial the lead into it.
-    on("room-connected", () => {
-      setStatus("ringing");
-      const c = callRef.current;
-      try {
-        // Documented Video client API: dial a PSTN number into the session.
-        if (typeof room.makeOutboundCall === "function" && c?.leadPhone) {
-          room.makeOutboundCall(c.leadPhone);
-        }
-      } catch (e) {
-        console.error("[softphone] makeOutboundCall failed", e);
-        toast.error("Couldn't dial the lead. Ending call.");
-        endCall("error");
-      }
+    // A new stream (the dialed-in lead's audio) was added → subscribe to receive it.
+    on("stream-added", (e) => {
+      const stream = e?.stream || e?.data?.stream;
+      try { if (stream) room.subscribe(stream); } catch (err) { console.error("[softphone] subscribe failed", err); }
     });
 
-    // Lead answered / media is flowing → mark active and start the timer.
-    const markActive = () => {
-      if (connectedAtRef.current) return;      // already active
-      connectedAtRef.current = Date.now();
-      setStatus("active");
-      timerRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - connectedAtRef.current) / 1000));
-      }, 1000);
-    };
-    on("active-talkers-updated", markActive);
+    // Subscription confirmed → play the lead's audio locally + mark connected.
     on("stream-subscribed", (e) => {
-      // Play the lead's audio locally.
-      try { (e?.stream || e?.streams?.[0])?.play?.(REMOTE_AUDIO_ID); } catch { /* noop */ }
+      const stream = e?.stream || e?.data?.stream;
+      try { stream?.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ }
       markActive();
     });
 
-    // Any terminal event → clean up.
+    // Fallback signal that the lead is on the call.
+    on("active-talkers-updated", (e) => {
+      const list = e?.message?.activeList;
+      if (Array.isArray(list) && list.length > 0) markActive();
+      // Ensure any remote stream is playing (covers browsers that miss stream-subscribed).
+      try {
+        const streams = room.remoteStreams?.getAll?.() || {};
+        Object.values(streams).forEach((st) => { try { st.play?.(REMOTE_AUDIO_ID, { muted: false }); } catch { /* noop */ } });
+      } catch { /* noop */ }
+    });
+
+    // Outbound PSTN dial-out result events.
+    on("outbound-call-state", (e) => console.info("[softphone] outbound-call-state", e?.message || e));
+    on("outbound-call-success", () => console.info("[softphone] outbound-call placed"));
+    on("outbound-call-failed", (e) => {
+      console.error("[softphone] outbound-call-failed", e?.message || e);
+      toast.error("The lead's number could not be reached.");
+      endCall("error");
+    });
+
+    // Terminal events → clean up.
     on("room-disconnected", () => endCall("remote"));
     on("user-disconnected", () => endCall("remote"));
     on("stream-ended",      () => endCall("remote"));
     on("room-error",        (e) => { console.error("[softphone] room-error", e); endCall("error"); });
-  }, [endCall]);
+  }, [endCall, markActive]);
 
   // ── Start an in-app call. target = { leadId?|projectLeadId?, name, phone }. ────
   const startCall = useCallback(async (target) => {
@@ -190,18 +199,43 @@ export function SoftPhoneProvider({ children }) {
       if (typeof rtc.joinRoom !== "function") {
         throw new Error("EnableX SDK loaded but joinRoom is unavailable.");
       }
-      // joinRoom(token, config, callback) → returns the local stream; the room
-      // object arrives via the callback.
-      const localStream = rtc.joinRoom(data.token, config, (roomMeta, error) => {
-        if (error) {
-          console.error("[softphone] joinRoom error", error);
+
+      const leadPhone = data.leadPhone;
+      const callerId  = data.callerId || "";
+
+      // joinRoom(token, config, callback) → returns the local (mic) stream. The
+      // callback's `success` arg IS the room-connected signal — there is no
+      // separate "room-connected" event.
+      const localStream = rtc.joinRoom(data.token, config, (success, error) => {
+        if (!success) {
+          console.error("[softphone] joinRoom failed", error);
           toast.error("Couldn't connect the call.");
           endCall("error");
           return;
         }
-        const room = roomMeta?.room || roomMeta;
+        const room = success.room;
         roomRef.current = room;
         attachRoomListeners(room);
+
+        // Subscribe to any streams already present (normally none for a fresh call).
+        try { (success.streams || []).forEach((s) => room.subscribe(s)); } catch { /* noop */ }
+
+        // Connected to the room → dial the lead's phone into it.
+        setStatus("ringing");
+        try {
+          // makeOutboundCall(number, caller_id, options, callback). result===0 = initiated.
+          room.makeOutboundCall(leadPhone, callerId, undefined, (resp) => {
+            if (!resp || resp.result !== 0) {
+              console.error("[softphone] makeOutboundCall rejected", resp);
+              toast.error("Couldn't dial the lead's number (dial-out may not be enabled on EnableX).");
+              endCall("error");
+            }
+          });
+        } catch (e) {
+          console.error("[softphone] makeOutboundCall threw", e);
+          toast.error("Couldn't dial the lead. Ending call.");
+          endCall("error");
+        }
       });
       localStreamRef.current = localStream;
 
@@ -237,8 +271,12 @@ export function SoftPhoneProvider({ children }) {
       value={{ enabled, status, call, muted, elapsed, startCall, hangUp, toggleMute }}
     >
       {children}
-      {/* Hidden sink for the lead's audio. */}
-      <div id={REMOTE_AUDIO_ID} style={{ display: "none" }} />
+      {/* Off-screen sink for the lead's audio. Not display:none — some browsers
+          won't autoplay media inside a display:none node. */}
+      <div
+        id={REMOTE_AUDIO_ID}
+        style={{ position: "fixed", width: 1, height: 1, opacity: 0, overflow: "hidden", pointerEvents: "none", bottom: 0, left: 0 }}
+      />
     </SoftPhoneContext.Provider>
   );
 }

@@ -928,6 +928,9 @@ router.post("/webrtc/session", protect, async (req, res, next) => {
       activityId,
       leadName:  lead.name,
       leadPhone,               // digits, e.g. "917020950304" — browser dials this into the room
+      // Caller ID shown to the lead on the dial-out leg — the DID attached to the
+      // Video project's PSTN Integration (same number as the Voice virtualNumber).
+      callerId:  org.enablex.virtualNumber ? normalizePhone(org.enablex.virtualNumber) : "",
     });
   } catch (err) { next(err); }
 });
