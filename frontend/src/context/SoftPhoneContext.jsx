@@ -210,7 +210,8 @@ export function SoftPhoneProvider({ children }) {
       console.error("[softphone] startCall failed", err);
       setStatus("idle");
       setCall(null);
-      toast.error(err?.message || "Call failed to start.");
+      // Prefer the backend's explanatory message over the raw "status code NNN".
+      toast.error(err?.response?.data?.message || err?.message || "Call failed to start.");
       teardown();
       return false;
     }
