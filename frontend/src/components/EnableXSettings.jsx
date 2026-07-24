@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, Eye, EyeOff, ExternalLink, Loader2, Phone, Wifi, WifiOff, X, Sparkles } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, ExternalLink, Loader2, Phone, Wifi, WifiOff, X, Sparkles, Headphones } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -16,6 +16,13 @@ export default function EnableXSettings() {
   const [aiAutoStatus,   setAiAutoStatus]   = useState(false);
   const [togglingAI,     setTogglingAI]     = useState(false);
   const [inboundUrl,     setInboundUrl]     = useState("");
+  // In-app soft phone (EnableX Video API) — separate credentials from Voice above.
+  const [webrtcEnabled,  setWebrtcEnabled]  = useState(false);
+  const [videoAppId,     setVideoAppId]     = useState("");
+  const [videoAppKey,    setVideoAppKey]    = useState("");
+  const [hasVideoAppKey, setHasVideoAppKey] = useState(false);
+  const [showVideoKey,   setShowVideoKey]   = useState(false);
+  const [savingWebrtc,   setSavingWebrtc]   = useState(false);
 
   // Must point at the API server (api.arthaleads.com), not the CRM web app's own
   // origin (www.arthaleads.com) - the web app has no /api proxy, so EnableX's
@@ -36,8 +43,44 @@ export default function EnableXSettings() {
       setVirtualNumber(s.virtualNumber || "");
       setAiAutoStatus(!!s.aiAutoStatus);
       setInboundUrl(r.data.inboundUrl || "");
+      const w = s.webrtc || {};
+      setWebrtcEnabled(!!w.enabled);
+      setVideoAppId(w.videoAppId || "");
+      setHasVideoAppKey(!!w.hasVideoAppKey);
     }).catch(() => {});
   }, []);
+
+  const saveWebrtc = async () => {
+    if (!videoAppId.trim()) { toast.error("Enter your EnableX Video App ID"); return; }
+    if (!videoAppKey.trim() && !hasVideoAppKey) { toast.error("Enter your EnableX Video App Key"); return; }
+    setSavingWebrtc(true);
+    try {
+      const patch = { webrtcEnabled: true, videoAppId: videoAppId.trim() };
+      if (videoAppKey.trim()) patch.videoAppKey = videoAppKey.trim();
+      await api.patch("/calls/settings", patch);
+      setWebrtcEnabled(true);
+      setHasVideoAppKey(true);
+      setVideoAppKey("");
+      toast.success("In-app calling enabled.");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Save failed.");
+    } finally { setSavingWebrtc(false); }
+  };
+
+  const toggleWebrtc = async () => {
+    const next = !webrtcEnabled;
+    if (next && (!videoAppId.trim() || !hasVideoAppKey)) {
+      toast.error("Add your Video App ID and Key first.");
+      return;
+    }
+    try {
+      await api.patch("/calls/settings", { webrtcEnabled: next });
+      setWebrtcEnabled(next);
+      toast.success(next ? "In-app calling enabled" : "In-app calling disabled");
+    } catch {
+      toast.error("Failed to update setting");
+    }
+  };
 
   const toggleAiAutoStatus = async () => {
     setTogglingAI(true);
@@ -289,6 +332,73 @@ export default function EnableXSettings() {
           )}
         </div>
       )}
+
+      {/* In-app calling (WebRTC soft phone) — optional, separate from the DID flow */}
+      <div className="card p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(249,115,22,0.10)" }}>
+              <Headphones className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-app">In-app calling (browser phone)</p>
+              <p className="text-xs text-app-soft mt-0.5 max-w-md">
+                Let agents talk to leads directly from the browser — no phone rings on the agent's side, so it
+                avoids the carrier "no answer" drops. Uses your EnableX <strong>Video API</strong> credentials
+                (separate from the Voice APP ID/KEY above). Leave off to keep using the standard call flow.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleWebrtc}
+            className="shrink-0 mt-0.5 relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+            style={{ background: webrtcEnabled ? "var(--app-primary)" : "var(--app-border)" }}
+            title={webrtcEnabled ? "Click to disable" : "Click to enable"}
+          >
+            <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+              style={{ transform: webrtcEnabled ? "translateX(1.375rem)" : "translateX(0.25rem)" }} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-app-soft mb-1 block">Video App ID</label>
+            <input className="input w-full" placeholder="EnableX Video API App ID"
+              autoComplete="off"
+              value={videoAppId} onChange={e => setVideoAppId(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-app-soft mb-1 block">
+              Video App Key {hasVideoAppKey && <span className="text-green-500">(saved)</span>}
+            </label>
+            <div className="relative">
+              <input className="input w-full pr-10" type={showVideoKey ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder={hasVideoAppKey ? "Leave blank to keep current key" : "Paste your Video App Key"}
+                value={videoAppKey} onChange={e => setVideoAppKey(e.target.value)} />
+              <button type="button" onClick={() => setShowVideoKey(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app transition">
+                {showVideoKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <button onClick={saveWebrtc} disabled={savingWebrtc}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition disabled:opacity-40 btn-secondary">
+            {savingWebrtc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {savingWebrtc ? "Saving…" : "Save & Enable In-app Calling"}
+          </button>
+
+          <div className="rounded-xl px-3 py-2.5 text-xs text-app-soft"
+            style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+            <p className="font-semibold text-app mb-1">Two one-time setup steps on EnableX's side:</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Download the <strong>EnxRtc.js</strong> Web SDK from your EnableX dashboard and add it to the app at <code>frontend/public/vendor/EnxRtc.js</code>.</li>
+              <li>Whitelist <code>www.arthaleads.com</code> in your EnableX project's allowed domains so it can issue call tokens.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

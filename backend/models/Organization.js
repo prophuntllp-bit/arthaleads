@@ -84,6 +84,17 @@ const orgSchema = new mongoose.Schema(
       apiKey:        { type: String,  default: "" },  // APP KEY from EnableX dashboard
       virtualNumber: { type: String,  default: "" },  // virtual phone number to call from
       aiAutoStatus:  { type: Boolean, default: false }, // auto-advance lead status from AI intent
+
+      // ── In-app WebRTC soft phone (browser is the phone) ──────────────────────
+      // Additive + independent from the Voice/DID fields above. Uses EnableX's
+      // Video API (SIP-enabled audio rooms) which has its OWN App ID/Key, separate
+      // from the Voice appId/apiKey. Leaving webrtc.enabled=false keeps the app on
+      // the existing PSTN dial-bridge flow — nothing here affects that path.
+      webrtc: {
+        enabled:     { type: Boolean, default: false },
+        videoAppId:  { type: String,  default: "" }, // EnableX Video API App ID
+        videoAppKey: { type: String,  default: "" }, // EnableX Video API App Key
+      },
     },
 
     // ── Voice Integration API key (per-org, scoped to this tenant only) ─────────

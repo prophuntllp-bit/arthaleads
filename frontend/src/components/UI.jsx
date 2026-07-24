@@ -2,9 +2,10 @@
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import { useSoftPhone } from "../context/SoftPhoneContext";
 
 export function StatusBadge({ status }) {
   return (
@@ -170,8 +171,21 @@ export function PhoneActions({ phone, lead, projectLead, onContact }) {
   const [calling,   setCalling]   = useState(false);
   const ref       = useRef(null);
   const hoverTimer = useRef(null);
+  const sp        = useSoftPhone();   // null on pages outside the authed CRM shell
 
   if (!phone) return <span className="text-xs text-app-soft">-</span>;
+
+  // Start an in-app (browser) call — the agent's browser becomes the phone.
+  const callInBrowser = () => {
+    setDialOpen(false);
+    sp?.startCall({
+      leadId:        lead?._id || undefined,
+      projectLeadId: !lead?._id ? projectLead?._id : undefined,
+      name:          lead?.name || projectLead?.name,
+      phone,
+    });
+    onContact?.();
+  };
 
   const onMouseEnter = () => {
     hoverTimer.current = setTimeout(() => {
@@ -275,6 +289,16 @@ export function PhoneActions({ phone, lead, projectLead, onContact }) {
               Call {lead?.name || projectLead?.name || phone}
             </p>
             <div className="p-2 space-y-0.5">
+              {sp?.enabled && (lead?._id || projectLead?._id) && (
+                <button onClick={callInBrowser}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"
+                  style={{ color:"#f97316" }}
+                  onMouseEnter={e => e.currentTarget.style.background="rgba(249,115,22,0.08)"}
+                  onMouseLeave={e => e.currentTarget.style.background=""}>
+                  <Headphones className="w-4 h-4 shrink-0" />
+                  Call in browser
+                </button>
+              )}
               {(lead?._id || projectLead?._id) && (
                 <button onClick={callIVR}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-left transition"

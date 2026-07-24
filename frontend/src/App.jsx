@@ -4,6 +4,8 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CopilotProvider } from "./context/CopilotContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
+import { SoftPhoneProvider } from "./context/SoftPhoneContext";
+import SoftPhoneWidget from "./components/SoftPhoneWidget";
 import Sidebar from "./components/Sidebar";
 import AdminSidebar from "./components/AdminSidebar";
 import ImpersonationBanner from "./components/ImpersonationBanner";
@@ -484,6 +486,7 @@ function RequireAuth() {
   );
 
   return (
+    <SoftPhoneProvider>
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
       <SupportSessionBanner />
@@ -495,11 +498,14 @@ function RequireAuth() {
       <NotificationBanner />
       {/* Floating AI help assistant + guided tours - on every CRM page */}
       <HelpBot />
+      {/* In-app soft phone in-call widget — renders only during an active call */}
+      <SoftPhoneWidget />
       {/* Blocking overlays - rendered on top of everything */}
       {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
       {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
       {!isInactive && !trialExpired && needsOnboarding && <OnboardingGate />}
     </div>
+    </SoftPhoneProvider>
   );
 }
 

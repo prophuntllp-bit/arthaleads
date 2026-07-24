@@ -16,6 +16,7 @@ const {
   diagnosticsEnabled,
   stopCallStream,
 } = require("../services/callStreamRecorder");
+const enablexRoom = require("../services/enablexRoom");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -671,12 +672,20 @@ ${callLines}`,
 router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
   try {
     const org = await Organization.findById(req.user.orgId).select("enablex").lean();
-    const { apiKey, ...safe } = org?.enablex || {};
+    const { apiKey, webrtc, ...safe } = org?.enablex || {};
     const orgId = String(req.user.orgId);
+    // Mask the WebRTC (Video API) secret the same way the Voice apiKey is masked —
+    // never send videoAppKey to the browser, only whether one is set.
+    const { videoAppKey, ...webrtcSafe } = webrtc || {};
     // Inbound answer URL — admins paste this into EnableX portal → Phone Numbers → Answer URL
     const inboundUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/inbound/${orgId}`;
     res.json({
-      enablex:    { ...safe, apiKey: apiKey || "", hasApiKey: !!apiKey },
+      enablex:    {
+        ...safe,
+        apiKey: apiKey || "",
+        hasApiKey: !!apiKey,
+        webrtc: { ...webrtcSafe, hasVideoAppKey: !!videoAppKey },
+      },
       connected:  !!(apiKey && org?.enablex?.enabled),
       orgId,
       inboundUrl, // shown in Settings → Telephony so admin can copy it
@@ -687,19 +696,25 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
 // PATCH /api/calls/settings
 router.patch("/settings", authorize("admin", "super_admin"), async (req, res, next) => {
   try {
-    const { appId, apiKey, virtualNumber, enabled, aiAutoStatus } = req.body;
+    const { appId, apiKey, virtualNumber, enabled, aiAutoStatus,
+            webrtcEnabled, videoAppId, videoAppKey } = req.body;
     const upd = {};
     if (appId         !== undefined) upd["enablex.appId"]         = String(appId).trim();
     if (apiKey        !== undefined && apiKey) upd["enablex.apiKey"] = String(apiKey).trim();
     if (virtualNumber !== undefined) upd["enablex.virtualNumber"] = String(virtualNumber).trim();
     if (enabled       !== undefined) upd["enablex.enabled"]       = Boolean(enabled);
     if (aiAutoStatus  !== undefined) upd["enablex.aiAutoStatus"]  = Boolean(aiAutoStatus);
+    // In-app soft phone (EnableX Video API) — independent of the Voice fields above.
+    if (webrtcEnabled !== undefined) upd["enablex.webrtc.enabled"]    = Boolean(webrtcEnabled);
+    if (videoAppId    !== undefined) upd["enablex.webrtc.videoAppId"] = String(videoAppId).trim();
+    if (videoAppKey   !== undefined && videoAppKey) upd["enablex.webrtc.videoAppKey"] = String(videoAppKey).trim();
 
     const org = await Organization.findByIdAndUpdate(
       req.user.orgId, { $set: upd }, { new: true }
     ).select("enablex");
-    const { apiKey: _k, ...safe } = org.enablex.toObject();
-    res.json({ enablex: { ...safe, hasApiKey: !!_k } });
+    const { apiKey: _k, webrtc: _w, ...safe } = org.enablex.toObject();
+    const { videoAppKey: _vk, ...webrtcSafe } = _w || {};
+    res.json({ enablex: { ...safe, hasApiKey: !!_k, webrtc: { ...webrtcSafe, hasVideoAppKey: !!_vk } } });
   } catch (err) { next(err); }
 });
 
@@ -829,6 +844,138 @@ router.post("/initiate", protect, async (req, res, next) => {
       || err.message;
     res.status(500).json({ success: false, message: `Call failed: ${msg}` });
   }
+});
+
+// ── In-app WebRTC soft phone ──────────────────────────────────────────────────
+// POST /api/calls/webrtc/session — start a browser call. Creates a SIP audio room,
+// mints a join token for this agent, logs a "called" activity (so it shows up in
+// the Calls list exactly like a PSTN call), and returns the token + roomId + the
+// lead's phone. The browser joins the room and dials the lead in. This path never
+// dials the agent's mobile, so it's immune to the PSTN "instant no-answer" issue.
+router.post("/webrtc/session", protect, async (req, res, next) => {
+  try {
+    const { leadId, projectLeadId } = req.body;
+    if (!leadId && !projectLeadId) {
+      return res.status(400).json({ success: false, message: "leadId or projectLeadId is required." });
+    }
+
+    const org = await Organization.findById(req.user.orgId).select("enablex name").lean();
+    const wc  = org?.enablex?.webrtc;
+    if (!wc?.enabled || !wc.videoAppId || !wc.videoAppKey) {
+      return res.status(400).json({
+        success: false,
+        message: "In-app calling isn't set up. An admin can enable it in Automation → Telephony (needs EnableX Video App ID/Key).",
+      });
+    }
+
+    const isProjectLead = !!projectLeadId;
+    const targetId = projectLeadId || leadId;
+    const Model = isProjectLead ? ProjectLead : Lead;
+
+    const lead = await Model.findOne({ _id: targetId, orgId: req.user.orgId });
+    if (!lead)       return res.status(404).json({ success: false, message: isProjectLead ? "Project lead not found." : "Lead not found." });
+    if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
+
+    const ownerRef  = `${isProjectLead ? "projectlead" : "lead"}_${targetId}_${Date.now()}`;
+    const leadPhone = normalizePhone(lead.phone);
+    const creds     = { videoAppId: wc.videoAppId, videoAppKey: wc.videoAppKey };
+
+    let roomId, token;
+    try {
+      ({ roomId } = await enablexRoom.createRoom(creds, {
+        name: `crm-${String(targetId).slice(-6)}-${Date.now()}`,
+        ownerRef,
+      }));
+      token = await enablexRoom.createToken(creds, roomId, {
+        name:    req.user.name || "Agent",
+        userRef: String(req.user._id),
+        role:    "moderator",
+      });
+    } catch (enxErr) {
+      console.error("[enablex webrtc] room/token failed:", enxErr.response?.status,
+        JSON.stringify(enxErr.response?.data || enxErr.enablexBody || enxErr.message));
+      return res.status(502).json({
+        success: false,
+        message: "Couldn't start the in-app call session with EnableX. Check the Video App ID/Key and that Video/SIP is enabled on your EnableX account.",
+      });
+    }
+
+    lead.activities.push({
+      type:            "called",
+      description:     `In-app call to ${lead.name}`,
+      performedBy:     req.user._id,
+      performedByName: req.user.name,
+      meta: {
+        ownerRef,
+        mode:       "webrtc",
+        roomId,
+        direction:  "outbound",
+        status:     "initiated",
+        phone:      lead.phone,
+        leadPhone,
+        agentPhone: req.user.phone || "",
+      },
+    });
+    await lead.save();
+    const activityId = String(lead.activities[lead.activities.length - 1]._id);
+
+    res.json({
+      success:  true,
+      token,
+      roomId,
+      leadId:   String(lead._id),
+      isProjectLead,
+      activityId,
+      leadName:  lead.name,
+      leadPhone,               // digits, e.g. "917020950304" — browser dials this into the room
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/calls/webrtc/:leadId/:activityId/end — the browser reports the call is
+// over (duration in seconds, whether it connected). Room-based calls don't fire the
+// Voice webhook, so the client is the source of truth for duration/status here.
+router.post("/webrtc/:leadId/:activityId/end", protect, async (req, res, next) => {
+  try {
+    const dur       = Math.max(0, Math.round(Number(req.body?.duration ?? 0)));
+    const connected = req.body?.connected === true || dur > 0;
+    const { doc: lead, Model } = await findLeadOrProjectLead(req.params.leadId, req.user.orgId);
+    if (!lead) return res.status(404).json({ success: false, message: "Lead not found" });
+
+    const idx = lead.activities.findIndex(a => String(a._id) === req.params.activityId);
+    if (idx < 0) return res.status(404).json({ success: false, message: "Activity not found" });
+
+    // Ignore duplicate/late end reports once a terminal status is set.
+    const already = lead.activities[idx].meta?.status;
+    if (already === "answered" || already === "missed") {
+      return res.json({ success: true, meta: lead.activities[idx].meta });
+    }
+
+    const callStatus = connected && dur > 5 ? "answered" : "missed";
+    lead.activities[idx].description = callStatus === "answered"
+      ? `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`
+      : `Missed call to ${lead.name}`;
+    lead.activities[idx].meta = {
+      ...lead.activities[idx].meta,
+      status:   callStatus,
+      duration: dur,
+    };
+
+    // Same auto-advance behaviour as PSTN answered calls (New → Contacted).
+    if (callStatus === "answered" && lead.status === "New") {
+      lead.status = "Contacted";
+      if (!lead.firstContactedAt) lead.firstContactedAt = new Date();
+      lead.activities.push({
+        type:        "status_changed",
+        description: "Status automatically changed to Contacted after answered call",
+        meta:        { from: "New", to: "Contacted", auto: true },
+      });
+    }
+
+    lead.markModified("activities");
+    await lead.save();
+    res.json({ success: true, meta: lead.activities[idx].meta });
+  } catch (err) { next(err); }
 });
 
 // GET /api/calls/analytics — call volume + per-agent duration (last 30 days)
