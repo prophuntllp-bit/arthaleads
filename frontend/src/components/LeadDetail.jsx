@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
+import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
 
@@ -110,6 +111,8 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
       .finally(() => setCallsLoading(false));
   }, [tab, lead?._id]);
 
+  const sp = useSoftPhone();   // null outside the authed CRM shell
+
   const callLead = async () => {
     if (!lead?._id || calling) return;
     setCalling(true);
@@ -123,6 +126,18 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     } finally {
       setCalling(false);
     }
+  };
+
+  // In-app (browser) call — agent's browser becomes the phone. Same lead/project
+  // routing as the PSTN "Call" button above.
+  const callInBrowser = () => {
+    if (!lead?._id) return;
+    sp?.startCall({
+      leadId:        lead._type === "project" ? undefined : lead._id,
+      projectLeadId: lead._type === "project" ? lead._id : undefined,
+      name:          lead.name,
+      phone:         lead.phone,
+    });
   };
 
   const handleAiDraft = async () => {
@@ -227,6 +242,19 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                   >
                     {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5 text-orange-500" />}
                     {calling ? "Calling…" : "Call"}
+                  </button>
+                )}
+                {lead.phone && sp?.enabled && (
+                  <button
+                    type="button"
+                    onClick={callInBrowser}
+                    disabled={sp.status !== "idle"}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
+                    style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}
+                    title="Call this lead from your browser (no phone ring)"
+                  >
+                    <Headphones className="h-3.5 w-3.5 text-orange-500" />
+                    Call in browser
                   </button>
                 )}
                 {lead.phone && !isProjectLead && (
