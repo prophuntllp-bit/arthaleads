@@ -129,12 +129,17 @@ export function SoftPhoneProvider({ children }) {
     });
 
     // Outbound PSTN dial-out lifecycle — surfaces WHY the lead leg ends.
+    // NOTE: "answered" is NOT inferred from this event (states like "connecting"
+    // are ambiguous). The only trusted "answered" signal is the lead's remote
+    // stream arriving (stream-subscribed / active-talkers), handled above.
     on("outbound-call-state", (e) => {
       const msg = e?.message || e?.data || e || {};
       console.info("[softphone] outbound-call-state", JSON.stringify(msg));
       const state = String(msg.state || msg.status || msg.call_state || "").toLowerCase();
-      if (/answer|connect|bridge|active/.test(state)) markActive();
-      if (/disconnect|fail|no.?answer|busy|reject|cancel|timeout|unavailable|decline/.test(state)) {
+      // Match only unambiguous terminal states (avoid "connecting"/"disconnected"
+      // ambiguity by requiring word-ish boundaries on the failure tokens).
+      if (/\b(no.?answer|busy|reject|cancel|timeout|unavailable|declin|fail)/.test(state)
+          || /disconnected|hangup|ended/.test(state)) {
         toast.error(`Lead didn't connect${state ? ` (${state})` : ""}.`);
         endCall("remote");
       }
