@@ -204,9 +204,18 @@ export function SoftPhoneProvider({ children }) {
       try {
         const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
         probe.getTracks().forEach((t) => t.stop());
-      } catch {
+      } catch (micErr) {
         setStatus("idle");
-        toast.error("Microphone access is blocked. Allow the mic to call from the browser.");
+        const name = micErr?.name || "";
+        let msg = "Couldn't access a microphone.";
+        if (name === "NotAllowedError" || name === "SecurityError")
+          msg = "Microphone access is blocked. Allow the mic for this site (and in your OS privacy settings).";
+        else if (name === "NotFoundError" || name === "DevicesNotFoundError" || name === "OverconstrainedError")
+          msg = "No microphone found — connect a mic or headset to call from the browser.";
+        else if (name === "NotReadableError" || name === "TrackStartError" || name === "AbortError")
+          msg = "Your microphone is in use by another app. Close it and try again.";
+        console.error("[softphone] getUserMedia failed:", name, micErr?.message);
+        toast.error(msg);
         return false;
       }
 
