@@ -235,9 +235,11 @@ export function SoftPhoneProvider({ children }) {
         setStatus("ringing");
         try {
           // makeOutboundCall(number, caller_id, options, callback). result===0 = initiated.
-          // early_media:true exchanges ringback before answer (some carriers drop
-          // the leg otherwise); silent_join:false so the lead joins as a talker.
-          room.makeOutboundCall(leadPhone, callerId, { early_media: true, silent_join: false }, (resp) => {
+          // Pass default options (undefined) — this is the form that reliably rings
+          // the lead. early_media requires carrier/SIP support this account lacks and
+          // makes the dial fail outright, so we don't use it. Answer detection comes
+          // from the dial-state "connected" event, not from early media.
+          room.makeOutboundCall(leadPhone, callerId, undefined, (resp) => {
             if (!resp || resp.result !== 0) {
               console.error("[softphone] makeOutboundCall rejected", resp);
               toast.error("Couldn't dial the lead's number (dial-out may not be enabled on EnableX).");
