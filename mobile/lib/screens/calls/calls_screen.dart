@@ -174,10 +174,8 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
-  Future<void> _refresh() => Future.wait([
-    _load(reset: true),
-    _loadAnalytics(),
-  ]);
+  Future<void> _refresh() =>
+      Future.wait([_load(reset: true), _loadAnalytics()]);
 
   Color _statusColor(String? s) {
     switch (s) {
@@ -205,22 +203,36 @@ class _CallsScreenState extends State<CallsScreen> {
   }
 
   static const _monthAbbr = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   Widget _volumeByDayCard(List<Map> volumeByDay) {
     final maxTotal = volumeByDay.fold<int>(
       1,
-      (m, d) =>
-          (d['total'] as num? ?? 0).toInt() > m ? (d['total'] as num).toInt() : m,
+      (m, d) => (d['total'] as num? ?? 0).toInt() > m
+          ? (d['total'] as num).toInt()
+          : m,
     );
     return SoftSurface(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('DAILY CALL VOLUME (LAST 14 DAYS)', style: AppText.kicker(context)),
+          Text(
+            'DAILY CALL VOLUME (LAST 14 DAYS)',
+            style: AppText.kicker(context),
+          ),
           const SizedBox(height: 12),
           if (volumeByDay.isEmpty)
             Text(
@@ -324,7 +336,10 @@ class _CallsScreenState extends State<CallsScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _legendDot(AppColors.success.withValues(alpha: 0.7), 'Answered'),
+                _legendDot(
+                  AppColors.success.withValues(alpha: 0.7),
+                  'Answered',
+                ),
                 const SizedBox(width: 12),
                 _legendDot(AppColors.danger.withValues(alpha: 0.5), 'Missed'),
               ],
@@ -498,6 +513,35 @@ class _CallsScreenState extends State<CallsScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () => _load(reset: true),
+      child: CustomScrollView(
+        controller: _scroll,
+        slivers: [
+          SliverToBoxAdapter(child: _header(auth)),
+          if (_loading && _calls.isEmpty)
+            const SliverFillRemaining(
+              child: Center(child: AppSpinner(size: 32)),
+            )
+          else if (_calls.isEmpty)
+            SliverFillRemaining(child: _emptyState())
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _callCard(i),
+                childCount: _calls.length,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Title, stat cards, analytics charts, search, status tabs, and the
+  /// admin agent filter — scrolls away together with the call list below
+  /// it, matching web's single continuously-scrolling page (Calls.jsx).
+  Widget _header(AuthState auth) {
     return Column(
       children: [
         Padding(
@@ -634,133 +678,105 @@ class _CallsScreenState extends State<CallsScreen> {
               ],
             ),
           ),
-        Expanded(
-          child: _loading && _calls.isEmpty
-              ? const Center(child: AppSpinner(size: 32))
-              : _calls.isEmpty
-              ? _emptyState()
-              : RefreshIndicator(
-                  color: AppColors.primary,
-                  onRefresh: () => _load(reset: true),
-                  child: ListView.builder(
-                    controller: _scroll,
-                    itemCount: _calls.length,
-                    itemBuilder: (context, i) {
-                      final row = _calls[i];
-                      final color = _statusColor(row['lastStatus'] as String?);
-                      final calling = _callingLeadId == row['leadId'];
-                      return FadeSlideIn(
-                        delay: Duration(milliseconds: 20 * (i % 12)),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          child: ListTile(
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => CallHistoryScreen(
-                                  leadId: row['leadId'] as String,
-                                  leadName: row['leadName'] as String? ?? '—',
-                                  leadPhone: row['leadPhone'] as String?,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              row['leadName'] as String? ?? '—',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(row['leadPhone'] as String? ?? ''),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: color.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                        border: Border.all(
-                                          color: color.withValues(alpha: 0.35),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        row['lastStatus'] as String? ?? '—',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: color,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _fmtDate(row['lastCallAt'] as String?),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                    if (_fmtDuration(
-                                      row['lastDuration'],
-                                    ).isNotEmpty) ...[
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        _fmtDuration(row['lastDuration']),
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: calling
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AppColors.primary,
-                                          ),
-                                        )
-                                      : Icon(
-                                          FontAwesomeIcons.phone.data,
-                                          color: AppColors.primary,
-                                        ),
-                                  onPressed: calling ? null : () => _call(row),
-                                ),
-                                Text(
-                                  '${row['callCount'] ?? 0} calls',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
       ],
+    );
+  }
+
+  Widget _callCard(int i) {
+    final row = _calls[i];
+    final color = _statusColor(row['lastStatus'] as String?);
+    final calling = _callingLeadId == row['leadId'];
+    return FadeSlideIn(
+      delay: Duration(milliseconds: 20 * (i % 12)),
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: ListTile(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => CallHistoryScreen(
+                leadId: row['leadId'] as String,
+                leadName: row['leadName'] as String? ?? '—',
+                leadPhone: row['leadPhone'] as String?,
+              ),
+            ),
+          ),
+          title: Text(
+            row['leadName'] as String? ?? '—',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(row['leadPhone'] as String? ?? ''),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: color.withValues(alpha: 0.35)),
+                    ),
+                    child: Text(
+                      row['lastStatus'] as String? ?? '—',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _fmtDate(row['lastCallAt'] as String?),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (_fmtDuration(row['lastDuration']).isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      _fmtDuration(row['lastDuration']),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: calling
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : Icon(
+                        FontAwesomeIcons.phone.data,
+                        color: AppColors.primary,
+                      ),
+                onPressed: calling ? null : () => _call(row),
+              ),
+              Text(
+                '${row['callCount'] ?? 0} calls',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

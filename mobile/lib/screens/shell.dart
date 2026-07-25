@@ -7,6 +7,7 @@ import '../core/push_service.dart';
 import '../core/theme.dart';
 import '../core/theme_state.dart';
 import '../widgets/header_actions.dart';
+import '../widgets/profile_menu.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
@@ -64,7 +65,17 @@ class _NavItem {
   final IconData icon;
   final Widget Function() builder;
   final bool adminOnly;
-  const _NavItem(this.label, this.icon, this.builder, {this.adminOnly = false});
+  // Kept in _items so onNavigate('Referrals') from the profile menu still
+  // resolves, but hidden from the drawer list itself — web only reaches
+  // Referrals through the profile dropdown, not the main sidebar nav.
+  final bool showInDrawer;
+  const _NavItem(
+    this.label,
+    this.icon,
+    this.builder, {
+    this.adminOnly = false,
+    this.showInDrawer = true,
+  });
 }
 
 /// App shell: drawer navigation + role gating.
@@ -216,6 +227,7 @@ class _ShellState extends State<Shell> {
       'Referrals',
       Icons.card_giftcard_rounded,
       () => const ReferralsScreen(),
+      showInDrawer: false,
     ),
     _NavItem(
       'Help & Support',
@@ -315,71 +327,55 @@ class _ShellState extends State<Shell> {
                   ),
                   const Divider(height: 1),
                   Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      itemCount: visible.length,
-                      itemBuilder: (context, i) {
-                        final item = visible[i];
-                        final selected = i == _index;
-                        return ListTile(
-                          leading: Icon(
-                            item.icon,
-                            color: selected ? AppColors.primary : null,
-                          ),
-                          title: Text(
-                            item.label,
-                            style: TextStyle(
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
-                              color: selected ? AppColors.primary : null,
-                            ),
-                          ),
-                          selected: selected,
-                          selectedTileColor: AppColors.primary.withValues(
-                            alpha: 0.08,
-                          ),
-                          onTap: () {
-                            if (i != _index) {
-                              _navigationHistory.add(visible[_index].label);
-                            }
-                            setState(() => _index = i);
-                            Navigator.pop(context);
+                    child: Builder(
+                      builder: (context) {
+                        final drawerItems = visible
+                            .where((item) => item.showInDrawer)
+                            .toList();
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: drawerItems.length,
+                          itemBuilder: (context, i) {
+                            final item = drawerItems[i];
+                            final realIndex = visible.indexOf(item);
+                            final selected = realIndex == _index;
+                            return ListTile(
+                              leading: Icon(
+                                item.icon,
+                                color: selected ? AppColors.primary : null,
+                              ),
+                              title: Text(
+                                item.label,
+                                style: TextStyle(
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  color: selected ? AppColors.primary : null,
+                                ),
+                              ),
+                              selected: selected,
+                              selectedTileColor: AppColors.primary.withValues(
+                                alpha: 0.08,
+                              ),
+                              onTap: () {
+                                if (realIndex != _index) {
+                                  _navigationHistory.add(
+                                    visible[_index].label,
+                                  );
+                                }
+                                setState(() => _index = realIndex);
+                                Navigator.pop(context);
+                              },
+                            );
                           },
                         );
                       },
                     ),
                   ),
                   const Divider(height: 1),
-                  Consumer<ThemeState>(
-                    builder: (context, theme, _) => ListTile(
-                      leading: Icon(
-                        theme.isDark
-                            ? Icons.dark_mode_rounded
-                            : Icons.light_mode_rounded,
-                        color: AppColors.primary,
-                      ),
-                      title: Text(theme.isDark ? 'Dark Mode' : 'Light Mode'),
-                      trailing: Switch(
-                        value: theme.isDark,
-                        onChanged: theme.setDark,
-                      ),
-                      onTap: theme.toggle,
-                    ),
-                  ),
-                  ListTile(
-                    leading: const Icon(
-                      Icons.logout_rounded,
-                      color: AppColors.danger,
-                    ),
-                    title: const Text(
-                      'Log out',
-                      style: TextStyle(color: AppColors.danger),
-                    ),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await context.read<AuthState>().logout();
-                    },
+                  ProfileMenu(
+                    onNavigate: _navigateToLabel,
+                    onClose: () => Navigator.pop(context),
                   ),
                 ],
               ),
