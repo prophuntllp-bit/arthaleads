@@ -17,7 +17,11 @@ const _serverBase = 'https://api.arthaleads.com';
 /// Includes generic sources, WordPress/Google/Vistrow token managers, routing
 /// rules, Facebook token health, diagnostics and re-subscribe controls.
 class AutomationScreen extends StatefulWidget {
-  const AutomationScreen({super.key});
+  /// Lets the "Telephony" quick-connect tile jump to the Settings tab —
+  /// wired by shell.dart the same way Dashboard/Bookings already do.
+  final ValueChanged<String>? onNavigate;
+
+  const AutomationScreen({super.key, this.onNavigate});
 
   @override
   State<AutomationScreen> createState() => _AutomationScreenState();
@@ -2072,6 +2076,26 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 description:
                     'Qualified leads from the Vistrow Voice AI calling platform',
                 onTap: () => _openTokenManager('voice'),
+              ),
+              _sourceCard(
+                icon: const Icon(
+                  Icons.phone_in_talk_outlined,
+                  color: AppColors.success,
+                  size: 26,
+                ),
+                title: 'Telephony',
+                description:
+                    'Connect EnableX so agents can call leads straight from the CRM',
+                onTap: () {
+                  if (widget.onNavigate != null) {
+                    widget.onNavigate!('Settings');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Open the Telephony tab in Settings'),
+                      ),
+                    );
+                  }
+                },
               ),
             ],
           ),
