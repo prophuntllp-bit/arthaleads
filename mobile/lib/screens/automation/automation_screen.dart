@@ -1725,6 +1725,21 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 ],
               ),
               if (tokenBadge != null) tokenBadge,
+              const SizedBox(height: 8),
+              _FormLabelsEditor(
+                automation: a,
+                onUpdated: (labels) => setState(() {
+                  final idx = _automations.indexWhere(
+                    (x) => x['_id'] == a['_id'],
+                  );
+                  if (idx != -1) {
+                    _automations[idx] = {
+                      ..._automations[idx],
+                      'formLabels': labels,
+                    };
+                  }
+                }),
+              ),
             ] else if (platform == 'Website Form') ...[
               const SizedBox(height: 8),
               Container(
@@ -2420,6 +2435,240 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Facebook's Graph API can't tell us a Lead Form's own name with the
+/// permissions this app has — reading a submitted lead's answers needs a
+/// different, narrower scope than reading the form object itself. So instead
+/// of waiting on a Meta App Review for a broader permission, admins map each
+/// form_id to a friendly name here once; the webhook uses it directly.
+/// Mirrors `FormLabelsEditor` in frontend/src/pages/Automation.jsx.
+class _FormLabelsEditor extends StatefulWidget {
+  final Map<String, dynamic> automation;
+  final ValueChanged<List<Map<String, dynamic>>> onUpdated;
+
+  const _FormLabelsEditor({required this.automation, required this.onUpdated});
+
+  @override
+  State<_FormLabelsEditor> createState() => _FormLabelsEditorState();
+}
+
+class _FormLabelsEditorState extends State<_FormLabelsEditor> {
+  final _api = ApiClient.instance;
+  final _formIdCtrl = TextEditingController();
+  final _labelCtrl = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _formIdCtrl.dispose();
+    _labelCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add() async {
+    final formId = _formIdCtrl.text.trim();
+    final label = _labelCtrl.text.trim();
+    if (formId.isEmpty || label.isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      final res = await _api.dio.post(
+        '/automations/facebook/${widget.automation['_id']}/form-labels',
+        data: {'formId': formId, 'label': label},
+      );
+      widget.onUpdated(
+        (res.data['formLabels'] as List? ?? []).cast<Map<String, dynamic>>(),
+      );
+      _formIdCtrl.clear();
+      _labelCtrl.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Form name saved'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Failed to save form name'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _remove(String formId) async {
+    try {
+      final res = await _api.dio.delete(
+        '/automations/facebook/${widget.automation['_id']}/form-labels/${Uri.encodeComponent(formId)}',
+      );
+      widget.onUpdated(
+        (res.data['formLabels'] as List? ?? []).cast<Map<String, dynamic>>(),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Failed to remove form name'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = AppTheme.of(context);
+    final labels = (widget.automation['formLabels'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.surfaceLow,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Form Names',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: theme.text,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            "Facebook can't auto-detect a lead form's name for us. Paste each "
+            "form's ID (visible in Meta's Lead Ads tools, next to the form) "
+            "and a label so agents know which campaign a lead came from.",
+            style: TextStyle(fontSize: 10, color: theme.textSoft, height: 1.3),
+          ),
+          if (labels.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...labels.map(
+              (f) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: TextStyle(fontSize: 11, color: theme.text),
+                            children: [
+                              TextSpan(
+                                text: f['label']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              TextSpan(text: ' · ${f['formId']}'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _remove(f['formId'].toString()),
+                        child: Icon(
+                          Icons.delete_outline,
+                          size: 15,
+                          color: theme.textSoft,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _formIdCtrl,
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Form ID',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: TextField(
+                  controller: _labelCtrl,
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    hintText: 'Name (e.g. Mahalunge NX)',
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              SizedBox(
+                height: 34,
+                width: 34,
+                child: IconButton(
+                  padding: EdgeInsets.zero,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: _saving ? null : _add,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.add, size: 16),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
