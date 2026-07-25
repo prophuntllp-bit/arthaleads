@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
@@ -36,7 +35,8 @@ const _billingRequired = [
 /// Settings — My Profile (avatar upload, name/phone, password) for everyone;
 /// Organization (logo, billing/GST/bank details, auto-assign) and Security
 /// (support access log) tabs for admin/super_admin. Mirrors the tab layout
-/// of frontend/src/pages/Settings.jsx, including EnableX telephony setup.
+/// of frontend/src/pages/Settings.jsx. Telephony setup lives in Automation
+/// (see telephony_integration_screen.dart), not here — matching web's move.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -85,19 +85,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _autoAssign = true;
   bool _togglingAutoAssign = false;
 
-  // EnableX telephony
-  final _enablexAppId = TextEditingController();
-  final _enablexApiKey = TextEditingController();
-  final _enablexNumber = TextEditingController();
-  bool _enablexLoaded = false;
-  bool _enablexConnected = false;
-  bool _enablexHasKey = false;
-  bool _enablexAiStatus = false;
-  bool _enablexBusy = false;
-  bool _showEnablexKey = false;
-  String _enablexInboundUrl = '';
-  String _enablexOrgId = '';
-
   // Security
   List<Map<String, dynamic>> _accessRecords = [];
   bool _loadingAccess = true;
@@ -108,9 +95,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _phone.dispose();
     _currentPassword.dispose();
     _newPassword.dispose();
-    _enablexAppId.dispose();
-    _enablexApiKey.dispose();
-    _enablexNumber.dispose();
     for (final c in _billing.values) {
       c.dispose();
     }
@@ -366,156 +350,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _loadEnableX() async {
-    if (_enablexLoaded) return;
-    setState(() => _enablexBusy = true);
-    try {
-      final res = await _api.dio.get('/calls/settings');
-      final settings = (res.data['enablex'] as Map? ?? {})
-          .cast<String, dynamic>();
-      _enablexAppId.text = settings['appId']?.toString() ?? '';
-      _enablexNumber.text = settings['virtualNumber']?.toString() ?? '';
-      setState(() {
-        _enablexConnected = res.data['connected'] == true;
-        _enablexHasKey = settings['hasApiKey'] == true;
-        _enablexAiStatus = settings['aiAutoStatus'] == true;
-        _enablexInboundUrl = res.data['inboundUrl']?.toString() ?? '';
-        _enablexOrgId = res.data['orgId']?.toString() ?? '';
-        _enablexLoaded = true;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              ApiClient.errorMessage(e, 'Failed to load telephony settings'),
-            ),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _enablexBusy = false);
-    }
-  }
-
-  Future<void> _saveEnableX() async {
-    if (_enablexAppId.text.trim().isEmpty ||
-        (_enablexApiKey.text.trim().isEmpty && !_enablexHasKey)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enter the EnableX APP ID and APP KEY'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-      return;
-    }
-    setState(() => _enablexBusy = true);
-    try {
-      await _api.dio.patch(
-        '/calls/settings',
-        data: {
-          'appId': _enablexAppId.text.trim(),
-          if (_enablexApiKey.text.trim().isNotEmpty)
-            'apiKey': _enablexApiKey.text.trim(),
-          'virtualNumber': _enablexNumber.text.trim(),
-        },
-      );
-      setState(() => _enablexHasKey = true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('EnableX credentials saved'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Save failed')),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _enablexBusy = false);
-    }
-  }
-
-  Future<void> _testEnableX() async {
-    setState(() => _enablexBusy = true);
-    try {
-      await _api.dio.post('/calls/settings/test');
-      setState(() => _enablexConnected = true);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('EnableX connected successfully'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Connection failed')),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _enablexBusy = false);
-    }
-  }
-
-  Future<bool> _confirmDisconnectEnableX() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Disconnect EnableX telephony?'),
-        content: const Text(
-          'Click-to-call, recordings, and AI call summaries will stop working until you reconnect.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Disconnect', style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
-      ),
-    );
-    return ok == true;
-  }
-
-  Future<void> _updateEnableXFlag(String key, bool value) async {
-    if (key == 'enabled' && value == false && !await _confirmDisconnectEnableX()) {
-      return;
-    }
-    try {
-      await _api.dio.patch('/calls/settings', data: {key: value});
-      setState(() {
-        if (key == 'enabled') _enablexConnected = value;
-        if (key == 'aiAutoStatus') _enablexAiStatus = value;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Update failed')),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _loadAccessLog() async {
     setState(() => _loadingAccess = true);
     try {
@@ -674,12 +508,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Icons.business_outlined,
                   ),
                 if (isAdmin)
-                  _tabChip(
-                    'telephony',
-                    'Telephony',
-                    Icons.phone_in_talk_outlined,
-                  ),
-                if (isAdmin)
                   _tabChip('security', 'Security', Icons.lock_outline),
               ],
             ),
@@ -690,8 +518,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ? _profileTab(auth)
               : _tab == 'organization' && isAdmin
               ? _organizationTab()
-              : _tab == 'telephony' && isAdmin
-              ? _telephonyTab()
               : _tab == 'security' && isAdmin
               ? _securityTab()
               : _profileTab(auth),
@@ -711,7 +537,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onSelected: (_) {
           setState(() => _tab = value);
           if (value == 'security' && _accessRecords.isEmpty) _loadAccessLog();
-          if (value == 'telephony') _loadEnableX();
         },
       ),
     );
@@ -1020,175 +845,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
           ],
         ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  Widget _telephonyTab() {
-    if (_enablexBusy && !_enablexLoaded) {
-      return const Center(child: AppSpinner(size: 32));
-    }
-    final webhook = _enablexOrgId.isEmpty
-        ? 'https://api.arthaleads.com/api/calls/webhook'
-        : 'https://api.arthaleads.com/api/calls/webhook/$_enablexOrgId';
-
-    Widget copyRow(String label, String value) => Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(
-                  child: SelectableText(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Copy',
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: value));
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(const SnackBar(content: Text('Copied')));
-                  },
-                  icon: const Icon(Icons.copy, size: 17),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          color: (_enablexConnected ? AppColors.success : AppColors.primary)
-              .withValues(alpha: 0.07),
-          child: ListTile(
-            leading: Icon(
-              _enablexConnected ? Icons.wifi : Icons.wifi_off,
-              color: _enablexConnected ? AppColors.success : AppColors.primary,
-            ),
-            title: Text(
-              _enablexConnected ? 'EnableX Connected' : 'EnableX not connected',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              _enablexConnected
-                  ? 'Click-to-call, recordings and AI summaries are active.'
-                  : 'Enter your credentials to enable telephony.',
-            ),
-            trailing: _enablexConnected
-                ? TextButton(
-                    onPressed: () => _updateEnableXFlag('enabled', false),
-                    child: const Text(
-                      'Disconnect',
-                      style: TextStyle(color: AppColors.danger),
-                    ),
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'EnableX credentials',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        const SizedBox(height: 4),
-        GestureDetector(
-          onTap: () => launchUrl(
-            Uri.parse('https://portal.enablex.io'),
-            mode: LaunchMode.externalApplication,
-          ),
-          child: const Text(
-            'Get your APP ID and APP KEY from the EnableX partner portal →',
-            style: TextStyle(fontSize: 11, color: AppColors.primary),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _enablexAppId,
-          decoration: const InputDecoration(labelText: 'APP ID'),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _enablexApiKey,
-          obscureText: !_showEnablexKey,
-          decoration: InputDecoration(
-            labelText: _enablexHasKey
-                ? 'APP KEY (saved — enter only to replace)'
-                : 'APP KEY',
-            suffixIcon: IconButton(
-              onPressed: () =>
-                  setState(() => _showEnablexKey = !_showEnablexKey),
-              icon: Icon(
-                _showEnablexKey
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _enablexNumber,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'Virtual Phone Number'),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: GradientButton(
-                loading: _enablexBusy,
-                onPressed: _enablexBusy ? null : _saveEnableX,
-                child: const Text('Save Credentials'),
-              ),
-            ),
-            if (_enablexHasKey) ...[
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _enablexBusy ? null : _testEnableX,
-                  icon: const Icon(Icons.phone, size: 16),
-                  label: const Text('Test & Enable'),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 18),
-        copyRow('Recording Webhook URL', webhook),
-        if (_enablexInboundUrl.isNotEmpty)
-          copyRow('Inbound Answer URL', _enablexInboundUrl),
-        if (_enablexConnected)
-          Card(
-            child: SwitchListTile.adaptive(
-              title: const Text(
-                'AI Auto-Status Updates',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text(
-                'Advance lead status automatically when call AI detects intent.',
-              ),
-              value: _enablexAiStatus,
-              onChanged: (value) => _updateEnableXFlag('aiAutoStatus', value),
-            ),
-          ),
         const SizedBox(height: 24),
       ],
     );

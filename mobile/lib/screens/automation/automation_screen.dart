@@ -10,6 +10,7 @@ import '../../widgets/motion.dart';
 import '../../widgets/buttons.dart';
 import 'automation_form.dart';
 import 'routing_rules_screen.dart';
+import 'telephony_integration_screen.dart';
 
 const _serverBase = 'https://api.arthaleads.com';
 
@@ -17,11 +18,7 @@ const _serverBase = 'https://api.arthaleads.com';
 /// Includes generic sources, WordPress/Google/Vistrow token managers, routing
 /// rules, Facebook token health, diagnostics and re-subscribe controls.
 class AutomationScreen extends StatefulWidget {
-  /// Lets the "Telephony" quick-connect tile jump to the Settings tab —
-  /// wired by shell.dart the same way Dashboard/Bookings already do.
-  final ValueChanged<String>? onNavigate;
-
-  const AutomationScreen({super.key, this.onNavigate});
+  const AutomationScreen({super.key});
 
   @override
   State<AutomationScreen> createState() => _AutomationScreenState();
@@ -2086,16 +2083,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 title: 'Telephony',
                 description:
                     'Connect EnableX so agents can call leads straight from the CRM',
-                onTap: () {
-                  if (widget.onNavigate != null) {
-                    widget.onNavigate!('Settings');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Open the Telephony tab in Settings'),
-                      ),
-                    );
-                  }
-                },
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TelephonyIntegrationScreen(),
+                  ),
+                ),
               ),
             ],
           ),
