@@ -561,8 +561,22 @@ export default function ProjectDetail() {
       const buf = await file.arrayBuffer();
       const wb  = xlsxRead(buf, { type: "array" });
       const ws  = wb.Sheets[wb.SheetNames[0]];
-      const raw = xlsxUtils.sheet_to_json(ws, { defval: "" });
-      const rows = raw.map(parseRow).filter((r) => r.name && r.phone);
+      // Read as rows-of-arrays so we can locate the REAL header row. Many sheets
+      // have a blank leading row, a title row, or a second sub-header row before
+      // the actual "Name / Phone Number" headers — plain sheet_to_json would treat
+      // whatever is in row 1 as the headers and find nothing.
+      const aoa = xlsxUtils.sheet_to_json(ws, { header: 1, defval: "", blankrows: false });
+      const looksName  = (v) => /name/i.test(String(v));
+      const looksPhone = (v) => /phone|mobile|contact|number|cell|whats?app|\btel\b|\bmob\b/i.test(String(v));
+      let headerIdx = aoa.findIndex((row) => Array.isArray(row) && row.some(looksName) && row.some(looksPhone));
+      if (headerIdx < 0) headerIdx = 0; // fall back to the first row
+      const headers = (aoa[headerIdx] || []).map((h) => String(h).trim());
+      const objs = aoa.slice(headerIdx + 1).map((row) => {
+        const obj = {};
+        headers.forEach((h, i) => { if (h) obj[h] = row[i] ?? ""; });
+        return obj;
+      });
+      const rows = objs.map(parseRow).filter((r) => r.name && r.phone);
       if (!rows.length) return toast.error("No valid rows found. Columns needed: Name, Phone Number");
       const res = await api.post(`/projects/${id}/leads/import`, { rows });
       const inserted  = res.data?.inserted  ?? 0;
