@@ -388,7 +388,7 @@ export default function HelpBot() {
           </button>
           <div className="flex items-center gap-2 mb-1.5">
             <div className="w-7 h-7 rounded-full overflow-hidden shrink-0">
-              <img src="/ai-avatar.png" alt="" className="w-full h-full object-cover" />
+              <img src="/ai-avatar2.png" alt="" className="w-full h-full object-cover" />
             </div>
             <p className="text-sm font-bold text-app">Welcome to Arthaleads!</p>
           </div>
@@ -425,7 +425,7 @@ export default function HelpBot() {
             className="relative rounded-full shadow-lg transition hover:scale-105 cursor-pointer overflow-hidden"
             style={{ width: 56, height: 56, background: "var(--app-surface)" }}
           >
-            <img src="/ai-avatar.png" alt="Help Assistant" className="w-full h-full object-cover" />
+            <img src="/ai-avatar2.png" alt="Help Assistant" className="w-full h-full object-cover" />
           </button>
         </div>
       )}
@@ -451,7 +451,7 @@ export default function HelpBot() {
           >
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-full overflow-hidden">
-                <img src="/ai-avatar.png" alt="Artha" className="w-full h-full object-cover" />
+                <img src="/ai-avatar2.png" alt="Artha" className="w-full h-full object-cover" />
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: "var(--app-bg)" }} />
             </div>
@@ -486,7 +486,7 @@ export default function HelpBot() {
               <div className="space-y-3">
                 {/* Intro bubble */}
                 <div className="flex gap-2 items-start">
-                  <img src="/ai-avatar.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                   <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 text-sm text-app" style={{ background: "var(--app-surface-low)" }}>
                     {greetingMsg.text}
                   </div>
@@ -569,7 +569,7 @@ export default function HelpBot() {
             {messages.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start gap-2 items-start"}>
                 {m.role === "bot" && (
-                  <img src="/ai-avatar.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                 )}
                 <div className="max-w-[80%]">
                   {/* Coming Soon badge */}
@@ -642,7 +642,7 @@ export default function HelpBot() {
 
             {loading && (
               <div className="flex justify-start gap-2 items-start">
-                <img src="/ai-avatar.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
                 <div className="rounded-2xl rounded-tl-sm px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
                   <span className="inline-flex gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "0ms" }} />
