@@ -305,7 +305,20 @@ app.use((req, res) => {
 // ── Sentry error handler (must be BEFORE our own errorHandler) ───────────────
 const Sentry = require("./instrument");
 if (process.env.SENTRY_DSN) {
-  Sentry.setupExpressErrorHandler(app);
+  Sentry.setupExpressErrorHandler(app, {
+    // Only report genuine server-side bugs (5xx). Expected client errors — an
+    // expired/invalid login token, validation failures, bad ObjectIds, duplicate
+    // keys — are normal and just add noise. Our errorHandler maps these to 4xx,
+    // but Sentry sees the raw error first (with no statusCode), so match on type.
+    shouldHandleError(error) {
+      const name = error?.name;
+      if (name === "TokenExpiredError" || name === "JsonWebTokenError" ||
+          name === "ValidationError"   || name === "CastError") return false;
+      if (error?.code === 11000) return false; // Mongo duplicate key → 409
+      const status = Number(error?.statusCode || error?.status || 500);
+      return status >= 500; // capture only 5xx / unknown
+    },
+  });
 }
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
