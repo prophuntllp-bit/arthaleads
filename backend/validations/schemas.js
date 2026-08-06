@@ -1,5 +1,24 @@
 // validations/schemas.js
 const Joi = require("joi");
+
+// Booking values — MUST stay in sync with the `booking` enum in models/Lead.js
+// and models/ProjectLead.js, and with BOOKING_OPTIONS in the frontend.
+// Kept as one constant because these lists had drifted: "Other Location" and
+// "Commercial" were selectable in the UI and valid on the model, but missing
+// here, so choosing either failed validation with a 400 ("Save failed").
+const BOOKING_VALUES = [
+  "",
+  "Interested",
+  "Not Interested",
+  "Not Reachable",
+  "Low Budget",
+  "Call Back",
+  "Site Visit Booked",
+  "Site Visit Done",
+  "Booked",
+  "Other Location",
+  "Commercial",
+];
 const avatarSchema = Joi.string()
   .pattern(/^(https?:\/\/|data:image\/(?:png|jpe?g|webp|gif);base64,)/i)
   .allow("")
@@ -173,7 +192,7 @@ const updateLeadSchema = Joi.object({
   remark1: Joi.string().allow("").max(500),
   remark2: Joi.string().allow("").max(500),
   remark: Joi.string().allow("").max(1000),
-  booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow(""),
+  booking: Joi.string().valid(...BOOKING_VALUES).allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
 }).min(1); // At least one field required for update
@@ -217,7 +236,7 @@ const importLeadsSchema = Joi.object({
         })
       ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
-      booking: Joi.string().valid("", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget").allow("").optional(),
+      booking: Joi.string().valid(...BOOKING_VALUES).allow("").optional(),
       remark: Joi.string().allow("").optional(),
       remark1: Joi.string().allow("").optional(),
       remark2: Joi.string().allow("").optional(),

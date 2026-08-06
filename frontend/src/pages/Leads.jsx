@@ -98,7 +98,11 @@ function InlineDate({ value, leadId, projectId, field, onSaved }) {
         ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { [field]: isoStr })
         : await api.put(`/leads/${leadId}`, { [field]: isoStr });
       onSaved(res.data.data);
-    } catch { toast.error("Save failed"); }
+    } catch (err) {
+      // Surface the server's reason (e.g. a rejected field value) — a bare
+      // "Save failed" hides validation errors and makes these look like flakes.
+      toast.error(err.response?.data?.message || "Save failed");
+    }
     finally { setSaving(false); }
   };
   if (saving) return <span className="flex items-center"><Spinner size="sm" /></span>;
@@ -130,7 +134,11 @@ function InlineBooking({ value, leadId, projectId, onSaved }) {
         ? await api.patch(`/projects/${projectId}/leads/${leadId}`, { booking: v })
         : await api.put(`/leads/${leadId}`, { booking: v });
       onSaved(res.data.data);
-    } catch { toast.error("Save failed"); }
+    } catch (err) {
+      // Surface the server's reason (e.g. a rejected field value) — a bare
+      // "Save failed" hides validation errors and makes these look like flakes.
+      toast.error(err.response?.data?.message || "Save failed");
+    }
     finally { setSaving(false); }
   };
 
@@ -535,12 +543,12 @@ export default function Leads() {
   };
 
   const handleInlineUpdate = (updated) => {
-    if (updated?.booking === "Not Interested") {
-      removeLead(updated._id);
-      toast.success("Lead moved to Dump");
-    } else {
-      upsertLead(updated, false);
-    }
+    // Setting booking to "Not Interested" used to drop the row and claim the
+    // lead had been "moved to Dump" — but nothing actually moves it. Dump lists
+    // regular leads by isDeleted/Closed Lost (never by booking), and the Leads
+    // query doesn't filter "Not Interested" out either, so the row simply
+    // reappeared on the next refresh. Keep the row and show the new status.
+    upsertLead(updated, false);
   };
 
   const exportRows = async (type, selectedIdsOverride = null) => {
