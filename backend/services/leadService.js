@@ -578,7 +578,11 @@ const leadService = {
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
+    // "Not Interested" leads live in Dump, so keep them out of the active list —
+    // unless the user explicitly filters for them, which would otherwise return
+    // a confusing empty result.
     if (booking)  leadFilter.booking  = booking;
+    else          leadFilter.booking  = { $ne: "Not Interested" };
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
@@ -609,7 +613,10 @@ const leadService = {
       const projFilter = { orgId: user.orgId };
       if (status)  projFilter.status  = status;
       if (source)  projFilter.source  = source;
+      // Same rule as regular leads above — dumped project leads stay out of the
+      // active list (previously they appeared in BOTH Leads and Dump).
       if (booking) projFilter.booking = booking;
+      else         projFilter.booking = { $ne: "Not Interested" };
       if (createdAtFilter) projFilter.createdAt = createdAtFilter;
       if (followUpToday === "true" || followUpToday === true) {
         projFilter.$or = [
@@ -934,6 +941,9 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
     lead.isDeleted = false;
     lead.deletedAt = null;
+    // Clear the booking too, otherwise a lead dumped via "Not Interested" would
+    // be un-deleted but immediately re-match the Dump filter and appear stuck.
+    if (lead.booking === "Not Interested") lead.booking = "";
     await lead.save({ validateBeforeSave: false });
     return lead;
   },
@@ -1102,11 +1112,15 @@ const leadService = {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const lim  = parseInt(limit);
 
+    // A lead lands in Dump when it is soft-deleted, lost, or marked
+    // "Not Interested" — the last one mirrors how ProjectLeads already behave
+    // (projFilter below), so both lead types dump on the same signal.
     const leadFilter = {
       orgId: user.orgId,
       $or: [
         { isDeleted: true },
         { status: "Closed Lost" },
+        { booking: "Not Interested" },
       ],
     };
     if (user.role === "agent") {
