@@ -1,5 +1,8 @@
 export const STATUS_OPTIONS = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
-export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "Other"];
+// Keep in sync with the `source` enum in backend/models/Lead.js and
+// SOURCE_VALUES in backend/validations/schemas.js. "QR Code" was missing here,
+// so a QR-captured lead opened in the edit form showed no matching option.
+export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"];
 export const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Hot"];
 export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other"];
 export const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];

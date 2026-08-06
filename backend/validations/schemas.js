@@ -1,6 +1,29 @@
 // validations/schemas.js
 const Joi = require("joi");
 
+// Lead sources — MUST stay in sync with the `source` enum in models/Lead.js.
+// These had drifted too: "QR Code" existed only on the model, and "Custom" /
+// "Vistrow Voice" were missing from the update/import schemas — so editing a
+// lead that arrived from a QR code, the voice integration, or a custom
+// automation was rejected with a 400, because the edit form posts `source`
+// back unchanged.
+const SOURCE_VALUES = [
+  "Facebook",
+  "Google",
+  "WhatsApp",
+  "Manual",
+  "Website",
+  "Custom",
+  "Vistrow Voice",
+  "Referral",
+  "Walk-in",
+  "PropTiger",
+  "99acres",
+  "MagicBricks",
+  "QR Code",
+  "Other",
+];
+
 // Booking values — MUST stay in sync with the `booking` enum in models/Lead.js
 // and models/ProjectLead.js, and with BOOKING_OPTIONS in the frontend.
 // Kept as one constant because these lists had drifted: "Other Location" and
@@ -83,7 +106,7 @@ const updateProfileSchema = Joi.object({
 const createAutomationSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom", "Vistrow Voice").required(),
-  mode: Joi.string().valid("webhook", "api", "form", "spreadsheet").optional(),
+  mode: Joi.string().valid("webhook", "api", "form", "spreadsheet", "oauth").optional(),
   status: Joi.string().valid("draft", "connected", "paused").optional(),
   description: Joi.string().allow("").max(500).optional(),
   leadSourceLabel: Joi.string().allow("").max(100).optional(),
@@ -103,7 +126,7 @@ const createAutomationSchema = Joi.object({
 const updateAutomationSchema = Joi.object({
   name: Joi.string().min(2).max(100),
   platform: Joi.string().valid("Facebook", "Google", "WhatsApp", "Website Form", "Custom", "Vistrow Voice"),
-  mode: Joi.string().valid("webhook", "api", "form", "spreadsheet"),
+  mode: Joi.string().valid("webhook", "api", "form", "spreadsheet", "oauth"),
   status: Joi.string().valid("draft", "connected", "paused"),
   description: Joi.string().allow("").max(500),
   leadSourceLabel: Joi.string().allow("").max(100),
@@ -143,7 +166,7 @@ const createLeadSchema = Joi.object({
     .default("New"),
   priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
   source: Joi.string()
-    .valid("Facebook","Google","WhatsApp","Manual","Website","Custom","Vistrow Voice","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other")
+    .valid(...SOURCE_VALUES)
     .default("Manual"),
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),
@@ -175,7 +198,7 @@ const updateLeadSchema = Joi.object({
   purpose: Joi.string().valid("Buy","Rent","Invest","N/A"),
   status: Joi.string().valid("New","Contacted","Site Visit","Negotiation","Closed Won","Closed Lost"),
   priority: Joi.string().valid("Low","Medium","High","Hot"),
-  source: Joi.string().valid("Facebook","Google","WhatsApp","Manual","Website","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other"),
+  source: Joi.string().valid(...SOURCE_VALUES),
   assignedTo: Joi.string().hex().length(24).allow(null, ""),
   followUpDate: Joi.date().allow(null),
   followUpNote: Joi.string().allow(""),
@@ -224,7 +247,7 @@ const importLeadsSchema = Joi.object({
       purpose: Joi.string().valid("Buy","Rent","Invest","N/A").default("Buy"),
       status: Joi.string().valid("New","Contacted","Site Visit","Negotiation","Closed Won","Closed Lost").default("New"),
       priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
-      source: Joi.string().valid("Facebook","Google","WhatsApp","Manual","Website","Referral","Walk-in","PropTiger","99acres","MagicBricks","Other").default("Manual"),
+      source: Joi.string().valid(...SOURCE_VALUES).default("Manual"),
       assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
       followUpDate: Joi.date().allow(null).optional(),
       followUpNote: Joi.string().allow("").optional(),

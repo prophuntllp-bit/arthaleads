@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 /// Option lists mirrored from frontend/src/utils/constants.js and Leads.jsx.
 const statusOptions = ['New', 'Contacted', 'Site Visit', 'Negotiation', 'Closed Won', 'Closed Lost'];
 
+// Keep in sync with the `source` enum in backend/models/Lead.js and
+// SOURCE_OPTIONS on web — 'Custom', 'Vistrow Voice' and 'QR Code' were missing
+// here, so leads from those channels had no matching option on mobile.
 const sourceOptions = [
-  'Facebook', 'Google', 'WhatsApp', 'Manual', 'Website', 'Referral',
-  'Walk-in', 'PropTiger', '99acres', 'MagicBricks', 'Other',
+  'Facebook', 'Google', 'WhatsApp', 'Manual', 'Website', 'Custom',
+  'Vistrow Voice', 'Referral', 'Walk-in', 'PropTiger', '99acres',
+  'MagicBricks', 'QR Code', 'Other',
 ];
 
 const priorityOptions = ['Low', 'Medium', 'High', 'Hot'];
