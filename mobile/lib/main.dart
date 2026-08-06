@@ -9,6 +9,7 @@ import 'core/theme.dart';
 import 'core/theme_state.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
+import 'widgets/update_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +38,9 @@ class ArthaleadsApp extends StatelessWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: theme.mode,
-      home: const _AuthGate(),
+      // Wraps the whole app (not just the logged-in shell) so a mandatory
+      // update applies even to someone sitting on the login screen.
+      home: const UpdateGate(child: _AuthGate()),
     );
   }
 }
