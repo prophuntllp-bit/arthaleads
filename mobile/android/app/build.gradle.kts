@@ -68,6 +68,25 @@ android {
                 signingConfigs.getByName("release")
             else
                 signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    // Without this, one release APK bundles native libs for every CPU
+    // architecture (arm64-v8a, armeabi-v7a, x86_64, x86) — most of the
+    // 70MB release APK. Splitting emits one small APK per architecture
+    // (~15-20MB each) plus a universal fallback for sideloading/testing.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = true
         }
     }
 }
