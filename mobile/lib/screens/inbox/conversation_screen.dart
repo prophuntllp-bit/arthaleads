@@ -59,11 +59,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final res = await _api.dio.get(
         '/whatsapp/conversations/${widget.conversationId}',
       );
-      if (mounted)
+      if (mounted) {
         setState(
           () =>
               _conv = (res.data['conversation'] as Map).cast<String, dynamic>(),
         );
+      }
     } catch (_) {}
   }
 
@@ -86,8 +87,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
       });
       if (wasAtBottom) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scroll.hasClients)
+          if (_scroll.hasClients) {
             _scroll.jumpTo(_scroll.position.maxScrollExtent);
+          }
         });
       }
     } catch (e) {
@@ -147,11 +149,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
         '/whatsapp/conversations/${widget.conversationId}',
         data: {'botEnabled': next},
       );
-      if (mounted)
+      if (mounted) {
         setState(
           () =>
               _conv = (res.data['conversation'] as Map).cast<String, dynamic>(),
         );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -170,11 +173,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
         '/whatsapp/conversations/${widget.conversationId}',
         data: {'status': status},
       );
-      if (mounted)
+      if (mounted) {
         setState(
           () =>
               _conv = (res.data['conversation'] as Map).cast<String, dynamic>(),
         );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -228,14 +232,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _statusIcon(String? status) {
-    if (status == 'read')
+    if (status == 'read') {
       return const Icon(Icons.done_all, size: 13, color: Color(0xFF60A5FA));
-    if (status == 'delivered')
+    }
+    if (status == 'delivered') {
       return Icon(
         Icons.done_all,
         size: 13,
         color: Colors.grey.withValues(alpha: 0.7),
       );
+    }
     return Icon(
       Icons.done,
       size: 13,

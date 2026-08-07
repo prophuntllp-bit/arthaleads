@@ -400,8 +400,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   ImageProvider _imageProvider(String uri) {
-    if (uri.startsWith('http://') || uri.startsWith('https://'))
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
       return NetworkImage(uri);
+    }
     final b64 = uri.contains(',') ? uri.split(',').last : uri;
     return MemoryImage(base64Decode(b64));
   }

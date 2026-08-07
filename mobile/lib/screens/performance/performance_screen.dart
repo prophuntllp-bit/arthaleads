@@ -673,8 +673,9 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
     }
 
     if (_loading) return const Center(child: AppSpinner(size: 32));
-    if (_members.isEmpty)
+    if (_members.isEmpty) {
       return const Center(child: Text('No team performance data yet'));
+    }
 
     final members = _displayMembers;
 

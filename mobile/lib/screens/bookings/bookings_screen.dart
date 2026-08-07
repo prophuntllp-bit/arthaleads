@@ -449,8 +449,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         firstDate: DateTime(2015),
                         lastDate: DateTime(2100),
                       );
-                      if (picked != null)
+                      if (picked != null) {
                         setSheetState(() => bookingDate = picked);
+                      }
                     },
                     child: InputDecorator(
                       decoration: const InputDecoration(

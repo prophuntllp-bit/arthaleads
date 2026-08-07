@@ -70,8 +70,9 @@ class _TeamScreenState extends State<TeamScreen> {
       final res = await _api.dio.patch('/auth/users/${user['_id']}/toggle');
       setState(() {
         final idx = _users.indexWhere((u) => u['_id'] == user['_id']);
-        if (idx != -1)
+        if (idx != -1) {
           _users[idx] = (res.data['user'] as Map).cast<String, dynamic>();
+        }
       });
     } catch (e) {
       if (mounted) {

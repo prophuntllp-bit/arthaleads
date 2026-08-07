@@ -85,9 +85,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
       );
       setState(() {
         final idx = _automations.indexWhere((x) => x['_id'] == a['_id']);
-        if (idx != -1)
+        if (idx != -1) {
           _automations[idx] = (res.data['automation'] as Map)
               .cast<String, dynamic>();
+        }
       });
     } catch (e) {
       if (mounted) {
@@ -812,8 +813,9 @@ class _AutomationScreenState extends State<AutomationScreen> {
       callbackUrlScheme: 'arthaleads',
     );
     final session = Uri.parse(callback).queryParameters['session'];
-    if (session == null || session.isEmpty)
+    if (session == null || session.isEmpty) {
       throw Exception('OAuth did not return a session');
+    }
     final resultPath = provider == 'facebook' ? 'result' : 'oauth-result';
     final response = await _api.dio.get(
       '/automations/$provider/$resultPath',
@@ -1014,8 +1016,9 @@ class _AutomationScreenState extends State<AutomationScreen> {
       }
       final customers = (result['customers'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      if (customers.isEmpty)
+      if (customers.isEmpty) {
         throw Exception('No Google Ads accounts found for this login');
+      }
       if (!mounted) return;
       var customerId = customers.first['id']?.toString() ?? '';
       final nameController = TextEditingController(
@@ -1166,8 +1169,9 @@ class _AutomationScreenState extends State<AutomationScreen> {
       );
       final pages = (verify.data['pages'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      if (pages.isEmpty)
+      if (pages.isEmpty) {
         throw Exception('No Facebook Pages were found for this token');
+      }
       if (!mounted) return;
 
       var pageId = pages.first['id']?.toString() ?? '';
@@ -1725,7 +1729,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   ),
                 ],
               ),
-              if (tokenBadge != null) tokenBadge,
+              ?tokenBadge,
               const SizedBox(height: 8),
               _FormLabelsEditor(
                 automation: a,
@@ -2343,14 +2347,18 @@ class _AutomationScreenState extends State<AutomationScreen> {
                                           ),
                                           PopupMenuButton<String>(
                                             onSelected: (value) {
-                                              if (value == 'edit')
+                                              if (value == 'edit') {
                                                 _openForm(automation: a);
-                                              if (value == 'diagnose')
+                                              }
+                                              if (value == 'diagnose') {
                                                 _diagnoseFacebook(a);
-                                              if (value == 'resubscribe')
+                                              }
+                                              if (value == 'resubscribe') {
                                                 _resubscribeFacebook(a);
-                                              if (value == 'sync')
+                                              }
+                                              if (value == 'sync') {
                                                 _syncGoogle(a);
+                                              }
                                               if (value == 'delete') _delete(a);
                                             },
                                             itemBuilder: (_) => [

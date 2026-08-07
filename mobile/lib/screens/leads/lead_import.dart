@@ -168,7 +168,7 @@ Map<String, dynamic> _parseImportRow(
     'bhk': bhk.isNotEmpty ? bhk : 'N/A',
     'purpose': purpose.isNotEmpty ? purpose : 'Buy',
     if (preferredLocation.isNotEmpty) 'preferredLocation': preferredLocation,
-    if (followUpDate != null) 'followUpDate': followUpDate,
+    'followUpDate': ?followUpDate,
     if (followUpNote.isNotEmpty) 'followUpNote': followUpNote,
     if (assignedAgent != null) 'assignedTo': assignedAgent['_id'],
     'budget': {'min': budgetMin.round(), 'max': budgetMax.round(), 'currency': 'INR'},

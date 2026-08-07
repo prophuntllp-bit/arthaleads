@@ -161,7 +161,7 @@ class _SearchSheetState extends State<_SearchSheet> {
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: _results.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, i) {
                       final lead = _results[i];
                       final name = lead['name'] as String? ?? '—';
@@ -341,7 +341,7 @@ class _AlertsSheet extends StatelessWidget {
                 : ListView.separated(
                     shrinkWrap: true,
                     itemCount: alerts.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, i) {
                       final lead = alerts[i];
                       final created = DateTime.tryParse(

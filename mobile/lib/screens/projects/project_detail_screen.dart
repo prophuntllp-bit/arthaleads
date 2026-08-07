@@ -64,10 +64,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen>
     );
     if (saved == true) {
       final fresh = await ApiClient.instance.dio.get('/projects/$_projectId');
-      if (mounted)
+      if (mounted) {
         setState(
           () => _project = (fresh.data['data'] as Map).cast<String, dynamic>(),
         );
+      }
     }
   }
 
@@ -174,14 +175,14 @@ class _InfoTab extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: images.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) => ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
                   images[i],
                   width: 200,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  errorBuilder: (_, _, _) =>
                       Container(width: 200, color: Colors.grey.shade800),
                 ),
               ),
@@ -821,8 +822,9 @@ class _LeadsTabState extends State<_LeadsTab> {
                                   ),
                                   onPressed: () {
                                     final p = lead['phone'] as String?;
-                                    if (p != null)
+                                    if (p != null) {
                                       launchUrl(Uri.parse('tel:$p'));
+                                    }
                                   },
                                 ),
                                 IconButton(
