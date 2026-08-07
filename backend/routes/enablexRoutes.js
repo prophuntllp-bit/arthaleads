@@ -1155,9 +1155,15 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
   const audioResp = await axios.get(recordingUrl, { responseType: "arraybuffer" });
   const buf       = Buffer.from(audioResp.data);
 
-  // Create a readable stream with .name so OpenAI SDK identifies the format
+  // The saved file is mp3 when Cloudinary's transcode succeeded, but falls back
+  // to the original wav when it didn't (see saveRecordingFromEnablexUrl). The
+  // filename told to Whisper was always hardcoded to "recording.mp3" regardless
+  // of which one this actually is - telling the API a wav file is an mp3 is a
+  // real format mismatch, not just cosmetic, and a plausible cause of garbled
+  // transcriptions. Derive the real extension from the URL instead.
+  const ext    = /\.wav(\?|$)/i.test(recordingUrl) ? "wav" : "mp3";
   const stream = Readable.from(buf);
-  stream.name  = "recording.mp3";
+  stream.name  = `recording.${ext}`;
 
   const transcription = await openai.audio.transcriptions.create({
     file:        stream,
