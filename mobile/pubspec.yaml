@@ -2,7 +2,12 @@ name: arthaleads_mobile
 description: "Arthaleads CRM — native Android app."
 publish_to: 'none'
 
-version: 1.0.0+1
+# version: <name>+<buildNumber>. The build number is what the in-app update
+# check compares (see lib/core/update_service.dart) and what Android uses as
+# versionCode, so it MUST increase on every release you distribute — otherwise
+# builds are indistinguishable and no one is ever prompted to update.
+# After bumping, set ANDROID_LATEST_BUILD on the backend to match.
+version: 1.0.1+2
 
 environment:
   sdk: ^3.12.2
