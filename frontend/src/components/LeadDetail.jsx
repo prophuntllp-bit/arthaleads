@@ -1,12 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing } from "lucide-react";
 import api from "../services/api";
 import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
+
+// Incoming (lead called us) vs outgoing (we called the lead). Kept visually
+// identical to the badge on the Calls page so the two screens agree.
+const DIRECTION_STYLE = {
+  inbound:  { bg: "rgba(59,130,246,0.10)",  color: "#3b82f6", label: "Incoming", icon: PhoneIncoming },
+  outbound: { bg: "rgba(161,161,170,0.12)", color: "#8b8b93", label: "Outgoing", icon: PhoneOutgoing },
+};
+
+function DirectionBadge({ direction }) {
+  const d = DIRECTION_STYLE[direction];
+  if (!d) return null;   // legacy call with no recorded direction — don't guess
+  const Icon = d.icon;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
+      style={{ background: d.bg, color: d.color }}
+      title={direction === "inbound" ? "Lead called us" : "We called the lead"}>
+      <Icon className="w-3 h-3" />{d.label}
+    </span>
+  );
+}
 
 const FB_ERROR_PATTERN = "Facebook lead received but field data could not be fetched";
 
@@ -466,6 +486,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
+                        <DirectionBadge direction={meta.direction} />
                         <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                           style={{ background: stBg, color: stColor }}>{st}</span>
                         {dur && <span className="text-xs font-semibold text-app">{dur}</span>}

@@ -5,7 +5,7 @@ import {
   Phone, PhoneOff, PhoneMissed, Mic, AlignLeft,
   Loader2, RefreshCw, Sparkles, ChevronRight, X,
   FileText, CalendarPlus, CheckCircle2, Filter,
-  ChevronLeft, PhoneCall, Copy, Check, Search,
+  ChevronLeft, PhoneCall, Copy, Check, Search, PhoneIncoming, PhoneOutgoing,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -31,6 +31,29 @@ const SENTIMENT = {
   negative: { bg: "rgba(239,68,68,0.10)",   color: "#ef4444", label: "Negative" },
   neutral:  { bg: "rgba(161,161,170,0.12)", color: "#a1a1aa", label: "Neutral"  },
 };
+// Whether the lead called us or we called them. Stored per call as
+// meta.direction by the telephony webhooks; without showing it, an agent cannot
+// tell an incoming enquiry apart from their own outgoing call.
+const DIRECTION_STYLE = {
+  inbound:  { bg: "rgba(59,130,246,0.10)",  color: "#3b82f6", label: "Incoming", icon: PhoneIncoming },
+  outbound: { bg: "rgba(161,161,170,0.12)", color: "#8b8b93", label: "Outgoing", icon: PhoneOutgoing },
+};
+
+function DirectionBadge({ direction, compact = false }) {
+  const d = DIRECTION_STYLE[direction];
+  if (!d) return null;               // unknown/legacy call — show nothing rather than guess
+  const Icon = d.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full font-bold uppercase ${compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-0.5 text-[11px]"}`}
+      style={{ background: d.bg, color: d.color }}
+      title={direction === "inbound" ? "Lead called us" : "We called the lead"}
+    >
+      <Icon className="w-3 h-3" />{d.label}
+    </span>
+  );
+}
+
 const STATUS_STYLE = {
   answered:  { bg: "rgba(34,197,94,0.10)",  color: "#22c55e", icon: Phone       },
   missed:    { bg: "rgba(239,68,68,0.10)",  color: "#ef4444", icon: PhoneMissed },
@@ -244,6 +267,7 @@ function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
           <ChevronLeft className="w-4 h-4" /> Back to call history
         </button>
         <div className="flex items-center gap-2 flex-wrap">
+          <DirectionBadge direction={meta.direction} />
           <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase"
             style={{ background: ss.bg, color: ss.color }}>{status}</span>
           {sent && (
@@ -534,6 +558,7 @@ function LeadCallModal({ lead, onClose }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
+                          <DirectionBadge direction={meta.direction} compact />
                           <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
                             style={{ background: ss.bg, color: ss.color }}>{status}</span>
                           {meta.duration > 0 && (
@@ -577,6 +602,7 @@ function LeadCallCard({ lead, onClick }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-bold text-app truncate">{lead.leadName || "Unknown Lead"}</p>
             {lead.leadPhone && <span className="text-xs text-app-soft">{lead.leadPhone}</span>}
+            <DirectionBadge direction={lead.lastDirection} compact />
             <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase"
               style={{ background: ss.bg, color: ss.color }}>{status}</span>
           </div>

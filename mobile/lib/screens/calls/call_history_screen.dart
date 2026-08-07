@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/direction_badge.dart';
 
 /// Full call history + AI analysis for one lead.
 /// GET /calls/lead/:leadId, POST /calls/:leadId/:activityId/summarize,
@@ -544,6 +545,8 @@ class _CallCardState extends State<_CallCard> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 6),
+                DirectionBadge(direction: _meta['direction'] as String?),
                 const Spacer(),
                 if (isMissed)
                   TextButton.icon(

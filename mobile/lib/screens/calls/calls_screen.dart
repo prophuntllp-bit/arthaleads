@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import 'call_history_screen.dart';
+import '../../widgets/direction_badge.dart';
 
 /// Calls — GET /calls (per-lead call history), GET /calls/stats,
 /// POST /calls/initiate (EnableX bridge call — rings the agent's own phone
@@ -730,6 +731,8 @@ class _CallsScreenState extends State<CallsScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  DirectionBadge(direction: row['lastDirection'] as String?),
                   const SizedBox(width: 8),
                   Text(
                     _fmtDate(row['lastCallAt'] as String?),

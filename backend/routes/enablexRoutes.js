@@ -512,6 +512,7 @@ router.get("/", async (req, res, next) => {
         callCount:       { $sum: 1 },
         lastCallAt:      { $first: "$activities.createdAt" },
         lastStatus:      { $first: "$activities.meta.status" },
+        lastDirection:   { $first: "$activities.meta.direction" },
         lastDuration:    { $first: "$activities.meta.duration" },
         lastPerformedBy: { $first: "$activities.performedByName" },
         lastActivityId:  { $first: "$activities._id" },
@@ -525,6 +526,7 @@ router.get("/", async (req, res, next) => {
         callCount:       1,
         lastCallAt:      1,
         lastStatus:      1,
+        lastDirection:   1,
         lastDuration:    1,
         lastPerformedBy: 1,
         lastActivityId:  1,
@@ -1253,13 +1255,26 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
     ...basicAuth(org),
   });
   const dataUri = `data:audio/wav;base64,${Buffer.from(audioResp.data).toString("base64")}`;
-  const result  = await cloudinary.uploader.upload(dataUri, {
+  const baseOpts = {
     resource_type: "video",
-    format:        "mp3",   // transcode WAV → MP3; browsers scrub/show duration for MP3 (a raw .wav often shows 0:00)
     folder:        "arthaleads/call-recordings",
     public_id:     `call-${voiceId || ownerRef}`,
     overwrite:     true,
-  });
+  };
+
+  // Transcode WAV → MP3 so the browser player can show duration and scrub (a raw
+  // .wav frequently renders as 0:00). Transcoding can fail on its own — plan
+  // limits, an odd source codec — and a failed upload means NO recording is
+  // saved at all, which is far worse than one that shows 0:00. So fall back to
+  // storing the original audio untouched.
+  let result;
+  try {
+    result = await cloudinary.uploader.upload(dataUri, { ...baseOpts, format: "mp3" });
+  } catch (mp3Err) {
+    console.error("[enablex recording] mp3 transcode failed, storing original:",
+      mp3Err?.message || mp3Err);
+    result = await cloudinary.uploader.upload(dataUri, baseOpts);
+  }
   const recordingUrl = result.secure_url;
   console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
 
