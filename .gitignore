@@ -41,3 +41,9 @@ __pycache__/
 
 # ZIP artifacts — generate locally, never commit
 *.zip
+
+# Claude Code worktrees — transient scratch checkouts. These were committed as
+# bare gitlinks with no .gitmodules entry, so every CI checkout emitted
+# "fatal: No url found for submodule path '.claude/worktrees/...'".
+# Shared project config (.claude/settings.json, .claude/skills/) stays tracked.
+.claude/worktrees/
