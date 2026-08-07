@@ -1111,6 +1111,40 @@ router.post("/:leadId/followup", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Save a lead mutation, retrying on a concurrent-write version conflict ─────
+// The recording-save and transcription paths run well after their triggering
+// webhook (a Cloudinary upload, a Whisper transcription) - during that window a
+// SECOND call event on the SAME lead (most commonly: the lead calls back inbound
+// a few seconds after an outbound call ends) can save the document first. Plain
+// lead.save() then throws Mongoose's VersionError and the whole write — the
+// recording URL, or the transcript/summary — was being silently dropped
+// (confirmed live: "save failed: No matching document found ... version 4").
+//
+// Reloading and reapplying the mutation is safe because `activities` is
+// append-only in this codebase (always pushed, never removed/reordered), so an
+// index captured before the retry still points at the same activity after.
+async function saveWithVersionRetry(Model, leadId, actIdx, applyMeta, { maxAttempts = 4, logPrefix = "[enablex]" } = {}) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const lead = await Model.findById(leadId);
+    if (!lead || !lead.activities[actIdx]) return null;
+    await applyMeta(lead, actIdx);
+    lead.markModified("activities");
+    try {
+      await lead.save();
+      return lead;
+    } catch (err) {
+      if (err.name === "VersionError" && attempt < maxAttempts) {
+        console.warn(`${logPrefix} save version conflict, retrying (${attempt}/${maxAttempts})`);
+        await new Promise((r) => setTimeout(r, 150 * attempt));
+        continue;
+      }
+      console.error(`${logPrefix} save failed after ${attempt} attempt(s):`, err.message);
+      return null;
+    }
+  }
+  return null;
+}
+
 // ── AI transcription + summarization (runs async after webhook) ──────────────
 async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead) {
   const { Readable } = require("stream");
@@ -1125,17 +1159,12 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
   const stream = Readable.from(buf);
   stream.name  = "recording.mp3";
 
-  const [transcription, lead] = await Promise.all([
-    openai.audio.transcriptions.create({
-      file:        stream,
-      model:       "whisper-1",
-      temperature: 0,   // deterministic — Whisper invents far less on silence/ringback
-      prompt:      "This is a real estate sales phone call between an agent and a customer, in English, Hindi or Marathi.",
-    }),
-    Model.findById(leadId),
-  ]);
-
-  if (!lead || !lead.activities[actIdx]) return;
+  const transcription = await openai.audio.transcriptions.create({
+    file:        stream,
+    model:       "whisper-1",
+    temperature: 0,   // deterministic — Whisper invents far less on silence/ringback
+    prompt:      "This is a real estate sales phone call between an agent and a customer, in English, Hindi or Marathi.",
+  });
 
   const transcript = (transcription.text || "").trim();
 
@@ -1144,18 +1173,18 @@ async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead
   // mark it clearly instead. Count only tokens that contain actual letters.
   const realWords = transcript.split(/\s+/).filter(t => /[\p{L}]{2,}/u.test(t));
   if (realWords.length < 6) {
-    lead.activities[actIdx].meta = {
-      ...lead.activities[actIdx].meta,
-      transcript,
-      summary:    "No clear conversation was captured on this call.",
-      keyPoints:  [],
-      nextAction: null,
-      intent:     "unclear",
-      sentiment:  "neutral",
-      noSpeech:   true,
-    };
-    lead.markModified("activities");
-    await lead.save();
+    await saveWithVersionRetry(Model, leadId, actIdx, (lead, idx) => {
+      lead.activities[idx].meta = {
+        ...lead.activities[idx].meta,
+        transcript,
+        summary:    "No clear conversation was captured on this call.",
+        keyPoints:  [],
+        nextAction: null,
+        intent:     "unclear",
+        sentiment:  "neutral",
+        noSpeech:   true,
+      };
+    }, { logPrefix: "[enablex transcript]" });
     return;
   }
 
@@ -1198,34 +1227,36 @@ ${transcript.slice(0, 3000)}`,
   const nextAction = parsed?.nextAction  || null;
   const intent     = parsed?.intent      || null;
 
-  lead.activities[actIdx].meta = {
-    ...lead.activities[actIdx].meta,
-    transcript,
-    summary,
-    keyPoints,
-    nextAction,
-    intent,
-    sentiment,
-  };
-
-  // Auto-advance lead status when aiAutoStatus is enabled for this org
   const INTENT_STATUS_MAP = { site_visit: "Site Visit", negotiation: "Negotiation" };
   const targetStatus = intent ? INTENT_STATUS_MAP[intent] : null;
-  if (targetStatus && lead.status !== targetStatus) {
-    const org = await Organization.findById(lead.orgId).select("enablex.aiAutoStatus").lean();
-    if (org?.enablex?.aiAutoStatus) {
-      const prev = lead.status;
-      lead.status = targetStatus;
-      lead.activities.push({
-        type:        "status_changed",
-        description: `Status changed to ${targetStatus} — AI detected "${intent}" intent from call`,
-        meta:        { from: prev, to: targetStatus, auto: true, aiTriggered: true },
-      });
-    }
-  }
 
-  lead.markModified("activities");
-  await lead.save();
+  await saveWithVersionRetry(Model, leadId, actIdx, async (lead, idx) => {
+    lead.activities[idx].meta = {
+      ...lead.activities[idx].meta,
+      transcript,
+      summary,
+      keyPoints,
+      nextAction,
+      intent,
+      sentiment,
+    };
+
+    // Auto-advance lead status when aiAutoStatus is enabled for this org.
+    // Re-checks lead.status fresh on every retry attempt, since a concurrent
+    // save (the very thing being retried against) may have already changed it.
+    if (targetStatus && lead.status !== targetStatus) {
+      const orgSettings = await Organization.findById(lead.orgId).select("enablex.aiAutoStatus").lean();
+      if (orgSettings?.enablex?.aiAutoStatus) {
+        const prev = lead.status;
+        lead.status = targetStatus;
+        lead.activities.push({
+          type:        "status_changed",
+          description: `Status changed to ${targetStatus} — AI detected "${intent}" intent from call`,
+          meta:        { from: prev, to: targetStatus, auto: true, aiTriggered: true },
+        });
+      }
+    }
+  }, { logPrefix: "[enablex transcript]" });
 }
 
 // ── Download EnableX's recording URL (pushed directly on the webhook event) →
@@ -1244,10 +1275,12 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
 
   const Model = ownerRef?.startsWith("projectlead_") ? ProjectLead : Lead;
-  const lead = await Model.findOne({ orgId, "activities.meta.ownerRef": ownerRef });
-  if (!lead) return;
-  const actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
-  if (actIdx < 0 || lead.activities[actIdx].meta?.recordingUrl) return;
+  const lookupLead = await Model.findOne({ orgId, "activities.meta.ownerRef": ownerRef }).select("_id activities").lean();
+  if (!lookupLead) return;
+  const actIdx = lookupLead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
+  if (actIdx < 0 || lookupLead.activities[actIdx].meta?.recordingUrl) return;
+  const leadId = lookupLead._id;
+  const callDuration = Number(lookupLead.activities[actIdx].meta?.duration ?? 0);
 
   const audioResp = await axios.get(enablexRecordingUrl, {
     responseType: "arraybuffer",
@@ -1278,14 +1311,14 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
   const recordingUrl = result.secure_url;
   console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
 
-  lead.activities[actIdx].meta = { ...lead.activities[actIdx].meta, recordingUrl };
-  lead.markModified("activities");
-  await lead.save();
+  const saved = await saveWithVersionRetry(Model, leadId, actIdx, (lead, idx) => {
+    lead.activities[idx].meta = { ...lead.activities[idx].meta, recordingUrl };
+  }, { logPrefix: "[enablex recording]" });
+  if (!saved) return; // logged inside the helper — a concurrent call kept winning the race
 
   // Auto-transcribe + AI analysis
-  const dur = Number(lead.activities[actIdx].meta?.duration ?? 0);
-  if (process.env.OPENAI_API_KEY && dur > 10) {
-    transcribeAndSummarize(String(lead._id), actIdx, recordingUrl, Model).catch(() => {});
+  if (process.env.OPENAI_API_KEY && callDuration > 10) {
+    transcribeAndSummarize(String(leadId), actIdx, recordingUrl, Model).catch(() => {});
   }
 }
 
