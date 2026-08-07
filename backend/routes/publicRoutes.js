@@ -1,9 +1,34 @@
 const express = require("express");
 const router = express.Router();
 const { getForm, submitLead } = require("../controllers/publicController");
+const OPTS = require("../constants/leadOptions");
 
 router.get("/form/:token", getForm);
 router.post("/form/:token", submitLead);
+
+// ── Lead option lists ────────────────────────────────────────────────────────
+// Serves the same constants the model and validators use, so a client can never
+// offer a value the API rejects. This matters most for the Android app: APKs are
+// distributed privately and can be months old, but they still pick up new
+// options from here without a reinstall.
+//
+// Public because these are non-sensitive UI constants and the app may load them
+// before login. Cached for an hour — they change only on deploy.
+router.get("/options", (req, res) => {
+  res.set("Cache-Control", "public, max-age=3600");
+  res.json({
+    success: true,
+    options: {
+      status:       OPTS.STATUS,
+      priority:     OPTS.PRIORITY,
+      source:       OPTS.SOURCE,
+      booking:      OPTS.BOOKING,
+      propertyType: OPTS.PROPERTY_TYPE,
+      bhk:          OPTS.BHK,
+      purpose:      OPTS.PURPOSE,
+    },
+  });
+});
 
 // ── App version check (Android APK is distributed privately, not via Play Store) ──
 // Sideloaded builds get no automatic updates, so the app asks here on launch

@@ -1,7 +1,10 @@
+// ── Lead option lists ─────────────────────────────────────────────────────────
+// These mirror backend/constants/leadOptions.js, which is the single source of
+// truth (the Mongoose enums and Joi validators derive from it too). The values
+// below are the bundled fallback; hydrateLeadOptions() below refreshes them
+// from GET /api/public/options at startup, so a deployed backend can add an
+// option without the client needing a rebuild.
 export const STATUS_OPTIONS = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
-// Keep in sync with the `source` enum in backend/models/Lead.js and
-// SOURCE_VALUES in backend/validations/schemas.js. "QR Code" was missing here,
-// so a QR-captured lead opened in the edit form showed no matching option.
 export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"];
 export const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Hot"];
 export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other"];
@@ -82,4 +85,36 @@ export function fmtCurrency(value) {
     currency: "INR",
     maximumFractionDigits: 0
   }).format(value);
+}
+
+
+// ── Runtime hydration ─────────────────────────────────────────────────────────
+// Replaces each list's CONTENTS in place (never the array reference) so every
+// module that already imported them sees the update without re-importing.
+// Best-effort: if the request fails, the bundled values above stay in use.
+const _OPTION_TARGETS = {
+  status:       STATUS_OPTIONS,
+  priority:     PRIORITY_OPTIONS,
+  source:       SOURCE_OPTIONS,
+  propertyType: PROPERTY_TYPES,
+  bhk:          BHK_OPTIONS,
+  purpose:      PURPOSE_OPTIONS,
+};
+
+export async function hydrateLeadOptions(api) {
+  try {
+    const { data } = await api.get("/public/options");
+    const opts = data?.options;
+    if (!opts) return;
+    for (const [key, target] of Object.entries(_OPTION_TARGETS)) {
+      const incoming = opts[key];
+      // Ignore anything that isn't a non-empty array of strings — a malformed
+      // payload must never blank out a dropdown.
+      if (!Array.isArray(incoming) || incoming.length === 0) continue;
+      if (!incoming.every((v) => typeof v === "string")) continue;
+      target.splice(0, target.length, ...incoming);
+    }
+  } catch {
+    // Offline or backend down — bundled defaults remain correct enough.
+  }
 }

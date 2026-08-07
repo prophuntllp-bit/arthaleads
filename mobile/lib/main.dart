@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/auth_state.dart';
+import 'core/options_service.dart';
 import 'core/push_service.dart';
 import 'core/theme.dart';
 import 'core/theme_state.dart';
@@ -15,6 +16,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // Refresh lead dropdown options from the backend (cached, offline-safe) so a
+  // stale sideloaded build still offers exactly what the API accepts.
+  // Deliberately not awaited — app start must not wait on it.
+  OptionsService.hydrate();
   runApp(
     MultiProvider(
       providers: [

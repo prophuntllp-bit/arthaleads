@@ -1,47 +1,9 @@
 // validations/schemas.js
 const Joi = require("joi");
+// Every enumerated lead value comes from one place — see constants/leadOptions.js
+// for why (the model/validator/client copies had drifted and broke saves).
+const OPTS = require("../constants/leadOptions");
 
-// Lead sources — MUST stay in sync with the `source` enum in models/Lead.js.
-// These had drifted too: "QR Code" existed only on the model, and "Custom" /
-// "Vistrow Voice" were missing from the update/import schemas — so editing a
-// lead that arrived from a QR code, the voice integration, or a custom
-// automation was rejected with a 400, because the edit form posts `source`
-// back unchanged.
-const SOURCE_VALUES = [
-  "Facebook",
-  "Google",
-  "WhatsApp",
-  "Manual",
-  "Website",
-  "Custom",
-  "Vistrow Voice",
-  "Referral",
-  "Walk-in",
-  "PropTiger",
-  "99acres",
-  "MagicBricks",
-  "QR Code",
-  "Other",
-];
-
-// Booking values — MUST stay in sync with the `booking` enum in models/Lead.js
-// and models/ProjectLead.js, and with BOOKING_OPTIONS in the frontend.
-// Kept as one constant because these lists had drifted: "Other Location" and
-// "Commercial" were selectable in the UI and valid on the model, but missing
-// here, so choosing either failed validation with a 400 ("Save failed").
-const BOOKING_VALUES = [
-  "",
-  "Interested",
-  "Not Interested",
-  "Not Reachable",
-  "Low Budget",
-  "Call Back",
-  "Site Visit Booked",
-  "Site Visit Done",
-  "Booked",
-  "Other Location",
-  "Commercial",
-];
 const avatarSchema = Joi.string()
   .pattern(/^(https?:\/\/|data:image\/(?:png|jpe?g|webp|gif);base64,)/i)
   .allow("")
@@ -151,7 +113,7 @@ const createLeadSchema = Joi.object({
   streetAddress: Joi.string().allow("").optional(),
   city: Joi.string().allow("").optional(),
   propertyType: Joi.string()
-    .valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other")
+    .valid(...OPTS.PROPERTY_TYPE)
     .default("Apartment"),
   budget: Joi.object({
     min: Joi.number().min(0).default(0),
@@ -159,14 +121,14 @@ const createLeadSchema = Joi.object({
     currency: Joi.string().default("INR"),
   }).default({}),
   preferredLocation: Joi.string().allow("").optional(),
-  bhk: Joi.string().valid("1BHK","2BHK","3BHK","4BHK","5BHK+","Studio","N/A").default("N/A"),
-  purpose: Joi.string().valid("Buy","Rent","Invest","N/A").default("Buy"),
+  bhk: Joi.string().valid(...OPTS.BHK).default("N/A"),
+  purpose: Joi.string().valid(...OPTS.PURPOSE).default("Buy"),
   status: Joi.string()
-    .valid("New","Contacted","Site Visit","Negotiation","Closed Won","Closed Lost")
+    .valid(...OPTS.STATUS)
     .default("New"),
-  priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
+  priority: Joi.string().valid(...OPTS.PRIORITY).default("Medium"),
   source: Joi.string()
-    .valid(...SOURCE_VALUES)
+    .valid(...OPTS.SOURCE)
     .default("Manual"),
   assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
   followUpDate: Joi.date().allow(null).optional(),
@@ -187,18 +149,18 @@ const updateLeadSchema = Joi.object({
   email: Joi.string().email().allow(""),
   streetAddress: Joi.string().allow(""),
   city: Joi.string().allow(""),
-  propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other"),
+  propertyType: Joi.string().valid(...OPTS.PROPERTY_TYPE),
   budget: Joi.object({
     min: Joi.number().min(0),
     max: Joi.number().min(0),
     currency: Joi.string(),
   }),
   preferredLocation: Joi.string().allow(""),
-  bhk: Joi.string().valid("1BHK","2BHK","3BHK","4BHK","5BHK+","Studio","N/A"),
-  purpose: Joi.string().valid("Buy","Rent","Invest","N/A"),
-  status: Joi.string().valid("New","Contacted","Site Visit","Negotiation","Closed Won","Closed Lost"),
-  priority: Joi.string().valid("Low","Medium","High","Hot"),
-  source: Joi.string().valid(...SOURCE_VALUES),
+  bhk: Joi.string().valid(...OPTS.BHK),
+  purpose: Joi.string().valid(...OPTS.PURPOSE),
+  status: Joi.string().valid(...OPTS.STATUS),
+  priority: Joi.string().valid(...OPTS.PRIORITY),
+  source: Joi.string().valid(...OPTS.SOURCE),
   assignedTo: Joi.string().hex().length(24).allow(null, ""),
   followUpDate: Joi.date().allow(null),
   followUpNote: Joi.string().allow(""),
@@ -215,7 +177,7 @@ const updateLeadSchema = Joi.object({
   remark1: Joi.string().allow("").max(500),
   remark2: Joi.string().allow("").max(500),
   remark: Joi.string().allow("").max(1000),
-  booking: Joi.string().valid(...BOOKING_VALUES).allow(""),
+  booking: Joi.string().valid(...OPTS.BOOKING).allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
 }).min(1); // At least one field required for update
@@ -236,18 +198,18 @@ const importLeadsSchema = Joi.object({
       email: Joi.string().email().allow("").optional(),
       streetAddress: Joi.string().allow("").optional(),
       city: Joi.string().allow("").optional(),
-      propertyType: Joi.string().valid("Apartment","Villa","Plot","Commercial","Office","Penthouse","Other").default("Apartment"),
+      propertyType: Joi.string().valid(...OPTS.PROPERTY_TYPE).default("Apartment"),
       budget: Joi.object({
         min: Joi.number().min(0).default(0),
         max: Joi.number().min(0).default(0),
         currency: Joi.string().default("INR"),
       }).default({}),
       preferredLocation: Joi.string().allow("").optional(),
-      bhk: Joi.string().valid("1BHK","2BHK","3BHK","4BHK","5BHK+","Studio","N/A").default("N/A"),
-      purpose: Joi.string().valid("Buy","Rent","Invest","N/A").default("Buy"),
-      status: Joi.string().valid("New","Contacted","Site Visit","Negotiation","Closed Won","Closed Lost").default("New"),
-      priority: Joi.string().valid("Low","Medium","High","Hot").default("Medium"),
-      source: Joi.string().valid(...SOURCE_VALUES).default("Manual"),
+      bhk: Joi.string().valid(...OPTS.BHK).default("N/A"),
+      purpose: Joi.string().valid(...OPTS.PURPOSE).default("Buy"),
+      status: Joi.string().valid(...OPTS.STATUS).default("New"),
+      priority: Joi.string().valid(...OPTS.PRIORITY).default("Medium"),
+      source: Joi.string().valid(...OPTS.SOURCE).default("Manual"),
       assignedTo: Joi.string().hex().length(24).allow(null, "").optional(),
       followUpDate: Joi.date().allow(null).optional(),
       followUpNote: Joi.string().allow("").optional(),
@@ -259,7 +221,7 @@ const importLeadsSchema = Joi.object({
         })
       ).optional(),
       tags: Joi.array().items(Joi.string()).optional(),
-      booking: Joi.string().valid(...BOOKING_VALUES).allow("").optional(),
+      booking: Joi.string().valid(...OPTS.BOOKING).allow("").optional(),
       remark: Joi.string().allow("").optional(),
       remark1: Joi.string().allow("").optional(),
       remark2: Joi.string().allow("").optional(),

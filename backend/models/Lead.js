@@ -1,5 +1,8 @@
 ﻿// models/Lead.js - Full Real Estate CRM Lead Schema
 const mongoose = require("mongoose");
+// Enumerated option lists live in one place so the model, the Joi validators
+// and both clients cannot drift apart. See constants/leadOptions.js.
+const OPTS = require("../constants/leadOptions");
 
 // ── Sub-schemas ────────────────────────────────────────────────────────────────
 
@@ -102,7 +105,7 @@ const leadSchema = new mongoose.Schema(
     // ── Real Estate Specific ──────────────────────────────────────────────────
     propertyType: {
       type: String,
-      enum: ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other"],
+      enum: OPTS.PROPERTY_TYPE,
       default: "Apartment",
     },
     budget: {
@@ -111,28 +114,28 @@ const leadSchema = new mongoose.Schema(
       currency: { type: String, default: "INR" },
     },
     preferredLocation: { type: String, trim: true, default: "" },
-    bhk: { type: String, enum: ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"], default: "N/A" },
-    purpose: { type: String, enum: ["Buy", "Rent", "Invest", "N/A"], default: "Buy" },
+    bhk: { type: String, enum: OPTS.BHK, default: "N/A" },
+    purpose: { type: String, enum: OPTS.PURPOSE, default: "Buy" },
 
     // ── Pipeline ──────────────────────────────────────────────────────────────
     status: {
       type: String,
       enum: {
-        values: ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"],
+        values: OPTS.STATUS,
         message: "Invalid status",
       },
       default: "New",
     },
     priority: {
       type: String,
-      enum: ["Low", "Medium", "High", "Hot"],
+      enum: OPTS.PRIORITY,
       default: "Medium",
     },
 
     // ── Lead Source ───────────────────────────────────────────────────────────
     source: {
       type: String,
-      enum: ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"],
+      enum: OPTS.SOURCE,
       default: "Manual",
     },
 
@@ -166,7 +169,7 @@ const leadSchema = new mongoose.Schema(
     followUp2: { type: Date, default: null },
     booking: {
       type: String,
-      enum: ["", "Interested", "Not Interested", "Not Reachable", "Low Budget", "Call Back", "Site Visit Booked", "Site Visit Done", "Booked", "Other Location", "Commercial"],
+      enum: OPTS.BOOKING,
       default: "",
     },
 

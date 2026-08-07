@@ -1,24 +1,36 @@
 import 'package:flutter/material.dart';
 
-/// Option lists mirrored from frontend/src/utils/constants.js and Leads.jsx.
-const statusOptions = ['New', 'Contacted', 'Site Visit', 'Negotiation', 'Closed Won', 'Closed Lost'];
+/// Lead option lists.
+///
+/// backend/constants/leadOptions.js is the single source of truth — the Mongoose
+/// enums and Joi validators derive from it, and GET /api/public/options serves
+/// it. OptionsService hydrates the lists below at startup, which matters here
+/// because the APK is distributed privately: an old install still picks up new
+/// options without being reinstalled.
+///
+/// These are mutable on purpose (hydration replaces their contents in place).
+/// The values are the offline fallback.
+const _defaultStatusOptions = ['New', 'Contacted', 'Site Visit', 'Negotiation', 'Closed Won', 'Closed Lost'];
+List<String> statusOptions = List.of(_defaultStatusOptions);
 
-// Keep in sync with the `source` enum in backend/models/Lead.js and
-// SOURCE_OPTIONS on web — 'Custom', 'Vistrow Voice' and 'QR Code' were missing
-// here, so leads from those channels had no matching option on mobile.
-const sourceOptions = [
+const _defaultSourceOptions = [
   'Facebook', 'Google', 'WhatsApp', 'Manual', 'Website', 'Custom',
   'Vistrow Voice', 'Referral', 'Walk-in', 'PropTiger', '99acres',
   'MagicBricks', 'QR Code', 'Other',
 ];
+List<String> sourceOptions = List.of(_defaultSourceOptions);
 
-const priorityOptions = ['Low', 'Medium', 'High', 'Hot'];
+const _defaultPriorityOptions = ['Low', 'Medium', 'High', 'Hot'];
+List<String> priorityOptions = List.of(_defaultPriorityOptions);
 
-const propertyTypes = ['Apartment', 'Villa', 'Plot', 'Commercial', 'Office', 'Penthouse', 'Other'];
+const _defaultPropertyTypes = ['Apartment', 'Villa', 'Plot', 'Commercial', 'Office', 'Penthouse', 'Other'];
+List<String> propertyTypes = List.of(_defaultPropertyTypes);
 
-const bhkOptions = ['1BHK', '2BHK', '3BHK', '4BHK', '5BHK+', 'Studio', 'N/A'];
+const _defaultBhkOptions = ['1BHK', '2BHK', '3BHK', '4BHK', '5BHK+', 'Studio', 'N/A'];
+List<String> bhkOptions = List.of(_defaultBhkOptions);
 
-const purposeOptions = ['Buy', 'Rent', 'Invest', 'N/A'];
+const _defaultPurposeOptions = ['Buy', 'Rent', 'Invest', 'N/A'];
+List<String> purposeOptions = List.of(_defaultPurposeOptions);
 
 class BookingOption {
   final String value;
@@ -27,7 +39,7 @@ class BookingOption {
   const BookingOption(this.value, this.label, this.color);
 }
 
-const bookingOptions = [
+const _defaultBookingOptions = [
   BookingOption('', '- None -', null),
   BookingOption('Interested', 'Interested', Color(0xFF2563EB)),
   BookingOption('Not Interested', 'Not Interested', Color(0xFFEF4444)),
@@ -40,6 +52,22 @@ const bookingOptions = [
   BookingOption('Other Location', 'Other Location', Color(0xFFEA580C)),
   BookingOption('Commercial', 'Commercial', Color(0xFF4F46E5)),
 ];
+List<BookingOption> bookingOptions = List.of(_defaultBookingOptions);
+
+/// Colour per booking value, so a value that arrives from the API still renders
+/// with the right chip colour. Unknown values fall back to grey.
+const bookingColors = <String, Color>{
+  'Interested': Color(0xFF2563EB),
+  'Not Interested': Color(0xFFEF4444),
+  'Not Reachable': Color(0xFF6B7280),
+  'Low Budget': Color(0xFFDB2777),
+  'Call Back': Color(0xFFD97706),
+  'Site Visit Booked': Color(0xFF7C3AED),
+  'Site Visit Done': Color(0xFF0D9488),
+  'Booked': Color(0xFF16A34A),
+  'Other Location': Color(0xFFEA580C),
+  'Commercial': Color(0xFF4F46E5),
+};
 
 // Matches frontend/src/pages/LeadPipeline.jsx's STAGE_META, which is the
 // same status→color mapping frontend/src/utils/constants.js's STATUS_COLORS

@@ -20,7 +20,13 @@ import { Download, X, Bell, Share } from "lucide-react";
 import { subscribeToPush } from "./utils/pushNotifications";
 import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
+import { hydrateLeadOptions } from "./utils/constants";
 import toast from "react-hot-toast";
+
+// Refresh the lead dropdown options from the backend once per page load, so the
+// client always offers exactly what the API accepts. Falls back silently to the
+// bundled defaults. Fired at module load — it needs no React state.
+hydrateLeadOptions(api);
 
 // ── Page-level code splitting ─────────────────────────────────────────────────
 // Each page is loaded only when first visited - reduces initial bundle ~50%

@@ -1,5 +1,6 @@
 ﻿// models/ProjectLead.js
 const mongoose = require("mongoose");
+const OPTS = require("../constants/leadOptions");
 
 const noteSchema = new mongoose.Schema(
   {
@@ -76,13 +77,13 @@ const projectLeadSchema = new mongoose.Schema(
     followUpSetByName:  { type: String, default: "" },
     booking: {
       type: String,
-      enum: ["", "Interested", "Site Visit Booked", "Site Visit Done", "Booked", "Not Interested", "Call Back", "Not Reachable", "Low Budget", "Other Location", "Commercial"],
+      enum: OPTS.BOOKING,
       default: "",
     },
 
     status: {
       type: String,
-      enum: ["", "New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"],
+      enum: ["", ...OPTS.STATUS],
       default: "",
     },
 
