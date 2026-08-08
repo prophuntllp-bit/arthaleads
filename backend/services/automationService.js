@@ -19,6 +19,7 @@ function generateIngestToken() {
 const TOKEN_INGEST_WEBHOOK_PATH = {
   Custom: "/webhook/lead",
   "Vistrow Voice": "/webhook/lead",
+  WhatsApp: "/webhook/lead",
   Google: "/webhook/google",
 };
 const TOKEN_INGEST_PLATFORMS = Object.keys(TOKEN_INGEST_WEBHOOK_PATH);
@@ -40,10 +41,10 @@ const DEFAULTS = {
     description: "Receive Google Ads Lead Form submissions directly — no OAuth, just a webhook URL and key.",
   },
   WhatsApp: {
-    mode: "api",
-    webhookPath: "/api/leads",
+    mode: "webhook",
+    webhookPath: "/webhook/lead",
     leadSourceLabel: "WhatsApp",
-    description: "Push WhatsApp enquiries into the lead API with source set to WhatsApp.",
+    description: "Receive enquiries from a WhatsApp bot or provider (e.g. Wati, Interakt, Twilio) via the lead webhook with your token.",
   },
   "Website Form": {
     mode: "form",

@@ -30,11 +30,11 @@ const PLATFORM_PRESETS = {
     tone: "bg-red-500/10 text-red-400",
   },
   WhatsApp: {
-    mode: "api",
+    mode: "webhook",
     status: "draft",
     leadSourceLabel: "WhatsApp",
-    webhookPath: "/api/leads",
-    description: "Route WhatsApp enquiries from a bot or form into the CRM.",
+    webhookPath: "/webhook/lead",
+    description: "Route WhatsApp enquiries from a bot or provider (Wati, Interakt, Twilio, etc.) into the CRM.",
     icon: MessageCircle,
     tone: "bg-green-500/10 text-green-400",
   },
@@ -72,13 +72,13 @@ const PLATFORM_PRESETS = {
 const emptyNonFbForm = {
   name: "",
   platform: "WhatsApp",
-  mode: "api",
+  mode: "webhook",
   status: "draft",
   leadSourceLabel: "WhatsApp",
   description: "",
   externalSourceId: "",
   externalSourceUrl: "",
-  webhookPath: "/api/leads",
+  webhookPath: "/webhook/lead",
   verifyToken: "",
   accessToken: "",
   mappingNotes: "",
@@ -729,7 +729,7 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
           </div>
           <p className="mt-1 text-xs text-app-soft">POST leads to this endpoint with source set to <span className="text-orange-400">{form.leadSourceLabel || form.platform}</span>.</p>
         </div>
-        {form.platform === "Custom" && (
+        {(form.platform === "Custom" || form.platform === "WhatsApp") && (
           <div>
             <label className="label">Auth Token</label>
             {form.verifyToken ? (
@@ -2187,7 +2187,7 @@ export default function Automation() {
                         <p className="mt-1 text-[11px] text-app-soft">Paste both into Google Ads → Lead form extension → Webhook integration.</p>
                       </div>
                     </div>
-                  ) : (item.platform === "Custom" || item.platform === "Vistrow Voice") ? (
+                  ) : (item.platform === "Custom" || item.platform === "Vistrow Voice" || item.platform === "WhatsApp") ? (
                     <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
                       <div>
                         <p className="text-xs text-app-soft mb-1">API Endpoint</p>

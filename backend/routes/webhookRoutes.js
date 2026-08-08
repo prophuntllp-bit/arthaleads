@@ -794,20 +794,22 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: "Field 'phone' is required (min 7 chars)" });
     }
 
-    // Token-ingest platforms (Custom, Vistrow Voice) share this endpoint and are
-    // disambiguated purely by their token. Keep in sync with TOKEN_INGEST_PLATFORMS
-    // in services/automationService.js.
+    // Token-ingest platforms (Custom, Vistrow Voice, WhatsApp) share this endpoint
+    // and are disambiguated purely by their token. Keep in sync with
+    // TOKEN_INGEST_PLATFORMS in services/automationService.js.
+    const TOKEN_INGEST_PLATFORMS = ["Custom", "Vistrow Voice", "WhatsApp"];
     const automation = await Automation.findOne({
-      platform: { $in: ["Custom", "Vistrow Voice"] },
+      platform: { $in: TOKEN_INGEST_PLATFORMS },
       verifyToken: token,
       isActive: true,
     });
     if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
 
     const orgId = automation.orgId;
-    // Stamp the lead's source from the matched connection so a Vistrow Voice
-    // token produces "Vistrow Voice" leads and a generic Custom token "Custom".
-    const leadSource = automation.platform === "Vistrow Voice" ? "Vistrow Voice" : "Custom";
+    // Stamp the lead's source from the matched connection's own platform, so a
+    // Vistrow Voice token produces "Vistrow Voice" leads, a WhatsApp token
+    // produces "WhatsApp" leads, and anything else falls back to "Custom".
+    const leadSource = TOKEN_INGEST_PLATFORMS.includes(automation.platform) ? automation.platform : "Custom";
 
     // Deduplication: same phone for this org within the last 2 minutes = a
     // double-fire from the sender — skip silently (same guard as website flow).
