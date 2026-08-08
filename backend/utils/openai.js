@@ -110,19 +110,22 @@ PIPELINE / KANBAN
 Left sidebar -> Pipeline. Six columns: New, Contacted, Site Visit, Negotiation, Closed Won, Closed Lost. Drag a card between columns to update status instantly. Scroll right to see all columns.
 
 CONNECT FACEBOOK LEAD ADS (Admin/Manager only)
-Automation -> click the "Facebook" tile in "Quick connect" -> click "Continue with Facebook" -> log in to Meta and grant access -> pick your Ad Account and Lead Form -> give the connection a name -> Save. Done - every new Facebook form submission now imports automatically.
+Integrations -> click the "Facebook" tile in "Quick connect" -> click "Continue with Facebook" -> log in to Meta and grant access -> pick your Ad Account and Lead Form -> give the connection a name -> Save. Done - every new Facebook form submission now imports automatically.
 
 CONNECT WORDPRESS / WEBSITE FORMS (Admin/Manager only)
-Automation -> click the "Website Form" tile -> click "Add Site" -> copy the Webhook URL shown -> go to your WordPress plugin settings (MetForm / CF7 / WPForms / Elementor / Gravity Forms) -> paste the URL -> Save. Leads from that form now appear in the CRM automatically.
+Integrations -> click the "Website Form" tile -> click "Add Site" -> copy the Webhook URL shown -> go to your WordPress plugin settings (MetForm / CF7 / WPForms / Elementor / Gravity Forms) -> paste the URL -> Save. Leads from that form now appear in the CRM automatically.
 
 CONNECT VISTROW VOICE (AI calling platform) (Admin/Manager only)
-Automation -> click the "Vistrow Voice" tile in "Quick connect" -> click "Add Voice Connection" -> a token (starts with "AW-") is generated -> click Copy -> in your Vistrow Voice account, open the Arthaleads integration and paste the token there -> Save. That's the whole setup — no coding needed. Every qualified call from Vistrow Voice now creates a lead automatically: it appears in Leads with the source "Vistrow Voice", and the call summary/transcript lands in the lead's Requirements field. You can add multiple connections (each gets its own token) and remove any with the trash icon. If leads stop arriving, generate a fresh token here and re-paste it into Vistrow Voice. The "Developer details" section in that popup is only for people wiring a custom (non-Vistrow) sender by hand — normal users can ignore it.
+Integrations -> click the "Vistrow Voice" tile in "Quick connect" -> click "Add Voice Connection" -> a token (starts with "AW-") is generated -> click Copy -> in your Vistrow Voice account, open the Arthaleads integration and paste the token there -> Save. That's the whole setup — no coding needed. Every qualified call from Vistrow Voice now creates a lead automatically: it appears in Leads with the source "Vistrow Voice", and a concise summary of what the call extracted (budget/location/timeline/etc, when the caller gave that info) lands in the lead's Requirements field — the full transcript lives in that lead's Transcript tab, not Requirements. You can add multiple connections (each gets its own token) and remove any with the trash icon. If leads stop arriving, generate a fresh token here and re-paste it into Vistrow Voice. The "Developer details" section in that popup is only for people wiring a custom (non-Vistrow) sender by hand — normal users can ignore it.
+
+CONNECT WHATSAPP (bot or provider) (Admin/Manager only)
+Integrations -> click the "WhatsApp" tile -> in "Add Lead Source" give it a name and Save -> a token (starts with "AW-") is generated -> click Copy, along with the API Endpoint shown just above it. Give both to whatever handles your inbound WhatsApp messages (a bot, or a provider like Wati/Interakt/Twilio) and have it POST JSON with fields token, name, phone, email, message to that endpoint whenever it captures an enquiry. Every submission creates a lead with source "WhatsApp" - the message field becomes the lead's Requirements. This is the same token-webhook pattern as Custom and Vistrow Voice, just labelled WhatsApp.
 
 SET UP AUTO-ROUTING RULES (Admin/Manager only)
-Automation -> scroll to "Routing Rules" section -> "Add Rule" -> pick Source (e.g. Facebook) -> pick assignment mode (Specific Agent or Round Robin) -> Save. Incoming leads from that source auto-assign.
+Integrations -> scroll to "Routing Rules" section -> "Add Rule" -> pick Source (e.g. Facebook) -> pick assignment mode (Specific Agent or Round Robin) -> Save. Incoming leads from that source auto-assign.
 
 RECONNECT FACEBOOK (expired token)
-Automation -> find the Facebook connection card -> click the three-dot menu -> "Reconnect" -> re-authorize with Meta. Tokens expire every 60 days.
+Integrations -> find the Facebook connection card -> click the three-dot menu -> "Reconnect" -> re-authorize with Meta. Tokens expire every 60 days.
 
 INVITE A TEAM MEMBER (Admin only)
 Team -> click "Add Team Member" (top-right orange button) -> fill: Name, Email, Role (Agent / Manager / Admin), Password -> Save. The person can log in immediately. Roles: Agent = own leads + follow-ups + attendance only. Manager = everything except Team page. Admin = full access.
@@ -299,14 +302,14 @@ WHATSAPP BUTTON NOT WORKING / NOT OPENING
 4. If the number shows without +91, open the lead and edit the phone field to add the country code.
 
 FACEBOOK LEADS NOT IMPORTING AUTOMATICALLY
-1. Go to Automation and check if the Facebook connection status shows "Active" (green dot). If not, click "Reconnect".
+1. Go to Integrations and check if the Facebook connection status shows "Active" (green dot). If not, click "Reconnect".
 2. Facebook tokens expire every 60 days - reconnect if it has been more than 60 days since you set it up.
 3. Check that the lead form you selected in the wizard is still the active form on your Facebook ad. If you changed the form, disconnect and reconnect to pick the new one.
 4. Check that the Meta account connected has Admin permissions on the Facebook Page running the ads.
 5. New form submissions take up to 2 minutes to appear in the CRM.
 
 LEADS ASSIGNED TO WRONG AGENT (auto-routing issue)
-1. Go to Automation -> Routing Rules - check if a rule is mis-configured.
+1. Go to Integrations -> Routing Rules - check if a rule is mis-configured.
 2. If you use Round Robin, the assignment rotates through all active agents - this is expected.
 3. To fix past wrong assignments: Leads -> tick the affected leads -> bulk Assign -> pick the correct agent.
 4. To prevent future mis-assignments: update the routing rule or set "Specific Agent" instead of Round Robin.
@@ -334,8 +337,8 @@ ATTENDANCE NOT RECORDING / CLOCK IN NOT WORKING
 2. Only one clock-in per day is allowed. If you forgot to clock out yesterday, today's clock-in may behave differently - ask Admin to fix yesterday's entry.
 3. Admins: go to Attendance -> Add Entry to manually add or correct entries for any agent.
 
-CANNOT SEE AUTOMATION / PERFORMANCE / TEAM PAGE
-This is expected role restriction. Agents (non-Admin, non-Manager) do not have access to: Automation, Performance, Team, Dump Leads. If you need access, ask your Admin to upgrade your role to Manager or Admin in the Team page.
+CANNOT SEE INTEGRATIONS / PERFORMANCE / TEAM PAGE
+This is expected role restriction. Agents (non-Admin, non-Manager) do not have access to: Integrations, Performance, Team, Dump Leads. If you need access, ask your Admin to upgrade your role to Manager or Admin in the Team page.
 
 FORGOT TO SET FOLLOW-UP / MISSED REMINDER
 Go to Leads -> open the lead -> Info tab -> set a new follow-up date -> Save. Then check the Follow-ups page regularly. Push notifications can be enabled in Settings -> Notifications.
@@ -443,8 +446,8 @@ All scheduled reminders. Overdue in red, today in amber. Quick Call and WhatsApp
 PROJECTS (/projects)
 Group leads under a real-estate project. Each project has its own lead list, pipeline, stats.
 
-AUTOMATION (/automation) — Admin/Manager only
-Facebook Lead Ads (one-click OAuth), WordPress plugin (webhook), Vistrow Voice (AI calling platform — paste a token, no coding), Custom sources (token webhook for any partner/broker/vendor), Routing Rules (auto-assign by source, round-robin or specific agent).
+INTEGRATIONS (/automation) — Admin/Manager only. (Sidebar label is "Integrations"; the URL path is still /automation.)
+Facebook Lead Ads (one-click OAuth), WordPress plugin (webhook), Vistrow Voice (AI calling platform — paste a token, no coding), WhatsApp bot/provider (token webhook — same pattern as Custom, for tools like Wati/Interakt/Twilio), Custom sources (token webhook for any partner/broker/vendor), Routing Rules (auto-assign by source, round-robin or specific agent).
 
 CALLS (/calls)
 EnableX telephony call log. One card per lead (groups all calls to that lead). Shows: lead name, phone, most recent call status, last call time, agent, duration, call-count badge. Click a card to open call history modal. Click a call in history to see full detail: recording player, AI Analysis (intent/sentiment/summary/key points/next action), call notes (editable), follow-up task scheduler, Call Back button for missed calls. Filter tabs: All / Answered / Missed / Initiated. Agent filter dropdown (Admin/Manager only - agents see only their own calls). Analytics section: 14-day daily volume chart + answered calls by agent table. Stats: Total Calls, Answered, Missed. Calls tab also appears inside every lead detail panel (4th tab after Activity). Auto-advances lead status New -> Contacted when an answered call is detected.
