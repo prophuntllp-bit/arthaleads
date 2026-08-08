@@ -43,16 +43,18 @@ export const PRIORITY_COLORS = {
 
 export const SOURCE_COLORS = {
   Facebook: "bg-[#1877F2] text-white",
-  Google: "bg-emerald-50 text-emerald-700",
+  Google: "bg-[#4285F4] text-white",
   WhatsApp: "bg-[#2AB540] text-white",
-  Manual: "bg-gray-100 text-gray-700",
+  Manual: "bg-[#64748B] text-white",
   Website: "bg-[#f88025] text-white",
-  Referral: "bg-purple-50 text-purple-700",
-  "Walk-in": "bg-amber-50 text-amber-700",
-  PropTiger: "bg-rose-50 text-rose-700",
-  "99acres": "bg-lime-50 text-lime-700",
-  MagicBricks: "bg-fuchsia-50 text-fuchsia-700",
-  Other: "bg-gray-100 text-gray-700",
+  Custom: "bg-[#14B8A6] text-white",
+  Referral: "bg-[#9333EA] text-white",
+  "Walk-in": "bg-[#D97706] text-white",
+  PropTiger: "bg-[#DC2626] text-white",
+  "99acres": "bg-[#65A30D] text-white",
+  MagicBricks: "bg-[#4F46E5] text-white",
+  "QR Code": "bg-[#1F2937] text-white",
+  Other: "bg-[#6B7280] text-white",
   "Vistrow Voice": "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white"
 };
 
