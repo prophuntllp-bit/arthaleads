@@ -52,7 +52,8 @@ export const SOURCE_COLORS = {
   PropTiger: "bg-rose-50 text-rose-700",
   "99acres": "bg-lime-50 text-lime-700",
   MagicBricks: "bg-fuchsia-50 text-fuchsia-700",
-  Other: "bg-gray-100 text-gray-700"
+  Other: "bg-gray-100 text-gray-700",
+  "Vistrow Voice": "bg-gradient-to-r from-purple-600 via-fuchsia-500 to-pink-500 text-white"
 };
 
 export function fmtDate(value) {

@@ -1082,7 +1082,10 @@ function VoiceWizard({ open, onClose, onChanged }) {
   const handleAdd = async () => {
     setAdding(true);
     try {
-      const { data } = await api.post("/automations/voice/create", { name: `Vistrow Voice ${connections.length + 1}` });
+      // Bare "Vistrow Voice" for the first connection — a number only makes
+      // sense once there's a second one to tell apart.
+      const name = connections.length === 0 ? "Vistrow Voice" : `Vistrow Voice ${connections.length + 1}`;
+      const { data } = await api.post("/automations/voice/create", { name });
       setConnections((prev) => [...prev, data.connection]);
       onChanged?.();
       toast.success("New token created — paste it into Vistrow Voice's webhook sender.");
