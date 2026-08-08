@@ -21,7 +21,7 @@ export const QUICK_ANSWERS = [
   {
     id: "facebook",
     q: "How do I connect Facebook lead ads?",
-    a: "Open the Automation page (Admin/Manager only), choose Facebook Lead Ads, connect your Meta account and pick your lead form. Every new submission then imports into the CRM automatically.",
+    a: "Open the Integrations page (Admin/Manager only), choose Facebook Lead Ads, connect your Meta account and pick your lead form. Every new submission then imports into the CRM automatically.",
     goto: "/automation",
     tour: "facebook",
   },

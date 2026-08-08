@@ -17,7 +17,7 @@ export default function TelephonyIntegration() {
               <Phone className="w-5 h-5 text-orange-500" />
             </div>
             <div>
-              <p className="stitch-kicker mb-0.5">Automation</p>
+              <p className="stitch-kicker mb-0.5">Integrations</p>
               <h1 className="text-xl font-black tracking-tight text-app">Telephony Integration</h1>
               <p className="text-xs text-app-soft">Connect EnableX for click-to-call, recordings and AI summaries</p>
             </div>

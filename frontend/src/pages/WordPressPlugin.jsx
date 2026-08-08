@@ -109,7 +109,7 @@ const FAQS = [
   },
   {
     q: "What is the Arthaleads account token and where do I get it?",
-    a: "The account token is a secure API key that links your WordPress site to your Arthaleads workspace. You can find it in your Arthaleads account under Automation → WordPress Integration.",
+    a: "The account token is a secure API key that links your WordPress site to your Arthaleads workspace. You can find it in your Arthaleads account under Integrations → WordPress Integration.",
   },
   {
     q: "Is the plugin compatible with the latest version of WordPress?",

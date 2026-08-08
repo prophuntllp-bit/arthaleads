@@ -79,7 +79,7 @@ const PAGE_COPILOT = {
     ],
   },
   "/automation": {
-    label: "Automation",
+    label: "Integrations",
     chips: [
       "How do I connect Facebook Lead Ads?",
       "How do I set up auto-routing?",

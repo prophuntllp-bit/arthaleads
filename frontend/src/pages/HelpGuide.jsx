@@ -9,7 +9,7 @@ import { useSEO } from "../utils/useSEO";
 const steps = [
   { num: "01", title: "Create your account",  desc: "Sign up at arthaleads.com/signup. Your account and organisation are set up instantly - no waiting, no approval process." },
   { num: "02", title: "Add your team",         desc: "Go to Team settings and invite your telecallers, managers, and admins. Each member gets their own login with role-based access." },
-  { num: "03", title: "Connect your forms",    desc: "In Automations, connect Facebook Leads, or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
+  { num: "03", title: "Connect your forms",    desc: "In Integrations, connect Facebook Leads, or install the Arthaleads WordPress plugin to capture website form submissions automatically." },
   { num: "04", title: "Import existing leads", desc: "Upload a CSV or paste a lead list directly into a project. The system detects duplicates and normalises phone numbers automatically." },
   { num: "05", title: "Start tracking",        desc: "Assign leads to agents, track call outcomes, set follow-up reminders, and watch your pipeline move through stages toward a closed deal." },
 ];
@@ -17,7 +17,7 @@ const steps = [
 const faqs = [
   {
     q: "How do I get leads from Facebook into Arthaleads?",
-    a: "Go to Automations → Facebook Leads in your Arthaleads dashboard. Connect your Facebook Ad account, select your lead form, and Arthaleads will pull every new submission automatically in real time.",
+    a: "Go to Integrations → Facebook Leads in your Arthaleads dashboard. Connect your Facebook Ad account, select your lead form, and Arthaleads will pull every new submission automatically in real time.",
   },
   {
     q: "How do I connect my WordPress contact forms?",
