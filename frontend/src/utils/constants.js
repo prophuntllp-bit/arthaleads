@@ -42,11 +42,11 @@ export const PRIORITY_COLORS = {
 };
 
 export const SOURCE_COLORS = {
-  Facebook: "bg-blue-50 text-blue-700",
+  Facebook: "bg-[#1877F2] text-white",
   Google: "bg-emerald-50 text-emerald-700",
-  WhatsApp: "bg-green-50 text-green-700",
+  WhatsApp: "bg-[#2AB540] text-white",
   Manual: "bg-gray-100 text-gray-700",
-  Website: "bg-cyan-50 text-cyan-700",
+  Website: "bg-[#f88025] text-white",
   Referral: "bg-purple-50 text-purple-700",
   "Walk-in": "bg-amber-50 text-amber-700",
   PropTiger: "bg-rose-50 text-rose-700",
