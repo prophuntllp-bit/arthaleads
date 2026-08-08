@@ -92,6 +92,16 @@
     }
   }
 
+  /* ── Smooth light/dark switch ──
+     Every surface reads its colours from the --app-* variables above, which
+     flip instantly when ThemeContext toggles the .dark class. Transitioning
+     these specific properties (not transform/opacity, so it never fights an
+     element's own enter/exit animation) makes that flip fade instead of snap.
+     Respects prefers-reduced-motion via the transition-duration override above. */
+  *, *::before, *::after {
+    transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease, fill 0.35s ease, stroke 0.35s ease;
+  }
+
   body {
     /* HARDCODED font - self-hosted via @fontsource-variable/inter, never change this */
     font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
