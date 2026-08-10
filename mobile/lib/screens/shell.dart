@@ -43,15 +43,13 @@ class _ArthaFab extends StatelessWidget {
         heroTag: 'artha-fab',
         elevation: 8,
         backgroundColor: AppColors.primaryDeep,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+        shape: CircleBorder(
           side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
         ),
         onPressed: () => Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
+        child: ClipOval(
           child: Image.asset('assets/images/ai_avatar.png', fit: BoxFit.cover),
         ),
       ),
@@ -384,9 +382,11 @@ class _ShellState extends State<Shell> {
           body: Stack(
             children: [
               currentScreen,
-              // Persistent AI avatar — bottom-LEFT (not bottom-right) so it never
-              // overlaps each screen's own "+" FAB, which all sit bottom-right.
-              Positioned(left: 14, bottom: 14, child: _ArthaFab()),
+              // Persistent AI avatar — bottom-right, matching the web app's
+              // floating HelpBot bubble. Raised above the default 56dp "+"
+              // FAB (bottom:16 + height:56 + 16 margin = 88) that most
+              // screens show in this same corner, so the two never overlap.
+              Positioned(right: 14, bottom: 88, child: _ArthaFab()),
             ],
           ),
         ),
