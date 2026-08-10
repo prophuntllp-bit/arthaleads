@@ -10,6 +10,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/badges.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../calls/call_history_screen.dart';
 
@@ -395,6 +396,16 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   Future<void> _callLead() async {
     final phone = lead['phone'] as String?;
     if (phone == null || phone.isEmpty || _calling) return;
+    final choice = await pickCallMethod(
+      context,
+      name: lead['name'] as String?,
+      phone: phone,
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      return;
+    }
     setState(() => _calling = true);
     try {
       final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});

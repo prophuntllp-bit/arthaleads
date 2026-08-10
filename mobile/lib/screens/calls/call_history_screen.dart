@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/direction_badge.dart';
 
@@ -114,6 +115,16 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
   Future<void> _callBack() async {
     final phone = widget.leadPhone;
     if (phone == null || phone.isEmpty) return;
+    final choice = await pickCallMethod(
+      context,
+      name: widget.leadName,
+      phone: phone,
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      return;
+    }
     try {
       final res = await _api.dio.post(
         '/calls/initiate',
@@ -173,6 +184,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
                       (e) => _CallCard(
                         leadId: widget.leadId,
                         leadName: widget.leadName,
+                        leadPhone: widget.leadPhone,
                         index: _calls.length - e.key,
                         call: e.value,
                         onChanged: (updated) =>
@@ -255,6 +267,7 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
 class _CallCard extends StatefulWidget {
   final String leadId;
   final String leadName;
+  final String? leadPhone;
   final int index;
   final Map<String, dynamic> call;
   final void Function(Map<String, dynamic>) onChanged;
@@ -262,6 +275,7 @@ class _CallCard extends StatefulWidget {
   const _CallCard({
     required this.leadId,
     required this.leadName,
+    this.leadPhone,
     required this.index,
     required this.call,
     required this.onChanged,
@@ -551,6 +565,19 @@ class _CallCardState extends State<_CallCard> {
                 if (isMissed)
                   TextButton.icon(
                     onPressed: () async {
+                      final choice = await pickCallMethod(
+                        context,
+                        name: widget.leadName,
+                        phone: widget.leadPhone,
+                      );
+                      if (!mounted || choice == null) return;
+                      if (choice == 'native') {
+                        final phone = widget.leadPhone;
+                        if (phone != null && phone.isNotEmpty) {
+                          await launchUrl(Uri.parse('tel:$phone'));
+                        }
+                        return;
+                      }
                       try {
                         await _api.dio.post(
                           '/calls/initiate',

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
 import 'call_history_screen.dart';
@@ -133,6 +135,19 @@ class _CallsScreenState extends State<CallsScreen> {
   Future<void> _call(Map<String, dynamic> row) async {
     final leadId = row['leadId'] as String?;
     if (leadId == null || _callingLeadId != null) return;
+    final phone = row['leadPhone'] as String?;
+    final choice = await pickCallMethod(
+      context,
+      name: row['leadName'] as String?,
+      phone: phone,
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      if (phone != null && phone.isNotEmpty) {
+        await launchUrl(Uri.parse('tel:$phone'));
+      }
+      return;
+    }
     setState(() => _callingLeadId = leadId);
     try {
       final res = await _api.dio.post(
