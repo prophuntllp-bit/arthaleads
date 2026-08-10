@@ -168,20 +168,6 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     // The actual call control happens via the REST API below, not via this body.
     res.json({});
 
-    // Notify the agent in-app so they know their phone is about to ring. Awaited
-    // (rather than fire-and-forget) and given a short head start before the
-    // accept/connect calls below actually make the phone ring - push delivery
-    // isn't instant, and without this gap the physical ring can beat the
-    // notification to the lock screen, defeating the point of sending it.
-    if (agentUserId) {
-      await sendPushToUser(String(agentUserId), {
-        title: "Incoming Call",
-        body:  lead ? `${lead.name} is calling — pick up your phone` : `Inbound call — pick up your phone`,
-        data:  { type: "inbound_call", leadId: lead ? String(lead._id) : null },
-      }).catch(() => {});
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-    }
-
     // EnableX inbound calls aren't auto-answered once a custom Event URL is
     // configured — the call just rings (and eventually drops) unless we
     // explicitly accept it, then bridge it to the agent via the connect API.
@@ -190,7 +176,17 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     if (!voiceId) {
       console.error("[enablex inbound] no voice_id in webhook payload — cannot accept/bridge. full params:", JSON.stringify(params));
     } else {
-      // Step 1: Accept the inbound call (answers it so caller hears hold instead of ringing)
+      // Step 1: Accept the inbound call (answers it so caller hears hold instead of
+      // ringing) — do this FIRST, before anything else. Confirmed live: routing
+      // (DB lookups) plus a since-removed 1.2s "let the push notification land
+      // first" delay before this call pushed accept() out to ~3.4s after the
+      // caller's leg started ringing - and the caller's leg then disconnected
+      // just 437ms after we finally answered (call_duration: 0.437 in the
+      // "disconnected" event). That's the caller hanging up on dead air/ring
+      // before we ever picked up, not an EnableX/carrier problem. The agent's
+      // push-notification head start (below) only needs to land before their
+      // phone physically rings via connect() - not before we accept the caller -
+      // so it now runs after accept instead of before.
       try {
         const acceptResp = await axios.put(`${ENABLEX_BASE}/call/${voiceId}/accept`, {}, basicAuth(org));
         console.info("[enablex inbound] accept OK:", voiceId, JSON.stringify(acceptResp.data).slice(0, 200));
@@ -198,6 +194,20 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
         console.error("[enablex inbound] accept FAILED:", acceptErr.response?.status,
           JSON.stringify(acceptErr.response?.data));
         // Continue anyway — connect may still work
+      }
+
+      // Notify the agent in-app so they know their phone is about to ring, with a
+      // short head start before connect() below actually makes it ring — push
+      // delivery isn't instant, and without this gap the physical ring can beat
+      // the notification to the lock screen. The caller is already on hold from
+      // accept() above by this point, so this delay no longer costs them anything.
+      if (agentUserId) {
+        await sendPushToUser(String(agentUserId), {
+          title: "Incoming Call",
+          body:  lead ? `${lead.name} is calling — pick up your phone` : `Inbound call — pick up your phone`,
+          data:  { type: "inbound_call", leadId: lead ? String(lead._id) : null },
+        }).catch(() => {});
+        await new Promise((resolve) => setTimeout(resolve, 1200));
       }
 
       // Step 2: Bridge to the agent's phone.
