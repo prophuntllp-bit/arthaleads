@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 
 /// Filter model for GET /leads/unified — field names match the query params.
 class LeadFilters {
@@ -199,15 +200,17 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
           );
           if (picked != null) onChanged(picked);
         },
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            isDense: true,
-            suffixIcon: value != null
-                ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => onChanged(null))
-                : null,
+        child: LabeledField(
+          label: label,
+          child: InputDecorator(
+            decoration: InputDecoration(
+              isDense: true,
+              suffixIcon: value != null
+                  ? IconButton(icon: const Icon(Icons.clear, size: 16), onPressed: () => onChanged(null))
+                  : null,
+            ),
+            child: Text(value == null ? 'Any' : DateFormat('dd MMM yyyy').format(value)),
           ),
-          child: Text(value == null ? 'Any' : DateFormat('dd MMM yyyy').format(value)),
         ),
       ),
     );
@@ -225,14 +228,17 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: DropdownButtonFormField<String>(
-        initialValue: value.isEmpty ? '' : value,
-        decoration: InputDecoration(labelText: label, isDense: true),
-        items: [
-          DropdownMenuItem(value: '', child: Text('All', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color))),
-          ...options.map((o) => DropdownMenuItem(value: o.$1, child: Text(o.$2, overflow: TextOverflow.ellipsis))),
-        ],
-        onChanged: (v) => onChanged(v ?? ''),
+      child: LabeledField(
+        label: label,
+        child: DropdownButtonFormField<String>(
+          initialValue: value.isEmpty ? '' : value,
+          decoration: const InputDecoration(isDense: true),
+          items: [
+            DropdownMenuItem(value: '', child: Text('All', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color))),
+            ...options.map((o) => DropdownMenuItem(value: o.$1, child: Text(o.$2, overflow: TextOverflow.ellipsis))),
+          ],
+          onChanged: (v) => onChanged(v ?? ''),
+        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -125,12 +126,9 @@ class _TasksScreenState extends State<TasksScreen> {
               style: const TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 12),
-            TextField(
-              controller: noteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Completion note (optional)',
-              ),
-              maxLines: 3,
+            LabeledField(
+              label: 'Completion note (optional)',
+              child: TextField(controller: noteCtrl, maxLines: 3),
             ),
           ],
         ),
@@ -284,46 +282,51 @@ class _TasksScreenState extends State<TasksScreen> {
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Title'),
+                LabeledField(
+                  label: 'Title',
+                  child: TextField(controller: titleCtrl),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 3,
+                LabeledField(
+                  label: 'Description',
+                  child: TextField(controller: descCtrl, maxLines: 3),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: priority,
-                  decoration: const InputDecoration(labelText: 'Priority'),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'critical',
-                      child: Text('Critical'),
-                    ),
-                    DropdownMenuItem(value: 'high', child: Text('High')),
-                    DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                    DropdownMenuItem(value: 'low', child: Text('Low')),
-                  ],
-                  onChanged: (v) =>
-                      setSheetState(() => priority = v ?? 'medium'),
+                LabeledField(
+                  label: 'Priority',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: priority,
+                    decoration: const InputDecoration(),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'critical',
+                        child: Text('Critical'),
+                      ),
+                      DropdownMenuItem(value: 'high', child: Text('High')),
+                      DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                      DropdownMenuItem(value: 'low', child: Text('Low')),
+                    ],
+                    onChanged: (v) =>
+                        setSheetState(() => priority = v ?? 'medium'),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (_agents.isNotEmpty)
-                  DropdownButtonFormField<String>(
-                    initialValue: assignedTo,
-                    decoration: const InputDecoration(labelText: 'Assign to'),
-                    items: _agents
-                        .map(
-                          (a) => DropdownMenuItem(
-                            value: a['_id'] as String,
-                            child: Text(a['name'] as String? ?? '—'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setSheetState(() => assignedTo = v),
+                  LabeledField(
+                    label: 'Assign to',
+                    child: DropdownButtonFormField<String>(
+                      initialValue: assignedTo,
+                      decoration: const InputDecoration(),
+                      items: _agents
+                          .map(
+                            (a) => DropdownMenuItem(
+                              value: a['_id'] as String,
+                              child: Text(a['name'] as String? ?? '—'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setSheetState(() => assignedTo = v),
+                    ),
                   ),
                 const SizedBox(height: 12),
                 ListTile(

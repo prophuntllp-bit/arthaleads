@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import 'ticket_detail_screen.dart';
 
@@ -237,45 +238,53 @@ class _HelpScreenState extends State<HelpScreen> {
                 Text('Raise a Ticket', style: Theme.of(ctx).textTheme.titleLarge),
                 const Text('We\'ll respond within 24 hours', style: TextStyle(fontSize: 11, color: Colors.grey)),
                 const SizedBox(height: 16),
-                TextField(controller: subjectCtrl, decoration: const InputDecoration(labelText: 'Subject *')),
+                LabeledField(
+                  label: 'Subject *',
+                  child: TextField(controller: subjectCtrl),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: category,
-                        decoration: const InputDecoration(labelText: 'Category'),
-                        items: const [
-                          DropdownMenuItem(value: 'general', child: Text('General')),
-                          DropdownMenuItem(value: 'technical', child: Text('Technical')),
-                          DropdownMenuItem(value: 'billing', child: Text('Billing')),
-                          DropdownMenuItem(value: 'bug', child: Text('Bug report')),
-                          DropdownMenuItem(value: 'feature-request', child: Text('Feature request')),
-                        ],
-                        onChanged: (v) => setSheetState(() => category = v ?? 'general'),
+                      child: LabeledField(
+                        label: 'Category',
+                        child: DropdownButtonFormField<String>(
+                          initialValue: category,
+                          decoration: const InputDecoration(),
+                          items: const [
+                            DropdownMenuItem(value: 'general', child: Text('General')),
+                            DropdownMenuItem(value: 'technical', child: Text('Technical')),
+                            DropdownMenuItem(value: 'billing', child: Text('Billing')),
+                            DropdownMenuItem(value: 'bug', child: Text('Bug report')),
+                            DropdownMenuItem(value: 'feature-request', child: Text('Feature request')),
+                          ],
+                          onChanged: (v) => setSheetState(() => category = v ?? 'general'),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: priority,
-                        decoration: const InputDecoration(labelText: 'Priority'),
-                        items: const [
-                          DropdownMenuItem(value: 'low', child: Text('Low')),
-                          DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                          DropdownMenuItem(value: 'high', child: Text('High')),
-                          DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
-                        ],
-                        onChanged: (v) => setSheetState(() => priority = v ?? 'medium'),
+                      child: LabeledField(
+                        label: 'Priority',
+                        child: DropdownButtonFormField<String>(
+                          initialValue: priority,
+                          decoration: const InputDecoration(),
+                          items: const [
+                            DropdownMenuItem(value: 'low', child: Text('Low')),
+                            DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                            DropdownMenuItem(value: 'high', child: Text('High')),
+                            DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
+                          ],
+                          onChanged: (v) => setSheetState(() => priority = v ?? 'medium'),
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(labelText: 'Describe your issue * (min 20 chars)'),
-                  maxLines: 4,
+                LabeledField(
+                  label: 'Describe your issue * (min 20 chars)',
+                  child: TextField(controller: descCtrl, maxLines: 4),
                 ),
                 const SizedBox(height: 12),
                 Row(

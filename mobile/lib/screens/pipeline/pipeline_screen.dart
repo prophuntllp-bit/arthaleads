@@ -11,6 +11,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -221,31 +222,31 @@ class _PipelineScreenState extends State<PipelineScreen> {
             children: [
               if (_agents.isNotEmpty)
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _assignedTo,
-                    decoration: const InputDecoration(
-                      labelText: 'Member',
-                      isDense: true,
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                        value: '',
-                        child: Text('All Members'),
-                      ),
-                      ..._agents.map(
-                        (a) => DropdownMenuItem(
-                          value: a['_id'] as String,
-                          child: Text(
-                            a['name'] as String? ?? '',
-                            overflow: TextOverflow.ellipsis,
+                  child: LabeledField(
+                    label: 'Member',
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _assignedTo,
+                      decoration: const InputDecoration(isDense: true),
+                      items: [
+                        const DropdownMenuItem(
+                          value: '',
+                          child: Text('All Members'),
+                        ),
+                        ..._agents.map(
+                          (a) => DropdownMenuItem(
+                            value: a['_id'] as String,
+                            child: Text(
+                              a['name'] as String? ?? '',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _assignedTo = v ?? '');
-                      _load();
-                    },
+                      ],
+                      onChanged: (v) {
+                        setState(() => _assignedTo = v ?? '');
+                        _load();
+                      },
+                    ),
                   ),
                 )
               else

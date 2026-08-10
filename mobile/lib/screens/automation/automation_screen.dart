@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
 import 'routing_rules_screen.dart';
 import 'telephony_integration_screen.dart';
@@ -914,57 +915,59 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   ],
                 ),
                 const SizedBox(height: 18),
-                DropdownButtonFormField<String>(
-                  initialValue: pageId,
-                  decoration: const InputDecoration(labelText: 'Facebook Page'),
-                  items: pages
-                      .map(
-                        (page) => DropdownMenuItem(
-                          value: page['id']?.toString(),
-                          child: Text(page['name']?.toString() ?? 'Page'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    final selected = pages.firstWhere(
-                      (page) => page['id']?.toString() == value,
-                    );
-                    setSheetState(() {
-                      pageId = value ?? '';
-                      forms = (selected['forms'] as List? ?? [])
-                          .cast<Map<String, dynamic>>();
-                      formId = forms.isEmpty
-                          ? ''
-                          : forms.first['id']?.toString() ?? '';
-                      nameController.text =
-                          '${selected['name'] ?? 'Facebook'} - Lead Ads';
-                    });
-                  },
+                LabeledField(
+                  label: 'Facebook Page',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: pageId,
+                    decoration: const InputDecoration(),
+                    items: pages
+                        .map(
+                          (page) => DropdownMenuItem(
+                            value: page['id']?.toString(),
+                            child: Text(page['name']?.toString() ?? 'Page'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      final selected = pages.firstWhere(
+                        (page) => page['id']?.toString() == value,
+                      );
+                      setSheetState(() {
+                        pageId = value ?? '';
+                        forms = (selected['forms'] as List? ?? [])
+                            .cast<Map<String, dynamic>>();
+                        formId = forms.isEmpty
+                            ? ''
+                            : forms.first['id']?.toString() ?? '';
+                        nameController.text =
+                            '${selected['name'] ?? 'Facebook'} - Lead Ads';
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('$pageId-$formId'),
-                  initialValue: formId.isEmpty ? null : formId,
-                  decoration: const InputDecoration(
-                    labelText: 'Lead Form (optional)',
+                LabeledField(
+                  label: 'Lead Form (optional)',
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey('$pageId-$formId'),
+                    initialValue: formId.isEmpty ? null : formId,
+                    decoration: const InputDecoration(),
+                    items: forms
+                        .map(
+                          (form) => DropdownMenuItem(
+                            value: form['id']?.toString(),
+                            child: Text(form['name']?.toString() ?? 'Form'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setSheetState(() => formId = value ?? ''),
                   ),
-                  items: forms
-                      .map(
-                        (form) => DropdownMenuItem(
-                          value: form['id']?.toString(),
-                          child: Text(form['name']?.toString() ?? 'Form'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setSheetState(() => formId = value ?? ''),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Connection Name',
-                  ),
+                LabeledField(
+                  label: 'Connection Name',
+                  child: TextField(controller: nameController),
                 ),
                 const SizedBox(height: 18),
                 GradientButton(
@@ -1048,40 +1051,39 @@ class _AutomationScreenState extends State<AutomationScreen> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: customerId,
-                    decoration: const InputDecoration(
-                      labelText: 'Google Ads Account',
-                    ),
-                    items: customers
-                        .map(
-                          (customer) => DropdownMenuItem(
-                            value: customer['id']?.toString(),
-                            child: Text(
-                              customer['name']?.toString() ??
-                                  customer['id']?.toString() ??
-                                  'Account',
+                  LabeledField(
+                    label: 'Google Ads Account',
+                    child: DropdownButtonFormField<String>(
+                      initialValue: customerId,
+                      decoration: const InputDecoration(),
+                      items: customers
+                          .map(
+                            (customer) => DropdownMenuItem(
+                              value: customer['id']?.toString(),
+                              child: Text(
+                                customer['name']?.toString() ??
+                                    customer['id']?.toString() ??
+                                    'Account',
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      final selected = customers.firstWhere(
-                        (item) => item['id']?.toString() == value,
-                      );
-                      setSheetState(() {
-                        customerId = value ?? '';
-                        nameController.text =
-                            selected['name']?.toString() ?? 'Google Ads';
-                      });
-                    },
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        final selected = customers.firstWhere(
+                          (item) => item['id']?.toString() == value,
+                        );
+                        setSheetState(() {
+                          customerId = value ?? '';
+                          nameController.text =
+                              selected['name']?.toString() ?? 'Google Ads';
+                        });
+                      },
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Connection Name',
-                    ),
+                  LabeledField(
+                    label: 'Connection Name',
+                    child: TextField(controller: nameController),
                   ),
                   const SizedBox(height: 18),
                   GradientButton(
@@ -1137,14 +1139,16 @@ class _AutomationScreenState extends State<AutomationScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Connect Facebook Lead Ads'),
-        content: TextField(
-          controller: tokenController,
-          obscureText: true,
-          maxLines: 1,
-          decoration: const InputDecoration(
-            labelText: 'Meta System User Token',
-            helperText:
-                'Use a permanent token with page and leads permissions.',
+        content: LabeledField(
+          label: 'Meta System User Token',
+          child: TextField(
+            controller: tokenController,
+            obscureText: true,
+            maxLines: 1,
+            decoration: const InputDecoration(
+              helperText:
+                  'Use a permanent token with page and leads permissions.',
+            ),
           ),
         ),
         actions: [
@@ -1202,57 +1206,59 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: pageId,
-                  decoration: const InputDecoration(labelText: 'Facebook Page'),
-                  items: pages
-                      .map(
-                        (page) => DropdownMenuItem(
-                          value: page['id']?.toString(),
-                          child: Text(page['name']?.toString() ?? 'Page'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    final selected = pages.firstWhere(
-                      (page) => page['id']?.toString() == value,
-                    );
-                    setSheetState(() {
-                      pageId = value ?? '';
-                      forms = (selected['forms'] as List? ?? [])
-                          .cast<Map<String, dynamic>>();
-                      formId = forms.isEmpty
-                          ? ''
-                          : forms.first['id']?.toString() ?? '';
-                      nameController.text =
-                          '${selected['name'] ?? 'Facebook'} - Lead Ads';
-                    });
-                  },
+                LabeledField(
+                  label: 'Facebook Page',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: pageId,
+                    decoration: const InputDecoration(),
+                    items: pages
+                        .map(
+                          (page) => DropdownMenuItem(
+                            value: page['id']?.toString(),
+                            child: Text(page['name']?.toString() ?? 'Page'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      final selected = pages.firstWhere(
+                        (page) => page['id']?.toString() == value,
+                      );
+                      setSheetState(() {
+                        pageId = value ?? '';
+                        forms = (selected['forms'] as List? ?? [])
+                            .cast<Map<String, dynamic>>();
+                        formId = forms.isEmpty
+                            ? ''
+                            : forms.first['id']?.toString() ?? '';
+                        nameController.text =
+                            '${selected['name'] ?? 'Facebook'} - Lead Ads';
+                      });
+                    },
+                  ),
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  key: ValueKey('$pageId-$formId'),
-                  initialValue: formId.isEmpty ? null : formId,
-                  decoration: const InputDecoration(
-                    labelText: 'Lead Form (optional)',
+                LabeledField(
+                  label: 'Lead Form (optional)',
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey('$pageId-$formId'),
+                    initialValue: formId.isEmpty ? null : formId,
+                    decoration: const InputDecoration(),
+                    items: forms
+                        .map(
+                          (form) => DropdownMenuItem(
+                            value: form['id']?.toString(),
+                            child: Text(form['name']?.toString() ?? 'Form'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setSheetState(() => formId = value ?? ''),
                   ),
-                  items: forms
-                      .map(
-                        (form) => DropdownMenuItem(
-                          value: form['id']?.toString(),
-                          child: Text(form['name']?.toString() ?? 'Form'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setSheetState(() => formId = value ?? ''),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Connection Name',
-                  ),
+                LabeledField(
+                  label: 'Connection Name',
+                  child: TextField(controller: nameController),
                 ),
                 const SizedBox(height: 18),
                 GradientButton(

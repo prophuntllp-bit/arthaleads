@@ -9,6 +9,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/initials_avatar.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -187,61 +188,65 @@ class _TeamScreenState extends State<TeamScreen> {
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                LabeledField(
+                  label: 'Name',
+                  child: TextField(controller: nameCtrl),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: emailCtrl,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: phoneCtrl,
-                  decoration: InputDecoration(
-                    labelText: user == null ? 'Phone' : 'Phone (optional)',
+                LabeledField(
+                  label: 'Email',
+                  child: TextField(
+                    controller: emailCtrl,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  keyboardType: TextInputType.phone,
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: avatarCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Avatar URL',
-                    suffixIcon: IconButton(
-                      tooltip: 'Choose image',
-                      icon: const Icon(Icons.photo_library_outlined),
-                      onPressed: () async {
-                        final picked = await ImagePicker().pickImage(
-                          source: ImageSource.gallery,
-                          imageQuality: 72,
-                          maxWidth: 600,
-                        );
-                        if (picked == null) return;
-                        final bytes = await picked.readAsBytes();
-                        if (bytes.length > 1500000) {
-                          if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Please choose an image smaller than 1.5 MB',
+                LabeledField(
+                  label: user == null ? 'Phone' : 'Phone (optional)',
+                  child: TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                LabeledField(
+                  label: 'Avatar URL',
+                  child: TextField(
+                    controller: avatarCtrl,
+                    decoration: InputDecoration(
+                      suffixIcon: IconButton(
+                        tooltip: 'Choose image',
+                        icon: const Icon(Icons.photo_library_outlined),
+                        onPressed: () async {
+                          final picked = await ImagePicker().pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 72,
+                            maxWidth: 600,
+                          );
+                          if (picked == null) return;
+                          final bytes = await picked.readAsBytes();
+                          if (bytes.length > 1500000) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Please choose an image smaller than 1.5 MB',
+                                  ),
+                                  backgroundColor: AppColors.danger,
                                 ),
-                                backgroundColor: AppColors.danger,
-                              ),
-                            );
+                              );
+                            }
+                            return;
                           }
-                          return;
-                        }
-                        final mime = picked.name.toLowerCase().endsWith('.png')
-                            ? 'image/png'
-                            : 'image/jpeg';
-                        setSheetState(
-                          () => avatarCtrl.text =
-                              'data:$mime;base64,${base64Encode(bytes)}',
-                        );
-                      },
+                          final mime = picked.name.toLowerCase().endsWith('.png')
+                              ? 'image/png'
+                              : 'image/jpeg';
+                          setSheetState(
+                            () => avatarCtrl.text =
+                                'data:$mime;base64,${base64Encode(bytes)}',
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -265,42 +270,45 @@ class _TeamScreenState extends State<TeamScreen> {
                   ),
                 ],
                 const SizedBox(height: 12),
-                TextField(
-                  controller: passwordCtrl,
-                  decoration: InputDecoration(
-                    labelText: user == null
-                        ? 'Password'
-                        : 'New password (leave blank to keep current)',
+                LabeledField(
+                  label: user == null
+                      ? 'Password'
+                      : 'New password (leave blank to keep current)',
+                  child: TextField(
+                    controller: passwordCtrl,
+                    obscureText: true,
                   ),
-                  obscureText: true,
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: role,
-                  decoration: const InputDecoration(labelText: 'Role'),
-                  items: [
-                    const DropdownMenuItem(
-                      value: 'admin',
-                      child: Text('Admin'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'manager',
-                      child: Text('Manager'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'agent',
-                      child: Text('Agent'),
-                    ),
-                    // Not a normally assignable role — included only so editing an
-                    // existing super_admin's other fields doesn't crash the dropdown
-                    // (initialValue must match exactly one item) or silently demote them.
-                    if (role == 'super_admin')
+                LabeledField(
+                  label: 'Role',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: role,
+                    decoration: const InputDecoration(),
+                    items: [
                       const DropdownMenuItem(
-                        value: 'super_admin',
-                        child: Text('Super Admin'),
+                        value: 'admin',
+                        child: Text('Admin'),
                       ),
-                  ],
-                  onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
+                      const DropdownMenuItem(
+                        value: 'manager',
+                        child: Text('Manager'),
+                      ),
+                      const DropdownMenuItem(
+                        value: 'agent',
+                        child: Text('Agent'),
+                      ),
+                      // Not a normally assignable role — included only so editing an
+                      // existing super_admin's other fields doesn't crash the dropdown
+                      // (initialValue must match exactly one item) or silently demote them.
+                      if (role == 'super_admin')
+                        const DropdownMenuItem(
+                          value: 'super_admin',
+                          child: Text('Super Admin'),
+                        ),
+                    ],
+                    onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
+                  ),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,

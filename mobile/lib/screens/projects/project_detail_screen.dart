@@ -178,12 +178,9 @@ class _InfoTab extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) => ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  images[i],
+                child: SizedBox(
                   width: 200,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      Container(width: 200, color: Colors.grey.shade800),
+                  child: _projectImage(images[i]),
                 ),
               ),
             ),
@@ -253,6 +250,30 @@ class _InfoTab extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Project photos are stored as either a base64 data URI (uploaded from
+  /// the phone/browser, see project_form.dart's `_pickImages`) or a plain
+  /// https URL — `Image.network` only understands the latter, so a data URI
+  /// silently failed and rendered a blank grey box.
+  Widget _projectImage(String value) {
+    if (value.startsWith('data:image') && value.contains(',')) {
+      try {
+        return Image.memory(
+          base64Decode(value.split(',').last),
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) =>
+              Container(color: Colors.grey.shade800),
+        );
+      } catch (_) {
+        return Container(color: Colors.grey.shade800);
+      }
+    }
+    return Image.network(
+      value,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Container(color: Colors.grey.shade800),
     );
   }
 }

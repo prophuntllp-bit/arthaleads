@@ -9,6 +9,7 @@ import '../core/auth_state.dart';
 import '../core/theme.dart';
 import '../widgets/buttons.dart';
 import '../widgets/glass.dart';
+import '../widgets/labeled_field.dart';
 
 /// Exact SVG paths from frontend/src/pages/Login.jsx's inline Google logo.
 const _googleLogoSvg = '''
@@ -189,36 +190,40 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 20),
-                          TextField(
-                            controller: _identifier,
-                            keyboardType: TextInputType.emailAddress,
-                            autocorrect: false,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'Email or Phone',
-                              hintText: 'you@company.com or 9876543210',
-                              helperText:
-                                  'Enter your email address or registered mobile number.',
-                              helperMaxLines: 2,
+                          LabeledField(
+                            label: 'Email or Phone',
+                            child: TextField(
+                              controller: _identifier,
+                              keyboardType: TextInputType.emailAddress,
+                              autocorrect: false,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                hintText: 'you@company.com or 9876543210',
+                                helperText:
+                                    'Enter your email address or registered mobile number.',
+                                helperMaxLines: 2,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
-                          TextField(
-                            controller: _password,
-                            obscureText: _obscure,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              hintText: '••••••••',
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscure
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                          LabeledField(
+                            label: 'Password',
+                            child: TextField(
+                              controller: _password,
+                              obscureText: _obscure,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _submit(),
+                              decoration: InputDecoration(
+                                hintText: '••••••••',
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscure
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
                                 ),
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
                               ),
                             ),
                           ),
@@ -582,16 +587,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           style: TextStyle(fontSize: 13, color: t.textSoft),
                         ),
                         const SizedBox(height: 20),
-                        TextField(
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          autofocus: true,
-                          enabled: !_loading,
-                          onSubmitted: (_) => _submit(),
-                          decoration: const InputDecoration(
-                            labelText: 'Email address',
-                            hintText: 'you@example.com',
-                            prefixIcon: Icon(Icons.mail_outline, size: 18),
+                        LabeledField(
+                          label: 'Email address',
+                          child: TextField(
+                            controller: _email,
+                            keyboardType: TextInputType.emailAddress,
+                            autofocus: true,
+                            enabled: !_loading,
+                            onSubmitted: (_) => _submit(),
+                            decoration: const InputDecoration(
+                              hintText: 'you@example.com',
+                              prefixIcon: Icon(Icons.mail_outline, size: 18),
+                            ),
                           ),
                         ),
                         if (_error != null) ...[

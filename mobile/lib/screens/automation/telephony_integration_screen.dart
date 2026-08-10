@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
 /// Automation -> Telephony — EnableX credentials, webhook/answer URLs, and
@@ -343,29 +344,33 @@ class _TelephonyIntegrationScreenState
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: _appId,
-          decoration: const InputDecoration(labelText: 'APP ID'),
+        LabeledField(
+          label: 'APP ID',
+          child: TextField(controller: _appId),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _apiKey,
-          obscureText: !_showKey,
-          decoration: InputDecoration(
-            labelText: _hasKey ? 'APP KEY (saved — enter only to replace)' : 'APP KEY',
-            suffixIcon: IconButton(
-              onPressed: () => setState(() => _showKey = !_showKey),
-              icon: Icon(
-                _showKey ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+        LabeledField(
+          label: _hasKey ? 'APP KEY (saved — enter only to replace)' : 'APP KEY',
+          child: TextField(
+            controller: _apiKey,
+            obscureText: !_showKey,
+            decoration: InputDecoration(
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _showKey = !_showKey),
+                icon: Icon(
+                  _showKey ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _number,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(labelText: 'Virtual Phone Number'),
+        LabeledField(
+          label: 'Virtual Phone Number',
+          child: TextField(
+            controller: _number,
+            keyboardType: TextInputType.phone,
+          ),
         ),
         const SizedBox(height: 12),
         Row(

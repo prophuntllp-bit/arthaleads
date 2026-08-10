@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -471,18 +472,20 @@ class _DeveloperFormState extends State<_DeveloperForm> {
         Row(
           children: [
             Expanded(
-              child: TextField(
-                controller: _c['rera'],
-                decoration: const InputDecoration(labelText: 'Add RERA number'),
-                onSubmitted: (v) {
-                  final trimmed = v.trim();
-                  if (trimmed.isNotEmpty && !_rera.contains(trimmed)) {
-                    setState(() {
-                      _rera.add(trimmed);
-                      _c['rera']!.clear();
-                    });
-                  }
-                },
+              child: LabeledField(
+                label: 'Add RERA number',
+                child: TextField(
+                  controller: _c['rera'],
+                  onSubmitted: (v) {
+                    final trimmed = v.trim();
+                    if (trimmed.isNotEmpty && !_rera.contains(trimmed)) {
+                      setState(() {
+                        _rera.add(trimmed);
+                        _c['rera']!.clear();
+                      });
+                    }
+                  },
+                ),
               ),
             ),
             IconButton.filledTonal(
@@ -520,20 +523,23 @@ class _DeveloperFormState extends State<_DeveloperForm> {
             Expanded(child: _field('eoi', 'EOI Incentive', number: true)),
           ],
         ),
-        DropdownButtonFormField<String>(
-          initialValue: _template,
-          decoration: const InputDecoration(labelText: 'Invoice Template'),
-          items: const [
-            DropdownMenuItem(
-              value: 'detailed',
-              child: Text('Detailed (with brokerage breakdown)'),
-            ),
-            DropdownMenuItem(
-              value: 'simple',
-              child: Text('Simple (flat amount)'),
-            ),
-          ],
-          onChanged: (v) => _template = v ?? 'detailed',
+        LabeledField(
+          label: 'Invoice Template',
+          child: DropdownButtonFormField<String>(
+            initialValue: _template,
+            decoration: const InputDecoration(),
+            items: const [
+              DropdownMenuItem(
+                value: 'detailed',
+                child: Text('Detailed (with brokerage breakdown)'),
+              ),
+              DropdownMenuItem(
+                value: 'simple',
+                child: Text('Simple (flat amount)'),
+              ),
+            ],
+            onChanged: (v) => _template = v ?? 'detailed',
+          ),
         ),
         const SizedBox(height: 20),
         GradientButton(
@@ -555,11 +561,13 @@ class _DeveloperFormState extends State<_DeveloperForm> {
     bool number = false,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 5),
-    child: TextField(
-      controller: _c[key],
-      maxLines: lines,
-      keyboardType: number ? TextInputType.number : null,
-      decoration: InputDecoration(labelText: label),
+    child: LabeledField(
+      label: label,
+      child: TextField(
+        controller: _c[key],
+        maxLines: lines,
+        keyboardType: number ? TextInputType.number : null,
+      ),
     ),
   );
 }

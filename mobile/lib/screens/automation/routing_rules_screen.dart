@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
 const _matchFields = ['form_id', 'campaign_id', 'adset_id', 'ad_id'];
@@ -117,24 +118,36 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
             children: [
               Text('New Routing Rule', style: Theme.of(ctx).textTheme.titleMedium),
               const SizedBox(height: 12),
-              TextField(controller: labelCtrl, decoration: const InputDecoration(labelText: 'Label', isDense: true)),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: matchField,
-                decoration: const InputDecoration(labelText: 'Match Field', isDense: true),
-                items: _matchFields.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                onChanged: (v) => setSheet(() => matchField = v ?? _matchFields.first),
+              LabeledField(
+                label: 'Label',
+                child: TextField(controller: labelCtrl, decoration: const InputDecoration(isDense: true)),
               ),
               const SizedBox(height: 8),
-              TextField(controller: valueCtrl, decoration: const InputDecoration(labelText: 'Match Value (Facebook ID)', isDense: true)),
+              LabeledField(
+                label: 'Match Field',
+                child: DropdownButtonFormField<String>(
+                  initialValue: matchField,
+                  decoration: const InputDecoration(isDense: true),
+                  items: _matchFields.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                  onChanged: (v) => setSheet(() => matchField = v ?? _matchFields.first),
+                ),
+              ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: assignTo,
-                decoration: const InputDecoration(labelText: 'Assign to Agent', isDense: true),
-                items: _agents
-                    .map((a) => DropdownMenuItem(value: a['_id'] as String, child: Text(a['name'] as String? ?? '')))
-                    .toList(),
-                onChanged: (v) => setSheet(() => assignTo = v),
+              LabeledField(
+                label: 'Match Value (Facebook ID)',
+                child: TextField(controller: valueCtrl, decoration: const InputDecoration(isDense: true)),
+              ),
+              const SizedBox(height: 8),
+              LabeledField(
+                label: 'Assign to Agent',
+                child: DropdownButtonFormField<String>(
+                  initialValue: assignTo,
+                  decoration: const InputDecoration(isDense: true),
+                  items: _agents
+                      .map((a) => DropdownMenuItem(value: a['_id'] as String, child: Text(a['name'] as String? ?? '')))
+                      .toList(),
+                  onChanged: (v) => setSheet(() => assignTo = v),
+                ),
               ),
               const SizedBox(height: 16),
               GradientButton(

@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 
 /// Add / edit a lead. Plain leads: POST /leads or PUT /leads/:id (full field set).
 /// Project leads: PATCH /projects/:pid/leads/:id — ProjectLead only stores a reduced
@@ -166,13 +167,16 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
               _field(_requirements, 'Requirements', maxLines: 3),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: InkWell(
-                  onTap: _pickFollowUpDate,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Follow-up Date', isDense: true),
-                    child: Text(_followUpDate == null
-                        ? 'Not set'
-                        : DateFormat('dd MMM yyyy').format(_followUpDate!)),
+                child: LabeledField(
+                  label: 'Follow-up Date',
+                  child: InkWell(
+                    onTap: _pickFollowUpDate,
+                    child: InputDecorator(
+                      decoration: const InputDecoration(isDense: true),
+                      child: Text(_followUpDate == null
+                          ? 'Not set'
+                          : DateFormat('dd MMM yyyy').format(_followUpDate!)),
+                    ),
                   ),
                 ),
               ),
@@ -181,17 +185,20 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
             if (!_isProjectLead && widget.agents.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: DropdownButtonFormField<String>(
-                  initialValue: _assignedTo.isEmpty ? '' : _assignedTo,
-                  decoration: const InputDecoration(labelText: 'Assign to', isDense: true),
-                  items: [
-                    const DropdownMenuItem(value: '', child: Text('Auto-assign')),
-                    ...widget.agents.map((a) => DropdownMenuItem(
-                          value: a['_id'] as String,
-                          child: Text(a['name'] as String? ?? ''),
-                        )),
-                  ],
-                  onChanged: (v) => setState(() => _assignedTo = v ?? ''),
+                child: LabeledField(
+                  label: 'Assign to',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _assignedTo.isEmpty ? '' : _assignedTo,
+                    decoration: const InputDecoration(isDense: true),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Auto-assign')),
+                      ...widget.agents.map((a) => DropdownMenuItem(
+                            value: a['_id'] as String,
+                            child: Text(a['name'] as String? ?? ''),
+                          )),
+                    ],
+                    onChanged: (v) => setState(() => _assignedTo = v ?? ''),
+                  ),
                 ),
               ),
             const SizedBox(height: 16),
@@ -227,12 +234,15 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextFormField(
-        controller: ctrl,
-        keyboardType: keyboard,
-        maxLines: maxLines,
-        validator: validator,
-        decoration: InputDecoration(labelText: label, isDense: true),
+      child: LabeledField(
+        label: label,
+        child: TextFormField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          maxLines: maxLines,
+          validator: validator,
+          decoration: const InputDecoration(isDense: true),
+        ),
       ),
     );
   }
@@ -246,14 +256,17 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: DropdownButtonFormField<String>(
-        initialValue: value.isEmpty && allowEmpty ? '' : (options.contains(value) ? value : options.first),
-        decoration: InputDecoration(labelText: label, isDense: true),
-        items: [
-          if (allowEmpty) const DropdownMenuItem(value: '', child: Text('—')),
-          ...options.map((o) => DropdownMenuItem(value: o, child: Text(o))),
-        ],
-        onChanged: (v) => onChanged(v ?? ''),
+      child: LabeledField(
+        label: label,
+        child: DropdownButtonFormField<String>(
+          initialValue: value.isEmpty && allowEmpty ? '' : (options.contains(value) ? value : options.first),
+          decoration: const InputDecoration(isDense: true),
+          items: [
+            if (allowEmpty) const DropdownMenuItem(value: '', child: Text('—')),
+            ...options.map((o) => DropdownMenuItem(value: o, child: Text(o))),
+          ],
+          onChanged: (v) => onChanged(v ?? ''),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
@@ -7,6 +8,7 @@ import '../core/push_service.dart';
 import '../core/theme.dart';
 import '../core/theme_state.dart';
 import '../widgets/header_actions.dart';
+import '../widgets/initials_avatar.dart';
 import '../widgets/profile_menu.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
@@ -116,6 +118,79 @@ class _ArthaFabState extends State<_ArthaFab>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Wraps [_ArthaFab] so the user can drag it anywhere on screen — the
+/// position is remembered per-device (flutter_secure_storage, same store
+/// already used for the auth token) so it stays where they left it next
+/// time the app opens.
+class _DraggableArthaFab extends StatefulWidget {
+  const _DraggableArthaFab();
+
+  @override
+  State<_DraggableArthaFab> createState() => _DraggableArthaFabState();
+}
+
+class _DraggableArthaFabState extends State<_DraggableArthaFab> {
+  static const _storage = FlutterSecureStorage();
+  static const _xKey = 'artha_fab_x';
+  static const _yKey = 'artha_fab_y';
+  static const _boxSize = 84.0;
+
+  Offset? _pos;
+
+  @override
+  void initState() {
+    super.initState();
+    _restore();
+  }
+
+  Future<void> _restore() async {
+    final x = double.tryParse(await _storage.read(key: _xKey) ?? '');
+    final y = double.tryParse(await _storage.read(key: _yKey) ?? '');
+    if (!mounted || x == null || y == null) return;
+    setState(() => _pos = Offset(x, y));
+  }
+
+  void _persist(Offset pos) {
+    _storage.write(key: _xKey, value: pos.dx.toString());
+    _storage.write(key: _yKey, value: pos.dy.toString());
+  }
+
+  // Matches the previous fixed anchor (right: 6, bottom: 74) so a first-time
+  // user sees the FAB in the same spot it always used to be.
+  Offset _defaultPos(Size area) =>
+      Offset(area.width - _boxSize - 6, area.height - _boxSize - 74);
+
+  Offset _clamp(Offset pos, Size area) => Offset(
+    pos.dx.clamp(0, (area.width - _boxSize).clamp(0, double.infinity)),
+    pos.dy.clamp(0, (area.height - _boxSize).clamp(0, double.infinity)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final area = Size(constraints.maxWidth, constraints.maxHeight);
+        final pos = _clamp(_pos ?? _defaultPos(area), area);
+        return Stack(
+          children: [
+            Positioned(
+              left: pos.dx,
+              top: pos.dy,
+              child: GestureDetector(
+                onPanUpdate: (details) => setState(
+                  () => _pos = _clamp((_pos ?? pos) + details.delta, area),
+                ),
+                onPanEnd: (_) => _persist(_pos ?? pos),
+                child: const _ArthaFab(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -348,11 +423,12 @@ class _ShellState extends State<Shell> {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        CircleAvatar(
+                        InitialsAvatar(
+                          avatarValue: auth.user?['avatar'] as String?,
                           backgroundColor: AppColors.primary.withValues(
                             alpha: 0.15,
                           ),
-                          child: Text(
+                          fallback: Text(
                             (auth.user?['name'] as String? ?? '?').isNotEmpty
                                 ? (auth.user!['name'] as String)[0]
                                       .toUpperCase()
@@ -445,14 +521,10 @@ class _ShellState extends State<Shell> {
           body: Stack(
             children: [
               currentScreen,
-              // Persistent AI avatar — bottom-right, matching the web app's
-              // floating HelpBot bubble (56dp circle, pulsing ring). The
-              // widget's box is 84dp (room for the ring to expand into), so
-              // these offsets are shifted in by (84-56)/2=14 from the visible
-              // circle's actual edges, which land at inset 20/88 — clearing
-              // the default 56dp "+" FAB (bottom:16 + height:56 = top at 72)
-              // that most screens show in this same corner.
-              Positioned(right: 6, bottom: 74, child: _ArthaFab()),
+              // Persistent, user-draggable AI avatar — defaults to bottom-right
+              // (matching the web app's floating HelpBot bubble) but can be
+              // dragged anywhere and remembers where it was left.
+              Positioned.fill(child: _DraggableArthaFab()),
             ],
           ),
         ),

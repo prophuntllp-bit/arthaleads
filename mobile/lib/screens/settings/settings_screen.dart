@@ -9,6 +9,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
 /// Force-uppercases input as the user types — matches web's onChange
@@ -590,58 +591,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        TextField(
-          controller: _name,
-          decoration: const InputDecoration(labelText: 'Full Name'),
+        LabeledField(
+          label: 'Full Name',
+          child: TextField(controller: _name),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _phone,
-          decoration: const InputDecoration(labelText: 'Phone'),
+        LabeledField(
+          label: 'Phone',
+          child: TextField(controller: _phone),
         ),
         const SizedBox(height: 12),
-        TextField(
-          enabled: false,
-          decoration: InputDecoration(
-            labelText: 'Email',
-            hintText: auth.user?['email'] as String?,
+        LabeledField(
+          label: 'Email',
+          child: TextField(
+            enabled: false,
+            decoration: InputDecoration(
+              hintText: auth.user?['email'] as String?,
+            ),
           ),
         ),
         const SizedBox(height: 20),
         Text('Change Password', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 8),
-        TextField(
-          controller: _currentPassword,
-          obscureText: _obscureCurrent,
-          decoration: InputDecoration(
-            labelText: 'Current password',
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureCurrent
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                size: 18,
+        LabeledField(
+          label: 'Current password',
+          child: TextField(
+            controller: _currentPassword,
+            obscureText: _obscureCurrent,
+            decoration: InputDecoration(
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureCurrent
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 18,
+                ),
+                onPressed: () =>
+                    setState(() => _obscureCurrent = !_obscureCurrent),
               ),
-              onPressed: () =>
-                  setState(() => _obscureCurrent = !_obscureCurrent),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _newPassword,
-          obscureText: _obscureNew,
-          decoration: InputDecoration(
-            labelText: 'New password',
-            hintText: '8+ chars, uppercase, number, special',
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureNew
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                size: 18,
+        LabeledField(
+          label: 'New password',
+          child: TextField(
+            controller: _newPassword,
+            obscureText: _obscureNew,
+            decoration: InputDecoration(
+              hintText: '8+ chars, uppercase, number, special',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureNew
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 18,
+                ),
+                onPressed: () => setState(() => _obscureNew = !_obscureNew),
               ),
-              onPressed: () => setState(() => _obscureNew = !_obscureNew),
             ),
           ),
         ),
@@ -666,14 +673,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final required = _billingRequired.contains(key);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: _billing[key],
-        style: TextStyle(fontFamily: mono ? 'monospace' : null),
-        textCapitalization: numbers
-            ? TextCapitalization.characters
-            : TextCapitalization.none,
-        inputFormatters: numbers ? [_UpperCaseTextFormatter()] : null,
-        decoration: InputDecoration(labelText: required ? '$label *' : label),
+      child: LabeledField(
+        label: required ? '$label *' : label,
+        child: TextField(
+          controller: _billing[key],
+          style: TextStyle(fontFamily: mono ? 'monospace' : null),
+          textCapitalization: numbers
+              ? TextCapitalization.characters
+              : TextCapitalization.none,
+          inputFormatters: numbers ? [_UpperCaseTextFormatter()] : null,
+        ),
       ),
     );
   }

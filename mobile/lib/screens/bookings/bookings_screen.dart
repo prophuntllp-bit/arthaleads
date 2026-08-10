@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
 const _unitTypes = ['Flat', 'Plot', 'Villa', 'Shop', 'Office', 'Other'];
@@ -344,18 +345,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: customerCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Customer name *',
-                    ),
+                  LabeledField(
+                    label: 'Customer name *',
+                    child: TextField(controller: customerCtrl),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: jointBuyerCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Joint buyer (optional)',
-                    ),
+                  LabeledField(
+                    label: 'Joint buyer (optional)',
+                    child: TextField(controller: jointBuyerCtrl),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -367,97 +364,100 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: developerId,
-                    decoration: const InputDecoration(labelText: 'Developer *'),
-                    items: _developers
-                        .map(
-                          (d) => DropdownMenuItem(
-                            value: d['_id'] as String,
-                            child: Text(d['name'] as String? ?? '—'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: editing
-                        ? null
-                        : (v) {
-                            developerId = v;
-                            applyDeveloperDefaults(v);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: projectCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Project name *',
+                  LabeledField(
+                    label: 'Developer *',
+                    child: DropdownButtonFormField<String>(
+                      initialValue: developerId,
+                      decoration: const InputDecoration(),
+                      items: _developers
+                          .map(
+                            (d) => DropdownMenuItem(
+                              value: d['_id'] as String,
+                              child: Text(d['name'] as String? ?? '—'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: editing
+                          ? null
+                          : (v) {
+                              developerId = v;
+                              applyDeveloperDefaults(v);
+                            },
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: phaseCtrl,
-                          decoration: const InputDecoration(labelText: 'Phase'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          initialValue: unitType,
-                          decoration: const InputDecoration(labelText: 'Type'),
-                          items: _unitTypes
-                              .map(
-                                (t) =>
-                                    DropdownMenuItem(value: t, child: Text(t)),
-                              )
-                              .toList(),
-                          onChanged: (v) =>
-                              setSheetState(() => unitType = v ?? 'Flat'),
-                        ),
-                      ),
-                    ],
+                  LabeledField(
+                    label: 'Project name *',
+                    child: TextField(controller: projectCtrl),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: unitCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Unit / Plot no. *',
-                          ),
+                        child: LabeledField(
+                          label: 'Phase',
+                          child: TextField(controller: phaseCtrl),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextField(
-                          controller: towerCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Tower / Block',
+                        child: LabeledField(
+                          label: 'Type',
+                          child: DropdownButtonFormField<String>(
+                            initialValue: unitType,
+                            decoration: const InputDecoration(),
+                            items: _unitTypes
+                                .map(
+                                  (t) => DropdownMenuItem(
+                                    value: t,
+                                    child: Text(t),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setSheetState(() => unitType = v ?? 'Flat'),
                           ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: bookingDate,
-                        firstDate: DateTime(2015),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setSheetState(() => bookingDate = picked);
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Booking date',
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LabeledField(
+                          label: 'Unit / Plot no. *',
+                          child: TextField(controller: unitCtrl),
+                        ),
                       ),
-                      child: Text(_fmtDate(bookingDate.toIso8601String())),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LabeledField(
+                          label: 'Tower / Block',
+                          child: TextField(controller: towerCtrl),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LabeledField(
+                    label: 'Booking date',
+                    child: InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: bookingDate,
+                          firstDate: DateTime(2015),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) {
+                          setSheetState(() => bookingDate = picked);
+                        }
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(),
+                        child: Text(_fmtDate(bookingDate.toIso8601String())),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -470,34 +470,34 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: valueCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Consideration value (₹)',
+                  LabeledField(
+                    label: 'Consideration value (₹)',
+                    child: TextField(
+                      controller: valueCtrl,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setSheetState(() {}),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => setSheetState(() {}),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
                         child: manualBrokerage
-                            ? TextField(
-                                controller: brokerageAmtCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'Brokerage amount (₹)',
+                            ? LabeledField(
+                                label: 'Brokerage amount (₹)',
+                                child: TextField(
+                                  controller: brokerageAmtCtrl,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) => setSheetState(() {}),
                                 ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (_) => setSheetState(() {}),
                               )
-                            : TextField(
-                                controller: brokeragePctCtrl,
-                                decoration: const InputDecoration(
-                                  labelText: 'Brokerage %',
+                            : LabeledField(
+                                label: 'Brokerage %',
+                                child: TextField(
+                                  controller: brokeragePctCtrl,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (_) => setSheetState(() {}),
                                 ),
-                                keyboardType: TextInputType.number,
-                                onChanged: (_) => setSheetState(() {}),
                               ),
                       ),
                       const SizedBox(width: 8),
@@ -515,36 +515,36 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: adjustmentCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Brokerage adjustment (-) (₹)',
+                  LabeledField(
+                    label: 'Brokerage adjustment (-) (₹)',
+                    child: TextField(
+                      controller: adjustmentCtrl,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setSheetState(() {}),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) => setSheetState(() {}),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: fosCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'FOS incentive (₹)',
+                        child: LabeledField(
+                          label: 'FOS incentive (₹)',
+                          child: TextField(
+                            controller: fosCtrl,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setSheetState(() {}),
                           ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setSheetState(() {}),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextField(
-                          controller: eoiCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'EOI incentive (₹)',
+                        child: LabeledField(
+                          label: 'EOI incentive (₹)',
+                          child: TextField(
+                            controller: eoiCtrl,
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => setSheetState(() {}),
                           ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) => setSheetState(() {}),
                         ),
                       ),
                     ],
@@ -592,12 +592,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: notesCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Notes (internal)',
-                    ),
-                    maxLines: 2,
+                  LabeledField(
+                    label: 'Notes (internal)',
+                    child: TextField(controller: notesCtrl, maxLines: 2),
                   ),
                   const SizedBox(height: 14),
                   Container(

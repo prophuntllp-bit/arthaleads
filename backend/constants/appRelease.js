@@ -19,7 +19,7 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 8,
+    build: 9,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
@@ -31,8 +31,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-8/arthaleads-1.0.1%2B8-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-9/arthaleads-1.0.1%2B9-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Leads list quick-call now also offers EnableX or phone dialer.",
+    notes: "Form labels fixed, photos/profile pic now render, AI avatar is draggable.",
   },
 };

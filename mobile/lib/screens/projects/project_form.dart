@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 
 /// Add/edit project form with the same structured fields and image workflow as
 /// the web app. Photos are resized/compressed on-device and sent as data URLs.
@@ -474,12 +475,15 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: TextFormField(
-        controller: ctrl,
-        keyboardType: keyboard,
-        maxLines: maxLines,
-        validator: validator,
-        decoration: InputDecoration(labelText: label, isDense: true),
+      child: LabeledField(
+        label: label,
+        child: TextFormField(
+          controller: ctrl,
+          keyboardType: keyboard,
+          maxLines: maxLines,
+          validator: validator,
+          decoration: const InputDecoration(isDense: true),
+        ),
       ),
     );
   }

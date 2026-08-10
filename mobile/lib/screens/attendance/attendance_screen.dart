@@ -12,6 +12,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import 'attendance_capture_sheet.dart';
 
@@ -308,51 +309,54 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedUser,
-                  decoration: const InputDecoration(labelText: 'Team member'),
-                  items: members
-                      .map(
-                        (user) => DropdownMenuItem(
-                          value: user['_id'].toString(),
-                          child: Text(user['name']?.toString() ?? 'Member'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) selectedUser = value;
-                  },
+                LabeledField(
+                  label: 'Team member',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: selectedUser,
+                    decoration: const InputDecoration(),
+                    items: members
+                        .map(
+                          (user) => DropdownMenuItem(
+                            value: user['_id'].toString(),
+                            child: Text(user['name']?.toString() ?? 'Member'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) selectedUser = value;
+                    },
+                  ),
                 ),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: dateCtrl,
-                  keyboardType: TextInputType.datetime,
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    hintText: 'YYYY-MM-DD',
+                LabeledField(
+                  label: 'Date',
+                  child: TextField(
+                    controller: dateCtrl,
+                    keyboardType: TextInputType.datetime,
+                    decoration: const InputDecoration(hintText: 'YYYY-MM-DD'),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: inCtrl,
-                        keyboardType: TextInputType.datetime,
-                        decoration: const InputDecoration(
-                          labelText: 'Clock In',
-                          hintText: 'HH:MM',
+                      child: LabeledField(
+                        label: 'Clock In',
+                        child: TextField(
+                          controller: inCtrl,
+                          keyboardType: TextInputType.datetime,
+                          decoration: const InputDecoration(hintText: 'HH:MM'),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
-                        controller: outCtrl,
-                        keyboardType: TextInputType.datetime,
-                        decoration: const InputDecoration(
-                          labelText: 'Clock Out',
-                          hintText: 'HH:MM',
+                      child: LabeledField(
+                        label: 'Clock Out',
+                        child: TextField(
+                          controller: outCtrl,
+                          keyboardType: TextInputType.datetime,
+                          decoration: const InputDecoration(hintText: 'HH:MM'),
                         ),
                       ),
                     ),
@@ -364,12 +368,9 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   value: nextDay,
                   onChanged: (value) => setSheet(() => nextDay = value),
                 ),
-                TextField(
-                  controller: noteCtrl,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                  ),
+                LabeledField(
+                  label: 'Note (optional)',
+                  child: TextField(controller: noteCtrl, maxLines: 2),
                 ),
                 const SizedBox(height: 14),
                 GradientButton(
@@ -518,51 +519,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: startCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Shift Start (HH:MM)',
-                    isDense: true,
+                LabeledField(
+                  label: 'Shift Start (HH:MM)',
+                  child: TextField(
+                    controller: startCtrl,
+                    decoration: const InputDecoration(isDense: true),
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: endCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Shift End (HH:MM)',
-                    isDense: true,
+                LabeledField(
+                  label: 'Shift End (HH:MM)',
+                  child: TextField(
+                    controller: endCtrl,
+                    decoration: const InputDecoration(isDense: true),
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: bufferCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Grace/Buffer Minutes',
-                    isDense: true,
+                LabeledField(
+                  label: 'Grace/Buffer Minutes',
+                  child: TextField(
+                    controller: bufferCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(isDense: true),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: halfDayCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Half Day Minutes',
-                          isDense: true,
+                      child: LabeledField(
+                        label: 'Half Day Minutes',
+                        child: TextField(
+                          controller: halfDayCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(isDense: true),
                         ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: TextField(
-                        controller: fullDayCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Day Minutes',
-                          isDense: true,
+                      child: LabeledField(
+                        label: 'Full Day Minutes',
+                        child: TextField(
+                          controller: fullDayCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(isDense: true),
                         ),
                       ),
                     ),
@@ -1172,29 +1173,31 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           _statusCard(clockIn, clockOut, clockedIn, done),
           const SizedBox(height: 16),
           if (recordsOnly) ...[
-            DropdownButtonFormField<String>(
-              initialValue: _recordUserId,
-              decoration: const InputDecoration(
-                labelText: 'Team member',
-                prefixIcon: Icon(Icons.person_search_outlined),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('All members'),
+            LabeledField(
+              label: 'Team member',
+              child: DropdownButtonFormField<String>(
+                initialValue: _recordUserId,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.person_search_outlined),
                 ),
-                ..._team.map((row) {
-                  final user = (row['user'] as Map).cast<String, dynamic>();
-                  return DropdownMenuItem<String>(
-                    value: user['_id'].toString(),
-                    child: Text(user['name']?.toString() ?? 'Member'),
-                  );
-                }),
-              ],
-              onChanged: (value) {
-                setState(() => _recordUserId = value);
-                _load();
-              },
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('All members'),
+                  ),
+                  ..._team.map((row) {
+                    final user = (row['user'] as Map).cast<String, dynamic>();
+                    return DropdownMenuItem<String>(
+                      value: user['_id'].toString(),
+                      child: Text(user['name']?.toString() ?? 'Member'),
+                    );
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() => _recordUserId = value);
+                  _load();
+                },
+              ),
             ),
             const SizedBox(height: 12),
           ],

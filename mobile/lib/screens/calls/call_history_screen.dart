@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/call_options_sheet.dart';
+import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/direction_badge.dart';
 
@@ -420,17 +421,17 @@ class _CallCardState extends State<_CallCard> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: titleCtrl,
-              decoration: const InputDecoration(labelText: 'Task title'),
+            LabeledField(
+              label: 'Task title',
+              child: TextField(controller: titleCtrl),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: descriptionCtrl,
-              minLines: 2,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
+            LabeledField(
+              label: 'Description (optional)',
+              child: TextField(
+                controller: descriptionCtrl,
+                minLines: 2,
+                maxLines: 4,
               ),
             ),
             const SizedBox(height: 10),

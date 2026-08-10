@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/labeled_field.dart';
 
 const _platformDefaults = {
   'Google': (
@@ -157,16 +158,17 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
             if (!_isEdit)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: DropdownButtonFormField<String>(
-                  initialValue: _platform,
-                  decoration: const InputDecoration(
-                    labelText: 'Platform',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Platform',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _platform,
+                    decoration: const InputDecoration(isDense: true),
+                    items: _platformDefaults.keys
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _platform = v ?? 'Google'),
                   ),
-                  items: _platformDefaults.keys
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _platform = v ?? 'Google'),
                 ),
               )
             else if (_isFacebook)
@@ -180,107 +182,118 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
               ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              child: TextFormField(
-                controller: _name,
-                decoration: const InputDecoration(
-                  labelText: 'Name *',
-                  isDense: true,
+              child: LabeledField(
+                label: 'Name *',
+                child: TextFormField(
+                  controller: _name,
+                  decoration: const InputDecoration(isDense: true),
+                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                 ),
-                validator: (v) => v!.trim().isEmpty ? 'Required' : null,
               ),
             ),
             if (_isFacebook) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _pageId,
-                  decoration: const InputDecoration(
-                    labelText: 'Facebook Page ID',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Facebook Page ID',
+                  child: TextFormField(
+                    controller: _pageId,
+                    decoration: const InputDecoration(isDense: true),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _formId,
-                  decoration: const InputDecoration(
-                    labelText: 'Lead Form ID',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Lead Form ID',
+                  child: TextFormField(
+                    controller: _formId,
+                    decoration: const InputDecoration(isDense: true),
                   ),
                 ),
               ),
             ] else ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: DropdownButtonFormField<String>(
-                  initialValue: _status,
-                  decoration: const InputDecoration(
-                    labelText: 'Status',
-                    isDense: true,
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'draft', child: Text('Draft')),
-                    DropdownMenuItem(value: 'connected', child: Text('Connected')),
-                    DropdownMenuItem(value: 'paused', child: Text('Paused')),
-                  ],
-                  onChanged: (v) => setState(() => _status = v ?? 'draft'),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _leadSourceLabel,
-                  decoration: InputDecoration(
-                    labelText: 'Lead Source Label',
-                    hintText: _platformDefaults[_platform]?.$1 == null
-                        ? ''
-                        : _platform,
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Status',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _status,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: 'draft', child: Text('Draft')),
+                      DropdownMenuItem(
+                        value: 'connected',
+                        child: Text('Connected'),
+                      ),
+                      DropdownMenuItem(value: 'paused', child: Text('Paused')),
+                    ],
+                    onChanged: (v) => setState(() => _status = v ?? 'draft'),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _externalSourceId,
-                  decoration: const InputDecoration(
-                    labelText: 'External Source ID',
-                    hintText: 'Campaign or partner ID',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Lead Source Label',
+                  child: TextFormField(
+                    controller: _leadSourceLabel,
+                    decoration: InputDecoration(
+                      hintText: _platformDefaults[_platform]?.$1 == null
+                          ? ''
+                          : _platform,
+                      isDense: true,
+                    ),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _externalSourceUrl,
-                  decoration: InputDecoration(
-                    labelText: 'External Source URL',
-                    hintText: 'Landing page URL',
-                    isDense: true,
-                    suffixIcon: _externalSourceUrl.text.trim().isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Open',
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            onPressed: () => launchUrl(
-                              Uri.parse(_externalSourceUrl.text.trim()),
-                              mode: LaunchMode.externalApplication,
+                child: LabeledField(
+                  label: 'External Source ID',
+                  child: TextFormField(
+                    controller: _externalSourceId,
+                    decoration: const InputDecoration(
+                      hintText: 'Campaign or partner ID',
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: LabeledField(
+                  label: 'External Source URL',
+                  child: TextFormField(
+                    controller: _externalSourceUrl,
+                    decoration: InputDecoration(
+                      hintText: 'Landing page URL',
+                      isDense: true,
+                      suffixIcon: _externalSourceUrl.text.trim().isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Open',
+                              icon: const Icon(Icons.open_in_new, size: 18),
+                              onPressed: () => launchUrl(
+                                Uri.parse(_externalSourceUrl.text.trim()),
+                                mode: LaunchMode.externalApplication,
+                              ),
                             ),
-                          ),
+                    ),
                   ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _description,
-                  maxLines: 2,
-                  decoration: InputDecoration(
-                    labelText: 'Description',
-                    hintText: _platformDefaults[_platform]?.$2 ?? '',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Description',
+                  child: TextFormField(
+                    controller: _description,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: _platformDefaults[_platform]?.$2 ?? '',
+                      isDense: true,
+                    ),
                   ),
                 ),
               ),
@@ -394,13 +407,15 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: TextFormField(
-                  controller: _mappingNotes,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    hintText: 'Notes about field mapping or setup details',
-                    isDense: true,
+                child: LabeledField(
+                  label: 'Notes',
+                  child: TextFormField(
+                    controller: _mappingNotes,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      hintText: 'Notes about field mapping or setup details',
+                      isDense: true,
+                    ),
                   ),
                 ),
               ),
