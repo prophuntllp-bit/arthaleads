@@ -30,28 +30,91 @@ import 'tasks/tasks_screen.dart';
 import 'team/team_screen.dart';
 
 /// Floating button opening the Artha AI help assistant — persistent across
-/// every tab, mirrors the web app's floating HelpBot bubble.
-class _ArthaFab extends StatelessWidget {
+/// every tab, mirrors the web app's floating HelpBot bubble: same 56dp size
+/// and the same expanding-ring pulse (web's `animate-ping`) so it doesn't
+/// get lost among the rest of the screen.
+class _ArthaFab extends StatefulWidget {
   const _ArthaFab();
+
+  @override
+  State<_ArthaFab> createState() => _ArthaFabState();
+}
+
+class _ArthaFabState extends State<_ArthaFab>
+    with SingleTickerProviderStateMixin {
+  static const _buttonSize = 56.0;
+  static const _boxSize = 84.0;
+
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    );
+    if (!MediaQuery.of(context).disableAnimations) {
+      _pulse.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 46,
-      height: 46,
-      child: FloatingActionButton(
-        heroTag: 'artha-fab',
-        elevation: 8,
-        backgroundColor: AppColors.primaryDeep,
-        shape: CircleBorder(
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-        ),
-        onPressed: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
-        child: ClipOval(
-          child: Image.asset('assets/images/ai_avatar.png', fit: BoxFit.cover),
-        ),
+      width: _boxSize,
+      height: _boxSize,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) {
+              final t = Curves.easeOut.transform(_pulse.value);
+              return Opacity(
+                opacity: (1 - t) * 0.45,
+                child: Transform.scale(
+                  scale: 1 + t * 0.7,
+                  child: Container(
+                    width: _buttonSize,
+                    height: _buttonSize,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFFF6B00),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          SizedBox(
+            width: _buttonSize,
+            height: _buttonSize,
+            child: FloatingActionButton(
+              heroTag: 'artha-fab',
+              elevation: 8,
+              backgroundColor: AppColors.primaryDeep,
+              shape: CircleBorder(
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              onPressed: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ai_avatar.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -383,10 +446,13 @@ class _ShellState extends State<Shell> {
             children: [
               currentScreen,
               // Persistent AI avatar — bottom-right, matching the web app's
-              // floating HelpBot bubble. Raised above the default 56dp "+"
-              // FAB (bottom:16 + height:56 + 16 margin = 88) that most
-              // screens show in this same corner, so the two never overlap.
-              Positioned(right: 14, bottom: 88, child: _ArthaFab()),
+              // floating HelpBot bubble (56dp circle, pulsing ring). The
+              // widget's box is 84dp (room for the ring to expand into), so
+              // these offsets are shifted in by (84-56)/2=14 from the visible
+              // circle's actual edges, which land at inset 20/88 — clearing
+              // the default 56dp "+" FAB (bottom:16 + height:56 = top at 72)
+              // that most screens show in this same corner.
+              Positioned(right: 6, bottom: 74, child: _ArthaFab()),
             ],
           ),
         ),
