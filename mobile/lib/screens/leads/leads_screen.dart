@@ -17,6 +17,7 @@ import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/qr_sheet.dart';
@@ -355,8 +356,31 @@ class LeadsScreenState extends State<LeadsScreen> {
   Future<void> _call(Map<String, dynamic> lead) async {
     final phone = lead['phone'] as String?;
     if (phone == null || phone.isEmpty) return;
-    await launchUrl(Uri.parse('tel:$phone'));
-    _markContacted(lead);
+    final choice = await pickCallMethod(
+      context,
+      name: lead['name'] as String?,
+      phone: phone,
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      _markContacted(lead);
+      return;
+    }
+    try {
+      final res = await _api.dio.post(
+        '/calls/initiate',
+        data: {'leadId': lead['_id']},
+      );
+      if (mounted) {
+        _snack(res.data['message'] as String? ?? 'Call initiated — check your phone.');
+      }
+      _markContacted(lead);
+    } catch (e) {
+      if (mounted) {
+        _snack(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'), error: true);
+      }
+    }
   }
 
   Future<void> _whatsapp(Map<String, dynamic> lead) async {
