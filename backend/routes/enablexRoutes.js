@@ -283,36 +283,43 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       return;
     }
 
-    // EnableX fires "recording_complete" and "disconnected" within the same
-    // instant, both trying to save the same lead document - confirmed live via a
-    // Mongoose VersionError ("No matching document found... version 5") when both
-    // landed concurrently. "disconnected" already carries the same recording_url
-    // inline (verified in the same event), so recording_complete is redundant -
-    // skip it entirely rather than risk racing the duration/status save that only
-    // "disconnected" performs. Same reasoning as the existing bridge_disconnected
-    // skip below.
-    if (eventType === "recording_complete") {
-      console.info(`${logPrefix} skipping recording_complete (redundant with disconnected's inline recording_url)`);
-      return;
-    }
+    // recording_complete used to be skipped entirely here on the theory that
+    // "disconnected" always arrives and already carries the same recording_url
+    // inline. Confirmed live that this isn't always true: a call can receive
+    // bridged -> bridge_disconnected -> recording_complete and the final
+    // "disconnected" event just never shows up - the call was then stuck
+    // showing "Initiated" forever despite a real ~1-minute conversation having
+    // happened (recording_complete's own recording_duration proved it). So
+    // recording_complete now flows through to the shared handling below instead
+    // of returning here - see the block after the lead lookup for how it
+    // contributes without racing "disconnected" when both do arrive.
 
     // ownerRef's prefix tells us which model this call belongs to - "lead_" for
     // regular Leads, "projectlead_" for Project leads (a separate model with its
     // own _id namespace, see /initiate). Both have an identically-shaped
     // activities array, so the rest of this function treats `lead` generically.
-    let lead, actIdx = -1;
+    // Which model matched is tracked alongside `lead` so the delayed
+    // bridge_disconnected fallback below (which reloads the doc after a setTimeout)
+    // knows which collection to reload from.
+    let lead, actIdx = -1, Model = null;
     if (ownerRef?.startsWith("projectlead_")) {
       const id = ownerRef.split("_")[1];
+      Model = ProjectLead;
       lead = await ProjectLead.findOne({ _id: id, orgId });
       if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     } else if (ownerRef?.startsWith("lead_")) {
       const id = ownerRef.split("_")[1];
+      Model = Lead;
       lead = await Lead.findOne({ _id: id, orgId });
       if (lead) actIdx = lead.activities.findIndex(a => a.meta?.ownerRef === ownerRef);
     }
     if ((!lead || actIdx < 0) && eventVoiceId) {
+      Model = Lead;
       lead = await Lead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
-      if (!lead) lead = await ProjectLead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+      if (!lead) {
+        Model = ProjectLead;
+        lead = await ProjectLead.findOne({ orgId, "activities.meta.voiceId": eventVoiceId });
+      }
       if (lead) {
         actIdx = lead.activities.findIndex(a => a.meta?.voiceId === eventVoiceId);
         if (actIdx >= 0) ownerRef = lead.activities[actIdx].meta?.ownerRef || ownerRef;
@@ -400,26 +407,28 @@ async function processCallStateEvent(orgId, event, logPrefix) {
       }, 3000);
     }
 
-    // ── Call hangup / completion event (duration + status) ──────────────────
-    // EnableX sends state="disconnected" with call_duration (float, seconds).
-    // Ignore bridge_disconnected — it fires simultaneously with disconnected and
-    // causes a Mongoose optimistic-concurrency error on the same document version.
-    if (eventType !== "bridge_disconnected" && /disconnected|hangup|completed|exit|end/i.test(eventType)) {
-      const dur        = Math.round(
-        Number(event?.call_duration ?? event?.data?.duration ?? event?.duration ?? 0)
-      );
-      const callStatus = dur > 5 ? "answered" : "missed";
+    // ── Call hangup / completion (duration + status) ─────────────────────────
+    // Two event types can carry what's needed to finalize a call, and EnableX
+    // does not reliably send both on every call:
+    //   - "disconnected" carries call_duration - the normal, expected path.
+    //   - "recording_complete" carries its own recording_duration. Confirmed
+    //     live that some calls go bridged -> bridge_disconnected ->
+    //     recording_complete and "disconnected" never arrives at all - without
+    //     this, the call stayed stuck showing "Initiated" forever despite a
+    //     real ~1-minute conversation having happened.
+    // Whichever finalizes first wins (guarded by meta.status still being
+    // "initiated"); the other is then a no-op if it also arrives.
+    // bridge_disconnected itself carries no duration, so it's NOT used to
+    // finalize here - see the delayed fallback below instead.
+    const isDisconnectEvent = eventType !== "bridge_disconnected"
+      && /disconnected|hangup|completed|exit|end/i.test(eventType);
+    const isRecordingComplete = eventType === "recording_complete";
 
-      const isInbound = lead.activities[actIdx].meta?.direction === "inbound";
-      lead.activities[actIdx].description = callStatus === "missed"
-        ? (isInbound ? `Missed inbound call from ${lead.name}` : `Missed call to ${lead.name}`)
-        : `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`;
-
-      lead.activities[actIdx].meta = {
-        ...lead.activities[actIdx].meta,
-        status: callStatus,
-        duration: dur,
-      };
+    if ((isDisconnectEvent || isRecordingComplete) && lead.activities[actIdx].meta?.status === "initiated") {
+      const dur = isRecordingComplete
+        ? Math.round(Number(event?.recording_duration ?? 0))
+        : Math.round(Number(event?.call_duration ?? event?.data?.duration ?? event?.duration ?? 0));
+      const callStatus = finalizeCallActivity(lead, actIdx, dur);
       dirty = true;
 
       // Auto-advance lead status New → Contacted on first answered call
@@ -452,7 +461,26 @@ async function processCallStateEvent(orgId, event, logPrefix) {
             ? axios.delete(`${ENABLEX_BASE}/call/${storedVoiceId}`, basicAuth(org)) : null)
           .catch(e => console.info("[enablex] terminate agent leg:", e.response?.status || e.message));
       }
+    }
 
+    // ── Fallback: bridge_disconnected but neither disconnected nor
+    // recording_complete ever arrives (e.g. recording itself failed to start).
+    // With no duration data available, this can only guess "missed" - but
+    // that's still better than a call stuck showing "Initiated" forever with
+    // no record it ever ended. Delayed so the more informative events above
+    // get first chance to finalize (they arrived within the same second of
+    // bridge_disconnected in every case seen so far); reloads fresh via
+    // saveWithVersionRetry since this runs well after the triggering request.
+    if (eventType === "bridge_disconnected" && Model) {
+      const fallbackLeadId = lead._id;
+      const fallbackActIdx = actIdx;
+      setTimeout(() => {
+        saveWithVersionRetry(Model, fallbackLeadId, fallbackActIdx, (freshLead, idx) => {
+          if (freshLead.activities[idx].meta?.status === "initiated") {
+            finalizeCallActivity(freshLead, idx, 0);
+          }
+        }, { logPrefix: "[enablex bridge-fallback]" }).catch(() => {});
+      }, 8000);
     }
 
     if (dirty) {
@@ -1110,6 +1138,24 @@ router.post("/:leadId/followup", async (req, res, next) => {
     res.status(201).json({ success: true, task });
   } catch (err) { next(err); }
 });
+
+// ── Apply the terminal call outcome (status/description/duration) to an
+// activity already loaded in memory. Shared by the immediate disconnected/
+// recording_complete path and the delayed bridge_disconnected fallback so
+// both compute "answered" vs "missed" the same way. Returns the callStatus.
+function finalizeCallActivity(lead, actIdx, dur) {
+  const callStatus = dur > 5 ? "answered" : "missed";
+  const isInbound = lead.activities[actIdx].meta?.direction === "inbound";
+  lead.activities[actIdx].description = callStatus === "missed"
+    ? (isInbound ? `Missed inbound call from ${lead.name}` : `Missed call to ${lead.name}`)
+    : `Call with ${lead.name} · ${Math.floor(dur / 60)}m ${dur % 60}s`;
+  lead.activities[actIdx].meta = {
+    ...lead.activities[actIdx].meta,
+    status:   callStatus,
+    duration: dur,
+  };
+  return callStatus;
+}
 
 // ── Save a lead mutation, retrying on a concurrent-write version conflict ─────
 // The recording-save and transcription paths run well after their triggering
