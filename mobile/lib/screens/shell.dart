@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/auth_state.dart';
 import '../core/push_service.dart';
@@ -123,9 +123,11 @@ class _ArthaFabState extends State<_ArthaFab>
 }
 
 /// Wraps [_ArthaFab] so the user can drag it anywhere on screen — the
-/// position is remembered per-device (flutter_secure_storage, same store
-/// already used for the auth token) so it stays where they left it next
-/// time the app opens.
+/// position is remembered per-device (SharedPreferences — a plain UI
+/// coordinate isn't sensitive enough to need the encrypted secure-storage
+/// used for the auth token, and avoids that store's Keystore-dependent
+/// write path, which proved unreliable for rapid-fire writes on-device)
+/// so it stays where they left it next time the app opens.
 class _DraggableArthaFab extends StatefulWidget {
   const _DraggableArthaFab();
 
@@ -134,7 +136,6 @@ class _DraggableArthaFab extends StatefulWidget {
 }
 
 class _DraggableArthaFabState extends State<_DraggableArthaFab> {
-  static const _storage = FlutterSecureStorage();
   static const _xKey = 'artha_fab_x';
   static const _yKey = 'artha_fab_y';
   static const _boxSize = 84.0;
@@ -148,15 +149,17 @@ class _DraggableArthaFabState extends State<_DraggableArthaFab> {
   }
 
   Future<void> _restore() async {
-    final x = double.tryParse(await _storage.read(key: _xKey) ?? '');
-    final y = double.tryParse(await _storage.read(key: _yKey) ?? '');
+    final prefs = await SharedPreferences.getInstance();
+    final x = prefs.getDouble(_xKey);
+    final y = prefs.getDouble(_yKey);
     if (!mounted || x == null || y == null) return;
     setState(() => _pos = Offset(x, y));
   }
 
-  void _persist(Offset pos) {
-    _storage.write(key: _xKey, value: pos.dx.toString());
-    _storage.write(key: _yKey, value: pos.dy.toString());
+  Future<void> _persist(Offset pos) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_xKey, pos.dx);
+    await prefs.setDouble(_yKey, pos.dy);
   }
 
   // Matches the previous fixed anchor (right: 6, bottom: 74) so a first-time
@@ -181,10 +184,14 @@ class _DraggableArthaFabState extends State<_DraggableArthaFab> {
               left: pos.dx,
               top: pos.dy,
               child: GestureDetector(
-                onPanUpdate: (details) => setState(
-                  () => _pos = _clamp((_pos ?? pos) + details.delta, area),
-                ),
-                onPanEnd: (_) => _persist(_pos ?? pos),
+                onPanUpdate: (details) {
+                  final next = _clamp((_pos ?? pos) + details.delta, area);
+                  setState(() => _pos = next);
+                  // Persisted on every update (not just onPanEnd) — some
+                  // synthetic/edge-case gesture streams never deliver a
+                  // clean pan-end, which silently dropped the save.
+                  _persist(next);
+                },
                 child: const _ArthaFab(),
               ),
             ),
