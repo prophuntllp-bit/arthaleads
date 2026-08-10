@@ -296,8 +296,14 @@ function CallDetailPanel({ call, leadId, leadName, isProjectLead, onBack }) {
           <div className="flex items-center gap-2 mb-2">
             <Mic className="w-3.5 h-3.5 text-orange-500" />
             <span className="text-xs font-bold uppercase tracking-wider text-app">Recording</span>
+            {/* The browser reads duration from the audio file's own metadata, which
+                some EnableX/Cloudinary-transcoded recordings don't carry reliably —
+                showing "0:00/0:00" even for a real recording. The call's actual
+                duration is already known from the webhook, so show it here too
+                rather than depending on the player guessing it right. */}
+            {meta.duration > 0 && <span className="text-xs text-app-soft">· {fmt(meta.duration)}</span>}
           </div>
-          <audio controls src={meta.recordingUrl} className="w-full rounded-xl" style={{ height: 36 }} />
+          <audio controls preload="metadata" src={meta.recordingUrl} className="w-full rounded-xl" style={{ height: 36 }} />
         </section>
       ) : status === "answered" && (
         <div className="rounded-xl p-3 flex items-center gap-2 text-xs text-app"

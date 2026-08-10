@@ -532,8 +532,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                         <div className="mt-3">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-app-soft mb-1.5 flex items-center gap-1">
                             <Mic className="w-3 h-3" /> Recording
+                            {/* Some transcoded recordings don't carry duration metadata the
+                                browser can read, showing "0:00/0:00" for a real recording —
+                                the call's actual duration is already known, so show it here too. */}
+                            {dur && <span className="normal-case font-normal">· {dur}</span>}
                           </p>
-                          <audio controls src={meta.recordingUrl} className="w-full h-8" />
+                          <audio controls preload="metadata" src={meta.recordingUrl} className="w-full h-8" />
                         </div>
                       ) : st === "answered" && (
                         <p className="text-xs text-app-soft mt-3 flex items-center gap-1.5">
@@ -691,7 +695,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                       {/* Recording player */}
                       {isCall && meta.recordingUrl && (
                         <div className="mt-2">
-                          <audio controls src={meta.recordingUrl} className="w-full h-8" style={{ maxWidth: "100%" }} />
+                          {meta.duration > 0 && (
+                            <p className="text-[10px] text-app-soft mb-1">
+                              {`${Math.floor(meta.duration / 60)}m ${meta.duration % 60}s`.replace(/^0m /, "")}
+                            </p>
+                          )}
+                          <audio controls preload="metadata" src={meta.recordingUrl} className="w-full h-8" style={{ maxWidth: "100%" }} />
                         </div>
                       )}
 
