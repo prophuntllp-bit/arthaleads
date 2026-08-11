@@ -7,6 +7,25 @@ import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 
+// Compress image to JPEG ≤ 400×400 before upload - an uncompressed data URI
+// can run several MB, which is unreliable to decode/render on mobile clients.
+function compressImage(dataUri, maxPx = 400) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
+
 const emptyMember = {
   name: "",
   email: "",
@@ -96,8 +115,9 @@ export default function Team() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setForm((current) => ({ ...current, avatar: reader.result }));
+    reader.onload = async () => {
+      const compressed = await compressImage(reader.result);
+      setForm((current) => ({ ...current, avatar: compressed }));
       toast.success("Profile image ready to save");
     };
     reader.onerror = () => toast.error("Could not read that image");

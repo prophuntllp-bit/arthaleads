@@ -434,8 +434,11 @@ export default function Settings() {
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setForm((current) => ({ ...current, avatar: reader.result }));
+    reader.onload = async () => {
+      // Compress before storing - an uncompressed data URI can run several MB,
+      // which is unreliable to decode/render on memory-constrained mobile clients.
+      const compressed = await compressImage(reader.result);
+      setForm((current) => ({ ...current, avatar: compressed }));
       toast.success("Profile image ready to save");
     };
     reader.onerror = () => toast.error("Could not read that image");
