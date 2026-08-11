@@ -34,8 +34,10 @@ router.put("/me",             validate(updateProfileSchema), authController.upda
 router.get("/agents",         authController.getAgents);
 router.get("/performance",    authorize("admin", "manager"), authController.getPerformance);
 
-// Admin only
-router.get("/users",          authorize("admin"),  authController.getAllUsers);
+// Team list is viewable by admin + manager; managers see it read-only
+// (create/edit/toggle/delete stay admin-only — same split the UI already
+// enforces via disabled buttons for non-admins).
+router.get("/users",          authorize("admin", "manager"),  authController.getAllUsers);
 router.post("/users",         authorize("admin"), validate(createUserSchema), authController.createUser);
 router.patch("/users/:id",    authorize("admin"), validate(updateUserSchema), authController.updateUser);
 router.patch("/users/:id/toggle", authorize("admin"), authController.toggleUserActive);

@@ -21,11 +21,10 @@ const _planLimits = {
   'enterprise': 999999,
 };
 
-/// Team — GET/POST/PATCH/DELETE /auth/users. Unlike most other admin-only
-/// screens, the backend restricts this strictly to role === "admin" (not
-/// manager) — see backend/routes/authRoutes.js. The nav drawer's generic
-/// adminOnly flag lets managers tap in, so this screen self-guards rather
-/// than surfacing a raw 403.
+/// Team — GET/POST/PATCH/DELETE /auth/users. GET is admin + manager;
+/// create/edit/toggle/delete stay admin (+ super_admin) only — see
+/// backend/routes/authRoutes.js. Managers get the same read-only view the
+/// web app already had (edit/toggle/delete controls just disable).
 class TeamScreen extends StatefulWidget {
   const TeamScreen({super.key});
 
@@ -434,17 +433,21 @@ class _TeamScreenState extends State<TeamScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
-    if (auth.role != 'admin') {
+    if (auth.role == 'agent') {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Team management is available to admins only.',
+            'Team management is available to admins and managers only.',
             textAlign: TextAlign.center,
           ),
         ),
       );
     }
+    // Managers can view the team (matches the web app's disabled-button
+    // pattern) but only admins/super_admins can add, edit, toggle, or
+    // remove members — see backend/routes/authRoutes.js.
+    final isAdmin = auth.role == 'admin' || auth.role == 'super_admin';
 
     final admins = _users.where((u) => u['role'] == 'admin').length;
     final managers = _users.where((u) => u['role'] == 'manager').length;
@@ -456,23 +459,25 @@ class _TeamScreenState extends State<TeamScreen> {
     final atLimit = _users.length >= memberLimit;
 
     return Scaffold(
-      floatingActionButton: GradientFab(
-        onPressed: () {
-          if (atLimit) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Member limit reached ($memberLimit) for your plan. Upgrade to add more.',
-                ),
-                backgroundColor: AppColors.danger,
-              ),
-            );
-            return;
-          }
-          _openForm();
-        },
-        icon: Icons.person_add_rounded,
-      ),
+      floatingActionButton: !isAdmin
+          ? null
+          : GradientFab(
+              onPressed: () {
+                if (atLimit) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Member limit reached ($memberLimit) for your plan. Upgrade to add more.',
+                      ),
+                      backgroundColor: AppColors.danger,
+                    ),
+                  );
+                  return;
+                }
+                _openForm();
+              },
+              icon: Icons.person_add_rounded,
+            ),
       body: Column(
         children: [
           PageHeader(
@@ -542,7 +547,7 @@ class _TeamScreenState extends State<TeamScreen> {
                         vertical: 4,
                       ),
                       child: ListTile(
-                        onTap: () => _openForm(user: u),
+                        onTap: isAdmin ? () => _openForm(user: u) : null,
                         leading: InitialsAvatar(
                           backgroundColor: roleColor.withValues(alpha: 0.15),
                           avatarValue: u['avatar'] as String?,
@@ -574,15 +579,19 @@ class _TeamScreenState extends State<TeamScreen> {
                             Switch(
                               value: active,
                               activeThumbColor: AppColors.success,
-                              onChanged: (_) => _toggleActive(u),
+                              onChanged: isAdmin
+                                  ? (_) => _toggleActive(u)
+                                  : null,
                             ),
                             IconButton(
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.delete_outline_rounded,
-                                color: AppColors.danger,
+                                color: isAdmin
+                                    ? AppColors.danger
+                                    : Theme.of(context).disabledColor,
                                 size: 20,
                               ),
-                              onPressed: () => _delete(u),
+                              onPressed: isAdmin ? () => _delete(u) : null,
                             ),
                           ],
                         ),

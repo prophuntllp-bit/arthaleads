@@ -55,7 +55,7 @@ const navItems = [
   },
   { to: "/attendance",  label: "Attendance",   icon: Clock,     minPlan: "growth" },
   { to: "/dump-leads",  label: "Dump Leads",   icon: Archive,   roles: ["admin", "manager", "super_admin"] },
-  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "super_admin"] },
+  { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "manager", "super_admin"] },
   { to: "/automation",  label: "Integrations", icon: Workflow,  roles: ["admin", "manager", "super_admin"] },
   { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"], minPlan: "growth" },
   { to: "/settings",    label: "Settings",     icon: Settings },

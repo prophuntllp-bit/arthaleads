@@ -638,13 +638,10 @@ export default function App() {
           <Route path="/developers"    element={<Developers />} />
           <Route path="/plans"         element={<Plans />} />
 
-          {/* Admin only */}
-          <Route element={<RequireRole roles={["admin"]} />}>
-            <Route path="/team" element={<Team />} />
-          </Route>
-
-          {/* Admin + Manager only */}
+          {/* Admin + Manager only (managers get read-only Team — see isAdmin
+              gating inside Team.jsx for which actions stay admin-only) */}
           <Route element={<RequireRole roles={["admin", "manager"]} />}>
+            <Route path="/team" element={<Team />} />
             <Route path="/automation"  element={<Automation />} />
             <Route path="/automation/telephony" element={<TelephonyIntegration />} />
             <Route path="/performance" element={<Performance />} />
