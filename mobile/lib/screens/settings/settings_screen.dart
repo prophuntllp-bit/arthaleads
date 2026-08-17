@@ -26,6 +26,7 @@ class _UpperCaseTextFormatter extends TextInputFormatter {
 }
 
 const _billingRequired = [
+  'name',
   'address',
   'gstNo',
   'pan',
@@ -65,6 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Organization billing
   final Map<String, TextEditingController> _billing = {
     for (final k in [
+      'name',
       'address',
       'phone',
       'email',
@@ -782,6 +784,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         ),
         const SizedBox(height: 20),
+        Text(
+          'ORGANISATION NAME',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+            color: Colors.grey.shade600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _billingField('name', 'Name'),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            "Shown in the sidebar, invoices, and everywhere else your organisation's name appears.",
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          ),
+        ),
+        const SizedBox(height: 16),
         Text(
           'ORGANISATION IDENTITY',
           style: TextStyle(

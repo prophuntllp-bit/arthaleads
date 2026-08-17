@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
+import '../core/auth_errors.dart';
 import '../core/auth_state.dart';
 import '../core/theme.dart';
 import '../widgets/buttons.dart';
@@ -63,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await context.read<AuthState>().login(id, pw);
     } catch (e) {
-      setState(() => _error = ApiClient.errorMessage(e, 'Login failed'));
+      setState(() => _error = authErrorMessage(e, 'Login failed'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -84,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await context.read<AuthState>().googleLogin(accessToken);
     } catch (e) {
       setState(
-        () => _error = ApiClient.errorMessage(
+        () => _error = authErrorMessage(
           e,
           'Google sign-in failed. Please try again.',
         ),
