@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { LogOut, Shield } from "lucide-react";
+import api from "../services/api";
 
 export default function ImpersonationBanner() {
   const { logout } = useAuth();
@@ -13,6 +14,16 @@ export default function ImpersonationBanner() {
 
   const exit = async () => {
     sessionStorage.removeItem("impersonating");
+    // Restore the super admin's own session so exiting lands back in the
+    // admin panel instead of forcing a fresh login. Falls back to a full
+    // logout if we never captured a token (or it's since expired).
+    if (data.superAdminToken) {
+      try {
+        await api.post("/auth/restore-admin-session", { token: data.superAdminToken });
+        window.location.href = "/super-admin/orgs";
+        return;
+      } catch { /* fall through to full logout below */ }
+    }
     await logout();
     window.location.href = "/admin-login";
   };

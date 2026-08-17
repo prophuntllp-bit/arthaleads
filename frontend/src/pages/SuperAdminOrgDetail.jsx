@@ -146,7 +146,7 @@ export default function SuperAdminOrgDetail() {
   }, [actPage]);
 
   const handleImpersonate = async () => {
-    if (!window.confirm(`Login as the admin of "${data.org.name}"? Your current admin session will end.`)) return;
+    if (!window.confirm(`Login as the admin of "${data.org.name}"?`)) return;
     setImp(true);
     try {
       const { data: res } = await api.post(`/super-admin/orgs/${id}/impersonate`);
@@ -154,6 +154,7 @@ export default function SuperAdminOrgDetail() {
         orgName: res.orgName,
         adminName: res.adminName,
         adminEmail: res.adminEmail,
+        superAdminToken: res.superAdminToken,
       }));
       toast.success(`Logged in as ${res.adminName} (${res.orgName})`);
       window.location.href = "/dashboard";
@@ -249,7 +250,7 @@ export default function SuperAdminOrgDetail() {
       <div className="card p-4 mb-5 flex items-center gap-4">
         <div>
           <p className="text-sm font-bold text-app">Login As This Organisation</p>
-          <p className="text-xs text-app-soft mt-0.5">Open the CRM as their admin to debug or assist. Your admin session will end — log back in via /admin-login.</p>
+          <p className="text-xs text-app-soft mt-0.5">Open the CRM as their admin to debug or assist. Exit Impersonation returns you to the admin panel.</p>
         </div>
         <button
           onClick={handleImpersonate}

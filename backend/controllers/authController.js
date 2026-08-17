@@ -118,6 +118,36 @@ const authController = {
     res.json({ success: true, message: "Logged out" });
   },
 
+  // POST /api/auth/restore-admin-session — re-set the super admin's own cookie
+  // after they exit an impersonated org session, so they land back in the
+  // admin panel instead of having to log in again. Public route (the current
+  // cookie belongs to the impersonated org admin, not the super admin) - the
+  // security boundary is verifying the token itself, not who's currently
+  // logged in.
+  async restoreAdminSession(req, res, next) {
+    try {
+      const { token } = req.body;
+      if (!token) return next(new AppError("Token is required", 400));
+
+      let payload;
+      try {
+        payload = jwt.verify(token, process.env.JWT_SECRET);
+      } catch {
+        return next(new AppError("Your session has expired — please log in again", 401));
+      }
+
+      const user = await User.findById(payload.id).select("role isActive");
+      if (!user || user.role !== "super_admin" || !user.isActive) {
+        return next(new AppError("Invalid session", 401));
+      }
+
+      res.cookie("crm_token", token, cookieOptions());
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getMe(req, res, next) {
     try {
       const { user, org } = await authService.getMe(req.user._id);

@@ -562,6 +562,12 @@ const superAdminController = {
         .select("_id name email");
       if (!admin) return next(new AppError("No active admin found for this organisation", 404));
 
+      // Hand the super admin's own still-valid session token back to the
+      // frontend before it gets overwritten below - "Exit Impersonation"
+      // restores it via /auth/restore-admin-session instead of forcing a
+      // fresh login.
+      const superAdminToken = req.cookies?.crm_token || null;
+
       await logAudit("impersonate", req, {
         targetOrg:      org._id || req.params.id,
         targetOrgName:  org.name,
@@ -580,7 +586,7 @@ const superAdminController = {
         maxAge:   2 * 60 * 60 * 1000,
       });
 
-      res.json({ success: true, orgName: org.name, adminName: admin.name, adminEmail: admin.email });
+      res.json({ success: true, orgName: org.name, adminName: admin.name, adminEmail: admin.email, superAdminToken });
     } catch (err) {
       next(err);
     }

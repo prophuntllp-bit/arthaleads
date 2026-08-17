@@ -27,6 +27,10 @@ router.post("/reset-password/:token", authController.resetPassword);
 // Logout must be public - cookie must clear even if JWT is expired/invalid
 router.post("/logout",        authController.logout);
 
+// Restoring a super admin's session after impersonation must be public too -
+// the current cookie at that point belongs to the impersonated org admin.
+router.post("/restore-admin-session", authController.restoreAdminSession);
+
 // Protected routes
 router.use(protect);
 router.get("/me",             authController.getMe);
