@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
          Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Pencil, Trash2 } from "lucide-react";
@@ -649,7 +650,12 @@ export default function Settings() {
 
             {/* Change password */}
             <div className="rounded-[1.25rem] p-5 stitch-surface-muted space-y-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-app"><KeyRound className="h-4 w-4 text-orange-500" /> Change Password</div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-app"><KeyRound className="h-4 w-4 text-orange-500" /> Change Password</div>
+                <Link to="/forgot-password" className="text-xs font-medium hover:underline underline-offset-2" style={{ color: "var(--app-primary)" }}>
+                  Forgot your password?
+                </Link>
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="label">Current Password</label>
