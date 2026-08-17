@@ -222,6 +222,7 @@ const BILLING_FIELDS = [
 
 function OrgBillingSection({ org, updateOrg }) {
   const [form, setForm] = useState({
+    name: "",
     address: "", phone: "", email: "", gstNo: "", pan: "", cin: "", rera: "",
     bankAccountName: "", bankAccountNo: "", bankIfsc: "", bankName: "", bankBranch: "",
   });
@@ -230,6 +231,7 @@ function OrgBillingSection({ org, updateOrg }) {
   useEffect(() => {
     if (org) {
       setForm({
+        name:            org.name            || "",
         address:         org.address         || "",
         phone:           org.phone           || "",
         email:           org.email           || "",
@@ -253,6 +255,10 @@ function OrgBillingSection({ org, updateOrg }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const save = async () => {
+    if (form.name.trim().length < 2) {
+      toast.error("Organisation name must be at least 2 characters.");
+      return;
+    }
     const missing = BILLING_REQUIRED.filter(k => !form[k]?.trim());
     if (missing.length) {
       toast.error("Please fill all required fields (marked *) before saving.");
@@ -317,6 +323,27 @@ function OrgBillingSection({ org, updateOrg }) {
           <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
         </div>
         <OrgLogoUpload logo={org?.logo} onUpdated={updateOrg} />
+      </div>
+
+      {/* Organisation name */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs font-bold text-app-soft uppercase tracking-wider">Organisation Name</span>
+          <div className="flex-1 h-px" style={{ background: "var(--app-border)" }} />
+        </div>
+        <div className="max-w-md">
+          <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1 block">
+            Name <span style={{ color: "#ef4444" }}>*</span>
+          </label>
+          <input
+            value={form.name}
+            onChange={e => set("name", e.target.value)}
+            placeholder="e.g. Fairline Group"
+            className="input w-full text-sm"
+            style={!form.name.trim() ? { borderColor: "rgba(245,158,11,0.6)" } : {}}
+          />
+          <p className="text-[11px] text-app-soft mt-1">Shown in the sidebar, invoices, and everywhere else your organisation's name appears.</p>
+        </div>
       </div>
 
       {/* Field sections */}

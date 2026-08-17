@@ -174,13 +174,19 @@ router.patch("/me/logo", authorize("admin"), async (req, res, next) => {
 });
 
 // PATCH /api/org/me/billing — save invoice letterhead / billing details (admin only)
+// Also carries the organisation's display name - same "identity" section on the
+// frontend as the logo, editable by whoever runs the account (rebrand, client
+// handoff, etc.) rather than being fixed at signup.
 router.patch("/me/billing", authorize("admin"), async (req, res, next) => {
   try {
-    const ALLOWED = ["address","phone","email","gstNo","pan","cin","rera",
+    const ALLOWED = ["name","address","phone","email","gstNo","pan","cin","rera",
                      "bankAccountName","bankAccountNo","bankIfsc","bankName","bankBranch"];
     const update = {};
     for (const k of ALLOWED) {
       if (req.body[k] !== undefined) update[k] = String(req.body[k]).trim();
+    }
+    if (update.name !== undefined && (update.name.length < 2 || update.name.length > 100)) {
+      return res.status(400).json({ success: false, message: "Organisation name must be 2-100 characters." });
     }
     if (!Object.keys(update).length) {
       return res.status(400).json({ success: false, message: "No valid fields provided." });
