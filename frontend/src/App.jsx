@@ -41,13 +41,32 @@ function isMarketingHost() {
 // bundled defaults. Fired at module load — it needs no React state.
 hydrateLeadOptions(api);
 
+// Tracks whether the index.html CSS splash has finished (or started fading) —
+// see main.jsx. Until then it's still covering the screen, so React's own
+// loading spinners must stay blank rather than render a second loader behind
+// it that becomes visible during the splash's opacity crossfade.
+function useSplashDone() {
+  const [done, setDone] = useState(() => typeof window !== "undefined" && window.__splashDone === true);
+  useEffect(() => {
+    if (done) return;
+    const onDone = () => setDone(true);
+    window.addEventListener("splash:done", onDone);
+    return () => window.removeEventListener("splash:done", onDone);
+  }, [done]);
+  return done;
+}
+
 // ── Page-level code splitting ─────────────────────────────────────────────────
 // Each page is loaded only when first visited - reduces initial bundle ~50%
-const PageFallback = () => (
-  <div className="flex min-h-[60vh] items-center justify-center">
-    <Spinner size="lg" />
-  </div>
-);
+const PageFallback = () => {
+  const splashDone = useSplashDone();
+  if (!splashDone) return null;
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Spinner size="lg" />
+    </div>
+  );
+};
 
 // ── Brand Colour ──────────────────────────────────────────────────────────────
 // Applies a customer's hex accent colour as CSS-variable overrides so the
@@ -475,8 +494,10 @@ function RequireAuth() {
   }, []);
 
   const handleLogout = () => { logout(); window.location.href = "/login"; };
+  const splashDone = useSplashDone();
 
   if (loading) {
+    if (!splashDone) return null;
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Spinner size="lg" />
@@ -570,11 +591,15 @@ function AdminLayout() {
 // Guards super admin routes — must be logged in AND be super_admin
 function RequireAdmin() {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Spinner size="lg" />
-    </div>
-  );
+  const splashDone = useSplashDone();
+  if (loading) {
+    if (!splashDone) return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/admin-login" replace />;
   if (user.role !== "super_admin") return <Navigate to="/dashboard" replace />;
   return <AdminLayout />;
@@ -593,12 +618,16 @@ function RequireAdmin() {
 // marketing host never auto-redirects into the app.
 function RootRoute() {
   const { user, loading } = useAuth();
+  const splashDone = useSplashDone();
   if (isAppHost()) {
-    if (loading) return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
+    if (loading) {
+      if (!splashDone) return null;
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      );
+    }
     if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
     return <Navigate to="/login" replace />;
   }

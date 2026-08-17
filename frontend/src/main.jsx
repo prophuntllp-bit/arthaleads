@@ -107,4 +107,12 @@ Promise.all([reactReady, minDisplay]).then(() => {
     splash.classList.add("splash-hidden");
     setTimeout(() => splash.remove(), 600);
   }
+  // Tell the app it's safe to show its own loading spinners now. Until this
+  // fires, the CSS splash above is guaranteed to still be covering the screen
+  // (or mid-fade), so any spinner React renders underneath it during that
+  // window would double up with the splash's own ring animation for the
+  // ~0.55s crossfade — this flag is what App.jsx's guard components check to
+  // stay blank instead of painting a second, redundant loader behind it.
+  window.__splashDone = true;
+  window.dispatchEvent(new Event("splash:done"));
 });
