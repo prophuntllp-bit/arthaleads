@@ -3,9 +3,45 @@ const router = express.Router();
 const { getForm, submitLead } = require("../controllers/publicController");
 const OPTS = require("../constants/leadOptions");
 const APP_RELEASE = require("../constants/appRelease");
+const { answerMarketingQuestion } = require("../utils/openai");
 
 router.get("/form/:token", getForm);
 router.post("/form/:token", submitLead);
+
+// ── Marketing site chatbot ───────────────────────────────────────────────────
+// POST /api/public/chat — Body: { question, history? }
+// No auth, no access to any customer data — pre-sales Q&A only. Inherits the
+// contactLimiter rate limit already applied to this whole router in server.js
+// (10 req / 15 min / IP), which is the abuse guard for this AI-cost-incurring
+// endpoint since it's reachable by anyone.
+router.post("/chat", async (req, res, next) => {
+  try {
+    const question = (req.body.question || "").toString().trim().slice(0, 500);
+    const history  = Array.isArray(req.body.history)
+      ? req.body.history.slice(-6).map((m) => ({
+          role: m.role === "user" ? "user" : "assistant",
+          text: String(m.text || "").slice(0, 800),
+        }))
+      : [];
+
+    if (!question) return res.status(400).json({ success: false, message: "Please type a question." });
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({
+        success: false,
+        message: "Chat isn't available right now — email contact@arthaleads.com or WhatsApp +91 80801 97945.",
+      });
+    }
+
+    const result = await answerMarketingQuestion(question, history);
+    res.json({ success: true, answer: result.answer, cta: result.cta });
+  } catch (err) {
+    if (err.message?.includes("OPENAI_API_KEY")) {
+      return res.status(503).json({ success: false, message: "Chat isn't available right now." });
+    }
+    next(err);
+  }
+});
 
 // ── Lead option lists ────────────────────────────────────────────────────────
 // Serves the same constants the model and validators use, so a client can never

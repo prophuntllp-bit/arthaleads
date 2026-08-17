@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import MarketingChatBot from "./MarketingChatBot";
 
 const NAV_RESOURCES = [
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
@@ -395,5 +396,10 @@ function NavInner({ onScrollTo }) {
 }
 
 export default function PublicNav({ onScrollTo }) {
-  return <NavInner onScrollTo={onScrollTo} />;
+  return (
+    <>
+      <NavInner onScrollTo={onScrollTo} />
+      <MarketingChatBot />
+    </>
+  );
 }
