@@ -38,7 +38,18 @@ Disallow: /signup
 Disallow: /reset-password
 Disallow: /forgot-password
 Disallow: /fb-callback
+Disallow: /google-callback
+Disallow: /admin-login
 Disallow: /share-target
+Disallow: /conversations
+Disallow: /calls
+Disallow: /tasks
+Disallow: /bookings
+Disallow: /invoices
+Disallow: /developers
+Disallow: /plans
+Disallow: /referrals
+Disallow: /form/
 Disallow: /api/
 
 Sitemap: https://www.arthaleads.com/sitemap.xml
