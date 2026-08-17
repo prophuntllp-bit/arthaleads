@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { Check, Download, ArrowRight, ChevronDown, Zap, Shield, RefreshCw, Globe, Star, Bell, Code2, PlugZap } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import PublicNav from "../components/PublicNav";
@@ -325,12 +325,12 @@ function WordPressPluginInner() {
               <Download className="w-5 h-5" />
               Download Plugin - Free
             </a>
-            <Link to="/signup"
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5"
               style={{ borderColor: cardBorder, color: text }}>
               Get Free CRM Account
               <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
 
           <p className="text-xs mt-5" style={{ color: soft }}>
@@ -528,12 +528,12 @@ function WordPressPluginInner() {
               <Download className="w-5 h-5" />
               Download Plugin Free
             </a>
-            <Link to="/signup"
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="inline-flex items-center gap-2 font-semibold px-8 py-4 rounded-2xl border transition-all hover:-translate-y-0.5"
               style={{ borderColor: "rgba(255,107,0,0.35)", color: "#ff6b00" }}>
               Create Free Account
               <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </section>

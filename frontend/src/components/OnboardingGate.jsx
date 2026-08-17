@@ -116,22 +116,22 @@ export default function OnboardingGate() {
             <>
               <div>
                 <label className="label">Organisation Name <span className="text-orange-500">*</span></label>
-                <input className="input" value={form.name} onChange={set("name")} placeholder="e.g. Skyline Realty Pvt Ltd" autoFocus />
+                <input className="input" value={form.name} onChange={set("name")} placeholder="e.g. Skyline Realty Pvt Ltd" autoComplete="organization" autoFocus />
               </div>
               <div>
                 <label className="label">Business Phone <span className="text-orange-500">*</span></label>
-                <input className="input" type="tel" value={form.phone} onChange={set("phone")} placeholder="Office contact number" />
+                <input className="input" type="tel" value={form.phone} onChange={set("phone")} placeholder="Office contact number" autoComplete="off" name="org-business-phone" />
               </div>
             </>
           )}
           <div>
             <label className="label">Your Full Name <span className="text-orange-500">*</span></label>
             <input className="input" value={form.fullName} onChange={set("fullName")} placeholder="Enter your full name"
-              autoFocus={profileOnly} />
+              autoComplete="name" autoFocus={profileOnly} />
           </div>
           <div>
             <label className="label">Your Mobile Number <span className="text-orange-500">*</span></label>
-            <input className="input" type="tel" value={form.personalPhone} onChange={set("personalPhone")} placeholder="10-digit mobile number" />
+            <input className="input" type="tel" value={form.personalPhone} onChange={set("personalPhone")} placeholder="10-digit mobile number" autoComplete="tel" />
           </div>
 
           {!profileOnly && (

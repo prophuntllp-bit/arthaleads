@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { ArrowRight, BookOpen, Calendar, Clock } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -187,13 +188,13 @@ function CaseStudiesInner() {
           <p className="text-base mb-8" style={{ color: softText }}>
             Start a free trial and set up your first lead pipeline today. No credit card required.
           </p>
-          <Link
-            to="/signup"
+          <a
+            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
             className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
           >
             Get Started Free
             <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
         </div>
       </section>
 

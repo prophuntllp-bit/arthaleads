@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import {
   Shield, Lock, KeyRound, Server, Eye, UserCheck, Database, Bell,
   CheckCircle2, ArrowRight, Mail, FileCheck, RefreshCw, Globe,
@@ -208,13 +208,13 @@ export default function Security() {
           <p className="text-base mb-6" style={{ color: softText }}>
             Join real estate teams across India who trust Arthaleads with their pipeline.
           </p>
-          <Link
-            to="/signup"
+          <a
+            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
             className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-6 py-3 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25"
           >
             Get Started Free
             <ArrowRight className="w-4 h-4" />
-          </Link>
+          </a>
         </div>
       </section>
 

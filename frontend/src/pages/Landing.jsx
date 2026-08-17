@@ -1,6 +1,6 @@
 ﻿// pages/Landing.jsx - Arthaleads public marketing homepage
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight,
   BarChart3, Users, Zap, Building2, PhoneCall,
@@ -129,10 +129,10 @@ function Hero({ isDark }) {
             and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link to="/signup"
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
               Start Free Trial <ArrowRight className="w-5 h-5" />
-            </Link>
+            </a>
             <button onClick={() => scrollTo("features")}
               className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
               style={{ color: btnText, borderColor: btnBorder }}>
@@ -1730,11 +1730,11 @@ function FinalCTA({ isDark }) {
           Start your free trial today - no credit card needed.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link to="/signup"
+          <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
             className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1">
             Get Started Free
             <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
           <button onClick={() => scrollTo("contact")}
             className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 font-medium border"
             style={{ color: btnText, borderColor: btnBdr }}>

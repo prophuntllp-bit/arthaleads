@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import api from "../services/api";
 import { Clock, Tag, Search, ChevronLeft, ChevronRight, ArrowRight, BookOpen, Calendar } from "lucide-react";
 import PublicNav from "../components/PublicNav";
@@ -341,12 +342,12 @@ function BlogPageInner() {
                 <p className="text-xs text-orange-100 mb-4 leading-relaxed">
                   Try Arthaleads CRM - built for Indian real estate teams.
                 </p>
-                <Link
-                  to="/signup"
+                <a
+                  href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
                   className="inline-block px-5 py-2.5 rounded-xl bg-white text-orange-600 text-xs font-bold hover:bg-orange-50 transition"
                 >
                   Start Free Trial →
-                </Link>
+                </a>
               </div>
             </div>
           </div>

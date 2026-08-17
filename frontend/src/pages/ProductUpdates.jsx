@@ -1,4 +1,4 @@
-﻿import { Link } from "react-router-dom";
+﻿import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { ArrowRight } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -172,13 +172,13 @@ function ProductUpdatesInner() {
           <p className="text-base mb-8" style={{ color: softText }}>
             Every update goes live for all users the day it ships. Start your free trial to access everything.
           </p>
-          <Link
-            to="/signup"
+          <a
+            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
             className="inline-flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:-translate-y-0.5"
           >
             Get Started Free
             <ArrowRight className="w-5 h-5" />
-          </Link>
+          </a>
         </div>
       </section>
 

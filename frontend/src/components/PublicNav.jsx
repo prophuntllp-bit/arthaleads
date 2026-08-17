@@ -7,6 +7,7 @@ import {
   Code2, GitCompare, Shield, Gift,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
+import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 
 const NAV_RESOURCES = [
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
@@ -296,19 +297,19 @@ function NavInner({ onScrollTo }) {
             >
               {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <Link to="/login"
+            <a href={CRM_LOGIN_URL} {...CRM_LINK_PROPS}
               className="text-sm font-medium transition-colors px-4 py-2"
               style={{ color: textMuted }}
               onMouseEnter={e => (e.currentTarget.style.color = textActive)}
               onMouseLeave={e => (e.currentTarget.style.color = textMuted)}
             >
               Login
-            </Link>
-            <Link to="/signup"
+            </a>
+            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
               className="bg-[#ff6b00] hover:bg-[#e05f00] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all duration-200 shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:-translate-y-0.5"
             >
               Get Started Free
-            </Link>
+            </a>
           </div>
 
           {/* Mobile: theme + hamburger */}
@@ -376,15 +377,15 @@ function NavInner({ onScrollTo }) {
 
             {/* Auth CTAs */}
             <div className="pt-3 flex flex-col gap-2 mt-3" style={{ borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e5e7eb"}` }}>
-              <Link to="/login" onClick={() => setMobileOpen(false)}
+              <a href={CRM_LOGIN_URL} {...CRM_LINK_PROPS} onClick={() => setMobileOpen(false)}
                 className="text-center py-2.5 text-sm font-medium rounded-xl"
                 style={{ color: textMuted, border: `1px solid ${isDark ? "rgba(255,255,255,0.10)" : "#d1d5db"}` }}>
                 Login
-              </Link>
-              <Link to="/signup" onClick={() => setMobileOpen(false)}
+              </a>
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS} onClick={() => setMobileOpen(false)}
                 className="text-center bg-[#ff6b00] text-white py-2.5 rounded-xl text-sm font-semibold">
                 Get Started Free
-              </Link>
+              </a>
             </div>
           </div>
         </div>

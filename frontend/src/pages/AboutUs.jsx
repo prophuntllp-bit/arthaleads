@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import {
   ArrowRight, Check, Zap, Heart, Shield,
   MapPin, Users, BarChart3, Layers, Sparkles,
@@ -460,8 +461,8 @@ export default function AboutUs() {
               No spreadsheets. No missed follow-ups. Your whole team working from one place, set up in under 5 minutes.
             </p>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <Link
-                to="/signup"
+              <a
+                href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 8,
                   background: "#ff6b00", color: "#fff",
@@ -475,7 +476,7 @@ export default function AboutUs() {
               >
                 Start Free Trial
                 <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
+              </a>
               <Link
                 to="/#features"
                 style={{

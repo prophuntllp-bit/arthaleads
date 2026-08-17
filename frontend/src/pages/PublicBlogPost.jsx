@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import DOMPurify from "dompurify";
 import api from "../services/api";
 import { Clock, Calendar, ArrowLeft, Tag, BookOpen, Share2, ChevronRight } from "lucide-react";
@@ -427,12 +428,12 @@ function BlogPostInner() {
           >
             <ArrowLeft className="w-4 h-4" /> More articles
           </Link>
-          <Link
-            to="/signup"
+          <a
+            href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition shadow-sm"
           >
             Try Arthaleads CRM Free →
-          </Link>
+          </a>
         </div>
       </article>
 

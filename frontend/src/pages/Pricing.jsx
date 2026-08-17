@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
 import { Check, Zap, Users, Target, ChevronDown, ArrowRight, Sparkles } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -323,13 +324,13 @@ export default function Pricing() {
 
                   {/* CTA */}
                   {plan.ctaAction === "signup" ? (
-                    <Link
-                      to="/signup"
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center"
+                    <a
+                      href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
                       style={{ background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
                     >
                       {plan.cta}
-                    </Link>
+                    </a>
                   ) : (
                     <a
                       href={`mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}`}

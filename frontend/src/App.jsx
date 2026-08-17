@@ -20,7 +20,21 @@ import { subscribeToPush } from "./utils/pushNotifications";
 import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
 import { hydrateLeadOptions } from "./utils/constants";
+import { CRM_URL } from "./utils/crmLinks";
 import toast from "react-hot-toast";
+
+// ── Marketing / CRM subdomain split ───────────────────────────────────────────
+// The CRM (auth + dashboard) lives on app.arthaleads.com; the marketing site
+// lives on www.arthaleads.com / arthaleads.com. Gating checks exact production
+// hostnames only — localhost and *.vercel.app previews are never gated, so
+// local dev and PR previews keep the full router available.
+const MARKETING_HOSTS = ["www.arthaleads.com", "arthaleads.com"];
+function isAppHost() {
+  return window.location.hostname === "app.arthaleads.com";
+}
+function isMarketingHost() {
+  return MARKETING_HOSTS.includes(window.location.hostname);
+}
 
 // Refresh the lead dropdown options from the backend once per page load, so the
 // client always offers exactly what the API accepts. Falls back silently to the
@@ -527,6 +541,19 @@ function RedirectIfAuth() {
   return <Outlet />;
 }
 
+// Guards every CRM/auth route (login, signup, dashboard, super-admin, ...).
+// Visited on the marketing host, it full-page-redirects to the same path on
+// app.arthaleads.com — the crm_token cookie is domain-scoped to .arthaleads.com
+// so the session carries over with no re-login. No-op everywhere else
+// (app host, localhost, vercel previews).
+function RequireAppHost() {
+  if (isMarketingHost()) {
+    window.location.href = `${CRM_URL}${window.location.pathname}${window.location.search}`;
+    return null;
+  }
+  return <Outlet />;
+}
+
 // ── Admin Layout ─────────────────────────────────────────────────────────────
 // Clean layout for the super admin panel — sidebar + scrollable main
 function AdminLayout() {
@@ -553,7 +580,10 @@ function RequireAdmin() {
   return <AdminLayout />;
 }
 
-// / route: logged-in users → dashboard, guests → Landing marketing page
+// / route: on the app host, guests → /login and authed users → their dashboard
+// (never the marketing Landing page). On the marketing host (or localhost /
+// preview), logged-in users are sent to their dashboard on app.arthaleads.com
+// and guests see Landing as before.
 function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) return (
@@ -561,7 +591,14 @@ function RootRoute() {
       <Spinner size="lg" />
     </div>
   );
-  if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
+  if (isAppHost()) {
+    if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
+    return <Navigate to="/login" replace />;
+  }
+  if (user) {
+    window.location.href = `${CRM_URL}/${user.role === "super_admin" ? "super-admin" : "dashboard"}`;
+    return null;
+  }
   return <Landing />;
 }
 
@@ -593,8 +630,6 @@ export default function App() {
         <Route path="/pricing"              element={<Pricing />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/google-callback"      element={<GoogleCallback />} />
-        <Route path="/forgot-password"      element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />
@@ -607,64 +642,74 @@ export default function App() {
         <Route path="/share-target"         element={<ShareTarget />} />
         <Route path="/form/:token"          element={<PublicLeadForm />} />
 
-        {/* Public routes - redirect to dashboard if already logged in */}
-        <Route element={<RedirectIfAuth />}>
-          <Route path="/login"  element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-        </Route>
+        {/* Everything below lives on the CRM subdomain (app.arthaleads.com) —
+            visited on the marketing host, RequireAppHost bounces to the same
+            path on app.arthaleads.com. */}
+        <Route element={<RequireAppHost />}>
 
-        {/* Admin login - always public (separate from org login) */}
-        <Route path="/admin-login" element={<AdminLogin />} />
-
-        {/* Protected routes */}
-        <Route element={<RequireAuth />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/leads"     element={<Leads />} />
-          <Route path="/pipeline"  element={<LeadPipeline />} />
-          <Route path="/settings"      element={<Settings />} />
-          <Route path="/help-support"  element={<HelpSupport />} />
-          <Route path="/referrals"     element={<Referrals />} />
-          <Route path="/projects"      element={<Projects />} />
-          <Route path="/projects/:id"  element={<ProjectDetail />} />
-          <Route path="/followups"     element={<FollowUps />} />
-          <Route path="/conversations"  element={<Inbox />} />
-          <Route path="/calls"          element={<Calls />} />
-          <Route path="/tasks"         element={<Tasks />} />
-          <Route path="/attendance"    element={<Attendance />} />
-          <Route path="/bookings"      element={<Bookings />} />
-          <Route path="/invoices"      element={<Invoices />} />
-          <Route path="/developers"    element={<Developers />} />
-          <Route path="/plans"         element={<Plans />} />
-
-          {/* Admin + Manager only (managers get read-only Team — see isAdmin
-              gating inside Team.jsx for which actions stay admin-only) */}
-          <Route element={<RequireRole roles={["admin", "manager"]} />}>
-            <Route path="/team" element={<Team />} />
-            <Route path="/automation"  element={<Automation />} />
-            <Route path="/automation/telephony" element={<TelephonyIntegration />} />
-            <Route path="/performance" element={<Performance />} />
-            <Route path="/dump-leads"  element={<DumpLeads />} />
+          {/* Public routes - redirect to dashboard if already logged in */}
+          <Route element={<RedirectIfAuth />}>
+            <Route path="/login"  element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
           </Route>
 
-        </Route>
+          <Route path="/forgot-password"       element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-        {/* Super Admin routes — own layout with AdminSidebar */}
-        <Route element={<RequireAdmin />}>
-          <Route path="/super-admin"                    element={<SuperAdminHome />} />
-          <Route path="/super-admin/orgs"               element={<SuperAdmin />} />
-          <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
-          <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
-          <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
-          <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
-          <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
-          <Route path="/super-admin/audit"              element={<SuperAdminAudit />} />
-          <Route path="/super-admin/insights"          element={<SuperAdminInsights />} />
-          <Route path="/super-admin/orgs/:id"           element={<SuperAdminOrgDetail />} />
-          <Route path="/super-admin/blog"               element={<BlogManager />} />
-          <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
-          <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
-          <Route path="/super-admin/blog/tags"          element={<BlogTags />} />
-          <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
+          {/* Admin login - always public (separate from org login) */}
+          <Route path="/admin-login" element={<AdminLogin />} />
+
+          {/* Protected routes */}
+          <Route element={<RequireAuth />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/leads"     element={<Leads />} />
+            <Route path="/pipeline"  element={<LeadPipeline />} />
+            <Route path="/settings"      element={<Settings />} />
+            <Route path="/help-support"  element={<HelpSupport />} />
+            <Route path="/referrals"     element={<Referrals />} />
+            <Route path="/projects"      element={<Projects />} />
+            <Route path="/projects/:id"  element={<ProjectDetail />} />
+            <Route path="/followups"     element={<FollowUps />} />
+            <Route path="/conversations"  element={<Inbox />} />
+            <Route path="/calls"          element={<Calls />} />
+            <Route path="/tasks"         element={<Tasks />} />
+            <Route path="/attendance"    element={<Attendance />} />
+            <Route path="/bookings"      element={<Bookings />} />
+            <Route path="/invoices"      element={<Invoices />} />
+            <Route path="/developers"    element={<Developers />} />
+            <Route path="/plans"         element={<Plans />} />
+
+            {/* Admin + Manager only (managers get read-only Team — see isAdmin
+                gating inside Team.jsx for which actions stay admin-only) */}
+            <Route element={<RequireRole roles={["admin", "manager"]} />}>
+              <Route path="/team" element={<Team />} />
+              <Route path="/automation"  element={<Automation />} />
+              <Route path="/automation/telephony" element={<TelephonyIntegration />} />
+              <Route path="/performance" element={<Performance />} />
+              <Route path="/dump-leads"  element={<DumpLeads />} />
+            </Route>
+
+          </Route>
+
+          {/* Super Admin routes — own layout with AdminSidebar */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/super-admin"                    element={<SuperAdminHome />} />
+            <Route path="/super-admin/orgs"               element={<SuperAdmin />} />
+            <Route path="/super-admin/users"              element={<SuperAdminUsers />} />
+            <Route path="/super-admin/tickets"            element={<SuperAdminTickets />} />
+            <Route path="/super-admin/analytics"          element={<SuperAdminAnalytics />} />
+            <Route path="/super-admin/revenue"            element={<SuperAdminRevenue />} />
+            <Route path="/super-admin/broadcast"          element={<SuperAdminBroadcast />} />
+            <Route path="/super-admin/audit"              element={<SuperAdminAudit />} />
+            <Route path="/super-admin/insights"          element={<SuperAdminInsights />} />
+            <Route path="/super-admin/orgs/:id"           element={<SuperAdminOrgDetail />} />
+            <Route path="/super-admin/blog"               element={<BlogManager />} />
+            <Route path="/super-admin/blog/new"           element={<BlogEditor />} />
+            <Route path="/super-admin/blog/categories"    element={<BlogCategories />} />
+            <Route path="/super-admin/blog/tags"          element={<BlogTags />} />
+            <Route path="/super-admin/blog/:id/edit"      element={<BlogEditor />} />
+          </Route>
+
         </Route>
 
         {/* Catch-all */}
