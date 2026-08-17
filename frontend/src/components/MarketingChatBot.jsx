@@ -1,13 +1,29 @@
 // components/MarketingChatBot.jsx
-// Floating pre-sales assistant for the public marketing site. Talks to
-// POST /api/public/chat — no login, no CRM data access, knowledge-base only
+// The same Artha assistant from inside the CRM (components/HelpBot.jsx),
+// transplanted onto the public marketing site — same avatar, same panel,
+// same message/typing/chip styling, same "Artha - Help Assistant" header.
+// What's genuinely different: no login, so no page-aware live-data copilot,
+// no guided tours (they target [data-tour] elements that only exist inside
+// the authenticated app), no support tickets, no CRM write actions. Talks to
+// POST /api/public/chat instead of /help/ask — a separate endpoint with a
+// marketing-only knowledge base and zero access to any customer's CRM data
 // (see backend/utils/openai.js MARKETING_SYSTEM_PROMPT). Rendered once from
-// PublicNav so it appears on every marketing page without per-page wiring.
+// PublicNav so it appears on every marketing page with no per-page wiring.
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MessageCircle, X, Send, Bot, ArrowRight } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, ChevronDown } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+
+// Exact values from styles.css's :root / :root.dark --app-* tokens, so this
+// panel matches the real in-app HelpBot pixel-for-pixel regardless of
+// whether the marketing site's own theme toggle happens to also flip the
+// CRM's .dark class (it doesn't — PublicThemeContext is a separate system).
+const THEME = {
+  light: { bg: "#f0ede8", surfaceLow: "rgba(255,255,255,0.38)", text: "#18181b", textSoft: "#5f5f66", border: "rgba(160,65,0,0.12)" },
+  dark:  { bg: "#111113", surfaceLow: "rgba(22,21,24,0.68)",   text: "#ededed", textSoft: "#969696", border: "rgba(255,255,255,0.10)" },
+};
+const PRIMARY = "#ff6b00";
 
 const QUICK_QUESTIONS = [
   "What does Arthaleads do?",
@@ -16,34 +32,33 @@ const QUICK_QUESTIONS = [
   "How do I contact support?",
 ];
 
-const WELCOME_TEXT =
-  "Hi! I'm Artha 👋 Ask me anything about Arthaleads — features, pricing, or how it works for your team.";
+const GREETING = "Hi! I'm Artha 👋 Ask me anything about Arthaleads - features, pricing, or how it works for your team.";
 
-function CtaButton({ cta }) {
+function CtaChip({ cta }) {
   if (cta === "signup") {
     return (
       <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-        className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
-        style={{ background: "#ff6b00", color: "#fff" }}>
-        Start Free Trial <ArrowRight className="w-3 h-3" />
+        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer"
+        style={{ background: "rgba(255,107,0,0.10)", color: PRIMARY, border: "1px solid rgba(255,107,0,0.25)" }}>
+        Start Free Trial <ArrowRight className="h-3 w-3" />
       </a>
     );
   }
   if (cta === "pricing") {
     return (
       <Link to="/pricing"
-        className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
-        style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00", border: "1px solid rgba(255,107,0,0.3)" }}>
-        See Pricing <ArrowRight className="w-3 h-3" />
+        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer"
+        style={{ background: "rgba(255,107,0,0.10)", color: PRIMARY, border: "1px solid rgba(255,107,0,0.25)" }}>
+        See Pricing <ArrowRight className="h-3 w-3" />
       </Link>
     );
   }
   if (cta === "contact") {
     return (
       <Link to="/contact"
-        className="inline-flex items-center gap-1.5 mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
-        style={{ background: "rgba(255,107,0,0.12)", color: "#ff6b00", border: "1px solid rgba(255,107,0,0.3)" }}>
-        Contact Us <ArrowRight className="w-3 h-3" />
+        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer"
+        style={{ background: "rgba(255,107,0,0.10)", color: PRIMARY, border: "1px solid rgba(255,107,0,0.25)" }}>
+        Contact Us <ArrowRight className="h-3 w-3" />
       </Link>
     );
   }
@@ -52,49 +67,49 @@ function CtaButton({ cta }) {
 
 export default function MarketingChatBot() {
   const { isDark } = usePublicTheme();
+  const t = isDark ? THEME.dark : THEME.light;
+
   const [open, setOpen]         = useState(false);
-  const [messages, setMessages] = useState([{ role: "bot", text: WELCOME_TEXT, cta: null }]);
+  const [messages, setMessages] = useState([]); // {role:'user'|'bot', text, cta?}
   const [input, setInput]       = useState("");
   const [loading, setLoading]   = useState(false);
-  const listRef  = useRef(null);
-  const inputRef = useRef(null);
+  const [showCommonQ, setShowCommonQ] = useState(false);
+  const scrollRef = useRef(null);
+  const inputRef  = useRef(null);
 
   useEffect(() => {
-    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
   }, [open]);
 
-  const panelBg     = isDark ? "#12121e" : "#ffffff";
-  const panelBorder = isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb";
-  const headerBg    = isDark ? "#0d0d1a" : "#fff7f0";
-  const heading     = isDark ? "#ffffff" : "#111827";
-  const body        = isDark ? "rgba(255,255,255,0.6)" : "#4b5563";
-  const botBubbleBg = isDark ? "rgba(255,255,255,0.06)" : "#f3f4f6";
-  const inputBg     = isDark ? "rgba(255,255,255,0.05)" : "#f9fafb";
-  const inputBorder = isDark ? "rgba(255,255,255,0.1)" : "#d1d5db";
-
-  const send = async (text) => {
-    const question = (text ?? input).trim();
+  const send = async (e, overrideText) => {
+    e?.preventDefault();
+    const question = (overrideText ?? input).trim();
     if (!question || loading) return;
-    const history = messages.slice(-6);
+    if (!overrideText) setInput("");
+
+    const historyToSend = messages.slice(-6).map((m) => ({
+      role: m.role === "bot" ? "assistant" : "user",
+      text: m.text || "",
+    }));
+
     setMessages((m) => [...m, { role: "user", text: question }]);
-    setInput("");
     setLoading(true);
     try {
       const apiBase = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/api$/, "");
       const res = await fetch(`${apiBase}/api/public/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, history }),
+        body: JSON.stringify({ question, history: historyToSend }),
       });
       const data = await res.json();
       if (data.success) {
         setMessages((m) => [...m, { role: "bot", text: data.answer, cta: data.cta }]);
       } else {
-        setMessages((m) => [...m, { role: "bot", text: data.message || "Something went wrong — please try again.", cta: "contact" }]);
+        setMessages((m) => [...m, { role: "bot", text: data.message || "Something went wrong - please try again.", cta: "contact" }]);
       }
     } catch {
       setMessages((m) => [...m, {
@@ -107,118 +122,148 @@ export default function MarketingChatBot() {
     }
   };
 
+  const resetChat = () => { setMessages([]); setShowCommonQ(false); };
+
   return (
     <>
-      {/* Launcher */}
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-label={open ? "Close chat" : "Open chat"}
-        className="fixed z-[9990] flex items-center justify-center rounded-full shadow-lg transition-transform duration-200 hover:scale-105"
-        style={{
-          right: 24, bottom: 96, width: 56, height: 56,
-          background: "linear-gradient(135deg, #ff6b00, #ffaa00)",
-          boxShadow: "0 8px 28px rgba(255,107,0,0.45)",
-        }}
-      >
-        {open ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-6 h-6 text-white" />}
-      </button>
+      {/* Floating button with pulse ring — exact match to the in-app HelpBot launcher */}
+      {!open && (
+        <div className="fixed z-[997]" style={{ right: 20, bottom: `calc(20px + env(safe-area-inset-bottom, 0px))` }}>
+          <span className="absolute inset-0 rounded-full animate-ping pointer-events-none" style={{ background: "rgba(255,107,0,0.35)" }} />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open chat assistant"
+            className="relative rounded-full shadow-lg transition hover:scale-105 cursor-pointer overflow-hidden"
+            style={{ width: 56, height: 56, background: t.bg }}
+          >
+            <img src="/ai-avatar2.png" alt="Chat assistant" className="w-full h-full object-cover" />
+          </button>
+        </div>
+      )}
 
-      {/* Panel */}
+      {/* Chat panel */}
       {open && (
         <div
-          className="fixed z-[9989] flex flex-col overflow-hidden rounded-2xl shadow-2xl"
+          className="fixed z-[998] flex flex-col overflow-hidden shadow-2xl"
           style={{
-            right: 24, bottom: 164,
-            width: "min(370px, calc(100vw - 32px))",
-            height: "min(520px, calc(100vh - 220px))",
-            background: panelBg,
-            border: `1px solid ${panelBorder}`,
+            right: "max(12px, env(safe-area-inset-right))",
+            bottom: `calc(12px + env(safe-area-inset-bottom, 0px))`,
+            width: "min(390px, calc(100vw - 24px))",
+            height: "min(580px, calc(100vh - 80px))",
+            background: t.bg,
+            border: `1px solid ${t.border}`,
+            borderRadius: 20,
           }}
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3.5" style={{ background: headerBg, borderBottom: `1px solid ${panelBorder}` }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, #ff6b00, #ffaa00)" }}>
-              <Bot className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2.5 px-4 py-3 shrink-0" style={{ borderBottom: `1px solid ${t.border}`, background: "linear-gradient(to right, rgba(255,107,0,0.08), transparent)" }}>
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-full overflow-hidden">
+                <img src="/ai-avatar2.png" alt="Artha" className="w-full h-full object-cover" />
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 bg-green-500" style={{ borderColor: t.bg }} />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-tight" style={{ color: heading }}>Artha</p>
-              <p className="text-[11px] leading-tight" style={{ color: body }}>Ask about Arthaleads</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold leading-tight" style={{ color: t.text }}>Artha - Help Assistant</p>
+              <p className="text-[11px] text-green-500 leading-tight font-medium">Online - Ask me anything</p>
+            </div>
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button type="button" onClick={resetChat} aria-label="Back to home" title="Back to quick answers"
+                  className="p-1.5 rounded-lg transition cursor-pointer" style={{ color: t.textSoft }}>
+                  <MessageCircle className="h-4 w-4" />
+                </button>
+              )}
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close"
+                className="p-1.5 rounded-lg transition cursor-pointer" style={{ color: t.textSoft }}>
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
           {/* Messages */}
-          <div ref={listRef} className="flex-1 overflow-y-auto px-3.5 py-4 space-y-3">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed"
-                  style={
-                    m.role === "user"
-                      ? { background: "#ff6b00", color: "#fff", borderBottomRightRadius: 4 }
-                      : { background: botBubbleBg, color: heading, borderBottomLeftRadius: 4 }
-                  }
-                >
-                  {m.text}
-                  {m.role === "bot" && m.cta && <div><CtaButton cta={m.cta} /></div>}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+            {messages.length === 0 && (
+              <div className="space-y-3">
+                <div className="flex gap-2 items-start">
+                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                  <div className="rounded-2xl rounded-tl-sm px-3 py-2.5 text-sm" style={{ background: t.surfaceLow, color: t.text }}>
+                    {GREETING}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl px-3.5 py-3 flex items-center gap-1" style={{ background: botBubbleBg, borderBottomLeftRadius: 4 }}>
-                  {[0, 1, 2].map((d) => (
-                    <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: body, animationDelay: `${d * 0.15}s` }} />
+
+                <div className="flex flex-col gap-1.5">
+                  {QUICK_QUESTIONS.map((q) => (
+                    <button key={q} type="button" onClick={() => send(null, q)} disabled={loading}
+                      className="w-full text-left rounded-xl px-3 py-2 transition cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                      style={{ border: `1px solid ${t.border}`, color: t.text }}>
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: PRIMARY }} />
+                      <span className="min-w-0 flex-1 text-xs font-medium">{q}</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0" style={{ color: t.textSoft }} />
+                    </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Quick questions — only before the conversation starts */}
-            {messages.length === 1 && !loading && (
-              <div className="flex flex-col gap-1.5 pt-1">
-                {QUICK_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => send(q)}
-                    className="text-left text-xs px-3 py-2 rounded-xl transition-colors"
-                    style={{ background: "transparent", border: `1px solid ${panelBorder}`, color: body }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(255,107,0,0.4)"; e.currentTarget.style.color = "#ff6b00"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = panelBorder; e.currentTarget.style.color = body; }}
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === "user" ? "flex justify-end" : "flex justify-start gap-2 items-start"}>
+                {m.role === "bot" && (
+                  <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                )}
+                <div className="max-w-[80%]">
+                  <div
+                    className={`rounded-2xl px-3 py-2.5 text-sm whitespace-pre-line ${m.role === "bot" ? "rounded-tl-sm" : "rounded-tr-sm"}`}
+                    style={m.role === "user" ? { background: PRIMARY, color: "#fff" } : { background: t.surfaceLow, color: t.text }}
                   >
-                    {q}
-                  </button>
-                ))}
+                    {m.text}
+                  </div>
+                  {m.role === "bot" && m.cta && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <CtaChip cta={m.cta} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex justify-start gap-2 items-start">
+                <img src="/ai-avatar2.png" alt="" className="w-7 h-7 rounded-full shrink-0 mt-0.5 object-cover" />
+                <div className="rounded-2xl rounded-tl-sm px-3 py-2.5" style={{ background: t.surfaceLow }}>
+                  <span className="inline-flex gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "0ms", color: t.text }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "150ms", color: t.text }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-40 animate-bounce" style={{ animationDelay: "300ms", color: t.text }} />
+                  </span>
+                </div>
               </div>
             )}
           </div>
 
           {/* Input */}
-          <div className="flex items-center gap-2 px-3 py-3" style={{ borderTop: `1px solid ${panelBorder}` }}>
+          <form onSubmit={send} className="flex items-center gap-2 px-3 py-3 shrink-0" style={{ borderTop: `1px solid ${t.border}` }}>
             <input
               ref={inputRef}
-              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-              placeholder="Type a question…"
-              disabled={loading}
+              placeholder="Ask about Arthaleads..."
               maxLength={500}
-              className="flex-1 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#ff6b00]/40"
-              style={{ background: inputBg, border: `1px solid ${inputBorder}`, color: heading }}
+              disabled={loading}
+              className="flex-1 rounded-full px-4 py-2 text-sm focus:outline-none"
+              style={{ background: t.surfaceLow, border: `1px solid ${t.border}`, color: t.text }}
             />
             <button
-              type="button"
-              onClick={() => send()}
+              type="submit"
               disabled={loading || !input.trim()}
               aria-label="Send"
-              className="flex-shrink-0 flex items-center justify-center rounded-xl transition-colors disabled:opacity-40"
-              style={{ width: 38, height: 38, background: "#ff6b00" }}
+              className="flex h-9 w-9 items-center justify-center rounded-full shrink-0 cursor-pointer disabled:opacity-50 transition hover:opacity-90"
+              style={{ background: PRIMARY, color: "#fff" }}
             >
-              <Send className="w-4 h-4 text-white" />
+              <Send className="h-4 w-4" />
             </button>
-          </div>
+          </form>
         </div>
       )}
     </>
