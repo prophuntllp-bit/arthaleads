@@ -7,6 +7,36 @@ import { useSEO } from "../utils/useSEO";
 
 const updates = [
   {
+    date: "August 2026",
+    title: "Arthaleads is Now a Native Android App",
+    desc: "Get the full CRM — leads, pipeline, calls, attendance, and AI copilot — in a fast, native Android app built for the field. Push notifications the moment a lead is assigned to you, and the same real-time data as the web app, wherever you are. Ask your admin for the install link.",
+    tags: ["Mobile App", "New Feature"],
+  },
+  {
+    date: "August 2026",
+    title: "Capture Leads Directly from WhatsApp",
+    desc: "Connect WhatsApp as a lead source alongside Facebook and Google. Incoming enquiries on your business WhatsApp number are automatically captured as leads in your CRM — no manual copy-paste from chat threads, no leads lost in a busy inbox.",
+    tags: ["WhatsApp", "Lead Capture", "New Feature"],
+  },
+  {
+    date: "August 2026",
+    title: "Dedicated App Subdomain, Faster & More Secure",
+    desc: "The CRM now runs on its own address, app.arthaleads.com, fully separated from the marketing site for better security and reliability. Also new: rename your organisation any time from Settings, and a one-click 'Forgot your password?' shortcut right from the Change Password screen — no need to log out first.",
+    tags: ["Platform", "Security", "Improvement"],
+  },
+  {
+    date: "July 2026",
+    title: "In-Browser Calling — No Phone Required",
+    desc: "Make and receive calls directly from your browser with the new WebRTC soft phone — no physical handset needed. Full EnableX calling parity has also been extended to Project leads, so every lead in every project gets the same one-tap call, recording, and AI analysis experience.",
+    tags: ["Calls", "New Feature"],
+  },
+  {
+    date: "July 2026",
+    title: "Facebook Lead Form Mapping & Unmapped-Form Alerts",
+    desc: "See exactly which Facebook form each lead came from, right in the lead's Source and Notes. Map form IDs to human-readable names once, and get alerted automatically if a new lead arrives from a form you haven't mapped yet — so nothing silently falls through.",
+    tags: ["Facebook", "Automation", "Improvement"],
+  },
+  {
     date: "June 2026",
     title: "QR Code Lead Capture — Org & Project Level",
     desc: "Every organisation and every project now has its own unique QR code. Put it on site hoardings, brochures, visiting cards, or property expo stalls. When a prospect scans it, they fill a short form on their phone and the lead lands directly in your CRM with source tagged. Download, print, or regenerate the QR from the Leads or Projects page.",
@@ -23,6 +53,12 @@ const updates = [
     title: "AI WhatsApp Draft",
     desc: "Agents can now generate a personalised WhatsApp message for any lead in one click. The AI uses the lead's name, property interest, budget, and last interaction to write a context-aware message. Review, edit if needed, and send. Saves 10–15 minutes per agent per day and improves response quality.",
     tags: ["AI", "WhatsApp", "New Feature"],
+  },
+  {
+    date: "June 2026",
+    title: "AI Call Intelligence — Transcription, Insights & Auto-Status",
+    desc: "Every recorded call is now automatically transcribed and analysed by AI: intent (Interested / Site Visit / Negotiating / Not Interested), sentiment, a summary, key points, and a recommended next action. Turn on AI Auto-Status and the lead's pipeline stage advances automatically the moment the AI hears 'site visit' or 'negotiating' — no manual updates needed.",
+    tags: ["AI", "Calls", "New Feature"],
   },
   {
     date: "May 2026",
