@@ -5,17 +5,18 @@
       "has": [{ "type": "host", "value": "arthaleads.com" }],
       "destination": "https://www.arthaleads.com/$1",
       "permanent": true
+    },
+    {
+      "source": "/robots.txt",
+      "has": [{ "type": "host", "value": "app.arthaleads.com" }],
+      "destination": "/robots-app.txt",
+      "permanent": false
     }
   ],
   "rewrites": [
     {
       "source": "/sitemap.xml",
       "destination": "https://api.arthaleads.com/sitemap.xml"
-    },
-    {
-      "source": "/robots.txt",
-      "has": [{ "type": "host", "value": "app.arthaleads.com" }],
-      "destination": "/robots-app.txt"
     },
     {
       "source": "/(.*)",
