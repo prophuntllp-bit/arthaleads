@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
+import '../login_screen.dart' show ForgotPasswordScreen;
 
 /// Force-uppercases input as the user types — matches web's onChange
 /// transform for GST/PAN/CIN/IFSC (frontend/src/pages/Settings.jsx:351-353).
@@ -611,7 +612,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        Text('Change Password', style: Theme.of(context).textTheme.titleSmall),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Change Password', style: Theme.of(context).textTheme.titleSmall),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+              ),
+              child: const Text(
+                'Forgot your password?',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         LabeledField(
           label: 'Current password',
