@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall } from "lucide-react";
+import { Eye, EyeOff, Zap, Bell, Users, BarChart3, Shield, PhoneCall,
+         MailCheck, Clock, ArrowLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { Spinner } from "../components/UI";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getRecaptchaToken } from "../utils/recaptcha";
+import api from "../services/api";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -18,7 +20,69 @@ export default function Signup() {
   const [form, setForm] = useState({ orgName: "", name: "", email: "", password: "", phone: "" });
   const [referralCode] = useState(() => searchParams.get("ref") || "");
 
+  // Signup is a 3-step flow now: verify the email by OTP, then fill in the
+  // details, then wait for a human to approve the trial.
+  //   "email"   → enter address, receive a code
+  //   "otp"     → enter the 6-digit code
+  //   "details" → org/name/phone/password, submit
+  //   "pending" → request received, awaiting approval
+  const [step, setStep]           = useState("email");
+  const [otp, setOtp]             = useState("");
+  const [maskedEmail, setMasked]  = useState("");
+  const [signupToken, setToken]   = useState("");
+  const [resendIn, setResendIn]   = useState(0);
+
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  // Cooldown so people don't hammer "resend" (the backend caps it at 5 too).
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const sendCode = async (e) => {
+    e?.preventDefault();
+    setError("");
+    const email = form.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    setLoading(true);
+    try {
+      const recaptchaToken = await getRecaptchaToken("signup_send_otp");
+      const { data } = await api.post("/auth/signup/send-otp", { email, recaptchaToken });
+      setMasked(data.maskedEmail || email);
+      setStep("otp");
+      setResendIn(30);
+      toast.success("Verification code sent");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not send the code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyCode = async (e) => {
+    e?.preventDefault();
+    setError("");
+    if (otp.trim().length !== 6) { setError("Enter the 6-digit code"); return; }
+    setLoading(true);
+    try {
+      const { data } = await api.post("/auth/signup/verify-otp", {
+        email: form.email.trim(),
+        otp:   otp.trim(),
+      });
+      setToken(data.signupToken);
+      setStep("details");
+      toast.success("Email verified");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not verify that code.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const triggerGoogle = useGoogleLogin({
     scope: "openid email profile",
@@ -34,7 +98,18 @@ export default function Signup() {
         toast.success("Account ready! Welcome to Arthaleads.");
         navigate("/dashboard");
       } catch (e) {
-        setError(e.response?.data?.message || "Google sign-up failed. Please try again.");
+        const code = e.response?.data?.message;
+        // Google signups are approval-gated too — the backend refuses the
+        // session and returns this code instead of a token.
+        if (code === "PENDING_APPROVAL") {
+          setStep("pending");
+          return;
+        }
+        if (code === "SIGNUP_REJECTED") {
+          setError("This account can't be activated. Please contact support@arthaleads.com.");
+          return;
+        }
+        setError(code || "Google sign-up failed. Please try again.");
       } finally {
         setGLoading(false);
       }
@@ -51,13 +126,31 @@ export default function Signup() {
     setLoading(true);
     try {
       const recaptchaToken = await getRecaptchaToken("signup");
-      await signup({ ...form, recaptchaToken, ...(referralCode ? { referralCode } : {}) });
+      const data = await signup({
+        ...form,
+        signupToken,
+        recaptchaToken,
+        ...(referralCode ? { referralCode } : {}),
+      });
+      // Approval-gated: no session is issued here, so there's nothing to
+      // navigate into. Show the "under review" state instead.
+      if (data?.pending) {
+        setStep("pending");
+        return;
+      }
       toast.success("Account created! Welcome to Arthaleads.");
       navigate("/dashboard");
     } catch (err) {
       const msg = err.response?.data?.message ||
         (err.request ? "Could not reach the server. Please check your connection and try again." : "Something went wrong. Please try again.");
       setError(msg);
+      // Verification expired mid-form — send them back to re-verify rather
+      // than leaving a dead Submit button.
+      if (/verif/i.test(msg) && /expire|match|invalid/i.test(msg)) {
+        setToken("");
+        setOtp("");
+        setStep("email");
+      }
     } finally {
       setLoading(false);
     }
@@ -139,21 +232,122 @@ export default function Signup() {
               <p className="mt-1 text-sm text-app-soft">Start managing real estate leads with your team.</p>
             </div>
 
+            {/* ── Step 4: request submitted, awaiting approval ── */}
+            {step === "pending" && (
+              <div className="py-6 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
+                  style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+                  <Clock className="h-7 w-7" style={{ color: "var(--app-primary)" }} />
+                </div>
+                <h2 className="text-xl font-black text-app">Your request is under review</h2>
+                <p className="mx-auto mt-2 max-w-sm text-sm text-app-soft leading-relaxed">
+                  Thanks{form.name ? `, ${form.name.split(" ")[0]}` : ""}! We review every trial
+                  request personally — usually within one working day. We'll email
+                  <strong className="text-app"> {form.email}</strong> as soon as your account is active.
+                </p>
+                <p className="mx-auto mt-3 max-w-sm text-xs text-app-soft">
+                  Your 14-day trial starts when we activate it, not today — so you won't lose any of it waiting.
+                </p>
+                <Link to="/login" className="btn-secondary mt-6 inline-flex justify-center px-6 py-2.5">
+                  Back to login
+                </Link>
+              </div>
+            )}
+
+            {/* ── Step 1: verify email ── */}
+            {step === "email" && (
+              <form onSubmit={sendCode} className="space-y-4" autoComplete="off">
+                <div>
+                  <label className="label">Work Email</label>
+                  <input className="input" type="email" value={form.email} onChange={set("email")}
+                    placeholder="your@email.com" autoComplete="username" required autoFocus />
+                  <p className="mt-1.5 text-xs text-app-soft">
+                    We'll send a 6-digit code here to confirm it's really you.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" className="btn-primary w-full justify-center py-3 mt-2 disabled:opacity-50" disabled={loading}>
+                  {loading ? <><Spinner size="sm" /><span>Sending code…</span></> : "Send verification code"}
+                </button>
+              </form>
+            )}
+
+            {/* ── Step 2: enter the code ── */}
+            {step === "otp" && (
+              <form onSubmit={verifyCode} className="space-y-4" autoComplete="off">
+                <div className="mb-1 flex flex-col items-center text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+                    style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+                    <MailCheck className="h-6 w-6" style={{ color: "var(--app-primary)" }} />
+                  </div>
+                  <p className="text-sm text-app-soft">
+                    Code sent to <strong className="text-app">{maskedEmail}</strong>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label">6-digit code</label>
+                  <input
+                    className="input text-center text-lg font-bold tracking-[0.4em]"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="······"
+                    autoFocus
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                <button type="submit" className="btn-primary w-full justify-center py-3 disabled:opacity-50" disabled={loading}>
+                  {loading ? <><Spinner size="sm" /><span>Verifying…</span></> : "Verify email"}
+                </button>
+
+                <div className="flex items-center justify-between pt-1">
+                  <button type="button" onClick={() => { setStep("email"); setError(""); setOtp(""); }}
+                    className="inline-flex items-center gap-1 text-xs text-app-soft hover:text-app transition">
+                    <ArrowLeft className="h-3 w-3" /> Change email
+                  </button>
+                  <button type="button" onClick={sendCode} disabled={resendIn > 0 || loading}
+                    className="text-xs font-semibold text-orange-500 hover:text-orange-400 transition disabled:opacity-40">
+                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ── Step 3: account details ── */}
+            {step === "details" && (
             <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+
+              <div className="flex items-center gap-2 rounded-2xl px-3 py-2.5"
+                style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.25)" }}>
+                <MailCheck className="h-4 w-4 shrink-0" style={{ color: "#10b981" }} />
+                <p className="text-xs" style={{ color: "#10b981" }}>
+                  <strong>{form.email}</strong> verified
+                </p>
+              </div>
 
               <div>
                 <label className="label">Company / Organization Name</label>
-                <input className="input" value={form.orgName} onChange={set("orgName")} placeholder="Your company or organization name" autoComplete="organization" required minLength={2} />
+                <input className="input" value={form.orgName} onChange={set("orgName")} placeholder="Your company or organization name" autoComplete="organization" required minLength={2} autoFocus />
               </div>
 
               <div>
                 <label className="label">Your Full Name</label>
                 <input className="input" value={form.name} onChange={set("name")} placeholder="Enter your full name" autoComplete="name" required minLength={2} />
-              </div>
-
-              <div>
-                <label className="label">Work Email</label>
-                <input className="input" type="email" value={form.email} onChange={set("email")} placeholder="your@email.com" autoComplete="username" required />
               </div>
 
               <div>
@@ -205,13 +399,19 @@ export default function Signup() {
                 disabled={loading}
               >
                 {loading ? (
-                  <><Spinner size="sm" /><span>Creating account…</span></>
+                  <><Spinner size="sm" /><span>Submitting request…</span></>
                 ) : (
-                  "Create Account"
+                  "Request your free trial"
                 )}
               </button>
             </form>
+            )}
 
+            {/* Google sign-up is its own verified path (Google has already
+                confirmed the address), so it's only offered at the first step —
+                showing it mid-OTP or after the details form would be confusing. */}
+            {step === "email" && (
+            <>
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1" style={{ background: "var(--app-border)" }} />
               <span className="text-xs text-app-soft">or sign up with</span>
@@ -239,11 +439,15 @@ export default function Signup() {
                 </>
               )}
             </button>
+            </>
+            )}
 
-            <p className="mt-6 text-center text-sm text-app-soft">
-              Already have an account?{" "}
-              <Link to="/login" className="font-semibold text-orange-500 hover:underline">Sign in</Link>
-            </p>
+            {step !== "pending" && (
+              <p className="mt-6 text-center text-sm text-app-soft">
+                Already have an account?{" "}
+                <Link to="/login" className="font-semibold text-orange-500 hover:underline">Sign in</Link>
+              </p>
+            )}
           </div>
         </div>
       </div>

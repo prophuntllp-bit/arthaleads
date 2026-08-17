@@ -18,8 +18,29 @@ const signToken = (id) =>
     expiresIn: process.env.JWT_EXPIRES_IN || "30d",
   });
 
+// Refuse to mint a session for an org that hasn't cleared the trial approval
+// gate. Thrown as bare codes (not prose) to match the existing
+// ORGANISATION_INACTIVE / TRIAL_EXPIRED contract the frontend already switches
+// on — see middlewares/auth.js and frontend/src/services/api.js.
+// super_admin is exempt: platform-level access, no org of its own.
+async function assertOrgApproved(user) {
+  if (!user || user.role === "super_admin" || !user.orgId) return;
+  const org = await Organization.findById(user.orgId).select("approvalStatus").lean();
+  if (!org) return;
+  if (org.approvalStatus === "pending")  throw new AppError("PENDING_APPROVAL", 403);
+  if (org.approvalStatus === "rejected") throw new AppError("SIGNUP_REJECTED", 403);
+}
+
 const authService = {
-  async signup(data) {
+  // Self-serve signup. The caller (authController.signup) has already proven
+  // the person controls `data.email` via the OTP step — this never runs on an
+  // unverified address.
+  //
+  // The org is created as approvalStatus:"pending" and NO session token is
+  // issued: a super admin has to approve the request before the CRM opens up
+  // (see superAdminController.approveOrg, which is also where the trial clock
+  // starts — otherwise the 14 days would burn down while they wait).
+  async signup(data, meta = {}) {
     const normalizedEmail = (data.email || "").toLowerCase().trim();
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) throw new AppError("Email already registered", 409);
@@ -33,7 +54,14 @@ const authService = {
     const slugExists = await Organization.findOne({ slug });
     if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
 
-    const org = await Organization.create({ name: orgName, slug });
+    const org = await Organization.create({
+      name: orgName,
+      slug,
+      approvalStatus:  "pending",
+      trialEndsAt:     null,        // clock starts on approval, not on request
+      signupIp:        meta.ip || "",
+      signupUserAgent: (meta.userAgent || "").slice(0, 300),
+    });
 
     // Attribute referral if a valid code was passed
     if (data.referralCode) {
@@ -49,17 +77,16 @@ const authService = {
     try {
       user = await User.create({ ...data, email: normalizedEmail, phone: normPhone, orgId: org._id, role: "admin" });
     } catch (err) {
+      // Roll the org back so a failed user insert doesn't strand an empty
+      // pending org in the review queue.
+      await Organization.deleteOne({ _id: org._id }).catch(() => {});
       if (err.code === 11000) throw new AppError("Email already registered", 409);
       throw err;
     }
-    const token = signToken(user._id);
 
-    // Fire-and-forget welcome email - don't block the signup response
-    sendWelcomeEmail(user.email, user.name, org.name)
-      .then(() => console.log(`[signup] ✅ welcome email sent to ${user.email}`))
-      .catch((err) => console.error(`[signup] ❌ welcome email failed:`, err.message));
-
-    return { token, user, org };
+    // No welcome email yet — that goes out on approval. Nothing to send here
+    // beyond the "request received" note the controller handles.
+    return { user, org, pending: true };
   },
 
   async login(identifier, password, ip = "unknown") {
@@ -107,6 +134,11 @@ const authService = {
       }
       throw new AppError("Invalid email/phone or password", 401);
     }
+
+    // Credentials are good — but a pending/rejected org gets no session.
+    // Checked before the lastLogin write so a blocked attempt doesn't look
+    // like a successful sign-in in the audit trail.
+    await assertOrgApproved(user);
 
     // ── Successful login - reset lockout fields ───────────────────────────────
     user.loginAttempts = 0;
@@ -215,12 +247,21 @@ const authService = {
         if (picture && !user.avatar) user.avatar = picture;
       }
     } else {
-      // New Google user - create their own org and make them admin
+      // New Google user - create their own org and make them admin.
+      // Google has already verified the address, so there's no OTP step here —
+      // but the org still lands as "pending" and goes through the same approval
+      // queue as a form signup. This path used to hand out an instant trial with
+      // no gate at all, which is how most of the junk orgs got created.
       const orgName = `${name}'s Workspace`;
       let slug = Organization.generateSlug(orgName);
       const slugExists = await Organization.findOne({ slug });
       if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
-      const org = await Organization.create({ name: orgName, slug });
+      const org = await Organization.create({
+        name: orgName,
+        slug,
+        approvalStatus: "pending",
+        trialEndsAt:    null,   // clock starts on approval
+      });
 
       user = await User.create({
         name,
@@ -230,12 +271,12 @@ const authService = {
         role: "admin",
         orgId: org._id,
       });
-
-      // Fire-and-forget welcome email for new Google signups
-      sendWelcomeEmail(user.email, user.name, org.name)
-        .then(() => console.log(`[googleAuth] ✅ welcome email sent to ${user.email}`))
-        .catch((err) => console.error(`[googleAuth] ❌ welcome email failed:`, err.message));
+      // Welcome email goes out on approval, not here.
     }
+
+    // Blocks both a brand-new pending signup and an existing user whose org is
+    // still awaiting review.
+    await assertOrgApproved(user);
 
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });
@@ -437,6 +478,9 @@ const authService = {
     user.passwordResetExpires = undefined;
     await user.save();
 
+    // Password is updated either way, but a pending org still gets no session.
+    await assertOrgApproved(user);
+
     const token = signToken(user._id);
     const org   = user.orgId
       ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
@@ -459,6 +503,7 @@ const authService = {
       );
     }
     if (!user.isActive) throw new AppError("Account deactivated. Contact admin.", 403);
+    await assertOrgApproved(user);
 
     user.lastLogin = new Date();
     await user.save({ validateBeforeSave: false });

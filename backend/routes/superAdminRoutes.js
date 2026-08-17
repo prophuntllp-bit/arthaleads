@@ -11,6 +11,8 @@ router.get("/orgs/:id",               ctrl.getOrgDetail);
 router.patch("/orgs/:id",             ctrl.updateOrg);
 router.patch("/orgs/:id/logo",        ctrl.updateLogo);
 router.patch("/orgs/:id/extend-trial", ctrl.extendTrial);
+router.post("/orgs/:id/approve",      ctrl.approveOrg);
+router.post("/orgs/:id/reject",       ctrl.rejectOrg);
 router.post("/orgs/:id/impersonate",  ctrl.impersonate);
 router.get("/audit",                  ctrl.listAudit);
 router.get("/users",                  ctrl.listUsers);

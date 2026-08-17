@@ -7,6 +7,8 @@ const User        = require("../models/User");
 const AuditLog    = require("../models/AuditLog");
 const { AppError } = require("../middlewares/errorHandler");
 const { verifyRecaptcha } = require("../utils/recaptcha");
+const { isDisposableEmail } = require("../utils/emailDomains");
+const { sendSignupPendingEmail, notifySuperAdminsOfSignup } = require("../utils/email");
 
 function _auditLog(req, action, extras = {}) {
   AuditLog.create({
@@ -46,14 +48,60 @@ function sendAuthResponse(res, statusCode, data) {
 }
 
 const authController = {
+  // Step 3 of 3: create the account. Requires the signupToken minted by
+  // signupVerifyOtp, so an account can only ever be created on an address
+  // someone proved they can read.
   async signup(req, res, next) {
     try {
       // reCAPTCHA check temporarily disabled — same production misconfiguration
       // (secret key / Google siteverify reachability) that blocked all logins was
       // also blocking every signup. Re-enable once RECAPTCHA_SECRET_KEY is
       // verified against the site key baked into the frontend build.
-      const data = await authService.signup(req.body);
-      sendAuthResponse(res, 201, data);
+      const { signupToken, ...rest } = req.body;
+
+      // This check is the whole point of the OTP step. Before, the token was
+      // issued and then never looked at again — and the Joi schema's
+      // stripUnknown quietly dropped it from the body anyway — so signup was
+      // wide open to anyone POSTing straight at the endpoint.
+      if (!signupToken) {
+        return next(new AppError("Please verify your email address before creating an account.", 400));
+      }
+      let payload;
+      try {
+        payload = jwt.verify(signupToken, process.env.JWT_SECRET);
+      } catch {
+        return next(new AppError("Your email verification expired. Please verify again.", 400));
+      }
+      if (payload.type !== "signup_verify") {
+        return next(new AppError("Invalid verification token.", 400));
+      }
+      // The verified address must be the one being registered — otherwise a
+      // token earned for an address you control could be used to open an
+      // account under someone else's.
+      const claimed = String(rest.email || "").toLowerCase().trim();
+      if (String(payload.email || "").toLowerCase() !== claimed) {
+        return next(new AppError("Verification doesn't match this email address.", 400));
+      }
+
+      const { user, org } = await authService.signup(rest, {
+        ip:        req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+
+      // Fire-and-forget: confirm to the applicant, and ping the super admins
+      // so a pending request doesn't sit unnoticed in the queue.
+      sendSignupPendingEmail(user.email, user.name, org.name)
+        .catch((e) => console.error("[signup] applicant email failed:", e.message));
+      notifySuperAdminsOfSignup({ name: user.name, email: user.email, phone: user.phone, orgName: org.name })
+        .catch((e) => console.error("[signup] super-admin notify failed:", e.message));
+
+      // Deliberately NO auth cookie — the org is pending review and must not
+      // get a session until a super admin approves it.
+      res.status(201).json({
+        success: true,
+        pending: true,
+        message: "Thanks! Your trial request is under review. We'll email you as soon as it's activated.",
+      });
     } catch (err) {
       next(err);
     }
@@ -245,34 +293,60 @@ const authController = {
     }
   },
 
-  // ── Signup phone verification ─────────────────────────────────────────────
+  // ── Signup email verification ─────────────────────────────────────────────
+  // Step 1 of 3: prove the person controls the address they signed up with.
+  // (This step previously claimed to verify a PHONE number but mailed the code
+  // to the typed email — so it never proved anything about the phone. Phone
+  // verification is deliberately out of scope for now; the approval queue is
+  // what actually screens signups.)
   async signupSendOtp(req, res, next) {
     try {
-      const { phone, email, recaptchaToken } = req.body;
+      const { email, recaptchaToken } = req.body;
       const ok = await verifyRecaptcha(recaptchaToken, "signup_send_otp");
       if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
-      if (!phone || !email) return next(new AppError("Phone and email are required", 400));
+      if (!email) return next(new AppError("Email is required", 400));
 
-      // Basic email format check before sending an OTP to it
-      if (!email.includes("@") || !email.includes(".")) {
+      const normEmail = String(email).toLowerCase().trim();
+      // Same shape check the signup schema enforces, applied up front so a
+      // typo'd address fails here rather than after an OTP is burnt on it.
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normEmail)) {
         return next(new AppError("Enter a valid email address", 400));
       }
+      if (isDisposableEmail(normEmail)) {
+        return next(new AppError(
+          "Temporary/disposable email addresses aren't accepted. Please sign up with your regular work or personal email.",
+          400
+        ));
+      }
 
-      const norm = normPhone(phone);
-      if (norm.length !== 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));
+      // Reject if the address already has an account
+      const taken = await User.findOne({ email: normEmail });
+      if (taken) return next(new AppError("This email is already registered. Please log in instead.", 409));
 
-      // Reject if phone is already used by an existing account
-      const taken = await User.findOne({ phone: { $in: [norm, `+91${norm}`, `91${norm}`, `0${norm}`] } });
-      if (taken) return next(new AppError("This phone number is already registered. Please use a different number or log in.", 409));
+      // Cap resends per address so this can't be used to mail-bomb someone.
+      // The record is TTL'd at expiresAt, so the window resets naturally.
+      const existing = await SignupOtp.findOne({ email: normEmail });
+      if (existing && existing.sendCount >= 5) {
+        return next(new AppError("Too many codes requested for this email. Please wait a few minutes and try again.", 429));
+      }
 
       const otp     = String(crypto.randomInt(100000, 999999));
       const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-      // Upsert: one record per phone (replace any previous attempt)
+      // Upsert: one live code per address. Resending replaces the previous code
+      // and resets the guess counter, but keeps counting sends.
+      // (Computed rather than $inc'd because $inc and $setOnInsert on the same
+      // path is a Mongo update conflict. sendCount is a soft anti-mail-bomb
+      // cap, not a security boundary, so a racy double-send is acceptable —
+      // the auth rate limiter is the hard backstop.)
       await SignupOtp.findOneAndUpdate(
-        { phone: norm },
-        { phone: norm, email: email.toLowerCase().trim(), otpHash, expiresAt },
+        { email: normEmail },
+        {
+          email: normEmail, otpHash, expiresAt, attempts: 0,
+          ip: req.ip || "",
+          sendCount: existing ? existing.sendCount + 1 : 1,
+        },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
@@ -283,8 +357,8 @@ const authController = {
 
       await resend.emails.send({
         from,
-        to:      email.toLowerCase().trim(),
-        subject: `${otp} — Verify your phone number on Arthaleads`,
+        to:      normEmail,
+        subject: `${otp} — Verify your email to start your Arthaleads trial`,
         html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"/></head>
@@ -297,10 +371,10 @@ const authController = {
             style="display:inline-block;border-radius:14px;" />
         </td></tr>
         <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Phone Verification</p>
-          <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#fff;">Verify your mobile number</h1>
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Email Verification</p>
+          <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#fff;">Verify your email address</h1>
           <p style="margin:0 0 28px;font-size:15px;color:#a8a29e;line-height:1.6;">
-            Use the code below to verify your mobile number during signup. It expires in <strong style="color:#fff;">5 minutes</strong>.
+            Use the code below to continue setting up your Arthaleads trial. It expires in <strong style="color:#fff;">10 minutes</strong>.
           </p>
           <div style="background:#292524;border:1px solid #3d3835;border-radius:14px;padding:24px;text-align:center;margin-bottom:28px;">
             <span style="font-size:40px;font-weight:900;letter-spacing:.25em;color:#f97316;">${otp}</span>
@@ -318,9 +392,9 @@ const authController = {
       });
 
       // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
-      const atIdx = email.lastIndexOf("@");
-      const local  = email.slice(0, atIdx);
-      const domain = email.slice(atIdx + 1);
+      const atIdx  = normEmail.lastIndexOf("@");
+      const local  = normEmail.slice(0, atIdx);
+      const domain = normEmail.slice(atIdx + 1);
       const masked = local.length <= 2 ? `${local[0]}***@${domain}` : `${local[0]}${local[1]}***@${domain}`;
       res.json({ success: true, maskedEmail: masked });
     } catch (err) {
@@ -328,17 +402,20 @@ const authController = {
     }
   },
 
+  // Step 2 of 3: exchange a correct code for a short-lived signup token.
+  // That token is what proves the email was verified — signup() below refuses
+  // to create an account without a valid one.
   async signupVerifyOtp(req, res, next) {
     try {
-      const { phone, otp } = req.body;
-      if (!phone || !otp) return next(new AppError("Phone and OTP are required", 400));
+      const { email, otp } = req.body;
+      if (!email || !otp) return next(new AppError("Email and OTP are required", 400));
       if (String(otp).length !== 6) return next(new AppError("OTP must be 6 digits", 400));
 
-      const norm   = normPhone(phone);
-      const record = await SignupOtp.findOne({ phone: norm });
+      const normEmail = String(email).toLowerCase().trim();
+      const record    = await SignupOtp.findOne({ email: normEmail });
 
-      if (!record)                                    return next(new AppError("OTP not found. Please request a new one.", 400));
-      if (Date.now() > new Date(record.expiresAt).getTime()) return next(new AppError("OTP has expired. Please request a new one.", 400));
+      if (!record)                                          return next(new AppError("Code not found. Please request a new one.", 400));
+      if (Date.now() > new Date(record.expiresAt).getTime()) return next(new AppError("Code has expired. Please request a new one.", 400));
 
       const hash = crypto.createHash("sha256").update(String(otp)).digest("hex");
       if (hash !== record.otpHash) {
@@ -346,28 +423,28 @@ const authController = {
         // IP rate limiter alone is bypassable with rotating proxies. Cap guesses per
         // OTP to 5 — after that the record is destroyed and a new OTP is required.
         const updated = await SignupOtp.findOneAndUpdate(
-          { phone: norm },
+          { email: normEmail },
           { $inc: { attempts: 1 } },
           { new: true }
         );
         if (updated && updated.attempts >= 5) {
-          await SignupOtp.deleteOne({ phone: norm });
-          return next(new AppError("Too many incorrect attempts. Please request a new OTP.", 429));
+          await SignupOtp.deleteOne({ email: normEmail });
+          return next(new AppError("Too many incorrect attempts. Please request a new code.", 429));
         }
-        return next(new AppError("Invalid OTP. Please check and try again.", 400));
+        return next(new AppError("Invalid code. Please check and try again.", 400));
       }
 
-      // Issue a short-lived phone-verified token (15 min) — included in signup body
-      const phoneToken = jwt.sign(
-        { phone: norm, email: record.email, type: "phone_verify" },
+      // Short-lived proof-of-email-ownership, submitted with the signup form.
+      const signupToken = jwt.sign(
+        { email: normEmail, type: "signup_verify" },
         process.env.JWT_SECRET,
-        { expiresIn: "15m" }
+        { expiresIn: "30m" }
       );
 
       // Delete the used OTP record
-      await SignupOtp.deleteOne({ phone: norm });
+      await SignupOtp.deleteOne({ email: normEmail });
 
-      res.json({ success: true, phoneToken });
+      res.json({ success: true, signupToken });
     } catch (err) {
       next(new AppError(err.message || "OTP verification failed", 500));
     }

@@ -1383,6 +1383,99 @@ function MigrateLogosButton() {
   );
 }
 
+// ── PendingApprovals ──────────────────────────────────────────────────────────
+// Self-serve signups land here instead of getting an instant trial. Approving
+// starts the 14-day clock (see superAdminController.approveOrg) — so a slow
+// review never eats into the customer's trial.
+function PendingApprovals({ orgs, onChanged }) {
+  const [busyId, setBusyId] = useState(null);
+  const pending = orgs.filter((o) => o.approvalStatus === "pending");
+
+  if (!pending.length) return null;
+
+  const approve = async (org) => {
+    setBusyId(org._id);
+    try {
+      const { data } = await api.post(`/super-admin/orgs/${org._id}/approve`);
+      toast.success(`${org.name} approved — 14-day trial started`);
+      onChanged(data.org);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not approve");
+    } finally { setBusyId(null); }
+  };
+
+  const reject = async (org) => {
+    const reason = window.prompt(
+      `Reject "${org.name}"?\n\nOptional note (included in the email to them):`,
+      ""
+    );
+    if (reason === null) return; // cancelled
+    setBusyId(org._id);
+    try {
+      const { data } = await api.post(`/super-admin/orgs/${org._id}/reject`, { reason });
+      toast.success(`${org.name} rejected`);
+      onChanged(data.org);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not reject");
+    } finally { setBusyId(null); }
+  };
+
+  const fmt = (d) => d
+    ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "—";
+
+  return (
+    <div className="card overflow-hidden mb-5"
+      style={{ borderColor: "rgba(245,158,11,0.35)" }}>
+      <div className="flex items-center gap-3 px-4 py-3 border-b"
+        style={{ borderColor: "var(--app-border)", background: "rgba(245,158,11,0.06)" }}>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(245,158,11,0.15)" }}>
+          <Clock className="w-4 h-4" style={{ color: "#f59e0b" }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="font-bold text-app text-sm">Pending trial requests</h2>
+          <p className="text-[11px] text-app-soft">Email verified · awaiting your approval before the trial starts</p>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+          style={{ background: "rgba(245,158,11,0.15)", color: "#d97706" }}>
+          {pending.length}
+        </span>
+      </div>
+
+      <div className="divide-y" style={{ borderColor: "var(--app-border)" }}>
+        {pending.map((org) => (
+          <div key={org._id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-sm font-bold text-app">{org.name}</p>
+              <p className="text-xs text-app-soft mt-0.5">
+                Requested {fmt(org.createdAt)}
+                {org.signupIp ? ` · ${org.signupIp}` : ""}
+              </p>
+            </div>
+            <Link to={`/super-admin/orgs/${org._id}`}
+              className="text-[11px] font-semibold hover:underline shrink-0"
+              style={{ color: "var(--app-primary)" }}>
+              View details →
+            </Link>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => reject(org)} disabled={busyId === org._id}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-red-500 border border-red-500/30 hover:bg-red-500/10 transition disabled:opacity-50">
+                Reject
+              </button>
+              <button onClick={() => approve(org)} disabled={busyId === org._id}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-white transition disabled:opacity-50"
+                style={{ background: "#16a34a" }}>
+                {busyId === org._id ? "Working…" : "Approve"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SuperAdmin() {
   useEffect(() => { document.title = "Organizations · Arthaleads Admin"; }, []);
 
@@ -1443,6 +1536,9 @@ export default function SuperAdmin() {
           </div>
         </div>
       </div>
+
+      {/* ── Pending trial requests (renders nothing when the queue is empty) ── */}
+      <PendingApprovals orgs={orgs} onChanged={handleOrgUpdated} />
 
       {/* ── Orgs table ── */}
       {(

@@ -118,10 +118,13 @@ export function AuthProvider({ children }) {
       return data;
     }), [withAuthInProgress, persist]);
 
+  // Signup no longer logs anyone in: the org is created as pending and a super
+  // admin has to approve it first, so the response carries { pending: true }
+  // and no token. Caller shows the "under review" screen.
   const signup = useCallback((payload) =>
     withAuthInProgress(async () => {
       const { data } = await api.post("/auth/signup", payload);
-      persist(data.user, data.org, data.token);
+      if (!data.pending && data.token) persist(data.user, data.org, data.token);
       return data;
     }), [withAuthInProgress, persist]);
 

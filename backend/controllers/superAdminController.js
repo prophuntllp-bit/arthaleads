@@ -11,6 +11,7 @@ const AuditLog    = require("../models/AuditLog");
 const AiUsage     = require("../models/AiUsage");
 const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
+const { sendSignupApprovedEmail, sendSignupRejectedEmail } = require("../utils/email");
 const { runBackup } = require("../utils/backup");
 const { invalidateOrgCache } = require("../middlewares/auth");
 
@@ -170,6 +171,73 @@ const superAdminController = {
     } catch (err) {
       next(err);
     }
+  },
+
+  // POST /api/super-admin/orgs/:id/approve — activate a pending trial request.
+  // The 14-day clock starts HERE, not at signup, so a slow review doesn't eat
+  // into the customer's trial.
+  async approveOrg(req, res, next) {
+    try {
+      const org = await Organization.findById(req.params.id);
+      if (!org) return next(new AppError("Organisation not found", 404));
+      if (org.approvalStatus === "approved") {
+        return next(new AppError("This organisation is already approved.", 400));
+      }
+
+      const trialDays = Number(req.body.trialDays) > 0 ? Math.min(Number(req.body.trialDays), 90) : 14;
+
+      org.approvalStatus = "approved";
+      org.approvedAt     = new Date();
+      org.approvedBy     = req.user._id;
+      org.rejectedReason = "";
+      org.isActive       = true;
+      org.trialEndsAt    = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+      await org.save({ validateBeforeSave: false });
+
+      invalidateOrgCache(org._id);
+
+      const admin = await User.findOne({ orgId: org._id, role: "admin" }).select("email name").lean();
+      if (admin) {
+        sendSignupApprovedEmail(admin.email, admin.name, org.name)
+          .catch((e) => console.error("[approveOrg] email failed:", e.message));
+      }
+
+      logAudit("org_approved", req, {
+        targetOrg: org._id, targetOrgName: org.name, details: { trialDays },
+      });
+
+      res.json({ success: true, org });
+    } catch (err) { next(err); }
+  },
+
+  // POST /api/super-admin/orgs/:id/reject — decline a pending trial request.
+  // Kept as a status rather than a delete so the record stays reviewable and
+  // the same email can't immediately re-register.
+  async rejectOrg(req, res, next) {
+    try {
+      const { reason } = req.body;
+      const org = await Organization.findById(req.params.id);
+      if (!org) return next(new AppError("Organisation not found", 404));
+
+      org.approvalStatus = "rejected";
+      org.rejectedReason = String(reason || "").slice(0, 500);
+      org.isActive       = false;
+      await org.save({ validateBeforeSave: false });
+
+      invalidateOrgCache(org._id);
+
+      const admin = await User.findOne({ orgId: org._id, role: "admin" }).select("email name").lean();
+      if (admin) {
+        sendSignupRejectedEmail(admin.email, admin.name, org.rejectedReason)
+          .catch((e) => console.error("[rejectOrg] email failed:", e.message));
+      }
+
+      logAudit("org_rejected", req, {
+        targetOrg: org._id, targetOrgName: org.name, details: { reason: org.rejectedReason },
+      });
+
+      res.json({ success: true, org });
+    } catch (err) { next(err); }
   },
 
   // PATCH /api/super-admin/orgs/:id/extend-trial - extend an org's trial period

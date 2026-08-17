@@ -26,6 +26,14 @@ const signupSchema = Joi.object({
   password:     passwordSchema.required(),
   phone:        Joi.string().min(10).max(15).required(),
   referralCode: Joi.string().length(6).uppercase().alphanum().optional().allow("", null),
+  // Proof the email was verified via OTP. MUST be declared here — validate()
+  // runs with stripUnknown:true, so an undeclared field is silently dropped
+  // before the controller ever sees it (which is exactly how the original
+  // verification step ended up being a no-op).
+  signupToken:  Joi.string().required(),
+  // Frontend sends this for the (currently disabled) reCAPTCHA check; declared
+  // so it isn't rejected outright, ignored by the controller.
+  recaptchaToken: Joi.string().optional().allow("", null),
 });
 
 const loginSchema = Joi.object({

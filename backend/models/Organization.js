@@ -26,6 +26,25 @@ const orgSchema = new mongoose.Schema(
       default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
     },
     isActive: { type: Boolean, default: true },
+    // ── Trial approval gate ───────────────────────────────────────────────────
+    // Self-serve signups land as "pending" and cannot access the CRM until a
+    // super admin approves them (see superAdminController.approveOrg). Defaults
+    // to "approved" so every OTHER creation path — existing orgs, admin-created
+    // orgs, seeds — keeps working untouched; the signup flow opts in to
+    // "pending" explicitly. Failing open here is deliberate: a missed default
+    // should never lock a paying customer out.
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "approved",
+      index: true,
+    },
+    approvedAt:     { type: Date, default: null },
+    approvedBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    rejectedReason: { type: String, default: "" },
+    // Captured at signup purely to help review a pending request.
+    signupIp:        { type: String, default: "" },
+    signupUserAgent: { type: String, default: "" },
     industry:    { type: String, default: "Real Estate" },
     companySize: { type: String, default: "" },
     city:        { type: String, default: "" },

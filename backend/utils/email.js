@@ -370,4 +370,131 @@ async function sendTeamInviteEmail(toEmail, toName, orgName, addedByName) {
   return data;
 }
 
-module.exports = { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail };
+// ── Signup received (pending approval) ────────────────────────────────────────
+// Sent immediately after a self-serve signup. The account exists but is gated
+// until a super admin approves it — see superAdminController.approveOrg.
+async function sendSignupPendingEmail(toEmail, toName, orgName) {
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: toEmail,
+    subject: "We've received your Arthaleads trial request",
+    html: cardEmail({
+      iconEmoji: "⏳",
+      headerHtml: `
+        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Request Received</p>
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">You're almost in</h1>`,
+      bodyHtml: `
+        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
+          Hi ${toName || "there"}, thanks for requesting a trial of Arthaleads for
+          <strong style="color:#ededed;">${orgName}</strong>.
+        </p>
+        <p style="margin:0 0 18px;font-size:15px;color:#969696;line-height:1.65;">
+          Our team reviews every trial request personally — usually within one working day.
+          You'll get an email the moment your account is activated, and your 14-day trial
+          starts from then, not from today.
+        </p>
+        ${divider}
+        <p style="margin:0;font-size:13px;color:#777;line-height:1.6;">
+          Didn't request this? You can safely ignore this email — no account will be activated.
+        </p>`,
+      footerNote: "You're receiving this because someone requested an Arthaleads trial with this address.",
+    }),
+  });
+}
+
+// ── Trial approved ────────────────────────────────────────────────────────────
+async function sendSignupApprovedEmail(toEmail, toName, orgName) {
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: toEmail,
+    subject: "Your Arthaleads trial is live 🎉",
+    html: cardEmail({
+      iconEmoji: "🎉",
+      headerHtml: `
+        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Trial Activated</p>
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">Welcome to Arthaleads</h1>`,
+      bodyHtml: `
+        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
+          Hi ${toName || "there"}, your account for <strong style="color:#ededed;">${orgName}</strong>
+          has been approved. Your 14-day free trial starts now.
+        </p>
+        ${ctaButton(LOGIN_URL, "Log in to your CRM")}
+        <p style="margin:0;font-size:13px;color:#777;line-height:1.6;">
+          Log in with the email and password you signed up with. Need a hand getting started?
+          Just reply to this email.
+        </p>`,
+      footerNote: "Your 14-day trial has started today.",
+    }),
+  });
+}
+
+// ── Trial request declined ────────────────────────────────────────────────────
+async function sendSignupRejectedEmail(toEmail, toName, reason) {
+  const resend = getResend();
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: toEmail,
+    subject: "About your Arthaleads trial request",
+    html: cardEmail({
+      iconEmoji: "📄",
+      headerHtml: `
+        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Trial Request</p>
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">We couldn't activate this one</h1>`,
+      bodyHtml: `
+        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
+          Hi ${toName || "there"}, we weren't able to activate a trial for this request.
+        </p>
+        ${reason ? `<p style="margin:0 0 18px;font-size:15px;color:#969696;line-height:1.65;">${reason}</p>` : ""}
+        <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
+          If you think this was a mistake, reply to this email and we'll take another look.
+        </p>`,
+      footerNote: "Questions? Just reply to this email.",
+    }),
+  });
+}
+
+// ── Internal: new pending signup needs review ─────────────────────────────────
+// Mails every active super_admin so a request doesn't sit unnoticed in the
+// queue. Looks the recipients up from the DB rather than an env var so it stays
+// correct as the admin team changes.
+async function notifySuperAdminsOfSignup({ name, email, phone, orgName }) {
+  const User   = require("../models/User");
+  const admins = await User.find({ role: "super_admin", isActive: true }).select("email").lean();
+  if (!admins.length) return;
+
+  const resend    = getResend();
+  const reviewUrl = `${(process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(/\/$/, "")}/super-admin/orgs`;
+
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: admins.map((a) => a.email),
+    subject: `New trial request: ${orgName}`,
+    html: cardEmail({
+      iconEmoji: "🔔",
+      headerHtml: `
+        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Pending Approval</p>
+        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">New trial request</h1>`,
+      bodyHtml: `
+        <p style="margin:0 0 8px;font-size:15px;color:#c9c9c9;">
+          <strong style="color:#ededed;">${orgName}</strong>
+        </p>
+        <p style="margin:0 0 6px;font-size:14px;color:#969696;">${name} &nbsp;·&nbsp; ${email}</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#969696;">${phone || "no phone given"}</p>
+        ${ctaButton(reviewUrl, "Review in admin panel")}
+        <p style="margin:0;font-size:13px;color:#777;">Email verified via OTP. Awaiting your approval before the trial starts.</p>`,
+      footerNote: "Sent to Arthaleads platform administrators.",
+    }),
+  });
+}
+
+module.exports = {
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  sendTeamInviteEmail,
+  sendSignupPendingEmail,
+  sendSignupApprovedEmail,
+  sendSignupRejectedEmail,
+  notifySuperAdminsOfSignup,
+};

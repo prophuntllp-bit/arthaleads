@@ -92,11 +92,21 @@ const protect = async (req, res, next) => {
     if (user.role !== "super_admin" && user.orgId) {
       let org = _getCachedOrg(user.orgId);
       if (!org) {
-        org = await Organization.findById(user.orgId).select("isActive plan trialEndsAt").lean();
+        org = await Organization.findById(user.orgId)
+          .select("isActive plan trialEndsAt approvalStatus").lean();
         if (org) _setCachedOrg(user.orgId, org);
       }
       if (!org || !org.isActive) {
         return next(new AppError("ORGANISATION_INACTIVE", 403));
+      }
+      // Trial approval gate. Login/signup already refuse to issue a session for
+      // a pending org — this also catches sessions minted before approval was
+      // revoked, and any token issued through another path.
+      if (org.approvalStatus === "pending") {
+        return next(new AppError("PENDING_APPROVAL", 403));
+      }
+      if (org.approvalStatus === "rejected") {
+        return next(new AppError("SIGNUP_REJECTED", 403));
       }
       // Trial expiry check - only for orgs still on the trial plan
       if (org.plan === "trial" && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)) {

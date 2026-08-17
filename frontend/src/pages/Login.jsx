@@ -6,6 +6,7 @@ import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getRecaptchaToken } from "../utils/recaptcha";
+import { authErrorMessage } from "../utils/authErrors";
 
 // ── Main Login page ───────────────────────────────────────────────────────────
 export default function Login() {
@@ -34,7 +35,7 @@ export default function Login() {
         toast.success("Welcome back!");
         navigate("/dashboard");
       } catch (e) {
-        setErr(e.response?.data?.message || "Google sign-in failed. Please try again.");
+        setErr(authErrorMessage(e, "Google sign-in failed. Please try again."));
       } finally {
         setGLoading(false);
       }
@@ -68,12 +69,12 @@ export default function Login() {
           setErr("");
           continue;
         }
-        setErr(
-          e.response?.data?.message ||
-          (isNetworkErr
+        setErr(authErrorMessage(
+          e,
+          isNetworkErr
             ? "Could not reach the server. Please check your internet connection and try again. If on mobile data, try switching to Wi-Fi."
-            : "Login failed. Please check your email/phone and password.")
-        );
+            : "Login failed. Please check your email/phone and password."
+        ));
         break;
       }
     }
