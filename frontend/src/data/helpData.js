@@ -131,6 +131,12 @@ export const QUICK_ANSWERS = [
     tour: "callsSetup",
   },
   {
+    id: "referrals",
+    q: "How does Refer & Earn work?",
+    a: "Go to the Referrals page to get your unique referral link or code. Share it with another real estate team — when they subscribe to a paid plan, you both get a free month credited automatically. Track your referral history and rewards right there.",
+    goto: "/referrals",
+  },
+  {
     id: "calls-autostatus",
     q: "How does AI auto-status update work?",
     a: "In Settings -> Telephony, turn on the 'AI Auto-Status Updates' toggle. After each call is analysed by AI, if it detects 'site visit' intent the lead is automatically moved to Site Visit stage, or 'negotiation' intent moves it to Negotiation. Each change is logged in the lead's activity with 'AI detected'. Turn the toggle OFF if the AI is making mistakes.",

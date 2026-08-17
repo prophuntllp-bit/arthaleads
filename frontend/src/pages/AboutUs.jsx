@@ -426,6 +426,42 @@ export default function AboutUs() {
         </div>
       </section>
 
+      {/* ── Parent company ── */}
+      <section style={{ padding: "0 24px 88px" }}>
+        <div style={{
+          maxWidth: 860, margin: "0 auto", borderRadius: 20, padding: "32px 36px",
+          background: sectionBg, border: `1px solid ${sectionBdr}`,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexWrap: "wrap", gap: 20,
+        }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.14em", color: "#ff6b00", marginBottom: 8 }}>
+              Parent Company
+            </div>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: body, maxWidth: 560 }}>
+              Arthaleads is a product of <strong style={{ color: heading }}>Vistrow Technologies</strong> — built and supported by the same team behind Vistrow's other software products.
+            </p>
+          </div>
+          <a
+            href="https://www.vistrow.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "12px 22px", borderRadius: 12, fontSize: 14, fontWeight: 700,
+              color: "#ff6b00", border: "1px solid rgba(255,107,0,0.35)",
+              background: "rgba(255,107,0,0.08)", textDecoration: "none",
+              transition: "background 0.18s, transform 0.18s", flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,107,0,0.16)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,107,0,0.08)"; e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            Visit vistrow.com
+            <ArrowRight style={{ width: 15, height: 15 }} />
+          </a>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section style={{ padding: "80px 24px" }}>
         <div ref={ctaRef} style={{

@@ -582,22 +582,25 @@ function RequireAdmin() {
 
 // / route: on the app host, guests → /login and authed users → their dashboard
 // (never the marketing Landing page). On the marketing host (or localhost /
-// preview), logged-in users are sent to their dashboard on app.arthaleads.com
-// and guests see Landing as before.
+// preview), Landing always renders — regardless of CRM login state.
+//
+// The crm_token cookie is domain-scoped to .arthaleads.com (so one login works
+// on both subdomains), which means the marketing host sees the same session as
+// the app host. That must NOT bounce visitors here away to the CRM: someone
+// with the CRM open in one tab still needs the marketing site to load
+// independently in another, not get yanked into their dashboard. "Totally
+// separate" cuts both ways — the app host never shows marketing, and the
+// marketing host never auto-redirects into the app.
 function RootRoute() {
   const { user, loading } = useAuth();
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Spinner size="lg" />
-    </div>
-  );
   if (isAppHost()) {
+    if (loading) return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
     if (user) return <Navigate to={user.role === "super_admin" ? "/super-admin" : "/dashboard"} replace />;
     return <Navigate to="/login" replace />;
-  }
-  if (user) {
-    window.location.href = `${CRM_URL}/${user.role === "super_admin" ? "super-admin" : "dashboard"}`;
-    return null;
   }
   return <Landing />;
 }

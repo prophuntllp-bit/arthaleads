@@ -8,7 +8,7 @@ import {
   Facebook, MessageCircle, Mail, Phone, MapPin,
   ChevronDown, PlayCircle, Layers, Clock, Filter,
   FileSpreadsheet, UserCheck, Activity,
-  QrCode, Sparkles, FileText, Camera, Bot
+  QrCode, Sparkles, FileText, Camera, Bot, Headphones
 } from "lucide-react";
 import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
@@ -329,6 +329,7 @@ const FEATURES = [
   { cat: "automation", icon: QrCode,     color: "#14b8a6", title: "QR Code Lead Capture",      desc: "Every org and project gets a unique QR code. Put it on site hoardings, brochures, or expo stalls. A prospect scans it, fills a form on their phone, and the lead lands in your CRM instantly — with source tagged." },
   { cat: "automation", icon: MessageCircle, color: "#25D366", title: "AI WhatsApp Draft",      desc: "AI writes a personalized WhatsApp message for any lead using their name, project interest, and budget. Agent reviews and sends in seconds. Saves 10–15 minutes per agent per day." },
   { cat: "team",       icon: PhoneCall,  color: "#3b82f6", title: "Telecaller Workflow",       desc: "Streamline your calling team with remark tracking, booking status, follow-up scheduling, and call outcomes. Never let a hot lead go cold again." },
+  { cat: "automation", icon: Headphones, color: "#8b5cf6", title: "AI Call Intelligence",      desc: "One-tap click-to-call bridges your phone straight to the lead's number. Every recording is auto-transcribed with AI-detected intent and sentiment, a summary, and next-step suggestions — and can auto-advance the lead's pipeline stage the moment it hears 'site visit' or 'negotiating'." },
   { cat: "analytics",  icon: BarChart3,  color: "#a855f7", title: "Performance Analytics",     desc: "Real-time dashboards showing lead sources, team conversion rates, follow-up completion, and deal pipeline. Make data-driven decisions every day." },
   { cat: "team",       icon: Users,      color: "#f59e0b", title: "Team Management",           desc: "Assign roles - Admin, Manager, Agent - with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel." },
   { cat: "team",       icon: Camera,     color: "#3b82f6", title: "Attendance & Selfie Clock-In", desc: "Field agents clock in and out from their phone with a selfie — no paper registers, no WhatsApp check-ins. Admins see real-time attendance and download monthly reports in one click." },
