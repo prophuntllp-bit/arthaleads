@@ -13,6 +13,11 @@
       "destination": "https://api.arthaleads.com/sitemap.xml"
     },
     {
+      "source": "/robots.txt",
+      "has": [{ "type": "host", "value": "app.arthaleads.com" }],
+      "destination": "/robots-app.txt"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
