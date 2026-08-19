@@ -38,15 +38,21 @@ class _UpdateGateState extends State<UpdateGate> {
     final info = await UpdateService.check();
     if (info == null || !mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !info.mandatory,
-      builder: (_) => _UpdateDialog(info: info),
-    );
+    await showUpdateDialog(context, info);
   }
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// Shared with the manual "Check for Updates" action in Settings — same
+/// dialog either way, whether the app found it on launch or a person asked.
+Future<void> showUpdateDialog(BuildContext context, UpdateInfo info) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: !info.mandatory,
+    builder: (_) => _UpdateDialog(info: info),
+  );
 }
 
 class _UpdateDialog extends StatelessWidget {

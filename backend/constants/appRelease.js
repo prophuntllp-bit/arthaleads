@@ -19,17 +19,15 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 16,
+    build: 17,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Left at 15, not bumped to 16: build 15's force was for a genuine
-    // update-delivery bug (permanent skip). Build 16 is a normal workflow
-    // fix — everyone below 15 still gets pulled up to at least 15, but 16
-    // itself is a regular optional/dismissible prompt (with the build-15
-    // 3-day re-prompt cooldown, so it still won't go silently missed).
+    // Left at 15 — build 17 adds a manual "Check for Updates" (Settings) and
+    // a lead-card display fix, neither of which needs to be forced. Anyone
+    // below 15 is still pulled up to at least the update-delivery fix.
     minBuild: 15,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
@@ -37,8 +35,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-16/arthaleads-1.0.1%2B16-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-17/arthaleads-1.0.1%2B17-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Fixed: marking a lead 'Not Interested' was kicking you out of the lead detail sheet before you could add a remark. It now stays open like every other status change.",
+    notes: "Added a manual 'Check for Updates' button in Settings — no more relying only on the automatic on-launch check. Also: lead cards always show a date now instead of sometimes looking empty.",
   },
 };

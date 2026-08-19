@@ -824,10 +824,28 @@ class LeadsScreenState extends State<LeadsScreen> {
     );
   }
 
+  // Same relative-time formatting already used on the Referrals screen.
+  String _timeAgo(String? iso) {
+    final dt = DateTime.tryParse(iso ?? '');
+    if (dt == null) return '';
+    final days = DateTime.now().difference(dt).inDays;
+    if (days <= 0) return 'Today';
+    if (days == 1) return 'Yesterday';
+    if (days < 30) return '${days}d ago';
+    return DateFormat('dd MMM').format(dt);
+  }
+
   Widget _leadCard(Map<String, dynamic> lead) {
     final id = lead['_id'] as String;
     final selected = _selected.contains(id);
     final followUp = lead['followUpDate'] as String?;
+    // Booking chip, follow-up, and assigned-to are all conditional — a fresh
+    // "New" lead with none of them set left this row completely blank with
+    // just empty space above the call/WhatsApp icons. Fall back to when the
+    // lead was added so the row always shows something.
+    final hasBooking = (lead['booking'] as String? ?? '').isNotEmpty;
+    final hasAssignee = (lead['assignedToName'] as String? ?? '').isNotEmpty;
+    final showCreatedFallback = !hasBooking && followUp == null && !hasAssignee;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -923,6 +941,18 @@ class LeadsScreenState extends State<LeadsScreen> {
               Row(
                 children: [
                   BookingChip(lead['booking'] as String?),
+                  if (showCreatedFallback) ...[
+                    Icon(
+                      Icons.schedule,
+                      size: 13,
+                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      'Added ${_timeAgo(lead['createdAt'] as String?)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   if (followUp != null) ...[
                     const SizedBox(width: 6),
                     Icon(

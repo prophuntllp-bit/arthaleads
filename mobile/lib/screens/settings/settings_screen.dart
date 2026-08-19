@@ -3,14 +3,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../core/update_service.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
+import '../../widgets/update_gate.dart' show showUpdateDialog;
 import '../login_screen.dart' show ForgotPasswordScreen;
 
 /// Force-uppercases input as the user types — matches web's onChange
@@ -50,6 +53,34 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _api = ApiClient.instance;
   String _tab = 'profile';
+
+  bool _checkingUpdate = false;
+  String? _appVersion; // "1.0.1 (build 16)" — filled in on first build
+
+  Future<void> _checkForUpdate() async {
+    setState(() => _checkingUpdate = true);
+    final outcome = await UpdateService.checkManual();
+    if (!mounted) return;
+    setState(() => _checkingUpdate = false);
+    switch (outcome.result) {
+      case ManualCheckResult.updateAvailable:
+        await showUpdateDialog(context, outcome.info!);
+        break;
+      case ManualCheckResult.upToDate:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You're on the latest version.")),
+        );
+        break;
+      case ManualCheckResult.error:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Couldn't check for updates — check your connection and try again."),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        break;
+    }
+  }
 
   // Profile
   late final _name = TextEditingController();
@@ -92,6 +123,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Security
   List<Map<String, dynamic>> _accessRecords = [];
   bool _loadingAccess = true;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = '${info.version} (build ${info.buildNumber})');
+    });
+  }
 
   @override
   void dispose() {
@@ -681,6 +720,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           loading: _savingProfile,
           onPressed: _savingProfile ? null : _saveProfile,
           child: const Text('Save Changes'),
+        ),
+        const SizedBox(height: 28),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _appVersion ?? 'Arthaleads',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).hintColor,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _checkingUpdate ? null : _checkForUpdate,
+              icon: _checkingUpdate
+                  ? const SizedBox(
+                      width: 14, height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.system_update_rounded, size: 16),
+              label: Text(_checkingUpdate ? 'Checking…' : 'Check for Updates'),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
       ],

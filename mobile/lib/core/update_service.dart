@@ -124,4 +124,61 @@ class UpdateService {
     if (v is num) return v.toInt();
     return int.tryParse('$v') ?? 0;
   }
+
+  /// Explicit, user-triggered check (Settings → Check for Updates). Unlike
+  /// [check], this always reports the true state — it ignores any prior
+  /// "Later" dismissal (the user asked directly, so "you skipped this
+  /// already" is not a useful answer) and distinguishes "you're current"
+  /// from "the check itself failed", which the silent [check] intentionally
+  /// can't (both return null there, correctly, since neither should ever
+  /// block app launch). Longer timeout too: nothing here is blocking startup,
+  /// so it's worth waiting out a cold Railway backend rather than giving up.
+  static Future<ManualCheckOutcome> checkManual() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+      if (currentBuild == 0) return const ManualCheckOutcome(ManualCheckResult.error);
+
+      final res = await ApiClient.instance.dio.get(
+        '/public/app-version',
+        queryParameters: {'platform': 'android'},
+        options: Options(
+          receiveTimeout: const Duration(seconds: 15),
+          sendTimeout: const Duration(seconds: 15),
+        ),
+      );
+
+      final data = res.data;
+      if (data is! Map) return const ManualCheckOutcome(ManualCheckResult.error);
+
+      final latestBuild = _int(data['latestBuild']);
+      final minBuild = _int(data['minBuild']);
+      final downloadUrl = (data['downloadUrl'] ?? '').toString();
+
+      if (latestBuild <= currentBuild || downloadUrl.isEmpty) {
+        return const ManualCheckOutcome(ManualCheckResult.upToDate);
+      }
+
+      return ManualCheckOutcome(
+        ManualCheckResult.updateAvailable,
+        UpdateInfo(
+          latestBuild: latestBuild,
+          latestVersion: (data['latestVersion'] ?? '').toString(),
+          downloadUrl: downloadUrl,
+          releaseNotes: (data['releaseNotes'] ?? '').toString(),
+          mandatory: currentBuild < minBuild,
+        ),
+      );
+    } catch (_) {
+      return const ManualCheckOutcome(ManualCheckResult.error);
+    }
+  }
+}
+
+enum ManualCheckResult { upToDate, updateAvailable, error }
+
+class ManualCheckOutcome {
+  final ManualCheckResult result;
+  final UpdateInfo? info;
+  const ManualCheckOutcome(this.result, [this.info]);
 }
