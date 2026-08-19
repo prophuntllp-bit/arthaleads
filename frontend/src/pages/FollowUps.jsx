@@ -499,7 +499,7 @@ export default function FollowUps() {
                           )}
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          <PhoneActions phone={lead.phone} />
+                          <PhoneActions phone={lead.phone} {...(lead._type === "project" ? { projectLead: lead } : { lead })} />
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <WhatsAppLink

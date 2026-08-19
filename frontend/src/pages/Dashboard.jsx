@@ -30,7 +30,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader } from "../components/UI";
+import { PageLoader, PhoneActions } from "../components/UI";
 import api from "../services/api";
 import { fmtDate } from "../utils/constants";
 import DateRangePicker from "../components/DateRangePicker";
@@ -1243,15 +1243,10 @@ function FollowUpDuePanel({ user, navigate, prefetchedLeads }) {
             {/* Call + WA - icon-only on mobile, label on sm+ */}
             {lead.phone && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <a
-                  href={`tel:${lead.phone}`}
-                  title={lead.phone}
-                  className="flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium transition"
-                  style={{ borderColor: "rgba(249,115,22,0.25)", color: "var(--app-primary)", background: "rgba(249,115,22,0.06)" }}
-                >
-                  <Phone className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">{lead.phone}</span>
-                </a>
+                <div className="rounded-lg border px-2 py-1"
+                  style={{ borderColor: "rgba(249,115,22,0.25)", background: "rgba(249,115,22,0.06)" }}>
+                  <PhoneActions phone={lead.phone} lead={lead} />
+                </div>
                 <a
                   href={`https://wa.me/${toWa(lead.phone)}`}
                   target="_blank"
@@ -1421,12 +1416,10 @@ function HotLeadsWidget({ navigate, limit = 6, prefetchedLeads }) {
 
                 {/* Call */}
                 {lead.phone && (
-                  <a href={`tel:${lead.phone}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg transition cursor-pointer"
-                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}
-                    title={`Call ${lead.phone}`}>
-                    <Phone className="h-3.5 w-3.5" />
-                  </a>
+                  <div className="h-7 w-7 rounded-lg"
+                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)" }}>
+                    <PhoneActions phone={lead.phone} lead={lead} compact />
+                  </div>
                 )}
 
                 {/* WhatsApp */}
@@ -1591,11 +1584,10 @@ function StaleLeadsWidget({ navigate }) {
                   <p className="text-[11px] text-app-soft truncate">{[lead.status, lead.source, lead.assignedToName].filter(Boolean).join(" · ")}</p>
                 </div>
                 {lead.phone && (
-                  <a href={`tel:${lead.phone}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0 transition"
-                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)", color: "var(--app-primary)" }}>
-                    <Phone className="h-3.5 w-3.5" />
-                  </a>
+                  <div className="h-7 w-7 rounded-lg shrink-0"
+                    style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.2)" }}>
+                    <PhoneActions phone={lead.phone} lead={lead} compact />
+                  </div>
                 )}
               </div>
             ))}

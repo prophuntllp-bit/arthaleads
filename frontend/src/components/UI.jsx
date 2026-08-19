@@ -163,7 +163,7 @@ export function toWaNumber(phone = "") {
 }
 
 // Orange call icon + phone number - tap to dial
-export function PhoneActions({ phone, lead, projectLead, onContact }) {
+export function PhoneActions({ phone, lead, projectLead, onContact, compact = false }) {
   const [dialOpen,  setDialOpen]  = useState(false);
   const [hoverOpen, setHoverOpen] = useState(false);
   const [dialPos,   setDialPos]   = useState({});
@@ -242,12 +242,13 @@ export function PhoneActions({ phone, lead, projectLead, onContact }) {
         onMouseEnter={onMouseEnter}
         onMouseLeave={onMouseLeave}
         disabled={calling}
-        className="flex items-center gap-1.5 text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap disabled:opacity-60"
+        title={compact ? phone : undefined}
+        className={`flex items-center ${compact ? "justify-center h-full w-full" : "gap-1.5"} text-xs text-app-soft hover:text-orange-500 transition whitespace-nowrap disabled:opacity-60`}
       >
         {calling
           ? <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin text-orange-400" />
           : <Phone   className="h-3.5 w-3.5 flex-shrink-0 text-orange-400" />}
-        {phone}
+        {!compact && phone}
       </button>
 
       {/* ── Hover card — name only, glassy ── */}
