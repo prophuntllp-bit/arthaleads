@@ -42,6 +42,13 @@ class UpdateService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static const _skippedKey = 'update_skipped_build';
+  static const _skippedAtKey = 'update_skipped_at';
+  // A "Later" used to suppress the prompt for that build forever — someone
+  // taps it once, absent-mindedly, and silently stops hearing about updates
+  // indefinitely, including ones that ship after real fixes. Re-prompting
+  // after a few days costs one dismissible dialog and guarantees no one is
+  // permanently stuck on a stale build by accident.
+  static const _skipCooldown = Duration(days: 3);
 
   static Future<UpdateInfo?> check() async {
     try {
@@ -73,11 +80,19 @@ class UpdateService {
 
       final mandatory = currentBuild < minBuild;
 
-      // Respect a previous "Later" for this exact build — but a mandatory
-      // update always shows, no matter what was dismissed before.
+      // Respect a previous "Later" for this exact build, but only for
+      // _skipCooldown — after that it re-prompts even if nothing changed on
+      // the backend, so a one-time dismissal can never turn into forever. A
+      // mandatory update always shows regardless of any prior dismissal.
       if (!mandatory) {
         final skipped = int.tryParse(await _storage.read(key: _skippedKey) ?? '');
-        if (skipped == latestBuild) return null;
+        if (skipped == latestBuild) {
+          final skippedAtRaw = await _storage.read(key: _skippedAtKey);
+          final skippedAt = skippedAtRaw != null ? DateTime.tryParse(skippedAtRaw) : null;
+          if (skippedAt != null && DateTime.now().difference(skippedAt) < _skipCooldown) {
+            return null;
+          }
+        }
       }
 
       return UpdateInfo(
@@ -93,10 +108,12 @@ class UpdateService {
   }
 
   /// Remember that the user chose "Later" for this build so they aren't
-  /// re-prompted on every launch for the same version.
+  /// re-prompted on every launch for the same version — only until
+  /// _skipCooldown elapses, then it asks again.
   static Future<void> skip(int build) async {
     try {
       await _storage.write(key: _skippedKey, value: '$build');
+      await _storage.write(key: _skippedAtKey, value: DateTime.now().toIso8601String());
     } catch (_) {
       // Storage failure just means they get prompted again — harmless.
     }

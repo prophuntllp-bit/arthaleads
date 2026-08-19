@@ -19,20 +19,27 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 14,
+    build: 15,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
-    minBuild: 0,
+    //
+    // Forced deliberately for build 15: it fixes a real bug in the update
+    // checker itself — a "Later" tap used to suppress the prompt for that
+    // build forever (see UpdateService._skipCooldown in update_service.dart)
+    // — so anyone who already dismissed build 14 needs to be pulled forward
+    // regardless, since the old client can't know its own dismissal logic
+    // was broken.
+    minBuild: 15,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
     // Hosted as a GitHub Release asset — see .github/workflows/mobile-flutter-ci.yml
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-14/arthaleads-1.0.1%2B14-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-15/arthaleads-1.0.1%2B15-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Forgot-password shortcut, editable org name, and the EnableX/phone call choice now works everywhere (Projects, Pipeline, Follow-ups, Dashboard) — not just Leads.",
+    notes: "Fixed a bug where dismissing an update once could silently suppress it forever. Also: forgot-password shortcut, editable org name, and the EnableX/phone call choice now works everywhere (Projects, Pipeline, Follow-ups, Dashboard).",
   },
 };
