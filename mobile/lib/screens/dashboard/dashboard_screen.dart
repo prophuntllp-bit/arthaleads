@@ -12,6 +12,7 @@ import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/date_range_picker.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
@@ -52,6 +53,37 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
   final _api = ApiClient.instance;
+
+  Future<void> _call({required String? phone, String? name, String? leadId}) async {
+    if (phone == null || phone.isEmpty) return;
+    final choice = await pickCallMethod(context, name: name, phone: phone);
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      return;
+    }
+    try {
+      final res = await _api.dio.post('/calls/initiate', data: {'leadId': leadId});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
   Map<String, dynamic>? _analytics;
   List<Map<String, dynamic>> _hot = [];
   List<Map<String, dynamic>> _due = [];
@@ -756,12 +788,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     trailing: IconButton(
                       tooltip: 'Call',
-                      onPressed: () {
-                        final phone = lead['phone']?.toString();
-                        if (phone != null && phone.isNotEmpty) {
-                          launchUrl(Uri.parse('tel:$phone'));
-                        }
-                      },
+                      onPressed: () => _call(
+                        phone: lead['phone']?.toString(),
+                        name: lead['name']?.toString(),
+                        leadId: lead['_id']?.toString(),
+                      ),
                       icon: Icon(FontAwesomeIcons.phone.data, size: 17),
                     ),
                   ),
@@ -892,12 +923,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                         IconButton(
                           tooltip: 'Call',
-                          onPressed: () {
-                            final phone = str(hot['phone']);
-                            if (phone != null && phone.isNotEmpty) {
-                              launchUrl(Uri.parse('tel:$phone'));
-                            }
-                          },
+                          onPressed: () => _call(
+                            phone: str(hot['phone']),
+                            name: str(hot['name']),
+                            leadId: str(hot['_id']),
+                          ),
                           icon: Icon(
                             FontAwesomeIcons.phone.data,
                             color: AppColors.primary,
@@ -1104,12 +1134,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                 overflow: TextOverflow.ellipsis,
               ),
               trailing: IconButton(
-                onPressed: () {
-                  final phone = lead['phone']?.toString();
-                  if (phone != null && phone.isNotEmpty) {
-                    launchUrl(Uri.parse('tel:$phone'));
-                  }
-                },
+                onPressed: () => _call(
+                  phone: lead['phone']?.toString(),
+                  name: lead['name']?.toString(),
+                  leadId: lead['_id']?.toString(),
+                ),
                 icon: Icon(FontAwesomeIcons.phone.data, size: 17),
               ),
             ),

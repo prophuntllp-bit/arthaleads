@@ -10,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -105,6 +106,39 @@ class _PipelineScreenState extends State<PipelineScreen> {
       mode: LaunchMode.externalApplication,
     );
     _markContacted(lead);
+  }
+
+  Future<void> _call(Map<String, dynamic> lead) async {
+    final phone = lead['phone'] as String?;
+    if (phone == null || phone.isEmpty) return;
+    final choice = await pickCallMethod(context, name: lead['name'] as String?, phone: phone);
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      _markContacted(lead);
+      return;
+    }
+    try {
+      final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+      _markContacted(lead);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _markContacted(Map<String, dynamic> lead) async {
@@ -406,17 +440,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
                                                     ),
                                                   ),
                                                   InkWell(
-                                                    onTap: () {
-                                                      final p =
-                                                          lead['phone']
-                                                              as String?;
-                                                      if (p != null) {
-                                                        launchUrl(
-                                                          Uri.parse('tel:$p'),
-                                                        );
-                                                        _markContacted(lead);
-                                                      }
-                                                    },
+                                                    onTap: () => _call(lead),
                                                     child: Icon(
                                                       FontAwesomeIcons
                                                           .phone

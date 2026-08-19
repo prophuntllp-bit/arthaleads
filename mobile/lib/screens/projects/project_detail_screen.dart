@@ -13,6 +13,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
@@ -306,6 +307,44 @@ class _LeadsTabState extends State<_LeadsTab> {
   DateTime? _dateTo;
 
   String get _projectId => widget.project['_id'] as String;
+
+  Future<void> _call(Map<String, dynamic> lead) async {
+    final phone = lead['phone'] as String?;
+    if (phone == null || phone.isEmpty) return;
+    final choice = await pickCallMethod(
+      context,
+      name: lead['name'] as String?,
+      phone: phone,
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'native') {
+      await launchUrl(Uri.parse('tel:$phone'));
+      return;
+    }
+    try {
+      final res = await _api.dio.post(
+        '/calls/initiate',
+        data: {'leadId': lead['_id']},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -841,12 +880,7 @@ class _LeadsTabState extends State<_LeadsTab> {
                                     size: 18,
                                     color: AppColors.primary,
                                   ),
-                                  onPressed: () {
-                                    final p = lead['phone'] as String?;
-                                    if (p != null) {
-                                      launchUrl(Uri.parse('tel:$p'));
-                                    }
-                                  },
+                                  onPressed: () => _call(lead),
                                 ),
                                 IconButton(
                                   icon: Icon(
