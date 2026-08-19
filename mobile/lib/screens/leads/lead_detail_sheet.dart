@@ -20,8 +20,11 @@ const _fbErrorPattern = 'Facebook lead received but field data could not be fetc
 /// Plain leads PATCH /leads/:id; project leads PATCH /projects/:pid/leads/:id
 /// — same split the web app uses for inline cells.
 /// Pops with `true` when something changed that requires a list refresh
-/// (transfer, dump, booking = Not Interested), or `'edit'` to ask the caller
-/// to open the edit form for this lead.
+/// (transfer, dump), or `'edit'` to ask the caller to open the edit form for
+/// this lead. Booking status changes (including "Not Interested") patch and
+/// stay open like every other field — the agent needs the sheet to add a
+/// remark right after marking a lead Not Interested, not get kicked out of
+/// it. The list catches up to the move-to-Dump on its next natural refresh.
 class LeadDetailSheet extends StatefulWidget {
   final Map<String, dynamic> lead;
   final List<Map<String, dynamic>> projects;
@@ -558,8 +561,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                           label: Text(o.label, style: const TextStyle(fontSize: 12)),
                           selected: (lead['booking'] as String? ?? '') == o.value,
                           selectedColor: (o.color ?? Colors.grey).withValues(alpha: 0.2),
-                          onSelected: (_) =>
-                              _patch({'booking': o.value}, refreshList: o.value == 'Not Interested'),
+                          onSelected: (_) => _patch({'booking': o.value}),
                         ))
                     .toList(),
               ),

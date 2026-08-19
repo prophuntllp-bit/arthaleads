@@ -19,18 +19,17 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 15,
+    build: 16,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Forced deliberately for build 15: it fixes a real bug in the update
-    // checker itself — a "Later" tap used to suppress the prompt for that
-    // build forever (see UpdateService._skipCooldown in update_service.dart)
-    // — so anyone who already dismissed build 14 needs to be pulled forward
-    // regardless, since the old client can't know its own dismissal logic
-    // was broken.
+    // Left at 15, not bumped to 16: build 15's force was for a genuine
+    // update-delivery bug (permanent skip). Build 16 is a normal workflow
+    // fix — everyone below 15 still gets pulled up to at least 15, but 16
+    // itself is a regular optional/dismissible prompt (with the build-15
+    // 3-day re-prompt cooldown, so it still won't go silently missed).
     minBuild: 15,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
@@ -38,8 +37,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-15/arthaleads-1.0.1%2B15-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-16/arthaleads-1.0.1%2B16-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Fixed a bug where dismissing an update once could silently suppress it forever. Also: forgot-password shortcut, editable org name, and the EnableX/phone call choice now works everywhere (Projects, Pipeline, Follow-ups, Dashboard).",
+    notes: "Fixed: marking a lead 'Not Interested' was kicking you out of the lead detail sheet before you could add a remark. It now stays open like every other status change.",
   },
 };
