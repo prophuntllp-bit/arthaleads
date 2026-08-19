@@ -33,6 +33,6 @@ module.exports = {
     // local/untracked).
     url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-14/arthaleads-1.0.1%2B14-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Added a 'Forgot your password?' shortcut in Settings.",
+    notes: "Forgot-password shortcut, editable org name, and the EnableX/phone call choice now works everywhere (Projects, Pipeline, Follow-ups, Dashboard) — not just Leads.",
   },
 };
