@@ -105,6 +105,10 @@ class _ArthaFabState extends State<_ArthaFab>
               shape: CircleBorder(
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
               ),
+              // See GradientFab (widgets/buttons.dart) for why this matters —
+              // the theme's default FAB shape is a rounded square, and
+              // FloatingActionButton doesn't clip to `shape` unless told to.
+              clipBehavior: Clip.antiAlias,
               onPressed: () => Navigator.of(
                 context,
               ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
@@ -136,8 +140,14 @@ class _DraggableArthaFab extends StatefulWidget {
 }
 
 class _DraggableArthaFabState extends State<_DraggableArthaFab> {
-  static const _xKey = 'artha_fab_x';
-  static const _yKey = 'artha_fab_y';
+  // _v2: was bottom-right, same side as the screen's own Add/+ FAB — on
+  // screens with a floating "+" button they'd land on top of each other,
+  // and whatever spot someone dragged it to since then could just as easily
+  // sit over list content instead. New key forces every device back to the
+  // new bottom-left default (mirroring the + FAB on the right) once, after
+  // which dragging + persistence works exactly as before.
+  static const _xKey = 'artha_fab_x_v2';
+  static const _yKey = 'artha_fab_y_v2';
   static const _boxSize = 84.0;
 
   Offset? _pos;
@@ -162,10 +172,10 @@ class _DraggableArthaFabState extends State<_DraggableArthaFab> {
     await prefs.setDouble(_yKey, pos.dy);
   }
 
-  // Matches the previous fixed anchor (right: 6, bottom: 74) so a first-time
-  // user sees the FAB in the same spot it always used to be.
-  Offset _defaultPos(Size area) =>
-      Offset(area.width - _boxSize - 6, area.height - _boxSize - 74);
+  // Bottom-left, mirroring the screen's own Add/+ FAB on the bottom-right
+  // (same 6px side margin, same 74px bottom margin) so the two never
+  // collide and this never sits on top of list content in that corner.
+  Offset _defaultPos(Size area) => Offset(6, area.height - _boxSize - 74);
 
   Offset _clamp(Offset pos, Size area) => Offset(
     pos.dx.clamp(0, (area.width - _boxSize).clamp(0, double.infinity)),

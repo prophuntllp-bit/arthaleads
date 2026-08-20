@@ -19,24 +19,17 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 19,
+    build: 20,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Set to 19 — every build up through 18 has a broken update checker (see
-    // trueBuildNumber() in mobile/lib/core/update_service.dart): Flutter's
-    // ABI-split builds stamp Android's versionCode as abiCode*1000+build
-    // (e.g. build 18 reads back as 2018), and every prior version of this
-    // check compared that inflated number straight against this file's plain
-    // build/minBuild — so `latestBuild <= currentBuild` and `currentBuild <
-    // minBuild` were BOTH always wrong, meaning no install has ever
-    // correctly detected an update OR a forced one, confirmed via
-    // `aapt dump badging` on the actual APKs. minBuild can't retroactively
-    // fix already-installed broken clients (their own checker is what's
-    // broken) — every device on build ≤18 needs one manual reinstall of 19
-    // before the in-app prompt can be trusted again for anything after this.
+    // Left at 19 on purpose — build 20 is a UI-only fix (FAB polish), not a
+    // delivery-critical one, so anyone already on 19's working checker gets
+    // a normal dismissible "Update available" prompt rather than a forced
+    // one. Also doubles as the first live test of the just-fixed optional-
+    // update path, not just the forced one.
     minBuild: 19,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
@@ -44,8 +37,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-19/arthaleads-1.0.1%2B19-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-20/arthaleads-1.0.1%2B20-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Fixed the update checker itself — it was comparing Android's ABI-split version code (which is offset, e.g. build 18 read back as 2018) against the plain build number, so no update or forced update has ever actually been detected correctly until now.",
+    notes: "Fixed a light square artifact peeking out from behind the round Add-lead and Artha assistant buttons, and moved the Artha assistant bubble to the bottom-left so it stops overlapping the + button and list content on the right.",
   },
 };

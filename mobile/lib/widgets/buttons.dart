@@ -139,6 +139,12 @@ class GradientFab extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         shape: const CircleBorder(),
+        // FloatingActionButton defaults to Clip.none, so without this the
+        // Material surface isn't actually clipped to `shape` — the app's
+        // floatingActionButtonTheme sets a rounded-square default shape
+        // (theme.dart), and its corners show through behind this circular
+        // FAB at every corner where the square is wider than the circle.
+        clipBehavior: Clip.antiAlias,
         child: Ink(
           decoration: gradient,
           child: Center(child: Icon(icon, color: Colors.white)),
@@ -150,6 +156,7 @@ class GradientFab extends StatelessWidget {
       onPressed: onPressed,
       backgroundColor: Colors.transparent,
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.pill),
       ),
