@@ -15,6 +15,7 @@ import '../../widgets/chips.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
+import '../../widgets/whatsapp_send_sheet.dart';
 
 /// Pipeline — kanban-style stage view. Reuses GET /leads/unified (same data
 /// as Leads/Follow-ups) grouped client-side by status, mirroring
@@ -95,17 +96,15 @@ class _PipelineScreenState extends State<PipelineScreen> {
   }
 
   Future<void> _whatsapp(Map<String, dynamic> lead) async {
-    final phone = (lead['phone'] as String? ?? '').replaceAll(
-      RegExp(r'\D'),
-      '',
+    final isProject = lead['_type'] == 'project' && lead['projectId'] != null;
+    await showWhatsAppSendSheet(
+      context,
+      phone: lead['phone'] as String?,
+      name: lead['name'] as String?,
+      leadId: lead['_id'] as String?,
+      projectId: isProject ? lead['projectId'] as String? : null,
+      onSent: () => _markContacted(lead),
     );
-    if (phone.isEmpty) return;
-    final wa = phone.length == 10 ? '91$phone' : phone;
-    await launchUrl(
-      Uri.parse('https://wa.me/$wa'),
-      mode: LaunchMode.externalApplication,
-    );
-    _markContacted(lead);
   }
 
   Future<void> _call(Map<String, dynamic> lead) async {

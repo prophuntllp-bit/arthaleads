@@ -19,15 +19,15 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 17,
+    build: 18,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Left at 15 — build 17 adds a manual "Check for Updates" (Settings) and
-    // a lead-card display fix, neither of which needs to be forced. Anyone
-    // below 15 is still pulled up to at least the update-delivery fix.
+    // Left at 15 — build 18 is a new feature (WhatsApp personal/business +
+    // AI draft) and a display tweak, neither needs forcing. Anyone below 15
+    // is still pulled up to at least the update-delivery fix.
     minBuild: 15,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
@@ -35,8 +35,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-17/arthaleads-1.0.1%2B17-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-18/arthaleads-1.0.1%2B18-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Added a manual 'Check for Updates' button in Settings — no more relying only on the automatic on-launch check. Also: lead cards always show a date now instead of sometimes looking empty.",
+    notes: "WhatsApp button now matches the web app exactly: editable pre-filled message, AI Draft, and a choice of personal or WhatsApp Business — everywhere (Leads, Pipeline, Projects, Dashboard, Lead Detail). Lead cards also now show the full created date and time.",
   },
 };

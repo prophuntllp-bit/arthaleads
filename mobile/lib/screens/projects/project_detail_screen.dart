@@ -14,6 +14,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/call_options_sheet.dart';
+import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
@@ -888,16 +889,13 @@ class _LeadsTabState extends State<_LeadsTab> {
                                     size: 19,
                                     color: AppColors.whatsapp,
                                   ),
-                                  onPressed: () {
-                                    final p = (lead['phone'] as String? ?? '')
-                                        .replaceAll(RegExp(r'\D'), '');
-                                    if (p.isEmpty) return;
-                                    final wa = p.length == 10 ? '91$p' : p;
-                                    launchUrl(
-                                      Uri.parse('https://wa.me/$wa'),
-                                      mode: LaunchMode.externalApplication,
-                                    );
-                                  },
+                                  onPressed: () => showWhatsAppSendSheet(
+                                    context,
+                                    phone: lead['phone'] as String?,
+                                    name: lead['name'] as String?,
+                                    leadId: lead['_id'] as String?,
+                                    projectId: _projectId,
+                                  ),
                                 ),
                               ],
                             ),

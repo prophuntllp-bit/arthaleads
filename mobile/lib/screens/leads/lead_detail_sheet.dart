@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,6 +11,7 @@ import '../../core/theme.dart';
 import '../../widgets/badges.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/whatsapp_send_sheet.dart';
 import '../calls/call_history_screen.dart';
 
 const _fbErrorPattern = 'Facebook lead received but field data could not be fetched';
@@ -46,7 +46,6 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   late Map<String, dynamic> lead = {...widget.lead};
   bool _saving = false;
   bool _retrying = false;
-  bool _drafting = false;
   bool _calling = false;
   String _tab = 'info';
   final _noteCtrl = TextEditingController();
@@ -256,58 +255,13 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }
   }
 
-  Future<void> _draftAiMessage() async {
-    setState(() => _drafting = true);
-    String? message;
-    String? error;
-    try {
-      final res = _isProject
-          ? await _api.dio.post('/projects/${lead['projectId']}/leads/${lead['_id']}/draft-message')
-          : await _api.dio.post('/leads/${lead['_id']}/draft-message');
-      message = res.data['message'] as String?;
-    } catch (e) {
-      error = ApiClient.errorMessage(e, 'AI drafting failed');
-    } finally {
-      if (mounted) setState(() => _drafting = false);
-    }
-    if (!mounted) return;
-    if (error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error), backgroundColor: AppColors.danger));
-      return;
-    }
-    final ctrl = TextEditingController(text: message ?? '');
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('AI-drafted WhatsApp message'),
-        content: TextField(controller: ctrl, maxLines: 8, decoration: const InputDecoration(isDense: true)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-          TextButton(
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: ctrl.text));
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied')));
-            },
-            child: const Text('Copy'),
-          ),
-          FilledButton.icon(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final phone = (lead['phone'] as String? ?? '').replaceAll(RegExp(r'\D'), '');
-              if (phone.isEmpty) return;
-              final wa = phone.length == 10 ? '91$phone' : phone;
-              await launchUrl(
-                Uri.parse('https://wa.me/$wa?text=${Uri.encodeComponent(ctrl.text)}'),
-                mode: LaunchMode.externalApplication,
-              );
-            },
-            icon: Icon(FontAwesomeIcons.whatsapp.data, size: 16),
-            label: const Text('Send'),
-          ),
-        ],
-      ),
+  Future<void> _whatsapp() async {
+    await showWhatsAppSendSheet(
+      context,
+      phone: lead['phone'] as String?,
+      name: lead['name'] as String?,
+      leadId: lead['_id'] as String?,
+      projectId: _isProject ? lead['projectId'] as String? : null,
     );
   }
 
@@ -672,14 +626,9 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: _drafting ? null : _draftAiMessage,
-                      icon: _drafting
-                          ? const SizedBox(
-                              width: 14, height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.auto_awesome, size: 18),
-                      label: const Text('Draft with AI'),
+                      onPressed: _whatsapp,
+                      icon: Icon(FontAwesomeIcons.whatsapp.data, size: 18),
+                      label: const Text('WhatsApp'),
                     ),
                   ),
                 ],

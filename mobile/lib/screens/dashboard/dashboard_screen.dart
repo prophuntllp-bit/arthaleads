@@ -13,6 +13,7 @@ import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/call_options_sheet.dart';
+import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/date_range_picker.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
@@ -935,18 +936,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                         IconButton(
                           tooltip: 'WhatsApp',
-                          onPressed: () {
-                            final digits = (str(hot['phone']) ?? '')
-                                .replaceAll(RegExp(r'\D'), '');
-                            if (digits.isNotEmpty) {
-                              launchUrl(
-                                Uri.parse(
-                                  'https://wa.me/${digits.length == 10 ? '91$digits' : digits}',
-                                ),
-                                mode: LaunchMode.externalApplication,
-                              );
-                            }
-                          },
+                          onPressed: () => showWhatsAppSendSheet(
+                            context,
+                            phone: str(hot['phone']),
+                            name: str(hot['name']),
+                            leadId: str(hot['_id']),
+                          ),
                           icon: Icon(
                             FontAwesomeIcons.whatsapp.data,
                             color: AppColors.whatsapp,

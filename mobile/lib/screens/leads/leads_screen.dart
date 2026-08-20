@@ -18,6 +18,7 @@ import '../../core/deep_link.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/call_options_sheet.dart';
+import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/qr_sheet.dart';
@@ -384,17 +385,13 @@ class LeadsScreenState extends State<LeadsScreen> {
   }
 
   Future<void> _whatsapp(Map<String, dynamic> lead) async {
-    final phone = (lead['phone'] as String? ?? '').replaceAll(
-      RegExp(r'\D'),
-      '',
+    await showWhatsAppSendSheet(
+      context,
+      phone: lead['phone'] as String?,
+      name: lead['name'] as String?,
+      leadId: lead['_id'] as String?,
+      onSent: () => _markContacted(lead),
     );
-    if (phone.isEmpty) return;
-    final wa = phone.length == 10 ? '91$phone' : phone;
-    await launchUrl(
-      Uri.parse('https://wa.me/$wa'),
-      mode: LaunchMode.externalApplication,
-    );
-    _markContacted(lead);
   }
 
   /// Auto-mark as Contacted on call/WhatsApp — mirrors handleContact() on the web.
@@ -824,15 +821,14 @@ class LeadsScreenState extends State<LeadsScreen> {
     );
   }
 
-  // Same relative-time formatting already used on the Referrals screen.
-  String _timeAgo(String? iso) {
+  // Actual date+time rather than relative wording — "Created on Today" read
+  // oddly for same-day leads, and an exact timestamp is more useful anyway.
+  // Same 'dd MMM, hh:mm a' format used everywhere else in the app (Calls,
+  // Tasks, Automation, Follow-ups, Lead Detail).
+  String _createdOn(String? iso) {
     final dt = DateTime.tryParse(iso ?? '');
     if (dt == null) return '';
-    final days = DateTime.now().difference(dt).inDays;
-    if (days <= 0) return 'Today';
-    if (days == 1) return 'Yesterday';
-    if (days < 30) return '${days}d ago';
-    return DateFormat('dd MMM').format(dt);
+    return DateFormat('dd MMM, hh:mm a').format(dt.toLocal());
   }
 
   Widget _leadCard(Map<String, dynamic> lead) {
@@ -949,7 +945,7 @@ class LeadsScreenState extends State<LeadsScreen> {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      'Added ${_timeAgo(lead['createdAt'] as String?)}',
+                      'Created on ${_createdOn(lead['createdAt'] as String?)}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
