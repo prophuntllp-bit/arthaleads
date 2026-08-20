@@ -19,24 +19,33 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 18,
+    build: 19,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Left at 15 — build 18 is a new feature (WhatsApp personal/business +
-    // AI draft) and a display tweak, neither needs forcing. Anyone below 15
-    // is still pulled up to at least the update-delivery fix.
-    minBuild: 15,
+    // Set to 19 — every build up through 18 has a broken update checker (see
+    // trueBuildNumber() in mobile/lib/core/update_service.dart): Flutter's
+    // ABI-split builds stamp Android's versionCode as abiCode*1000+build
+    // (e.g. build 18 reads back as 2018), and every prior version of this
+    // check compared that inflated number straight against this file's plain
+    // build/minBuild — so `latestBuild <= currentBuild` and `currentBuild <
+    // minBuild` were BOTH always wrong, meaning no install has ever
+    // correctly detected an update OR a forced one, confirmed via
+    // `aapt dump badging` on the actual APKs. minBuild can't retroactively
+    // fix already-installed broken clients (their own checker is what's
+    // broken) — every device on build ≤18 needs one manual reinstall of 19
+    // before the in-app prompt can be trusted again for anything after this.
+    minBuild: 19,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
     // Hosted as a GitHub Release asset — see .github/workflows/mobile-flutter-ci.yml
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-18/arthaleads-1.0.1%2B18-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-19/arthaleads-1.0.1%2B19-arm64.apk",
     // Optional short "what's new" line.
-    notes: "WhatsApp button now matches the web app exactly: editable pre-filled message, AI Draft, and a choice of personal or WhatsApp Business — everywhere (Leads, Pipeline, Projects, Dashboard, Lead Detail). Lead cards also now show the full created date and time.",
+    notes: "Fixed the update checker itself — it was comparing Android's ABI-split version code (which is offset, e.g. build 18 read back as 2018) against the plain build number, so no update or forced update has ever actually been detected correctly until now.",
   },
 };

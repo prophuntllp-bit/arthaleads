@@ -53,7 +53,7 @@ class UpdateService {
   static Future<UpdateInfo?> check() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+      final currentBuild = trueBuildNumber(info.buildNumber);
       if (currentBuild == 0) return null; // unknown build — don't guess
 
       final res = await ApiClient.instance.dio.get(
@@ -125,6 +125,26 @@ class UpdateService {
     return int.tryParse('$v') ?? 0;
   }
 
+  /// Recovers the real "+N" build number (matches mobile/pubspec.yaml and
+  /// backend/constants/appRelease.js) from Android's actual versionCode.
+  ///
+  /// android/app/build.gradle.kts enables `splits { abi { ... } }` to keep
+  /// the download small (one ABI's native code per APK instead of all of
+  /// them) — but Flutter's Gradle tooling stamps each ABI split with
+  /// `abiVersionCode * 1000 + versionCode` so a Play Store multi-APK release
+  /// can tell the splits apart (armeabi-v7a=1000, arm64-v8a=2000, x86_64=
+  /// 4000). We don't publish through Play, we just rename the arm64 split
+  /// and sideload it directly — but PackageInfo.buildNumber still reports
+  /// the offset value regardless, e.g. build 18 reads back as "2018".
+  /// Every prior version of this check compared that inflated number
+  /// straight against the backend's plain build number, so `latestBuild <=
+  /// currentBuild` was always true and no update was ever offered, to
+  /// anyone, ever — confirmed via `aapt dump badging` on the actual APK.
+  /// `% 1000` recovers the true value for both offset and un-offset builds
+  /// (a universal APK's plain versionCode passes through unchanged) and
+  /// stays correct up to build 999.
+  static int trueBuildNumber(String raw) => (int.tryParse(raw) ?? 0) % 1000;
+
   /// Explicit, user-triggered check (Settings → Check for Updates). Unlike
   /// [check], this always reports the true state — it ignores any prior
   /// "Later" dismissal (the user asked directly, so "you skipped this
@@ -136,7 +156,7 @@ class UpdateService {
   static Future<ManualCheckOutcome> checkManual() async {
     try {
       final info = await PackageInfo.fromPlatform();
-      final currentBuild = int.tryParse(info.buildNumber) ?? 0;
+      final currentBuild = trueBuildNumber(info.buildNumber);
       if (currentBuild == 0) return const ManualCheckOutcome(ManualCheckResult.error);
 
       final res = await ApiClient.instance.dio.get(
