@@ -225,10 +225,10 @@ const automationService = {
     return user;
   },
 
-  createFacebookState({ userId, mobile = false }) {
+  createFacebookState({ userId, mobile = false, origin = "" }) {
     // Only embed userId - never the session JWT (which would leak via URL/browser history)
     return jwt.sign(
-      { userId, mobile, type: "facebook_oauth" },
+      { userId, mobile, origin, type: "facebook_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -238,7 +238,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "facebook_oauth") throw new Error("Invalid state type");
-      return { userId: decoded.userId, mobile: decoded.mobile === true };
+      return { userId: decoded.userId, mobile: decoded.mobile === true, origin: decoded.origin || "" };
     } catch {
       throw new AppError("Invalid Facebook OAuth state", 400);
     }
@@ -246,6 +246,18 @@ const automationService = {
 
   getFacebookRedirectUri() {
     return process.env.FB_REDIRECT_URI || "http://localhost:5000/api/automations/facebook/callback";
+  },
+
+  // The app is reachable on several domains (marketing + CRM subdomains, an
+  // alternate Vercel host) - see CLIENT_URLS. The OAuth popup must redirect
+  // back to whichever one actually opened it, or window.opener.postMessage's
+  // targetOrigin check silently drops the result (popup just closes with no
+  // feedback - it looks identical to the user cancelling).
+  isAllowedFrontendOrigin(origin) {
+    if (!origin) return false;
+    const allowed = (process.env.CLIENT_URLS || "http://localhost:3000")
+      .split(",").map((o) => o.trim());
+    return allowed.includes(origin);
   },
 
   getFrontendOrigin() {
@@ -438,9 +450,9 @@ const automationService = {
   // up a Google Cloud OAuth Client and been granted a Google Ads Developer
   // Token — both are external approvals only the account owner can request;
   // see GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_ADS_DEVELOPER_TOKEN.
-  createGoogleState({ userId, mobile = false }) {
+  createGoogleState({ userId, mobile = false, origin = "" }) {
     return jwt.sign(
-      { userId, mobile, type: "google_oauth" },
+      { userId, mobile, origin, type: "google_oauth" },
       process.env.JWT_SECRET,
       { expiresIn: "10m" }
     );
@@ -450,7 +462,7 @@ const automationService = {
     try {
       const decoded = jwt.verify(state, process.env.JWT_SECRET);
       if (decoded.type !== "google_oauth") throw new Error("Invalid state type");
-      return { userId: decoded.userId, mobile: decoded.mobile === true };
+      return { userId: decoded.userId, mobile: decoded.mobile === true, origin: decoded.origin || "" };
     } catch {
       throw new AppError("Invalid Google OAuth state", 400);
     }

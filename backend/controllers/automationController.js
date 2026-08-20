@@ -453,9 +453,11 @@ const automationController = {
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
       // Pass only userId - never embed the session token in the OAuth state (URL-visible)
+      const origin = req.query.origin || "";
       const state = automationService.createFacebookState({
         userId: user._id.toString(),
         mobile: req.query.mobile === "1",
+        origin: automationService.isAllowedFrontendOrigin(origin) ? origin : "",
       });
       const authUrl = automationService.getFacebookAuthUrl(state);
       res.redirect(authUrl);
@@ -465,10 +467,15 @@ const automationController = {
   },
 
   async facebookCallback(req, res) {
-    const frontendOrigin = automationService.getFrontendOrigin();
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
 
     let mobile = false;
+    // Falls back to the static FRONTEND_URL only if the popup's own origin
+    // wasn't captured (e.g. an old/cached state minted before this field
+    // existed) - otherwise this MUST be the origin that opened the popup, or
+    // window.opener.postMessage's targetOrigin check silently drops the
+    // result and the window just closes with no feedback (see FbCallback.jsx).
+    let frontendOrigin = automationService.getFrontendOrigin();
     try {
       console.log(`[facebookCallback] query params: ${JSON.stringify(req.query)}`);
       const { code, state, error, error_description } = req.query;
@@ -476,7 +483,9 @@ const automationController = {
       // Preserve the native callback target even when the provider returns an
       // error (for example, when the user cancels the consent screen).
       if (state) {
-        mobile = automationService.verifyFacebookState(state).mobile;
+        const partial = automationService.verifyFacebookState(state);
+        mobile = partial.mobile;
+        if (partial.origin) frontendOrigin = partial.origin;
       }
 
       // Facebook returns ?error= when the user denies or the app lacks App Review approval
@@ -492,6 +501,7 @@ const automationController = {
 
       const statePayload = automationService.verifyFacebookState(state);
       mobile = statePayload.mobile;
+      if (statePayload.origin) frontendOrigin = statePayload.origin;
       const { pages, freshToken } = await automationService.getFacebookConnectionData(code);
 
       console.log(`[facebookCallback] pages fetched: ${pages.length} | userId: ${statePayload.userId}`);
@@ -537,9 +547,11 @@ const automationController = {
     try {
       const rawToken = req.cookies?.crm_token || req.query.token || "";
       const user = await automationService.verifyPopupToken(rawToken);
+      const origin = req.query.origin || "";
       const state = automationService.createGoogleState({
         userId: user._id.toString(),
         mobile: req.query.mobile === "1",
+        origin: automationService.isAllowedFrontendOrigin(origin) ? origin : "",
       });
       const authUrl = automationService.getGoogleAuthUrl(state);
       res.redirect(authUrl);
@@ -549,7 +561,10 @@ const automationController = {
   },
 
   async googleCallback(req, res) {
-    const frontendOrigin = automationService.getFrontendOrigin();
+    // See facebookCallback for why this must be the popup's own origin, not
+    // the static FRONTEND_URL - a mismatch silently drops window.opener's
+    // postMessage and the popup just closes with no feedback.
+    let frontendOrigin = automationService.getFrontendOrigin();
     res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
 
     let mobile = false;
@@ -559,7 +574,9 @@ const automationController = {
       // Provider-declined flows still need to return to the APK rather than
       // falling through to the web callback page.
       if (state) {
-        mobile = automationService.verifyGoogleState(state).mobile;
+        const partial = automationService.verifyGoogleState(state);
+        mobile = partial.mobile;
+        if (partial.origin) frontendOrigin = partial.origin;
       }
 
       if (error) {
@@ -570,6 +587,7 @@ const automationController = {
 
       const statePayload = automationService.verifyGoogleState(state); // throws if invalid/expired
       mobile = statePayload.mobile;
+      if (statePayload.origin) frontendOrigin = statePayload.origin;
       const { customers, accessToken, refreshToken } = await automationService.getGoogleConnectionData(code);
 
       if (!refreshToken) {

@@ -209,7 +209,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
 
   const openOAuth = () => {
     setConnecting(true);
-    const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect`;
+    const url = `${(apiBase || "").replace(/\/api\/?$/, "")}/api/automations/facebook/connect?origin=${encodeURIComponent(window.location.origin)}`;
     const popup = window.open(url, `arthaleads-fb-oauth-${Date.now()}`, "width=720,height=760,resizable=yes,scrollbars=yes");
 
     if (!popup) {
@@ -1431,7 +1431,7 @@ function GoogleWizard({ open, onClose, onChanged }) {
 
   const openGoogleOAuth = () => {
     setOauthConnecting(true);
-    const url = `${serverBase}/api/automations/google/connect`;
+    const url = `${serverBase}/api/automations/google/connect?origin=${encodeURIComponent(window.location.origin)}`;
     const popup = window.open(url, `arthaleads-google-oauth-${Date.now()}`, "width=520,height=680,resizable=yes,scrollbars=yes");
 
     if (!popup) {
