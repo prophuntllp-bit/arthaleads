@@ -103,16 +103,40 @@ const automationService = {
       updatedBy: actor._id,
     });
 
-    // Subscribe the Page to send leadgen events to our webhook
+    // Subscribe the Page to send leadgen events to our webhook.
+    //
+    // This is NOT cosmetic: without it Facebook never delivers a single lead.
+    // Treating a failure here as merely "non-fatal" meant the org saw a
+    // connected source and silently received nothing, which is worse than an
+    // outright error — so the reason is recorded and surfaced instead.
     if (normalized.platform === "Facebook" && normalized.pageId && normalized.accessToken) {
-      try {
-        await automationService.subscribePageWebhook(normalized.pageId, normalized.accessToken);
-      } catch (err) {
-        console.warn("Page webhook subscription failed (non-fatal):", err.message);
-      }
+      automation.webhookWarning = await automationService.trySubscribePage(
+        normalized.pageId,
+        normalized.accessToken
+      );
     }
 
     return automation;
+  },
+
+  // Returns null on success, or a human-readable reason the Page could not be
+  // subscribed. Persists the reason so a silently-broken connection is
+  // diagnosable later rather than living only in a log line.
+  async trySubscribePage(pageId, pageAccessToken, automationDoc = null) {
+    try {
+      await automationService.subscribePageWebhook(pageId, pageAccessToken);
+      return null;
+    } catch (err) {
+      const reason = err.message || "Unknown error";
+      console.error(`[subscribePageWebhook] FAILED for page ${pageId} — this Page will receive NO leads: ${reason}`);
+      if (automationDoc) {
+        try {
+          automationDoc.mappingNotes = `Webhook subscription failed: ${reason}`.slice(0, 500);
+          await automationDoc.save();
+        } catch { /* best effort — never mask the original failure */ }
+      }
+      return reason;
+    }
   },
 
   async subscribePageWebhook(pageId, pageAccessToken) {
@@ -189,11 +213,10 @@ const automationService = {
 
     // Re-subscribe page webhook on update (in case token changed or first save)
     if (normalized.platform === "Facebook" && normalized.pageId && normalized.accessToken) {
-      try {
-        await automationService.subscribePageWebhook(normalized.pageId, normalized.accessToken);
-      } catch (err) {
-        console.warn("Page webhook subscription failed (non-fatal):", err.message);
-      }
+      automation.webhookWarning = await automationService.trySubscribePage(
+        normalized.pageId,
+        normalized.accessToken
+      );
     }
 
     return automation;
@@ -280,13 +303,20 @@ const automationService = {
       // returns a clean, error-free 0 and the connect flow dead-ends at "No
       // Facebook Pages found" with nothing in the logs to explain why.
       auth_type: "rerequest",
-      // leads_retrieval is intentionally omitted — the server-side App Token
-      // (FB_APP_ID|FB_APP_SECRET) handles all lead fetching, so users never
-      // need to grant that advanced permission personally.
+      // leads_retrieval IS required here, despite the App Token
+      // (FB_APP_ID|FB_APP_SECRET) handling all lead *fetching*. Subscribing a
+      // Page to the "leadgen" webhook field is a separate operation, and Graph
+      // rejects it without leads_retrieval on the subscribing token:
+      //   (#200) To subscribe to the leadgen field, one of these permissions
+      //          is needed: leads_retrieval
+      // Omitting it let the connection save while the Page was never actually
+      // subscribed, so the org looked connected and received zero leads.
+      // It is approved for Advanced Access, so every user can grant it.
       scope: [
         "pages_show_list",
         "pages_manage_metadata",
         "pages_read_engagement",
+        "leads_retrieval",
       ].join(","),
     });
 

@@ -233,6 +233,17 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
     }, 600);
   };
 
+  // The source saves fine even when Facebook refuses to subscribe the Page to
+  // leadgen events — but in that state it never receives a single lead. A plain
+  // "connected!" toast there is actively misleading, so say what actually failed.
+  const reportSaveOutcome = (webhookWarning, successMessage) => {
+    if (!webhookWarning) { toast.success(successMessage); return; }
+    toast.error(
+      `Saved, but Facebook would not subscribe this Page — no leads will arrive. ${webhookWarning}`,
+      { duration: 10000 }
+    );
+  };
+
   const handleSave = async () => {
     if (!pageId) { toast.error("Please enter a Facebook Page ID"); return; }
     if (!connName.trim()) { toast.error("Please give this connection a name"); return; }
@@ -265,11 +276,11 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
       if (editingItem) {
         const { data } = await api.patch(`/automations/${editingItem._id}`, payload);
         onSaved("update", data.automation);
-        toast.success("Facebook connection updated");
+        reportSaveOutcome(data.webhookWarning, "Facebook connection updated");
       } else {
         const { data } = await api.post("/automations", payload);
         onSaved("create", data.automation);
-        toast.success("Facebook Lead Ads connected!");
+        reportSaveOutcome(data.webhookWarning, "Facebook Lead Ads connected!");
       }
       onClose();
     } catch (err) {

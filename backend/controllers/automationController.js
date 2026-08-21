@@ -419,7 +419,9 @@ const automationController = {
   async create(req, res, next) {
     try {
       const automation = await automationService.create(req.body, req.user);
-      res.status(201).json({ success: true, automation });
+      // A Facebook source that saved but could not subscribe its Page receives
+      // no leads at all — say so rather than reporting a clean success.
+      res.status(201).json({ success: true, automation, webhookWarning: automation.webhookWarning || null });
     } catch (err) {
       next(err);
     }
@@ -428,7 +430,7 @@ const automationController = {
   async update(req, res, next) {
     try {
       const automation = await automationService.update(req.params.id, req.body, req.user);
-      res.json({ success: true, automation });
+      res.json({ success: true, automation, webhookWarning: automation.webhookWarning || null });
     } catch (err) {
       next(err);
     }
