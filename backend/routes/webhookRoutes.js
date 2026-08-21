@@ -80,13 +80,31 @@ async function getFacebookLeadFields(leadgenId, accessToken) {
   // aren't even valid queryable fields on this Graph API object - requesting them here just
   // risks Graph rejecting the whole call over one bad field name, as page_id and adgroup_id
   // both did.
-  const params = new URLSearchParams({
-    access_token: accessToken,
-    fields: "field_data",
-  });
+  // ad_name / adset_name / campaign_name are NOT in the webhook payload and are
+  // the only campaign context reachable without pages_manage_ads (which gates
+  // every leadgen_form read and is testers-only). Verified readable with the
+  // page token we already hold, so agents get "which campaign is this?" without
+  // an App Review round. Organic leads have no ad, so a failure here must not
+  // cost us the lead itself — fall back to the original field_data-only call.
+  const RICH = "field_data,ad_id,ad_name,adset_name,campaign_name,form_id,platform,created_time";
 
-  const response = await fetch(`https://graph.facebook.com/v23.0/${leadgenId}?${params.toString()}`);
-  const json = await response.json();
+  let response = await fetch(`https://graph.facebook.com/v23.0/${leadgenId}?${new URLSearchParams({
+    access_token: accessToken, fields: RICH,
+  })}`);
+  let json = await response.json();
+
+  if (!response.ok) {
+    const params = new URLSearchParams({ access_token: accessToken, fields: "field_data" });
+    const retry = await fetch(`https://graph.facebook.com/v23.0/${leadgenId}?${params.toString()}`);
+    const retryJson = await retry.json();
+    // Only prefer the retry when it actually succeeded, so a genuine auth
+    // failure still surfaces its real error to the caller below.
+    if (retry.ok) {
+      logger.info(`Facebook webhook: rich fields unavailable for lead ${leadgenId}, used field_data only`);
+      response = retry;
+      json = retryJson;
+    }
+  }
 
   if (!response.ok) {
     const errCode = json?.error?.code;
@@ -417,8 +435,25 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           const resolved = await getFacebookFormName(formId, accessToken);
           formName = resolved.name;
         }
+
+        // Campaign context read off the lead itself (see getFacebookLeadFields).
+        // Graph will not give us a lead form's NAME without pages_manage_ads, but
+        // the campaign/adset/ad names identify the source at least as well — and
+        // need no extra permission, so this works for every org automatically
+        // instead of depending on someone maintaining the Form Names mapping.
+        const campaignName = leadDetails.campaign_name || "";
+        const adsetName    = leadDetails.adset_name    || "";
+        const adName       = leadDetails.ad_name       || "";
+        const campaignLine = [
+          campaignName ? `Campaign: ${campaignName}` : "",
+          adsetName ? `Ad set: ${adsetName}` : "",
+          adName ? `Ad: ${adName}` : "",
+        ].filter(Boolean).join("\n");
+
         const formLine = formName
           ? `Form: ${formName}`
+          : campaignName
+          ? "" // campaignLine already identifies the source; don't nag about Form Names
           : formId
           ? `Form ID: ${formId} (add a name for this in Automation → Facebook → Form Names)`
           : "";
@@ -426,7 +461,9 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         // First lead from a form with no manual name yet - likely a brand new
         // campaign. Alert once per form_id rather than relying on someone to spot
         // an unfamiliar ID buried in the Notes tab.
-        if (!formName && formId) {
+        // Skipped when we have a campaign name: the lead is already labelled, so
+        // asking someone to hand-map the form would be busywork.
+        if (!formName && !campaignName && formId) {
           const alertKey = `${automation.orgId}:${formId}`;
           if (!unmappedFormAlerted.has(alertKey)) {
             unmappedFormAlerted.add(alertKey);
@@ -472,6 +509,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
               `Phone: ${fieldMap.phone_number || fieldMap.phone || "N/A"}`,
               `Email: ${fieldMap.email || "-"}`,
               formLine,
+              campaignLine,
               customLines ? `\nForm Answers:\n${customLines}` : "",
               `Lead ID: ${leadData.leadgen_id || "unknown"}`,
             ].filter(Boolean).join("\n");
@@ -520,8 +558,14 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           createdBy: assignee?._id || null,
           assignedTo: assignee?._id || null,
           assignedToName: assignee?.name || "",
-          leadSourceLabel: [automation?.name || "Facebook Lead Ads", formName, isTestLead ? "Test" : ""]
-            .filter(Boolean).join(" · "),
+          // Prefer a human-set form label, then the campaign name (available
+          // for every org without extra permissions), so the Leads table shows
+          // which campaign produced the lead rather than a bare "Facebook".
+          leadSourceLabel: [
+            automation?.name || "Facebook Lead Ads",
+            formName || campaignName,
+            isTestLead ? "Test" : "",
+          ].filter(Boolean).join(" · "),
           notes: [
             {
               text: noteText,
