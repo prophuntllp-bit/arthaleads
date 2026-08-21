@@ -323,9 +323,18 @@ class _LeadsTabState extends State<_LeadsTab> {
       return;
     }
     try {
+      // Everything on this screen comes from /projects/:id/leads, i.e. the
+      // ProjectLead collection. The raw row carries no '_type' (that is only
+      // added when opening the detail sheet), so tag it here — otherwise the
+      // payload says leadId, the backend searches the wrong collection, and
+      // the agent gets "Lead not found." on every EnableX call.
       final res = await _api.dio.post(
         '/calls/initiate',
-        data: {'leadId': lead['_id']},
+        data: callTargetPayload({
+          ...lead,
+          '_type': 'project',
+          'projectId': _projectId,
+        }),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

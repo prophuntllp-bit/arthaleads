@@ -787,19 +787,30 @@ router.post("/initiate", protect, async (req, res, next) => {
     // no shared _id - ownerRef's prefix ("lead_" vs "projectlead_") is what tells
     // processCallStateEvent() which collection to update when EnableX's webhook
     // events come back.
-    const isProjectLead = !!projectLeadId;
+    //
+    // Which collection to search is resolved by LOOKUP, not by which key the
+    // caller happened to use. Trusting the key meant any client that sent
+    // `leadId` for a project lead searched the wrong collection and got a flat
+    // "Lead not found." - which is what the Android app did from inside a
+    // project, breaking EnableX calling for those leads entirely. ObjectIds are
+    // globally unique so the fallback can never mismatch (see
+    // findLeadOrProjectLead above), and fixing it here rather than only in the
+    // client means every already-installed app is fixed without an update.
     const targetId = projectLeadId || leadId;
-    const Model = isProjectLead ? ProjectLead : Lead;
 
-    const [org, lead] = await Promise.all([
+    const [org, found] = await Promise.all([
       Organization.findById(req.user.orgId).select("enablex name").lean(),
-      Model.findOne({ _id: targetId, orgId: req.user.orgId }),
+      findLeadOrProjectLead(targetId, req.user.orgId),
     ]);
+
+    const lead = found.doc;
+    const isProjectLead = found.Model === ProjectLead;
 
     if (!org?.enablex?.enabled || !org.enablex.appId || !org.enablex.apiKey) {
       return res.status(400).json({ success: false, message: "EnableX telephony is not configured. Go to Settings → Organization → Telephony." });
     }
-    if (!lead)       return res.status(404).json({ success: false, message: isProjectLead ? "Project lead not found." : "Lead not found." });
+    // Both collections were searched, so there is no "which kind" to report.
+    if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
     if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
     const agentPhone = req.user.phone ? normalizePhone(req.user.phone) : null;
@@ -908,12 +919,15 @@ router.post("/webrtc/session", protect, async (req, res, next) => {
       });
     }
 
-    const isProjectLead = !!projectLeadId;
+    // Resolved by lookup rather than by which key the caller sent — see the
+    // same fix in /initiate above. A client sending leadId for a project lead
+    // would otherwise search the wrong collection and get "Lead not found."
     const targetId = projectLeadId || leadId;
-    const Model = isProjectLead ? ProjectLead : Lead;
+    const found = await findLeadOrProjectLead(targetId, req.user.orgId);
+    const lead = found.doc;
+    const isProjectLead = found.Model === ProjectLead;
 
-    const lead = await Model.findOne({ _id: targetId, orgId: req.user.orgId });
-    if (!lead)       return res.status(404).json({ success: false, message: isProjectLead ? "Project lead not found." : "Lead not found." });
+    if (!lead)       return res.status(404).json({ success: false, message: "Lead not found." });
     if (!lead.phone) return res.status(400).json({ success: false, message: "This lead has no phone number." });
 
     const ownerRef  = `${isProjectLead ? "projectlead" : "lead"}_${targetId}_${Date.now()}`;

@@ -125,3 +125,21 @@ String fmtBudget(num? val) {
   }
   return '₹$val';
 }
+
+/// Body for POST /calls/initiate (and the WebRTC session endpoint).
+///
+/// Project leads live in a separate ProjectLead collection with no shared _id,
+/// so the backend picks the collection purely from WHICH key it receives:
+/// `projectLeadId` means ProjectLead, `leadId` means Lead. Sending `leadId` for
+/// a project lead therefore looks up the wrong collection and fails with a
+/// flat "Lead not found." — which is exactly what agents hit when calling from
+/// inside a project.
+///
+/// Always build the payload with this rather than hand-writing {'leadId': ...},
+/// so a new call site cannot silently reintroduce that bug.
+Map<String, dynamic> callTargetPayload(Map<String, dynamic> lead) {
+  final isProject = lead['_type'] == 'project' && lead['projectId'] != null;
+  return isProject
+      ? {'projectLeadId': lead['_id']}
+      : {'leadId': lead['_id']};
+}

@@ -118,7 +118,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
       return;
     }
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});
+      final res = await _api.dio.post('/calls/initiate', data: callTargetPayload(lead));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

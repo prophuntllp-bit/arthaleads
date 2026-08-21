@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
@@ -34,7 +35,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
       return;
     }
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});
+      final res = await _api.dio.post('/calls/initiate', data: callTargetPayload(lead));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

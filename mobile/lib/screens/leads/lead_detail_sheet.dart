@@ -365,7 +365,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }
     setState(() => _calling = true);
     try {
-      final res = await _api.dio.post('/calls/initiate', data: {'leadId': lead['_id']});
+      final res = await _api.dio.post('/calls/initiate', data: callTargetPayload(lead));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
