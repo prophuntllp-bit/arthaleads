@@ -354,31 +354,61 @@ const automationService = {
     return userAccessToken; // fallback to user token
   },
 
-  // Explains an empty /me/accounts. Only runs on the zero-page path, so it
-  // costs nothing normally. Never logs the token itself — only its metadata.
-  async logZeroPageDiagnostics(accessToken) {
-    const probe = async (label, path, params) => {
-      try {
-        const r = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${path}?${new URLSearchParams(params)}`);
-        const j = await r.json();
-        console.log(`[fb-diag] ${label} → ${JSON.stringify(j)}`);
-        return j;
-      } catch (e) {
-        console.log(`[fb-diag] ${label} → threw: ${e.message}`);
+  // The Page IDs the user actually ticked in the consent picker.
+  //
+  // /me/accounts only lists Pages where the user holds a CLASSIC Page role.
+  // A Page on the New Pages Experience comes back as an empty 200 there even
+  // when the user just granted it — no error, nothing distinguishing it from
+  // "this user manages no Pages" (an ambiguity that cost two wrong root-cause
+  // diagnoses: Dev Mode, then Business Manager). The grant is intact either
+  // way, and debug_token reports it under granular_scopes as the exact
+  // target_ids per scope, so that is the reliable source of truth.
+  async fetchGrantedPageIds(accessToken) {
+    if (!process.env.FB_APP_ID || !process.env.FB_APP_SECRET) return [];
+    const appToken = `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`;
+    try {
+      const params = new URLSearchParams({ input_token: accessToken, access_token: appToken });
+      const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/debug_token?${params.toString()}`);
+      const json = await resp.json();
+      if (json.error) {
+        console.warn(`[fetchGrantedPageIds] debug_token error: ${json.error.message}`);
+        return [];
+      }
+
+      const ids = new Set();
+      for (const entry of json.data?.granular_scopes || []) {
+        // Only pages_show_list is guaranteed to target Pages; other scopes can
+        // target ad accounts or businesses, whose IDs are not Page IDs.
+        if (entry.scope !== "pages_show_list") continue;
+        for (const id of entry.target_ids || []) ids.add(String(id));
+      }
+      return [...ids];
+    } catch (e) {
+      console.warn(`[fetchGrantedPageIds] debug_token threw: ${e.message}`);
+      return [];
+    }
+  },
+
+  // Read one Page directly by ID. Used for Pages the grant covers but
+  // /me/accounts refuses to enumerate (see fetchGrantedPageIds).
+  async fetchPageById(pageId, userAccessToken) {
+    try {
+      const params = new URLSearchParams({ access_token: userAccessToken, fields: "id,name,access_token,tasks" });
+      const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}?${params.toString()}`);
+      const json = await resp.json();
+      if (json.error) {
+        console.warn(`[fetchPageById] ${pageId} failed: ${json.error.message}`);
         return null;
       }
-    };
-
-    await probe("/me", "me", { access_token: accessToken, fields: "id,name" });
-    await probe("/me/permissions", "me/permissions", { access_token: accessToken });
-
-    if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
-      // Reveals token type (USER vs SYSTEM_USER) and granular_scopes — the
-      // latter lists the exact Page IDs the grant is actually scoped to.
-      await probe("debug_token", "debug_token", {
-        input_token: accessToken,
-        access_token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`,
-      });
+      return {
+        id: json.id,
+        name: json.name || pageId,
+        access_token: json.access_token, // may be absent; enriched by caller
+        tasks: json.tasks || [],
+      };
+    } catch (e) {
+      console.warn(`[fetchPageById] ${pageId} threw: ${e.message}`);
+      return null;
     }
   },
 
@@ -393,24 +423,29 @@ const automationService = {
       throw new AppError(json1.error?.message || "Failed to fetch Facebook pages", 400);
     }
 
-    const directPages = json1.data || [];
+    let directPages = json1.data || [];
     console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} direct page(s)`);
 
-    // A zero here is indistinguishable from a real "user manages no Pages" —
-    // Graph returns 200 with an empty list even when the user demonstrably
-    // granted a Page in the picker. Ask Facebook what it actually thinks the
-    // token holds so the logs explain WHY, instead of us guessing (which has
-    // now been wrong twice: first Dev Mode, then Business Manager).
+    // Empty here does NOT mean the user granted nothing — /me/accounts omits
+    // New Pages Experience Pages entirely. Fall back to the Page IDs carried
+    // in the token's own grant and read each Page directly.
     if (directPages.length === 0) {
-      await this.logZeroPageDiagnostics(accessToken);
+      const grantedIds = await this.fetchGrantedPageIds(accessToken);
+      console.log(`[fetchFacebookPages] /me/accounts empty - grant covers ${grantedIds.length} Page id(s): ${grantedIds.join(", ") || "none"}`);
+      if (grantedIds.length) {
+        directPages = (await Promise.all(
+          grantedIds.map((id) => this.fetchPageById(id, accessToken))
+        )).filter(Boolean);
+        console.log(`[fetchFacebookPages] recovered ${directPages.length} Page(s) directly by id`);
+      }
     }
 
     // 2️⃣ Fetch page tokens for any pages missing them, then deduplicate
-    // Note: /me/businesses (Business Manager pages) requires the business_management
-    // permission which needs separate Facebook App Review approval. Until that is
-    // granted, only pages directly administered on the user's personal profile
-    // (/me/accounts) are returned. Customers whose pages are Business-Manager-only
-    // must add themselves as a personal Page Admin first, then reconnect.
+    // Note: this no longer depends on /me/accounts alone — the granular_scopes
+    // fallback above covers New Pages Experience Pages, which /me/accounts
+    // silently omits. business_management (for Pages reachable ONLY through a
+    // Business portfolio, with no direct grant) is still unapproved and remains
+    // out of scope; the System User Token panel is the path for those.
     const enriched = await Promise.all(
       directPages.map(async (page) => {
         if (page.access_token) return page;
