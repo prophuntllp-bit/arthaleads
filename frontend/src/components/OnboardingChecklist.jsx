@@ -20,7 +20,7 @@ const STEPS = [
     id: "connect_facebook",
     title: "Connect Facebook Lead Ads",
     desc: "Auto-capture every Meta ad form submission straight into the CRM.",
-    href: "/automation",
+    href: "/integrations",
     Icon: Zap,
   },
   {

@@ -44,7 +44,7 @@ const faqs = [
   ["How do I add a new team member?", "Go to the Team page, click Add Team Member, fill in their name and email, set a role (Agent, Manager, or Admin), and save. They will receive their login credentials and can sign in immediately."],
   ["How do I assign leads faster?", "Open the Leads table and click on any lead row to assign it directly. You can also drag and drop leads between stages in the Pipeline view. Use the bulk-select checkbox to assign multiple leads at once."],
   ["Who can change user roles?", "Only Admins can update user roles. Go to Team → click on a member → change their role. Managers can view performance reports but cannot modify roles or remove teammates."],
-  ["How do Facebook leads get into Arthaleads?", "Connect your Facebook Page via Automation → Connect Facebook. Once connected, any lead submitted through your Facebook Lead Ad forms will automatically appear in the Leads section within seconds."],
+  ["How do Facebook leads get into Arthaleads?", "Connect your Facebook Page via Integrations → Connect Facebook. Once connected, any lead submitted through your Facebook Lead Ad forms will automatically appear in the Leads section within seconds."],
   ["How do I export leads?", "Go to the Leads page and click the Export button (top right). You can export filtered leads as a CSV or Excel file for use in WhatsApp campaigns or external reporting."],
   ["What do the lead statuses mean?", "New = just arrived, not yet contacted. Contacted = call made or message sent. Site Visit = property visit scheduled or done. Negotiation = price or deal discussion ongoing. Converted = sale completed. Lost = lead dropped or unresponsive."],
 ];
@@ -53,13 +53,13 @@ const quickActions = [
   { title: "Need onboarding support?", body: "Ask your admin to add your profile, assign your role, and share your login credentials. Once added, sign in at arthaleads.com and you are ready to go.", action: { label: "Go to Sign In", href: "/login" } },
   { title: "Need missing lead data?", body: "Use the Import option on the Leads screen to upload a CSV. Export the current list first as a backup before doing bulk updates. Supported format: Name, Phone, Email, Source, Status.", action: { label: "Go to Leads", href: "/leads" } },
   { title: "Need admin access?", body: "Admins control roles and permissions. If you need elevated access, contact your system owner or reach out via WhatsApp support.", action: { label: "WhatsApp Support", href: "https://wa.me/918080197945?text=Hi%2C+I+need+help+with+Arthaleads+CRM.", external: true } },
-  { title: "How do I connect Facebook Lead Ads?", body: "Go to Automation in the sidebar, click Connect Facebook, approve the popup, then select your Page and Lead Ad Form. Leads will flow in automatically after setup.", action: { label: "Go to Automation", href: "/automation" } },
+  { title: "How do I connect Facebook Lead Ads?", body: "Go to Integrations in the sidebar, click Connect Facebook, approve the popup, then select your Page and Lead Ad Form. Leads will flow in automatically after setup.", action: { label: "Go to Integrations", href: "/integrations" } },
 ];
 
 const PRIVACY_SECTIONS = [
   ["What data we collect", "Account info (name, email, phone, password), lead data (names, phones, emails, property preferences from Facebook Ads, Google, WhatsApp, or manual entry), Facebook Page/Form IDs and access tokens, and login/activity logs for audit."],
   ["How we use it", "To manage your CRM account, receive and store leads from ad platforms, assign leads to agents, send follow-up reminders, generate analytics reports, and maintain security."],
-  ["Facebook data", "We connect to Meta's Graph API to retrieve lead submissions. We store Page Access Tokens securely. We do not sell or share Facebook lead data - it is used solely to operate the CRM for you. You can disconnect at any time from the Automation page."],
+  ["Facebook data", "We connect to Meta's Graph API to retrieve lead submissions. We store Page Access Tokens securely. We do not sell or share Facebook lead data - it is used solely to operate the CRM for you. You can disconnect at any time from the Integrations page."],
   ["Data storage & security", "Data is stored on MongoDB Atlas (AWS). We use HTTPS/TLS encryption, bcrypt-hashed passwords, JWT authentication, and role-based access control."],
   ["Data sharing", "We do not sell or share your data with third parties except infrastructure providers (database hosting). Lead data is never used for advertising."],
   ["Your rights", "You can access, correct, or delete your data at any time. You can export leads as CSV or Excel from the Leads page. Contact us to close your account and remove all data."],
@@ -160,7 +160,7 @@ const GUIDE_MODULES = [
     title: "Automation & Integrations",
     short: "Integrations",
     summary: "Connect Facebook Lead Ads and other channels so every lead flows in automatically.",
-    href: "/automation",
+    href: "/integrations",
     steps: [
       "Go to Integrations in the sidebar. Click Connect Facebook and approve the popup to log in with your Facebook account.",
       "Select the Facebook Page that runs your lead ads, then select the specific Lead Ad Form you want to capture.",

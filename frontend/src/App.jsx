@@ -715,8 +715,14 @@ export default function App() {
                 gating inside Team.jsx for which actions stay admin-only) */}
             <Route element={<RequireRole roles={["admin", "manager"]} />}>
               <Route path="/team" element={<Team />} />
-              <Route path="/automation"  element={<Automation />} />
-              <Route path="/automation/telephony" element={<TelephonyIntegration />} />
+              <Route path="/integrations" element={<Automation />} />
+              <Route path="/integrations/telephony" element={<TelephonyIntegration />} />
+              {/* The page was renamed Automation -> Integrations. Keep the old
+                  slug redirecting: push notifications already delivered to
+                  devices carry url:"/automation" in their payload and would
+                  otherwise dead-end, as would any bookmark. */}
+              <Route path="/automation" element={<Navigate to="/integrations" replace />} />
+              <Route path="/automation/telephony" element={<Navigate to="/integrations/telephony" replace />} />
               <Route path="/performance" element={<Performance />} />
               <Route path="/dump-leads"  element={<DumpLeads />} />
             </Route>

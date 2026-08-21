@@ -9,7 +9,7 @@ export default function TelephonyIntegration() {
     <div className="stitch-page space-y-6">
       <div className="stitch-topbar">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/automation")} className="btn-ghost">
+          <button onClick={() => navigate("/integrations")} className="btn-ghost">
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="flex items-center gap-3">

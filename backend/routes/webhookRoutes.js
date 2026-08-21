@@ -496,6 +496,13 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
               type: "facebook_form_unmapped",
               title: "New Facebook campaign detected",
               body: `A lead came in from a form we don't have a name for yet (ID: ${formId}). Add one in Automation → Facebook → Form Names.`,
+              // Deliberately still "/automation" though the web page is now
+              // /integrations. The Android app matches a notification's url
+              // against its TAB LABEL (shell.dart), and that tab is still
+              // labelled "Automation" — "/integrations" would match nothing and
+              // the tap would silently go nowhere on every installed build.
+              // Web redirects /automation -> /integrations, so both work.
+              // Change this only alongside a mobile release that renames the tab.
               data: { url: "/automation" },
             }, automation.orgId).catch((e) => logger.warn("Push notification failed:", e.message));
           }

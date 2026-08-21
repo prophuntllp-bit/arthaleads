@@ -22,7 +22,7 @@ export const QUICK_ANSWERS = [
     id: "facebook",
     q: "How do I connect Facebook lead ads?",
     a: "Open the Integrations page (Admin/Manager only), choose Facebook Lead Ads, connect your Meta account and pick your lead form. Every new submission then imports into the CRM automatically.",
-    goto: "/automation",
+    goto: "/integrations",
     tour: "facebook",
   },
   {
@@ -230,7 +230,7 @@ export const TOURS = {
   },
   facebook: {
     label: "Facebook tour",
-    path: "/automation",
+    path: "/integrations",
     steps: [
       { target: '[data-tour="fb-connect"]', title: "Connect Facebook Lead Ads", body: "Click the Facebook tile, connect your Meta account and pick your lead form. Every new submission then imports into the CRM automatically and can be auto-assigned." },
     ],

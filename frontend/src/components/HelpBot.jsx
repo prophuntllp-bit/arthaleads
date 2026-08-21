@@ -78,7 +78,7 @@ const PAGE_COPILOT = {
       "How do I view the project pipeline?",
     ],
   },
-  "/automation": {
+  "/integrations": {
     label: "Integrations",
     chips: [
       "How do I connect Facebook Lead Ads?",
