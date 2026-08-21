@@ -272,6 +272,14 @@ const automationService = {
       redirect_uri: this.getFacebookRedirectUri(),
       state,
       response_type: "code",
+      // Force the permission/Page picker to re-render every time. Without this
+      // Facebook shows "You've previously linked Arthaleads CRM — continue with
+      // your previous settings?" and Continue silently re-grants the OLD asset
+      // selection. A user whose first attempt failed before reaching the picker
+      // (or who ticked no Pages) then re-grants zero Pages forever: /me/accounts
+      // returns a clean, error-free 0 and the connect flow dead-ends at "No
+      // Facebook Pages found" with nothing in the logs to explain why.
+      auth_type: "rerequest",
       // leads_retrieval is intentionally omitted — the server-side App Token
       // (FB_APP_ID|FB_APP_SECRET) handles all lead fetching, so users never
       // need to grant that advanced permission personally.

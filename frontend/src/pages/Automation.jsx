@@ -162,7 +162,7 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
           setNoPagesWarning(true);
           setShowSysPanel(true);
           // Stay on connect step so the System Token panel is visible
-          toast.error("No Facebook Pages found. Your page may be in Business Manager — use the System Token below.");
+          toast.error("Facebook returned no Pages. Reconnect and choose \"Edit settings\" to pick your Page.");
         }
       }
       if (result.type === "facebook_oauth_error") {
@@ -457,8 +457,11 @@ function FacebookWizard({ open, onClose, onSaved, editingItem, apiBase }) {
                 <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 space-y-2">
                   <p className="text-sm font-semibold text-orange-400">No Facebook Pages were returned</p>
                   <p className="text-xs text-app-soft leading-relaxed">
-                    This usually means Facebook didn't grant Pages permission. When the login window opens,
-                    make sure to click <strong>"Continue"</strong> on every permission screen - don't uncheck anything.
+                    Facebook granted access to zero Pages. If the login window showed
+                    <strong> "You've previously linked Arthaleads CRM… continue with your previous settings?"</strong>,
+                    click <strong>"Edit settings"</strong> rather than "Continue" - Continue silently re-applies your
+                    earlier selection, which had no Pages ticked. On the picker that follows, select your Page,
+                    then approve every permission screen without unchecking anything.
                   </p>
                   <button
                     type="button"
