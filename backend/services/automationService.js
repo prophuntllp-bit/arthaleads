@@ -393,7 +393,11 @@ const automationService = {
   // /me/accounts refuses to enumerate (see fetchGrantedPageIds).
   async fetchPageById(pageId, userAccessToken) {
     try {
-      const params = new URLSearchParams({ access_token: userAccessToken, fields: "id,name,access_token,tasks" });
+      // `tasks` is NOT requestable here — it exists only on the /me/accounts
+      // edge, and asking for it makes Graph reject the whole call with
+      // "(#100) Tried accessing nonexisting field (tasks)" rather than just
+      // omitting it. Same trap as page_id/adgroup_id in webhookRoutes.js.
+      const params = new URLSearchParams({ access_token: userAccessToken, fields: "id,name,access_token" });
       const resp = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${pageId}?${params.toString()}`);
       const json = await resp.json();
       if (json.error) {
@@ -404,7 +408,7 @@ const automationService = {
         id: json.id,
         name: json.name || pageId,
         access_token: json.access_token, // may be absent; enriched by caller
-        tasks: json.tasks || [],
+        tasks: [], // unavailable on this path; only used for display
       };
     } catch (e) {
       console.warn(`[fetchPageById] ${pageId} threw: ${e.message}`);
