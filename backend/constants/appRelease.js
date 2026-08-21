@@ -19,7 +19,7 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 20,
+    build: 21,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
@@ -37,8 +37,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-20/arthaleads-1.0.1%2B20-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-21/arthaleads-1.0.1%2B21-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Fixed a light square artifact peeking out from behind the round Add-lead and Artha assistant buttons, and moved the Artha assistant bubble to the bottom-left so it stops overlapping the + button and list content on the right.",
+    notes: "Renamed the Automation tab to Integrations, matching the web app. Notification taps that open it keep working on this and older builds.",
   },
 };
