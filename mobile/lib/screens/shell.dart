@@ -262,16 +262,36 @@ class _ShellState extends State<Shell> {
   // Jumps to the tab matching a tapped notification's data.url (e.g.
   // "/leads/507f..." → the "Leads" tab). Falls back to doing nothing
   // (staying on the current tab) if no label matches.
+  // Paths whose wording no longer matches the tab that serves them. Matching is
+  // label-based, so a renamed tab silently stops resolving its own old links —
+  // and those links live on: already-delivered notifications keep their original
+  // payload forever, and the backend deliberately still sends "/automation"
+  // because builds older than this one only know that spelling.
+  static const _routeAliases = <String, String>{
+    'automation': 'Integrations',
+  };
+
   void _onPendingRoute() {
     final path = PushService.instance.pendingRoute.value;
     if (path == null) return;
     PushService.instance.pendingRoute.value = null;
     final normalized = path.toLowerCase().replaceAll(RegExp(r'[-_ ]'), '');
-    final match = _items.indexWhere(
-      (i) => normalized.contains(
-        i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), ''),
-      ),
-    );
+
+    String? targetLabel;
+    for (final entry in _routeAliases.entries) {
+      if (normalized.contains(entry.key)) {
+        targetLabel = entry.value;
+        break;
+      }
+    }
+
+    final match = targetLabel != null
+        ? _items.indexWhere((i) => i.label == targetLabel)
+        : _items.indexWhere(
+            (i) => normalized.contains(
+              i.label.toLowerCase().replaceAll(RegExp(r'[-_ ]'), ''),
+            ),
+          );
     if (match != -1) setState(() => _index = match);
   }
 
@@ -371,7 +391,7 @@ class _ShellState extends State<Shell> {
       adminOnly: true,
     ),
     _NavItem(
-      'Automation',
+      'Integrations',
       Icons.bolt_rounded,
       () => const AutomationScreen(),
       adminOnly: true,

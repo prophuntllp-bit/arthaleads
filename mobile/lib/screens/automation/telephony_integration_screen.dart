@@ -280,7 +280,7 @@ class _TelephonyIntegrationScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AUTOMATION',
+                    'INTEGRATIONS',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,

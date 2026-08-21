@@ -144,7 +144,7 @@ class _InboxScreenState extends State<InboxScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (_) => Scaffold(
-                        appBar: AppBar(title: const Text('Automation')),
+                        appBar: AppBar(title: const Text('Integrations')),
                         body: const AutomationScreen(),
                       ),
                     ),

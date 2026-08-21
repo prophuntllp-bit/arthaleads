@@ -20,7 +20,7 @@ const _steps = [
   _Step('first_lead', 'Add your first lead',
       'Import from Facebook, upload a CSV, or add manually from Leads.', 'Leads', Icons.dashboard_rounded),
   _Step('connect_facebook', 'Connect Facebook Lead Ads',
-      'Auto-capture every Meta ad form submission straight into the CRM.', 'Automation', Icons.bolt_rounded),
+      'Auto-capture every Meta ad form submission straight into the CRM.', 'Integrations', Icons.bolt_rounded),
   _Step('add_teammate', 'Add a team member',
       'Invite agents or managers so leads can be assigned and tracked.', 'Team', Icons.groups_rounded),
   _Step('view_pipeline', 'Explore the Kanban pipeline',
