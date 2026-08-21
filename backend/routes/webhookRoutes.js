@@ -139,33 +139,55 @@ const FORM_NAME_CACHE_TTL = 24 * 60 * 60 * 1000;
 // "no form_id in the payload" or a still-warming cache, which cost real time
 // diagnosing why the form name wasn't appearing. Surfacing the reason directly
 // in the lead note (below) is what actually found the last two Graph API bugs.
-async function getFacebookFormName(formId, fallbackToken) {
+async function getFacebookFormName(formId, pageId, pageAccessToken) {
   if (!formId) return { name: "", error: "no form_id in webhook payload" };
   const cached = formNameCache.get(formId);
   if (cached && Date.now() - cached.ts < FORM_NAME_CACHE_TTL) return { name: cached.name, error: null };
 
-  const tokens = [];
-  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) tokens.push({ label: "App Token", token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}` });
-  if (fallbackToken) tokens.push({ label: "Page Token", token: fallbackToken });
+  // Reading the form object directly (/{form_id}?fields=name) is NOT viable:
+  // it returns a generic "(#100) does not exist, cannot be loaded due to
+  // missing permissions" for the app token, the page token AND the user token,
+  // even for a form a lead was verifiably delivered from. The Page's
+  // leadgen_forms edge is the one path that works, and it names its own
+  // requirement outright: "(#200) Requires pages_manage_ads".
+  //
+  // So list the Page's forms and cache EVERY name from that single call — the
+  // next lead from any other form on the same Page then resolves for free.
+  if (!pageId) return { name: "", error: "no page_id available to list forms" };
+  if (!pageAccessToken) return { name: "", error: "no page access token available" };
 
-  const errors = [];
-  for (const { label, token } of tokens) {
-    try {
-      const params = new URLSearchParams({ access_token: token, fields: "name" });
-      const r = await fetch(`https://graph.facebook.com/v23.0/${formId}?${params.toString()}`);
-      const j = await r.json();
-      if (r.ok && j.name) {
-        formNameCache.set(formId, { name: j.name, ts: Date.now() });
-        return { name: j.name, error: null };
-      }
-      errors.push(`${label}: ${j?.error?.message || JSON.stringify(j)}`);
-    } catch (e) {
-      errors.push(`${label}: ${e.message}`);
+  try {
+    const params = new URLSearchParams({
+      access_token: pageAccessToken,
+      fields: "id,name",
+      limit: "200",
+    });
+    const r = await fetch(`https://graph.facebook.com/v23.0/${pageId}/leadgen_forms?${params.toString()}`);
+    const j = await r.json();
+
+    if (j.error) {
+      // Expected until pages_manage_ads reaches Advanced Access — the lead is
+      // still labelled by campaign name, so this is a downgrade, not a failure.
+      logger.warn(`Facebook webhook: cannot list forms for page ${pageId}: ${j.error.message}`);
+      return { name: "", error: j.error.message };
     }
+
+    const now = Date.now();
+    let match = "";
+    for (const form of j.data || []) {
+      if (!form.id || !form.name) continue;
+      formNameCache.set(String(form.id), { name: form.name, ts: now });
+      if (String(form.id) === String(formId)) match = form.name;
+    }
+    logger.info(`Facebook webhook: cached ${(j.data || []).length} form name(s) for page ${pageId}`);
+
+    return match
+      ? { name: match, error: null }
+      : { name: "", error: `form ${formId} not in the page's form list` };
+  } catch (e) {
+    logger.warn(`Facebook webhook: form-name lookup threw for page ${pageId}: ${e.message}`);
+    return { name: "", error: e.message };
   }
-  const errorSummary = errors.join("; ") || "no tokens available to try";
-  logger.warn(`Facebook webhook: could not resolve form name for form ${formId}: ${errorSummary}`);
-  return { name: "", error: errorSummary };
 }
 
 async function findFacebookAutomationByPayload(leadData) {
@@ -425,14 +447,17 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         // the generic Page-level connection name and can't tell campaigns apart.
         // Graph API can't read a Lead Form's own name field with the permissions this
         // app has (confirmed: fails identically on App Token and a Page Token that
-        // successfully fetches the lead's own field_data), so admin-entered mappings
-        // (Automation → Facebook → Form Names) are the primary source; the live fetch
-        // is only a best-effort fallback in case that ever changes.
+        // successfully fetches the lead's own field_data). The Page's leadgen_forms
+        // edge DOES work, but needs pages_manage_ads — currently Standard Access,
+        // so it resolves only for users holding a role on the app until App Review
+        // grants Advanced Access. Precedence is therefore: admin-entered mapping,
+        // then the live form list, then the campaign name (always available).
         const formId = leadData.form_id || leadDetails.form_id || "";
         const manualLabel = formId ? (automation?.formLabels || []).find((f) => f.formId === formId)?.label : null;
         let formName = manualLabel || "";
         if (!formName && formId) {
-          const resolved = await getFacebookFormName(formId, accessToken);
+          const formPageId = leadData.page_id || leadDetails.page_id || automation?.pageId || "";
+          const resolved = await getFacebookFormName(formId, formPageId, accessToken);
           formName = resolved.name;
         }
 

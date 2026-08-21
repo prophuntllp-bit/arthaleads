@@ -312,11 +312,20 @@ const automationService = {
       // Omitting it let the connection save while the Page was never actually
       // subscribed, so the org looked connected and received zero leads.
       // It is approved for Advanced Access, so every user can grant it.
+      // pages_manage_ads gates every read of a Page's lead forms — both the
+      // connect-time Form dropdown and resolving a form's name for an incoming
+      // lead. It is still at Standard Access ("Ready for testing"), so Facebook
+      // grants it only to users holding a role on the app and simply omits it
+      // for everyone else; login is unaffected either way, and the form list
+      // already degrades to an empty "All forms" state. Requesting it now is
+      // what makes the App Review screencast recordable — on approval it starts
+      // working for every org with no further code change.
       scope: [
         "pages_show_list",
         "pages_manage_metadata",
         "pages_read_engagement",
         "leads_retrieval",
+        "pages_manage_ads",
       ].join(","),
     });
 
