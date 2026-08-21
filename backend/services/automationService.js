@@ -354,6 +354,34 @@ const automationService = {
     return userAccessToken; // fallback to user token
   },
 
+  // Explains an empty /me/accounts. Only runs on the zero-page path, so it
+  // costs nothing normally. Never logs the token itself — only its metadata.
+  async logZeroPageDiagnostics(accessToken) {
+    const probe = async (label, path, params) => {
+      try {
+        const r = await fetch(`https://graph.facebook.com/${META_GRAPH_VERSION}/${path}?${new URLSearchParams(params)}`);
+        const j = await r.json();
+        console.log(`[fb-diag] ${label} → ${JSON.stringify(j)}`);
+        return j;
+      } catch (e) {
+        console.log(`[fb-diag] ${label} → threw: ${e.message}`);
+        return null;
+      }
+    };
+
+    await probe("/me", "me", { access_token: accessToken, fields: "id,name" });
+    await probe("/me/permissions", "me/permissions", { access_token: accessToken });
+
+    if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
+      // Reveals token type (USER vs SYSTEM_USER) and granular_scopes — the
+      // latter lists the exact Page IDs the grant is actually scoped to.
+      await probe("debug_token", "debug_token", {
+        input_token: accessToken,
+        access_token: `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`,
+      });
+    }
+  },
+
   async fetchFacebookPages(accessToken) {
     // 1️⃣ Direct pages — managed personally by the user (/me/accounts)
     const params = new URLSearchParams({ access_token: accessToken, fields: "id,name,access_token,tasks", limit: "200" });
@@ -367,6 +395,15 @@ const automationService = {
 
     const directPages = json1.data || [];
     console.log(`[fetchFacebookPages] /me/accounts returned ${directPages.length} direct page(s)`);
+
+    // A zero here is indistinguishable from a real "user manages no Pages" —
+    // Graph returns 200 with an empty list even when the user demonstrably
+    // granted a Page in the picker. Ask Facebook what it actually thinks the
+    // token holds so the logs explain WHY, instead of us guessing (which has
+    // now been wrong twice: first Dev Mode, then Business Manager).
+    if (directPages.length === 0) {
+      await this.logZeroPageDiagnostics(accessToken);
+    }
 
     // 2️⃣ Fetch page tokens for any pages missing them, then deduplicate
     // Note: /me/businesses (Business Manager pages) requires the business_management
