@@ -75,5 +75,10 @@ flutter_launcher_icons:
   android: true
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#ff6b00"
+  # A flat colour here is what made the launcher icon look solid orange rather
+  # than the brand gradient: Android 8+ renders the ADAPTIVE icon, so the
+  # gradient baked into app_icon.png only ever showed on pre-8 fallbacks.
+  # This background is the same diagonal gradient, sampled from
+  # frontend/public/logo.png so the app matches the web mark exactly.
+  adaptive_icon_background: "assets/icon/app_icon_background.png"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"

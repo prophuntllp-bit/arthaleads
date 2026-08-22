@@ -30,33 +30,47 @@ class SkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppTheme.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    // Neutral black/white overlays rather than the theme's surface/border
+    // tokens: lightBorder is a rust colour (rgba(160,65,0,.12)) and the light
+    // surfaces are semi-transparent white, which together rendered the
+    // placeholders brown instead of reading as blank content.
+    final base = dark ? const Color(0x1FFFFFFF) : const Color(0x12000000);
+    final highlight = dark ? const Color(0x3DFFFFFF) : const Color(0x05000000);
+
     final shimmer = _SkeletonShimmer.of(context);
     return AnimatedBuilder(
       animation: shimmer,
       builder: (context, _) {
-        // Sweep a soft highlight left-to-right across the block.
-        final v = shimmer.value;
         return Container(
           width: width,
           height: height,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(radius),
             gradient: LinearGradient(
-              begin: Alignment(-1.0 - 2 * (1 - v), 0),
-              end: Alignment(1.0 + 2 * v, 0),
-              colors: [
-                t.surfaceLow,
-                Color.alphaBlend(t.border.withValues(alpha: 0.55), t.surfaceLow),
-                t.surfaceLow,
-              ],
-              stops: const [0.35, 0.5, 0.65],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [base, highlight, base],
+              stops: const [0.25, 0.5, 0.75],
+              transform: _SlideGradient(shimmer.value),
             ),
           ),
         );
       },
     );
   }
+}
+
+/// Slides the highlight across the block, entering from the left and leaving
+/// to the right, so the sweep reads as one pass rather than a pulsing band.
+class _SlideGradient extends GradientTransform {
+  final double t;
+  const _SlideGradient(this.t);
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) =>
+      Matrix4.translationValues(bounds.width * (t * 2 - 1), 0, 0);
 }
 
 /// Drives the shimmer for everything beneath it. Wrap a screen's skeleton in

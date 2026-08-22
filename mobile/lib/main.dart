@@ -10,6 +10,7 @@ import 'core/theme.dart';
 import 'core/theme_state.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
+import 'widgets/skeleton.dart';
 import 'widgets/update_gate.dart';
 
 void main() async {
@@ -58,9 +59,20 @@ class _AuthGate extends StatelessWidget {
     final auth = context.watch<AuthState>();
 
     if (auth.restoring) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
+      // A returning user is heading for the dashboard, so show its skeleton
+      // for the /auth/me wait — the launch then reads as one continuous load
+      // into the real dashboard rather than spinner, then skeleton, then
+      // content. Before the stored token is read we cannot know where this
+      // lands, but that phase is a local storage call and passes in a frame
+      // or two, so it stays blank rather than flashing the wrong layout.
+      return Scaffold(
+        // SafeArea because this stands in for the Shell, which normally
+        // supplies an app bar — without it the first card slides under the
+        // status bar and looks clipped.
+        body: SafeArea(
+          child: auth.restoringKnownSession
+              ? const DashboardSkeleton()
+              : const SizedBox.shrink(),
         ),
       );
     }

@@ -34,10 +34,22 @@ class AuthState extends ChangeNotifier {
     };
   }
 
+  /// True once restore() has found a stored token, i.e. this launch is
+  /// almost certainly heading for the dashboard rather than the login screen.
+  ///
+  /// Reading the token is a fast local call; the slow part is the /auth/me
+  /// round trip after it. Publishing this in between lets the launch screen
+  /// show the dashboard skeleton during that wait, instead of a spinner that
+  /// says nothing — and without showing a dashboard skeleton to someone who
+  /// is about to land on the login screen.
+  bool restoringKnownSession = false;
+
   /// App-launch session restore: stored token → GET /auth/me.
   Future<void> restore() async {
     await _api.loadToken();
     if (_api.hasToken) {
+      restoringKnownSession = true;
+      notifyListeners();
       try {
         final res = await _api.dio.get('/auth/me');
         user = (res.data['user'] as Map?)?.cast<String, dynamic>();

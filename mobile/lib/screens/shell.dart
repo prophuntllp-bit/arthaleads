@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -458,6 +460,12 @@ class _ShellState extends State<Shell> {
             ],
           ),
           drawer: Drawer(
+            // Material's default is a flat 304dp, which on a 360dp-wide phone
+            // covers ~84% of the screen and reads as a full-page takeover
+            // rather than a panel. Scale it instead, so a useful strip of the
+            // page stays visible to tap back to, and cap it so it does not
+            // sprawl on a tablet.
+            width: math.min(300.0, MediaQuery.sizeOf(context).width * 0.76),
             child: SafeArea(
               child: Column(
                 children: [
