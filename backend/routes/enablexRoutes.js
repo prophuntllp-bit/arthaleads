@@ -104,15 +104,26 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
     const fromNumber = normalizePhone(org.enablex.virtualNumber);
     const webhookUrl = `${process.env.APP_URL || "https://api.arthaleads.com"}/api/calls/webhook/${orgId}`;
 
-    // Match lead by last 10 digits of their phone (DB stores numbers in various formats)
+    // Match lead by last 10 digits of their phone (DB stores numbers in various formats).
+    //
+    // Must search ProjectLead too. Searching only Lead meant every caller who
+    // exists solely as a project lead came back "unknown", discarding the very
+    // call history this routing depends on — so the call skipped the agent who
+    // had actually been speaking to them and hit the fallback instead.
     const last10 = callerRaw.replace(/\D/g, "").slice(-10);
     let lead = null;
+    let leadIsProject = false;
     if (last10.length >= 8) {
-      lead = await Lead.findOne({
+      const phoneQuery = {
         orgId:     new mongoose.Types.ObjectId(orgId),
         phone:     { $regex: last10 + "$", $options: "i" },
-        isDeleted: { $ne: true },
-      }).select("name phone activities").lean();
+        isDeleted: { $ne: true },   // also matches docs without the field
+      };
+      lead = await Lead.findOne(phoneQuery).select("name phone activities").lean();
+      if (!lead) {
+        lead = await ProjectLead.findOne(phoneQuery).select("name phone activities").lean();
+        leadIsProject = !!lead;
+      }
     }
 
     let agentPhone   = null;
@@ -132,19 +143,28 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
       }
     }
 
-    // Fallback: route to any admin/manager/agent in the org who has a phone number
+    // Fallback for a caller we genuinely have no history with.
+    //
+    // Prefer an agent: agents are the people who actually work the phones, and
+    // sorting purely by createdAt sent every unrouted call to whoever was set
+    // up first in the org — typically the founder/admin, who does not take
+    // lead calls. Managers/admins remain the last resort so a call is never
+    // dropped for want of a recipient.
     if (!agentPhone) {
-      const fallback = await User.findOne({
+      const base = {
         orgId,
         isActive: true,
         phone:    { $exists: true, $ne: "" },
-        role:     { $in: ["admin", "manager", "agent"] },
-      }).sort({ createdAt: 1 }).select("phone name _id").lean();
+      };
+      const fallback =
+        (await User.findOne({ ...base, role: "agent" }).sort({ createdAt: 1 }).select("phone name _id").lean()) ||
+        (await User.findOne({ ...base, role: { $in: ["manager", "admin"] } }).sort({ createdAt: 1 }).select("phone name _id").lean());
 
       if (fallback?.phone) {
         agentPhone  = normalizePhone(fallback.phone);
         agentUserId = fallback._id;
         agentName   = fallback.name;
+        console.info(`[enablex inbound] no call history for ${callerRaw} - falling back to ${fallback.name}`);
       }
     }
 
@@ -159,7 +179,11 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
       return res.json({ message: "No available agent to route this call." });
     }
 
-    const ownerRef = `lead_${lead?._id || "unknown"}_${Date.now()}`;
+    // Prefix decides which collection processCallStateEvent() writes the call
+    // activity/recording back to, so it has to follow where the lead was found —
+    // hardcoding "lead_" would file a project lead's inbound call against a
+    // non-existent regular Lead and silently lose it.
+    const ownerRef = `${leadIsProject ? "projectlead" : "lead"}_${lead?._id || "unknown"}_${Date.now()}`;
 
     console.info("[enablex inbound] routing", callerRaw, "→ agent", agentPhone,
       lead ? `(lead: ${lead.name})` : "(unknown caller)");
