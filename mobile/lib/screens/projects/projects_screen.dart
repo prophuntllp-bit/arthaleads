@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
@@ -148,7 +149,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           Expanded(
             child: _loading
-                ? const Center(child: AppSpinner(size: 32))
+                ? const ProjectListSkeleton()
                 : _projects.isEmpty
                 ? const Center(
                     child: Text('No projects yet — tap + to add one'),

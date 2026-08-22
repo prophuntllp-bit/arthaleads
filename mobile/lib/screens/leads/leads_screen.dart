@@ -16,6 +16,7 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/deep_link.dart';
 import '../../core/theme.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
@@ -793,7 +794,9 @@ class LeadsScreenState extends State<LeadsScreen> {
           ),
           Expanded(
             child: !_initialLoaded
-                ? const Center(child: AppSpinner(size: 32))
+                // First page only — later pages append under the existing
+                // list and keep their own inline spinner.
+                ? const LeadListSkeleton()
                 : _leads.isEmpty
                 ? const Center(child: Text('No leads found'))
                 : RefreshIndicator(

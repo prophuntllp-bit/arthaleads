@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
@@ -538,7 +539,10 @@ class _CallsScreenState extends State<CallsScreen> {
           SliverToBoxAdapter(child: _header(auth)),
           if (_loading && _calls.isEmpty)
             const SliverFillRemaining(
-              child: Center(child: AppSpinner(size: 32)),
+              // hasScrollBody: false lets the skeleton size to its content
+              // inside the sliver instead of being forced to fill the viewport.
+              hasScrollBody: false,
+              child: CallListSkeleton(),
             )
           else if (_calls.isEmpty)
             SliverFillRemaining(child: _emptyState())

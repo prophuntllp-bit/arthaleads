@@ -10,6 +10,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/labeled_field.dart';
@@ -233,7 +234,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: AppSpinner(size: 32));
+      return const PipelineSkeleton();
     }
 
     final grouped = <String, List<Map<String, dynamic>>>{

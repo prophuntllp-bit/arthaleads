@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/page_header.dart';
@@ -409,9 +410,9 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
         ),
         Expanded(
           child: _loading && _leads.isEmpty
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary),
-                )
+              // Guarded on _leads.isEmpty, so a refresh with rows already on
+              // screen keeps them rather than flashing back to placeholders.
+              ? const LeadListSkeleton()
               : _leads.isEmpty
               ? Center(
                   child: Column(
