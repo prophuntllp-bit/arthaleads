@@ -675,25 +675,51 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'my', label: Text('My')),
-                      ButtonSegment(value: 'team', label: Text('Team Today')),
-                      ButtonSegment(
-                        value: 'records',
-                        label: Text('All Records'),
-                      ),
-                    ],
-                    selected: {_view},
-                    onSelectionChanged: (sel) {
-                      setState(() => _view = sel.first);
-                      if (_view == 'team' && _team.isEmpty) _loadTeam();
-                      if (_view == 'records') {
-                        if (_team.isEmpty) _loadTeam();
-                        _load();
-                      } else if (_view == 'my') {
-                        _load();
-                      }
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // "Team Today" / "All Records" do not fit on narrower
+                      // phones (or at a larger system font scale) and get
+                      // clipped mid-word. Shorten them once space is tight
+                      // instead of letting the segments misalign.
+                      final tight = constraints.maxWidth < 320;
+                      return SegmentedButton<String>(
+                        // The selected-segment check icon costs ~24px per
+                        // segment — with three segments that alone is enough
+                        // to push the labels out of the bar.
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        segments: [
+                          const ButtonSegment(
+                            value: 'my',
+                            label: Text('My', maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          ButtonSegment(
+                            value: 'team',
+                            label: Text(tight ? 'Team' : 'Team Today',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                          ButtonSegment(
+                            value: 'records',
+                            label: Text(tight ? 'Records' : 'All Records',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                        selected: {_view},
+                        onSelectionChanged: (sel) {
+                          setState(() => _view = sel.first);
+                          if (_view == 'team' && _team.isEmpty) _loadTeam();
+                          if (_view == 'records') {
+                            if (_team.isEmpty) _loadTeam();
+                            _load();
+                          } else if (_view == 'my') {
+                            _load();
+                          }
+                        },
+                      );
                     },
                   ),
                 ),

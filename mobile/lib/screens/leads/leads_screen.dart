@@ -648,6 +648,9 @@ class LeadsScreenState extends State<LeadsScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: _selectMode
           ? null
           : GradientFab(onPressed: () => _openForm()),

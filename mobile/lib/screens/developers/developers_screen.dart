@@ -101,6 +101,9 @@ class _DevelopersScreenState extends State<DevelopersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(),
         icon: const Icon(Icons.add),

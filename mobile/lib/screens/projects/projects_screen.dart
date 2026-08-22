@@ -133,6 +133,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Widget build(BuildContext context) {
     final canManage = context.watch<AuthState>().isAdmin;
     return Scaffold(
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: canManage
           ? GradientFab(onPressed: () => _openForm())
           : null,

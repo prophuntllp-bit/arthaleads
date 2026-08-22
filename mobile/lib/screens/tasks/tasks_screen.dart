@@ -553,6 +553,9 @@ class _TasksScreenState extends State<TasksScreen> {
     final auth = context.watch<AuthState>();
 
     return Scaffold(
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: auth.isAdmin
           ? GradientFab(onPressed: () => _openForm())
           : null,

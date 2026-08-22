@@ -2238,6 +2238,9 @@ class _AutomationScreenState extends State<AutomationScreen> {
   // ignore: unused_element
   Widget _legacyBuild(BuildContext context) {
     return Scaffold(
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: GradientFab(onPressed: () => _openForm()),
       body: _loading
           ? const Center(child: AppSpinner(size: 32))

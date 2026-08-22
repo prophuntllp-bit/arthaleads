@@ -189,6 +189,9 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Lead Routing Rules')),
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: _planError == null ? GradientFab(onPressed: _addRule) : null,
       body: _loading
           ? const Center(child: AppSpinner(size: 32))

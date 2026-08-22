@@ -459,6 +459,9 @@ class _TeamScreenState extends State<TeamScreen> {
     final atLimit = _users.length >= memberLimit;
 
     return Scaffold(
+      // Bottom-left: the draggable Artha assistant bubble owns the
+      // bottom-right corner (see _DraggableArthaFab in shell.dart).
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       floatingActionButton: !isAdmin
           ? null
           : GradientFab(
