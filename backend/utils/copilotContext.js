@@ -1,6 +1,7 @@
 // Fetches live CRM data to give the AI assistant real context about the user's workspace.
 const Lead       = require("../models/Lead");
 const Attendance = require("../models/Attendance");
+const { findLeadById } = require("./leadLookup");
 let User, Project, Booking, Invoice, Task;
 try { User    = require("../models/User");    } catch { User    = null; }
 try { Project = require("../models/Project"); } catch { Project = null; }
@@ -24,9 +25,15 @@ async function fetchPageContext(page, userId, orgId, leadId) {
   // ── If user is viewing a specific lead, include full details ──────────────
   if (leadId) {
     try {
-      const lead = await Lead.findOne({ _id: leadId, orgId, isDeleted: { $ne: true } })
-        .populate("assignedTo", "name")
-        .lean();
+      // Resolve across both collections: a project lead opened in the UI would
+      // otherwise yield no context at all, and Artha would answer about a lead
+      // it cannot actually see.
+      const { Model } = await findLeadById(leadId, orgId, { lean: true, select: "_id" });
+      const lead = Model
+        ? await Model.findOne({ _id: leadId, orgId, isDeleted: { $ne: true } })
+            .populate("assignedTo", "name")
+            .lean()
+        : null;
       if (lead) {
         parts.push(`CURRENTLY OPEN LEAD (user is viewing this lead right now):
 - Lead ID: ${lead._id}

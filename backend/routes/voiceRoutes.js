@@ -6,6 +6,7 @@
 const express = require("express");
 const router = express.Router();
 const Lead = require("../models/Lead");
+const { findLeadById, searchBothLeadTypes } = require("../utils/leadLookup");
 const apiKeyAuth = require("../middlewares/apiKey");
 
 router.use(apiKeyAuth);
@@ -96,10 +97,14 @@ router.get("/leads/search", async (req, res) => {
 
     if (orConditions.length) filter.$or = orConditions;
 
-    const leads = await Lead.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select("name phone email status source leadSourceLabel priority assignedToName createdAt followUpDate remark notes");
+    // Searches project leads too. This endpoint only IDENTIFIES an existing
+    // contact (e.g. matching an inbound caller), so widening it places no calls
+    // — unlike GET /leads above, which feeds the outbound call list and is
+    // deliberately left to regular Leads.
+    const SELECT = "name phone email status source leadSourceLabel priority assignedToName createdAt followUpDate remark notes";
+    const leads = (await searchBothLeadTypes(filter, { select: SELECT, limit: 10 }))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 10);
 
     res.json({ success: true, count: leads.length, leads });
   } catch (err) {
@@ -121,8 +126,13 @@ router.patch("/leads/:id", async (req, res) => {
       return res.status(400).json({ success: false, message: "No valid fields to update" });
     }
 
+    // Resolve which collection this id belongs to first — /leads/search can now
+    // return a project lead, so updating one must not 404.
+    const { Model } = await findLeadById(req.params.id, req.voiceOrgId, { lean: true, select: "_id" });
+    if (!Model) return res.status(404).json({ success: false, message: "Lead not found" });
+
     // Scope update to org so the voice platform can't mutate other tenants' leads
-    const lead = await Lead.findOneAndUpdate(
+    const lead = await Model.findOneAndUpdate(
       { _id: req.params.id, orgId: req.voiceOrgId },
       { $set: update },
       { new: true, runValidators: true }

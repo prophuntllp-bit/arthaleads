@@ -6,6 +6,7 @@ const { v2: cloudinary } = require("cloudinary");
 const WebSocket = require("ws");
 
 const Lead = require("../models/Lead");
+const ProjectLead = require("../models/ProjectLead");
 
 const STREAM_PATH_PREFIX = "/audio/calls/";
 const SAMPLE_RATE = 16000;
@@ -100,10 +101,16 @@ function createWavBuffer(pcm) {
 }
 
 async function saveDiagnosticResult(state, result) {
-  const lead = await Lead.findOne({
+  // Calls can belong to a regular Lead or a ProjectLead — the two are separate
+  // collections with identically-shaped `activities`, and ownerRef is unique
+  // across both. Searching Lead alone silently discarded every project lead's
+  // recording diagnostics.
+  const query = {
     orgId: state.orgId,
     "activities.meta.ownerRef": state.ownerRef,
-  });
+  };
+  const lead =
+    (await Lead.findOne(query)) || (await ProjectLead.findOne(query));
   if (!lead) return;
 
   const activityIndex = lead.activities.findIndex(

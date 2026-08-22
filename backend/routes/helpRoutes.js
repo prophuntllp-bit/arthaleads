@@ -6,6 +6,7 @@ const { protect } = require("../middlewares/auth");
 const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
 const Lead     = require("../models/Lead");
+const { findLeadById, searchBothLeadTypes } = require("../utils/leadLookup");
 const Task     = require("../models/Task");
 const AiUsage  = require("../models/AiUsage");
 
@@ -58,7 +59,9 @@ router.post("/ask", async (req, res, next) => {
             orgId: req.user.orgId, isDeleted: { $ne: true },
             ...(regexConds.length > 1 ? { $and: regexConds } : regexConds[0]),
           };
-          const matches = await Lead.find(query).select("_id name").limit(2).lean();
+          // Search project leads too, otherwise asking Artha about anyone who
+          // only exists on a project silently resolves to no lead context.
+          const matches = await searchBothLeadTypes(query, { select: "_id name", limit: 2 });
           // Use when exactly 1 lead matches, or when a multi-word name matches anything
           if (matches.length === 1 || (matches.length >= 1 && words.length >= 2)) {
             resolvedLeadId = matches[0]._id.toString();
@@ -104,9 +107,13 @@ router.post("/action", async (req, res, next) => {
     if (!type) return res.status(400).json({ success: false, message: "Action type required." });
 
     // Validate leadId belongs to this org before any mutation
+    // Resolves against both collections — an id Artha surfaced from a project
+    // lead would otherwise fail validation here and report "Lead not found."
+    // even though it had just told the user about that lead.
     const validateLead = async (leadId) => {
       if (!leadId || !mongoose.isValidObjectId(leadId)) return null;
-      return Lead.findOne({ _id: leadId, orgId: req.user.orgId, isDeleted: { $ne: true } });
+      const { doc } = await findLeadById(leadId, req.user.orgId);
+      return doc && doc.isDeleted !== true ? doc : null;
     };
 
     // ── Update lead status ────────────────────────────────────────────────────
