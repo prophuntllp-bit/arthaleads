@@ -46,6 +46,10 @@ function _fcmMessage(token, payload) {
         channelId: "leads",   // must match channel created in capacitorPush.js
         sound:     "default",
         icon:      "ic_notification",
+        // Android strips all colour from a small icon and tints the silhouette
+        // instead. With no colour supplied it uses its own grey, which is why
+        // the status-bar icon looked like a dull grey "A" rather than ours.
+        color:     "#FF6B00",
         priority:  "max",
       },
     },
