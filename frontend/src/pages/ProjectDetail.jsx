@@ -73,6 +73,65 @@ const STANDARD_IMPORT_KEYS = new Set([
   "source", "lead source",
 ]);
 
+// Columns from an imported sheet that aren't standard contact fields (e.g.
+// "requirement", "visit", "location") are flattened into remarkNote as
+// "key: value · key: value" so nothing is lost on import. That is fine for
+// display, but exporting the whole blob into one "Note" cell means those
+// columns never come back out as columns.
+//
+// This reverses the flattening so each captured field can be exported to its
+// own column again. Values are joined with " · " and keys separated by ": ",
+// so split on the first ": " only — a value may legitimately contain a colon.
+function parseRemarkNote(note) {
+  const out = {};
+  if (!note || typeof note !== "string") return out;
+  for (const part of note.split(" · ")) {
+    const idx = part.indexOf(": ");
+    if (idx <= 0) continue;
+    // Source sheets often have multi-line headers ("Status\nGenuine/Fake"),
+    // which would otherwise become a column name containing a newline.
+    const key = part.slice(0, idx).replace(/\s+/g, " ").trim();
+    const value = part.slice(idx + 2).trim();
+    if (key) out[key] = excelSerialToDate(key, value);
+  }
+  return out;
+}
+
+// Rows imported before the importer read dates properly stored the raw Excel
+// serial ("date: 45668"), which is meaningless in an export. Convert those back
+// to a readable date — but only for a date-ish column, and only for a bare
+// integer in Excel's plausible range, so a genuine number in another column
+// (an area, a budget) is never rewritten.
+function excelSerialToDate(key, value) {
+  if (!/date/i.test(key)) return value;
+  if (!/^\d{5}$/.test(value)) return value;
+  const serial = Number(value);
+  if (serial < 20000 || serial > 60000) return value;
+  const ms = (serial - 25569) * 86400000;   // Excel epoch -> Unix epoch
+  const d = new Date(ms);
+  return isNaN(d) ? value : d.toLocaleDateString("en-IN");
+}
+
+// Builds the ordered set of extra columns present across the rows being
+// exported, so every captured field gets a column and rows missing one just
+// leave it blank (rather than shifting other values along).
+function collectExtraColumns(leads) {
+  const keys = [];
+  const seen = new Set();
+  for (const lead of leads) {
+    for (const key of Object.keys(parseRemarkNote(lead.remarkNote))) {
+      if (!seen.has(key)) { seen.add(key); keys.push(key); }
+    }
+  }
+  return keys;
+}
+
+// Title-cases a captured column name for the export header ("requirement" ->
+// "Requirement"), leaving anything already mixed-case alone.
+function extraColumnLabel(key) {
+  return key.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
 function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
@@ -117,7 +176,14 @@ function parseRow(raw) {
   // Capture dynamic Facebook MCQ / custom form answers as structured notes
   const extraAnswers = Object.entries(r)
     .filter(([k, v]) => !STANDARD_IMPORT_KEYS.has(k) && v)
-    .map(([k, v]) => `${k.replace(/_/g, " ")}: ${v}`)
+    .map(([k, v]) => {
+      // Dates arrive as Date objects (cellDates above); render them readably
+      // rather than letting toString() emit "Wed Jul 02 2025 00:00:00 GMT…".
+      const value = v instanceof Date && !isNaN(v)
+        ? v.toLocaleDateString("en-IN")
+        : String(v).trim();
+      return `${k.replace(/_/g, " ")}: ${value}`;
+    })
     .join(" · ");
 
   return { name, phone, email, source, remarkNote: extraAnswers || "" };
@@ -430,20 +496,29 @@ export default function ProjectDetail() {
         const { data } = await api.get(`/projects/${id}/leads`, { params });
         sourceLeads = data.leads || [];
       }
-      const rows = sourceLeads.map((lead, i) => ({
-        "#":           i + 1,
-        "Name":        lead.name || "",
-        "Phone":       lead.phone || "",
-        "WhatsApp":    lead.whatsapp || "",
-        "Email":       lead.email || "",
-        "Source":      lead.source || "",
-        "Status":      lead.booking || "",
-        "Follow Up":   lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
-        "Follow Up 2": lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
-        "Remark 1":    lead.remark1 || "",
-        "Remark 2":    lead.remark2 || "",
-        "Note":        lead.remarkNote || "",
-      }));
+      // Give every field captured at import its own column instead of leaving
+      // them concatenated in "Note" — see parseRemarkNote.
+      const extraCols = collectExtraColumns(sourceLeads);
+      const rows = sourceLeads.map((lead, i) => {
+        const extras = parseRemarkNote(lead.remarkNote);
+        return {
+          "#":           i + 1,
+          "Name":        lead.name || "",
+          "Phone":       lead.phone || "",
+          "WhatsApp":    lead.whatsapp || "",
+          "Email":       lead.email || "",
+          "Source":      lead.source || "",
+          "Contact Status": lead.status || "",
+          "Status":      lead.booking || "",
+          "Follow Up":   lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
+          "Follow Up 2": lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
+          "Remark 1":    lead.remark1 || "",
+          "Remark 2":    lead.remark2 || "",
+          ...Object.fromEntries(extraCols.map((k) => [extraColumnLabel(k), extras[k] ?? ""])),
+          // Kept as a safety net for anything the split could not key/value.
+          "Note":        lead.remarkNote || "",
+        };
+      });
       if (!rows.length) { toast.error("No leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
       const filterLabel = !exportAll && bookingFilter ? `_${bookingFilter.replace(/ /g, "_")}` : "";
@@ -485,24 +560,31 @@ export default function ProjectDetail() {
         ...(prospDateTo        && { followUpTo: prospDateTo }),
       };
       const { data } = await api.get(`/projects/${id}/leads`, { params });
-      const rows = (data.leads || []).map((lead, i) => ({
-        "#":             i + 1,
-        "Name":          lead.name || "",
-        "Phone":         lead.phone || "",
-        "WhatsApp":      lead.whatsapp || "",
-        "Email":         lead.email || "",
-        "Source":        lead.source || "",
-        "Status":        lead.booking || "",
-        "Follow Up":     lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
-        "Follow Up 2":   lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
-        "Remark 1":      lead.remark1 || "",
-        "Remark 2":      lead.remark2 || "",
-        "Remark 3":      lead.remark3 || "",
-        "Remark 4":      lead.remark4 || "",
-        "Note":          lead.remarkNote || "",
-        "Updated By":    lead.remarkUpdatedBy?.name || "",
-        "Updated At":    lead.remarkUpdatedAt ? new Date(lead.remarkUpdatedAt).toLocaleDateString("en-IN") : "",
-      }));
+      const prospLeads = data.leads || [];
+      const prospExtraCols = collectExtraColumns(prospLeads);
+      const rows = prospLeads.map((lead, i) => {
+        const extras = parseRemarkNote(lead.remarkNote);
+        return {
+          "#":             i + 1,
+          "Name":          lead.name || "",
+          "Phone":         lead.phone || "",
+          "WhatsApp":      lead.whatsapp || "",
+          "Email":         lead.email || "",
+          "Source":        lead.source || "",
+          "Contact Status": lead.status || "",
+          "Status":        lead.booking || "",
+          "Follow Up":     lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
+          "Follow Up 2":   lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
+          "Remark 1":      lead.remark1 || "",
+          "Remark 2":      lead.remark2 || "",
+          "Remark 3":      lead.remark3 || "",
+          "Remark 4":      lead.remark4 || "",
+          ...Object.fromEntries(prospExtraCols.map((k) => [extraColumnLabel(k), extras[k] ?? ""])),
+          "Note":          lead.remarkNote || "",
+          "Updated By":    lead.remarkUpdatedBy?.name || "",
+          "Updated At":    lead.remarkUpdatedAt ? new Date(lead.remarkUpdatedAt).toLocaleDateString("en-IN") : "",
+        };
+      });
       if (!rows.length) { toast.error("No prospective leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
       const filterLabel = prospBookingFilter ? `_${prospBookingFilter.replace(/ /g, "_")}` : "";
@@ -559,7 +641,10 @@ export default function ProjectDetail() {
     setImporting(true);
     try {
       const buf = await file.arrayBuffer();
-      const wb  = xlsxRead(buf, { type: "array" });
+      // cellDates makes date cells arrive as real Dates. Without it a date
+      // column imports as its raw Excel serial ("date: 45668"), which is
+      // meaningless to an agent reading the lead.
+      const wb  = xlsxRead(buf, { type: "array", cellDates: true });
       const ws  = wb.Sheets[wb.SheetNames[0]];
       // Read as rows-of-arrays so we can locate the REAL header row. Many sheets
       // have a blank leading row, a title row, or a second sub-header row before
