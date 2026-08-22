@@ -132,6 +132,44 @@ function extraColumnLabel(key) {
   return key.replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }
 
+// Assembles export rows: the CRM's own fields, then one column per field
+// captured at import, then prunes columns that are empty for every row.
+//
+// baseRowFn(lead, index) supplies the CRM columns for one lead.
+function buildExportRows(leads, baseRowFn) {
+  const extraCols = collectExtraColumns(leads);
+
+  const rows = leads.map((lead, i) => {
+    const base = baseRowFn(lead, i);
+    const extras = parseRemarkNote(lead.remarkNote);
+    const reserved = new Set(Object.keys(base));
+    const out = { ...base };
+
+    for (const key of extraCols) {
+      let label = extraColumnLabel(key);
+      // An imported sheet with its own "status" / "follow up" column would
+      // otherwise overwrite the CRM's column of that name and blank out real
+      // data — booking values disappeared from the export exactly this way.
+      if (reserved.has(label)) label = `${label} (imported)`;
+      out[label] = extras[key] ?? "";
+    }
+
+    // The raw note is only worth a column when it is NOT just the key/value
+    // pairs already expanded above — e.g. an agent typing a plain "Contacted".
+    out["Note"] = Object.keys(extras).length ? "" : (lead.remarkNote || "");
+    return out;
+  });
+
+  // Drop columns nothing filled in — a project that never used a field
+  // shouldn't ship a wall of blank columns.
+  const ALWAYS_KEEP = new Set(["#", "Name", "Phone"]);
+  const allKeys = rows.length ? Object.keys(rows[0]) : [];
+  const keep = allKeys.filter(
+    (k) => ALWAYS_KEEP.has(k) || rows.some((r) => String(r[k] ?? "").trim() !== "")
+  );
+  return rows.map((r) => Object.fromEntries(keep.map((k) => [k, r[k]])));
+}
+
 function parseRow(raw) {
   const r = {};
   Object.keys(raw).forEach((k) => { r[k.trim().toLowerCase()] = String(raw[k] || "").trim(); });
@@ -497,28 +535,21 @@ export default function ProjectDetail() {
         sourceLeads = data.leads || [];
       }
       // Give every field captured at import its own column instead of leaving
-      // them concatenated in "Note" — see parseRemarkNote.
-      const extraCols = collectExtraColumns(sourceLeads);
-      const rows = sourceLeads.map((lead, i) => {
-        const extras = parseRemarkNote(lead.remarkNote);
-        return {
-          "#":           i + 1,
-          "Name":        lead.name || "",
-          "Phone":       lead.phone || "",
-          "WhatsApp":    lead.whatsapp || "",
-          "Email":       lead.email || "",
-          "Source":      lead.source || "",
-          "Contact Status": lead.status || "",
-          "Status":      lead.booking || "",
-          "Follow Up":   lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
-          "Follow Up 2": lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
-          "Remark 1":    lead.remark1 || "",
-          "Remark 2":    lead.remark2 || "",
-          ...Object.fromEntries(extraCols.map((k) => [extraColumnLabel(k), extras[k] ?? ""])),
-          // Kept as a safety net for anything the split could not key/value.
-          "Note":        lead.remarkNote || "",
-        };
-      });
+      // them concatenated in "Note" — see buildExportRows / parseRemarkNote.
+      const rows = buildExportRows(sourceLeads, (lead, i) => ({
+        "#":              i + 1,
+        "Name":           lead.name || "",
+        "Phone":          lead.phone || "",
+        "WhatsApp":       lead.whatsapp || "",
+        "Email":          lead.email || "",
+        "Source":         lead.source || "",
+        "Contact Status": lead.status || "",
+        "Status":         lead.booking || "",
+        "Follow Up":      lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
+        "Follow Up 2":    lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
+        "Remark 1":       lead.remark1 || "",
+        "Remark 2":       lead.remark2 || "",
+      }));
       if (!rows.length) { toast.error("No leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
       const filterLabel = !exportAll && bookingFilter ? `_${bookingFilter.replace(/ /g, "_")}` : "";
@@ -560,31 +591,24 @@ export default function ProjectDetail() {
         ...(prospDateTo        && { followUpTo: prospDateTo }),
       };
       const { data } = await api.get(`/projects/${id}/leads`, { params });
-      const prospLeads = data.leads || [];
-      const prospExtraCols = collectExtraColumns(prospLeads);
-      const rows = prospLeads.map((lead, i) => {
-        const extras = parseRemarkNote(lead.remarkNote);
-        return {
-          "#":             i + 1,
-          "Name":          lead.name || "",
-          "Phone":         lead.phone || "",
-          "WhatsApp":      lead.whatsapp || "",
-          "Email":         lead.email || "",
-          "Source":        lead.source || "",
-          "Contact Status": lead.status || "",
-          "Status":        lead.booking || "",
-          "Follow Up":     lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
-          "Follow Up 2":   lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
-          "Remark 1":      lead.remark1 || "",
-          "Remark 2":      lead.remark2 || "",
-          "Remark 3":      lead.remark3 || "",
-          "Remark 4":      lead.remark4 || "",
-          ...Object.fromEntries(prospExtraCols.map((k) => [extraColumnLabel(k), extras[k] ?? ""])),
-          "Note":          lead.remarkNote || "",
-          "Updated By":    lead.remarkUpdatedBy?.name || "",
-          "Updated At":    lead.remarkUpdatedAt ? new Date(lead.remarkUpdatedAt).toLocaleDateString("en-IN") : "",
-        };
-      });
+      const rows = buildExportRows(data.leads || [], (lead, i) => ({
+        "#":              i + 1,
+        "Name":           lead.name || "",
+        "Phone":          lead.phone || "",
+        "WhatsApp":       lead.whatsapp || "",
+        "Email":          lead.email || "",
+        "Source":         lead.source || "",
+        "Contact Status": lead.status || "",
+        "Status":         lead.booking || "",
+        "Follow Up":      lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
+        "Follow Up 2":    lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
+        "Remark 1":       lead.remark1 || "",
+        "Remark 2":       lead.remark2 || "",
+        "Remark 3":       lead.remark3 || "",
+        "Remark 4":       lead.remark4 || "",
+        "Updated By":     lead.remarkUpdatedBy?.name || "",
+        "Updated At":     lead.remarkUpdatedAt ? new Date(lead.remarkUpdatedAt).toLocaleDateString("en-IN") : "",
+      }));
       if (!rows.length) { toast.error("No prospective leads to export"); return; }
       const projectName = (project?.name || "project").replace(/[^a-zA-Z0-9]/g, "_");
       const filterLabel = prospBookingFilter ? `_${prospBookingFilter.replace(/ /g, "_")}` : "";
