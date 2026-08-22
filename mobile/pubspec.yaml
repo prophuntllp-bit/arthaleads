@@ -54,7 +54,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/icon/
+    # assets/icon/ is deliberately NOT bundled: those 2080x2080 source images
+    # are build-time input for flutter_launcher_icons (which reads them off
+    # disk), and nothing loads them at runtime. Shipping them added ~1.3MB of
+    # dead weight to every APK.
     - assets/images/
   fonts:
     - family: Inter
