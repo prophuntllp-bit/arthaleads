@@ -256,9 +256,12 @@ router.all("/inbound/:orgId", express.json(), express.urlencoded({ extended: tru
       }
     }
 
-    // Log inbound call activity on the lead (async — after response)
+    // Log inbound call activity on the lead (async — after response).
+    // Must reload from the collection the lead was actually found in; hardcoding
+    // Lead here silently dropped every project lead's inbound call, so the call
+    // never appeared in the CRM at all.
     if (lead) {
-      Lead.findById(lead._id).then(async (doc) => {
+      (leadIsProject ? ProjectLead : Lead).findById(lead._id).then(async (doc) => {
         if (!doc) return;
         doc.activities.push({
           type:            "called",
