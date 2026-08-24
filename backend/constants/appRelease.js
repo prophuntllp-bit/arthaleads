@@ -19,17 +19,18 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 22,
+    build: 23,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
-    // Left at 19 on purpose — build 20 is a UI-only fix (FAB polish), not a
-    // delivery-critical one, so anyone already on 19's working checker gets
-    // a normal dismissible "Update available" prompt rather than a forced
-    // one. Also doubles as the first live test of the just-fixed optional-
-    // update path, not just the forced one.
+    // Held at 19: that is the build whose version check actually works (the
+    // ABI-offset bug before it meant no install could ever detect an update,
+    // so anything older still needs one manual install). Nothing shipped
+    // since has been delivery-critical, so later builds arrive as a normal
+    // dismissible "Update available" prompt rather than a blocking one.
+    // Only raise this for something a stale install genuinely must not miss.
     minBuild: 19,
     // Where users download the APK. Until this is set, the app never prompts —
     // an update you cannot deliver is worse than no prompt at all.
@@ -37,8 +38,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-22/arthaleads-1.0.1%2B22-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-23/arthaleads-1.0.1%2B23-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Calling a lead from inside a project now works. Screens show placeholder content while loading instead of a spinner, the app icon matches the web logo, and the Attendance tabs, assistant bubble and menu width are fixed.",
+    notes: "Fixes a rare case where the app could get stuck on the loading screen at startup, and Settings → Security now shows a real Support Access log for admins.",
   },
 };
