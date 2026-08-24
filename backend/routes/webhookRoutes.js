@@ -244,9 +244,9 @@ async function autoRefreshPageToken(auto) {
 }
 
 // Try all active Facebook tokens until one successfully fetches the lead.
-// App Token (AppId|AppSecret) is tried FIRST — it never expires and works for
-// every page that has subscribed the app via subscribePageWebhook. Individual
-// user account suspensions, password changes, or token revocations do not affect it.
+// Order: stored page token, then App Token, then auto-refresh, then the other
+// automations in the org. The page token goes first because it is the only one
+// Graph accepts for leadgen reads — see the note on step 1.
 async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation, orgId) {
   const primaryAutomationId = primaryAutomation?._id;
 
@@ -257,25 +257,19 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
   const errors = [];
   const record = (label, e) => errors.push({ type: e.isAuthError ? "auth" : "other", message: e.message, automation: label });
 
-  // 1️⃣ Try the App Access Token first — permanent, never expires, works for all
-  //    pages that called subscribed_apps at connect time. This is the scalable path
-  //    for a multi-tenant CRM: no per-user token required after initial setup.
-  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
-    const appToken = `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`;
-    try {
-      const result = await getFacebookLeadFields(leadgenId, appToken);
-      return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
-    } catch (appErr) {
-      logger.warn(`Facebook webhook: App Token failed for lead ${leadgenId}: ${appErr.message}`);
-      record("App Token", appErr);
-    }
-  }
-
-  // 2️⃣ Try the stored page access token as first fallback
+  // 1️⃣ Stored page access token — the one that actually works.
+  //
+  // This used to run second, behind the App Access Token, on the reasoning
+  // that an app token never expires and so scales best across tenants. Graph
+  // does not accept app tokens for leadgen reads at all: the call comes back
+  // 400 "A user access token is required to request this resource" every
+  // time, for every org. Measured against a real delivered lead, that dead
+  // attempt cost ~490ms before the page token was even tried, on EVERY lead —
+  // and logged a warning each time, which made a genuine token failure look
+  // exactly like the constant background noise.
   if (primaryToken) {
     try {
       const result = await getFacebookLeadFields(leadgenId, primaryToken);
-      logger.info(`Facebook webhook: stored page token succeeded for lead ${leadgenId}`);
       return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
     } catch (err) {
       if (err.isAuthError) {
@@ -284,6 +278,24 @@ async function fetchLeadWithFallback(leadgenId, primaryToken, primaryAutomation,
         logger.warn(`Facebook webhook: stored page token failed for lead ${leadgenId} (${err.message})`);
       }
       record(primaryAutomation?.name || "Stored page token", err);
+    }
+  }
+
+  // 2️⃣ App Access Token, kept only as a fallback.
+  //
+  // Not expected to succeed for this endpoint (see above), but it costs
+  // nothing now that it runs only after the page token has already failed,
+  // and it covers the case where Meta changes what app tokens may read.
+  // Logged at debug rather than warn so it cannot drown out real failures.
+  if (process.env.FB_APP_ID && process.env.FB_APP_SECRET) {
+    const appToken = `${process.env.FB_APP_ID}|${process.env.FB_APP_SECRET}`;
+    try {
+      const result = await getFacebookLeadFields(leadgenId, appToken);
+      logger.info(`Facebook webhook: App Token succeeded for lead ${leadgenId}`);
+      return { leadDetails: result, isAuthError: false, isTestLead: false, fetchError: null };
+    } catch (appErr) {
+      logger.debug(`Facebook webhook: App Token failed for lead ${leadgenId}: ${appErr.message}`);
+      record("App Token", appErr);
     }
   }
 
