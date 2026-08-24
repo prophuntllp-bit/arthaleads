@@ -45,7 +45,24 @@ class AuthState extends ChangeNotifier {
   bool restoringKnownSession = false;
 
   /// App-launch session restore: stored token → GET /auth/me.
+  ///
+  /// `restoring` is cleared in a finally block: this runs fire-and-forget from
+  /// main(), so anything thrown here would otherwise be an unhandled async
+  /// error that leaves the flag set and the app parked on the launch screen
+  /// permanently. Whatever goes wrong, the gate has to be released — worst
+  /// case the user sees the login screen.
   Future<void> restore() async {
+    try {
+      await _restore();
+    } catch (e) {
+      debugPrint('[auth] session restore failed: $e');
+    } finally {
+      restoring = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _restore() async {
     await _api.loadToken();
     if (_api.hasToken) {
       restoringKnownSession = true;
@@ -59,8 +76,8 @@ class AuthState extends ChangeNotifier {
         // leave the token in place so a later retry can restore the session.
       }
     }
-    restoring = false;
-    notifyListeners();
+    // `restoring` is cleared by restore()'s finally block, so it is released
+    // even if anything above throws.
   }
 
   /// Email-or-phone + password login. Throws with a readable message on failure.

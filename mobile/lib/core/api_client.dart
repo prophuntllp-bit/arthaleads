@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -98,7 +99,28 @@ class ApiClient {
   }
 
   Future<void> loadToken() async {
-    _token = await _storage.read(key: 'auth_token');
+    // Reading can throw, not just return null. The token is encrypted with an
+    // Android Keystore key, and that key can stop matching the stored
+    // ciphertext — reinstall, restore-from-backup, or a keystore reset all do
+    // it — which surfaces as AEADBadTagException / "Signature/MAC verification
+    // failed" (seen in logcat on a real device).
+    //
+    // Letting that propagate would leave AuthState.restore() abandoned midway,
+    // pinning `restoring` true forever and hanging the app on the launch
+    // screen with no error and no way out but clearing app data. An
+    // unreadable token is simply a logged-out user, so treat it as one and
+    // drop the unusable entry so the next write starts clean.
+    try {
+      _token = await _storage.read(key: 'auth_token');
+    } catch (e) {
+      debugPrint('[auth] stored token unreadable, clearing: $e');
+      _token = null;
+      try {
+        await _storage.delete(key: 'auth_token');
+      } catch (_) {
+        // Nothing more to do — the user just logs in again.
+      }
+    }
   }
 
   bool get hasToken => _token != null;
