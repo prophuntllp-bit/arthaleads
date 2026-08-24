@@ -262,4 +262,37 @@ router.get("/me/voice-key", authorize("admin"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/org/support-access — when Arthaleads support accessed this account.
+//
+// Support access happens through super-admin impersonation, which already
+// writes an AuditLog entry ("impersonate", targetOrg, performedByName). This
+// surfaces that history to the organisation itself, so access to their data is
+// visible to them rather than only to us.
+//
+// Read-only by design: there is no request/approve workflow behind it. The
+// mobile Settings screen previously rendered pending/approve/deny controls for
+// this endpoint, which never existed on the server — the call 404'd, the error
+// was swallowed, and the section sat permanently empty. The controls have been
+// removed rather than faked.
+router.get("/support-access", authorize("admin", "manager", "super_admin"), async (req, res, next) => {
+  try {
+    const AuditLog = require("../models/AuditLog");
+    const entries = await AuditLog.find({ action: "impersonate", targetOrg: req.orgId })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select("performedByName targetUserName createdAt details")
+      .lean();
+
+    res.json({
+      success: true,
+      records: entries.map((e) => ({
+        _id: String(e._id),
+        accessedByName: e.performedByName || "Arthaleads Support",
+        accessedAs: e.targetUserName || "",
+        at: e.createdAt,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

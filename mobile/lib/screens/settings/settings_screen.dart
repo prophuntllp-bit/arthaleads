@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
@@ -406,41 +407,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loadingAccess = false);
-    }
-  }
-
-  Future<void> _respondAccess(String id, String action) async {
-    try {
-      await _api.dio.post(
-        '/org/support-access/$id/respond',
-        data: {'action': action},
-      );
-      _loadAccessLog();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Failed to respond')),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _endAccessSession() async {
-    try {
-      await _api.dio.post('/org/support-access/end-session');
-      _loadAccessLog();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Failed to end session')),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
     }
   }
 
@@ -966,25 +932,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _securityTab() {
-    final pending = _accessRecords
-        .where((r) => r['status'] == 'pending')
-        .toList();
-    const reasonLabels = {
-      'customer_support': 'Customer Support',
-      'onboarding': 'Onboarding Assistance',
-      'bug_investigation': 'Bug Investigation',
-      'data_migration': 'Data Migration',
-      'billing_issue': 'Billing Issue',
-      'other': 'Other',
-    };
-    const statusColors = {
-      'pending': AppColors.warning,
-      'approved': AppColors.success,
-      'denied': AppColors.danger,
-      'active': AppColors.primary,
-      'completed': Color(0xFF6B7280),
-    };
-
     if (_loadingAccess) return const Center(child: AppSpinner(size: 32));
 
     return RefreshIndicator(
@@ -995,26 +942,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.shield_outlined,
-                size: 18,
-                color: AppColors.primary,
-              ),
+              const Icon(Icons.shield_outlined, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text('Support Access Log',
+                        style: Theme.of(context).textTheme.titleSmall),
                     Text(
-                      'Support Access Log',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    Text(
-                      'Track when Arthaleads support accesses your account',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
+                      'Every time Arthaleads support signed in to your account',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -1022,90 +960,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (pending.isNotEmpty) ...[
-            Text(
-              'PENDING APPROVAL',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                color: AppColors.warning,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            for (final r in pending)
-              Card(
-                color: AppColors.warning.withValues(alpha: 0.06),
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${r['requestedByName'] ?? 'Someone'} is requesting access',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${reasonLabels[r['reason']] ?? r['reason'] ?? ''}${(r['notes'] as String? ?? '').isNotEmpty ? " — ${r['notes']}" : ""}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () =>
-                                _respondAccess(r['_id'] as String, 'deny'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.danger,
-                            ),
-                            child: const Text(
-                              'Deny',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () =>
-                                _respondAccess(r['_id'] as String, 'approve'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.success,
-                            ),
-                            child: const Text(
-                              'Approve',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 12),
-          ],
           if (_accessRecords.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 32),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.verified_user_outlined,
-                    size: 40,
-                    color: AppColors.success.withValues(alpha: 0.3),
-                  ),
+                  Icon(Icons.verified_user_outlined,
+                      size: 40, color: AppColors.success.withValues(alpha: 0.3)),
                   const SizedBox(height: 8),
-                  const Text(
-                    'No support access on record',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  const Text('No support access on record',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Nobody from Arthaleads has signed in to this account.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                   ),
                 ],
               ),
@@ -1116,54 +985,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 margin: const EdgeInsets.only(bottom: 6),
                 child: ListTile(
                   dense: true,
-                  title: Row(
-                    children: [
-                      Text(
-                        r['requestedByName'] as String? ?? '—',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (statusColors[r['status']] ?? Colors.grey)
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          r['status'] as String? ?? '',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            color: statusColors[r['status']] ?? Colors.grey,
-                          ),
-                        ),
-                      ),
-                    ],
+                  leading: const Icon(Icons.badge_outlined,
+                      size: 20, color: AppColors.primary),
+                  title: Text(
+                    r['accessedByName'] as String? ?? 'Arthaleads Support',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                   subtitle: Text(
-                    '${reasonLabels[r['reason']] ?? r['reason'] ?? ''}${(r['notes'] as String? ?? '').isNotEmpty ? " — ${r['notes']}" : ""}',
+                    [
+                      _formatAccessTime(r['at']),
+                      if ((r['accessedAs'] as String? ?? '').isNotEmpty)
+                        'signed in as ${r['accessedAs']}',
+                    ].join(' · '),
                     style: const TextStyle(fontSize: 11),
                   ),
-                  trailing: r['status'] == 'active'
-                      ? TextButton(
-                          onPressed: _endAccessSession,
-                          child: const Text(
-                            'End',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                        )
-                      : null,
                 ),
               ),
         ],
       ),
     );
+  }
+
+  /// "22 Aug 2026, 4:12 PM" — an access log is only useful with a timestamp,
+  /// which the previous version of this screen never rendered.
+  String _formatAccessTime(dynamic iso) {
+    final dt = DateTime.tryParse(iso?.toString() ?? '');
+    if (dt == null) return 'Unknown date';
+    return DateFormat('d MMM yyyy, h:mm a').format(dt.toLocal());
   }
 }
