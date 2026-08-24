@@ -210,12 +210,22 @@ class _CallsScreenState extends State<CallsScreen> {
   String _fmtDate(String? iso) {
     final dt = DateTime.tryParse(iso ?? '')?.toLocal();
     if (dt == null) return '—';
-    return DateFormat('dd MMM, hh:mm a').format(dt);
+    // No leading zeros: the call card packs this next to two badges and a
+    // duration, and the two saved characters buy real room on a narrow phone.
+    return DateFormat('d MMM, h:mm a').format(dt);
+  }
+
+  String _pluralCalls(dynamic count) {
+    final n = (count as num? ?? 0).toInt();
+    return n == 1 ? '1 call' : '$n calls';
   }
 
   String _fmtDuration(dynamic secs) {
     final s = secs is num ? secs.toInt() : 0;
     if (s <= 0) return '';
+    // Most calls here are under a minute, and a leading "0m " on every one of
+    // them is noise that also costs width on the already-tight call card.
+    if (s < 60) return '${s}s';
     return '${s ~/ 60}m ${s % 60}s';
   }
 
@@ -234,131 +244,180 @@ class _CallsScreenState extends State<CallsScreen> {
     'Dec',
   ];
 
+  /// Compact 14-day column chart.
+  ///
+  /// This was previously fourteen full-width horizontal bars. Two things made
+  /// that cost most of a screen: the date column was 34px wide, so every label
+  /// except "1 Aug" wrapped onto a second line and doubled its row height, and
+  /// scaling every bar against the busiest day left the quiet days as a 4px dot
+  /// trailed by ~300px of blank space with the total stranded at the far edge.
+  /// Vertical columns encode the same three numbers per day (answered, missed,
+  /// total) in roughly a third of the height, and put each total directly above
+  /// the bar it belongs to.
   Widget _volumeByDayCard(List<Map> volumeByDay) {
+    const barsHeight = 72.0;
     final maxTotal = volumeByDay.fold<int>(
       1,
       (m, d) => (d['total'] as num? ?? 0).toInt() > m
           ? (d['total'] as num).toInt()
           : m,
     );
+    final theme = AppTheme.of(context);
+
+    // The kicker used to claim "LAST 14 DAYS", but the series only contains
+    // days that actually had calls — gaps are silently dropped. Showing the
+    // real span keeps the label honest and doubles as the month qualifier that
+    // the day-number axis below omits.
+    String rangeLabel() {
+      String fmt(Map d) {
+        final id = (d['_id'] as Map?) ?? {};
+        final m = (id['m'] as num?)?.toInt();
+        final day = (id['d'] as num?)?.toInt();
+        if (m == null || day == null) return '';
+        return '$day ${_monthAbbr[(m - 1).clamp(0, 11)]}';
+      }
+
+      final first = fmt(volumeByDay.first);
+      final last = fmt(volumeByDay.last);
+      if (first.isEmpty || last.isEmpty) return '';
+      return first == last ? first : '$first – $last';
+    }
+
     return SoftSurface(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'DAILY CALL VOLUME (LAST 14 DAYS)',
-            style: AppText.kicker(context),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  'DAILY CALL VOLUME',
+                  style: AppText.kicker(context),
+                ),
+              ),
+              if (volumeByDay.isNotEmpty)
+                Text(
+                  rangeLabel(),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           if (volumeByDay.isEmpty)
             Text(
               'No calls in the last 30 days.',
               style: Theme.of(context).textTheme.bodySmall,
             )
           else ...[
-            ...volumeByDay.map((d) {
-              final id = (d['_id'] as Map?) ?? {};
-              final month = (id['m'] as num?)?.toInt();
-              final day = (id['d'] as num?)?.toInt();
-              final label = month != null && day != null
-                  ? '$day ${_monthAbbr[(month - 1).clamp(0, 11)]}'
-                  : '';
-              final total = (d['total'] as num? ?? 0).toInt();
-              final answered = (d['answered'] as num? ?? 0).toInt();
-              final missed = (d['missed'] as num? ?? 0).toInt();
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 34,
-                      child: Text(
-                        label,
-                        textAlign: TextAlign.right,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: SizedBox(
-                        height: 8,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: (answered * 1000 / maxTotal).round().clamp(
-                                0,
-                                1000,
-                              ),
-                              child: answered > 0
-                                  ? Container(
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success.withValues(
-                                          alpha: 0.7,
-                                        ),
-                                        borderRadius: BorderRadius.circular(99),
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
-                            Expanded(
-                              flex: (missed * 1000 / maxTotal).round().clamp(
-                                0,
-                                1000,
-                              ),
-                              child: missed > 0
-                                  ? Container(
-                                      decoration: BoxDecoration(
-                                        color: AppColors.danger.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                        borderRadius: BorderRadius.circular(99),
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
-                            Expanded(
-                              flex:
-                                  1000 -
-                                  (answered * 1000 / maxTotal).round().clamp(
-                                    0,
-                                    1000,
-                                  ) -
-                                  (missed * 1000 / maxTotal).round().clamp(
-                                    0,
-                                    1000,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: volumeByDay.map((d) {
+                final id = (d['_id'] as Map?) ?? {};
+                final day = (id['d'] as num?)?.toInt();
+                final total = (d['total'] as num? ?? 0).toInt();
+                final answered = (d['answered'] as num? ?? 0).toInt();
+                final missed = (d['missed'] as num? ?? 0).toInt();
+
+                // A day with a single call still has to be visible, so give any
+                // non-zero segment a 3px floor rather than letting it round away.
+                double seg(int v) => v <= 0
+                    ? 0
+                    : (v / maxTotal * barsHeight).clamp(3.0, barsHeight);
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$total',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: theme.text,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        SizedBox(
+                          height: barsHeight,
+                          child: Stack(
+                            children: [
+                              // Faint full-height track, so short bars still
+                              // read against a common baseline.
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: theme.textSoft.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                              child: const SizedBox.shrink(),
-                            ),
-                          ],
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (missed > 0)
+                                        SizedBox(
+                                          height: seg(missed),
+                                          width: double.infinity,
+                                          child: ColoredBox(
+                                            color: AppColors.danger.withValues(
+                                              alpha: 0.55,
+                                            ),
+                                          ),
+                                        ),
+                                      if (answered > 0)
+                                        SizedBox(
+                                          height: seg(answered),
+                                          width: double.infinity,
+                                          child: ColoredBox(
+                                            color: AppColors.success.withValues(
+                                              alpha: 0.75,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 20,
-                      child: Text(
-                        '$total',
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                        const SizedBox(height: 5),
+                        Text(
+                          day?.toString() ?? '',
+                          maxLines: 1,
+                          style: TextStyle(fontSize: 9, color: theme.textSoft),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            }),
-            const SizedBox(height: 8),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 _legendDot(
-                  AppColors.success.withValues(alpha: 0.7),
+                  AppColors.success.withValues(alpha: 0.75),
                   'Answered',
                 ),
                 const SizedBox(width: 12),
-                _legendDot(AppColors.danger.withValues(alpha: 0.5), 'Missed'),
+                _legendDot(AppColors.danger.withValues(alpha: 0.55), 'Missed'),
+                const Spacer(),
+                Text(
+                  'peak $maxTotal',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ],
@@ -415,7 +474,7 @@ class _CallsScreenState extends State<CallsScreen> {
                       ),
                     ),
                     Text(
-                      '${durationByAgent[i]['totalCalls']} calls',
+                      _pluralCalls(durationByAgent[i]['totalCalls']),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     if ((durationByAgent[i]['avgDuration'] as num? ?? 0) >
@@ -751,24 +810,33 @@ class _CallsScreenState extends State<CallsScreen> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  DirectionBadge(direction: row['lastDirection'] as String?),
-                  const SizedBox(width: 8),
-                  Text(
-                    _fmtDate(row['lastCallAt'] as String?),
-                    style: Theme.of(context).textTheme.bodySmall,
+                  DirectionBadge(
+                    direction: row['lastDirection'] as String?,
+                    compact: true,
                   ),
-                  if (_fmtDuration(row['lastDuration']).isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Text(
-                      _fmtDuration(row['lastDuration']),
+                  const SizedBox(width: 8),
+                  // Timestamp and duration share one flexible slot. They used
+                  // to be two unconstrained Text widgets, so on a card that had
+                  // both, the row overran the subtitle box and painted straight
+                  // over the trailing call count — release builds show no
+                  // overflow stripes, so it just read as garbled text.
+                  Expanded(
+                    child: Text(
+                      [
+                        _fmtDate(row['lastCallAt'] as String?),
+                        _fmtDuration(row['lastDuration']),
+                      ].where((s) => s.isNotEmpty).join('  ·  '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  ],
+                  ),
                 ],
               ),
             ],
           ),
           trailing: Column(
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -792,7 +860,8 @@ class _CallsScreenState extends State<CallsScreen> {
                 onPressed: calling ? null : () => _call(row),
               ),
               Text(
-                '${row['callCount'] ?? 0} calls',
+                _pluralCalls(row['callCount']),
+                maxLines: 1,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
