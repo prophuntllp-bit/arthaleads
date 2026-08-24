@@ -19,7 +19,7 @@
 module.exports = {
   android: {
     // Must match the "+N" build number in mobile/pubspec.yaml.
-    build: 23,
+    build: 24,
     // Human-readable, shown in the update prompt.
     version: "1.0.1",
     // Installs older than this are FORCED to update (blocking dialog).
@@ -38,8 +38,8 @@ module.exports = {
     // for how future signed builds get produced (needs the MOBILE_KEYSTORE_BASE64
     // secret set; not yet configured — see mobile/android/key.properties, kept
     // local/untracked).
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-23/arthaleads-1.0.1%2B23-arm64.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-24/arthaleads-1.0.1%2B24-arm64.apk",
     // Optional short "what's new" line.
-    notes: "Fixes a rare case where the app could get stuck on the loading screen at startup, and Settings → Security now shows a real Support Access log for admins.",
+    notes: "The Calls screen is fixed: the daily volume chart no longer fills the whole screen, and call rows no longer overlap the duration with the call count.",
   },
 };
