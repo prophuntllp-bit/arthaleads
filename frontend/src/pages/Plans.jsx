@@ -9,7 +9,9 @@ const PLANS = [
     id: "starter",
     name: "Starter",
     color: "#3b82f6",
-    userLimit: "Up to 3 members",
+    // Seat count reads from PLAN_PRICING so this can never drift from the
+    // enforced cap again the way the pre-2026 "Up to 3 members" text did.
+    userLimit: `${PLAN_PRICING.starter.minSeats} to ${PLAN_PRICING.starter.maxSeats} members`,
     tagline: "For solo brokers and small channel partner teams",
     groups: [
       {
@@ -30,6 +32,11 @@ const PLANS = [
           "Website / WordPress plugin",
         ],
       },
+      // Roles moved to Starter: the seat minimum is sold as one admin, one
+      // manager and agents, so the tier needs the thing that makes that a
+      // team rather than identical logins. authorize() has always applied on
+      // every plan — this is a packaging change, not a new gate.
+      { label: "Team", items: ["Role-based access (Admin / Manager / Agent)"] },
       { label: "Support", items: ["Email support"] },
     ],
     cta: "Contact Us to Upgrade",
@@ -40,7 +47,7 @@ const PLANS = [
     name: "Growth",
     color: "#ff6b00",
     popular: true,
-    userLimit: "Up to 20 members",
+    userLimit: `${PLAN_PRICING.growth.minSeats} to ${PLAN_PRICING.growth.maxSeats} members`,
     tagline: "For active real estate teams that need automation and insights",
     groups: [
       {
@@ -54,9 +61,8 @@ const PLANS = [
         ],
       },
       {
-        label: "Team & Roles",
+        label: "Team",
         items: [
-          "Role-based access (Admin / Manager / Agent)",
           "Attendance tracking",
           "Team performance dashboard",
         ],
@@ -78,7 +84,7 @@ const PLANS = [
     id: "enterprise",
     name: "Enterprise",
     color: "#a855f7",
-    userLimit: "Unlimited members",
+    userLimit: "25+ members, unlimited",
     tagline: "For large developers, franchise networks and multi-branch orgs",
     groups: [
       {
