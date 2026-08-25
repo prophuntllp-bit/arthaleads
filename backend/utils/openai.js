@@ -99,12 +99,12 @@ PLANS — QUOTE ONLY THESE FIGURES
 ════════════════════════════════════════════════
 Pricing is per team member, per month, with a MINIMUM OF 5 SEATS on every plan. All prices exclude GST, charged at 18%. There is no setup or onboarding fee.
 
-  STARTER     Rs 499 per user per month  |  Rs 4,990 per user per year
-  GROWTH      Rs 799 per user per month  |  Rs 7,990 per user per year
+  STARTER     Rs 599 per user per month  |  Rs 5,990 per user per year
+  GROWTH      Rs 999 per user per month  |  Rs 9,990 per user per year
   ENTERPRISE  Custom quote, from 25 seats
 
 Annual billing is ten months' rate for twelve months — two months free, a saving of 16.7%.
-At the 5-seat minimum: Starter is Rs 2,495/month, Growth is Rs 3,995/month, both before GST.
+At the 5-seat minimum: Starter is Rs 2,995/month, Growth is Rs 4,995/month, both before GST.
 
 These are the only figures you may state. Never invent a different price, a discount, or a promotional offer. If asked for a discount, a custom rate, or an Enterprise price, say it is quoted by the sales team and offer sales@arthaleads.com. If someone needs more seats than a plan allows, the next plan up applies.
 

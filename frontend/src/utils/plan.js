@@ -49,8 +49,8 @@ export function planLabel(plan) {
 // Keep the two in sync: if a cap moves here it must move there, or the website
 // promises a team size the API refuses to create.
 export const PLAN_PRICING = {
-  starter:    { monthly: 499, annual: 4990, custom: false, minSeats: 5,  maxSeats: 10 },
-  growth:     { monthly: 799, annual: 7990, custom: false, minSeats: 5,  maxSeats: 30 },
+  starter:    { monthly: 599, annual: 5990, custom: false, minSeats: 5,  maxSeats: 10 },
+  growth:     { monthly: 999, annual: 9990, custom: false, minSeats: 5,  maxSeats: 30 },
   enterprise: { monthly: null, annual: null, custom: true, minSeats: 25, maxSeats: Infinity },
 };
 

@@ -103,11 +103,11 @@ const PLANS = [
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature. No credit card is required, and you can upgrade or cancel anytime."],
-  ["How is pricing calculated?", "Pricing is per team member, per month, with a five-seat minimum on every plan. Starter is ₹499 and Growth is ₹799 per user per month, plus 18% GST. There is no setup fee. Enterprise is custom-quoted for large or multi-branch organisations."],
+  ["How is pricing calculated?", "Pricing is per team member, per month, with a five-seat minimum on every plan. Starter is ₹599 and Growth is ₹999 per user per month, plus 18% GST. There is no setup fee. Enterprise is custom-quoted for large or multi-branch organisations."],
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. You can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
-  ["Do you offer annual billing discounts?", "Yes. Annual billing is ten months’ rate for twelve months — two months free, a saving of 16.7%. Starter is ₹4,990 per user per year and Growth is ₹7,990 per user per year."],
+  ["Do you offer annual billing discounts?", "Yes. Annual billing is ten months’ rate for twelve months — two months free, a saving of 16.7%. Starter is ₹5,990 per user per year and Growth is ₹9,990 per user per year."],
   ["Which payment methods do you accept?", "We accept all major credit/debit cards, UPI, and net banking for Indian businesses. Enterprise customers can also pay via invoice."],
 ];
 
