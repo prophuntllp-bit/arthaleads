@@ -3,8 +3,13 @@ const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/projectController");
 const { protect, authorize } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 
-router.use(protect);
+// Project pipelines are a Growth feature ("Multiple project pipelines").
+// Leads do not depend on a project, so a Starter org keeps the full lead
+// workflow; the callers that fetch projects for a dropdown already swallow the
+// failure and render an empty list.
+router.use(protect, planGate("growth"));
 
 const ProjectLead = require("../models/ProjectLead");
 const Project     = require("../models/Project");

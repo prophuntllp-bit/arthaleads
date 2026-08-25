@@ -2,6 +2,7 @@
 const Organization = require("../models/Organization");
 const User = require("../models/User");
 const { protect, authorize, invalidateOrgCache } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 
 const router = express.Router();
@@ -74,7 +75,8 @@ router.post("/me/onboarding", authorize("admin"), async (req, res, next) => {
 });
 
 // PATCH /api/org/me/auto-assign - toggle round-robin auto-assignment (admin + super_admin)
-router.patch("/me/auto-assign", authorize("admin", "super_admin"), async (req, res, next) => {
+// "Auto round-robin lead assignment" is a Growth feature.
+router.patch("/me/auto-assign", planGate("growth"), authorize("admin", "super_admin"), async (req, res, next) => {
   try {
     const { autoAssign } = req.body;
     if (typeof autoAssign !== "boolean") {

@@ -1,6 +1,7 @@
 ﻿const express = require("express");
 const automationController = require("../controllers/automationController");
 const { protect, authorize } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const validate = require("../middlewares/validate");
 const { createAutomationSchema, updateAutomationSchema } = require("../validations/schemas");
 const Automation = require("../models/Automation");
@@ -39,12 +40,17 @@ router.post("/website/create", automationController.createWebsiteConnection);
 router.get("/voice/connections", automationController.getVoiceConnections);
 router.post("/voice/create", automationController.createVoiceConnection);
 
-router.get("/google/connections", automationController.getGoogleConnections);
-router.post("/google/create", automationController.createGoogleConnection);
+// Google Ads is sold as an Enterprise feature; Facebook, WhatsApp and the
+// website plugin above stay available on every plan, per the Starter tier.
+// The /google/connect and /google/callback endpoints further up are the OAuth
+// redirect pair and carry no session, so the gate goes on the authenticated
+// endpoints that actually read or persist a connection.
+router.get("/google/connections", planGate("enterprise"), automationController.getGoogleConnections);
+router.post("/google/create", planGate("enterprise"), automationController.createGoogleConnection);
 
-router.get("/google/oauth-result", automationController.getGoogleOAuthResult);
-router.post("/google/oauth-create", automationController.createGoogleOAuthConnection);
-router.post("/google/:id/sync", automationController.syncGoogleAdsConnection);
+router.get("/google/oauth-result", planGate("enterprise"), automationController.getGoogleOAuthResult);
+router.post("/google/oauth-create", planGate("enterprise"), automationController.createGoogleOAuthConnection);
+router.post("/google/:id/sync", planGate("enterprise"), automationController.syncGoogleAdsConnection);
 
 router.post("/facebook/diagnose", automationController.diagnoseFacebook);
 router.post("/facebook/resubscribe", automationController.resubscribeFacebook);

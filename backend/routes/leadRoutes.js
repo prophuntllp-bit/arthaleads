@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const leadController = require("../controllers/leadController");
 const { protect, authorize } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const validate = require("../middlewares/validate");
 const { createLeadSchema, updateLeadSchema, addNoteSchema, assignLeadSchema, importLeadsSchema } = require("../validations/schemas");
 const Lead = require("../models/Lead");
@@ -15,7 +16,8 @@ const AiUsage = require("../models/AiUsage");
 // All lead routes require authentication
 router.use(protect);
 
-router.get("/analytics", leadController.getAnalytics);
+// "Advanced analytics & conversion reports" is sold as a Growth feature.
+router.get("/analytics", planGate("growth"), leadController.getAnalytics);
 
 // GET /api/leads/hot — top scored leads for the "Hot Today" dashboard widget
 router.get("/hot", async (req, res, next) => {
@@ -68,7 +70,9 @@ router.get("/alerts", leadController.getAlerts);
 router.get("/followups-due", leadController.getFollowUpsDue);
 router.get("/unified", leadController.getAllUnified);
 router.get("/domains", leadController.getDomains);
-router.get("/export", leadController.exportLeads);
+// "Bulk lead export" is a Growth feature. Import stays open — Starter is sold
+// with "unlimited lead imports".
+router.get("/export", planGate("growth"), leadController.exportLeads);
 router.post("/import", authorize("admin", "manager"), validate(importLeadsSchema), leadController.bulkImport);
 router.post("/bulk-assign", authorize("admin", "manager"), leadController.bulkAssign);
 router.patch("/bulk-status", authorize("admin", "manager"), leadController.bulkUpdateStatus);
@@ -113,7 +117,10 @@ router.post("/backfill-source-domain", authorize("admin"), async (req, res, next
 // GET /api/leads/check-duplicate?phone=...&excludeId=... — real-time check the
 // Add/Edit Lead form calls as the agent types a phone number. Must be registered
 // before /:id so "check-duplicate" isn't swallowed as a lead id.
-router.get("/check-duplicate", leadController.checkDuplicate);
+// "Duplicate lead detection" is a Growth feature. The Add Lead form treats a
+// failure here as "no duplicate found" and never blocks saving, so a Starter
+// org simply loses the warning rather than losing the form.
+router.get("/check-duplicate", planGate("growth"), leadController.checkDuplicate);
 
 router.route("/")
   .get(leadController.getAll)
