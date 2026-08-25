@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Link } from "react-router-dom";
 import { Eye, EyeOff, ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { planLabel, planLevel } from "../utils/plan";
@@ -50,16 +51,36 @@ export default function Team() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isAdmin = ["admin", "super_admin"].includes(user?.role);
-  // Per-plan member limits: starter=3, growth/trial/pro=20, enterprise=unlimited
-  const PLAN_LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
-  const memberLimit = user?.role === "super_admin" ? Infinity : (PLAN_LIMITS[org?.plan] ?? Infinity);
-  const atLimit = users.length >= memberLimit;
+
+  // Seat ceiling comes from the server, not a copy of the numbers held here.
+  // This page used to carry its own PLAN_LIMITS table, which had drifted to the
+  // pre-2026 caps (starter 3, growth 20) — so it showed a limit the API did not
+  // enforce and disabled the Add button while the server would still accept the
+  // request. It also cannot be derived locally any more: a paid org is capped by
+  // the seats it bought, which only the server knows.
+  const [seatInfo, setSeatInfo] = useState(null);
+  const memberLimit = user?.role === "super_admin"
+    ? Infinity
+    : (seatInfo?.limit ?? Infinity);
+  const atLimit = seatInfo ? !seatInfo.canAdd && user?.role !== "super_admin" : false;
+
+  const loadSeats = async () => {
+    try {
+      const { data } = await api.get("/org/seats");
+      setSeatInfo(data.seats || null);
+    } catch {
+      // Non-fatal: the server enforces the cap regardless, so a failure here
+      // costs the meter, not the guard rail.
+      setSeatInfo(null);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
     try {
       const response = await api.get("/auth/users");
       setUsers(response.data.users || []);
+      loadSeats();
     } catch {
       toast.error("Failed to load team");
     } finally {
@@ -212,13 +233,26 @@ export default function Team() {
               {memberLimit < Infinity && (
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
                   style={{ background: atLimit ? "rgba(239,68,68,0.1)" : "rgba(var(--app-primary-rgb),0.08)", color: atLimit ? "#ef4444" : "var(--app-primary)", borderColor: atLimit ? "rgba(239,68,68,0.3)" : "rgba(var(--app-primary-rgb),0.2)" }}>
-                  {users.length}/{memberLimit} members · {planLabel(org?.plan)}
+                  {seatInfo?.used ?? users.length}/{memberLimit} seats · {planLabel(org?.plan)}
                 </span>
               )}
-              <button data-tour="invite-btn" className="btn-primary rounded-xl" onClick={openCreate} disabled={atLimit}
-                title={atLimit ? `${planLabel(org?.plan)} plan limit reached. Upgrade to add more members.` : undefined}>
-                <Plus className="h-4 w-4" /> Add Team Member
-              </button>
+              {/* At the ceiling, offer the action that actually clears it.
+                  Being capped by purchased seats needs more seats; being capped
+                  by the plan needs a bigger plan. Pointing at an upgrade when
+                  all they need is a seat sells the wrong thing. */}
+              {atLimit ? (
+                <Link to="/plans" className="btn-primary rounded-xl"
+                  title={seatInfo?.cappedByPurchase
+                    ? `All ${memberLimit} of your seats are in use.`
+                    : `${planLabel(org?.plan)} plan is limited to ${memberLimit} members.`}>
+                  <Plus className="h-4 w-4" />
+                  {seatInfo?.cappedByPurchase ? "Add seats" : "Upgrade plan"}
+                </Link>
+              ) : (
+                <button data-tour="invite-btn" className="btn-primary rounded-xl" onClick={openCreate}>
+                  <Plus className="h-4 w-4" /> Add Team Member
+                </button>
+              )}
             </div>
           )}
         </div>

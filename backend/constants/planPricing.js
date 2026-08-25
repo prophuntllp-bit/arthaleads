@@ -70,4 +70,29 @@ function termEnd(cycle, from = new Date()) {
   return d;
 }
 
-module.exports = { PLAN_PRICING, GST_RATE, BILLABLE_PLANS, CYCLES, quote, termEnd };
+// ── Seat ceilings ────────────────────────────────────────────────────────────
+// The single definition of how many people a plan may have. Both createUser
+// (which enforces it) and GET /api/org/seats (which displays it) read this, so
+// the number shown to a customer is always the number that will be enforced.
+//
+// trial and pro sit at Growth level, matching middlewares/planGate.
+const PLAN_SEAT_CAP = { starter: 10, trial: 30, growth: 30, pro: 30 };
+
+/**
+ * How many active members an org may have.
+ *
+ * A paid org is capped at the seats it bought, never above its plan's ceiling.
+ * Trial and legacy orgs store no seat count and fall back to the plan cap.
+ * Enterprise is uncapped and returns null.
+ */
+function seatLimitFor(plan, purchasedSeats) {
+  if (plan === "enterprise") return null;         // unlimited
+  const planCap = PLAN_SEAT_CAP[plan];
+  if (!purchasedSeats) return planCap ?? null;
+  return planCap === undefined ? purchasedSeats : Math.min(purchasedSeats, planCap);
+}
+
+module.exports = {
+  PLAN_PRICING, GST_RATE, BILLABLE_PLANS, CYCLES, quote, termEnd,
+  PLAN_SEAT_CAP, seatLimitFor,
+};

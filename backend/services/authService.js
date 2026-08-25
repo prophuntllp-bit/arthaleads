@@ -364,15 +364,12 @@ const authService = {
     // have been onboarded at the size they were sold.
     const org = await Organization.findById(orgId).select("plan seats").lean();
     if (org && org.plan !== "enterprise") {
-      const LIMITS = { starter: 10, trial: 30, growth: 30, pro: 30 };
-      // An org that bought a specific number of seats is capped at that number,
-      // not at the plan's ceiling — paying for 5 Growth seats buys 5, not 30.
-      // Trial and legacy orgs have no `seats` and fall back to the plan cap.
-      const planCap = LIMITS[org.plan];
-      const limit = org.seats
-        ? (planCap === undefined ? org.seats : Math.min(org.seats, planCap))
-        : planCap;
-      if (limit !== undefined) {
+      // One definition of the ceiling, shared with GET /api/org/seats so the
+      // number the Team page shows is the number enforced here.
+      const { seatLimitFor, PLAN_SEAT_CAP } = require("../constants/planPricing");
+      const planCap = PLAN_SEAT_CAP[org.plan];
+      const limit = seatLimitFor(org.plan, org.seats);
+      if (limit !== null && limit !== undefined) {
         const currentCount = await User.countDocuments({ orgId, isActive: true });
         if (currentCount >= limit) {
           const planLabel = org.plan === "starter" ? "Starter" : "Growth";

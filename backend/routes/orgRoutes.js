@@ -97,6 +97,38 @@ router.patch("/me/auto-assign", planGate("growth"), authorize("admin", "super_ad
   } catch (err) { next(err); }
 });
 
+// GET /api/org/seats — how many members the org may have, and how many it has.
+// Backs the seat meter on the Team page. Deliberately readable by any signed-in
+// member: an agent seeing "6 of 10 seats used" is harmless, and hiding it would
+// mean the Add button's disabled state has no explanation.
+router.get("/seats", async (req, res, next) => {
+  try {
+    const { seatLimitFor } = require("../constants/planPricing");
+    const org = await Organization.findById(req.orgId).select("plan seats paidUntil").lean();
+    if (!org) return res.status(404).json({ success: false, message: "Organization not found" });
+
+    const used  = await User.countDocuments({ orgId: req.orgId, isActive: true });
+    const limit = seatLimitFor(org.plan, org.seats);   // null = unlimited
+
+    res.json({
+      success: true,
+      seats: {
+        used,
+        limit,                                   // null on Enterprise
+        remaining: limit === null ? null : Math.max(0, limit - used),
+        canAdd: limit === null || used < limit,
+        // True when the ceiling is the number of seats bought rather than the
+        // plan's own maximum — the Team page uses this to offer "buy more
+        // seats" instead of "upgrade plan".
+        cappedByPurchase: Boolean(org.seats) && limit === org.seats,
+        plan: org.plan,
+        purchased: org.seats ?? null,
+        paidUntil: org.paidUntil ?? null,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/org/me/attendance-settings — read shift/attendance config
 router.get("/me/attendance-settings", async (req, res, next) => {
   try {
