@@ -641,8 +641,14 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* ── Upgrade button (hidden for enterprise & super_admin) ── */}
-        {user?.role !== "super_admin" && upgradeTarget(org?.plan) && (
+        {/* ── Plan & billing entry (hidden only for super_admin) ──
+            This used to be gated on upgradeTarget(), which returns null for
+            enterprise — so an enterprise customer had no route to /plans
+            anywhere in the UI and could not see their own plan, seats or
+            payment history. It also read "Upgrade Plan" on every tier, which
+            is a sales CTA rather than somewhere you'd look for billing, so it
+            now reflects whichever the org actually needs. */}
+        {user?.role !== "super_admin" && (
           <div className="px-2 mb-1 flex-shrink-0">
             <NavLink to="/plans"
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all w-full"
@@ -656,8 +662,10 @@ export default function Sidebar() {
                 color: "#ff6b00",
               })}>
               <Zap className="flex-shrink-0" style={{ width: 16, height: 16 }} />
-              <span style={labelStyle}>Upgrade Plan</span>
-              {isExpanded && (
+              <span style={labelStyle}>
+                {upgradeTarget(org?.plan) ? "Upgrade Plan" : "Plan & Billing"}
+              </span>
+              {isExpanded && upgradeTarget(org?.plan) && (
                 <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#ff6b00] text-white flex-shrink-0 ml-auto">
                   {upgradeTarget(org?.plan)}
                 </span>
