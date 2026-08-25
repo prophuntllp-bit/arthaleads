@@ -1246,6 +1246,27 @@ async function saveWithVersionRetry(Model, leadId, actIdx, applyMeta, { maxAttem
 async function transcribeAndSummarize(leadId, actIdx, recordingUrl, Model = Lead) {
   const { Readable } = require("stream");
 
+  // AI call intelligence is an Enterprise feature, and it is the most expensive
+  // thing the product does: a Whisper transcription plus a summarisation call
+  // for every recording. A telecaller on 50 calls a day can run up more in
+  // model spend than their seat earns, so this has to be gated by plan.
+  //
+  // The gate lives here rather than on a route because nothing user-facing
+  // triggers it — it runs async off a call-recording webhook, so there is no
+  // request to reject.
+  const { levelOf } = require("../middlewares/planGate");
+  const owner = await Model.findById(leadId).select("orgId").lean();
+  const ownerOrg = owner?.orgId
+    ? await Organization.findById(owner.orgId).select("plan").lean()
+    : null;
+  if (levelOf(ownerOrg?.plan) < levelOf("enterprise")) {
+    console.info(
+      `[enablex transcript] skipped for lead ${leadId} — plan "${ownerOrg?.plan || "unknown"}" ` +
+      `does not include AI call intelligence`
+    );
+    return;
+  }
+
   const openai = getOpenAI();
 
   // Download recording as buffer

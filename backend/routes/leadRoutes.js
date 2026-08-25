@@ -20,7 +20,9 @@ router.use(protect);
 router.get("/analytics", planGate("growth"), leadController.getAnalytics);
 
 // GET /api/leads/hot — top scored leads for the "Hot Today" dashboard widget
-router.get("/hot", async (req, res, next) => {
+// AI lead scoring is a Growth feature. Both the web and mobile dashboards
+// already swallow a failure here and render an empty widget.
+router.get("/hot", planGate("growth"), async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 8, 20);
     const filter = {
@@ -284,7 +286,8 @@ router.post("/:id/retry-facebook", async (req, res, next) => {
 });
 
 // POST /api/leads/:id/draft-message — AI-drafted WhatsApp message via OpenAI
-router.post("/:id/draft-message", async (req, res, next) => {
+// "AI WhatsApp draft" is a Growth feature, and each draft is a billed LLM call.
+router.post("/:id/draft-message", planGate("growth"), async (req, res, next) => {
   try {
     const lead = await Lead.findOne({ _id: req.params.id, orgId: req.user.orgId })
       .select("name phone status priority source budget booking siteVisitDone followUpDate notes propertyType bhk preferredLocation purpose assignedToName")

@@ -3,6 +3,7 @@ const express = require("express");
 const router  = express.Router();
 const mongoose = require("mongoose");
 const { protect } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
 const Lead     = require("../models/Lead");
@@ -10,7 +11,9 @@ const { findLeadById, searchBothLeadTypes } = require("../utils/leadLookup");
 const Task     = require("../models/Task");
 const AiUsage  = require("../models/AiUsage");
 
-router.use(protect);
+// The AI copilot is a Growth feature. Each question costs an LLM call, so
+// this gate protects margin as well as the packaging.
+router.use(protect, planGate("growth"));
 
 // POST /api/help/ask
 // Body: { question, page, leadId?, history? }

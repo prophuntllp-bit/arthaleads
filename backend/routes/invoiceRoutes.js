@@ -1,11 +1,13 @@
 const express   = require("express");
 const router    = express.Router();
 const { protect } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const Invoice   = require("../models/Invoice");
 const Booking   = require("../models/Booking");
 const Developer = require("../models/Developer");
 
-router.use(protect);
+// Invoicing is the second half of the Growth booking engine.
+router.use(protect, planGate("growth"));
 
 // GET /api/invoices
 router.get("/", async (req, res, next) => {

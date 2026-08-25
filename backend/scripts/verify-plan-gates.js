@@ -24,6 +24,9 @@ const ROUTERS = [
   ["/api/automations",   "../routes/automationRoutes"],
   ["/api/attendance",    "../routes/attendanceRoutes"],
   ["/api/routing-rules", "../routes/routingRuleRoutes"],
+  ["/api/bookings",       "../routes/bookingRoutes"],
+  ["/api/invoices",       "../routes/invoiceRoutes"],
+  ["/api/help",           "../routes/helpRoutes"],
 ];
 
 // Requiring a router drags in the scheduler and other long-lived handles, which
@@ -65,7 +68,13 @@ const GATED = [
   ["growth",     "*    /api/projects",               "Multiple project pipelines"],
   ["growth",     "*    /api/attendance",             "Attendance tracking"],
   ["growth",     "*    /api/routing-rules",          "Campaign routing rules"],
+  ["growth",     "*    /api/bookings",               "Booking engine"],
+  ["growth",     "*    /api/invoices",               "GST invoicing"],
+  ["growth",     "*    /api/help  (AI copilot)",     "AI copilot"],
+  ["growth",     "GET  /api/leads/hot",              "AI lead scoring"],
+  ["growth",     "POST /api/leads/:id/draft-message","AI WhatsApp draft"],
   ["enterprise", "*    /api/automations/google/*",   "Google Ads integration"],
+  ["enterprise", "call recording transcription",     "AI call intelligence"],
 ];
 
 const head = "min".padEnd(12) + "endpoint".padEnd(34) + PLANS.map((p) => p.slice(0, 6).padEnd(8)).join("");

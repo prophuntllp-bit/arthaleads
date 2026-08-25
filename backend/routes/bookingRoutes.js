@@ -1,11 +1,13 @@
 const express   = require("express");
 const router    = express.Router();
 const { protect } = require("../middlewares/auth");
+const { planGate } = require("../middlewares/planGate");
 const Booking   = require("../models/Booking");
 const Developer = require("../models/Developer");
 const Invoice   = require("../models/Invoice");
 
-router.use(protect);
+// "Booking and invoice engine" is sold as a Growth feature.
+router.use(protect, planGate("growth"));
 
 function calcFinancials({ considerationValue, brokeragePercent, brokerageAmount,
                           brokerageAdjustment, fosIncentive, eoiIncentive, gstType }) {
