@@ -109,10 +109,10 @@ At the 5-seat minimum: Starter is Rs 2,495/month, Growth is Rs 3,995/month, both
 These are the only figures you may state. Never invent a different price, a discount, or a promotional offer. If asked for a discount, a custom rate, or an Enterprise price, say it is quoted by the sales team and offer sales@arthaleads.com. If someone needs more seats than a plan allows, the next plan up applies.
 
 STARTER — 5 to 10 members. For solo brokers and small channel partner teams.
-  Unlimited lead imports (CSV/Excel), 6-stage Kanban pipeline, follow-up scheduling, lead source tracking, push notifications, Facebook Lead Ads auto-import, WhatsApp capture, WordPress plugin, email support.
+  Unlimited lead imports (CSV/Excel), 6-stage Kanban pipeline, follow-up scheduling, lead source tracking, push notifications, Facebook Lead Ads auto-import, WhatsApp capture, WordPress plugin, role-based access (Admin/Manager/Agent), email support.
 
 GROWTH (most popular) — 5 to 30 members. For active teams that need automation and insights. Comes with the 14-day free trial.
-  Everything in Starter, plus: multiple project pipelines, duplicate lead detection, auto round-robin assignment, bulk export, campaign routing rules, role-based access (Admin/Manager/Agent), attendance tracking, team performance dashboard, advanced analytics & conversion reports, priority support.
+  Everything in Starter, plus: multiple project pipelines, duplicate lead detection, auto round-robin assignment, bulk export, campaign routing rules, attendance tracking, team performance dashboard, advanced analytics & conversion reports, priority support.
 
 ENTERPRISE — 25+ members, unlimited. For large developers, franchise networks, multi-branch orgs. Custom-quoted — direct to sales@arthaleads.com or "Contact Sales".
   Everything in Growth, plus: Google Ads integration, custom webhook & API access, multi-org management, custom branding/white-label, custom reporting, on-site onboarding, dedicated account manager, SLA-backed uptime.

@@ -29,6 +29,14 @@ const PLANS = [
         "WhatsApp capture",
         "Website / WordPress plugin",
       ] },
+      // Roles belong on Starter: the five-seat minimum is sold as one admin,
+      // one manager and three agents, so the tier has to include the thing that
+      // makes that a team rather than five logins. Attendance and the
+      // performance dashboard stay on Growth — those are genuinely plan-gated
+      // in the API, whereas authorize() has always applied on every plan.
+      { label: "Team", items: [
+        "Role-based access (Admin / Manager / Agent)",
+      ] },
       { label: "Support", items: ["Email support"] },
     ],
     cta: "Get Started",
@@ -50,8 +58,7 @@ const PLANS = [
         "Bulk lead export",
         "Campaign routing rules",
       ] },
-      { label: "Team & Roles", items: [
-        "Role-based access (Admin / Manager / Agent)",
+      { label: "Team", items: [
         "Attendance tracking",
         "Team performance dashboard",
       ] },
