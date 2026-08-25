@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Zap, Users, Star, MessageCircle, Mail, ArrowRight, Lock, Shield, Facebook, Bell, Layers } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { canAccess, planLabel, planLevel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
+import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
 import CheckoutModal from "../components/CheckoutModal";
 
 const PLANS = [
@@ -122,7 +122,13 @@ export default function Plans() {
   const [checkoutPlan, setCheckoutPlan] = useState(null);
 
   const currentPlanId = org?.plan === "pro" ? "growth" : (org?.plan || "starter");
-  const currentLevel  = planLevel(org?.plan);
+  // A trial has never been paid for. It sits at Growth feature-level (see
+  // planLevel), which is exactly why the Growth card used to render as
+  // "Your Current Plan" for every trial org and hide its own checkout button
+  // — the one plan a trial admin would actually click Subscribe on was the
+  // only one with no way to do it. Purchasability now tracks payment, not
+  // feature level: only a genuinely paid plan can be "current".
+  const isPaidPlan = ["starter", "growth", "pro", "enterprise"].includes(org?.plan);
   const next          = upgradeTarget(org?.plan);
 
   const openWhatsApp = () => {
@@ -151,10 +157,13 @@ export default function Plans() {
           </div>
           {next && (
             <div className="flex items-center gap-3">
-              <button onClick={openWhatsApp}
+              {/* This is the page's single most-clicked CTA — it has to lead
+                  to checkout when the target is self-serve. Enterprise has no
+                  online price, so it still routes to WhatsApp. */}
+              <button onClick={() => next === "Enterprise" ? openWhatsApp() : setCheckoutPlan(next.toLowerCase())}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ff6b00] text-white text-sm font-semibold hover:bg-[#e05f00] transition-colors cursor-pointer">
                 <ArrowRight className="w-4 h-4" />
-                Upgrade to {next}
+                {next === "Enterprise" ? `Upgrade to ${next}` : `Subscribe to ${next}`}
               </button>
             </div>
           )}
@@ -171,8 +180,8 @@ export default function Plans() {
             <div>
               <p className="font-bold text-sm text-app">{planLabel(org?.plan)} Plan</p>
               <p className="text-xs text-app-soft">
-                {currentPlanId === "starter" && "3 team members · Basic features"}
-                {(currentPlanId === "growth" || org?.plan === "trial" || org?.plan === "pro") && "20 team members · Full automation & analytics"}
+                {currentPlanId === "starter" && `Up to ${PLAN_PRICING.starter.maxSeats} team members · Core features`}
+                {(currentPlanId === "growth" || org?.plan === "trial" || org?.plan === "pro") && `Up to ${PLAN_PRICING.growth.maxSeats} team members · Full automation & analytics`}
                 {currentPlanId === "enterprise" && "Unlimited members · All features"}
               </p>
             </div>
@@ -187,8 +196,14 @@ export default function Plans() {
       {/* Plans grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {PLANS.map((plan) => {
-          const isCurrent = plan.id === currentPlanId || (plan.id === "growth" && (org?.plan === "trial" || org?.plan === "pro"));
-          const isLocked  = planLevel(plan.id === "growth" ? "growth" : plan.id) > currentLevel && !isCurrent;
+          const isCurrent = isPaidPlan && plan.id === currentPlanId;
+          // Enterprise is never self-serve, so it keeps the old "locked ->
+          // talk to sales" treatment. Starter and Growth are both buyable
+          // whenever they are not the org's actual paid plan — a trial org
+          // sees Subscribe on both, not just whichever one happens to be
+          // "above" its trial-derived feature level.
+          const isLocked = plan.id === "enterprise" ? !isCurrent : false;
+          const isBuyable = plan.id !== "enterprise" && !isCurrent;
           const isHovered = hoveredPlan === plan.id;
 
           return (
@@ -300,25 +315,20 @@ export default function Plans() {
                     style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
                     Your Current Plan
                   </div>
-                ) : isLocked && plan.id !== "enterprise" ? (
+                ) : isBuyable ? (
                   <button onClick={() => setCheckoutPlan(plan.id)}
                     className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors cursor-pointer hover:opacity-90"
                     style={{ background: plan.color }}>
-                    Upgrade to {plan.name} →
+                    Subscribe to {plan.name} →
                   </button>
-                ) : isLocked ? (
+                ) : (
+                  // Only Enterprise reaches here now: isCurrent covers a paid
+                  // match, isBuyable covers every other Starter/Growth case,
+                  // so a non-current, non-buyable card is Enterprise.
                   <button onClick={openWhatsApp}
                     className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors cursor-pointer hover:opacity-90"
                     style={{ background: plan.color }}>
                     Talk to sales →
-                  </button>
-                ) : (
-                  <button onClick={openEmail}
-                    className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer"
-                    style={{ border: "1px solid var(--app-border)", color: "var(--app-text-soft)" }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--app-border)"; e.currentTarget.style.color = "var(--app-text-soft)"; }}>
-                    {plan.cta}
                   </button>
                 )}
               </div>
