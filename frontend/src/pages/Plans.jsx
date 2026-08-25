@@ -109,8 +109,10 @@ const PLANS = [
 
 export default function Plans() {
   useEffect(() => { document.title = "Plans & Upgrade - Arthaleads CRM"; }, []);
-  const { org } = useAuth();
+  const { org, refreshUser } = useAuth();
   const [hoveredPlan, setHoveredPlan] = useState(null);
+  // Which plan the checkout sheet is buying, or null when it is closed.
+  const [checkoutPlan, setCheckoutPlan] = useState(null);
 
   const currentPlanId = org?.plan === "pro" ? "growth" : (org?.plan || "starter");
   const currentLevel  = planLevel(org?.plan);
@@ -291,11 +293,17 @@ export default function Plans() {
                     style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
                     Your Current Plan
                   </div>
+                ) : isLocked && plan.id !== "enterprise" ? (
+                  <button onClick={() => setCheckoutPlan(plan.id)}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors cursor-pointer hover:opacity-90"
+                    style={{ background: plan.color }}>
+                    Upgrade to {plan.name} →
+                  </button>
                 ) : isLocked ? (
                   <button onClick={openWhatsApp}
                     className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors cursor-pointer hover:opacity-90"
                     style={{ background: plan.color }}>
-                    Upgrade to {plan.name} →
+                    Talk to sales →
                   </button>
                 ) : (
                   <button onClick={openEmail}
@@ -360,6 +368,16 @@ export default function Plans() {
           </div>
         </div>
       </section>
+
+      <CheckoutModal
+        open={Boolean(checkoutPlan)}
+        planId={checkoutPlan}
+        org={org}
+        onClose={() => setCheckoutPlan(null)}
+        // Pull the org again so the new plan, seat count and paid-through date
+        // are reflected without a page reload.
+        onSuccess={() => refreshUser?.()}
+      />
     </div>
   );
 }
