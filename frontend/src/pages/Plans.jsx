@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Zap, Users, Star, MessageCircle, Mail, ArrowRight, Lock, Shield, Facebook, Bell, Layers } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { canAccess, planLabel, planLevel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
+import CheckoutModal from "../components/CheckoutModal";
 
 const PLANS = [
   {
