@@ -125,6 +125,11 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
           amount: order.amount,
           currency: order.currency,
           name: "Arthaleads",
+          // Without this Razorpay draws a placeholder square with the first
+          // letter of `name`. apple-touch-icon is the same mark as logo.png but
+          // 180x180 / 18KB rather than 2080x2080 / 1.1MB — a payment dialog
+          // should not wait on a megabyte image to render its header.
+          image: `${window.location.origin}/apple-touch-icon.png`,
           description: `${plan.id === "growth" ? "Growth" : "Starter"} · ${quote.seats} seats · ${quote.cycle}`,
           prefill: { name: org?.name || "", email: org?.email || "" },
           theme: { color: "#ff6b00" },
