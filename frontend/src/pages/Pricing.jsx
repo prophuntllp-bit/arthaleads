@@ -6,6 +6,7 @@ import PublicNav from "../components/PublicNav";
 import PublicFooter from "../components/PublicFooter";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
+import { PLAN_PRICING, formatINR, freeMonths } from "../utils/plan";
 
 const PLANS = [
   {
@@ -13,8 +14,8 @@ const PLANS = [
     name: "Starter",
     tagline: "For solo brokers and small channel partner teams",
     color: "#3b82f6",
-    maxMembers: 3,
-    userLimit: "Up to 3 members",
+    maxMembers: PLAN_PRICING.starter.maxSeats,
+    userLimit: "5 to 10 members",
     groups: [
       { label: "Lead Management", items: [
         "Unlimited lead imports (CSV / Excel)",
@@ -39,8 +40,8 @@ const PLANS = [
     tagline: "For active real estate teams that need automation and insights",
     color: "#ff6b00",
     popular: true,
-    maxMembers: 20,
-    userLimit: "Up to 20 members",
+    maxMembers: PLAN_PRICING.growth.maxSeats,
+    userLimit: "5 to 30 members",
     groups: [
       { label: "Everything in Starter, plus", items: [
         "Multiple project pipelines",
@@ -70,7 +71,7 @@ const PLANS = [
     tagline: "For large developers, franchise networks and multi-branch orgs",
     color: "#a855f7",
     maxMembers: Infinity,
-    userLimit: "Unlimited members",
+    userLimit: "25+ members, unlimited",
     groups: [
       { label: "Everything in Growth, plus", items: [
         "Google Ads integration",
@@ -95,11 +96,11 @@ const PLANS = [
 
 const FAQS = [
   ["Is there a free trial?", "Yes. The Growth plan comes with a 14-day free trial that includes every Growth feature. No credit card is required, and you can upgrade or cancel anytime."],
-  ["How is pricing calculated?", "Pricing is per team member, per month. You pay only for the seats you add — no setup fee and no hidden charges. Enterprise is custom-quoted for large or multi-branch organisations. Reach out to our team for a quote."],
+  ["How is pricing calculated?", "Pricing is per team member, per month, with a five-seat minimum on every plan. Starter is ₹499 and Growth is ₹799 per user per month, plus 18% GST. There is no setup fee. Enterprise is custom-quoted for large or multi-branch organisations."],
   ["Is there a setup or onboarding fee?", "No. There is no setup fee on any plan. You can start on a 14-day free trial and only pay the per-seat price once you subscribe."],
   ["Can I change plans later?", "Absolutely. You can upgrade or downgrade at any time. When you upgrade, you get instant access to the new features; when you downgrade, the change applies from your next billing cycle."],
   ["What happens to my data if I cancel?", "Your data stays yours. You can export all your leads as CSV or Excel at any time. After cancellation we retain your data per our Refund & Cancellation Policy before secure deletion."],
-  ["Do you offer annual billing discounts?", "Yes. Annual billing gives you roughly two months free compared to paying monthly. Contact our team for the exact annual pricing for your plan."],
+  ["Do you offer annual billing discounts?", "Yes. Annual billing is ten months’ rate for twelve months — two months free, a saving of 16.7%. Starter is ₹4,990 per user per year and Growth is ₹7,990 per user per year."],
   ["Which payment methods do you accept?", "We accept all major credit/debit cards, UPI, and net banking for Indian businesses. Enterprise customers can also pay via invoice."],
 ];
 
@@ -150,8 +151,8 @@ export default function Pricing() {
 
   // Interactive: which plan does the chosen team size land in?
   const recommended = useMemo(() => {
-    if (members <= 3)  return "starter";
-    if (members <= 20) return "growth";
+    if (members <= PLAN_PRICING.starter.maxSeats) return "starter";
+    if (members <= PLAN_PRICING.growth.maxSeats)  return "growth";
     return "enterprise";
   }, [members]);
 
@@ -293,11 +294,47 @@ export default function Pricing() {
                   </div>
 
                   {/* User limit pill */}
-                  <div className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-lg mb-5"
+                  <div className="inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-lg mb-4"
                     style={{ background: `${plan.color}12`, border: `1px solid ${plan.color}25` }}>
                     <Users className="w-3 h-3" style={{ color: plan.color }} />
                     <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.userLimit}</span>
                   </div>
+
+                  {/* Price — published rather than "on request", so a prospect can
+                      qualify themselves before they ever reach the contact form. */}
+                  {(() => {
+                    const price = PLAN_PRICING[plan.id];
+                    if (!price || price.custom) {
+                      return (
+                        <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
+                          <div className="text-3xl font-black" style={{ color: heading }}>Custom quote</div>
+                          <p className="text-xs mt-1.5" style={{ color: body }}>
+                            Priced on team size and rollout. From {price?.minSeats ?? 25} seats.
+                          </p>
+                        </div>
+                      );
+                    }
+                    const free = freeMonths(plan.id);
+                    return (
+                      <div className="mb-5 pb-5" style={{ borderBottom: `1px solid ${divBdr}` }}>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-4xl font-black tracking-tight" style={{ color: heading }}>
+                            {formatINR(price.monthly)}
+                          </span>
+                          <span className="text-xs font-medium" style={{ color: body }}>
+                            / user / month
+                          </span>
+                        </div>
+                        <p className="text-xs mt-1.5" style={{ color: body }}>
+                          Plus 18% GST · minimum {price.minSeats} seats
+                        </p>
+                        <p className="text-xs mt-1 font-semibold" style={{ color: plan.color }}>
+                          {formatINR(price.annual)}/user/year billed annually
+                          {free ? ` — ${free} months free` : ""}
+                        </p>
+                      </div>
+                    );
+                  })()}
 
 
                   {/* Feature groups */}

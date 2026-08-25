@@ -353,10 +353,18 @@ const authService = {
     if (existing) throw new AppError("Email already registered", 409);
 
     // Enforce per-plan team member limits
-    // starter: 3  |  trial/growth/pro: 20  |  enterprise: unlimited
+    // starter: 10  |  trial/growth/pro: 30  |  enterprise: unlimited
+    //
+    // These are the caps the pricing page advertises — keep them in step with
+    // maxSeats in frontend/src/utils/plan.js, or the website sells a team size
+    // this refuses to create.
+    //
+    // Starter was 3, which the five-seat commercial minimum made impossible:
+    // the floor would have exceeded the ceiling and no Starter customer could
+    // have been onboarded at the size they were sold.
     const org = await Organization.findById(orgId).select("plan").lean();
     if (org && org.plan !== "enterprise") {
-      const LIMITS = { starter: 3, trial: 20, growth: 20, pro: 20 };
+      const LIMITS = { starter: 10, trial: 30, growth: 30, pro: 30 };
       const limit = LIMITS[org.plan];
       if (limit !== undefined) {
         const currentCount = await User.countDocuments({ orgId, isActive: true });

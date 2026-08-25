@@ -32,13 +32,52 @@ export function planLabel(plan) {
 }
 
 // ── Per-seat pricing (INR) ──────────────────────────────────────────────────
-// Transparent per-team-member pricing. No setup fee. Annual is billed yearly
-// per seat at ~2 months free vs paying monthly. Enterprise is custom-quoted.
+// Transparent per-team-member pricing. No setup fee.
+//
+// Annual is exactly ten months' rate, so the discount is 2/12 = 16.7% — "pay
+// for ten months, get twelve". At the five-seat minimum that saving works out
+// to precisely one free user-year on either plan, which is the line to use in
+// a quotation.
+//
+// `minSeats` is a commercial floor, not a technical one: five seats is the
+// smallest team the role model is built for (one admin, one manager, three
+// agents), since routing, attendance and the performance dashboard all assume
+// someone assigns work and someone does it. Nothing in the API enforces it —
+// it is held at quotation time.
+//
+// `maxSeats` IS enforced, by createUser in backend/services/authService.js.
+// Keep the two in sync: if a cap moves here it must move there, or the website
+// promises a team size the API refuses to create.
 export const PLAN_PRICING = {
-  starter:    { monthly: 999,  annual: 9990,  custom: false },
-  growth:     { monthly: 1500, annual: 15000, custom: false },
-  enterprise: { monthly: null, annual: null,  custom: true  },
+  starter:    { monthly: 499, annual: 4990, custom: false, minSeats: 5,  maxSeats: 10 },
+  growth:     { monthly: 799, annual: 7990, custom: false, minSeats: 5,  maxSeats: 30 },
+  enterprise: { monthly: null, annual: null, custom: true, minSeats: 25, maxSeats: Infinity },
 };
+
+// GST is charged on top of every published price, never baked in.
+export const GST_RATE = 0.18;
+
+export const withGST = (n) => Math.round(n * (1 + GST_RATE));
+
+// Months of an annual term that are effectively free, derived rather than
+// hard-coded so it stays true if a rate changes.
+export function freeMonths(planId) {
+  const p = PLAN_PRICING[planId];
+  if (!p?.monthly || !p?.annual) return null;
+  return Math.round(((p.monthly * 12 - p.annual) / p.monthly) * 10) / 10;
+}
+
+// What a mid-term seat addition costs. Monthly plans simply bill the new seats
+// on the next invoice; annual plans charge pro-rata for the whole months left
+// so the added seats co-terminate with the existing renewal date.
+export function seatAdditionCost(planId, seats, { annual = false, monthsRemaining = 12 } = {}) {
+  const p = PLAN_PRICING[planId];
+  if (!p || p.custom) return null;
+  const amount = annual
+    ? Math.round((p.annual / 12) * Math.max(0, monthsRemaining) * seats)
+    : p.monthly * seats;
+  return { amount, withGST: withGST(amount) };
+}
 
 export const formatINR = (n) => "₹" + Number(n).toLocaleString("en-IN");
 
