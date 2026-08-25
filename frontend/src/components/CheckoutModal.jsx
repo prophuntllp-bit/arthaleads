@@ -15,21 +15,48 @@ import toast from "react-hot-toast";
 
 const RZP_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 
+// How long to wait for checkout.js before giving up. An ad blocker or a DNS
+// filter can drop the request in a way that fires NEITHER load nor error, so
+// waiting on those events alone can hang forever.
+const RZP_LOAD_TIMEOUT_MS = 8000;
+
 // Checkout.js is loaded on demand rather than in index.html: most sessions
 // never open this modal, and it is a third-party script on every page load.
+//
+// Every failure path must remove the <script> tag it created. An earlier
+// version looked for an existing tag and attached fresh load/error listeners
+// to it — but a tag that has already failed will never fire either event
+// again, so the promise never settled and the Pay button span forever on
+// every attempt after the first. A transient blip on the first click bricked
+// checkout until a full page reload.
 function loadRazorpay() {
   if (window.Razorpay) return Promise.resolve(true);
+
   return new Promise((resolve) => {
-    const existing = document.querySelector(`script[src="${RZP_SCRIPT}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve(true));
-      existing.addEventListener("error", () => resolve(false));
-      return;
-    }
+    // Always start from a clean slate — a leftover tag is, by definition, one
+    // that did not succeed.
+    document
+      .querySelectorAll(`script[src="${RZP_SCRIPT}"]`)
+      .forEach((el) => el.remove());
+
     const s = document.createElement("script");
     s.src = RZP_SCRIPT;
-    s.onload = () => resolve(true);
-    s.onerror = () => resolve(false);
+
+    let settled = false;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      // Leave the tag in place only when it actually gave us window.Razorpay,
+      // so the next attempt genuinely retries instead of inheriting a corpse.
+      if (!ok) s.remove();
+      resolve(ok);
+    };
+
+    const timer = setTimeout(() => finish(false), RZP_LOAD_TIMEOUT_MS);
+    s.onload = () => finish(Boolean(window.Razorpay));
+    s.onerror = () => finish(false);
+
     document.body.appendChild(s);
   });
 }
@@ -75,9 +102,18 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
   const pay = async () => {
     if (!plan || busy) return;
     setBusy(true);
+    setLoadErr("");   // clear any previous failure so a retry starts clean
     try {
       const ok = await loadRazorpay();
-      if (!ok) throw new Error("Could not reach the payment gateway. Check your connection and try again.");
+      // By far the most common cause is an ad blocker or privacy extension
+      // dropping checkout.razorpay.com, not a flaky connection — so name that
+      // first. "Check your connection" sends people to look in the wrong place.
+      if (!ok) {
+        throw new Error(
+          "Couldn't load the payment window. An ad blocker or privacy extension is usually the cause — " +
+          "pause it for this site, or try a different browser, then retry."
+        );
+      }
 
       const { data } = await api.post("/billing/order", { plan: planId, seats, cycle });
       const { order, quote, keyId } = data;
@@ -117,7 +153,15 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
         rzp.open();
       });
     } catch (e) {
-      toast.error(e?.response?.data?.message || e.message || "Could not start checkout.");
+      const msg = e?.response?.data?.message || e.message || "Could not start checkout.";
+      // These messages carry an instruction ("pause your ad blocker"), so give
+      // them long enough to actually be read — the default duration is tuned
+      // for a few words, not a sentence someone has to act on.
+      toast.error(msg, { duration: 8000 });
+      // Surface it in the sheet as well. A toast is gone in seconds; the
+      // person is still sitting in front of a Pay button wondering what
+      // happened, and needs the reason to persist.
+      setLoadErr(msg);
     } finally {
       setBusy(false);
     }
@@ -151,7 +195,13 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
           </div>
         )}
 
-        {loadErr && <p className="px-5 pb-4 text-sm text-red-500">{loadErr}</p>}
+        {loadErr && (
+          <div className="mx-5 mb-3 px-3 py-2.5 rounded-xl text-xs leading-relaxed"
+            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", color: "#b91c1c" }}
+            role="alert">
+            {loadErr}
+          </div>
+        )}
 
         {!config && !loadErr && (
           <div className="px-5 py-10 flex justify-center">
