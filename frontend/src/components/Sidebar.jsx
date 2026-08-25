@@ -15,7 +15,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "../context/ThemeContext";
 import api from "../services/api";
 import { fmtDateTime } from "../utils/constants";
-import { canAccess, upgradeTarget } from "../utils/plan";
+import { canAccess } from "../utils/plan";
 import toast from "react-hot-toast";
 import AttendanceCapture from "./AttendanceCapture";
 
@@ -58,6 +58,11 @@ const navItems = [
   { to: "/team",        label: "Team",         icon: UserCheck, roles: ["admin", "manager", "super_admin"] },
   { to: "/integrations",  label: "Integrations", icon: Workflow,  roles: ["admin", "manager", "super_admin"] },
   { to: "/performance", label: "Performance",  icon: BarChart3, roles: ["admin", "manager", "super_admin"], minPlan: "growth" },
+  // Admin-only: buying a plan or adding seats is an admin action server-side
+  // (billingRoutes gates /order and /verify on authorize("admin")), so showing
+  // this to an agent offers something they cannot act on. Seat usage is still
+  // visible to everyone on the Team page.
+  { to: "/plans",       label: "Plan & Billing", icon: Zap, roles: ["admin"] },
   { to: "/settings",    label: "Settings",     icon: Settings },
   { to: "/help-support", label: "Help & Support", icon: LifeBuoy },
 ];
@@ -641,38 +646,11 @@ export default function Sidebar() {
           })}
         </nav>
 
-        {/* ── Plan & billing entry (hidden only for super_admin) ──
-            This used to be gated on upgradeTarget(), which returns null for
-            enterprise — so an enterprise customer had no route to /plans
-            anywhere in the UI and could not see their own plan, seats or
-            payment history. It also read "Upgrade Plan" on every tier, which
-            is a sales CTA rather than somewhere you'd look for billing, so it
-            now reflects whichever the org actually needs. */}
-        {user?.role !== "super_admin" && (
-          <div className="px-2 mb-1 flex-shrink-0">
-            <NavLink to="/plans"
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all w-full"
-              style={({ isActive }) => ({
-                background: isActive
-                  ? "rgba(255,107,0,0.15)"
-                  : org?.plan === "starter" || org?.plan === "trial"
-                    ? "linear-gradient(135deg,rgba(255,107,0,0.12),rgba(255,170,0,0.08))"
-                    : "rgba(255,107,0,0.06)",
-                border: `1px solid ${isActive ? "rgba(255,107,0,0.4)" : "rgba(255,107,0,0.2)"}`,
-                color: "#ff6b00",
-              })}>
-              <Zap className="flex-shrink-0" style={{ width: 16, height: 16 }} />
-              <span style={labelStyle}>
-                {upgradeTarget(org?.plan) ? "Upgrade Plan" : "Plan & Billing"}
-              </span>
-              {isExpanded && upgradeTarget(org?.plan) && (
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#ff6b00] text-white flex-shrink-0 ml-auto">
-                  {upgradeTarget(org?.plan)}
-                </span>
-              )}
-            </NavLink>
-          </div>
-        )}
+        {/* Plan & Billing now lives in the nav list above, next to Settings,
+            rather than as a gradient CTA pinned down here. It was styled as an
+            advertisement, which is not where anyone looks for their billing
+            page — and it was hidden entirely from enterprise orgs, who had no
+            route to it at all. The trial bar below remains the upgrade nudge. */}
 
         {/* ── Trial bar (visible only when expanded) ── */}
         {trialInfo && (
