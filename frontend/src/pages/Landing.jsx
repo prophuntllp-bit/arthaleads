@@ -1,6 +1,8 @@
 ﻿// pages/Landing.jsx - Arthaleads public marketing homepage
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight,
   BarChart3, Users, Zap, Building2, PhoneCall,
@@ -116,52 +118,69 @@ function Hero({ isDark }) {
           style={{ opacity: gridOpacity, backgroundImage: "linear-gradient(rgba(255,107,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,1) 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-36 lg:pb-8">
-        <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black leading-[1.1] mb-6" style={{ color: headingClr }}>
-            Manage Every Lead.{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
-              Close More Deals.
-            </span>
-          </h1>
-          <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto mb-10" style={{ color: bodyClr }}>
-            Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
-            and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-              className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
-              Start Free Trial <ArrowRight className="w-5 h-5" />
-            </a>
-            <button onClick={() => scrollTo("features")}
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
-              style={{ color: btnText, borderColor: btnBorder }}>
-              <PlayCircle className="w-5 h-5" /> See How It Works
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto">
-            {[
-              { num: "10,000+", label: "Leads Managed" },
-              { num: "50+",     label: "Teams Onboarded" },
-              { num: "3×",      label: "Faster Follow-ups" },
-            ].map((s) => (
-              <div key={s.label} className="text-center">
-                <div className="text-2xl sm:text-3xl font-black text-[#ff6b00]">{s.num}</div>
-                <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-6 lg:pt-32 lg:pb-8">
+        {/* Copy left, product right on desktop; stacked (copy first) below lg. */}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 lg:gap-10 xl:gap-14 items-center">
 
-        {/* ── Mockup area ── */}
-        <div className="mt-12 relative" style={{ maxWidth: 900, margin: "3rem auto 0" }}>
+          {/* ── Copy column ── */}
+          <div className="text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+            {/* In half the width the two sentences would break mid-phrase
+                ("Manage Every / Lead. Close More / Deals."), so the second one
+                gets its own line from lg up and the size is tuned to keep each
+                sentence to a single line. */}
+            <h1 className="text-4xl sm:text-5xl lg:text-[2.6rem] xl:text-[3.25rem] font-black leading-[1.08] mb-6" style={{ color: headingClr }}>
+              Manage Every Lead.{" "}
+              <span className="lg:block text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
+                Close More Deals.
+              </span>
+            </h1>
+            <p className="text-lg sm:text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0 mb-10 lg:mb-8" style={{ color: bodyClr }}>
+              Arthaleads brings every property enquiry - Facebook ads, Google campaigns, WhatsApp chats,
+              and walk-ins - into one powerful workspace. Built for real estate developers and channel partners.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12 lg:mb-10">
+              <a href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
+                className="flex items-center gap-2 bg-[#ff6b00] hover:bg-[#e05f00] text-white font-bold px-8 py-4 rounded-2xl transition-all duration-200 shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-1 text-base">
+                Start Free Trial <ArrowRight className="w-5 h-5" />
+              </a>
+              <button onClick={() => scrollTo("features")}
+                className="flex items-center gap-2 px-8 py-4 rounded-2xl transition-all duration-200 text-base font-medium border"
+                style={{ color: btnText, borderColor: btnBorder }}>
+                <PlayCircle className="w-5 h-5" /> See How It Works
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto lg:mx-0">
+              {[
+                { num: "10,000+", label: "Leads Managed" },
+                { num: "50+",     label: "Teams Onboarded" },
+                { num: "3×",      label: "Faster Follow-ups" },
+              ].map((s) => (
+                <div key={s.label} className="text-center lg:text-left">
+                  <div className="text-2xl sm:text-3xl font-black text-[#ff6b00]">{s.num}</div>
+                  <div className="text-xs sm:text-sm mt-0.5" style={{ color: softClr }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Mockup area ── */}
+          {/* Bleeds past the right gutter on large screens so the laptop still
+              reads at scale in half the width. The section clips overflow, so
+              this never introduces a horizontal scrollbar. */}
+          <div className="relative w-full mx-auto lg:mx-0 lg:-mr-10 xl:-mr-24 2xl:-mr-32" style={{ maxWidth: 900 }}>
 
           {/* Deep glow behind mockup */}
           <div className="absolute pointer-events-none"
             style={{ inset: "-20px 60px", background: "radial-gradient(ellipse at 50% 55%, rgba(255,107,0,0.22) 0%, transparent 68%)", filter: "blur(48px)" }} />
 
           {/* ── Floating stat badges ── */}
-          <div className="absolute -left-4 sm:left-0 top-12 z-20 hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-2xl"
+          {/* The laptop fills 14.8%–84.8% of the mockup image, so in a half-width
+              column there is only ~90px of gutter either side. Left at their old
+              offsets the badges sat squarely on the screen instead of floating at
+              its edges, so each is pushed outward far enough to straddle the
+              laptop's outer edge. The section clips overflow, so the extra reach
+              costs nothing. */}
+          <div className="absolute -left-4 sm:-left-5 lg:-left-8 top-10 z-20 hidden sm:flex items-center gap-2 px-3 py-2.5 rounded-2xl shadow-2xl"
             style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatA 4s ease-in-out infinite" }}>
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shrink-0" />
             <div>
@@ -170,7 +189,7 @@ function Hero({ isDark }) {
             </div>
           </div>
 
-          <div className="absolute -right-4 sm:right-0 top-16 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
+          <div className="absolute -right-4 sm:-right-5 lg:-right-8 top-14 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
             style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatB 5s ease-in-out infinite" }}>
             <span className="text-xl leading-none">📞</span>
             <div>
@@ -179,7 +198,7 @@ function Hero({ isDark }) {
             </div>
           </div>
 
-          <div className="absolute sm:right-4 bottom-20 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
+          <div className="absolute -right-4 lg:-right-6 bottom-16 z-20 hidden sm:flex items-center gap-2.5 px-3 py-2.5 rounded-2xl shadow-2xl"
             style={{ background: chipBg, border: `1px solid ${chipBdr}`, backdropFilter: "blur(14px)", animation: "floatC 4.5s ease-in-out infinite" }}>
             <span className="text-xl leading-none">🏠</span>
             <div>
@@ -188,7 +207,7 @@ function Hero({ isDark }) {
             </div>
           </div>
 
-          <div className="absolute left-4 bottom-24 z-30 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-xl shadow-2xl"
+          <div className="absolute -left-2 lg:-left-5 bottom-20 z-30 hidden lg:flex items-center gap-2 px-3 py-2.5 rounded-xl shadow-2xl"
             style={{ background: isDark ? "rgba(20,30,20,0.92)" : "#ffffff", border: "1.5px solid #22c55e", backdropFilter: "blur(12px)", animation: "floatA 6s ease-in-out infinite 1s" }}>
             <span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0 animate-pulse" />
             <span className="text-xs font-bold" style={{ color: isDark ? "#86efac" : "#15803d" }}>Deal Closed ✓</span>
@@ -205,6 +224,7 @@ function Hero({ isDark }) {
             />
           </div>
 
+          </div>
         </div>
 
         {/* ── Live lead ticker ── */}
@@ -322,132 +342,68 @@ function SourcesStrip({ isDark }) {
 }
 
 // ── Features ──────────────────────────────────────────────────────────────────
-const FEATURES = [
-  { cat: "leads",      icon: Layers,     color: "#ff6b00", title: "Unified Lead Inbox",       desc: "Every lead from Facebook, WhatsApp, Google Ads, walk-ins and portals lands in one place. No more juggling spreadsheets or missing follow-ups across platforms." },
-  { cat: "leads",      icon: Building2,  color: "#22c55e", title: "Project Management",        desc: "Run multiple real estate projects simultaneously. Import thousands of leads per project, track their status, and assign telecallers - all in one workspace." },
-  { cat: "leads",      icon: Sparkles,   color: "#ff6b00", title: "AI Lead Scoring",           desc: "Every lead is automatically scored 0–100 by AI based on budget, urgency, pipeline stage, and engagement. Your Hot Today widget shows agents their top leads to call every morning — no guessing." },
-  { cat: "automation", icon: QrCode,     color: "#14b8a6", title: "QR Code Lead Capture",      desc: "Every org and project gets a unique QR code. Put it on site hoardings, brochures, or expo stalls. A prospect scans it, fills a form on their phone, and the lead lands in your CRM instantly — with source tagged." },
-  { cat: "automation", icon: MessageCircle, color: "#25D366", title: "AI WhatsApp Draft",      desc: "AI writes a personalized WhatsApp message for any lead using their name, project interest, and budget. Agent reviews and sends in seconds. Saves 10–15 minutes per agent per day." },
-  { cat: "team",       icon: PhoneCall,  color: "#3b82f6", title: "Telecaller Workflow",       desc: "Streamline your calling team with remark tracking, booking status, follow-up scheduling, and call outcomes. Never let a hot lead go cold again." },
-  { cat: "automation", icon: Headphones, color: "#8b5cf6", title: "AI Call Intelligence",      desc: "One-tap click-to-call bridges your phone straight to the lead's number. Every recording is auto-transcribed with AI-detected intent and sentiment, a summary, and next-step suggestions — and can auto-advance the lead's pipeline stage the moment it hears 'site visit' or 'negotiating'." },
-  { cat: "analytics",  icon: BarChart3,  color: "#a855f7", title: "Performance Analytics",     desc: "Real-time dashboards showing lead sources, team conversion rates, follow-up completion, and deal pipeline. Make data-driven decisions every day." },
-  { cat: "team",       icon: Users,      color: "#f59e0b", title: "Team Management",           desc: "Assign roles - Admin, Manager, Agent - with controlled access. Track attendance, monitor individual performance, and manage the entire sales team from one panel." },
-  { cat: "team",       icon: Camera,     color: "#3b82f6", title: "Attendance & Selfie Clock-In", desc: "Field agents clock in and out from their phone with a selfie — no paper registers, no WhatsApp check-ins. Admins see real-time attendance and download monthly reports in one click." },
-  { cat: "automation", icon: Bell,       color: "#ec4899", title: "Smart Alerts & Follow-ups", desc: "Color-coded reminders: red for overdue, amber for due today. One-tap call or WhatsApp from the follow-up list. Push notifications for every new lead assignment so nothing slips through." },
-  { cat: "leads",      icon: FileText,   color: "#22c55e", title: "Booking & Invoice Engine",  desc: "Convert a closed deal to a booking in one click. Auto-calculates brokerage and GST (CGST/SGST/IGST). Generates a branded PDF invoice with your logo, RERA number, and bank details — ready in 2 minutes." },
-  { cat: "automation", icon: Bot,        color: "#a855f7", title: "AI Copilot & Help Bot",     desc: "An AI assistant built into every page. Ask live questions like 'How many overdue follow-ups do I have?' or 'Who are my hottest leads?' — and get instant answers from your own CRM data." },
-  { cat: "leads",      icon: Filter,     color: "#14b8a6", title: "Duplicate Prevention",      desc: "Our intelligent import engine detects and skips duplicate phone numbers automatically - even across different formats. Every agent calls a unique lead." },
-  { cat: "leads",      icon: TrendingUp, color: "#ff6b00", title: "Lead Pipeline",             desc: "Kanban-style pipeline view lets you drag leads through stages - New, Contacted, Site Visit, Booked, Closed. Visualise your entire sales funnel at a glance." },
-  { cat: "analytics",  icon: Activity,   color: "#6366f1", title: "Admin Intelligence Dashboard", desc: "Six real-time admin panels in one screen: stale lead alerts (7+ days no touch), revenue forecast vs goal, weekly lead trend chart, live agent clock-in status, automation health, and project-wise conversion breakdown." },
-  { cat: "analytics",  icon: Shield,     color: "#22c55e", title: "Secure & Multi-tenant",     desc: "Enterprise-grade data isolation. Every organisation's data is completely separate. Role-based access ensures agents only see what they're supposed to." },
-];
-
-const FEAT_FILTERS = [
-  { id: "all",        label: "All Features",    color: "#ff6b00" },
-  { id: "leads",      label: "Lead Management", color: "#14b8a6" },
-  { id: "team",       label: "Team",            color: "#3b82f6" },
-  { id: "analytics",  label: "Analytics",       color: "#a855f7" },
-  { id: "automation", label: "Automation",      color: "#ec4899" },
-];
-
+/**
+ * Home-page feature section.
+ *
+ * This used to render all 17 features as bordered cards with accent bars and
+ * ghost numerals — three columns of chrome that read as a wall of boxes rather
+ * than a product story. The full catalogue now lives on /features, and the home
+ * page shows six, with the card removed entirely: a tinted icon, a title, a
+ * line of copy, and space. Structure comes from the grid, not from borders.
+ */
 function Features({ isDark }) {
-  const [activeFilter, setActiveFilter] = useState("all");
   const bg       = isDark ? "#0d0d1a" : "#ffffff";
   const heading  = isDark ? "#ffffff" : "#111827";
   const body     = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const cardBg   = isDark ? "rgba(255,255,255,0.03)" : "#ffffff";
-  const cardBdr  = isDark ? "rgba(255,255,255,0.07)" : "#e5e7eb";
-  const cardText = isDark ? "rgba(255,255,255,0.50)" : "#6b7280";
-  const filtered = activeFilter === "all" ? FEATURES : FEATURES.filter(f => f.cat === activeFilter);
-
-  const Card = ({ icon: Icon, color, title, desc, idx }) => (
-    <div className="group relative flex-shrink-0 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-      style={{ background: cardBg, border: `1px solid ${cardBdr}` }}>
-      {/* Colored top accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 transition-all duration-300"
-        style={{ background: `linear-gradient(to right, ${color}, transparent)` }} />
-      {/* Ghost number watermark */}
-      <div className="absolute right-3 top-1 text-6xl font-black select-none pointer-events-none leading-none"
-        style={{ color: `${color}12` }}>
-        {String(idx + 1).padStart(2, "0")}
-      </div>
-      <div className="p-5">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-110"
-          style={{ background: `${color}15` }}>
-          <Icon className="w-5 h-5" style={{ color }} />
-        </div>
-        <h3 className="font-bold text-base mb-1.5" style={{ color: heading }}>{title}</h3>
-        <p className="text-sm leading-relaxed" style={{ color: cardText }}>{desc}</p>
-      </div>
-    </div>
-  );
+  const itemText = isDark ? "rgba(255,255,255,0.55)" : "#6b7280";
+  const rule     = isDark ? "rgba(255,255,255,0.06)" : "#f0f0f2";
 
   return (
-    <section id="features" className="py-10 lg:py-14" style={{ background: bg }}>
+    <section id="features" className="py-16 lg:py-24" style={{ background: bg }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b00]/30 bg-[#ff6b00]/10 mb-4">
-            <Zap className="w-3.5 h-3.5 text-[#ff6b00]" />
-            <span className="text-[#ff6b00] text-xs font-semibold uppercase tracking-wide">Powerful Features</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3" style={{ color: heading }}>
+
+        <div className="max-w-3xl mb-14 lg:mb-20">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ff6b00]">
+            Powerful Features
+          </span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mt-4 mb-4 leading-[1.12]" style={{ color: heading }}>
             Everything your team needs to{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b00] to-[#ffaa00]">
               close more deals
             </span>
           </h2>
-          <p className="text-base max-w-2xl mx-auto" style={{ color: body }}>
-            Built for the Indian real estate market - from small channel partner offices to large developer sales teams.
+          <p className="text-base sm:text-lg leading-relaxed" style={{ color: body }}>
+            Built for the Indian real estate market - from small channel partner offices to
+            large developer sales teams.
           </p>
         </div>
 
-        {/* Category filter tabs */}
-        <div className="flex justify-center mb-7">
-          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-            {FEAT_FILTERS.map((f) => {
-              const isActive = activeFilter === f.id;
-              return (
-                <button key={f.id} onClick={() => setActiveFilter(f.id)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
-                  style={{
-                    background: isActive ? `${f.color}15` : "transparent",
-                    border: `1px solid ${isActive ? f.color + "55" : (isDark ? "rgba(255,255,255,0.08)" : "#e5e7eb")}`,
-                    color: isActive ? f.color : (isDark ? "rgba(255,255,255,0.45)" : "#6b7280"),
-                    boxShadow: isActive ? `0 0 0 3px ${f.color}12` : "none",
-                  }}>
-                  {f.label}
-                  {isActive && activeFilter !== "all" && (
-                    <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${f.color}20`, color: f.color }}>
-                      {filtered.length}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Mobile: horizontal swipe carousel */}
-        <div className="lg:hidden -mx-4 px-4">
-          <div className="flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory"
-            style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
-            {filtered.map((f, i) => (
-              <div key={f.title} className="snap-start flex-shrink-0" style={{ width: "72vw", maxWidth: 300 }}>
-                <Card {...f} idx={i} />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 xl:gap-x-16 gap-y-12 lg:gap-y-16">
+          {HOME_FEATURES.map(({ icon: Icon, color, title, short, desc }) => (
+            <div key={title}>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center mb-5"
+                style={{ background: `${color}14` }}>
+                <Icon className="w-5 h-5" style={{ color }} />
               </div>
-            ))}
-            <div className="flex-shrink-0 w-4" />
-          </div>
-          <p className="text-center text-xs mt-2" style={{ color: isDark ? "rgba(255,255,255,0.25)" : "#d1d5db" }}>
-            swipe to see more
-          </p>
+              <h3 className="font-bold text-[17px] mb-2" style={{ color: heading }}>{title}</h3>
+              <p className="text-[15px] leading-relaxed" style={{ color: itemText }}>
+                {short || desc}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Desktop: 3-column grid */}
-        <div className="hidden lg:grid grid-cols-3 gap-5">
-          {filtered.map((f, i) => <Card key={f.title} {...f} idx={i} />)}
+        <div className="mt-16 lg:mt-20 pt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{ borderTop: `1px solid ${rule}` }}>
+          <p className="text-[15px]" style={{ color: body }}>
+            {FEATURES.length} features in all — attendance, invoicing, analytics, automation and more.
+          </p>
+          <Link to="/features"
+            className="inline-flex items-center gap-2 font-semibold text-[15px] text-[#ff6b00] hover:gap-3 transition-all duration-200 whitespace-nowrap">
+            Explore all features <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
+
       </div>
     </section>
   );

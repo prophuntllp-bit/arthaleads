@@ -243,6 +243,7 @@ function NavInner({ onScrollTo }) {
           {/* Desktop nav links */}
           <div className="hidden lg:flex items-center gap-5 xl:gap-6">
             <NavLink id="hero"        label="Home" />
+            <NavLink href="/features" label="Features" />
             <NavLink href="/about-us" label="About Us" />
             <NavLink href="/pricing"  label="Pricing" />
             <NavLink href="/blog"     label="Blog" />
@@ -338,6 +339,7 @@ function NavInner({ onScrollTo }) {
               : <Link to="/" onClick={() => setMobileOpen(false)}
                   className="block px-4 py-3 text-sm font-medium rounded-xl"
                   style={{ color: textMuted }}>Home</Link>}
+            <Link to="/features" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Features</Link>
             <Link to="/about-us" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>About Us</Link>
             <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Pricing</Link>
             <Link to="/blog" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Blog</Link>

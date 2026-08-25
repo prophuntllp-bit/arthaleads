@@ -358,6 +358,7 @@ const ReferEarn       = lazy(() => import("./pages/ReferEarn"));
 const Referrals       = lazy(() => import("./pages/Referrals"));
 const ApiDocs         = lazy(() => import("./pages/ApiDocs"));
 const Compare         = lazy(() => import("./pages/Compare"));
+const Features        = lazy(() => import("./pages/Features"));
 const Pricing         = lazy(() => import("./pages/Pricing"));
 const Bookings              = lazy(() => import("./pages/Bookings"));
 const Invoices              = lazy(() => import("./pages/Invoices"));
@@ -659,6 +660,7 @@ export default function App() {
         <Route path="/refer"                element={<ReferEarn />} />
         <Route path="/api-docs"             element={<ApiDocs />} />
         <Route path="/compare"              element={<Compare />} />
+        <Route path="/features"             element={<Features />} />
         <Route path="/pricing"              element={<Pricing />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/google-callback"      element={<GoogleCallback />} />
