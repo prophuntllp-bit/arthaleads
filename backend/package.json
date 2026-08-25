@@ -28,6 +28,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^8.0.7",
     "openai": "^6.41.0",
+    "razorpay": "^2.9.8",
     "resend": "^6.12.2",
     "web-push": "^3.6.7",
     "winston": "^3.17.0",

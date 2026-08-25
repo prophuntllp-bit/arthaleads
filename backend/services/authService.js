@@ -362,17 +362,29 @@ const authService = {
     // Starter was 3, which the five-seat commercial minimum made impossible:
     // the floor would have exceeded the ceiling and no Starter customer could
     // have been onboarded at the size they were sold.
-    const org = await Organization.findById(orgId).select("plan").lean();
+    const org = await Organization.findById(orgId).select("plan seats").lean();
     if (org && org.plan !== "enterprise") {
       const LIMITS = { starter: 10, trial: 30, growth: 30, pro: 30 };
-      const limit = LIMITS[org.plan];
+      // An org that bought a specific number of seats is capped at that number,
+      // not at the plan's ceiling — paying for 5 Growth seats buys 5, not 30.
+      // Trial and legacy orgs have no `seats` and fall back to the plan cap.
+      const planCap = LIMITS[org.plan];
+      const limit = org.seats
+        ? (planCap === undefined ? org.seats : Math.min(org.seats, planCap))
+        : planCap;
       if (limit !== undefined) {
         const currentCount = await User.countDocuments({ orgId, isActive: true });
         if (currentCount >= limit) {
           const planLabel = org.plan === "starter" ? "Starter" : "Growth";
           const next = org.plan === "starter" ? "Growth" : "Enterprise";
+          // Say which ceiling was actually hit. "Your plan is limited to 5"
+          // is untrue when the org simply bought 5 of an available 30, and it
+          // points at an upgrade when all they need is another seat.
+          const cappedBySeats = org.seats && limit === org.seats && limit < (planCap ?? Infinity);
           throw new AppError(
-            `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
+            cappedBySeats
+              ? `Your subscription covers ${limit} seats and all of them are in use. Add more seats to invite another member.`
+              : `${planLabel} plan is limited to ${limit} team members. Upgrade to ${next} to add more.`,
             403
           );
         }

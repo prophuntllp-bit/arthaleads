@@ -25,6 +25,16 @@ const orgSchema = new mongoose.Schema(
       type: Date,
       default: () => new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14-day trial
     },
+
+    // ── Paid subscription state, set by services/billingService ──────────────
+    // seats is what the org actually paid for. It caps team size ahead of the
+    // plan's own maximum, so an org that bought 5 Growth seats gets 5, not 30.
+    // Left unset on trial and legacy orgs, which fall back to the plan cap.
+    seats: { type: Number, min: 1 },
+    billingCycle: { type: String, enum: ["monthly", "annual"] },
+    // Paid through this date. Renewing early extends from here rather than
+    // from today, so an early payment never shortens a term.
+    paidUntil: { type: Date },
     isActive: { type: Boolean, default: true },
     // ── Trial approval gate ───────────────────────────────────────────────────
     // Self-serve signups land as "pending" and cannot access the CRM until a

@@ -225,8 +225,9 @@ if (process.env.NODE_ENV !== "test") {
   app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 }
 
-// ── Webhook BEFORE json parser (needs raw body option) ────────────────────────
+// ── Webhooks BEFORE json parser (they verify signatures over the raw body) ────
 app.use("/webhook", webhookRoutes);
+app.use("/api/billing/webhook", require("./routes/billingWebhookRoutes"));
 
 // ── Body Parsing + Cookie Parsing ─────────────────────────────────────────────
 app.use(express.json({ limit: "8mb" }));
@@ -265,6 +266,9 @@ app.use("/api/help",        require("./routes/helpRoutes"));
 app.use("/api/developers",  require("./routes/developerRoutes"));
 app.use("/api/bookings",    require("./routes/bookingRoutes"));
 app.use("/api/invoices",    require("./routes/invoiceRoutes"));
+// Mounted after /api/billing/webhook above, so the unauthenticated webhook is
+// matched first and never hits `protect`.
+app.use("/api/billing",     require("./routes/billingRoutes"));
 app.use("/api/contact",    contactLimiter, require("./routes/contactRoutes"));
 app.use("/api/careers",    contactLimiter, require("./routes/careersRoutes"));
 app.use("/api/public",     contactLimiter, require("./routes/publicRoutes"));
