@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { Check, Zap, Users, Star, MessageCircle, Mail, ArrowRight, Lock, Shield, Facebook, Bell, Layers } from "lucide-react";
+import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
 import CheckoutModal from "../components/CheckoutModal";
@@ -120,6 +122,36 @@ export default function Plans() {
   const [hoveredPlan, setHoveredPlan] = useState(null);
   // Which plan the checkout sheet is buying, or null when it is closed.
   const [checkoutPlan, setCheckoutPlan] = useState(null);
+  // Where the org sits in its billing cycle: active / grace / lapsed / none.
+  const [sub, setSub] = useState(null);
+  const [subBusy, setSubBusy] = useState(false);
+
+  const loadSubscription = () =>
+    api.get("/billing/me")
+      .then((r) => setSub(r.data.subscription || null))
+      // Non-fatal: this only drives a banner, and the plan cards below do not
+      // depend on it.
+      .catch(() => setSub(null));
+
+  useEffect(() => { loadSubscription(); }, []);
+
+  const setRenewal = async (cancel) => {
+    if (subBusy) return;
+    setSubBusy(true);
+    try {
+      const { data } = await api.post(cancel ? "/billing/cancel" : "/billing/resume");
+      setSub(data.subscription || null);
+      toast.success(data.message || (cancel ? "Subscription cancelled." : "Subscription resumed."));
+      refreshUser?.();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || "Could not update the subscription.");
+    } finally {
+      setSubBusy(false);
+    }
+  };
+
+  const fmtDate = (d) =>
+    d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "";
 
   const currentPlanId = org?.plan === "pro" ? "growth" : (org?.plan || "starter");
   // A trial has never been paid for. It sits at Growth feature-level (see
@@ -168,6 +200,68 @@ export default function Plans() {
             </div>
           )}
         </div>
+
+        {/* Subscription status: renewal date, grace warning, cancel / resume.
+            Only shown once something has actually been bought — a trial org
+            has no term to renew or cancel. */}
+        {sub && sub.status !== "none" && (
+          <div className="mt-5 p-4 rounded-xl flex items-start gap-3 flex-wrap"
+            style={
+              sub.status === "grace"
+                ? { background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.35)" }
+                : sub.status === "lapsed"
+                  ? { background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.35)" }
+                  : { background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.22)" }
+            }>
+            <div className="flex-1 min-w-[220px]">
+              {sub.status === "active" && (
+                <>
+                  <p className="font-bold text-sm text-app">
+                    {sub.cancelAtPeriodEnd
+                      ? `Cancelled — access until ${fmtDate(sub.paidUntil)}`
+                      : `Renews ${fmtDate(sub.paidUntil)}`}
+                  </p>
+                  <p className="text-xs text-app-soft mt-0.5">
+                    {sub.cancelAtPeriodEnd
+                      ? `Your plan will change to ${planLabel(sub.lapsesTo)} after that. You can resume any time before then.`
+                      : `${sub.daysLeft} day${sub.daysLeft !== 1 ? "s" : ""} remaining. Renewal is not automatic — we'll remind you.`}
+                  </p>
+                </>
+              )}
+              {sub.status === "grace" && (
+                <>
+                  <p className="font-bold text-sm" style={{ color: "#b45309" }}>
+                    Your plan expired on {fmtDate(sub.paidUntil)}
+                  </p>
+                  <p className="text-xs text-app-soft mt-0.5">
+                    You still have full access for {sub.daysLeft} more day{sub.daysLeft !== 1 ? "s" : ""}.
+                    After that this workspace moves to {planLabel(sub.lapsesTo)} — your leads stay, but paid features stop.
+                  </p>
+                </>
+              )}
+              {sub.status === "lapsed" && (
+                <>
+                  <p className="font-bold text-sm" style={{ color: "#b91c1c" }}>
+                    Subscription lapsed on {fmtDate(sub.paidUntil)}
+                  </p>
+                  <p className="text-xs text-app-soft mt-0.5">
+                    This workspace is on {planLabel(sub.lapsesTo)}. All your data is intact — renew to restore paid features.
+                  </p>
+                </>
+              )}
+            </div>
+
+            {sub.status === "active" && (
+              <button
+                onClick={() => setRenewal(!sub.cancelAtPeriodEnd)}
+                disabled={subBusy}
+                className="text-xs font-semibold px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 cursor-pointer"
+                style={{ borderColor: "var(--app-border)", color: "var(--app-text-soft)" }}>
+                {subBusy ? "Saving…" : sub.cancelAtPeriodEnd ? "Resume subscription" : "Cancel subscription"}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Current plan highlight bar */}
         <div className="mt-5 p-4 rounded-xl flex items-center gap-4 flex-wrap"

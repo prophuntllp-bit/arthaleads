@@ -35,6 +35,14 @@ const orgSchema = new mongoose.Schema(
     // Paid through this date. Renewing early extends from here rather than
     // from today, so an early payment never shortens a term.
     paidUntil: { type: Date },
+    // Set when an admin cancels. There is nothing to stop charging — terms are
+    // prepaid, not a mandate — so cancelling only means "do not prompt me to
+    // renew". Access continues to paidUntil either way; this just suppresses
+    // the renewal nudges and makes the intent explicit rather than silent.
+    cancelAtPeriodEnd: { type: Boolean, default: false },
+    // Stamped by the scheduler when a lapsed plan is downgraded, so the event
+    // is auditable and a support question has an answer.
+    lapsedAt: { type: Date },
     isActive: { type: Boolean, default: true },
     // ── Trial approval gate ───────────────────────────────────────────────────
     // Self-serve signups land as "pending" and cannot access the CRM until a

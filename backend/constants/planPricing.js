@@ -92,7 +92,65 @@ function seatLimitFor(plan, purchasedSeats) {
   return planCap === undefined ? purchasedSeats : Math.min(purchasedSeats, planCap);
 }
 
+// ── Expiry ───────────────────────────────────────────────────────────────────
+// Days past paidUntil before a paid plan is actually downgraded. A hard cliff
+// the morning a payment lapses is how you lose a customer who fully intended to
+// renew — most lapses are a forgotten invoice, not a decision to leave.
+const GRACE_DAYS = 7;
+
+// What a lapsed plan falls back to. Deliberately NOT a lockout: the org keeps
+// its leads and can keep working, it just loses the paid features. Locking a
+// customer out of their own CRM data over a late payment is punitive, and the
+// support cost of doing it lands on us.
+const LAPSED_PLAN = "starter";
+
+/**
+ * Where an organisation stands in its billing cycle.
+ *
+ * Pure and read-only — the actual downgrade is done once a day by the
+ * scheduler, not on the request path.
+ *
+ *   active  — paid, inside the term
+ *   grace   — term ended, still working, being warned
+ *   lapsed  — past grace; the scheduler will downgrade it on its next run
+ *   none    — never bought anything (trial or legacy org)
+ */
+function subscriptionState(org, now = new Date()) {
+  if (!org?.paidUntil) return { status: "none" };
+
+  const paidUntil = new Date(org.paidUntil);
+  const graceEndsAt = new Date(paidUntil.getTime() + GRACE_DAYS * 86400000);
+  const day = 86400000;
+
+  if (now <= paidUntil) {
+    return {
+      status: "active",
+      paidUntil,
+      graceEndsAt,
+      daysLeft: Math.ceil((paidUntil - now) / day),
+      cancelAtPeriodEnd: Boolean(org.cancelAtPeriodEnd),
+    };
+  }
+  if (now <= graceEndsAt) {
+    return {
+      status: "grace",
+      paidUntil,
+      graceEndsAt,
+      daysLeft: Math.ceil((graceEndsAt - now) / day),
+      cancelAtPeriodEnd: Boolean(org.cancelAtPeriodEnd),
+    };
+  }
+  return {
+    status: "lapsed",
+    paidUntil,
+    graceEndsAt,
+    daysLeft: 0,
+    cancelAtPeriodEnd: Boolean(org.cancelAtPeriodEnd),
+  };
+}
+
 module.exports = {
   PLAN_PRICING, GST_RATE, BILLABLE_PLANS, CYCLES, quote, termEnd,
   PLAN_SEAT_CAP, seatLimitFor,
+  GRACE_DAYS, LAPSED_PLAN, subscriptionState,
 };

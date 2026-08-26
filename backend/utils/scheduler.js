@@ -7,6 +7,7 @@ const logger = require("../config/logger");
 const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
 const { pollGoogleAdsLeads } = require("./googleAdsPoller");
+const { downgradeLapsedSubscriptions } = require("../services/subscriptionExpiry");
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -274,6 +275,17 @@ cron.schedule("30 4 * * *", () => {
 // (webhook-mode Google connections don't need this — Google pushes to them directly)
 cron.schedule("*/5 * * * *", () => {
   pollGoogleAdsLeads().catch((err) => logger.error(`[google-ads-poll] cron failed: ${err.message}`));
+});
+
+// ── Daily 5 AM IST (UTC 23:30): downgrade lapsed paid plans ──────────────────
+// paidUntil was previously written and displayed but never acted on, so a plan
+// bought for one month granted its features indefinitely.
+cron.schedule("30 23 * * *", () => {
+  downgradeLapsedSubscriptions()
+    .then(({ checked, downgraded }) => {
+      if (checked) logger.info(`[billing] expiry sweep — ${downgraded}/${checked} downgraded`);
+    })
+    .catch((err) => logger.error(`[billing] expiry sweep failed: ${err.message}`));
 });
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };

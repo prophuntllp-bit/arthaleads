@@ -10,7 +10,10 @@ const Payment = require("../models/Payment");
 const Organization = require("../models/Organization");
 const rzp = require("../services/razorpayService");
 const { applyPayment } = require("../services/billingService");
-const { quote, PLAN_PRICING, BILLABLE_PLANS } = require("../constants/planPricing");
+const {
+  quote, PLAN_PRICING, BILLABLE_PLANS,
+  subscriptionState, GRACE_DAYS, LAPSED_PLAN,
+} = require("../constants/planPricing");
 
 router.use(protect);
 
@@ -30,13 +33,60 @@ router.get("/plans", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /api/billing/me — current entitlement for the signed-in org.
+// GET /api/billing/me — current entitlement for the signed-in org, plus where
+// it stands in the billing cycle so the UI can warn before access changes.
 router.get("/me", async (req, res, next) => {
   try {
     const org = await Organization.findById(req.orgId)
-      .select("plan seats billingCycle paidUntil trialEndsAt").lean();
+      .select("plan seats billingCycle paidUntil trialEndsAt cancelAtPeriodEnd lapsedAt").lean();
     if (!org) return res.status(404).json({ success: false, message: "Organisation not found" });
-    res.json({ success: true, billing: org });
+    res.json({
+      success: true,
+      billing: org,
+      subscription: { ...subscriptionState(org), graceDays: GRACE_DAYS, lapsesTo: LAPSED_PLAN },
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/billing/cancel — stop renewal reminders; keep access to term end.
+//
+// Terms are prepaid rather than a mandate, so there is no charge to stop and
+// nothing to refund. Cancelling records the intent and suppresses the renewal
+// nudges; the plan then lapses on its own via the daily sweep.
+router.post("/cancel", authorize("admin"), async (req, res, next) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("plan paidUntil").lean();
+    if (!org) return res.status(404).json({ success: false, message: "Organisation not found" });
+    if (!org.paidUntil) {
+      return res.status(400).json({ success: false, message: "There is no active subscription to cancel." });
+    }
+
+    await Organization.findByIdAndUpdate(req.orgId, { $set: { cancelAtPeriodEnd: true } });
+    logger.info(`[billing] org ${req.orgId} cancelled — access continues to ${new Date(org.paidUntil).toISOString().slice(0, 10)}`);
+
+    const updated = await Organization.findById(req.orgId)
+      .select("plan seats billingCycle paidUntil cancelAtPeriodEnd").lean();
+    res.json({
+      success: true,
+      message: `Cancelled. You keep ${org.plan} until ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`,
+      billing: updated,
+      subscription: { ...subscriptionState(updated), graceDays: GRACE_DAYS, lapsesTo: LAPSED_PLAN },
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/billing/resume — undo a cancellation before the term ends.
+router.post("/resume", authorize("admin"), async (req, res, next) => {
+  try {
+    await Organization.findByIdAndUpdate(req.orgId, { $set: { cancelAtPeriodEnd: false } });
+    const updated = await Organization.findById(req.orgId)
+      .select("plan seats billingCycle paidUntil cancelAtPeriodEnd").lean();
+    res.json({
+      success: true,
+      message: "Subscription resumed.",
+      billing: updated,
+      subscription: { ...subscriptionState(updated), graceDays: GRACE_DAYS, lapsesTo: LAPSED_PLAN },
+    });
   } catch (err) { next(err); }
 });
 
