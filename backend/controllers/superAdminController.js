@@ -15,6 +15,7 @@ const { sendSignupApprovedEmail, sendSignupRejectedEmail } = require("../utils/e
 const { runBackup } = require("../utils/backup");
 const { subscriptionState } = require("../constants/planPricing");
 const { invalidateOrgCache } = require("../middlewares/auth");
+const { formatISTDateShort } = require("../utils/datetime");
 
 async function logAudit(action, req, opts = {}) {
   try {
@@ -298,7 +299,7 @@ const superAdminController = {
           ...updated.toObject(),
           trialExpired: false,
         },
-        message: `Trial extended by ${days} day${days > 1 ? "s" : ""} - new expiry: ${newTrialEndsAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`,
+        message: `Trial extended by ${days} day${days > 1 ? "s" : ""} - new expiry: ${formatISTDateShort(newTrialEndsAt)}`,
       });
     } catch (err) {
       next(err);

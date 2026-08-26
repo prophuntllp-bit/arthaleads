@@ -107,6 +107,9 @@ const blogController = {
         url: `/blog/${p.slug}`,
         priority: "0.8",
         changefreq: "weekly",
+        // Deliberately UTC, not IST: sitemap lastmod is a W3C Datetime and
+        // crawlers read it as such. This is the one date here that is not
+        // customer-facing, so it stays off the IST helpers.
         lastmod: (p.updatedAt || p.publishedAt || new Date()).toISOString().split("T")[0],
       }));
 

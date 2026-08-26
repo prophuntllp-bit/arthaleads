@@ -7,6 +7,7 @@ const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
+const { formatISTDate } = require("../utils/datetime");
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
 // Prevents repeated heavy 18-facet aggregations on every dashboard load.
@@ -192,7 +193,7 @@ const leadService = {
       logActivity(
         lead,
         "duplicate_flagged",
-        `Possible duplicate of existing lead "${duplicate.name}" (same phone number, created ${new Date(duplicate.createdAt).toLocaleDateString()})`,
+        `Possible duplicate of existing lead "${duplicate.name}" (same phone number, created ${formatISTDate(duplicate.createdAt)})`,
         user,
         { existingLeadId: duplicate._id }
       );

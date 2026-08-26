@@ -9,6 +9,7 @@ const Payment = require("../models/Payment");
 const Organization = require("../models/Organization");
 const logger = require("../config/logger");
 const { termEnd } = require("../constants/planPricing");
+const { istDateKey } = require("../utils/datetime");
 
 /**
  * Grant the purchased term to the organisation.
@@ -62,7 +63,7 @@ async function applyPayment(razorpayOrderId, razorpayPaymentId) {
 
   logger.info(
     `[billing] org ${claimed.orgId} → ${claimed.plan}, ${claimed.seats} seats, ` +
-    `${claimed.cycle}, paid until ${paidUntil.toISOString().slice(0, 10)}`
+    `${claimed.cycle}, paid until ${istDateKey(paidUntil)}`
   );
 
   return { applied: true, payment: { ...claimed.toObject(), paidUntil } };

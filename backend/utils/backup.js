@@ -3,6 +3,7 @@ const zlib     = require("zlib");
 const mongoose = require("mongoose");
 const { Resend } = require("resend");
 const logger   = require("../config/logger");
+const { istDateKey } = require("./datetime");
 
 // Collections to back up (in order)
 const COLLECTIONS = [
@@ -126,7 +127,7 @@ async function runBackup() {
   }
 
   const db     = mongoose.connection.db;
-  const date   = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const date   = istDateKey(); // YYYY-MM-DD in IST
   const backup = { _meta: { createdAt: new Date().toISOString(), version: "1.0" } };
   const stats  = [];
 

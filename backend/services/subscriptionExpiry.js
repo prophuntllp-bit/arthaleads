@@ -9,6 +9,7 @@
 const Organization = require("../models/Organization");
 const logger = require("../config/logger");
 const { GRACE_DAYS, LAPSED_PLAN } = require("../constants/planPricing");
+const { istDateKey } = require("../utils/datetime");
 
 async function downgradeLapsedSubscriptions() {
   const cutoff = new Date(Date.now() - GRACE_DAYS * 86400000);
@@ -37,7 +38,7 @@ async function downgradeLapsedSubscriptions() {
 
     downgraded++;
     logger.info(
-      `[billing] ${org.name} lapsed — paid until ${new Date(org.paidUntil).toISOString().slice(0, 10)}, ` +
+      `[billing] ${org.name} lapsed — paid until ${istDateKey(org.paidUntil)}, ` +
       `${org.plan} -> ${LAPSED_PLAN}`
     );
   }

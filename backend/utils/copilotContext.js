@@ -2,6 +2,7 @@
 const Lead       = require("../models/Lead");
 const Attendance = require("../models/Attendance");
 const { findLeadById } = require("./leadLookup");
+const { formatISTDate, formatISTTime } = require("./datetime");
 let User, Project, Booking, Invoice, Task;
 try { User    = require("../models/User");    } catch { User    = null; }
 try { Project = require("../models/Project"); } catch { Project = null; }
@@ -46,7 +47,7 @@ async function fetchPageContext(page, userId, orgId, leadId) {
 - Budget: ${lead.budget?.max ? `₹${lead.budget.max.toLocaleString("en-IN")}` : "not set"}
 - Location preference: ${lead.preferredLocation || "not set"}
 - Purpose: ${lead.purpose || "Buy"}
-- Follow-up date: ${lead.followUpDate ? new Date(lead.followUpDate).toLocaleDateString("en-IN") : "not set"}
+- Follow-up date: ${lead.followUpDate ? formatISTDate(lead.followUpDate) : "not set"}
 - Assigned to: ${lead.assignedTo?.name || "unassigned"}
 - Booking status: ${lead.booking || "none"}
 - Last remark: ${lead.remark1 || lead.remarkNote || "none"}
@@ -91,7 +92,7 @@ async function fetchPageContext(page, userId, orgId, leadId) {
       parts.push(`LIVE FOLLOW-UP DATA:
 - Overdue follow-ups: ${overdueCount}
 - Due today: ${todayCount}
-- Next overdue: ${overdueLeads.map(l => `${l.name} (due ${new Date(l.followUpDate).toLocaleDateString("en-IN")}, status: ${l.status})`).join(" | ") || "none"}`);
+- Next overdue: ${overdueLeads.map(l => `${l.name} (due ${formatISTDate(l.followUpDate)}, status: ${l.status})`).join(" | ") || "none"}`);
     }
 
     if (cleanPage === "/pipeline") {
@@ -186,14 +187,14 @@ ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
 - Completed: ${completed}
 - Overdue: ${overdue}
 - Due today: ${dueToday}
-- Top overdue: ${overdueTasks.length ? overdueTasks.map(t => `"${t.title}" (${t.assignedToName || "unassigned"}, due ${new Date(t.dueDate).toLocaleDateString("en-IN")}, ${t.priority})`).join(" | ") : "none"}`);
+- Top overdue: ${overdueTasks.length ? overdueTasks.map(t => `"${t.title}" (${t.assignedToName || "unassigned"}, due ${formatISTDate(t.dueDate)}, ${t.priority})`).join(" | ") : "none"}`);
     }
 
     if (cleanPage === "/attendance") {
       const rec = await Attendance.findOne({ userId, date: today }).lean();
       parts.push(`ATTENDANCE TODAY:
-- Clock in: ${rec?.clockIn ? new Date(rec.clockIn).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "not yet"}
-- Clock out: ${rec?.clockOut ? new Date(rec.clockOut).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "not yet"}
+- Clock in: ${rec?.clockIn ? formatISTTime(rec.clockIn) : "not yet"}
+- Clock out: ${rec?.clockOut ? formatISTTime(rec.clockOut) : "not yet"}
 - Hours worked: ${rec?.totalMinutes ? `${Math.floor(rec.totalMinutes / 60)}h ${rec.totalMinutes % 60}m` : "-"}
 - Status: ${rec?.clockIn ? (rec.clockOut ? "Completed" : "Active") : "Not clocked in"}`);
     }

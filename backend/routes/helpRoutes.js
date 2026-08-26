@@ -10,6 +10,7 @@ const Lead     = require("../models/Lead");
 const { findLeadById, searchBothLeadTypes } = require("../utils/leadLookup");
 const Task     = require("../models/Task");
 const AiUsage  = require("../models/AiUsage");
+const { formatISTDateShort } = require("../utils/datetime");
 
 // The AI copilot is a Growth feature. Each question costs an LLM call, so
 // this gate protects margin as well as the packaging.
@@ -144,7 +145,7 @@ router.post("/action", async (req, res, next) => {
       await lead.save();
       return res.json({
         success: true,
-        message: `Follow-up for ${lead.name} set to ${followUpDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}.`,
+        message: `Follow-up for ${lead.name} set to ${formatISTDateShort(followUpDate)}.`,
         data: { leadId, date: followUpDate.toISOString() },
       });
     }

@@ -14,7 +14,7 @@ const {
   quote, PLAN_PRICING, BILLABLE_PLANS,
   subscriptionState, GRACE_DAYS, LAPSED_PLAN,
 } = require("../constants/planPricing");
-const { formatISTDate } = require("../utils/datetime");
+const { formatISTDate, istDateKey } = require("../utils/datetime");
 
 router.use(protect);
 
@@ -63,7 +63,7 @@ router.post("/cancel", authorize("admin"), async (req, res, next) => {
     }
 
     await Organization.findByIdAndUpdate(req.orgId, { $set: { cancelAtPeriodEnd: true } });
-    logger.info(`[billing] org ${req.orgId} cancelled — access continues to ${new Date(org.paidUntil).toISOString().slice(0, 10)}`);
+    logger.info(`[billing] org ${req.orgId} cancelled — access continues to ${istDateKey(org.paidUntil)}`);
 
     const updated = await Organization.findById(req.orgId)
       .select("plan seats billingCycle paidUntil cancelAtPeriodEnd").lean();

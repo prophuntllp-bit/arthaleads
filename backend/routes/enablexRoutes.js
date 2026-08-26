@@ -17,6 +17,7 @@ const {
   stopCallStream,
 } = require("../services/callStreamRecorder");
 const enablexRoom = require("../services/enablexRoom");
+const { formatISTDate } = require("../utils/datetime");
 
 const ENABLEX_BASE = "https://api.enablex.io/voice/v1";
 
@@ -691,7 +692,7 @@ router.post("/lead/:leadId/summary", async (req, res, next) => {
     const fmt = (s) => `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
     const callLines = calls.map((c, i) => {
       const m = c.meta || {};
-      const parts = [`Call ${i + 1} (${new Date(c.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })})`];
+      const parts = [`Call ${i + 1} (${formatISTDate(c.createdAt, { month: "short", year: undefined })})`];
       if (m.status)   parts.push(`status: ${m.status}`);
       if (m.duration) parts.push(`duration: ${fmt(m.duration)}`);
       if (m.summary)  parts.push(`summary: "${m.summary}"`);

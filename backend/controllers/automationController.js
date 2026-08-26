@@ -24,6 +24,7 @@ function renderPopupScript(payload, targetOrigin) {
 const crypto = require("crypto");
 const Automation = require("../models/Automation");
 const { AppError } = require("../middlewares/errorHandler");
+const { formatISTDateTime } = require("../utils/datetime");
 
 function generateWebsiteToken() {
   // 192 bits of entropy - URL-safe hex, no need for slice
@@ -265,7 +266,7 @@ const automationController = {
           label: "Last lead successfully received",
           ok: !!a.lastSyncAt,
           detail: a.lastSyncAt
-            ? new Date(a.lastSyncAt).toLocaleString()
+            ? formatISTDateTime(a.lastSyncAt)
             : `Never — connected ${connectedDaysAgo === 0 ? "today" : `${connectedDaysAgo} day(s) ago`}. If Ads Manager shows leads generated but this stays "Never", Meta isn't successfully delivering webhook events for this Page despite the config above being correct — worth a message to Meta support with the Page ID and a timestamp of a known lead.`,
         });
 

@@ -3,6 +3,7 @@ const { invalidateAnalyticsCache } = require("../services/leadService");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { AppError } = require("../middlewares/errorHandler");
 const Lead = require("../models/Lead");
+const { istDateKey } = require("../utils/datetime");
 
 const leadController = {
   async create(req, res, next) {
@@ -325,7 +326,7 @@ const leadController = {
         Purpose: lead.purpose || "",
         BudgetMin: lead.budget?.min || "",
         BudgetMax: lead.budget?.max || "",
-        FollowUpDate: lead.followUpDate ? new Date(lead.followUpDate).toISOString().slice(0, 10) : "",
+        FollowUpDate: lead.followUpDate ? istDateKey(lead.followUpDate) : "",
         FollowUpNote: lead.followUpNote || "",
         Remark1: lead.remark1 || "",
         Remark2: lead.remark2 || "",
@@ -333,10 +334,10 @@ const leadController = {
         Booking: lead.booking || "",
         AssignedTo: lead.assignedToName || "",
         Project: lead.projectName || "",
-        CreatedAt: lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
+        CreatedAt: lead.createdAt ? istDateKey(lead.createdAt) : "",
       }));
 
-      const date = new Date().toISOString().slice(0, 10);
+      const date = istDateKey();
 
       if (format === "json") {
         res.setHeader("Content-Type", "application/json");

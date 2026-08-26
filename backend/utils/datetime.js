@@ -30,6 +30,26 @@ function formatISTDateTime(d) {
   });
 }
 
+/** "11:59 pm" */
+function formatISTTime(d) {
+  if (!d) return "";
+  return new Date(d).toLocaleTimeString("en-IN", {
+    hour: "2-digit", minute: "2-digit", timeZone: IST,
+  });
+}
+
+/**
+ * "2027-08-26" — the IST calendar day, for filenames, log lines and CSV cells.
+ *
+ * toISOString().slice(0, 10) is the UTC day, which rolls over at 05:30 IST.
+ * A lead created at 00:30 IST on the 2nd exports as the 1st under that, so
+ * anything a customer reads must go through here instead. en-CA is used only
+ * because it is the locale that formats as YYYY-MM-DD.
+ */
+function istDateKey(d = new Date()) {
+  return new Date(d).toLocaleDateString("en-CA", { timeZone: IST });
+}
+
 /**
  * End of the given IST day, as a UTC instant.
  *
@@ -40,4 +60,6 @@ function endOfISTDay(dateStr) {
   return new Date(`${dateStr}T18:29:59.999Z`);
 }
 
-module.exports = { IST, formatISTDate, formatISTDateShort, formatISTDateTime, endOfISTDay };
+module.exports = {
+  IST, formatISTDate, formatISTDateShort, formatISTDateTime, formatISTTime, istDateKey, endOfISTDay,
+};
