@@ -151,7 +151,7 @@ export default function Plans() {
   };
 
   const fmtDate = (d) =>
-    d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "";
+    d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" }) : "";
 
   const currentPlanId = org?.plan === "pro" ? "growth" : (org?.plan || "starter");
   // A trial has never been paid for. It sits at Growth feature-level (see

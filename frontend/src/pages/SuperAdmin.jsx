@@ -147,10 +147,10 @@ function OrgNameEditor({ org, onUpdated, isTrialExpired }) {
                 org.subscription.status === "active" ? "text-emerald-600"
                   : org.subscription.status === "grace" ? "text-amber-500" : "text-red-500"}`}>
                 {org.subscription.status === "active"
-                  ? `${org.cancelAtPeriodEnd ? "Ends" : "Renews"} ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+                  ? `${org.cancelAtPeriodEnd ? "Ends" : "Renews"} ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`
                   : org.subscription.status === "grace"
                     ? `In grace · ${org.subscription.daysLeft}d left`
-                    : `Lapsed ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+                    : `Lapsed ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`}
               </p>
             )}
             {org.plan !== "trial" && !org.paidUntil && (
@@ -490,7 +490,7 @@ function RenewalDateSetter({ org, onUpdated }) {
       d.setHours(23, 59, 59, 999);
       const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { paidUntil: d.toISOString() });
       onUpdated(data.org);
-      toast.success(`Renewal set to ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
+      toast.success(`Renewal set to ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })}`);
     } catch (err) {
       toast.error(err.response?.data?.message || "Could not set the renewal date");
       setValue(org.paidUntil ? new Date(org.paidUntil).toISOString().slice(0, 10) : "");

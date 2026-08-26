@@ -14,6 +14,7 @@ const {
   quote, PLAN_PRICING, BILLABLE_PLANS,
   subscriptionState, GRACE_DAYS, LAPSED_PLAN,
 } = require("../constants/planPricing");
+const { formatISTDate } = require("../utils/datetime");
 
 router.use(protect);
 
@@ -68,7 +69,7 @@ router.post("/cancel", authorize("admin"), async (req, res, next) => {
       .select("plan seats billingCycle paidUntil cancelAtPeriodEnd").lean();
     res.json({
       success: true,
-      message: `Cancelled. You keep ${org.plan} until ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`,
+      message: `Cancelled. You keep ${org.plan} until ${formatISTDate(org.paidUntil)}.`,
       billing: updated,
       subscription: { ...subscriptionState(updated), graceDays: GRACE_DAYS, lapsesTo: LAPSED_PLAN },
     });
