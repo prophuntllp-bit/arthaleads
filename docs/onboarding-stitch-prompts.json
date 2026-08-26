@@ -1,0 +1,135 @@
+{
+  "_readme": {
+    "what": "Google Stitch prompts for redesigning the Arthaleads first-run onboarding. One object per screen. Paste the `prompt` string of a screen into Stitch; use `design_system` as the shared style preamble for every screen so the set comes out consistent.",
+    "why": "The current onboarding is a single modal showing all four fields at once, sitting on backdrop-filter: blur(48px) saturate(140%). The frosted-glass panel reads as unfinished rather than premium, there is no sense of progress, and a brand-new user meets a wall of required fields before seeing any value.",
+    "source_of_truth": "Tokens below are taken from docs/arthaleads-brand-guidelines.html and frontend/src/styles.css, not invented. Radii match the existing .input (16px) and .card (24px) classes so generated screens drop into the real app without retuning.",
+    "how_to_use": [
+      "1. Open stitch.withgoogle.com and start a new project.",
+      "2. Paste `design_system.as_prompt_preamble` first — it sets the visual language.",
+      "3. Then paste one screen's `prompt` per generation.",
+      "4. Generate screens in order; Stitch keeps context between prompts in a session."
+    ]
+  },
+
+  "design_system": {
+    "brand": "Arthaleads — a real estate CRM for Indian property sales teams",
+    "tone": "Calm, confident, professional. Closer to a bank onboarding than a consumer app. Never playful, never cramped.",
+    "color": {
+      "primary": "#FF6B00",
+      "primary_deep": "#A04100",
+      "primary_tint": "#FFF0E6",
+      "ink": "#18181B",
+      "muted": "#71717A",
+      "faint": "#A1A1AA",
+      "surface": "#FFFFFF",
+      "ground": "#F0EDE8",
+      "border": "#E3DDD3",
+      "success": "#22C55E",
+      "danger": "#EF4444"
+    },
+    "typography": {
+      "family": "Inter",
+      "screen_title": "24px / 700 / -0.02em tracking",
+      "screen_subtitle": "14.5px / 400 / #71717A",
+      "field_label": "13px / 600 / #18181B",
+      "input_text": "14px / 400",
+      "helper_text": "12px / 400 / #71717A",
+      "button_text": "14px / 600"
+    },
+    "geometry": {
+      "input": "height 46px, radius 16px, padding 12px 16px, 1px solid #E3DDD3, background #FFFFFF",
+      "input_focus": "border #FF6B00, plus 3px ring rgba(255,107,0,0.12). No glow, no shadow bloom.",
+      "card": "radius 24px, background #FFFFFF, 1px solid #E3DDD3, shadow 0 1px 2px rgba(24,24,27,0.04), 0 12px 32px -16px rgba(160,65,0,0.14)",
+      "button_primary": "height 48px, radius 16px, background #FF6B00, white text, full width",
+      "button_secondary": "height 48px, radius 16px, transparent, 1px solid #E3DDD3, text #71717A",
+      "vertical_rhythm": "20px between fields, 28px between sections, 32px card padding"
+    },
+    "hard_constraints": [
+      "NO glassmorphism. No backdrop-filter, no frosted panels, no translucent cards. The current build uses blur(48px) saturate(140%) and it is exactly what we are removing.",
+      "NO gradient backgrounds behind the card. The page sits on flat #F0EDE8.",
+      "NO drop shadows heavier than the card spec above. No neon, no glow.",
+      "NO centred body text. Titles and body are left-aligned; only the logo may centre.",
+      "NO more than one primary button per screen.",
+      "Every required field is visibly marked, and the primary button states plainly what happens next."
+    ],
+    "as_prompt_preamble": "Design for Arthaleads, a professional real estate CRM used by Indian property sales teams. Visual language: flat #F0EDE8 page background, solid white cards with 24px radius and a hairline #E3DDD3 border, Inter typography, a single warm orange accent #FF6B00 used sparingly for the primary action and progress only. Inputs are 46px tall with 16px radius and a 1px #E3DDD3 border, focusing to an orange border with a soft 3px ring. Absolutely no glassmorphism, no frosted or blurred panels, no gradient backgrounds, no glow effects — the design must read as calm, solid and trustworthy, like a bank's onboarding rather than a consumer app. Left-align all text except the logo. Generous whitespace: 20px between fields, 32px card padding."
+  },
+
+  "flow": {
+    "principle": "Three short steps instead of one wall of fields. Each screen asks for one category of information and says why it is needed. Progress is always visible so the end feels close.",
+    "why_split": "The current single modal asks a brand-new user for four required fields before showing any value. Splitting reduces perceived effort even though the total field count is identical, and it lets each step carry a one-line reason, which raises completion.",
+    "screens": ["01_welcome_identity", "02_business_details", "03_activation", "04_success"]
+  },
+
+  "screens": [
+    {
+      "id": "01_welcome_identity",
+      "step": "1 of 3",
+      "goal": "Learn who the person is. Lowest-friction possible opener — two fields they can answer without thinking.",
+      "prompt": "Design an onboarding screen, step 1 of 3, for the Arthaleads real estate CRM. Centred card, 480px wide, on a flat #F0EDE8 page background. At the top of the card, a 48x48 rounded-square Arthaleads logo mark (orange gradient square with a white 'A'), centred. Directly beneath it a slim 3-segment progress indicator: segment one filled solid #FF6B00, segments two and three in #E3DDD3, each 4px tall with fully rounded ends, separated by 6px gaps. Below that, left-aligned, a 24px bold heading 'Let's set up your workspace' and a 14.5px #71717A subtitle 'This takes about a minute. We'll only ask for what the CRM actually needs.' Then two stacked form fields with 13px semibold labels above each: 'Your full name' with placeholder 'Priya Sharma', and 'Your mobile number' with a fixed non-editable '+91' prefix chip on the left inside the field and placeholder '98765 43210'. Each label has a small orange asterisk for required. Under the phone field, 12px #71717A helper text: 'Used for lead alerts and login verification.' At the bottom, a full-width 48px primary button in #FF6B00 with white 14px semibold text reading 'Continue', with a right-pointing arrow icon. Below the button, centred 12px #A1A1AA text: 'Step 1 of 3'. No frosted glass, no blur, no gradients on the card — solid white card, 24px radius, hairline #E3DDD3 border, one soft shadow.",
+      "fields": [
+        { "name": "fullName", "label": "Your full name", "type": "text", "required": true, "placeholder": "Priya Sharma", "autocomplete": "name" },
+        { "name": "personalPhone", "label": "Your mobile number", "type": "tel", "required": true, "prefix": "+91", "placeholder": "98765 43210", "helper": "Used for lead alerts and login verification.", "validation": "10 digits, must start 6-9" }
+      ],
+      "primary_action": "Continue",
+      "notes": "Opens with the person, not the company — it is the easier question and starts the commitment. The +91 prefix is a fixed chip rather than typed, which removes the single most common formatting error in Indian phone entry."
+    },
+
+    {
+      "id": "02_business_details",
+      "step": "2 of 3",
+      "goal": "Capture the organisation. Team size is asked here because it drives the plan recommendation later.",
+      "prompt": "Design onboarding step 2 of 3 for the Arthaleads real estate CRM, matching the previous screen exactly in card size, background, typography and spacing. The 3-segment progress bar now has segments one and two filled #FF6B00 and segment three #E3DDD3. Left-aligned 24px bold heading 'Tell us about your business' and 14.5px #71717A subtitle 'This is what appears on your invoices and lead forms.' Three stacked fields with 13px semibold labels: 'Organisation name' with placeholder 'Skyline Realty Pvt Ltd' and a required orange asterisk; 'Business phone' with a fixed '+91' prefix chip and placeholder 'Office contact number', required; and 'Team size' rendered NOT as a dropdown but as a horizontal row of four selectable pill buttons reading 'Just me', '2–5', '6–15', '16+', each 40px tall with 12px radius, unselected pills white with a #E3DDD3 border and #71717A text, the selected pill with a #FFF0E6 background, #FF6B00 border and #A04100 semibold text. Below the pills, 12px #71717A helper text: 'We'll suggest a plan that fits — you can change it any time.' At the bottom a row of two buttons: on the left a secondary 'Back' button, transparent with a #E3DDD3 border and #71717A text, sized to its content; on the right a primary #FF6B00 'Continue' button taking the remaining width. Below, centred 12px #A1A1AA 'Step 2 of 3'. Solid white card, 24px radius, hairline border, no blur, no glass, no gradient.",
+      "fields": [
+        { "name": "name", "label": "Organisation name", "type": "text", "required": true, "placeholder": "Skyline Realty Pvt Ltd", "autocomplete": "organization" },
+        { "name": "phone", "label": "Business phone", "type": "tel", "required": true, "prefix": "+91", "placeholder": "Office contact number" },
+        { "name": "companySize", "label": "Team size", "type": "pill-select", "required": true, "options": ["Just me", "2–5", "6–15", "16+"], "helper": "We'll suggest a plan that fits — you can change it any time." }
+      ],
+      "primary_action": "Continue",
+      "secondary_action": "Back",
+      "notes": "Team size as pills rather than a dropdown: four options do not justify a dropdown's two extra interactions, and it maps directly onto the 5-seat minimum and the Starter/Growth split so the plan recommendation is honest rather than guessed. 'Just me' is deliberately included even though the minimum is 5 seats — hiding it would make the pricing feel like a bait-and-switch later."
+    },
+
+    {
+      "id": "03_activation",
+      "step": "3 of 3",
+      "goal": "Get one lead source connected, or let them skip. This is the step that decides whether the CRM has data in it tomorrow.",
+      "prompt": "Design onboarding step 3 of 3 for the Arthaleads real estate CRM, matching the previous screens. All three progress segments now filled #FF6B00. Left-aligned 24px bold heading 'Where do your leads come from?' and 14.5px #71717A subtitle 'Connect one now and your leads start flowing in immediately. You can add more later.' Below, a vertical list of four selectable option rows, each 64px tall with 16px radius, a white background and 1px #E3DDD3 border, containing on the left a 36x36 rounded-square icon tile, then a 14px semibold label with a 12px #71717A description beneath it, and on the far right a small circular checkbox. The four rows are: Facebook Lead Ads with a blue Facebook icon and description 'Auto-import leads from your ad campaigns'; WhatsApp with a green WhatsApp icon and 'Capture enquiries from chats'; Website form with a grey globe icon and 'Add a form or our WordPress plugin'; and Import a spreadsheet with an orange upload icon and 'Bring in your existing leads from CSV or Excel'. A selected row shows a #FFF0E6 background, #FF6B00 border and a filled orange checkmark. Multiple rows can be selected. At the bottom a row with a secondary 'Back' button on the left and a primary #FF6B00 'Finish setup' button on the right. Directly beneath, centred, a plain 13px #71717A text link with no border or background reading 'Skip for now'. Solid white card, 24px radius, hairline border, absolutely no blur, glass or gradient.",
+      "fields": [
+        { "name": "sources", "label": "Lead sources", "type": "multi-select-rows", "required": false, "options": ["Facebook Lead Ads", "WhatsApp", "Website form", "Import a spreadsheet"] }
+      ],
+      "primary_action": "Finish setup",
+      "secondary_action": "Back",
+      "tertiary_action": "Skip for now",
+      "notes": "Deliberately optional, and skipping is a plain text link rather than a button so it never competes with the primary action. This is the highest-value step in the flow: an empty CRM is the main reason a trial dies, so asking here — while intent is highest — is worth more than any field above it. Selections should route to the matching integration after the flow completes, not block it."
+    },
+
+    {
+      "id": "04_success",
+      "step": "done",
+      "goal": "Confirm, orient, and hand over to one obvious next action.",
+      "prompt": "Design a completion screen for Arthaleads onboarding, same card and page styling as the previous steps. Replace the progress bar with a single 56x56 circle in #FFF0E6 containing a #22C55E checkmark, centred. Below it, centred 24px bold heading 'You're all set, Priya' and a 14.5px #71717A centred subtitle 'Your workspace is ready. Here's what we'd do first.' Then a left-aligned vertical list of three next-step rows, each with a 28x28 rounded-square tinted icon tile on the left, a 14px semibold title and a 12px #71717A one-line description: 'Add your first lead — start tracking an enquiry in under a minute'; 'Invite your team — assign leads to agents and track their follow-ups'; 'Connect Facebook Lead Ads — new leads land in your CRM automatically'. Each row has a small right-chevron on the far right and a hairline #EDE8E0 divider between rows. At the bottom, a full-width 48px primary #FF6B00 button reading 'Go to dashboard'. Solid white card, 24px radius, hairline border, no blur, no glass, no confetti, no illustration.",
+      "primary_action": "Go to dashboard",
+      "notes": "Uses the person's first name from step 1 so the screen reads as personal without decoration. Three next steps only — a longer list becomes a chore rather than a prompt. No confetti or celebratory illustration: this is a business tool and the audience is a working sales team, not a consumer app user."
+    }
+  ],
+
+  "states_to_generate": {
+    "note": "Ask Stitch for these as variants of each screen — they are where most onboarding designs fall apart.",
+    "items": [
+      "Validation error: a field with a #EF4444 border and 12px red helper text beneath, e.g. 'Enter a valid 10-digit mobile number.' The card must not resize or shift when the message appears.",
+      "Submitting: primary button disabled at 60% opacity with an inline spinner and the label 'Setting up…'.",
+      "Server error: a #FEF2F2 banner with a #EF4444 left border above the buttons, 13px text, and a 'Try again' inline action.",
+      "Mobile 375px: same card at full width minus 16px gutters, radius reduced to 20px, buttons stacked full-width, pills wrapping to two rows."
+    ]
+  },
+
+  "what_changes_vs_today": [
+    "Removes backdrop-filter: blur(48px) saturate(140%) — the frosted panel is the specific thing that reads as unprofessional.",
+    "Splits one 4-field modal into three short steps with visible progress, so the end always feels close.",
+    "Adds a reason line under each ask, so nothing feels like a form for its own sake.",
+    "Adds team size, which makes the later plan recommendation honest instead of guessed.",
+    "Adds a lead-source step, which is the single highest-leverage addition: an empty CRM is the main reason a trial fails.",
+    "Replaces the centred everything with left-aligned type; only the logo and success mark stay centred."
+  ]
+}
