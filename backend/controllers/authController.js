@@ -5,8 +5,9 @@ const otpService  = require("../services/otpService");
 const SignupOtp   = require("../models/SignupOtp");
 const User        = require("../models/User");
 const AuditLog    = require("../models/AuditLog");
+const logger      = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
-const { verifyRecaptcha } = require("../utils/recaptcha");
+const { checkRecaptcha } = require("../utils/recaptcha");
 const { isDisposableEmail } = require("../utils/emailDomains");
 const { sendSignupPendingEmail, notifySuperAdminsOfSignup } = require("../utils/email");
 
@@ -53,10 +54,20 @@ const authController = {
   // someone proved they can read.
   async signup(req, res, next) {
     try {
-      // reCAPTCHA check temporarily disabled — same production misconfiguration
-      // (secret key / Google siteverify reachability) that blocked all logins was
-      // also blocking every signup. Re-enable once RECAPTCHA_SECRET_KEY is
-      // verified against the site key baked into the frontend build.
+      // Bot check. A positive bot verdict blocks; an outage never does — see
+      // utils/recaptcha.js. Account creation additionally requires signupToken
+      // below, so a reCAPTCHA outage does not leave this endpoint open.
+      const verdict = await checkRecaptcha(req.body.recaptchaToken, "signup");
+      if (verdict === "bot") {
+        logger.warn(`[signup] blocked by reCAPTCHA - ip: ${req.ip}`);
+        return next(new AppError("Could not verify this request. Please try again.", 400));
+      }
+      if (verdict === "unavailable") {
+        logger.error("[signup] reCAPTCHA unavailable - allowing request, check RECAPTCHA_SECRET_KEY and outbound access to google.com");
+      } else if (verdict === "missing") {
+        logger.warn(`[signup] no reCAPTCHA token - allowing request, ip: ${req.ip}. If this is every signup, the widget is not loading (check the site CSP allows www.google.com).`);
+      }
+
       const { signupToken, ...rest } = req.body;
 
       // This check is the whole point of the OTP step. Before, the token was
@@ -109,12 +120,19 @@ const authController = {
 
   async login(req, res, next) {
     try {
-      // reCAPTCHA check temporarily disabled — misconfiguration on the
-      // deployed backend (secret key / Google siteverify reachability) was
-      // rejecting every login attempt in production, locking out all agents.
-      // Re-enable once RECAPTCHA_SECRET_KEY is verified against the site key
-      // baked into the frontend build. Account lockout + failure logging in
-      // authService.login still protect against brute force in the meantime.
+      // Deliberately no reCAPTCHA on login.
+      //
+      // The Flutter app cannot mint a v3 token (it is a browser-only widget),
+      // so enforcing here would either lock out every mobile agent or require
+      // a shared bypass secret shipped inside the APK — which anyone can
+      // decompile, and which therefore protects nothing while looking like it
+      // does. Brute force is instead handled where it actually can be:
+      // authService.login locks an account for 15 minutes after 5 failed
+      // attempts and logs every failure, and authLimiter caps attempts per IP.
+      //
+      // The abuse-prone endpoints — signup and both OTP senders — do enforce
+      // it, because those cost money to serve and are reachable from a
+      // browser that can produce a token.
       const ip   = req.ip || req.headers["x-forwarded-for"] || "unknown";
       const data = await authService.login(req.body.email, req.body.password, ip);
       sendAuthResponse(res, 200, data);
@@ -302,7 +320,7 @@ const authController = {
   async signupSendOtp(req, res, next) {
     try {
       const { email, recaptchaToken } = req.body;
-      const ok = await verifyRecaptcha(recaptchaToken, "signup_send_otp");
+      const ok = (await checkRecaptcha(recaptchaToken, "signup_send_otp")) !== "bot";
       if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       if (!email) return next(new AppError("Email is required", 400));
 
@@ -454,7 +472,7 @@ const authController = {
   async sendOtp(req, res, next) {
     try {
       const { phone, recaptchaToken } = req.body;
-      const ok = await verifyRecaptcha(recaptchaToken, "login_send_otp");
+      const ok = (await checkRecaptcha(recaptchaToken, "login_send_otp")) !== "bot";
       if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       if (!phone) return next(new AppError("Phone number is required", 400));
       const digits = String(phone).replace(/\D/g, "");

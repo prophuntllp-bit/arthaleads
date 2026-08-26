@@ -82,7 +82,19 @@ router.post("/:id/leads/:leadId/draft-message", async (req, res, next) => {
       return res.status(503).json({ success: false, message: "AI drafting is not configured. Ask your admin to set the OPENAI_API_KEY." });
     }
 
-    const lead = await ProjectLead.findOne({ _id: req.params.leadId, project: req.params.id }).lean();
+    // Confirm the project belongs to the caller's org before reading a lead
+    // out of it. Matching on :id alone let any authenticated Growth user pull
+    // another tenant's lead by id — and because the AI usage below is billed to
+    // req.user.orgId, it did so without leaving a trace on the victim's org.
+    //
+    // The check goes through the parent project rather than ProjectLead.orgId
+    // because that field is not backfilled on older lead documents (see
+    // projectService.updateRemark, which scopes the same way).
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.orgId })
+      .select("_id").lean();
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+
+    const lead = await ProjectLead.findOne({ _id: req.params.leadId, project: project._id }).lean();
     if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
 
     const agentName = req.user.name || "";

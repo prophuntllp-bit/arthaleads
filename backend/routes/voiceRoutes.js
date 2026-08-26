@@ -12,22 +12,36 @@ const apiKeyAuth = require("../middlewares/apiKey");
 router.use(apiKeyAuth);
 
 // ── Org-scope middleware ───────────────────────────────────────────────────────
-// When using a per-org API key, apiKeyAuth already set req.orgId — use it directly.
-// For the legacy global key path, fall back to header/param/env (deprecated).
+// Which organisation's leads this request may read is decided here, and only
+// ever from something the caller cannot choose.
+//
+// A per-org key identifies its own org through the key lookup. The legacy
+// global key does not, so it falls back to VOICE_ORG_ID — a server-side
+// environment variable — and nothing else.
+//
+// It previously also accepted X-Org-Id and ?org_id, which meant any holder of
+// the global key could read every tenant's leads by changing one header.
 router.use((req, res, next) => {
   if (req.orgId) {
-    // Per-org key path: org is determined from key lookup — no spoofable header needed.
+    // Per-org key path: org comes from the key lookup.
     req.voiceOrgId = req.orgId;
     return next();
   }
-  // Legacy global key fallback (migrate orgs off this path by issuing per-org keys)
-  const orgId = req.headers["x-org-id"] || req.query.org_id || process.env.VOICE_ORG_ID;
+
+  // Legacy global key path. Deprecated — issue per-org keys and unset
+  // VOICE_API_KEY to remove this branch entirely.
+  const orgId = process.env.VOICE_ORG_ID;
   if (!orgId) {
     return res.status(400).json({
       success: false,
       message: "Generate a per-org API key via Arthaleads Settings → Voice Integration.",
     });
   }
+
+  if (req.headers["x-org-id"] || req.query.org_id) {
+    console.warn("[voice] ignoring caller-supplied org id on the legacy global-key path");
+  }
+
   req.voiceOrgId = orgId;
   next();
 });
