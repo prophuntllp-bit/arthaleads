@@ -20,7 +20,34 @@ const LEADS = [
   { name: "Deepak Mehta", phone: "9432187654", email: "deepak@corp.com", source: "99acres", status: "Closed Lost", priority: "Low", propertyType: "Commercial", bhk: "N/A", purpose: "Buy", preferredLocation: "SB Road, Pune", budget: { min: 10000000, max: 15000000 } },
 ];
 
+// Guard. This file wipes the users and leads collections, and it used to run
+// that wipe simply by being require()'d — no main-module check, no environment
+// check. Any tooling that walks the source tree and imports each file (a
+// module-load smoke test, a dependency grapher, a coverage run) would silently
+// destroy whatever database .env happened to point at. That is exactly what
+// happened once, against production, because the local .env holds the
+// production Atlas URI.
+//
+// Two locks now: it only runs when executed directly, and it refuses any URI
+// that is not an explicitly local host unless SEED_I_MEAN_IT=yes is set.
+function assertSafeToSeed() {
+  const uri = process.env.MONGO_URI || "";
+  const isLocal = /@?(localhost|127\.0\.0\.1)[:/]/.test(uri);
+  if (isLocal) return;
+  if (process.env.SEED_I_MEAN_IT === "yes") {
+    logger.warn("[seed] non-local database, proceeding because SEED_I_MEAN_IT=yes");
+    return;
+  }
+  const host = (uri.match(/@([^/?]+)/) || [])[1] || "unknown host";
+  throw new Error(
+    `Refusing to seed: MONGO_URI points at ${host}, not localhost. ` +
+    "Seeding deletes every user and lead. Set SEED_I_MEAN_IT=yes only if you " +
+    "are certain this is a throwaway database."
+  );
+}
+
 async function seed() {
+  assertSafeToSeed();
   await mongoose.connect(process.env.MONGO_URI);
   logger.info("Connected to MongoDB");
 
@@ -69,9 +96,14 @@ async function seed() {
   await mongoose.disconnect();
 }
 
-seed()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    logger.error(`Seed failed: ${err.message}`);
-    process.exit(1);
-  });
+// Only when run directly (`node utils/seed.js`) — never on import.
+if (require.main === module) {
+  seed()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      logger.error(`Seed failed: ${err.message}`);
+      process.exit(1);
+    });
+}
+
+module.exports = { seed };

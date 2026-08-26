@@ -10,6 +10,10 @@ backend/dist/
 .env
 backend/.env
 frontend/.env
+# Local overrides. Nothing here is currently secret — Firebase web config and
+# the reCAPTCHA *site* key are public by design — but the rule exists so the
+# next value dropped in this file does not land in a public repo.
+*.env.local
 
 .vite/
 .codex-logs/
