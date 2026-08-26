@@ -139,6 +139,23 @@ function OrgNameEditor({ org, onUpdated, isTrialExpired }) {
                   : `Trial ends ${new Date(org.trialEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
               </p>
             )}
+            {/* Paid orgs get their renewal date here, in the same place the
+                trial countdown appears — support's first question about a paid
+                account is when its term ends. */}
+            {org.plan !== "trial" && org.subscription?.status && org.subscription.status !== "none" && (
+              <p className={`text-[10px] mt-0.5 font-semibold ${
+                org.subscription.status === "active" ? "text-emerald-600"
+                  : org.subscription.status === "grace" ? "text-amber-500" : "text-red-500"}`}>
+                {org.subscription.status === "active"
+                  ? `${org.cancelAtPeriodEnd ? "Ends" : "Renews"} ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`
+                  : org.subscription.status === "grace"
+                    ? `In grace · ${org.subscription.daysLeft}d left`
+                    : `Lapsed ${new Date(org.paidUntil).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}`}
+              </p>
+            )}
+            {org.plan !== "trial" && !org.paidUntil && (
+              <p className="text-[10px] mt-0.5 font-semibold text-app-soft">No renewal date set</p>
+            )}
           </div>
           <button onClick={open}
             className="opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer flex-shrink-0"
@@ -454,6 +471,67 @@ function BrandColorPicker({ org, onUpdated }) {
 // ── TrialExtender ─────────────────────────────────────────────────────────────
 // Dropdown with preset durations + "Other" custom-date picker.
 // Rendered via a portal so it isn't clipped by the table's overflow container.
+// Sets the renewal date on a paid org. Checkout writes paidUntil itself, but
+// Enterprise is negotiated and any bank transfer or UPI payment is taken
+// offline — those never touch checkout, so the date has to be settable by hand
+// or the customer has no renewal date at all.
+function RenewalDateSetter({ org, onUpdated }) {
+  const [saving, setSaving] = useState(false);
+  const [value, setValue] = useState(
+    org.paidUntil ? new Date(org.paidUntil).toISOString().slice(0, 10) : ""
+  );
+
+  const save = async (iso) => {
+    if (!iso) return;
+    setSaving(true);
+    try {
+      // End of day: a term paid "until the 26th" includes the 26th.
+      const d = new Date(iso);
+      d.setHours(23, 59, 59, 999);
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, { paidUntil: d.toISOString() });
+      onUpdated(data.org);
+      toast.success(`Renewal set to ${d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not set the renewal date");
+      setValue(org.paidUntil ? new Date(org.paidUntil).toISOString().slice(0, 10) : "");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // One year from today — the common case for an annual invoice, so the usual
+  // action is one click rather than picking a date.
+  const oneYear = () => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    const iso = d.toISOString().slice(0, 10);
+    setValue(iso);
+    save(iso);
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="date"
+        value={value}
+        disabled={saving}
+        onChange={(e) => { setValue(e.target.value); save(e.target.value); }}
+        className="rounded-lg px-2 py-1 text-[11px] border bg-transparent"
+        style={{ borderColor: "var(--app-border)", color: "var(--app-text)" }}
+        title="Paid through this date"
+      />
+      {!org.paidUntil && (
+        <button onClick={oneYear} disabled={saving}
+          className="text-[10px] font-semibold px-2 py-1 rounded-lg border whitespace-nowrap cursor-pointer"
+          style={{ borderColor: "rgba(234,88,12,0.25)", background: "rgba(234,88,12,0.06)", color: "#ea580c" }}
+          title="Set renewal to one year from today">
+          {saving ? <Spinner size="sm" /> : "+1 yr"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function TrialExtender({ org, onUpdated }) {
   const PRESETS = [
     { label: "7 days",   days: 7 },
@@ -1640,11 +1718,15 @@ export default function SuperAdmin() {
                         )}
                       </td>
                       <td>
-                        {/* Only show for trial-plan orgs */}
+                        {/* Trials get an extender; paid orgs get a renewal date.
+                            Enterprise and any offline bank/UPI payment never
+                            pass through checkout, so without this they have no
+                            renewal date anywhere — which is why a paying
+                            customer could not see when their term ends. */}
                         {org.plan === "trial" ? (
                           <TrialExtender org={org} onUpdated={handleOrgUpdated} />
                         ) : (
-                          <span className="text-xs text-app-soft">-</span>
+                          <RenewalDateSetter org={org} onUpdated={handleOrgUpdated} />
                         )}
                       </td>
                     </tr>

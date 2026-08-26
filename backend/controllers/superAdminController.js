@@ -13,6 +13,7 @@ const { AppError } = require("../middlewares/errorHandler");
 const { uploadOrgLogo, deleteOrgLogo } = require("../utils/upload");
 const { sendSignupApprovedEmail, sendSignupRejectedEmail } = require("../utils/email");
 const { runBackup } = require("../utils/backup");
+const { subscriptionState } = require("../constants/planPricing");
 const { invalidateOrgCache } = require("../middlewares/auth");
 
 async function logAudit(action, req, opts = {}) {
@@ -74,6 +75,9 @@ const superAdminController = {
         trialExpired: trialStatus(org) === "expired",
         aiCallsMonth: aiUsageMap[String(org._id)]?.calls       || 0,
         aiTokensMonth: aiUsageMap[String(org._id)]?.totalTokens || 0,
+        // Same helper the customer-facing banner uses, so the admin panel and
+        // the org see identical billing state rather than two calculations.
+        subscription: subscriptionState(org),
       }));
 
       res.json({ success: true, total, page, pages: Math.ceil(total / limit), orgs: enriched });
@@ -133,9 +137,25 @@ const superAdminController = {
   // PATCH /api/super-admin/orgs/:id - update plan / isActive
   async updateOrg(req, res, next) {
     try {
-      const allowed = ["plan", "isActive", "name", "brandColor"];
+      // paidUntil is settable here because Enterprise — and any offline bank
+      // transfer or UPI payment — is invoiced by hand and never passes through
+      // checkout. Without it those orgs have no renewal date at all, so neither
+      // they nor we can see when their term ends.
+      const allowed = ["plan", "isActive", "name", "brandColor", "paidUntil", "seats", "billingCycle"];
       const update  = {};
       allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
+
+      if (update.paidUntil !== undefined) {
+        if (update.paidUntil === null || update.paidUntil === "") {
+          update.paidUntil = null;
+        } else {
+          const d = new Date(update.paidUntil);
+          if (Number.isNaN(d.getTime())) {
+            return next(new AppError("paidUntil must be a valid date.", 400));
+          }
+          update.paidUntil = d;
+        }
+      }
 
       // Validate brandColor if provided
       if (update.brandColor !== undefined && update.brandColor !== "") {
