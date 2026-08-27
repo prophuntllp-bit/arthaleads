@@ -32,7 +32,7 @@ check("agent CAN add a note",
 
 console.log("\n=== G3 page gate ===");
 expectThrow("assign_lead refused from /tasks",
-  () => actions.authorise({ id: "assign_lead", params: { leadId: LEAD, agentId: AGENT }, role: "admin", page: "/tasks" }), 409, "needsScapeChangeTypo" && "needsScopeChange");
+  () => actions.authorise({ id: "assign_lead", params: { leadId: LEAD, agentId: AGENT }, role: "admin", page: "/tasks" }), 409, "needsScopeChange");
 check("same action allowed once scope confirmed",
   Boolean(actions.authorise({ id: "assign_lead", params: { leadId: LEAD, agentId: AGENT }, role: "admin", page: "/tasks", scopeConfirmed: true }).action));
 expectThrow("complete_task refused from /leads",
@@ -92,6 +92,58 @@ if (!__test || !__test.buildSystemPrompt) {
   const untouched = __test.buildSystemPrompt(null);
   check("null catalogue leaves prompt unchanged", untouched === base);
 }
+
+console.log("\n=== Phase 4: new actions ===");
+
+expectThrow("update_lead_fields rejects leadId alone",
+  () => actions.authorise({ id: "update_lead_fields", params: { leadId: LEAD }, role: "admin", page: "/leads" }), 400);
+check("update_lead_fields accepts a real change",
+  Boolean(actions.authorise({ id: "update_lead_fields", params: { leadId: LEAD, priority: "Hot" }, role: "agent", page: "/leads" }).action));
+expectThrow("update_lead_fields rejects an invalid priority",
+  () => actions.authorise({ id: "update_lead_fields", params: { leadId: LEAD, priority: "Urgent" }, role: "admin", page: "/leads" }), 400);
+
+// leadService.update ends in Object.assign, so this schema IS the whitelist.
+const smuggle = actions.authorise({
+  id: "update_lead_fields",
+  params: { leadId: LEAD, priority: "Hot", isDeleted: true, orgId: "x", assignedTo: AGENT },
+  role: "agent", page: "/leads",
+});
+check("dangerous fields stripped before Object.assign",
+  !("isDeleted" in smuggle.params) && !("orgId" in smuggle.params) && !("assignedTo" in smuggle.params),
+  JSON.stringify(smuggle.params));
+
+expectThrow("create_lead needs a phone",
+  () => actions.authorise({ id: "create_lead", params: { name: "Test Person" }, role: "agent", page: "/leads" }), 400);
+check("create_lead accepts name + phone",
+  Boolean(actions.authorise({ id: "create_lead", params: { name: "Test Person", phone: "9876543210" }, role: "agent", page: "/leads" }).action));
+expectThrow("create_lead rejects a malformed email",
+  () => actions.authorise({ id: "create_lead", params: { name: "T P", phone: "9876543210", email: "not-an-email" }, role: "agent", page: "/leads" }), 400);
+
+expectThrow("project booking refused from /leads",
+  () => actions.authorise({ id: "update_project_lead_booking", params: { leadId: LEAD, booking: "Interested" }, role: "admin", page: "/leads" }), 409, "needsScopeChange");
+check("project booking allowed on /projects",
+  Boolean(actions.authorise({ id: "update_project_lead_booking", params: { leadId: LEAD, booking: "Interested" }, role: "agent", page: "/projects" }).action));
+
+expectThrow("agent cannot bulk-update",
+  () => actions.authorise({ id: "bulk_update_status", params: { leadIds: [LEAD], status: "Contacted" }, role: "agent", page: "/leads" }), 403);
+check("manager can bulk-update",
+  Boolean(actions.authorise({ id: "bulk_update_status", params: { leadIds: [LEAD], status: "Contacted" }, role: "manager", page: "/leads" }).action));
+expectThrow("bulk rejects an empty selection",
+  () => actions.authorise({ id: "bulk_update_status", params: { leadIds: [], status: "Contacted" }, role: "admin", page: "/leads" }), 400);
+expectThrow("bulk refuses more than the cap",
+  () => actions.authorise({ id: "bulk_update_status", params: { leadIds: Array.from({ length: 51 }, () => LEAD), status: "Contacted" }, role: "admin", page: "/leads" }), 400);
+
+console.log("\n=== catalogue reflects the new breadth ===");
+const agentLeadsNow = actions.catalogueFor({ role: "agent", page: "/leads" });
+const adminLeadsNow = actions.catalogueFor({ role: "admin", page: "/leads" });
+const adminProjects = actions.catalogueFor({ role: "admin", page: "/projects" });
+check("agent on /leads sees create_lead", agentLeadsNow.includes("create_lead"));
+check("agent on /leads does NOT see bulk_update_status", !agentLeadsNow.includes("bulk_update_status"));
+check("admin on /leads sees bulk_update_status", adminLeadsNow.includes("bulk_update_status"));
+check("project booking only on /projects",
+  adminProjects.includes("update_project_lead_booking") && !adminLeadsNow.includes("update_project_lead_booking"));
+check("every action declares roles, pages, schema and description",
+  actions.ENTRIES.every((a) => Array.isArray(a.roles) && a.roles.length && (a.pages === "*" || a.pages.length) && a.describe && a.describe.summary && a.params));
 
 console.log(`\n  ${pass} passed, ${fail} failed`);
 process.exitCode = fail ? 1 : 0;

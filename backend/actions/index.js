@@ -19,6 +19,10 @@ const ENTRIES = [
   require("./assignLead"),
   require("./completeTask"),
   require("./addLeadNote"),
+  require("./updateLeadFields"),
+  require("./createLead"),
+  require("./updateProjectLeadBooking"),
+  require("./bulkUpdateStatus"),
 ];
 
 const byId = new Map(ENTRIES.map((a) => [a.id, a]));

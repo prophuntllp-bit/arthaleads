@@ -8,6 +8,7 @@ const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
 const { formatISTDate } = require("../utils/datetime");
+const OPTS = require("../constants/leadOptions");
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
 // Prevents repeated heavy 18-facet aggregations on every dashboard load.
@@ -366,6 +367,26 @@ const leadService = {
     await lead.save();
     // Return a fresh read so the response always reflects what's in the DB
     return Lead.findById(lead._id).populate("assignedTo", "name").lean();
+  },
+
+  // ── Bulk status ───────────────────────────────────────────────────────────
+  // Mirrors PATCH /api/leads/bulk-status, which is authorize("admin","manager").
+  // The role check lives here so the copilot inherits it rather than
+  // reimplementing it.
+  //
+  // Deliberately does not write a per-lead activity entry, matching the
+  // existing REST behaviour. Worth revisiting: a bulk change is currently
+  // invisible in each lead's timeline.
+  async bulkUpdateStatus(ids, status, user) {
+    if (user.role === "agent") throw new AppError("Agents cannot bulk-update leads", 403);
+    if (!Array.isArray(ids) || ids.length === 0) throw new AppError("No leads selected", 400);
+    if (!OPTS.STATUS.includes(status)) throw new AppError("Invalid status value", 400);
+
+    const result = await Lead.updateMany(
+      { _id: { $in: ids }, orgId: user.orgId },
+      { $set: { status } }
+    );
+    return { matched: result.matchedCount, modified: result.modifiedCount };
   },
 
   // ── Delete ────────────────────────────────────────────────────────────────
