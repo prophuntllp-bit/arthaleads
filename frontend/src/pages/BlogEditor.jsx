@@ -1,3 +1,4 @@
+import { SmartImage } from "../components/UI";
 ﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import DOMPurify from "dompurify";
@@ -236,7 +237,7 @@ function ImageUploadArea({ value, onChange, placeholder = "Upload image or paste
     <div className="space-y-2">
       {value ? (
         <div className="relative rounded-xl overflow-hidden border group" style={{ borderColor: "var(--app-border)" }}>
-          <img src={value} alt="" className="w-full max-h-52 object-cover" onError={e => { e.target.style.display = "none"; }} />
+          <SmartImage src={value} alt="" className="w-full max-h-52 object-cover" />
           <div className="absolute inset-0 bg-black/40 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition flex items-center justify-center gap-2">
             <button onClick={() => fileRef.current?.click()}
               className="px-3 py-1.5 rounded-lg bg-white text-gray-800 text-xs font-semibold flex items-center gap-1">

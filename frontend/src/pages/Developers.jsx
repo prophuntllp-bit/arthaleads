@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Building2, Plus, Pencil, Trash2, X, Check, Upload } from "lucide-react";
-import { AppSelect } from "../components/UI";
+import { AppSelect, SmartImage } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -307,17 +307,15 @@ export default function Developers() {
               style={{ border: "1px solid var(--app-border)" }}>
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                  {dev.logo ? (
-                    <img src={dev.logo} alt={dev.name}
-                      className="w-10 h-8 rounded-lg object-contain shrink-0"
-                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", padding: 3 }}
-                      onError={e => { e.target.style.display = "none"; }} />
-                  ) : (
-                    <div className="w-10 h-8 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                      <Building2 className="h-4 w-4 text-app-soft opacity-50" />
-                    </div>
-                  )}
+                  <SmartImage src={dev.logo} alt={dev.name}
+                    className="w-10 h-8 rounded-lg object-contain shrink-0"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", padding: 3 }}
+                    fallback={
+                      <div className="w-10 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                        <Building2 className="h-4 w-4 text-app-soft opacity-50" />
+                      </div>
+                    } />
                   <div className="min-w-0">
                     <p className="font-bold text-app text-sm leading-tight">{dev.name}</p>
                     {dev.address && <p className="text-xs text-app-soft mt-0.5 line-clamp-2">{dev.address}</p>}

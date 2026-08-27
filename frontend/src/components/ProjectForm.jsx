@@ -1,6 +1,6 @@
 ﻿// components/ProjectForm.jsx
 import { useEffect, useRef, useState } from "react";
-import { Modal, Spinner, AppDatePicker } from "./UI";
+import { Modal, Spinner, AppDatePicker, SmartImage } from "./UI";
 import { ChevronDown, ImageOff, Plus, Search, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -260,18 +260,16 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             <div className="flex flex-wrap gap-3">
               {form.images.map((url, i) => (
                 <div key={i} className="relative group flex-shrink-0">
-                  <img
+                  <SmartImage
                     src={url} alt=""
                     className="h-20 w-20 rounded-2xl object-cover border"
                     style={{ borderColor: "var(--app-border)" }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}
+                    fallback={
+                      <div className="flex h-20 w-20 rounded-2xl items-center justify-center stitch-surface-muted">
+                        <ImageOff className="h-6 w-6 text-app-soft" />
+                      </div>
+                    }
                   />
-                  <div className="hidden h-20 w-20 rounded-2xl items-center justify-center stitch-surface-muted">
-                    <ImageOff className="h-6 w-6 text-app-soft" />
-                  </div>
                   <button
                     type="button" onClick={() => removeImage(i)}
                     className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"

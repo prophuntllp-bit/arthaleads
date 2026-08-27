@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker, SmartImage } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -924,12 +924,13 @@ export default function ProjectDetail() {
               {project.images.map((url, i) => (
                 <div key={i} className="relative flex-shrink-0 h-52 w-80 rounded-2xl overflow-hidden border"
                   style={{ borderColor: "var(--app-border)" }}>
-                  <img src={url} alt="" className="h-full w-full object-cover"
-                    onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                  <SmartImage src={url} alt="" className="h-full w-full object-cover"
+                    fallback={
+                      <div className="flex h-full w-full items-center justify-center stitch-surface-muted">
+                        <ImageOff className="h-8 w-8 text-app-soft" />
+                      </div>
+                    }
                   />
-                  <div className="hidden h-full w-full items-center justify-center stitch-surface-muted">
-                    <ImageOff className="h-8 w-8 text-app-soft" />
-                  </div>
                 </div>
               ))}
             </div>

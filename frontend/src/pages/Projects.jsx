@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, EmptyState } from "../components/UI";
+import { PageLoader, EmptyState, SmartImage } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -95,23 +95,19 @@ export default function Projects() {
             >
               {/* Image */}
               <div className="relative h-44 w-full overflow-hidden">
-                {proj.images?.[0] ? (
-                  <img
-                    src={proj.images[0]}
-                    alt={proj.name}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}
-                  />
-                ) : null}
-                <div
-                  className={`${proj.images?.[0] ? "hidden" : "flex"} h-full w-full items-center justify-center`}
-                  style={{ background: "linear-gradient(135deg, rgba(160,65,0,0.15), rgba(255,107,0,0.10))" }}
-                >
-                  <Building2 className="h-12 w-12 text-orange-500/40" />
-                </div>
+                <SmartImage
+                  src={proj.images?.[0]}
+                  alt={proj.name}
+                  className="h-full w-full object-cover"
+                  fallback={
+                    <div
+                      className="flex h-full w-full items-center justify-center"
+                      style={{ background: "linear-gradient(135deg, rgba(160,65,0,0.15), rgba(255,107,0,0.10))" }}
+                    >
+                      <Building2 className="h-12 w-12 text-orange-500/40" />
+                    </div>
+                  }
+                />
                 {/* Lead count badge */}
                 <div className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white"
                   style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}>
