@@ -10,7 +10,7 @@ import {
   Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
   RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
   Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
-  Send, Paperclip, FileText, Loader2,
+  Send, Paperclip, FileText, Loader2, Sparkles,
 } from "lucide-react";
 
 function PlanBadge({ plan }) {
@@ -1591,6 +1591,26 @@ export default function SuperAdmin() {
     }
   };
 
+  // Kill switch for the AI copilot's write actions. Answers keep working —
+  // this only stops it changing anything, which is the switch you want at 9pm
+  // when something looks wrong and a deploy is not an option.
+  const toggleCopilot = async (org) => {
+    const disabling = !org.copilotWritesDisabled;
+    try {
+      const { data } = await api.patch(`/super-admin/orgs/${org._id}`, {
+        copilotWritesDisabled: disabling,
+      });
+      handleOrgUpdated(data.org);
+      toast.success(
+        disabling
+          ? `Copilot changes switched off for ${data.org.name}`
+          : `Copilot changes switched back on for ${data.org.name}`
+      );
+    } catch {
+      toast.error("Update failed");
+    }
+  };
+
   const filtered = orgs.filter((o) =>
     !search || o.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -1644,13 +1664,14 @@ export default function SuperAdmin() {
                   <th>Brand Colour</th>
                   <th>Change Plan</th>
                   <th className="text-center">Status</th>
+                  <th className="text-center">Copilot</th>
                   <th>Extend Trial</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
+                    <td colSpan={11} className="text-center py-12 text-app-soft text-sm">No organizations found</td>
                   </tr>
                 ) : filtered.map((org) => {
                   const isTrialExpired = !!org.trialExpired;
@@ -1715,6 +1736,32 @@ export default function SuperAdmin() {
                               ? <><CheckCircle2 className="w-3 h-3" /> Active</>
                               : <><XCircle className="w-3 h-3" /> Inactive</>}
                           </button>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        {/* Growth and above is where the copilot exists at all;
+                            for anyone else the switch would be describing a
+                            feature they do not have. */}
+                        {["growth", "pro", "enterprise", "trial"].includes(org.plan) ? (
+                          <button
+                            onClick={() => toggleCopilot(org)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold border transition ${
+                              org.copilotWritesDisabled
+                                ? "bg-red-500/10 text-red-500 border-red-500/25 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/25"
+                                : "bg-green-500/10 text-green-600 border-green-500/25 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/25"
+                            }`}
+                            title={
+                              org.copilotWritesDisabled
+                                ? "Copilot cannot make changes. Click to allow."
+                                : "Copilot can make changes (with confirmation). Click to switch off."
+                            }
+                          >
+                            {org.copilotWritesDisabled
+                              ? <><XCircle className="w-3 h-3" /> Off</>
+                              : <><Sparkles className="w-3 h-3" /> On</>}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-app-soft">&mdash;</span>
                         )}
                       </td>
                       <td>
