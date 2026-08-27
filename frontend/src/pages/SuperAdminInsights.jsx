@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PageLoader } from "../components/UI";
+import { PageLoader, SmartImage } from "../components/UI";
 import api from "../services/api";
 import {
   Heart, AlertTriangle, TrendingDown, RefreshCw,
@@ -289,8 +289,7 @@ export default function SuperAdminInsights() {
                     <td>
                       <div className="flex items-center gap-2.5">
                         {org.logo ? (
-                          <img src={org.logo} alt="" className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
-                            onError={e => e.currentTarget.style.display = "none"} />
+                          <SmartImage src={org.logo} alt="" className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
                         ) : (
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0"
                             style={{ background: "linear-gradient(135deg,#a04100,#ff6b00)" }}>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { PageLoader, Spinner, AppSelect } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, SmartImage } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -186,9 +186,8 @@ export default function SuperAdminOrgDetail() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             {org.logo
-              ? <img src={org.logo} alt={org.name} className="w-12 h-12 rounded-2xl object-cover border flex-shrink-0"
-                  style={{ borderColor: "var(--app-border)" }}
-                  onError={e => e.currentTarget.style.display = "none"} />
+              ? <SmartImage src={org.logo} alt={org.name} className="w-12 h-12 rounded-2xl object-cover border flex-shrink-0"
+                  style={{ borderColor: "var(--app-border)" }} />
               : <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg flex-shrink-0"
                   style={{ background: "linear-gradient(135deg,#a04100,#ff6b00)" }}>
                   {org.name?.charAt(0).toUpperCase()}
@@ -482,8 +481,7 @@ export default function SuperAdminOrgDetail() {
                       <td>
                         <div className="flex items-center gap-2.5">
                           {u.avatar
-                            ? <img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
-                                onError={e => e.currentTarget.style.display = "none"} />
+                            ? <SmartImage src={u.avatar} alt={u.name} className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
                             : <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0"
                                 style={{ background: "linear-gradient(135deg,#a04100,#ff6b00)" }}>
                                 {u.name?.charAt(0)?.toUpperCase()}

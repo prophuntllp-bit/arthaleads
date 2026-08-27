@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, AppSelect, AppDatePicker } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, AppDatePicker, SmartImage } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -334,15 +334,14 @@ function LogoUploader({ org, onUpdated }) {
       >
         {loading ? (
           <Spinner size="sm" />
-        ) : preview ? (
-          <img
+        ) : (
+          <SmartImage
             src={preview}
             alt=""
             className="max-w-full max-h-full object-contain p-1"
-            onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }}
+            fallback={<ImageIcon className="w-5 h-5 text-app-soft" />}
           />
-        ) : null}
-        <ImageIcon className="w-5 h-5 text-app-soft" style={{ display: preview ? "none" : "block" }} />
+        )}
       </div>
 
       <div className="flex flex-col gap-1">

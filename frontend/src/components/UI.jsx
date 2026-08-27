@@ -7,6 +7,61 @@ import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 
+/**
+ * An <img> that survives a transient failure.
+ *
+ * Logos and avatars are served from a CDN, and a CDN occasionally returns a
+ * 5xx for a request that would succeed a second later — a real 522 was
+ * observed on a working Cloudinary URL that returned 200 on the next attempt.
+ * A plain <img> gives up after one try, so a single blip meant the logo was
+ * gone for the rest of the session and looked like it had never been
+ * uploaded. Several call sites made that permanent by hiding the node through
+ * e.currentTarget.style.display, which React does not manage and therefore
+ * never resets.
+ *
+ * This retries a couple of times with a cache-busting query before falling
+ * back, and resets whenever the src changes.
+ */
+export function SmartImage({ src, alt = "", fallback = null, retries = 2, retryDelay = 600, onExhausted, ...rest }) {
+  const [attempt, setAttempt] = useState(0);
+  const [failed, setFailed]   = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    setAttempt(0);
+    setFailed(false);
+    return () => { if (timer.current) clearTimeout(timer.current); };
+  }, [src]);
+
+  if (!src || failed) return fallback;
+
+  // The cache-buster matters: without it the browser serves its own cached
+  // failure and the retry never reaches the network. It is only valid on real
+  // URLs though — appending a query to a data: or blob: URI corrupts it, and
+  // those cannot fail transiently anyway.
+  const inline = /^(data:|blob:)/.test(src);
+  const url = attempt === 0 || inline
+    ? src
+    : `${src}${src.includes("?") ? "&" : "?"}_r=${attempt}`;
+
+  return (
+    <img
+      key={url}
+      src={url}
+      alt={alt}
+      onError={() => {
+        if (attempt < retries) {
+          timer.current = setTimeout(() => setAttempt((a) => a + 1), retryDelay * (attempt + 1));
+        } else {
+          setFailed(true);
+          if (onExhausted) onExhausted();
+        }
+      }}
+      {...rest}
+    />
+  );
+}
+
 export function StatusBadge({ status }) {
   return (
     <span className={`badge ${STATUS_COLORS[status] || "bg-gray-100 text-gray-600"}`}>

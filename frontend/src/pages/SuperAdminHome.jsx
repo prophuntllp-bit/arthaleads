@@ -1,3 +1,4 @@
+import { SmartImage } from "../components/UI";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -231,9 +232,8 @@ export default function SuperAdminHome() {
             {recent.map(org => (
               <div key={org._id} className="flex items-center gap-3 px-4 py-2.5">
                 {org.logo ? (
-                  <img src={org.logo} alt={org.name}
-                    className="w-7 h-7 rounded-lg object-cover flex-shrink-0"
-                    onError={e => e.currentTarget.style.display = "none"} />
+                  <SmartImage src={org.logo} alt={org.name}
+                    className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
                 ) : (
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[10px] font-black flex-shrink-0"
                     style={{ background: "linear-gradient(135deg,#a04100,#ff6b00)" }}>

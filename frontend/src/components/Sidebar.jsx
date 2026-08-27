@@ -18,6 +18,7 @@ import { fmtDateTime } from "../utils/constants";
 import { canAccess } from "../utils/plan";
 import toast from "react-hot-toast";
 import AttendanceCapture from "./AttendanceCapture";
+import { SmartImage } from "./UI";
 
 const navItems = [
   { to: "/super-admin", label: "Super Admin",  icon: ShieldCheck, roles: ["super_admin"], end: true },
@@ -478,12 +479,11 @@ export default function Sidebar() {
                 className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl overflow-hidden"
                 style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}
               >
-                <img
-                  key={org.logo}
+                <SmartImage
                   src={org.logo}
                   alt={org.name}
                   className="max-w-full max-h-full object-contain"
-                  onError={() => setLogoError(true)}
+                  onExhausted={() => setLogoError(true)}
                 />
               </div>
               <div className="ml-3 overflow-hidden flex-1" style={labelStyle}>
@@ -790,9 +790,8 @@ export default function Sidebar() {
             {/* Avatar */}
             <div className="flex-shrink-0 relative" style={{ width: 36, height: 36 }}>
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border"
-                  style={{ borderColor: "var(--app-border)" }}
-                  onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }} />
+                <SmartImage src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover border"
+                  style={{ borderColor: "var(--app-border)" }} />
               ) : null}
               <div className="w-full h-full rounded-full items-center justify-center font-bold text-sm"
                 style={{ background: "rgba(var(--app-primary-rgb), 0.12)", color: "var(--app-primary)",
@@ -1310,8 +1309,8 @@ export default function Sidebar() {
               {org?.logo && !logoError ? (
                 <>
                   <div className="h-7 max-w-[72px] flex items-center flex-shrink-0">
-                    <img key={org.logo} src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 5 }}
-                      onError={() => setLogoError(true)} />
+                    <SmartImage src={org.logo} alt={org.name} className="max-h-full max-w-full object-contain" style={{ borderRadius: 5 }}
+                      onExhausted={() => setLogoError(true)} />
                   </div>
                   <span className="font-bold text-sm text-app truncate max-w-[90px]">{org.name}</span>
                   <img src="/logo.png" alt="AL" className="w-4 h-4 rounded object-cover flex-shrink-0" />

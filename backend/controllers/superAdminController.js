@@ -129,6 +129,12 @@ const superAdminController = {
       ).select("name logo");
       if (!org) return next(new AppError("Organization not found", 404));
 
+      // The org record is cached for 60s on the auth path. Without this, an
+      // org that just had its logo changed here keeps serving the old one to
+      // its own users for up to a minute — the org-side upload route already
+      // invalidates, so the two paths behaved differently.
+      invalidateOrgCache(req.params.id);
+
       res.json({ success: true, org });
     } catch (err) {
       next(err);
