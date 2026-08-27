@@ -34,6 +34,12 @@ const copilotActionSchema = new mongoose.Schema(
     // The question that produced the proposal, for support and for deciding
     // later which actions are safe to make lower-friction.
     prompt: { type: String, default: "", maxlength: 500 },
+
+    // What the record looked like before, captured immediately before the
+    // write. This is the undo receipt: confirmation stops most mistakes, and
+    // this handles the ones that were confirmed too quickly.
+    before: { type: mongoose.Schema.Types.Mixed, default: null },
+    undoneAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

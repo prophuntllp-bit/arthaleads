@@ -8,6 +8,8 @@ const { fetchPageContext } = require("../utils/copilotContext");
 const { searchBothLeadTypes } = require("../utils/leadLookup");
 const actions = require("../actions");
 const CopilotAction = require("../models/CopilotAction");
+const Organization = require("../models/Organization");
+const logger = require("../config/logger");
 const AiUsage  = require("../models/AiUsage");
 
 // The AI copilot is a Growth feature. Each question costs an LLM call, so
@@ -118,6 +120,17 @@ router.post("/action", async (req, res, next) => {
     const { type, params, page, scopeConfirmed, idempotencyKey } = req.body || {};
     if (!type) return res.status(400).json({ success: false, message: "Action type required." });
 
+    // Kill switch. Reads stay working; only writes stop. Checked here rather
+    // than in the registry because it is an org-wide operational switch, not a
+    // property of any action.
+    const org = await Organization.findById(req.orgId).select("copilotWritesDisabled").lean();
+    if (org && org.copilotWritesDisabled) {
+      return res.status(403).json({
+        success: false,
+        message: "Copilot changes are switched off for your organisation. Ask your admin.",
+      });
+    }
+
     const { action, params: clean } = actions.authorise({
       id: type,
       params,
@@ -163,6 +176,18 @@ router.post("/action", async (req, res, next) => {
       claim = key;
     }
 
+    // Snapshot what is about to change, as close to the write as possible.
+    // A failure here must not stop the action the user already approved — it
+    // only costs the ability to undo, so it is recorded and moved past.
+    let before = null;
+    if (typeof action.captureBefore === "function") {
+      try {
+        before = await action.captureBefore({ params: clean, user: req.user });
+      } catch (err) {
+        logger.warn(`[copilot] could not capture undo state for ${action.id}: ${err.message}`);
+      }
+    }
+
     let result;
     try {
       result = await action.execute({ params: clean, user: req.user });
@@ -175,11 +200,13 @@ router.post("/action", async (req, res, next) => {
     if (claim) {
       await CopilotAction.updateOne(
         { idempotencyKey: claim },
-        { $set: { status: "done", result } }
+        { $set: { status: "done", result, before } }
       ).catch(() => {});
     }
 
-    return res.json({ success: true, ...result });
+    // Undo is only offered when there is both a receipt and a way to apply it.
+    const undoable = Boolean(claim && before && typeof action.undo === "function");
+    return res.json({ success: true, ...result, undoable, undoKey: undoable ? claim : null });
   } catch (err) {
     // A page-scope refusal is not a failure — it is the copilot asking to work
     // somewhere else. The client renders it as a prompt and may retry with
@@ -227,6 +254,63 @@ router.post("/preview", async (req, res, next) => {
     }
     next(err);
   }
+});
+
+// POST /api/help/undo — put back a change the copilot made.
+// Body: { undoKey }
+//
+// Undo runs through the same services as the original write, so it is subject
+// to the same permission rules. If a colleague has since changed the record
+// again, this restores the value from the receipt over the top — it is an
+// undo of the copilot's edit, not a full revision history.
+const UNDO_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+router.post("/undo", async (req, res, next) => {
+  try {
+    const { undoKey } = req.body || {};
+    if (!undoKey) return res.status(400).json({ success: false, message: "Nothing to undo." });
+
+    const row = await CopilotAction.findOne({
+      idempotencyKey: String(undoKey).slice(0, 100),
+      orgId: req.orgId,
+    }).lean();
+
+    if (!row) return res.status(404).json({ success: false, message: "That change was not found." });
+    if (row.undoneAt) return res.status(409).json({ success: false, message: "That change was already undone." });
+    if (row.status !== "done") return res.status(409).json({ success: false, message: "That change did not complete." });
+    if (!row.before) return res.status(400).json({ success: false, message: "That change cannot be undone." });
+    if (Date.now() - new Date(row.createdAt).getTime() > UNDO_WINDOW_MS) {
+      return res.status(410).json({ success: false, message: "Undo is only available for 24 hours." });
+    }
+
+    const action = actions.byId.get(row.actionId);
+    if (!action || typeof action.undo !== "function") {
+      return res.status(400).json({ success: false, message: "That change cannot be undone." });
+    }
+
+    // Claim it first, so two taps on Undo cannot both run the inverse.
+    const claimed = await CopilotAction.findOneAndUpdate(
+      { _id: row._id, undoneAt: null },
+      { $set: { undoneAt: new Date() } },
+      { new: true }
+    ).lean();
+    if (!claimed) return res.status(409).json({ success: false, message: "That change was already undone." });
+
+    try {
+      const out = await action.undo({
+        before: row.before,
+        result: row.result,
+        params: row.params,
+        user: req.user,
+      });
+      return res.json({ success: true, ...out });
+    } catch (err) {
+      // Release so the user can try again — a permission error here is real
+      // and should not consume their one chance to undo.
+      await CopilotAction.updateOne({ _id: row._id }, { $set: { undoneAt: null } }).catch(() => {});
+      throw err;
+    }
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

@@ -33,6 +33,20 @@ module.exports = {
     };
   },
 
+  async captureBefore({ params, user }) {
+    const { doc, isProject } = await resolveLead(params.leadId, user);
+    const current = isProject ? doc.followUp : doc.followUpDate;
+    return { leadId: params.leadId, date: current ? new Date(current).toISOString() : null };
+  },
+
+  async undo({ before, user }) {
+    const { isProject } = await resolveLead(before.leadId, user);
+    const value = before.date ? new Date(before.date) : null;
+    if (isProject) await projectService.updateLeadFields(before.leadId, { followUp: value }, user);
+    else           await leadService.update(before.leadId, { followUpDate: value }, user);
+    return { message: before.date ? `Follow-up put back to ${formatISTDateShort(value)}.` : "Follow-up cleared again." };
+  },
+
   async execute({ params, user }) {
     const { doc, isProject } = await resolveLead(params.leadId, user);
     // The collections name this differently: Lead.followUpDate, ProjectLead.followUp.

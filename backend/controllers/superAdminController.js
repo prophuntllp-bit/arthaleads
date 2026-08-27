@@ -142,7 +142,7 @@ const superAdminController = {
       // transfer or UPI payment — is invoiced by hand and never passes through
       // checkout. Without it those orgs have no renewal date at all, so neither
       // they nor we can see when their term ends.
-      const allowed = ["plan", "isActive", "name", "brandColor", "paidUntil", "seats", "billingCycle"];
+      const allowed = ["plan", "isActive", "name", "brandColor", "paidUntil", "seats", "billingCycle", "copilotWritesDisabled"];
       const update  = {};
       allowed.forEach((k) => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
 

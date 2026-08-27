@@ -26,6 +26,16 @@ module.exports = {
     };
   },
 
+  async captureBefore({ params, user }) {
+    const task = await Task.findOne({ _id: params.taskId, orgId: user.orgId }).select("status").lean();
+    return { taskId: params.taskId, status: task ? task.status : "pending" };
+  },
+
+  async undo({ before, user }) {
+    await taskService.reopen(before.taskId, user);
+    return { message: "Task reopened." };
+  },
+
   async execute({ params, user }) {
     const task = await taskService.complete(params.taskId, params.note, user);
     return { message: `Task "${task.title}" marked as completed.`, data: { taskId: params.taskId } };

@@ -45,6 +45,19 @@ module.exports = {
     };
   },
 
+  async captureBefore({ params, user }) {
+    const { doc } = await resolveLead(params.leadId, user);
+    return { leadId: params.leadId, assignedTo: doc.assignedTo ? String(doc.assignedTo) : null };
+  },
+
+  async undo({ before, user }) {
+    // assign() requires an agent, so an originally-unassigned lead is put back
+    // through update() with an explicit null instead.
+    if (before.assignedTo) await leadService.assign(before.leadId, before.assignedTo, user);
+    else                   await leadService.update(before.leadId, { assignedTo: null }, user);
+    return { message: before.assignedTo ? "Assignment put back." : "Lead unassigned again." };
+  },
+
   async execute({ params, user }) {
     const { doc, isProject } = await resolveLead(params.leadId, user);
     if (isProject) {

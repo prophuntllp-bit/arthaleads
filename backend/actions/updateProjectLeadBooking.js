@@ -41,6 +41,22 @@ module.exports = {
     return { subject: doc.name, fields };
   },
 
+  async captureBefore({ params, user }) {
+    const { doc } = await resolveLead(params.leadId, user);
+    return { leadId: params.leadId, booking: doc.booking || "", remarkNote: doc.remarkNote || "" };
+  },
+
+  async undo({ before, user }) {
+    // isProspective is one-way by design in projectService and is deliberately
+    // not reverted here — undo restores the booking value, not that flag.
+    await projectService.updateLeadFields(
+      before.leadId,
+      { booking: before.booking, remarkNote: before.remarkNote },
+      user
+    );
+    return { message: `Booking put back to "${before.booking || "(none)"}".` };
+  },
+
   async execute({ params, user }) {
     const { doc, isProject } = await resolveLead(params.leadId, user);
     if (!isProject) throw new AppError("That is a regular lead - use update_lead_status instead.", 400);

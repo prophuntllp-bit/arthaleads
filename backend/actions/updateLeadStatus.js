@@ -29,6 +29,18 @@ module.exports = {
     };
   },
 
+  async captureBefore({ params, user }) {
+    const { doc } = await resolveLead(params.leadId, user);
+    return { leadId: params.leadId, status: doc.status || "" };
+  },
+
+  async undo({ before, user }) {
+    const { isProject } = await resolveLead(before.leadId, user);
+    if (isProject) await projectService.updateLeadFields(before.leadId, { status: before.status }, user);
+    else           await leadService.update(before.leadId, { status: before.status }, user);
+    return { message: `Status put back to "${before.status || "(none)"}".` };
+  },
+
   async execute({ params, user }) {
     const { doc, isProject } = await resolveLead(params.leadId, user);
     if (isProject) await projectService.updateLeadFields(params.leadId, { status: params.status }, user);

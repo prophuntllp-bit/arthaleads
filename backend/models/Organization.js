@@ -44,6 +44,10 @@ const orgSchema = new mongoose.Schema(
     // is auditable and a support question has an answer.
     lapsedAt: { type: Date },
     isActive: { type: Boolean, default: true },
+    // Stops the AI copilot writing anything for this org, while leaving its
+    // answers working. A switch rather than a deploy, for when something is
+    // going wrong at an inconvenient hour.
+    copilotWritesDisabled: { type: Boolean, default: false },
     // ── Trial approval gate ───────────────────────────────────────────────────
     // Self-serve signups land as "pending" and cannot access the CRM until a
     // super admin approves them (see superAdminController.approveOrg). Defaults

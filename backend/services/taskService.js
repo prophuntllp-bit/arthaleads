@@ -22,6 +22,18 @@ const taskService = {
     await task.save();
     return task;
   },
+
+  /** Put a task back to pending — the inverse of complete(), for undo. */
+  async reopen(id, user) {
+    const task = await Task.findOne({ _id: id, orgId: user.orgId });
+    if (!task) throw new AppError("Task not found", 404);
+
+    task.status = "pending";
+    task.completedAt = null;
+    task.completionNote = "";
+    await task.save();
+    return task;
+  },
 };
 
 module.exports = taskService;

@@ -49,6 +49,21 @@ module.exports = {
     return { subject: doc.name, fields };
   },
 
+  async captureBefore({ params, user }) {
+    const { doc } = await resolveLead(params.leadId, user);
+    const snapshot = {};
+    Object.keys(EDITABLE).forEach((k) => { if (k in params) snapshot[k] = doc[k] ?? ""; });
+    return { leadId: params.leadId, fields: snapshot };
+  },
+
+  async undo({ before, user }) {
+    const { isProject } = await resolveLead(before.leadId, user);
+    if (isProject) await projectService.updateLeadFields(before.leadId, before.fields, user);
+    else           await leadService.update(before.leadId, before.fields, user);
+    const names = Object.keys(before.fields).map((k) => EDITABLE[k]?.label || k).join(", ");
+    return { message: `Put ${names} back.` };
+  },
+
   async execute({ params, user }) {
     const { leadId, ...updates } = params;
     const { doc, isProject } = await resolveLead(leadId, user);

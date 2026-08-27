@@ -1,6 +1,7 @@
 const { Joi } = require("./_shared");
 const OPTS = require("../constants/leadOptions");
 const leadService = require("../services/leadService");
+const { AppError } = require("../middlewares/errorHandler");
 
 module.exports = {
   id: "create_lead",
@@ -40,6 +41,20 @@ module.exports = {
       subject: `New lead: ${params.name}`,
       fields: [{ label: "Name", param: "name", from: null, to: params.name, editor: { type: "text", value: params.name } }, ...fields],
     };
+  },
+
+  // Nothing exists yet, so there is no "before" to snapshot — undo works off
+  // the id the execute returned instead.
+  async captureBefore() { return { created: true }; },
+
+  async undo({ result, user }) {
+    const leadId = result && result.data && result.data.leadId;
+    if (!leadId) throw new AppError("Cannot undo: the new lead's id was not recorded.", 400);
+    // Soft delete for every role that can reach this action. super_admin is
+    // not in roles above, so the hard-delete branch of leadService.delete is
+    // unreachable here.
+    await leadService.delete(String(leadId), user);
+    return { message: "The new lead was removed." };
   },
 
   async execute({ params, user }) {

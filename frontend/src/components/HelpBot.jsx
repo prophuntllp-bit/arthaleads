@@ -399,7 +399,13 @@ export default function HelpBot() {
         prompt: msg.prompt || "",
       });
       setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
-      setMessages((m) => [...m, { role: "bot", text: `Done! ${data.message}` }]);
+      setMessages((m) => [...m, {
+        role: "bot",
+        text: `Done! ${data.message}`,
+        // Offered only when the server captured a receipt AND the action
+        // knows its own inverse.
+        undoKey: data.undoable ? data.undoKey : null,
+      }]);
       window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource: "leads" } }));
     } catch (err) {
       const body = err.response?.data;
@@ -408,6 +414,22 @@ export default function HelpBot() {
       } else {
         setMessages((m) => [...m, { role: "bot", text: body?.message || "Action failed. Please try again." }]);
       }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const undoAction = async (msgIndex) => {
+    const msg = messages[msgIndex];
+    if (!msg?.undoKey || actionLoading !== null) return;
+    setActionLoading(msgIndex);
+    try {
+      const { data } = await api.post("/help/undo", { undoKey: msg.undoKey });
+      setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, undoKey: null, undone: true } : x));
+      setMessages((m) => [...m, { role: "bot", text: data.message || "Put back." }]);
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource: "leads" } }));
+    } catch (err) {
+      setMessages((m) => [...m, { role: "bot", text: err.response?.data?.message || "Could not undo that." }]);
     } finally {
       setActionLoading(null);
     }
@@ -657,8 +679,16 @@ export default function HelpBot() {
                     {m.text}
                   </div>
                   {/* Action chips */}
-                  {m.role === "bot" && (m.goto || m.tour || m.suggestTicket || (m.action && !m.actionDone)) && (
+                  {m.role === "bot" && (m.goto || m.tour || m.suggestTicket || m.undoKey || (m.action && !m.actionDone)) && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {m.undoKey && (
+                        <button type="button" onClick={() => undoAction(messages.indexOf(m))}
+                          disabled={actionLoading !== null}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                          style={{ background: "rgba(107,114,128,0.1)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}>
+                          Undo
+                        </button>
+                      )}
                       {m.goto && (
                         <button type="button" onClick={() => handleGoto(m.goto)}
                           className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer"

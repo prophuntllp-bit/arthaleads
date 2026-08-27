@@ -54,6 +54,30 @@ module.exports = {
     };
   },
 
+  async captureBefore({ params, user }) {
+    const rows = await Lead.find({
+      _id: { $in: params.leadIds }, orgId: user.orgId, isDeleted: { $ne: true },
+    }).select("status").limit(MAX_RECORDS).lean();
+    return { statuses: rows.map((r) => ({ id: String(r._id), status: r.status })) };
+  },
+
+  async undo({ before, user }) {
+    // The selection may have spanned several original statuses, so put each
+    // group back to its own previous value rather than to one blanket status.
+    const groups = new Map();
+    (before.statuses || []).forEach(({ id, status }) => {
+      if (!groups.has(status)) groups.set(status, []);
+      groups.get(status).push(id);
+    });
+    let restored = 0;
+    for (const [status, ids] of groups) {
+      if (!STATUS.includes(status)) continue; // legacy/blank values cannot be written back
+      const { modified } = await leadService.bulkUpdateStatus(ids, status, user);
+      restored += modified;
+    }
+    return { message: `${restored} lead${restored === 1 ? "" : "s"} put back.` };
+  },
+
   async execute({ params, user }) {
     const { modified } = await leadService.bulkUpdateStatus(params.leadIds, params.status, user);
     return {
