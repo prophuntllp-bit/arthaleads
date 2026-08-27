@@ -25,9 +25,23 @@ module.exports = {
     if (isProject) throw new AppError("Project leads follow the project's team and have no individual owner.", 400);
     const agent = await User.findOne({ _id: params.agentId, orgId: user.orgId }).select("name").lean();
     if (!agent) throw new AppError("Agent not found.", 404);
+    // Offer the org's team as options: picking the wrong colleague is the
+    // most likely thing for the model to get wrong here, and correcting it in
+    // place beats rephrasing the question.
+    const team = await User.find({ orgId: user.orgId, isActive: true })
+      .select("name").sort({ name: 1 }).limit(50).lean();
+
     return {
       subject: doc.name,
-      fields: [{ label: "Assigned", from: doc.assignedToName || "(unassigned)", to: agent.name }],
+      fields: [{
+        label: "Assigned", param: "agentId",
+        from: doc.assignedToName || "(unassigned)", to: agent.name,
+        editor: {
+          type: "select",
+          value: String(params.agentId),
+          options: team.map((t) => ({ value: String(t._id), label: t.name })),
+        },
+      }],
     };
   },
 

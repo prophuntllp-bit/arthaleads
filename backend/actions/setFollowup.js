@@ -24,9 +24,11 @@ module.exports = {
     return {
       subject: doc.name,
       fields: [{
-        label: "Follow-up",
+        label: "Follow-up", param: "date",
         from: current ? formatISTDateShort(current) : "(none)",
         to: formatISTDateShort(params.date),
+        // The editor needs the raw value; the label above is for reading.
+        editor: { type: "date", value: new Date(params.date).toISOString().slice(0, 10) },
       }],
     };
   },

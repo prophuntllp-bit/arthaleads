@@ -7,6 +7,7 @@ const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
 const { searchBothLeadTypes } = require("../utils/leadLookup");
 const actions = require("../actions");
+const CopilotAction = require("../models/CopilotAction");
 const AiUsage  = require("../models/AiUsage");
 
 // The AI copilot is a Growth feature. Each question costs an LLM call, so
@@ -114,7 +115,7 @@ router.post("/ask", async (req, res, next) => {
 // here to forget to guard.
 router.post("/action", async (req, res, next) => {
   try {
-    const { type, params, page, scopeConfirmed } = req.body || {};
+    const { type, params, page, scopeConfirmed, idempotencyKey } = req.body || {};
     if (!type) return res.status(400).json({ success: false, message: "Action type required." });
 
     const { action, params: clean } = actions.authorise({
@@ -125,7 +126,59 @@ router.post("/action", async (req, res, next) => {
       scopeConfirmed: Boolean(scopeConfirmed),
     });
 
-    const result = await action.execute({ params: clean, user: req.user });
+    // ── Idempotency ────────────────────────────────────────────────────────
+    // Without this, a dropped response and a second tap on Apply assign the
+    // lead twice, or append the note twice. The key is minted when the
+    // preview is shown, so every retry of that one proposal reuses it.
+    const key = typeof idempotencyKey === "string" ? idempotencyKey.slice(0, 100) : null;
+    let claim = null;
+
+    if (key) {
+      // Upsert returns the PREVIOUS document: null means we just created it
+      // and therefore own this execution.
+      const existing = await CopilotAction.findOneAndUpdate(
+        { idempotencyKey: key },
+        {
+          $setOnInsert: {
+            idempotencyKey: key,
+            orgId: req.orgId,
+            userId: req.user._id,
+            userName: req.user.name || "",
+            actionId: action.id,
+            params: clean,
+            page: String(page || "").slice(0, 80),
+            prompt: String(req.body.prompt || "").slice(0, 500),
+            status: "pending",
+          },
+        },
+        { upsert: true, new: false }
+      ).lean();
+
+      if (existing && existing.status === "done") {
+        return res.json({ success: true, replayed: true, ...(existing.result || {}) });
+      }
+      if (existing && existing.status === "pending") {
+        return res.status(409).json({ success: false, message: "That change is already being applied." });
+      }
+      claim = key;
+    }
+
+    let result;
+    try {
+      result = await action.execute({ params: clean, user: req.user });
+    } catch (err) {
+      // Release the claim so the user can retry the same proposal.
+      if (claim) await CopilotAction.deleteOne({ idempotencyKey: claim }).catch(() => {});
+      throw err;
+    }
+
+    if (claim) {
+      await CopilotAction.updateOne(
+        { idempotencyKey: claim },
+        { $set: { status: "done", result } }
+      ).catch(() => {});
+    }
+
     return res.json({ success: true, ...result });
   } catch (err) {
     // A page-scope refusal is not a failure — it is the copilot asking to work

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2, XCircle } from "lucide-react";
+import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useCopilot } from "../context/CopilotContext";
@@ -349,20 +349,89 @@ export default function HelpBot() {
 
   const resetChat = () => { setMessages([]); setTicketPanel(false); setShowCommonQ(false); };
 
+  // Ask the server what would change, without changing it. Runs the same
+  // gates as the write, so a role or page refusal surfaces here — before the
+  // user has been shown an Apply button they were never allowed to press.
+  const loadPreview = async (msgIndex, overrideParams) => {
+    const msg = messages[msgIndex];
+    if (!msg?.action) return;
+    setActionLoading(msgIndex);
+    try {
+      const { data } = await api.post("/help/preview", {
+        type: msg.action.type,
+        params: overrideParams || msg.action.params,
+        page: location.pathname,
+        scopeConfirmed: Boolean(msg.scopeConfirmed),
+      });
+      setMessages((m) => m.map((x, i) => i === msgIndex
+        ? { ...x, preview: data, previewError: null, scopePrompt: null,
+            action: { ...x.action, params: overrideParams || x.action.params } }
+        : x));
+    } catch (err) {
+      const body = err.response?.data;
+      setMessages((m) => m.map((x, i) => i === msgIndex
+        ? (body?.needsScopeChange
+            ? { ...x, scopePrompt: body, preview: null, previewError: null }
+            : { ...x, previewError: body?.message || "Could not preview that change.", preview: null })
+        : x));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const confirmAction = async (msgIndex) => {
     const msg = messages[msgIndex];
     if (!msg?.action || actionLoading !== null) return;
     setActionLoading(msgIndex);
     try {
-      const { data } = await api.post("/help/action", { type: msg.action.type, params: msg.action.params });
+      // Minted once per proposal and reused on every retry, so a dropped
+      // response and a second tap cannot apply the change twice.
+      const key = msg.idempotencyKey
+        || `${msg.action.type}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, idempotencyKey: key } : x));
+
+      const { data } = await api.post("/help/action", {
+        type: msg.action.type,
+        params: msg.action.params,
+        page: location.pathname,
+        scopeConfirmed: Boolean(msg.scopeConfirmed),
+        idempotencyKey: key,
+        prompt: msg.prompt || "",
+      });
       setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
       setMessages((m) => [...m, { role: "bot", text: `Done! ${data.message}` }]);
+      window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource: "leads" } }));
     } catch (err) {
-      setMessages((m) => [...m, { role: "bot", text: err.response?.data?.message || "Action failed. Please try again." }]);
+      const body = err.response?.data;
+      if (body?.needsScopeChange) {
+        setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, scopePrompt: body } : x));
+      } else {
+        setMessages((m) => [...m, { role: "bot", text: body?.message || "Action failed. Please try again." }]);
+      }
     } finally {
       setActionLoading(null);
     }
   };
+
+  // The user agreeing to let the copilot work on another page.
+  const allowScope = (msgIndex) => {
+    setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, scopeConfirmed: true, scopePrompt: null } : x));
+    setTimeout(() => loadPreview(msgIndex), 0);
+  };
+
+  // Correcting a value the model got wrong, in place.
+  const editField = (msgIndex, param, value) => {
+    setMessages((m) => m.map((x, i) => i === msgIndex
+      ? { ...x, action: { ...x.action, params: { ...x.action.params, [param]: value } }, edited: true }
+      : x));
+  };
+
+  useEffect(() => {
+    const i = messages.findIndex(
+      (m) => m.action && !m.actionDone && !m.preview && !m.previewError && !m.scopePrompt
+    );
+    if (i !== -1 && actionLoading === null) loadPreview(i);
+  }, [messages, actionLoading]);
 
   const cancelAction = (msgIndex) => {
     setMessages((m) => m.map((x, i) => i === msgIndex ? { ...x, actionDone: true } : x));
@@ -613,25 +682,153 @@ export default function HelpBot() {
                       )}
                       {m.action && !m.actionDone && (() => {
                         const idx = messages.indexOf(m);
-                        const isLoading = actionLoading === idx;
+                        const busy = actionLoading === idx;
+
+                        // Page scope: the copilot asking to work somewhere else.
+                        if (m.scopePrompt) {
+                          return (
+                            <div className="w-full rounded-xl border p-2.5 text-xs"
+                              style={{ borderColor: "rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.07)" }}>
+                              <p className="mb-2" style={{ color: "var(--app-text)" }}>{m.scopePrompt.message}</p>
+                              <div className="flex gap-1.5">
+                                <button type="button" onClick={() => allowScope(idx)} disabled={busy}
+                                  className="rounded-lg px-2.5 py-1 font-semibold cursor-pointer disabled:opacity-60"
+                                  style={{ background: "rgba(245,158,11,0.15)", color: "#b45309", border: "1px solid rgba(245,158,11,0.35)" }}>
+                                  Yes, work on {m.scopePrompt.scopeLabel}
+                                </button>
+                                <button type="button" onClick={() => cancelAction(idx)} disabled={busy}
+                                  className="rounded-lg px-2.5 py-1 font-semibold cursor-pointer disabled:opacity-60"
+                                  style={{ background: "transparent", color: "var(--app-soft)", border: "1px solid var(--app-border)" }}>
+                                  No
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        if (m.previewError) {
+                          return (
+                            <div className="w-full rounded-xl border p-2.5 text-xs"
+                              style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.06)" }}>
+                              <p style={{ color: "#ef4444" }}>{m.previewError}</p>
+                            </div>
+                          );
+                        }
+
+                        if (!m.preview) {
+                          return (
+                            <div className="w-full rounded-xl border p-2.5 text-xs flex items-center gap-2"
+                              style={{ borderColor: "var(--app-border)", color: "var(--app-soft)" }}>
+                              <span className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                              Checking what would change...
+                            </div>
+                          );
+                        }
+
+                        const fields = m.preview.fields || [];
+                        const editable = fields.some((f) => f.param && f.editor);
+
                         return (
-                          <>
-                            <button type="button" onClick={() => confirmAction(idx)} disabled={isLoading}
-                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
-                              style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.3)" }}>
-                              {isLoading ? (
-                                <span className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                          <div className="w-full rounded-xl border overflow-hidden"
+                            style={{ borderColor: "var(--app-border)", background: "var(--app-card, var(--app-bg))" }}>
+                            <div className="px-2.5 py-2 border-b flex items-center gap-1.5"
+                              style={{ borderColor: "var(--app-border)" }}>
+                              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#6366f1" }} />
+                              <span className="text-xs font-semibold" style={{ color: "var(--app-text)" }}>
+                                Artha wants to make {fields.length || 1} change{fields.length === 1 ? "" : "s"}
+                              </span>
+                            </div>
+
+                            {m.preview.subject && (
+                              <div className="px-2.5 pt-2 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-soft)" }}>
+                                {m.preview.subject}
+                              </div>
+                            )}
+
+                            <div className="px-2.5 py-1.5">
+                              {fields.map((f, fi) => (
+                                <div key={fi} className="py-1 text-xs">
+                                  <div className="mb-0.5 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-soft)" }}>
+                                    {f.label}
+                                  </div>
+                                  {m.editing && f.param && f.editor ? (
+                                    f.editor.type === "select" ? (
+                                      <select
+                                        defaultValue={f.editor.value != null ? f.editor.value : f.to}
+                                        onChange={(e) => editField(idx, f.param, e.target.value)}
+                                        className="w-full rounded-lg px-2 py-1 text-xs"
+                                        style={{ background: "var(--app-bg)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}>
+                                        {(f.editor.options || []).map((o) => {
+                                          const val = typeof o === "string" ? o : o.value;
+                                          const lab = typeof o === "string" ? o : o.label;
+                                          return <option key={val} value={val}>{lab}</option>;
+                                        })}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type={f.editor.type === "date" ? "date" : "text"}
+                                        defaultValue={f.editor.value != null ? f.editor.value : ""}
+                                        onChange={(e) => editField(idx, f.param, e.target.value)}
+                                        className="w-full rounded-lg px-2 py-1 text-xs"
+                                        style={{ background: "var(--app-bg)", color: "var(--app-text)", border: "1px solid var(--app-border)" }} />
+                                    )
+                                  ) : (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {f.from != null && f.from !== "" && (
+                                        <>
+                                          <span className="line-through px-1 rounded"
+                                            style={{ color: "var(--app-soft)", background: "rgba(239,68,68,0.08)" }}>{f.from}</span>
+                                          <span style={{ color: "var(--app-soft)" }}>&rarr;</span>
+                                        </>
+                                      )}
+                                      <span className="px-1 rounded font-semibold"
+                                        style={{ color: "#059669", background: "rgba(16,185,129,0.1)" }}>{f.to}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex gap-1.5 px-2.5 py-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+                              {m.editing ? (
+                                <button type="button" disabled={busy}
+                                  onClick={() => {
+                                    setMessages((mm) => mm.map((x, i) => i === idx ? { ...x, editing: false } : x));
+                                    loadPreview(idx, messages[idx] && messages[idx].action ? messages[idx].action.params : null);
+                                  }}
+                                  className="rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                                  style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.3)" }}>
+                                  Review change
+                                </button>
                               ) : (
-                                <CheckCircle2 className="h-3 w-3" />
+                                <>
+                                  <button type="button" onClick={() => confirmAction(idx)} disabled={busy}
+                                    className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                                    style={{ background: "rgba(99,102,241,0.12)", color: "#6366f1", border: "1px solid rgba(99,102,241,0.3)" }}>
+                                    {busy ? (
+                                      <span className="h-2.5 w-2.5 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3 w-3" />
+                                    )}
+                                    {busy ? "Applying..." : "Apply"}
+                                  </button>
+                                  {editable && (
+                                    <button type="button" disabled={busy}
+                                      onClick={() => setMessages((mm) => mm.map((x, i) => i === idx ? { ...x, editing: true } : x))}
+                                      className="rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                                      style={{ background: "transparent", color: "var(--app-text)", border: "1px solid var(--app-border)" }}>
+                                      Edit
+                                    </button>
+                                  )}
+                                </>
                               )}
-                              {isLoading ? "Working..." : `Do it - ${m.action.label}`}
-                            </button>
-                            <button type="button" onClick={() => cancelAction(idx)} disabled={isLoading}
-                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
-                              style={{ background: "rgba(239,68,68,0.06)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.18)" }}>
-                              <XCircle className="h-3 w-3" /> Cancel
-                            </button>
-                          </>
+                              <button type="button" onClick={() => cancelAction(idx)} disabled={busy}
+                                className="ml-auto rounded-lg px-2.5 py-1 text-xs font-semibold cursor-pointer disabled:opacity-60"
+                                style={{ background: "transparent", color: "var(--app-soft)", border: "1px solid transparent" }}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
                         );
                       })()}
                     </div>

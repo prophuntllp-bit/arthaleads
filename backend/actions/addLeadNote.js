@@ -21,7 +21,10 @@ module.exports = {
     const { doc } = await resolveLead(params.leadId, user);
     return {
       subject: doc.name,
-      fields: [{ label: "Note", from: null, to: `+ "${params.note}"` }],
+      fields: [{
+        label: "Note", param: "note", from: null, to: params.note,
+        editor: { type: "text", value: params.note },
+      }],
     };
   },
 

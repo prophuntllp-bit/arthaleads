@@ -22,7 +22,7 @@ module.exports = {
     if (!task) return { subject: "Task", fields: [] };
     return {
       subject: task.title,
-      fields: [{ label: "Status", from: task.status, to: "completed" }],
+      fields: [{ label: "Status", param: null, from: task.status, to: "completed" }],
     };
   },
 

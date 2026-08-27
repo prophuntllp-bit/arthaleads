@@ -21,7 +21,11 @@ module.exports = {
     const { doc } = await resolveLead(params.leadId, user);
     return {
       subject: doc.name,
-      fields: [{ label: "Status", from: doc.status || "(none)", to: params.status }],
+      fields: [{
+        label: "Status", param: "status",
+        from: doc.status || "(none)", to: params.status,
+        editor: { type: "select", options: STATUS },
+      }],
     };
   },
 
