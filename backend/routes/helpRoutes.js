@@ -6,9 +6,11 @@ const { protect } = require("../middlewares/auth");
 const { planGate } = require("../middlewares/planGate");
 const { answerHelpQuestion } = require("../utils/openai");
 const { fetchPageContext } = require("../utils/copilotContext");
-const Lead     = require("../models/Lead");
 const { findLeadById, searchBothLeadTypes } = require("../utils/leadLookup");
-const Task     = require("../models/Task");
+const leadService    = require("../services/leadService");
+const projectService = require("../services/projectService");
+const taskService    = require("../services/taskService");
+const { STATUS }     = require("../constants/leadOptions");
 const AiUsage  = require("../models/AiUsage");
 const { formatISTDateShort } = require("../utils/datetime");
 
@@ -105,31 +107,44 @@ router.post("/ask", async (req, res, next) => {
 
 // POST /api/help/action  — execute a copilot write action (after user confirms)
 // Body: { type, params }
+//
+// Every branch below delegates to the same service function the UI calls. That
+// is the whole point of this handler: the services already enforce who may do
+// what and already write the lead timeline, so the copilot cannot drift into
+// being more permissive than the screen. Writing to the models directly here
+// is what previously let an agent reassign a colleague's lead through chat
+// with nothing recorded.
+//
+// Services throw AppError with a status code, so a refusal surfaces as a real
+// 403 rather than a silent success.
 router.post("/action", async (req, res, next) => {
   try {
     const { type, params = {} } = req.body;
     if (!type) return res.status(400).json({ success: false, message: "Action type required." });
 
-    // Validate leadId belongs to this org before any mutation
-    // Resolves against both collections — an id Artha surfaced from a project
-    // lead would otherwise fail validation here and report "Lead not found."
-    // even though it had just told the user about that lead.
-    const validateLead = async (leadId) => {
-      if (!leadId || !mongoose.isValidObjectId(leadId)) return null;
-      const { doc } = await findLeadById(leadId, req.user.orgId);
-      return doc && doc.isDeleted !== true ? doc : null;
+    // Resolve the target across both collections. A lead the copilot just
+    // described might live in either, and answering "Lead not found." for one
+    // it had just talked about is the bug leadLookup.js exists to prevent.
+    const resolve = async (leadId) => {
+      if (!leadId || !mongoose.isValidObjectId(leadId)) return { doc: null };
+      const found = await findLeadById(leadId, req.user.orgId);
+      if (!found.doc || found.doc.isDeleted === true) return { doc: null };
+      return found;
     };
 
     // ── Update lead status ────────────────────────────────────────────────────
     if (type === "update_lead_status") {
       const { leadId, status } = params;
-      const VALID = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
-      if (!VALID.includes(status)) return res.status(400).json({ success: false, message: "Invalid status." });
-      const lead = await validateLead(leadId);
-      if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
-      lead.status = status;
-      await lead.save();
-      return res.json({ success: true, message: `${lead.name}'s status updated to "${status}".`, data: { leadId, status } });
+      if (!STATUS.includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status." });
+      }
+      const { doc, isProject } = await resolve(leadId);
+      if (!doc) return res.status(404).json({ success: false, message: "Lead not found." });
+
+      if (isProject) await projectService.updateLeadFields(leadId, { status }, req.user);
+      else           await leadService.update(leadId, { status }, req.user);
+
+      return res.json({ success: true, message: `${doc.name}'s status updated to "${status}".`, data: { leadId, status } });
     }
 
     // ── Set follow-up date ────────────────────────────────────────────────────
@@ -137,41 +152,55 @@ router.post("/action", async (req, res, next) => {
       const { leadId, date } = params;
       const followUpDate = new Date(date);
       if (isNaN(followUpDate)) return res.status(400).json({ success: false, message: "Invalid date." });
-      const lead = await validateLead(leadId);
-      if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
-      lead.followUpDate = followUpDate;
-      lead.followUpSetBy     = req.user._id;
-      lead.followUpSetByName = req.user.name;
-      await lead.save();
+      const { doc, isProject } = await resolve(leadId);
+      if (!doc) return res.status(404).json({ success: false, message: "Lead not found." });
+
+      // The two collections name this field differently: Lead.followUpDate,
+      // ProjectLead.followUp. Both services stamp followUpSetBy themselves.
+      if (isProject) await projectService.updateLeadFields(leadId, { followUp: followUpDate }, req.user);
+      else           await leadService.update(leadId, { followUpDate }, req.user);
+
       return res.json({
         success: true,
-        message: `Follow-up for ${lead.name} set to ${formatISTDateShort(followUpDate)}.`,
+        message: `Follow-up for ${doc.name} set to ${formatISTDateShort(followUpDate)}.`,
         data: { leadId, date: followUpDate.toISOString() },
       });
     }
 
     // ── Assign lead ───────────────────────────────────────────────────────────
     if (type === "assign_lead") {
-      const { leadId, agentId, agentName } = params;
+      const { leadId, agentId } = params;
       if (!mongoose.isValidObjectId(agentId)) return res.status(400).json({ success: false, message: "Invalid agent." });
-      const lead = await validateLead(leadId);
-      if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
-      lead.assignedTo   = agentId;
-      lead.assignedName = agentName || "";
-      await lead.save();
-      return res.json({ success: true, message: `${lead.name} assigned to ${agentName || "the agent"}.`, data: { leadId, agentId } });
+      const { doc, isProject } = await resolve(leadId);
+      if (!doc) return res.status(404).json({ success: false, message: "Lead not found." });
+
+      // Project leads are worked by whoever the parent project is assigned to;
+      // there is no per-lead owner to set, so there is nothing to reassign.
+      if (isProject) {
+        return res.status(400).json({
+          success: false,
+          message: "Project leads follow the project's team. Change the project's assignees instead.",
+        });
+      }
+
+      // leadService.assign refuses agents, checks the target belongs to this
+      // org, writes the timeline entry and notifies the new owner. The agent
+      // name is read from that user record rather than trusted from the
+      // client, which also fixes the copilot writing a misspelt field that
+      // Mongoose silently dropped, leaving the previous owner's name on screen.
+      const updated = await leadService.assign(leadId, agentId, req.user);
+      return res.json({
+        success: true,
+        message: `${doc.name} assigned to ${updated.assignedToName || "the agent"}.`,
+        data: { leadId, agentId },
+      });
     }
 
     // ── Complete a task ───────────────────────────────────────────────────────
     if (type === "complete_task") {
       const { taskId, note } = params;
       if (!mongoose.isValidObjectId(taskId)) return res.status(400).json({ success: false, message: "Invalid task." });
-      const task = await Task.findOne({ _id: taskId, orgId: req.user.orgId });
-      if (!task) return res.status(404).json({ success: false, message: "Task not found." });
-      task.status         = "completed";
-      task.completedAt    = new Date();
-      task.completionNote = note || "";
-      await task.save();
+      const task = await taskService.complete(taskId, note, req.user);
       return res.json({ success: true, message: `Task "${task.title}" marked as completed.`, data: { taskId } });
     }
 
@@ -179,17 +208,13 @@ router.post("/action", async (req, res, next) => {
     if (type === "add_lead_note") {
       const { leadId, note } = params;
       if (!note?.trim()) return res.status(400).json({ success: false, message: "Note text required." });
-      const lead = await validateLead(leadId);
-      if (!lead) return res.status(404).json({ success: false, message: "Lead not found." });
-      const noteEntry = {
-        text:      note.trim(),
-        addedBy:   req.user._id,
-        addedName: req.user.name,
-        addedAt:   new Date(),
-      };
-      lead.notes = [...(lead.notes || []), noteEntry];
-      await lead.save();
-      return res.json({ success: true, message: `Note added to ${lead.name}'s profile.`, data: { leadId } });
+      const { doc, isProject } = await resolve(leadId);
+      if (!doc) return res.status(404).json({ success: false, message: "Lead not found." });
+
+      if (isProject) await projectService.addNote(String(doc.project), leadId, note, req.user);
+      else           await leadService.addNote(leadId, note, req.user);
+
+      return res.json({ success: true, message: `Note added to ${doc.name}'s profile.`, data: { leadId } });
     }
 
     return res.status(400).json({ success: false, message: "Unknown action type." });

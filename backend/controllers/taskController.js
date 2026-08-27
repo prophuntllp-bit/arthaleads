@@ -1,5 +1,6 @@
 const Task = require("../models/Task");
 const { sendPushToUser } = require("../utils/push");
+const taskService = require("../services/taskService");
 
 const taskController = {
   // GET /api/tasks  — all roles; agents see only tasks assigned to them
@@ -120,13 +121,7 @@ const taskController = {
   // PATCH /api/tasks/:id/complete  — all roles
   async complete(req, res, next) {
     try {
-      const task = await Task.findOne({ _id: req.params.id, orgId: req.user.orgId });
-      if (!task) return res.status(404).json({ success: false, message: "Task not found" });
-
-      task.status         = "completed";
-      task.completedAt    = new Date();
-      task.completionNote = req.body.note || "";
-      await task.save();
+      const task = await taskService.complete(req.params.id, req.body.note, req.user);
       res.json({ success: true, task });
     } catch (err) { next(err); }
   },
