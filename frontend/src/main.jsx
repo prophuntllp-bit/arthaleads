@@ -1,6 +1,5 @@
 ﻿import React from "react";
 import ReactDOM from "react-dom/client";
-import toast from "react-hot-toast";
 
 // ── Service Worker: periodic sync + message handling ─────────────────────────
 // SW is registered in index.html so PWABuilder/crawlers can detect it.
@@ -38,16 +37,13 @@ if ("serviceWorker" in navigator) {
   });
 
   // ── Messages from the Service Worker → in-app UI ─────────────────────────
+  //
+  // PUSH_NOTIFICATION is deliberately NOT handled here. Sidebar.jsx already
+  // listens for it and renders a toast carrying the title, the body and a
+  // click-through to the lead. Handling it in both places meant every push
+  // produced two stacked toasts for the same lead — one titled, one not.
   navigator.serviceWorker.addEventListener("message", (event) => {
-    const { type, title, body, resource } = event.data || {};
-
-    if (type === "PUSH_NOTIFICATION") {
-      toast(body || title, {
-        duration: 6000,
-        icon: "🔔",
-        style: { fontWeight: "500" },
-      });
-    }
+    const { type, resource } = event.data || {};
 
     if (type === "PERIODIC_SYNC") {
       window.dispatchEvent(new CustomEvent("arthaleads:refresh", { detail: { resource } }));
