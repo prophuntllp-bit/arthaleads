@@ -700,7 +700,41 @@ function needsStrongModel(question) {
   return troubleshootingPattern.test(question);
 }
 
-async function answerHelpQuestion(question, currentPage, userName, liveContext, conversationHistory = []) {
+// The prompt's action list is generated per request from actions/index.js,
+// filtered to this user's role and current page. A static list would drift
+// from what the registry actually permits, and would tempt the model to
+// propose things that are refused a moment later — which reads as the copilot
+// being broken rather than correctly scoped.
+// A regex literal, not new RegExp("..."): inside a string literal "\s" is just
+// "s" and "\n" is a real newline, so the string form silently compiled to
+// [sS]*? and never matched. A non-matching replace() returns the prompt
+// unchanged, which looks identical to success from the outside.
+const ACTION_BLOCK = /COPILOT - WRITE ACTIONS[\s\S]*?(?=═{10,}\nRESPONSE RULES)/;
+
+function buildSystemPrompt(actionCatalogue) {
+  if (actionCatalogue === null || actionCatalogue === undefined) return HELP_SYSTEM_PROMPT;
+
+  const body = actionCatalogue
+    ? `COPILOT - WRITE ACTIONS
+When the user asks you to DO something, you may propose ONE of the actions below. The user must confirm before anything executes.
+
+Supported actions here:
+${actionCatalogue}
+
+ONLY propose an action when the target (lead or task) is identifiable from context and the user's intent to act on it is unambiguous, and every required param can be resolved. Otherwise set "action": null.
+
+When proposing an action, set "action" AND say in "answer" that they need to confirm.
+
+`
+    : `COPILOT - WRITE ACTIONS
+You have NO write actions available on this page for this user's role. Explain how to do it through the UI instead, and set "action": null.
+
+`;
+
+  return HELP_SYSTEM_PROMPT.replace(ACTION_BLOCK, body);
+}
+
+async function answerHelpQuestion(question, currentPage, userName, liveContext, conversationHistory = [], actionCatalogue = null) {
   const client = getClient();
 
   const firstName = userName?.split(" ")[0]?.trim() || "";
@@ -727,7 +761,7 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
     model,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: HELP_SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt(actionCatalogue) },
       ...priorMessages,
       { role: "user", content: userContext },
     ],
@@ -751,4 +785,10 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
   }
 }
 
-module.exports = { draftWhatsAppMessage, answerHelpQuestion, answerMarketingQuestion, getClient };
+module.exports = {
+  draftWhatsAppMessage, answerHelpQuestion, answerMarketingQuestion, getClient,
+  // Exposed so scripts/verify-copilot-registry.js can prove the per-request
+  // splice actually matched. A regex that silently fails to match would
+  // return the static prompt unchanged and look like it worked.
+  __test: { buildSystemPrompt, HELP_SYSTEM_PROMPT },
+};
