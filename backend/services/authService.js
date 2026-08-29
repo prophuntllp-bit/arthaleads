@@ -259,31 +259,18 @@ const authService = {
         if (picture && !user.avatar) user.avatar = picture;
       }
     } else {
-      // New Google user - create their own org and make them admin.
-      // Google has already verified the address, so there's no OTP step here —
-      // but the org still lands as "pending" and goes through the same approval
-      // queue as a form signup. This path used to hand out an instant trial with
-      // no gate at all, which is how most of the junk orgs got created.
-      const orgName = `${name}'s Workspace`;
-      let slug = Organization.generateSlug(orgName);
-      const slugExists = await Organization.findOne({ slug });
-      if (slugExists) slug = `${slug}-${Date.now().toString(36)}`;
-      const org = await Organization.create({
-        name: orgName,
-        slug,
-        approvalStatus: "pending",
-        trialEndsAt:    null,   // clock starts on approval
-      });
-
-      user = await User.create({
-        name,
-        email,
-        googleId,
-        avatar: picture || "",
-        role: "admin",
-        orgId: org._id,
-      });
-      // Welcome email goes out on approval, not here.
+      // Signing in is not signing up.
+      //
+      // This used to create an org named "<Their Name>'s Workspace" plus an
+      // admin user, so pressing "Sign in with Google" with an address that had
+      // never registered silently produced an account — one with no company
+      // name, no phone number and no password, which then could not use
+      // "Forgot password" either. It is where the "Someone's Workspace" orgs
+      // came from.
+      //
+      // Account creation now happens only through signup, which collects those
+      // fields. The controller turns this into a prompt to sign up.
+      throw new AppError("NO_GOOGLE_ACCOUNT", 404);
     }
 
     // Blocks both a brand-new pending signup and an existing user whose org is

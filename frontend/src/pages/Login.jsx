@@ -6,7 +6,7 @@ import { Spinner } from "../components/UI";
 import toast from "react-hot-toast";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getRecaptchaToken } from "../utils/recaptcha";
-import { authErrorMessage } from "../utils/authErrors";
+import { authErrorMessage, isNoGoogleAccount } from "../utils/authErrors";
 
 // ── Main Login page ───────────────────────────────────────────────────────────
 export default function Login() {
@@ -35,6 +35,14 @@ export default function Login() {
         toast.success("Welcome back!");
         navigate("/dashboard");
       } catch (e) {
+        // Signing in with an address that has no account used to create one
+        // silently. Now it says so and hands them to signup, where the Google
+        // button prefills the form from the same Google account.
+        if (isNoGoogleAccount(e)) {
+          toast("No account yet - let's create one.");
+          navigate("/signup");
+          return;
+        }
         setErr(authErrorMessage(e, "Google sign-in failed. Please try again."));
       } finally {
         setGLoading(false);

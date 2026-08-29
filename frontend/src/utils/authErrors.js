@@ -12,6 +12,8 @@ const AUTH_ERROR_MESSAGES = {
     "This organisation has been deactivated. Please contact your administrator.",
   TRIAL_EXPIRED:
     "Your free trial has ended. Please upgrade your plan to continue.",
+  NO_GOOGLE_ACCOUNT:
+    "There's no Arthaleads account for that Google address yet. Create one first - it takes a minute.",
 };
 
 /**
@@ -21,6 +23,11 @@ const AUTH_ERROR_MESSAGES = {
 export function authErrorMessage(err, fallback = "Something went wrong. Please try again.") {
   const raw = err?.response?.data?.message;
   return AUTH_ERROR_MESSAGES[raw] || raw || fallback;
+}
+
+/** True when a Google sign-in found no account - the person needs to sign up. */
+export function isNoGoogleAccount(err) {
+  return err?.response?.data?.message === "NO_GOOGLE_ACCOUNT";
 }
 
 /** True when the error is the "awaiting manual approval" gate. */
