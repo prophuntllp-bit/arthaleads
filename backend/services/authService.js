@@ -288,12 +288,16 @@ const authService = {
   },
 
   async getMe(userId) {
-    const user = await User.findById(userId);
+    // +password so hasPassword can be reported. toJSON() strips the hash
+    // before it leaves here, so the flag travels and the secret does not.
+    // Settings needs it to know whether to ask for a current password: a
+    // Google-only account has none, and the form was unusable without this.
+    const user = await User.findById(userId).select("+password");
     if (!user) throw new AppError("User not found", 404);
     const org = user.orgId
       ? await Organization.findById(user.orgId).select("name slug logo plan isActive brandColor trialEndsAt autoAssign onboardingCompletedAt companySize city industry address phone email gstNo pan cin rera bankAccountName bankAccountNo bankIfsc bankName bankBranch enablex.webrtc.enabled").lean()
       : null;
-    return { user, org };
+    return { user: { ...user.toJSON(), hasPassword: Boolean(user.password) }, org };
   },
 
   async getAllAgents(orgId) {
@@ -339,7 +343,7 @@ const authService = {
     }
 
     await user.save();
-    return user;
+    return { ...user.toJSON(), hasPassword: Boolean(user.password) };
   },
 
   // Admin only

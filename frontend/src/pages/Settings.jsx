@@ -409,6 +409,10 @@ export default function Settings() {
   useEffect(() => { document.title = "Settings - Arthaleads CRM"; }, []);
   const { user, org, updateOrg, updateUserState, refreshUser } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  // getMe reports this; an account created through Google has no password.
+  // Default to true so a stale cached user shows the normal change-password
+  // form rather than offering to "create" one over an existing password.
+  const hasPassword = user?.hasPassword !== false;
   const [tab, setTab]                       = useState("profile");
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd]         = useState(false);
@@ -521,7 +525,7 @@ export default function Settings() {
           setSaving(false);
           return;
         }
-        payload.currentPassword = form.currentPassword;
+        if (hasPassword) payload.currentPassword = form.currentPassword;
         payload.newPassword = form.newPassword;
       }
 
@@ -649,15 +653,32 @@ export default function Settings() {
               />
             </div>
 
-            {/* Change password */}
+            {/* Change password.
+                An account created through Google has no password, so there is
+                nothing to confirm knowledge of — asking for a current one made
+                this section impossible to use. The backend already treats a
+                missing password as "set" rather than "change"; this just stops
+                the form pretending otherwise. */}
             <div className="rounded-[1.25rem] p-5 stitch-surface-muted space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-app"><KeyRound className="h-4 w-4 text-orange-500" /> Change Password</div>
-                <Link to="/forgot-password" className="text-xs font-medium hover:underline underline-offset-2" style={{ color: "var(--app-primary)" }}>
-                  Forgot your password?
-                </Link>
+                <div className="flex items-center gap-2 text-sm font-semibold text-app">
+                  <KeyRound className="h-4 w-4 text-orange-500" />
+                  {hasPassword ? "Change Password" : "Create a Password"}
+                </div>
+                {hasPassword && (
+                  <Link to="/forgot-password" className="text-xs font-medium hover:underline underline-offset-2" style={{ color: "var(--app-primary)" }}>
+                    Forgot your password?
+                  </Link>
+                )}
               </div>
+              {!hasPassword && (
+                <p className="text-xs text-app-soft">
+                  You signed up with Google, so this account has no password yet. Set one to
+                  also sign in with your email — signing in with Google keeps working either way.
+                </p>
+              )}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {hasPassword && (
                 <div>
                   <label className="label">Current Password</label>
                   <div className="relative">
@@ -667,6 +688,7 @@ export default function Settings() {
                     </button>
                   </div>
                 </div>
+                )}
                 <div>
                   <label className="label">New Password</label>
                   <div className="relative">
