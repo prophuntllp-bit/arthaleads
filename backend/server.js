@@ -273,11 +273,11 @@ app.get("/health", (req, res) => {
     status: "ok",
     env: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
-    // Which commit is actually serving. Railway injects this on git-triggered
-    // builds. Without it, confirming a deploy landed meant guessing from
-    // behaviour — and a build that silently failed looked identical to one
-    // that succeeded, because the old container kept answering.
-    commit: (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 7) || "unknown",
+    // No commit marker here: RAILWAY_GIT_COMMIT_SHA is not injected into this
+    // service's runtime (checked — only RAILWAY_ENVIRONMENT/PROJECT/SERVICE_*
+    // are present), so the field would read "unknown" forever and look like
+    // information it is not. Verify a deploy from `railway deployment list`
+    // instead, or from behaviour the change actually alters.
   });
 });
 
