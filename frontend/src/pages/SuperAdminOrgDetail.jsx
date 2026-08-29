@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { PageLoader, Spinner, AppSelect, SmartImage } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, SmartImage, RoleBadge } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
@@ -63,20 +63,6 @@ function fmtBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-function RoleBadge({ role }) {
-  const cls = {
-    admin:       "bg-orange-500/10 text-orange-600 border-orange-500/25",
-    manager:     "bg-blue-500/10 text-blue-600 border-blue-500/25",
-    agent:       "bg-gray-500/10 text-gray-500 border-gray-500/25",
-    super_admin: "bg-red-500/10 text-red-600 border-red-500/25",
-  }[role] || "bg-gray-500/10 text-gray-500 border-gray-500/25";
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${cls}`}>
-      {role?.replace("_", " ")}
-    </span>
-  );
 }
 
 const fmtDate     = d => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "—";

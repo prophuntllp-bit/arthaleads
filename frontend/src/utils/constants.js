@@ -41,6 +41,21 @@ export const PRIORITY_COLORS = {
   Hot: "bg-red-50 text-red-700"
 };
 
+// Roles, coloured as a hierarchy so a team list is scannable at a glance:
+// violet is platform-level and rare, amber owns the organisation, blue
+// oversees, and slate is the many — agents are the most numerous, so they are
+// deliberately the quietest.
+//
+// This lives here rather than in a page because two admin screens had drifted
+// to separate copies: admin rendered violet on one and orange on the other,
+// and only one of them knew super_admin existed.
+export const ROLE_COLORS = {
+  super_admin: "bg-violet-500/10 text-violet-600 border-violet-500/25 dark:text-violet-400",
+  admin:       "bg-amber-500/10 text-amber-600 border-amber-500/25 dark:text-amber-400",
+  manager:     "bg-blue-500/10 text-blue-600 border-blue-500/25 dark:text-blue-400",
+  agent:       "bg-slate-500/10 text-slate-600 border-slate-500/25 dark:text-slate-400",
+};
+
 export const SOURCE_COLORS = {
   Facebook: "bg-[#1877F2] text-white",
   Google: "bg-[#4285F4] text-white",

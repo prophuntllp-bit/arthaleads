@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown, Phone } from "lucide-react";
 import api from "../services/api";
-import { PageLoader, AppSelect, AppDatePicker } from "../components/UI";
+import { PageLoader, AppSelect, AppDatePicker, RoleBadge } from "../components/UI";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
@@ -470,7 +470,7 @@ export default function Performance() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <span className="badge bg-orange-500/10 text-orange-400 capitalize">{member.role}</span>
+                  <RoleBadge role={member.role} />
                   <p className="mt-2 text-xs text-app-soft">{member.isActive ? "Active" : "Inactive"}</p>
                 </div>
               </div>

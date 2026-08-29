@@ -1,3 +1,4 @@
+import { RoleBadge } from "../components/UI";
 ﻿import { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -613,7 +614,7 @@ export default function Settings() {
             <div>
               <p className="text-lg font-semibold text-app">{form.name || user?.name}</p>
               <p className="text-sm text-app-soft">{user?.email}</p>
-              <span className="badge mt-3 bg-orange-500/10 text-orange-400 capitalize">{form.role}</span>
+              <RoleBadge role={form.role} className="mt-3" />
             </div>
           </div>
 

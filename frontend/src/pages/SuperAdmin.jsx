@@ -3,13 +3,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, AppSelect, AppDatePicker, SmartImage } from "../components/UI";
+import { PageLoader, Spinner, AppSelect, AppDatePicker, SmartImage, RoleBadge } from "../components/UI";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import {
   Building2, Users, BarChart3, Upload, CheckCircle2, XCircle, Image as ImageIcon,
   RefreshCw, Clock, CalendarClock, ChevronDown, ChevronLeft, ChevronRight,
-  Phone, Mail, Shield, TicketIcon, AlertCircle, X, Save, Inbox,
+  Phone, Mail, TicketIcon, AlertCircle, X, Save, Inbox,
   Send, Paperclip, FileText, Loader2, Sparkles,
 } from "lucide-react";
 
@@ -669,21 +669,6 @@ function TrialExtender({ org, onUpdated }) {
         document.body
       )}
     </>
-  );
-}
-
-const ROLE_COLORS = {
-  admin:   "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400",
-  manager: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400",
-  agent:   "bg-gray-100 text-gray-600 dark:bg-gray-500/20 dark:text-gray-400",
-};
-
-function RoleBadge({ role }) {
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${ROLE_COLORS[role] || "bg-gray-100 text-gray-500"}`}>
-      <Shield className="w-2.5 h-2.5" />
-      {role}
-    </span>
   );
 }
 

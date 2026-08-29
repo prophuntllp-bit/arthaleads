@@ -1,5 +1,5 @@
 ﻿// components/UI.jsx - Shared reusable components
-import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS } from "../utils/constants";
+import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS, ROLE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones } from "lucide-react";
@@ -74,6 +74,18 @@ export function PriorityBadge({ priority }) {
   return (
     <span className={`badge ${PRIORITY_COLORS[priority] || "bg-gray-100 text-gray-600"}`}>
       {priority}
+    </span>
+  );
+}
+
+export function RoleBadge({ role, className = "" }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+        ROLE_COLORS[role] || "bg-slate-500/10 text-slate-500 border-slate-500/25"
+      } ${className}`}
+    >
+      {String(role || "").replace("_", " ")}
     </span>
   );
 }

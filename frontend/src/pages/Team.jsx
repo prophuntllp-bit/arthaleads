@@ -5,7 +5,7 @@ import { Eye, EyeOff, ImagePlus, Phone, Plus, Pencil, Shield, Trash2, UserCheck,
 import { useAuth } from "../context/AuthContext";
 import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
-import { ConfirmDialog, EmptyState, Modal, PageLoader } from "../components/UI";
+import { ConfirmDialog, EmptyState, Modal, PageLoader, RoleBadge } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 
 // Compress image to JPEG ≤ 400×400 before upload - an uncompressed data URI
@@ -285,7 +285,7 @@ export default function Team() {
                     <h3 className="truncate text-sm font-semibold text-app">{member.name}</h3>
                     <p className="truncate text-xs text-app-soft">{member.email}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="badge bg-orange-500/10 text-orange-400 capitalize">{member.role}</span>
+                      <RoleBadge role={member.role} />
                       <span className={`badge ${member.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                         {member.isActive ? "Active" : "Inactive"}
                       </span>
