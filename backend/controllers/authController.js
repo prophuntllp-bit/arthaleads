@@ -153,6 +153,48 @@ const authController = {
     }
   },
 
+  // POST /api/auth/google/signup-profile
+  //
+  // Google sign-UP used to call googleAuth, which creates the org and the user
+  // on the spot and names the workspace "<Their Name>'s Workspace". The person
+  // was never asked for their company name, their phone, or a password — they
+  // went straight from the Google popup to "awaiting approval", and the admin
+  // panel filled up with orgs called "Someone's Workspace".
+  //
+  // This returns the verified profile and creates nothing, so the normal signup
+  // form can be prefilled and completed. The signupToken it mints is the same
+  // shape the OTP step issues: Google having verified the address is the same
+  // proof of ownership that receiving a code proves, so the rest of signup is
+  // unchanged and still checks the token matches the address submitted.
+  async googleSignupProfile(req, res, next) {
+    try {
+      const { credential } = req.body || {};
+      if (!credential) return next(new AppError("Google credential is required", 400));
+
+      const { email, name, picture } = await authService.googleProfile(credential);
+
+      // Already registered — send them down the sign-in path instead of
+      // walking them through a signup that would fail on a duplicate email.
+      const existing = await User.findOne({ email }).select("_id").lean();
+      if (existing) return res.json({ success: true, existing: true, email });
+
+      const signupToken = jwt.sign(
+        { email: String(email).toLowerCase().trim(), type: "signup_verify" },
+        process.env.JWT_SECRET,
+        { expiresIn: "30m" }
+      );
+
+      res.json({
+        success: true,
+        existing: false,
+        email,
+        name: name || "",
+        picture: picture || "",
+        signupToken,
+      });
+    } catch (err) { next(err); }
+  },
+
   async googleAuth(req, res, next) {
     try {
       const { credential } = req.body;

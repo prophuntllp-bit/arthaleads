@@ -31,6 +31,10 @@ export default function Signup() {
   const [maskedEmail, setMasked]  = useState("");
   const [signupToken, setToken]   = useState("");
   const [resendIn, setResendIn]   = useState(0);
+  // True when the address was verified by Google rather than by an emailed
+  // code. The signup form then shows it as fixed instead of editable — the
+  // signupToken is bound to that address and the backend rejects a mismatch.
+  const [googleVerified, setGoogleVerified] = useState(false);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -94,13 +98,32 @@ export default function Signup() {
       setError("");
       setGLoading(true);
       try {
-        await googleLogin(tokenResponse.access_token);
-        toast.success("Account ready! Welcome to Arthaleads.");
-        navigate("/dashboard");
+        // Ask Google who this is without creating anything yet. Signing up
+        // straight from the popup skipped the whole form, so nobody was asked
+        // for a company name, a phone number or a password — the workspace was
+        // just named after them.
+        const { data } = await api.post("/auth/google/signup-profile", {
+          credential: tokenResponse.access_token,
+        });
+
+        if (data.existing) {
+          // Already has an account: this is a sign-in, not a sign-up.
+          await googleLogin(tokenResponse.access_token);
+          toast.success("Welcome back!");
+          navigate("/dashboard");
+          return;
+        }
+
+        // Google has verified the address, which is the same proof the emailed
+        // code gives — so skip the OTP steps and go straight to the details
+        // form with what Google told us already filled in.
+        setForm((f) => ({ ...f, email: data.email || "", name: data.name || f.name }));
+        setToken(data.signupToken || "");
+        setGoogleVerified(true);
+        setStep("details");
       } catch (e) {
         const code = e.response?.data?.message;
-        // Google signups are approval-gated too — the backend refuses the
-        // session and returns this code instead of a token.
+        // An existing user whose org is still awaiting review.
         if (code === "PENDING_APPROVAL") {
           setStep("pending");
           return;
@@ -336,7 +359,7 @@ export default function Signup() {
                 style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.25)" }}>
                 <MailCheck className="h-4 w-4 shrink-0" style={{ color: "#10b981" }} />
                 <p className="text-xs" style={{ color: "#10b981" }}>
-                  <strong>{form.email}</strong> verified
+                  <strong>{form.email}</strong> verified{googleVerified ? " with Google" : ""}
                 </p>
               </div>
 

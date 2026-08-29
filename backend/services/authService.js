@@ -196,7 +196,13 @@ const authService = {
     return { token, user, org: null };
   },
 
-  async googleAuth(credential) {
+  /**
+   * Exchange a Google access token for the verified profile behind it.
+   * Creates nothing — both the sign-in path and the sign-up path need this
+   * same check, and two copies of an email-verification rule is how one of
+   * them ends up weaker than the other.
+   */
+  async googleProfile(credential) {
     // credential is an OAuth2 access_token (from useGoogleLogin implicit flow).
     // Verify it by calling Google's userinfo endpoint - no client-secret needed.
     const response = await fetch(
@@ -223,6 +229,12 @@ const authService = {
     if (!isVerified) {
       throw new AppError("Your Google account email is not verified. Please verify it with Google first.", 400);
     }
+
+    return { googleId, email, name, picture };
+  },
+
+  async googleAuth(credential) {
+    const { googleId, email, name, picture } = await this.googleProfile(credential);
 
     // Find existing user by googleId or email
     let user = await User.findOne({ $or: [{ googleId }, { email }] }).select("+googleId");

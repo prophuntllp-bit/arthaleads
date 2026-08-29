@@ -18,6 +18,7 @@ router.post("/signup",         authLimiter, validate(signupSchema), authControll
 router.post("/login",          authLimiter, validate(loginSchema),  authController.login);
 router.post("/admin-login",    authLimiter, authController.adminLogin); // super_admin only
 router.post("/google",         authLimiter, authController.googleAuth);
+router.post("/google/signup-profile", authLimiter, authController.googleSignupProfile);
 router.post("/otp/send",           authLimiter, authController.sendOtp);          // login: email OTP send
 router.post("/otp/verify",         authLimiter, authController.verifyOtp);         // login: email OTP verify + login
 router.post("/signup/send-otp",    authLimiter, authController.signupSendOtp);     // signup: phone verify OTP send
