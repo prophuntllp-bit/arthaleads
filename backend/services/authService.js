@@ -7,7 +7,7 @@ const ProjectLead = require("../models/ProjectLead");
 const Project     = require("../models/Project");
 const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
-const { sendPasswordResetEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
+const { sendPasswordResetEmail, sendGoogleOnlyAccountEmail, sendWelcomeEmail, sendTeamInviteEmail } = require("../utils/email");
 const logger = require("../config/logger");
 
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -470,8 +470,22 @@ const authService = {
     // the address is registered and reveal the auth method used).
     if (!user) return;
 
+    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173";
+
+    // Google-only accounts have nothing to reset. Returning silently kept the
+    // HTTP response identical — which is the point, an attacker must not learn
+    // whether an address is registered — but it also left the real owner
+    // watching an inbox for a mail that was never coming.
+    //
+    // Telling them in the email is safe: only the owner of the address ever
+    // receives it, and the API reply is unchanged either way.
     const hasPassword = await User.findById(user._id).select("+password");
-    if (!hasPassword?.password) return; // Google-only: respond silently
+    if (!hasPassword?.password) {
+      sendGoogleOnlyAccountEmail(user.email, user.name, `${frontendBase}/login`)
+        .then(() => console.log(`[forgotPassword] google-only notice sent to ${user.email}`))
+        .catch((err) => console.error(`[forgotPassword] google-only notice failed for ${user.email}:`, err.message));
+      return;
+    }
 
     // Generate a 32-byte random token, store the SHA-256 hash in DB
     const rawToken   = crypto.randomBytes(32).toString("hex");
@@ -481,8 +495,7 @@ const authService = {
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save({ validateBeforeSave: false });
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    const resetUrl    = `${frontendUrl}/reset-password/${rawToken}`;
+    const resetUrl = `${frontendBase}/reset-password/${rawToken}`;
 
     // Fire-and-forget - respond immediately, email sends in background
     sendPasswordResetEmail(user.email, user.name, resetUrl)

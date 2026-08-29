@@ -239,6 +239,61 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 }
 
 // ── Welcome email (new signup - email/password or Google) ─────────────────────
+// Sent when someone asks to reset a password on an account that has none —
+// a Google-only sign-up. Staying silent was safe against email enumeration but
+// left the actual owner watching an inbox for a mail that was never coming.
+//
+// This does not weaken enumeration protection: the HTTP response is identical
+// either way, and only the owner of the address ever sees this. The disclosure
+// happens in their mailbox, not in an API reply an attacker can read.
+async function sendGoogleOnlyAccountEmail(toEmail, toName, loginUrl) {
+  const resend = getResend();
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Signing in to Arthaleads</title></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;">
+        <tr><td align="center" style="padding-bottom:24px;">
+          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48" style="display:inline-block;border-radius:14px;border:0;" />
+          <br/>
+          <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;">Artha<span style="color:#ff6b00;">leads</span></span>
+        </td></tr>
+        <tr><td style="background:#ffffff;border-radius:18px;padding:36px 32px;">
+          <h1 style="margin:0 0 14px;font-size:20px;color:#111113;">Use "Sign in with Google"</h1>
+          <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#4a4a4f;">
+            Hi ${toName || "there"}, you asked to reset your Arthaleads password.
+          </p>
+          <p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:#4a4a4f;">
+            This account doesn't have a password — it was created with Google, so there is nothing to reset.
+            Sign in with the Google button instead and you'll go straight in.
+          </p>
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
+            <tr><td style="background:#ff6b00;border-radius:12px;">
+              <a href="${loginUrl}" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Go to sign in</a>
+            </td></tr>
+          </table>
+          <p style="margin:0;font-size:13px;line-height:1.6;color:#8a8a90;">
+            If you didn't ask for this, you can ignore this email — nothing about your account has changed.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return resend.emails.send({
+    from: FROM_ADDRESS,
+    to: toEmail,
+    subject: "Signing in to Arthaleads",
+    html,
+  });
+}
+
 async function sendWelcomeEmail(toEmail, toName, orgName) {
   const resend = getResend();
   const firstName = toName?.split(" ")[0] || "there";
@@ -491,6 +546,7 @@ async function notifySuperAdminsOfSignup({ name, email, phone, orgName }) {
 
 module.exports = {
   sendPasswordResetEmail,
+  sendGoogleOnlyAccountEmail,
   sendWelcomeEmail,
   sendTeamInviteEmail,
   sendSignupPendingEmail,
