@@ -190,17 +190,6 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_AUTH) || 50,
-  message: { success: false, message: "Too many login attempts, please wait." },
-  skip: (req) => {
-    // Only skip rate limit for localhost - never bypass based on email
-    const ip = req.ip || "";
-    return ip === "::1" || ip === "127.0.0.1";
-  },
-});
-
 // Strict limiter for public unauthenticated endpoints that trigger external actions
 const contactLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -244,7 +233,9 @@ app.use(["/api", "/webhook", "/health"], (req, res, next) => {
 });
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use("/api/auth",  authLimiter, authRoutes);
+// The credential limiter is attached per-route inside authRoutes, so that
+// /auth/me, /auth/agents and the rest are not counted as login attempts.
+app.use("/api/auth",  authRoutes);
 app.use("/api/org",   orgRoutes);
 app.use("/api/leads", leadRoutes);
 app.use("/api/automations", automationRoutes);
