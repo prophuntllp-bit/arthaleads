@@ -16,6 +16,7 @@ const { runBackup } = require("../utils/backup");
 const { subscriptionState } = require("../constants/planPricing");
 const { invalidateOrgCache } = require("../middlewares/auth");
 const { formatISTDateShort } = require("../utils/datetime");
+const { layout, paragraph, esc } = require("../utils/emailLayout");
 
 async function logAudit(action, req, opts = {}) {
   try {
@@ -547,31 +548,18 @@ const superAdminController = {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const from   = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
 
-      const emailHtml = (name, body) => `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:500px;">
-        <tr><td align="center" style="padding-bottom:24px;">
-          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
-            style="display:inline-block;border-radius:14px;border:0;" />
-          <br/>
-          <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha<span style="color:#ff6b00;">leads</span></span>
-        </td></tr>
-        <tr><td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 0 0 1px rgba(255,107,0,0.06),0 20px 60px rgba(0,0,0,0.22);overflow:hidden;padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ff6b00;letter-spacing:.08em;text-transform:uppercase;">Message from Arthaleads</p>
-          <p style="margin:0 0 20px;font-size:15px;color:#969696;">Hi ${name},</p>
-          <div style="font-size:15px;color:#ededed;line-height:1.7;white-space:pre-wrap;">${body}</div>
-          <p style="margin:24px 0 0;font-size:13px;color:#555;">— Team Arthaleads</p>
-        </td></tr>
-        <tr><td style="padding:20px 0;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+      // Same shell as every other Arthaleads email — see utils/emailLayout.js.
+      // Line breaks the admin typed are preserved; the message is escaped so a
+      // stray < in someone's text cannot break the markup.
+      const emailHtml = (name, body) => layout({
+        preheader: subject.trim(),
+        eyebrow: "Announcement",
+        title: subject.trim(),
+        bodyHtml:
+          paragraph(`Hi ${esc(name || "there")},`) +
+          paragraph(esc(body).replace(/\n/g, "<br />")),
+        footerNote: "You received this because you administer an Arthaleads workspace.",
+      });
 
       const sendResults = await Promise.allSettled(
         admins.map(admin =>

@@ -9,7 +9,11 @@ const logger      = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
 const { checkRecaptcha } = require("../utils/recaptcha");
 const { isDisposableEmail } = require("../utils/emailDomains");
-const { sendSignupPendingEmail, notifySuperAdminsOfSignup } = require("../utils/email");
+const { sendSignupPendingEmail, notifySuperAdminsOfSignup, sendOtpEmail } = require("../utils/email");
+
+// Signup email-verification code lifetime. The email quotes this same
+// constant, so the promised window and the real one cannot drift apart.
+const OTP_TTL_MS = 10 * 60 * 1000;
 
 function _auditLog(req, action, extras = {}) {
   AuditLog.create({
@@ -392,7 +396,7 @@ const authController = {
 
       const otp     = String(crypto.randomInt(100000, 999999));
       const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
       // Upsert: one live code per address. Resending replaces the previous code
       // and resets the guess counter, but keeps counting sends.
@@ -411,45 +415,7 @@ const authController = {
       );
 
       // Send OTP to the email the user typed in the signup form
-      const { Resend } = require("resend");
-      const resend = new Resend(process.env.RESEND_API_KEY);
-      const from   = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-
-      await resend.emails.send({
-        from,
-        to:      normEmail,
-        subject: `${otp} — Verify your email to start your Arthaleads trial`,
-        html: `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:480px;">
-        <tr><td align="center" style="padding-bottom:24px;">
-          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
-            style="display:inline-block;border-radius:14px;" />
-        </td></tr>
-        <tr><td style="background:#1c1917;border-radius:20px;padding:40px 36px;">
-          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#f97316;letter-spacing:.08em;text-transform:uppercase;">Email Verification</p>
-          <h1 style="margin:0 0 16px;font-size:26px;font-weight:800;color:#fff;">Verify your email address</h1>
-          <p style="margin:0 0 28px;font-size:15px;color:#a8a29e;line-height:1.6;">
-            Use the code below to continue setting up your Arthaleads trial. It expires in <strong style="color:#fff;">10 minutes</strong>.
-          </p>
-          <div style="background:#292524;border:1px solid #3d3835;border-radius:14px;padding:24px;text-align:center;margin-bottom:28px;">
-            <span style="font-size:40px;font-weight:900;letter-spacing:.25em;color:#f97316;">${otp}</span>
-          </div>
-          <p style="margin:0;font-size:13px;color:#78716c;">Never share this OTP with anyone. Arthaleads will never ask for your OTP.</p>
-        </td></tr>
-        <tr><td style="padding:20px 0;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#a8a29e;">© ${new Date().getFullYear()} Arthaleads. All rights reserved.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`,
-      });
+      await sendOtpEmail(normEmail, otp, OTP_TTL_MS / 60000);
 
       // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
       const atIdx  = normEmail.lastIndexOf("@");

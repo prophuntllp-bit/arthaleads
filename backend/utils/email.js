@@ -1,546 +1,266 @@
-﻿// utils/email.js - Email via Resend HTTP API (no SMTP, works on Railway)
+// utils/email.js — every transactional email Arthaleads sends.
+//
+// All of them are built from utils/emailLayout.js. The templates used to be
+// split between a shared dark-card helper and several hand-rolled copies of
+// the same markup, so a change to the header had to be made in five places and
+// two of them had already drifted.
+//
+// Every send also carries a plain-text alternative. It is what a text-only
+// client shows, and its absence is a spam-filter signal.
+
 const { Resend } = require("resend");
+const {
+  layout, button, panel, row, codeBlock, paragraph, divider, esc, BRAND, HEADING, MUTED, FONT,
+} = require("./emailLayout");
 
 function getResend() {
   if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY environment variable is not set");
+    throw new Error("RESEND_API_KEY is not configured");
   }
   return new Resend(process.env.RESEND_API_KEY);
 }
 
 const FROM_ADDRESS = process.env.SMTP_FROM || "Arthaleads <onboarding@resend.dev>";
-const YEAR = new Date().getFullYear();
-const DASHBOARD_URL = process.env.FRONTEND_URL
-  ? `${process.env.FRONTEND_URL}/dashboard`
-  : "https://www.arthaleads.com/dashboard";
-const LOGIN_URL = process.env.FRONTEND_URL
-  ? `${process.env.FRONTEND_URL}/login`
-  : "https://www.arthaleads.com/login";
+const SITE_URL = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(/\/$/, "");
+const LOGIN_URL = `${SITE_URL}/login`;
+const DASHBOARD_URL = `${SITE_URL}/dashboard`;
+const SUPPORT = "contact@arthaleads.com";
 
-// ── Shared card wrapper ───────────────────────────────────────────────────────
-// Builds the outer shell (background, logo, charcoal card) so each email
-// only needs to supply the inner header + body HTML.
-function cardEmail({ iconEmoji, headerHtml, bodyHtml, footerNote }) {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;">
+const link = (href, text) =>
+  `<a href="${href}" style="color:${BRAND};text-decoration:none;">${text}</a>`;
+const strong = (t) => `<strong style="color:${HEADING};">${esc(t)}</strong>`;
 
-        <!-- Logo -->
-        <tr>
-          <td align="center" style="padding-bottom:24px;">
-            <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
-              style="display:inline-block;border-radius:14px;border:0;" />
-            <br/>
-            <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;">Artha<span style="color:#ff6b00;">leads</span></span>
-          </td>
-        </tr>
-
-        <!-- Card -->
-        <tr>
-          <td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 0 0 1px rgba(255,107,0,0.06),0 20px 60px rgba(0,0,0,0.22),0 0 40px rgba(255,107,0,0.06);overflow:hidden;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-
-              <!-- Card header -->
-              <tr>
-                <td style="background:linear-gradient(160deg,rgba(255,107,0,0.12) 0%,rgba(30,29,32,0) 55%);padding:36px 40px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
-                  <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
-                    <tr>
-                      <td style="background:rgba(255,107,0,0.12);border:1px solid rgba(255,107,0,0.22);border-radius:14px;width:52px;height:52px;text-align:center;vertical-align:middle;">
-                        <span style="font-size:24px;line-height:1;">${iconEmoji}</span>
-                      </td>
-                    </tr>
-                  </table>
-                  ${headerHtml}
-                </td>
-              </tr>
-
-              <!-- Card body -->
-              <tr>
-                <td style="padding:32px 40px 36px;">
-                  ${bodyHtml}
-                </td>
-              </tr>
-
-            </table>
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td align="center" style="padding:26px 0 8px;">
-            <p style="margin:0 0 4px;font-size:11.5px;color:#999;">© ${YEAR} Arthaleads &nbsp;·&nbsp; Pune, India</p>
-            <p style="margin:0;font-size:11px;color:#bbb;">${footerNote}</p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`.trim();
-}
-
-// ── Shared CTA button ─────────────────────────────────────────────────────────
-function ctaButton(url, label) {
-  return `
-  <table width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td align="center" style="padding-bottom:32px;">
-        <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#e05d00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 44px;border-radius:14px;letter-spacing:0.3px;box-shadow:0 4px 20px rgba(255,107,0,0.30),0 0 0 1px rgba(255,140,0,0.3);">
-          ${label}
-        </a>
-      </td>
-    </tr>
-  </table>`;
-}
-
-// ── Divider ───────────────────────────────────────────────────────────────────
-const divider = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr><td style="border-top:1px solid rgba(255,255,255,0.06);font-size:0;line-height:0;">&nbsp;</td></tr></table>`;
-
-// ── Password reset email ──────────────────────────────────────────────────────
-async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
-  const resend = getResend();
-
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reset your password</title>
-</head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" style="max-width:520px;">
-
-          <!-- Logo -->
-          <tr>
-            <td align="center" style="padding-bottom:24px;">
-              <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48"
-                style="display:inline-block;border-radius:14px;border:0;" />
-              <br/>
-              <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;font-family:'Segoe UI',Arial,sans-serif;">Artha<span style="color:#ff6b00;">leads</span></span>
-            </td>
-          </tr>
-
-          <!-- Card -->
-          <tr>
-            <td style="background:#1e1d20;border-radius:24px;border:1px solid rgba(255,107,0,0.18);box-shadow:0 0 0 1px rgba(255,107,0,0.06),0 20px 60px rgba(0,0,0,0.22),0 0 40px rgba(255,107,0,0.06);overflow:hidden;">
-
-              <!-- Header with orange gradient glow -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="background:linear-gradient(160deg,rgba(255,107,0,0.12) 0%,rgba(30,29,32,0) 55%);padding:36px 40px 28px;border-bottom:1px solid rgba(255,255,255,0.06);">
-
-                    <!-- Icon badge -->
-                    <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
-                      <tr>
-                        <td style="background:rgba(255,107,0,0.12);border:1px solid rgba(255,107,0,0.22);border-radius:14px;width:52px;height:52px;text-align:center;vertical-align:middle;">
-                          <span style="font-size:24px;line-height:1;">🔑</span>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">Reset your password</h1>
-                    <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-                      Hi <strong style="color:#d4d4d4;">${toName || "there"}</strong> - we received a request to reset your Arthaleads CRM password.
-                    </p>
-                  </td>
-                </tr>
-
-                <!-- Body -->
-                <tr>
-                  <td style="padding:32px 40px 36px;">
-                    <p style="margin:0 0 28px;font-size:14px;color:#969696;line-height:1.75;">
-                      Click the button below to set a new password. This link will expire in <strong style="color:#ff8a3d;">1 hour</strong> for your security.
-                    </p>
-
-                    <!-- CTA Button -->
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center" style="padding-bottom:32px;">
-                          <a href="${resetUrl}"
-                            style="display:inline-block;background:linear-gradient(135deg,#e05d00,#ff6b00);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 44px;border-radius:14px;letter-spacing:0.3px;box-shadow:0 4px 20px rgba(255,107,0,0.30),0 0 0 1px rgba(255,140,0,0.3);">
-                            Reset Password &nbsp;&rarr;
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Divider -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                      <tr>
-                        <td style="border-top:1px solid rgba(255,255,255,0.06);font-size:0;line-height:0;">&nbsp;</td>
-                      </tr>
-                    </table>
-
-                    <!-- Security note -->
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px 18px;">
-                          <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#ff8a3d;">⚠ &nbsp;Didn't request this?</p>
-                          <p style="margin:0;font-size:12px;color:#666;line-height:1.65;">
-                            If you didn't ask to reset your password, no action is needed. Your account is safe and your password remains unchanged.
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Fallback URL -->
-                    <p style="margin:22px 0 0;font-size:11px;color:#444;line-height:1.7;word-break:break-all;">
-                      Button not working? Copy this link into your browser:<br/>
-                      <a href="${resetUrl}" style="color:#ff6b00;text-decoration:none;">${resetUrl}</a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:26px 0 8px;">
-              <p style="margin:0 0 4px;font-size:11.5px;color:#999;">
-                © ${new Date().getFullYear()} Arthaleads &nbsp;·&nbsp; Pune, India
-              </p>
-              <p style="margin:0;font-size:11px;color:#bbb;">
-                You're receiving this because a password reset was requested for your account.
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim();
-
-  const { data, error } = await resend.emails.send({
-    from:    FROM_ADDRESS,
-    to:      toEmail,
-    subject: "Reset your Arthaleads password",
-    html,
-    text: `Hi ${toName || "there"},\n\nReset your Arthaleads password:\n${resetUrl}\n\nThis link expires in 1 hour.\n\n- Arthaleads Team`,
-  });
-
+/** Throws on a Resend error so callers do not silently believe a mail went out. */
+async function send(payload) {
+  const { data, error } = await getResend().emails.send({ from: FROM_ADDRESS, ...payload });
   if (error) throw new Error(error.message || "Resend API error");
   return data;
 }
 
-// ── Welcome email (new signup - email/password or Google) ─────────────────────
-// Sent when someone asks to reset a password on an account that has none —
-// a Google-only sign-up. Staying silent was safe against email enumeration but
-// left the actual owner watching an inbox for a mail that was never coming.
-//
-// This does not weaken enumeration protection: the HTTP response is identical
-// either way, and only the owner of the address ever sees this. The disclosure
-// happens in their mailbox, not in an API reply an attacker can read.
+// ── Password reset ────────────────────────────────────────────────────────────
+async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
+  const name = toName || "there";
+  return send({
+    to: toEmail,
+    subject: "Reset your Arthaleads password",
+    html: layout({
+      preheader: "This link expires in 1 hour.",
+      eyebrow: "Password reset",
+      title: "Reset your password",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(name)}, we received a request to reset the password on your Arthaleads account.`)}
+        ${paragraph(`Use the button below to choose a new one. The link expires in ${strong("1 hour")}.`)}
+        ${button(resetUrl, "Reset password")}
+        ${panel(`
+          <p style="margin:0 0 6px;font-family:${FONT};font-size:13px;font-weight:600;color:${HEADING};">Didn't request this?</p>
+          <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">Nothing to do. Your password stays as it is and the link above can be ignored.</p>`)}
+        <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${MUTED};word-break:break-all;">
+          If the button doesn't work, paste this into your browser:<br />${link(resetUrl, esc(resetUrl))}
+        </p>`,
+      footerNote: "You received this because a password reset was requested for your account.",
+    }),
+    text: `Hi ${name},\n\nReset your Arthaleads password:\n${resetUrl}\n\nThis link expires in 1 hour. If you didn't request it, you can ignore this email.\n\n— Arthaleads`,
+  });
+}
+
+// ── Reset requested on a Google-only account ──────────────────────────────────
+// There is no password to reset, so say that rather than send nothing. Safe
+// against enumeration: only the owner of the address ever receives it, and the
+// HTTP response is identical either way.
 async function sendGoogleOnlyAccountEmail(toEmail, toName, loginUrl) {
-  const resend = getResend();
-
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Signing in to Arthaleads</title></head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0ede8;padding:48px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:520px;">
-        <tr><td align="center" style="padding-bottom:24px;">
-          <img src="https://www.arthaleads.com/logo.png" alt="Arthaleads" width="48" height="48" style="display:inline-block;border-radius:14px;border:0;" />
-          <br/>
-          <span style="display:inline-block;margin-top:10px;color:#111113;font-weight:800;font-size:20px;">Artha<span style="color:#ff6b00;">leads</span></span>
-        </td></tr>
-        <tr><td style="background:#ffffff;border-radius:18px;padding:36px 32px;">
-          <h1 style="margin:0 0 14px;font-size:20px;color:#111113;">Use "Sign in with Google"</h1>
-          <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#4a4a4f;">
-            Hi ${toName || "there"}, you asked to reset your Arthaleads password.
-          </p>
-          <p style="margin:0 0 22px;font-size:15px;line-height:1.65;color:#4a4a4f;">
-            This account doesn't have a password — it was created with Google, so there is nothing to reset.
-            Sign in with the Google button instead and you'll go straight in.
-          </p>
-          <table cellpadding="0" cellspacing="0" style="margin:0 0 22px;">
-            <tr><td style="background:#ff6b00;border-radius:12px;">
-              <a href="${loginUrl}" style="display:inline-block;padding:13px 26px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Go to sign in</a>
-            </td></tr>
-          </table>
-          <p style="margin:0;font-size:13px;line-height:1.6;color:#8a8a90;">
-            If you didn't ask for this, you can ignore this email — nothing about your account has changed.
-          </p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-
-  return resend.emails.send({
-    from: FROM_ADDRESS,
+  const name = toName || "there";
+  return send({
     to: toEmail,
     subject: "Signing in to Arthaleads",
-    html,
+    html: layout({
+      preheader: "This account signs in with Google — there's no password to reset.",
+      eyebrow: "Sign in",
+      title: 'Use "Sign in with Google"',
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(name)}, you asked to reset your Arthaleads password.`)}
+        ${paragraph("This account doesn't have one — it was created with Google, so there's nothing to reset. Use the Google button on the sign-in page and you'll go straight in.")}
+        ${button(loginUrl, "Go to sign in")}
+        ${paragraph(`Prefer a password as well? Sign in with Google, then open Settings and create one. Google sign-in keeps working either way.`, MUTED)}
+        ${divider}
+        <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:${MUTED};">
+          If you didn't ask for this, you can ignore it — nothing about your account has changed.
+        </p>`,
+      footerNote: "You received this because a password reset was requested for this address.",
+    }),
+    text: `Hi ${name},\n\nYou asked to reset your Arthaleads password, but this account was created with Google and has no password.\n\nSign in with Google here: ${loginUrl}\n\nYou can add a password afterwards from Settings.\n\n— Arthaleads`,
   });
 }
 
+// ── Welcome (account is live) ─────────────────────────────────────────────────
 async function sendWelcomeEmail(toEmail, toName, orgName) {
-  const resend = getResend();
   const firstName = toName?.split(" ")[0] || "there";
-
-  const html = cardEmail({
-    iconEmoji: "🎉",
-    headerHtml: `
-      <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">Welcome to Arthaleads!</h1>
-      <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-        Hi <strong style="color:#d4d4d4;">${firstName}</strong> - your workspace <strong style="color:#ff8a3d;">${orgName}</strong> is all set up and ready to go.
-      </p>`,
-    bodyHtml: `
-      <p style="margin:0 0 24px;font-size:14px;color:#969696;line-height:1.75;">
-        You can now manage all your property leads, track your team's performance, and run automated follow-ups - all from one place.
-      </p>
-
-      <!-- Feature highlights -->
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-        <tr>
-          <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:20px 18px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding-bottom:14px;">
-                  <span style="font-size:16px;">📋</span>
-                  <span style="font-size:13px;font-weight:600;color:#d4d4d4;margin-left:10px;">Manage Leads</span>
-                  <p style="margin:4px 0 0 26px;font-size:12px;color:#666;line-height:1.5;">Capture leads from Facebook, Google, WhatsApp and walk-ins in one dashboard.</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding-bottom:14px;border-top:1px solid rgba(255,255,255,0.05);padding-top:14px;">
-                  <span style="font-size:16px;">👥</span>
-                  <span style="font-size:13px;font-weight:600;color:#d4d4d4;margin-left:10px;">Add Your Team</span>
-                  <p style="margin:4px 0 0 26px;font-size:12px;color:#666;line-height:1.5;">Invite agents and managers. Assign leads and track individual performance.</p>
-                </td>
-              </tr>
-              <tr>
-                <td style="border-top:1px solid rgba(255,255,255,0.05);padding-top:14px;">
-                  <span style="font-size:16px;">🔔</span>
-                  <span style="font-size:13px;font-weight:600;color:#d4d4d4;margin-left:10px;">Follow-up Reminders</span>
-                  <p style="margin:4px 0 0 26px;font-size:12px;color:#666;line-height:1.5;">Never miss a follow-up. Schedule reminders and get notified right on time.</p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      ${ctaButton(DASHBOARD_URL, "Go to Dashboard &nbsp;&rarr;")}
-      ${divider}
-      <p style="margin:0;font-size:12px;color:#555;line-height:1.65;">
-        Need help getting started? Reply to this email or reach us at
-        <a href="mailto:contact@arthaleads.com" style="color:#ff6b00;text-decoration:none;">contact@arthaleads.com</a>
-      </p>`,
-    footerNote: "You're receiving this because you just created an Arthaleads account.",
+  return send({
+    to: toEmail,
+    subject: `Welcome to Arthaleads, ${firstName} — your workspace is ready`,
+    html: layout({
+      preheader: `${orgName} is set up and ready to use.`,
+      eyebrow: "Welcome",
+      title: "Your workspace is ready",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(firstName)}, ${strong(orgName)} is set up. You can manage property leads, track your team and run follow-ups from one place.`)}
+        ${panel(`
+          <p style="margin:0 0 12px;font-family:${FONT};font-size:13px;font-weight:600;color:${HEADING};">Three things worth doing first</p>
+          <p style="margin:0 0 10px;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};"><span style="color:${HEADING};font-weight:600;">Bring your leads in.</span> Connect Facebook, Google or your website forms so enquiries arrive automatically.</p>
+          <p style="margin:0 0 10px;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};"><span style="color:${HEADING};font-weight:600;">Add your team.</span> Invite agents and managers, then assign leads to them.</p>
+          <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};"><span style="color:${HEADING};font-weight:600;">Set follow-up reminders.</span> Schedule them once and get notified on time.</p>`)}
+        ${button(DASHBOARD_URL, "Open your dashboard")}
+        ${divider}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
+          Stuck on anything? Reply to this email or write to ${link(`mailto:${SUPPORT}`, SUPPORT)}.
+        </p>`,
+      footerNote: "You received this because an Arthaleads account was created with this address.",
+    }),
+    text: `Hi ${firstName},\n\nWelcome to Arthaleads. Your workspace "${orgName}" is ready.\n\nOpen your dashboard: ${DASHBOARD_URL}\n\nNeed help? ${SUPPORT}\n\n— Arthaleads`,
   });
-
-  const { data, error } = await resend.emails.send({
-    from:    FROM_ADDRESS,
-    to:      toEmail,
-    subject: `Welcome to Arthaleads, ${firstName}! Your workspace is ready 🎉`,
-    html,
-    text: `Hi ${firstName},\n\nWelcome to Arthaleads! Your workspace "${orgName}" is ready.\n\nGo to your dashboard: ${DASHBOARD_URL}\n\nNeed help? Email us at contact@arthaleads.com\n\n- Arthaleads Team`,
-  });
-
-  if (error) throw new Error(error.message || "Resend API error");
-  return data;
 }
 
-// ── Team invite email (admin adds an agent/manager to their org) ──────────────
+// ── Added to a workspace ──────────────────────────────────────────────────────
 async function sendTeamInviteEmail(toEmail, toName, orgName, addedByName) {
-  const resend = getResend();
   const firstName = toName?.split(" ")[0] || "there";
-
-  const html = cardEmail({
-    iconEmoji: "🤝",
-    headerHtml: `
-      <h1 style="margin:0 0 10px;font-size:26px;font-weight:800;color:#ededed;letter-spacing:-0.5px;line-height:1.2;">You've been added to a workspace</h1>
-      <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
-        Hi <strong style="color:#d4d4d4;">${firstName}</strong> - <strong style="color:#ff8a3d;">${addedByName || "An admin"}</strong> has added you to <strong style="color:#d4d4d4;">${orgName}</strong> on Arthaleads.
-      </p>`,
-    bodyHtml: `
-      <p style="margin:0 0 24px;font-size:14px;color:#969696;line-height:1.75;">
-        You now have access to the team's lead pipeline, follow-up schedules, and property data. Sign in with the email address this was sent to.
-      </p>
-
-      <!-- Login details box -->
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-        <tr>
-          <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:18px 20px;">
-            <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#ff8a3d;text-transform:uppercase;letter-spacing:0.12em;">Your login details</p>
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size:12px;color:#666;padding-right:12px;padding-bottom:6px;">Workspace</td>
-                <td style="font-size:13px;font-weight:600;color:#d4d4d4;padding-bottom:6px;">${orgName}</td>
-              </tr>
-              <tr>
-                <td style="font-size:12px;color:#666;padding-right:12px;">Email</td>
-                <td style="font-size:13px;font-weight:600;color:#d4d4d4;">${toEmail}</td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-
-      ${ctaButton(LOGIN_URL, "Sign in to Arthaleads &nbsp;&rarr;")}
-      ${divider}
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px 16px;">
-            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#ff8a3d;">⚠ &nbsp;Wasn't expecting this?</p>
-            <p style="margin:0;font-size:12px;color:#666;line-height:1.65;">
-              If you weren't expecting to be added, you can ignore this email or contact <a href="mailto:contact@arthaleads.com" style="color:#ff6b00;text-decoration:none;">contact@arthaleads.com</a>.
-            </p>
-          </td>
-        </tr>
-      </table>`,
-    footerNote: `You're receiving this because ${addedByName || "an admin"} added you to ${orgName} on Arthaleads.`,
-  });
-
-  const { data, error } = await resend.emails.send({
-    from:    FROM_ADDRESS,
-    to:      toEmail,
+  const addedBy = addedByName || "An admin";
+  return send({
+    to: toEmail,
     subject: `You've been added to ${orgName} on Arthaleads`,
-    html,
-    text: `Hi ${firstName},\n\n${addedByName || "An admin"} has added you to "${orgName}" on Arthaleads.\n\nSign in at: ${LOGIN_URL}\nYour email: ${toEmail}\n\n- Arthaleads Team`,
+    html: layout({
+      preheader: `${addedBy} added you to ${orgName}.`,
+      eyebrow: "Team invite",
+      title: "You've been added to a workspace",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(firstName)}, ${strong(addedBy)} added you to ${strong(orgName)} on Arthaleads.`)}
+        ${paragraph("You now have access to the team's lead pipeline, follow-ups and property data. Sign in with the address this was sent to.")}
+        ${panel(`
+          <p style="margin:0 0 12px;font-family:${FONT};font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${MUTED};">Your sign-in details</p>
+          ${row("Workspace", orgName)}
+          ${row("Email", toEmail, true)}`)}
+        ${button(LOGIN_URL, "Sign in to Arthaleads")}
+        ${divider}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
+          Weren't expecting this? You can ignore this email, or tell us at ${link(`mailto:${SUPPORT}`, SUPPORT)}.
+        </p>`,
+      footerNote: `You received this because ${addedBy} added you to ${orgName}.`,
+    }),
+    text: `Hi ${firstName},\n\n${addedBy} added you to "${orgName}" on Arthaleads.\n\nSign in: ${LOGIN_URL}\nYour email: ${toEmail}\n\n— Arthaleads`,
   });
-
-  if (error) throw new Error(error.message || "Resend API error");
-  return data;
 }
 
-// ── Signup received (pending approval) ────────────────────────────────────────
-// Sent immediately after a self-serve signup. The account exists but is gated
-// until a super admin approves it — see superAdminController.approveOrg.
+// ── Trial request received (awaiting approval) ────────────────────────────────
 async function sendSignupPendingEmail(toEmail, toName, orgName) {
-  const resend = getResend();
-  return resend.emails.send({
-    from: FROM_ADDRESS,
+  const name = toName || "there";
+  return send({
     to: toEmail,
     subject: "We've received your Arthaleads trial request",
-    html: cardEmail({
-      iconEmoji: "⏳",
-      headerHtml: `
-        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Request Received</p>
-        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">You're almost in</h1>`,
+    html: layout({
+      preheader: "We review every request personally, usually within one working day.",
+      eyebrow: "Request received",
+      title: "You're almost in",
       bodyHtml: `
-        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
-          Hi ${toName || "there"}, thanks for requesting a trial of Arthaleads for
-          <strong style="color:#ededed;">${orgName}</strong>.
-        </p>
-        <p style="margin:0 0 18px;font-size:15px;color:#969696;line-height:1.65;">
-          Our team reviews every trial request personally — usually within one working day.
-          You'll get an email the moment your account is activated, and your 14-day trial
-          starts from then, not from today.
-        </p>
-        ${divider}
-        <p style="margin:0;font-size:13px;color:#777;line-height:1.6;">
-          Didn't request this? You can safely ignore this email — no account will be activated.
+        ${paragraph(`Hi ${esc(name)}, thanks for requesting a trial of Arthaleads for ${strong(orgName)}.`)}
+        ${paragraph("We review every trial request personally — usually within one working day. You'll get an email the moment your account is activated.")}
+        ${panel(`<p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">Your 14-day trial starts when we activate it, not today — so none of it is spent waiting.</p>`)}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
+          Didn't request this? You can ignore this email — no account will be activated.
         </p>`,
-      footerNote: "You're receiving this because someone requested an Arthaleads trial with this address.",
+      footerNote: "You received this because someone requested an Arthaleads trial with this address.",
     }),
+    text: `Hi ${name},\n\nThanks for requesting a trial of Arthaleads for "${orgName}".\n\nWe review every request personally, usually within one working day. Your 14-day trial starts when we activate it, not today.\n\n— Arthaleads`,
   });
 }
 
 // ── Trial approved ────────────────────────────────────────────────────────────
 async function sendSignupApprovedEmail(toEmail, toName, orgName) {
-  const resend = getResend();
-  return resend.emails.send({
-    from: FROM_ADDRESS,
+  const name = toName || "there";
+  return send({
     to: toEmail,
-    subject: "Your Arthaleads trial is live 🎉",
-    html: cardEmail({
-      iconEmoji: "🎉",
-      headerHtml: `
-        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Trial Activated</p>
-        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">Welcome to Arthaleads</h1>`,
+    subject: "Your Arthaleads trial is live",
+    html: layout({
+      preheader: "Your 14-day trial starts now.",
+      eyebrow: "Trial activated",
+      title: "Your trial is live",
       bodyHtml: `
-        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
-          Hi ${toName || "there"}, your account for <strong style="color:#ededed;">${orgName}</strong>
-          has been approved. Your 14-day free trial starts now.
-        </p>
-        ${ctaButton(LOGIN_URL, "Log in to your CRM")}
-        <p style="margin:0;font-size:13px;color:#777;line-height:1.6;">
-          Log in with the email and password you signed up with. Need a hand getting started?
-          Just reply to this email.
-        </p>`,
-      footerNote: "Your 14-day trial has started today.",
+        ${paragraph(`Hi ${esc(name)}, the account for ${strong(orgName)} has been approved. Your 14-day free trial starts now.`)}
+        ${button(LOGIN_URL, "Log in to your CRM")}
+        ${paragraph("Sign in with the email and password you signed up with. Need a hand getting started? Just reply to this email.", MUTED)}`,
+      footerNote: "Your 14-day trial started today.",
     }),
+    text: `Hi ${name},\n\nThe account for "${orgName}" has been approved and your 14-day trial starts now.\n\nLog in: ${LOGIN_URL}\n\n— Arthaleads`,
   });
 }
 
 // ── Trial request declined ────────────────────────────────────────────────────
 async function sendSignupRejectedEmail(toEmail, toName, reason) {
-  const resend = getResend();
-  return resend.emails.send({
-    from: FROM_ADDRESS,
+  const name = toName || "there";
+  return send({
     to: toEmail,
     subject: "About your Arthaleads trial request",
-    html: cardEmail({
-      iconEmoji: "📄",
-      headerHtml: `
-        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Trial Request</p>
-        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">We couldn't activate this one</h1>`,
+    html: layout({
+      preheader: "We couldn't activate this request.",
+      eyebrow: "Trial request",
+      title: "We couldn't activate this one",
       bodyHtml: `
-        <p style="margin:0 0 18px;font-size:15px;color:#c9c9c9;line-height:1.65;">
-          Hi ${toName || "there"}, we weren't able to activate a trial for this request.
-        </p>
-        ${reason ? `<p style="margin:0 0 18px;font-size:15px;color:#969696;line-height:1.65;">${reason}</p>` : ""}
-        <p style="margin:0;font-size:14px;color:#969696;line-height:1.65;">
+        ${paragraph(`Hi ${esc(name)}, we weren't able to activate a trial for this request.`)}
+        ${reason ? panel(`<p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">${esc(reason)}</p>`) : ""}
+        <p style="margin:0;font-family:${FONT};font-size:15px;line-height:1.65;color:${MUTED};">
           If you think this was a mistake, reply to this email and we'll take another look.
         </p>`,
       footerNote: "Questions? Just reply to this email.",
     }),
+    text: `Hi ${name},\n\nWe weren't able to activate a trial for this request.${reason ? `\n\n${reason}` : ""}\n\nIf you think that's a mistake, reply to this email and we'll take another look.\n\n— Arthaleads`,
   });
 }
 
-// ── Internal: new pending signup needs review ─────────────────────────────────
-// Mails every active super_admin so a request doesn't sit unnoticed in the
-// queue. Looks the recipients up from the DB rather than an env var so it stays
-// correct as the admin team changes.
+// ── Internal: a signup is waiting for review ──────────────────────────────────
 async function notifySuperAdminsOfSignup({ name, email, phone, orgName }) {
-  const User   = require("../models/User");
+  const User = require("../models/User");
   const admins = await User.find({ role: "super_admin", isActive: true }).select("email").lean();
   if (!admins.length) return;
 
-  const resend    = getResend();
-  const reviewUrl = `${(process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(/\/$/, "")}/super-admin/orgs`;
-
-  return resend.emails.send({
-    from: FROM_ADDRESS,
+  const reviewUrl = `${SITE_URL}/super-admin/orgs`;
+  return send({
     to: admins.map((a) => a.email),
     subject: `New trial request: ${orgName}`,
-    html: cardEmail({
-      iconEmoji: "🔔",
-      headerHtml: `
-        <p style="margin:0 0 8px;font-size:12.5px;font-weight:700;color:#ff6b00;letter-spacing:.09em;text-transform:uppercase;">Pending Approval</p>
-        <h1 style="margin:0;font-size:26px;font-weight:800;color:#ededed;line-height:1.25;">New trial request</h1>`,
+    html: layout({
+      preheader: `${name} — ${email}`,
+      eyebrow: "Pending approval",
+      title: "New trial request",
       bodyHtml: `
-        <p style="margin:0 0 8px;font-size:15px;color:#c9c9c9;">
-          <strong style="color:#ededed;">${orgName}</strong>
-        </p>
-        <p style="margin:0 0 6px;font-size:14px;color:#969696;">${name} &nbsp;·&nbsp; ${email}</p>
-        <p style="margin:0 0 24px;font-size:14px;color:#969696;">${phone || "no phone given"}</p>
-        ${ctaButton(reviewUrl, "Review in admin panel")}
-        <p style="margin:0;font-size:13px;color:#777;">Email verified via OTP. Awaiting your approval before the trial starts.</p>`,
+        ${panel(`
+          ${row("Organisation", orgName)}
+          ${row("Name", name)}
+          ${row("Email", email)}
+          ${row("Phone", phone || "not given", true)}`)}
+        ${button(reviewUrl, "Review in admin panel")}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
+          Email verified by one-time code. Awaiting approval before the trial starts.
+        </p>`,
       footerNote: "Sent to Arthaleads platform administrators.",
     }),
+    text: `New trial request\n\nOrganisation: ${orgName}\nName: ${name}\nEmail: ${email}\nPhone: ${phone || "not given"}\n\nReview: ${reviewUrl}`,
+  });
+}
+
+// ── One-time code (signup email verification) ─────────────────────────────────
+async function sendOtpEmail(toEmail, code, minutes = 10) {
+  return send({
+    to: toEmail,
+    subject: `${code} is your Arthaleads verification code`,
+    html: layout({
+      preheader: `Your code is ${code}. It expires in ${minutes} minutes.`,
+      eyebrow: "Email verification",
+      title: "Verify your email address",
+      bodyHtml: `
+        ${paragraph(`Use the code below to continue setting up your Arthaleads trial. It expires in ${strong(`${minutes} minutes`)}.`)}
+        ${codeBlock(code)}
+        <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
+          Never share this code with anyone. Arthaleads will never ask you for it.
+        </p>`,
+      footerNote: "You received this because this address was used to start an Arthaleads signup.",
+    }),
+    text: `Your Arthaleads verification code is ${code}.\n\nIt expires in ${minutes} minutes. Never share this code — Arthaleads will never ask you for it.`,
   });
 }
 
@@ -553,4 +273,5 @@ module.exports = {
   sendSignupApprovedEmail,
   sendSignupRejectedEmail,
   notifySuperAdminsOfSignup,
+  sendOtpEmail,
 };
