@@ -273,6 +273,11 @@ app.get("/health", (req, res) => {
     status: "ok",
     env: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
+    // Which commit is actually serving. Railway injects this on git-triggered
+    // builds. Without it, confirming a deploy landed meant guessing from
+    // behaviour — and a build that silently failed looked identical to one
+    // that succeeded, because the old container kept answering.
+    commit: (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 7) || "unknown",
   });
 });
 
