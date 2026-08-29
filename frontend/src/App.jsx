@@ -494,7 +494,17 @@ function RequireAuth() {
     };
   }, []);
 
-  const handleLogout = () => { logout(); window.location.href = "/login"; };
+  // logout() is async: it awaits the server call that clears the httpOnly
+  // cookie and only then clears local storage. Navigating without awaiting it
+  // killed the in-flight request before clearSession() ran, so the token
+  // survived, /login restored the session, and the user bounced straight back
+  // to the screen they were trying to leave. Every other logout button in the
+  // app already awaited; this one serves the blocking overlays, which is why
+  // it only looked broken when a trial ended.
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/login";
+  };
   const splashDone = useSplashDone();
 
   if (loading) {
