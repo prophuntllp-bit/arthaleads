@@ -1,0 +1,32 @@
+# Railway deploys the backend, and the service's Root Directory is "backend".
+#
+# That means `railway up` has to run from the repo root — the uploaded source
+# must contain a backend/ folder for the service to find. Running it from
+# inside backend/ uploads that folder's *contents*, so Railway looks for
+# backend/backend and the build fails with:
+#
+#   Root directory "backend" was not found in the deployed source
+#
+# Deploying from the root would otherwise upload the whole monorepo, so
+# everything the API does not need is excluded here.
+
+frontend/
+mobile/
+graphify-out/
+docs/
+android-release/
+
+node_modules/
+**/node_modules/
+
+.claude/
+.codex-deploy-callstream-finalize/
+
+*.apk
+*.aab
+*.zip
+*.keystore
+*.jks
+
+*.log
+.DS_Store
