@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, ImagePlus, Plus, Pencil, Shield, Trash2, UserCog, UserMinus, Users } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Phone, Plus, Pencil, Shield, Trash2, UserCheck, UserCog, UserMinus, Users } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { planLabel, planLevel } from "../utils/plan";
 import api from "../services/api";
@@ -294,20 +294,30 @@ export default function Team() {
                 </div>
               </div>
 
-              <div className="rounded-[1.1rem] p-4 stitch-surface-muted space-y-2">
-                <p className="text-xs text-app-soft">Phone</p>
-                <p className="text-sm text-app">{member.phone || "Not added yet"}</p>
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-3.5 w-3.5 shrink-0 text-app-soft" />
+                {member.phone
+                  ? <span className="text-app">{member.phone}</span>
+                  : <span className="text-app-soft italic">No phone added</span>}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button className="btn-secondary rounded-xl" onClick={() => toggleUser(member)} disabled={!isAdmin} title={!isAdmin ? "Only admins can activate or deactivate users" : undefined}>
-                  <UserMinus className="h-4 w-4" /> {member.isActive ? "Deactivate" : "Activate"}
+              <div className="flex items-center gap-1 pt-3" style={{ borderTop: "1px solid var(--app-border)" }}>
+                <button className="btn-secondary rounded-xl !px-3 !py-2 !text-xs" onClick={() => openEdit(member)} disabled={!isAdmin} title={!isAdmin ? "Only admins can edit team members" : undefined}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
                 </button>
-                <button className="btn-secondary rounded-xl" onClick={() => openEdit(member)} disabled={!isAdmin} title={!isAdmin ? "Only admins can edit team members" : undefined}>
-                  <Pencil className="h-4 w-4" /> Edit
+                <button className="btn-ghost rounded-xl !px-3 !py-2 !text-xs disabled:cursor-not-allowed disabled:opacity-50" onClick={() => toggleUser(member)} disabled={!isAdmin} title={!isAdmin ? "Only admins can activate or deactivate users" : undefined}>
+                  {member.isActive
+                    ? <><UserMinus className="h-3.5 w-3.5" /> Deactivate</>
+                    : <><UserCheck className="h-3.5 w-3.5" /> Activate</>}
                 </button>
-                <button className="btn-danger rounded-xl" onClick={() => setDeletingUser(member)} disabled={!isAdmin} title={!isAdmin ? "Only admins can remove team members" : undefined}>
-                  <Trash2 className="h-4 w-4" /> Remove
+                <button
+                  className="btn-ghost ml-auto rounded-xl !px-2.5 !py-2 hover:!text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setDeletingUser(member)}
+                  disabled={!isAdmin}
+                  aria-label={`Remove ${member.name}`}
+                  title={!isAdmin ? "Only admins can remove team members" : `Remove ${member.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </article>
