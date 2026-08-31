@@ -71,10 +71,6 @@ const SOCIAL = [
   ["LinkedIn", "https://www.linkedin.com/company/arthaleads/", "social-linkedin.png"],
 ];
 
-const INSTAGRAM_URL = "https://www.instagram.com/arthaleads.crm/";
-const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61589532765469";
-const LINKEDIN_URL = "https://www.linkedin.com/company/arthaleads/";
-
 // One logo, not a light/dark pair. Swapping on prefers-color-scheme looked
 // right in theory and was wrong on screen: the card this sits on is always
 // light, so a dark-mode reader got light-on-light and the wordmark vanished.
@@ -252,5 +248,5 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
 module.exports = {
   layout, button, panel, row, codeBlock, paragraph, divider, esc,
-  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND, SOCIAL, INSTAGRAM_URL, FACEBOOK_URL, LINKEDIN_URL,
+  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND, SOCIAL,
 };
