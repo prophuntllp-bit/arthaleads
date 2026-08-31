@@ -42,7 +42,20 @@ const SITE = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(
 // mark at 18 KB, which is what belongs in an email. To use the full horizontal
 // lockup instead, drop it at frontend/public/email-logo.png, deploy, and point
 // EMAIL_LOGO_URL at it — nothing else changes.
-const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://www.arthaleads.com/apple-touch-icon.png";
+const LOGO_URL = process.env.EMAIL_LOGO_URL || `${SITE}/email-logo.png`;
+
+// One logo, not a light/dark pair. Swapping on prefers-color-scheme looked
+// right in theory and was wrong on screen: the card this sits on is always
+// light, so a dark-mode reader got light-on-light and the wordmark vanished.
+// The email declares itself light-only instead.
+//
+// The supplied artwork is a 2080x2080 canvas that is mostly padding; it is
+// trimmed to its content by scripts/trim-logo.js, giving 1574x471. Shown at
+// 170x51 that is far more resolution than a retina screen needs, which is what
+// keeps it sharp. Width and height are attributes as well as CSS because
+// Outlook ignores the CSS and would draw it at full size.
+const LOGO_W = 170;
+const LOGO_H = 51;
 
 /** Escapes text interpolated into HTML. Names and org names are user input. */
 function esc(v) {
@@ -131,6 +144,8 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="x-apple-disable-message-reformatting" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>${esc(title)}</title>
 </head>
 <body style="margin:0;padding:0;background:${PAGE};">
@@ -144,12 +159,9 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
             <td align="left" style="padding:0 4px 20px;">
               <table cellpadding="0" cellspacing="0" border="0" role="presentation">
                 <tr>
-                  <td style="padding-right:10px;" valign="middle">
-                    <img src="${LOGO_URL}" width="34" height="34" alt=""
-                      style="display:block;border:0;border-radius:8px;" />
-                  </td>
                   <td valign="middle">
-                    <span style="font-family:${FONT};font-size:19px;font-weight:700;color:${HEADING};">Artha<span style="color:${BRAND};">leads</span></span>
+                    <img src="${LOGO_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
+                      style="display:block;border:0;" />
                   </td>
                 </tr>
               </table>
