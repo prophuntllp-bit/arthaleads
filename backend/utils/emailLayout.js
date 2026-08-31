@@ -54,6 +54,27 @@ const LOGO_DARK_URL = process.env.EMAIL_LOGO_DARK_URL || `${SITE}/logo-lockup-da
 // carry.
 const BAND = "#1b1f24";
 
+// Social icons.
+//
+// White glyphs with their counters knocked out to transparency rather than
+// filled with BAND, so they still read if the band ever changes shade. Drawn
+// at 66px and shown at 22 so they stay sharp on a retina screen.
+//
+// The accessible name lives on the <a> as aria-label, and the <img> carries
+// alt="". Putting the name in the alt instead looked more correct and rendered
+// badly: with images off, a 22x22 box clips "Instagram" to two letters, so the
+// footer became three unreadable stubs. An empty alt collapses to nothing, and
+// the aria-label still gives a screen reader something to announce.
+const SOCIAL = [
+  ["Instagram", "https://www.instagram.com/arthaleads.crm/", "social-instagram.png"],
+  ["Facebook", "https://www.facebook.com/profile.php?id=61589532765469", "social-facebook.png"],
+  ["LinkedIn", "https://www.linkedin.com/company/arthaleads/", "social-linkedin.png"],
+];
+
+const INSTAGRAM_URL = "https://www.instagram.com/arthaleads.crm/";
+const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61589532765469";
+const LINKEDIN_URL = "https://www.linkedin.com/company/arthaleads/";
+
 // One logo, not a light/dark pair. Swapping on prefers-color-scheme looked
 // right in theory and was wrong on screen: the card this sits on is always
 // light, so a dark-mode reader got light-on-light and the wordmark vanished.
@@ -173,7 +194,7 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
                 <tr>
                   <td align="left" valign="middle">
                     <img src="${LOGO_DARK_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
-                      style="display:block;border:0;" />
+                      style="display:block;border:0;color:#ffffff;font-family:${FONT};font-size:19px;font-weight:700;" />
                   </td>
                   <td align="right" valign="middle">
                     <table cellpadding="0" cellspacing="0" border="0" role="presentation">
@@ -200,6 +221,14 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
           <tr>
             <td bgcolor="${BAND}" style="background:${BAND};padding:22px 28px;">
               ${footerNote ? `<p style="margin:0 0 10px;font-family:${FONT};font-size:12px;line-height:1.6;color:#ffffff;opacity:.85;">${esc(footerNote)}</p>` : ""}
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="margin:0 0 14px;">
+                <tr>${SOCIAL.map(([name, href, file]) => `
+                  <td style="padding:0 14px 0 0;">
+                    <a href="${href}" aria-label="${name}" title="${name}"><img src="${SITE}/${file}" width="22" height="22" alt=""
+                      style="display:block;border:0;" /></a>
+                  </td>`).join("")}
+                </tr>
+              </table>
               <p style="margin:0 0 6px;font-family:${FONT};font-size:12px;line-height:1.7;color:#ffffff;">
                 <a href="${SITE}/privacy" style="color:#ffffff;text-decoration:underline;">Privacy Policy</a>
                 &nbsp;&middot;&nbsp;
@@ -223,5 +252,5 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
 module.exports = {
   layout, button, panel, row, codeBlock, paragraph, divider, esc,
-  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND,
+  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND, SOCIAL, INSTAGRAM_URL, FACEBOOK_URL, LINKEDIN_URL,
 };
