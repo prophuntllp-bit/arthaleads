@@ -107,8 +107,13 @@ for (let i = 0; i < plte.length / 3; i++) {
   });
 }
 
-// Background = fully transparent, or near-white. Both are "nothing to see".
-const isBg = palette.map((p) => p.a < 8 || (p.r > 246 && p.g > 246 && p.b > 246));
+// Background is transparency, and only transparency.
+//
+// Treating near-white as background too seems harmless until the artwork is
+// itself white: on the dark-mode lockup that rule ate 74px off the right edge,
+// taking part of the wordmark with it. The light and dark files crop to the
+// same box under this rule, which is the check that caught it.
+const isBg = palette.map((p) => p.a < 8);
 
 const px = unfilter(zlib.inflateSync(c.IDAT), W, H);
 

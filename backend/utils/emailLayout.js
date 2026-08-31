@@ -38,11 +38,10 @@ const SITE = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(
 // still reads when the image never loads, and the alt is empty so a blocked
 // image leaves no broken-image placeholder next to it.
 //
-// logo.png is the 1.1 MB square app icon; apple-touch-icon.png is the same
-// mark at 18 KB, which is what belongs in an email. To use the full horizontal
-// lockup instead, drop it at frontend/public/email-logo.png, deploy, and point
-// EMAIL_LOGO_URL at it — nothing else changes.
-const LOGO_URL = process.env.EMAIL_LOGO_URL || `${SITE}/email-logo.png`;
+// The same file the marketing site's nav and footer use, so the brand is one
+// asset rather than three that drift. Override with EMAIL_LOGO_URL if email
+// ever needs its own.
+const LOGO_URL = process.env.EMAIL_LOGO_URL || `${SITE}/logo-lockup.png`;
 
 // One logo, not a light/dark pair. Swapping on prefers-color-scheme looked
 // right in theory and was wrong on screen: the card this sits on is always

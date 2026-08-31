@@ -221,11 +221,14 @@ function NavInner({ onScrollTo }) {
           {/* Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-              <img src="/logo.png" alt="Arthaleads" className="w-9 h-9 rounded-xl object-cover" />
-              <div>
-                <span style={{ color: isDark ? "#fff" : "#111827" }} className="font-bold text-lg leading-none">Artha</span>
-                <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
-              </div>
+              {/* The full lockup, in the variant that suits the theme. The
+                  wordmark is near-black in one and white in the other, so a
+                  single file would disappear on one of the two backgrounds. */}
+              <img
+                src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
+                alt="Arthaleads — Turning Opportunities Into Value"
+                className="h-9 w-auto"
+              />
             </Link>
             <a
               href="https://www.vistrow.com"

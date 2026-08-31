@@ -16,11 +16,11 @@ export default function PublicFooter() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
-              <img src="/logo.png" alt="Arthaleads" className="w-8 h-8 rounded-xl object-cover" />
-              <div>
-                <span style={{ color: heading }} className="font-bold text-lg leading-none">Artha</span>
-                <span className="text-[#ff6b00] font-bold text-lg leading-none">leads</span>
-              </div>
+              <img
+                src={isDark ? "/logo-lockup-dark.png" : "/logo-lockup.png"}
+                alt="Arthaleads — Turning Opportunities Into Value"
+                className="h-8 w-auto"
+              />
             </div>
             <p style={{ color: text }} className="text-sm leading-relaxed max-w-xs">
               India's real estate CRM for developers, brokers &amp; channel partners. Built in Pune, trusted across Maharashtra.
