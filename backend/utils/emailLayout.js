@@ -30,6 +30,20 @@ const FONT =
 
 const SITE = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(/\/$/, "");
 
+// The mark, beside a live-text wordmark rather than baked into one image.
+//
+// Gmail and Outlook block remote images until the sender is trusted, and a
+// header that is entirely an image renders as an empty box for those readers —
+// which is most first-time recipients. Text beside the mark means the brand
+// still reads when the image never loads, and the alt is empty so a blocked
+// image leaves no broken-image placeholder next to it.
+//
+// logo.png is the 1.1 MB square app icon; apple-touch-icon.png is the same
+// mark at 18 KB, which is what belongs in an email. To use the full horizontal
+// lockup instead, drop it at frontend/public/email-logo.png, deploy, and point
+// EMAIL_LOGO_URL at it — nothing else changes.
+const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://www.arthaleads.com/apple-touch-icon.png";
+
 /** Escapes text interpolated into HTML. Names and org names are user input. */
 function esc(v) {
   return String(v == null ? "" : v)
@@ -128,7 +142,17 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
           <tr>
             <td align="left" style="padding:0 4px 20px;">
-              <span style="font-family:${FONT};font-size:19px;font-weight:700;color:${HEADING};">Artha<span style="color:${BRAND};">leads</span></span>
+              <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                <tr>
+                  <td style="padding-right:10px;" valign="middle">
+                    <img src="${LOGO_URL}" width="34" height="34" alt=""
+                      style="display:block;border:0;border-radius:8px;" />
+                  </td>
+                  <td valign="middle">
+                    <span style="font-family:${FONT};font-size:19px;font-weight:700;color:${HEADING};">Artha<span style="color:${BRAND};">leads</span></span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -160,5 +184,5 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
 module.exports = {
   layout, button, panel, row, codeBlock, paragraph, divider, esc,
-  BRAND, HEADING, BODY, MUTED, FONT, SITE,
+  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL,
 };
