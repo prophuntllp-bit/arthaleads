@@ -42,6 +42,17 @@ const SITE = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(
 // asset rather than three that drift. Override with EMAIL_LOGO_URL if email
 // ever needs its own.
 const LOGO_URL = process.env.EMAIL_LOGO_URL || `${SITE}/logo-lockup.png`;
+const LOGO_DARK_URL = process.env.EMAIL_LOGO_DARK_URL || `${SITE}/logo-lockup-dark.png`;
+
+// The header and footer bands.
+//
+// Brand orange was the obvious choice and was wrong twice over: white on
+// #ff6b00 is 2.86:1, which fails for the footer's small print, and the logo's
+// "Into Value" is itself orange, so the tagline vanished into the band. A dark
+// neutral fixes both — white text reads at about 15:1, and the orange in the
+// mark and the tagline is the only warm colour on it, which is what makes it
+// carry.
+const BAND = "#1b1f24";
 
 // One logo, not a light/dark pair. Swapping on prefers-color-scheme looked
 // right in theory and was wrong on screen: the card this sits on is always
@@ -149,18 +160,29 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 </head>
 <body style="margin:0;padding:0;background:${PAGE};">
   <div style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${esc(preheader)}</div>
-  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="${PAGE}" style="background:${PAGE};padding:40px 12px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="${PAGE}" style="background:${PAGE};padding:32px 12px;">
     <tr>
       <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:600px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:600px;border:1px solid ${BORDER};border-radius:12px;overflow:hidden;">
 
+          <!-- Brand band. Deliberately not #ff6b00: white on the brand orange
+               is 2.9:1, and the logo's own tagline is orange too. -->
           <tr>
-            <td align="left" style="padding:0 4px 20px;">
-              <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+            <td bgcolor="${BAND}" style="background:${BAND};padding:20px 28px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
                 <tr>
-                  <td valign="middle">
-                    <img src="${LOGO_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
+                  <td align="left" valign="middle">
+                    <img src="${LOGO_DARK_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
                       style="display:block;border:0;" />
+                  </td>
+                  <td align="right" valign="middle">
+                    <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+                      <tr>
+                        <td bgcolor="#ffffff" style="border-radius:6px;">
+                          <a href="${SITE}/login" style="display:inline-block;padding:9px 18px;font-family:${FONT};font-size:13px;font-weight:600;color:${BAND};text-decoration:none;border-radius:6px;">Log in</a>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -168,7 +190,7 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
           </tr>
 
           <tr>
-            <td bgcolor="${CARD}" style="background:${CARD};border:1px solid ${BORDER};border-radius:12px;padding:36px 36px 32px;">
+            <td bgcolor="${CARD}" style="background:${CARD};padding:34px 32px 30px;">
               ${eyebrow ? `<p style="margin:0 0 10px;font-family:${FONT};font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${BRAND};">${esc(eyebrow)}</p>` : ""}
               ${title ? `<h1 style="margin:0 0 18px;font-family:${FONT};font-size:23px;font-weight:700;line-height:1.3;color:${HEADING};">${esc(title)}</h1>` : ""}
               ${bodyHtml}
@@ -176,11 +198,17 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
           </tr>
 
           <tr>
-            <td align="left" style="padding:20px 4px 0;">
-              ${footerNote ? `<p style="margin:0 0 6px;font-family:${FONT};font-size:12px;line-height:1.6;color:${MUTED};">${esc(footerNote)}</p>` : ""}
-              <p style="margin:0;font-family:${FONT};font-size:12px;color:${MUTED};">
-                &copy; ${new Date().getFullYear()} Arthaleads &middot; Pune, India &middot;
-                <a href="${SITE}" style="color:${MUTED};text-decoration:underline;">arthaleads.com</a>
+            <td bgcolor="${BAND}" style="background:${BAND};padding:22px 28px;">
+              ${footerNote ? `<p style="margin:0 0 10px;font-family:${FONT};font-size:12px;line-height:1.6;color:#ffffff;opacity:.85;">${esc(footerNote)}</p>` : ""}
+              <p style="margin:0 0 6px;font-family:${FONT};font-size:12px;line-height:1.7;color:#ffffff;">
+                <a href="${SITE}/privacy" style="color:#ffffff;text-decoration:underline;">Privacy Policy</a>
+                &nbsp;&middot;&nbsp;
+                <a href="${SITE}/terms" style="color:#ffffff;text-decoration:underline;">Terms of Service</a>
+                &nbsp;&middot;&nbsp;
+                <a href="mailto:contact@arthaleads.com" style="color:#ffffff;text-decoration:underline;">contact@arthaleads.com</a>
+              </p>
+              <p style="margin:0;font-family:${FONT};font-size:12px;color:#ffffff;">
+                &copy; ${new Date().getFullYear()} Arthaleads &middot; Pune, India
               </p>
             </td>
           </tr>
@@ -195,5 +223,5 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
 module.exports = {
   layout, button, panel, row, codeBlock, paragraph, divider, esc,
-  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL,
+  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND,
 };
