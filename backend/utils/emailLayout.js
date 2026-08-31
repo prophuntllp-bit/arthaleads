@@ -42,14 +42,7 @@ const SITE = (process.env.FRONTEND_URL || "https://www.arthaleads.com").replace(
 // mark at 18 KB, which is what belongs in an email. To use the full horizontal
 // lockup instead, drop it at frontend/public/email-logo.png, deploy, and point
 // EMAIL_LOGO_URL at it — nothing else changes.
-const LOGO_URL = process.env.EMAIL_LOGO_URL || `${SITE}/email-logo.png`;
-const LOGO_DARK_URL = process.env.EMAIL_LOGO_DARK_URL || `${SITE}/email-logo-dark.png`;
-
-// 500x200 source shown at 150x60, so it stays sharp on a retina screen. Width
-// and height are set as attributes as well as CSS because Outlook ignores the
-// CSS and would otherwise draw it at full size.
-const LOGO_W = 150;
-const LOGO_H = 60;
+const LOGO_URL = process.env.EMAIL_LOGO_URL || "https://www.arthaleads.com/apple-touch-icon.png";
 
 /** Escapes text interpolated into HTML. Names and org names are user input. */
 function esc(v) {
@@ -138,20 +131,7 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="x-apple-disable-message-reformatting" />
-  <meta name="color-scheme" content="light dark" />
-  <meta name="supported-color-schemes" content="light dark" />
   <title>${esc(title)}</title>
-  <style>
-    /* The wordmark and tagline in the logo are near-black, so on a dark
-       background the light artwork all but disappears. Clients that honour
-       prefers-color-scheme swap to the dark variant; the rest — Outlook
-       desktop included, which is why the dark image sits behind an mso
-       conditional — simply keep the light one on the light card. */
-    @media (prefers-color-scheme: dark) {
-      .logo-light { display: none !important; }
-      .logo-dark  { display: block !important; max-height: none !important; overflow: visible !important; }
-    }
-  </style>
 </head>
 <body style="margin:0;padding:0;background:${PAGE};">
   <div style="display:none;font-size:1px;color:${PAGE};line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${esc(preheader)}</div>
@@ -164,13 +144,12 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
             <td align="left" style="padding:0 4px 20px;">
               <table cellpadding="0" cellspacing="0" border="0" role="presentation">
                 <tr>
+                  <td style="padding-right:10px;" valign="middle">
+                    <img src="${LOGO_URL}" width="34" height="34" alt=""
+                      style="display:block;border:0;border-radius:8px;" />
+                  </td>
                   <td valign="middle">
-                    <img src="${LOGO_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
-                      class="logo-light" style="display:block;border:0;" />
-                    <!--[if !mso]><!-->
-                    <img src="${LOGO_DARK_URL}" width="${LOGO_W}" height="${LOGO_H}" alt="Arthaleads"
-                      class="logo-dark" style="display:none;border:0;max-height:0;overflow:hidden;" />
-                    <!--<![endif]-->
+                    <span style="font-family:${FONT};font-size:19px;font-weight:700;color:${HEADING};">Artha<span style="color:${BRAND};">leads</span></span>
                   </td>
                 </tr>
               </table>
@@ -205,5 +184,5 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 
 module.exports = {
   layout, button, panel, row, codeBlock, paragraph, divider, esc,
-  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL,
+  BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL,
 };
