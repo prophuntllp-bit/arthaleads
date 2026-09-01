@@ -110,6 +110,11 @@ router.get("/app-version", (req, res) => {
     minBuild,
     downloadUrl:   process.env.ANDROID_APK_URL       || rel.url     || "",
     releaseNotes:  process.env.ANDROID_RELEASE_NOTES || rel.notes   || "",
+      // For the public download page. The app ignores both, but serving them
+      // here means the page and the in-app updater read one source and cannot
+      // drift apart.
+      sizeBytes:     int(process.env.ANDROID_APK_SIZE, int(rel.sizeBytes, 0)),
+      minAndroid:    process.env.ANDROID_MIN_OS || rel.minAndroid || "",
   });
 });
 

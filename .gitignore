@@ -45,6 +45,12 @@ __pycache__/
 
 # ZIP artifacts — generate locally, never commit
 *.zip
+# ...except the WordPress plugin the marketing site hands out. The blanket rule
+# above is why /arthaleads-integration.zip served an 11KB SPA fallback instead
+# of a download: the file was on every developer's disk and in the Capacitor
+# build assets, so it looked present everywhere except the one place Vercel
+# serves from.
+!frontend/public/arthaleads-integration.zip
 
 # Claude Code worktrees — transient scratch checkouts. These were committed as
 # bare gitlinks with no .gitmodules entry, so every CI checkout emitted

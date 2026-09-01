@@ -40,6 +40,14 @@ module.exports = {
     // local/untracked).
     url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-24/arthaleads-1.0.1%2B24-arm64.apk",
     // Optional short "what's new" line.
+    // Shown on the public download page (/download-app) so people know what
+    // they are about to pull over mobile data before they tap. Bytes, so the
+    // page can format it; 0 hides the figure rather than showing a wrong one.
+    sizeBytes: 0,
+    // Minimum Android version, for the requirements line on that page. This is
+    // the human-readable form of minSdk in mobile/android/app/build.gradle.kts
+    // -- keep the two in step.
+    minAndroid: "7.0",
     notes: "The Calls screen is fixed: the daily volume chart no longer fills the whole screen, and call rows no longer overlap the duration with the call count.",
   },
 };

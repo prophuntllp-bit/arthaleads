@@ -5,6 +5,7 @@ import {
   BookOpen, BarChart2, Zap, HelpCircle,
   Building2, Briefcase, Puzzle,
   Code2, GitCompare, Shield, Gift,
+  Smartphone,
 } from "lucide-react";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
@@ -14,6 +15,7 @@ const NAV_RESOURCES = [
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
   { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
+  { label: "Download App",    href: "/download-app",     desc: "Arthaleads on your Android phone", icon: Smartphone },
   { label: "WordPress Plugin", href: "/wordpress-plugin", desc: "Capture leads from any WP form",    icon: Puzzle },
   { label: "API Docs",         href: "/api-docs",         desc: "Integrate with the REST API",       icon: Code2 },
   { label: "Compare",          href: "/compare",          desc: "Arthaleads vs other CRMs",          icon: GitCompare },
