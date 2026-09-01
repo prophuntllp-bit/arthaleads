@@ -31,6 +31,9 @@ const _csrfAllowedOrigins = _buildCsrfAllowedOrigins();
 // ── In-memory org cache (60 s TTL) ───────────────────────────────────────────
 // Avoids a DB round-trip on every authenticated request.
 // Invalidated automatically by TTL; worst-case a deactivated org stays cached 60 s.
+// The endpoints that stay open while an organisation is frozen for deletion.
+const DELETION_ROUTES = new RegExp("/api/auth/account/deletion([?]|$)");
+
 const _orgCache = new Map();
 const ORG_CACHE_TTL = 60_000; // 60 seconds
 
@@ -93,11 +96,17 @@ const protect = async (req, res, next) => {
       let org = _getCachedOrg(user.orgId);
       if (!org) {
         org = await Organization.findById(user.orgId)
-          .select("isActive plan trialEndsAt approvalStatus").lean();
+          .select("isActive plan trialEndsAt approvalStatus deletionScheduledAt").lean();
         if (org) _setCachedOrg(user.orgId, org);
       }
       if (!org || !org.isActive) {
         return next(new AppError("ORGANISATION_INACTIVE", 403));
+      }
+      // Frozen while the deletion window runs. Managing that deletion has to
+      // stay reachable, or the only way to cancel would be blocked by the
+      // freeze itself, which would make the grace period decorative.
+      if (org.deletionScheduledAt && !DELETION_ROUTES.test(req.originalUrl || "")) {
+        return next(new AppError("ORG_PENDING_DELETION", 403));
       }
       // Trial approval gate. Login/signup already refuse to issue a session for
       // a pending org — this also catches sessions minted before approval was

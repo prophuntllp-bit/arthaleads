@@ -44,6 +44,14 @@ const orgSchema = new mongoose.Schema(
     // is auditable and a support question has an answer.
     lapsedAt: { type: Date },
     isActive: { type: Boolean, default: true },
+
+    // Set when the organisation's last admin deletes their account. Access is
+    // frozen immediately and the purge runs once this date passes -- see
+    // services/accountDeletionService.js. Signing back in before then clears
+    // these three, which is why the account is not erased on day 0.
+    deletionScheduledAt: { type: Date, default: null, index: true },
+    deletionRequestedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    deletionRequestedAt: { type: Date, default: null },
     // Stops the AI copilot writing anything for this org, while leaving its
     // answers working. A switch rather than a deploy, for when something is
     // going wrong at an inconvenient hour.

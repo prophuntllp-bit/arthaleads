@@ -36,6 +36,12 @@ router.post("/restore-admin-session", authController.restoreAdminSession);
 // Protected routes
 router.use(protect);
 router.get("/me",             authController.getMe);
+
+// Account deletion. These stay reachable while an org is frozen for deletion —
+// see the DELETION_ROUTES exemption in middlewares/auth.js.
+router.get("/account/deletion",    authController.accountDeletionStatus);
+router.post("/account/deletion",   authLimiter, authController.requestAccountDeletion);
+router.delete("/account/deletion", authLimiter, authController.cancelAccountDeletion);
 router.put("/me",             validate(updateProfileSchema), authController.updateProfile);
 router.get("/agents",         authController.getAgents);
 router.get("/performance",    authorize("admin", "manager"), authController.getPerformance);

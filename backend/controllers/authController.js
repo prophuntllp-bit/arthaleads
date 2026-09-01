@@ -1,9 +1,12 @@
 ﻿const crypto      = require("crypto");
 const jwt         = require("jsonwebtoken");
 const authService = require("../services/authService");
+const accountDeletion = require("../services/accountDeletionService");
+const { invalidateOrgCache } = require("../middlewares/auth");
 const SignupOtp   = require("../models/SignupOtp");
 const User        = require("../models/User");
 const AuditLog    = require("../models/AuditLog");
+const Organization = require("../models/Organization");
 const logger      = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
 const { checkRecaptcha } = require("../utils/recaptcha");
@@ -542,6 +545,64 @@ const authController = {
       res.json({ verified: true, signupToken: issueSignupToken(normEmail) });
     } catch (err) {
       next(new AppError(err.message || "Status check failed", 500));
+    }
+  },
+
+  // ── Account deletion ───────────────────────────────────────────────────────
+  // Play's User Data policy asks for a real erase rather than a deactivation.
+  // What happens depends on whether anyone is left to hand the organisation
+  // to -- see services/accountDeletionService.js.
+  async requestAccountDeletion(req, res, next) {
+    try {
+      const result = await accountDeletion.requestDeletion(req.user);
+      if (result.outcome === "scheduled") {
+        invalidateOrgCache(req.user.orgId);
+        _auditLog(req, "org_deletion_scheduled", {
+          targetOrg: req.user.orgId,
+          details: { scheduledFor: result.scheduledFor },
+        });
+        return res.json({
+          success: true,
+          outcome: "scheduled",
+          scheduledFor: result.scheduledFor,
+          graceDays: result.graceDays,
+        });
+      }
+      _auditLog(req, "user_deactivated", { targetUser: req.user._id, details: { selfDeleted: true } });
+      res.json({ success: true, outcome: "erased" });
+    } catch (err) {
+      next(new AppError(err.message || "Could not delete the account", 500));
+    }
+  },
+
+  async cancelAccountDeletion(req, res, next) {
+    try {
+      const result = await accountDeletion.cancelDeletion(req.user);
+      if (!result.cancelled) return next(new AppError("No deletion is scheduled for this organisation.", 400));
+      invalidateOrgCache(req.user.orgId);
+      _auditLog(req, "org_deletion_cancelled", { targetOrg: req.user.orgId });
+      res.json({ success: true });
+    } catch (err) {
+      next(new AppError(err.message || "Could not cancel the deletion", 500));
+    }
+  },
+
+  async accountDeletionStatus(req, res, next) {
+    try {
+      const org = req.user.orgId
+        ? await Organization.findById(req.user.orgId).select("name deletionScheduledAt").lean()
+        : null;
+      const lastAdmin = req.user.role === "admin" && (await accountDeletion.isLastAdmin(req.user));
+      res.json({
+        success: true,
+        orgName: org ? org.name : null,
+        scheduledFor: org ? org.deletionScheduledAt : null,
+        graceDays: accountDeletion.GRACE_DAYS,
+        // Tells the client which warning to show before anything is destroyed.
+        willCloseOrganisation: lastAdmin,
+      });
+    } catch (err) {
+      next(new AppError(err.message || "Could not read deletion status", 500));
     }
   },
 

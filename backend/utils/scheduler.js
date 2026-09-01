@@ -1,4 +1,5 @@
 ﻿const cron = require("node-cron");
+const { runDueDeletions } = require("../services/accountDeletionService");
 const Lead = require("../models/Lead");
 const ProjectLead = require("../models/ProjectLead");
 const Automation = require("../models/Automation");
@@ -262,6 +263,15 @@ cron.schedule("30 3 * * *", () => {
 });
 
 // ── Daily 2 AM IST (UTC 8:30 PM = 20:30): full DB backup via email ──────────
+// ── Daily 2:30 AM IST (UTC 21:00): carry out due account deletions ──────────
+// Runs shortly before the backup so a purge is captured by that night's
+// archive, which is the only copy that will still have the data afterwards.
+cron.schedule("0 21 * * *", () => {
+  runDueDeletions()
+    .then((r) => { if (r.processed) logger.warn(`[account-deletion] purged ${r.processed} organisation(s)`); })
+    .catch((err) => logger.error(`[account-deletion] cron failed: ${err.message}`));
+});
+
 cron.schedule("30 20 * * *", () => {
   runBackup().catch((err) => logger.error(`[backup] cron failed: ${err.message}`));
 });
