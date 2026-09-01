@@ -11,6 +11,7 @@ import '../core/auth_state.dart';
 import '../core/signup_handoff.dart';
 import '../core/theme.dart';
 import '../widgets/buttons.dart';
+import '../widgets/google_logo.dart';
 import '../widgets/labeled_field.dart';
 
 /// Signup — mirrors frontend/src/pages/Signup.jsx step for step, against the
@@ -377,7 +378,7 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
             onPressed: _googleBusy ? null : _googleSignup,
             icon: _googleBusy
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                : const GoogleLogo(),
             label: const Text('Sign up with Google'),
             style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           ),

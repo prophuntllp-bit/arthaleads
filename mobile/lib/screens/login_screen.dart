@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
@@ -10,17 +9,9 @@ import '../core/theme.dart';
 import '../widgets/buttons.dart';
 import '../widgets/glass.dart';
 import '../widgets/labeled_field.dart';
+import '../widgets/google_logo.dart';
 import 'signup_screen.dart';
 
-/// Exact SVG paths from frontend/src/pages/Login.jsx's inline Google logo.
-const _googleLogoSvg = '''
-<svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-  <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.2l6.8-6.8C35.8 2.2 30.2 0 24 0 14.6 0 6.6 5.4 2.6 13.3l7.9 6.1C12.4 13 17.7 9.5 24 9.5z"/>
-  <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
-  <path fill="#FBBC05" d="M10.5 28.6A14.8 14.8 0 0 1 9.5 24c0-1.6.3-3.1.7-4.6l-7.9-6.1A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.9-6.1z"/>
-  <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/>
-</svg>
-''';
 
 /// Login — mirrors frontend/src/pages/Login.jsx's mobile ("lg:hidden")
 /// layout: logo + heading, a "Secure access" note, email/phone + password
@@ -336,11 +327,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         ),
                                       )
                                     else
-                                      SvgPicture.string(
-                                        _googleLogoSvg,
-                                        width: 18,
-                                        height: 18,
-                                      ),
+                                      const GoogleLogo(),
                                     const SizedBox(width: 10),
                                     Text(
                                       _googleLoading
