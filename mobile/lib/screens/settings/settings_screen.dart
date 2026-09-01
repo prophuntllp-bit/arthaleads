@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
@@ -710,6 +711,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: Text(_checkingUpdate ? 'Checking…' : 'Check for Updates'),
             ),
           ],
+        ),
+        // Play requires the privacy policy to be reachable from inside the app,
+        // not only from the Play Console listing -- the User Data policy names
+        // both places. arthaleads.com/privacy is a plain public page, which is
+        // what it also asks for: no PDF, no geofence, no sign-in.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => launchUrl(
+              Uri.parse('https://www.arthaleads.com/privacy'),
+              mode: LaunchMode.externalApplication,
+            ),
+            icon: const Icon(Icons.privacy_tip_outlined, size: 16),
+            label: const Text('Privacy Policy'),
+          ),
         ),
         const SizedBox(height: 24),
       ],

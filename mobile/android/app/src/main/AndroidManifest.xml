@@ -1,9 +1,25 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- The camera plugin declares RECORD_AUDIO because it supports video, and
+         the merged manifest is what Play reads. We only ever take stills:
+         attendance_capture_sheet.dart builds its CameraController with
+         enableAudio: false and calls takePicture(). Left in, it would put
+         "Microphone" on the store listing for a CRM, and Play's permissions
+         policy requires every permission be necessary for a current feature. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
+
+    <!-- Superseded by the granular media permissions from API 33. Without a
+         ceiling it advertises on every level, which widens the requested set
+         for no functional gain. WRITE_EXTERNAL_STORAGE already arrives capped
+         at 28 from its own plugin. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
     <application
         android:label="Arthaleads"
         android:name="${applicationName}"
