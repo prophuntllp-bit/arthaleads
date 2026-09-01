@@ -6,6 +6,7 @@ import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound, Shuffle,
          Building2, FileText, AlertCircle, CheckCircle2, Upload, X, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import DeleteAccountSection from "../components/DeleteAccountSection";
 import CustomSelect from "../components/CustomSelect";
 
 // ── Indian Banks list ─────────────────────────────────────────────────────────
@@ -574,7 +575,7 @@ export default function Settings() {
       </div>
 
       {/* ── My Profile tab ── */}
-      {tab === "profile" && (
+      {tab === "profile" && (<>
         <section className="card p-6 space-y-5">
           {/* Avatar + identity */}
           <div className="flex items-center gap-4">
@@ -706,7 +707,8 @@ export default function Settings() {
             </div>
           </form>
         </section>
-      )}
+        <DeleteAccountSection />
+      </>)}
 
       {/* ── Organization tab (admin only) ── */}
       {tab === "organization" && isAdmin && (

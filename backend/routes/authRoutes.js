@@ -24,6 +24,7 @@ router.post("/signup/verify-otp",  authLimiter, authController.signupVerifyOtp);
 router.post("/signup/confirm-link", authLimiter, authController.signupConfirmLink); // signup: confirm the emailed link
 router.post("/signup/link-status",  signupPollLimiter, authController.signupLinkStatus); // signup: originating tab polls
 router.post("/forgot-password", authLimiter, authController.forgotPassword);
+router.post("/account/deletion-request", authLimiter, authController.publicDeletionRequest); // public: no session
 router.post("/reset-password/:token", authLimiter, authController.resetPassword);
 
 // Logout must be public - cookie must clear even if JWT is expired/invalid

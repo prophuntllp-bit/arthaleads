@@ -78,6 +78,7 @@ export function AuthProvider({ children }) {
         // Handle 403 org-level blocks here so the correct overlay is shown on mount.
         if (status === 403) {
           if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
+          if (msg === "ORG_PENDING_DELETION") window.dispatchEvent(new CustomEvent("org:pendingDeletion"));
           if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
         }
       })

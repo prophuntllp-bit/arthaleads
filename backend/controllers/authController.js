@@ -11,7 +11,8 @@ const logger      = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
 const { checkRecaptcha } = require("../utils/recaptcha");
 const { isDisposableEmail } = require("../utils/emailDomains");
-const { sendSignupPendingEmail, notifySuperAdminsOfSignup, sendSignupVerifyEmail } = require("../utils/email");
+const { sendSignupPendingEmail, notifySuperAdminsOfSignup, sendSignupVerifyEmail,
+        sendAccountDeletionRequestEmails } = require("../utils/email");
 
 // Signup email-verification code lifetime. The email quotes this same
 // constant, so the promised window and the real one cannot drift apart.
@@ -552,6 +553,43 @@ const authController = {
   // Play's User Data policy asks for a real erase rather than a deactivation.
   // What happens depends on whether anyone is left to hand the organisation
   // to -- see services/accountDeletionService.js.
+  // The public route, for people who cannot sign in any more -- someone who
+  // left the company, or lost access to the address. Play asks for a deletion
+  // route that works outside the app, and the in-app one requires a session.
+  //
+  // The response is identical whether or not the address is registered. A form
+  // that answers "no such account" is a way to test which addresses are.
+  async publicDeletionRequest(req, res, next) {
+    const GENERIC = { success: true, message: "If that address has an Arthaleads account, we've emailed you to confirm the request." };
+    try {
+      const email = String(req.body.email || "").toLowerCase().trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        return next(new AppError("Enter a valid email address", 400));
+      }
+
+      const user = await User.findOne({ email }).select("name email role orgId").lean();
+      if (user) {
+        const org = user.orgId
+          ? await Organization.findById(user.orgId).select("name").lean()
+          : null;
+        await sendAccountDeletionRequestEmails(user, org ? org.name : null);
+        AuditLog.create({
+          action: "user_deactivated",
+          targetUser: user._id,
+          targetOrg: user.orgId || null,
+          details: { deletionRequestedVia: "public form" },
+          ip: req.ip || "",
+        }).catch(() => {});
+      }
+      res.json(GENERIC);
+    } catch (err) {
+      // Still generic on failure: a 500 only for this address would leak the
+      // same fact the generic response exists to hide.
+      logger.error(`[deletion-request] ${err.message}`);
+      res.json(GENERIC);
+    }
+  },
+
   async requestAccountDeletion(req, res, next) {
     try {
       const result = await accountDeletion.requestDeletion(req.user);

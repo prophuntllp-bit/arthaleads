@@ -325,7 +325,9 @@ const Privacy        = lazy(() => import("./pages/Privacy"));
 const Terms          = lazy(() => import("./pages/Terms"));
 const FbCallback     = lazy(() => import("./pages/FbCallback"));
 const GoogleCallback = lazy(() => import("./pages/GoogleCallback"));
+const PendingDeletionScreen = lazy(() => import("./components/PendingDeletionScreen"));
 const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
+const DeleteAccount  = lazy(() => import("./pages/DeleteAccount"));
 const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
@@ -473,6 +475,7 @@ function RequireAuth() {
   const { user, org, loading, logout } = useAuth();
   const [orgInactive,      setOrgInactive]      = useState(false);
   const [trialExpiredFlag, setTrialExpiredFlag] = useState(false);
+  const [pendingDeletion,  setPendingDeletion]  = useState(false);
 
   // Apply (or clear) the org's custom brand colour whenever it changes
   useEffect(() => { applyBrandColor(org?.brandColor); }, [org?.brandColor]);
@@ -487,11 +490,14 @@ function RequireAuth() {
   useEffect(() => {
     const onInactive = () => setOrgInactive(true);
     const onTrial    = () => setTrialExpiredFlag(true);
-    window.addEventListener("org:inactive",  onInactive);
-    window.addEventListener("trial:expired", onTrial);
+    const onPending  = () => setPendingDeletion(true);
+    window.addEventListener("org:inactive",        onInactive);
+    window.addEventListener("trial:expired",       onTrial);
+    window.addEventListener("org:pendingDeletion", onPending);
     return () => {
-      window.removeEventListener("org:inactive",  onInactive);
-      window.removeEventListener("trial:expired", onTrial);
+      window.removeEventListener("org:inactive",        onInactive);
+      window.removeEventListener("trial:expired",       onTrial);
+      window.removeEventListener("org:pendingDeletion", onPending);
     };
   }, []);
 
@@ -552,9 +558,12 @@ function RequireAuth() {
       {/* In-app soft phone in-call widget — renders only during an active call */}
       <SoftPhoneWidget />
       {/* Blocking overlays - rendered on top of everything */}
-      {isInactive   && <OrgInactiveScreen   onLogout={handleLogout} />}
-      {!isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
-      {!isInactive && !trialExpired && needsOnboarding && <OnboardingGate />}
+      {/* A scheduled deletion outranks the others: it is the only one with a
+          deadline, and cancelling it is what the person came here to do. */}
+      {pendingDeletion && <PendingDeletionScreen onLogout={handleLogout} />}
+      {!pendingDeletion && isInactive && <OrgInactiveScreen onLogout={handleLogout} />}
+      {!pendingDeletion && !isInactive && trialExpired && <TrialExpiredScreen onLogout={handleLogout} />}
+      {!pendingDeletion && !isInactive && !trialExpired && needsOnboarding && <OnboardingGate />}
     </div>
     </SoftPhoneProvider>
   );
@@ -676,6 +685,7 @@ export default function App() {
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/google-callback"      element={<GoogleCallback />} />
         <Route path="/verify-email"         element={<VerifyEmail />} />
+        <Route path="/delete-account"       element={<DeleteAccount />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />

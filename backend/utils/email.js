@@ -283,6 +283,60 @@ The link and code expire in ${minutes} minutes. Didn't try to sign up? Ignore th
   });
 }
 
+// ── Account deletion requested from the public page ───────────────────────────
+// Two mails: the person gets confirmation that the request landed, and support
+// gets something to act on. Sent only when the address actually has an account,
+// while the endpoint's response is identical either way -- otherwise the form
+// becomes a way to test which addresses are registered.
+async function sendAccountDeletionRequestEmails(user, orgName) {
+  const support = send({
+    to: SUPPORT,
+    replyTo: user.email,
+    subject: `Account deletion requested — ${user.email}`,
+    html: layout({
+      preheader: `${user.name} asked for their account to be deleted.`,
+      eyebrow: "Account deletion",
+      title: "Deletion requested from the web form",
+      bodyHtml: `
+        ${paragraph("Someone used the public deletion page. They could not, or chose not to, do it from inside the app.")}
+        ${panel(
+          row("Name", user.name) +
+          row("Email", user.email) +
+          row("Organisation", orgName || "—") +
+          row("Role", user.role, true)
+        )}
+        ${paragraph("Deleting from Settings does this immediately and needs no action here. This is for people who have lost access.", MUTED)}`,
+      footerNote: "Sent to Arthaleads support.",
+    }),
+    text: `Account deletion requested
+
+Name: ${user.name}
+Email: ${user.email}
+Organisation: ${orgName || "-"}
+Role: ${user.role}`,
+  });
+
+  const ack = send({
+    to: user.email,
+    subject: "We received your deletion request",
+    html: plainLayout({
+      preheader: "We will action this within 30 days.",
+      title: "We received your deletion request",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(user.name || "there")}, we have your request to delete the Arthaleads account for ${strong(user.email)}.`)}
+        ${paragraph("We will action it within 30 days and email you when it is done.")}
+        ${paragraph(`If you can still sign in, Settings › My Profile › Delete my account does the same thing immediately. If you did not make this request, reply to this email and we will stop it.`)}`,
+    }),
+    text: `We received your request to delete the Arthaleads account for ${user.email}.
+
+We will action it within 30 days and email you when it is done.
+
+If you can still sign in, Settings > My Profile > Delete my account does the same thing immediately. If you did not make this request, reply to this email.`,
+  });
+
+  return Promise.all([support, ack]);
+}
+
 module.exports = {
   sendPasswordResetEmail,
   sendGoogleOnlyAccountEmail,
@@ -293,4 +347,5 @@ module.exports = {
   sendSignupRejectedEmail,
   notifySuperAdminsOfSignup,
   sendSignupVerifyEmail,
+  sendAccountDeletionRequestEmails,
 };

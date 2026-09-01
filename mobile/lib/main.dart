@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'core/api_client.dart';
 import 'core/auth_state.dart';
 import 'core/options_service.dart';
 import 'core/push_service.dart';
@@ -83,13 +84,58 @@ class _AuthGate extends StatelessWidget {
   }
 }
 
-class _OrgBlockedScreen extends StatelessWidget {
+class _OrgBlockedScreen extends StatefulWidget {
   final String reason;
   const _OrgBlockedScreen({required this.reason});
 
   @override
+  State<_OrgBlockedScreen> createState() => _OrgBlockedScreenState();
+}
+
+class _OrgBlockedScreenState extends State<_OrgBlockedScreen> {
+  bool _cancelling = false;
+  String? _error;
+
+  bool get _trial => widget.reason == 'TRIAL_EXPIRED';
+  bool get _pendingDeletion => widget.reason == 'ORG_PENDING_DELETION';
+
+  // The deletion endpoints are exempt from the freeze that produced this
+  // screen, so this call goes through where everything else is blocked --
+  // otherwise the grace period would be impossible to act on from the app.
+  Future<void> _cancelDeletion() async {
+    setState(() { _cancelling = true; _error = null; });
+    try {
+      await ApiClient.instance.dio.delete('/auth/account/deletion');
+      if (!mounted) return;
+      // Everything behind this screen was built while the org was frozen.
+      await context.read<AuthState>().refresh();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _cancelling = false;
+        _error = ApiClient.errorMessage(e, 'Could not cancel. Please try again.');
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final trial = reason == 'TRIAL_EXPIRED';
+    final title = _pendingDeletion
+        ? 'Scheduled for deletion'
+        : _trial
+            ? 'Your trial has expired'
+            : 'Organisation inactive';
+    final body = _pendingDeletion
+        ? 'This workspace and everything in it will be deleted when the notice period ends. You can still stop it.'
+        : _trial
+            ? 'Please upgrade your plan on the web dashboard to continue.'
+            : 'Your organisation account is inactive. Contact support.';
+    final icon = _pendingDeletion
+        ? Icons.delete_forever_rounded
+        : _trial
+            ? Icons.hourglass_bottom_rounded
+            : Icons.block_rounded;
+
     return Scaffold(
       body: Center(
         child: Padding(
@@ -97,31 +143,39 @@ class _OrgBlockedScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                trial ? Icons.hourglass_bottom_rounded : Icons.block_rounded,
-                size: 56,
-                color: AppColors.danger,
-              ),
+              Icon(icon, size: 56, color: AppColors.danger),
               const SizedBox(height: 16),
               Text(
-                trial ? 'Your trial has expired' : 'Organisation inactive',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
-                trial
-                    ? 'Please upgrade your plan on the web dashboard to continue.'
-                    : 'Your organisation account is inactive. Contact support.',
-                textAlign: TextAlign.center,
-              ),
+              Text(body, textAlign: TextAlign.center),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger)),
+              ],
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.read<AuthState>().logout(),
-                child: const Text('Back to login'),
-              ),
+              if (_pendingDeletion)
+                ElevatedButton(
+                  onPressed: _cancelling ? null : _cancelDeletion,
+                  child: _cancelling
+                      ? const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Keep my workspace'),
+                ),
+              if (_pendingDeletion) const SizedBox(height: 8),
+              _pendingDeletion
+                  ? TextButton(
+                      onPressed: () => context.read<AuthState>().logout(),
+                      child: const Text('Back to login'),
+                    )
+                  : ElevatedButton(
+                      onPressed: () => context.read<AuthState>().logout(),
+                      child: const Text('Back to login'),
+                    ),
             ],
           ),
         ),

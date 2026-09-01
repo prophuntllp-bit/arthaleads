@@ -111,6 +111,7 @@ api.interceptors.response.use(
     if (status === 403) {
       if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
       if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));
+      if (msg === "ORG_PENDING_DELETION") window.dispatchEvent(new CustomEvent("org:pendingDeletion"));
     }
 
     return Promise.reject(err);

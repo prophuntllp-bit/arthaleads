@@ -6,7 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// - base URL from --dart-define=API_BASE_URL (defaults to prod)
 /// - Bearer token on every request
 /// - 401 → clear session + notify listener (session expired)
-/// - 403 ORGANISATION_INACTIVE / TRIAL_EXPIRED surfaced as typed events
+/// - 403 ORGANISATION_INACTIVE / TRIAL_EXPIRED / ORG_PENDING_DELETION surfaced
+///   as typed events
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
@@ -60,7 +61,9 @@ class ApiClient {
               onSessionExpired?.call();
             }
           } else if (status == 403 &&
-              (msg == 'ORGANISATION_INACTIVE' || msg == 'TRIAL_EXPIRED')) {
+              (msg == 'ORGANISATION_INACTIVE' ||
+                 msg == 'TRIAL_EXPIRED' ||
+                 msg == 'ORG_PENDING_DELETION')) {
             onOrgBlocked?.call(msg!);
           }
           handler.next(err);

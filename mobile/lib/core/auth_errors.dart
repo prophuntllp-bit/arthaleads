@@ -15,6 +15,8 @@ const Map<String, String> kAuthErrorMessages = {
       'This organisation has been deactivated. Please contact your administrator.',
   'TRIAL_EXPIRED':
       'Your free trial has ended. Please upgrade your plan to continue.',
+  'ORG_PENDING_DELETION':
+      'This workspace is scheduled for deletion. Open it to cancel while there is still time.',
   'NO_GOOGLE_ACCOUNT':
       "There's no Arthaleads account for that Google address yet. Sign up on the web first, then sign in here.",
 };

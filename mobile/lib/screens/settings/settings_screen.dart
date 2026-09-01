@@ -13,6 +13,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../core/update_service.dart';
 import '../../widgets/buttons.dart';
+import '../../widgets/delete_account_tile.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/update_gate.dart' show showUpdateDialog;
@@ -727,6 +728,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             label: const Text('Privacy Policy'),
           ),
         ),
+        // Play's User Data policy requires deletion to be reachable from inside
+        // the app, not only from the public page at /delete-account.
+        const DeleteAccountTile(),
         const SizedBox(height: 24),
       ],
     );
