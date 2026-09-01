@@ -8,11 +8,17 @@ const logger      = require("../config/logger");
 const { AppError } = require("../middlewares/errorHandler");
 const { checkRecaptcha } = require("../utils/recaptcha");
 const { isDisposableEmail } = require("../utils/emailDomains");
-const { sendSignupPendingEmail, notifySuperAdminsOfSignup, sendOtpEmail } = require("../utils/email");
+const { sendSignupPendingEmail, notifySuperAdminsOfSignup, sendSignupVerifyEmail } = require("../utils/email");
 
 // Signup email-verification code lifetime. The email quotes this same
 // constant, so the promised window and the real one cannot drift apart.
-const OTP_TTL_MS = 10 * 60 * 1000;
+const OTP_TTL_MS = 15 * 60 * 1000;
+const SIGNUP_SITE = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+
+/** Issues the short-lived proof-of-email-ownership the signup form submits. */
+function issueSignupToken(email) {
+  return jwt.sign({ email, type: "signup_verify" }, process.env.JWT_SECRET, { expiresIn: "30m" });
+}
 
 function _auditLog(req, action, extras = {}) {
   AuditLog.create({
@@ -364,7 +370,7 @@ const authController = {
   // what actually screens signups.)
   async signupSendOtp(req, res, next) {
     try {
-      const { email, recaptchaToken } = req.body;
+      const { email, recaptchaToken, handoffHash } = req.body;
       const ok = (await checkRecaptcha(recaptchaToken, "signup_send_otp")) !== "bot";
       if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
       if (!email) return next(new AppError("Email is required", 400));
@@ -395,6 +401,11 @@ const authController = {
 
       const otp     = String(crypto.randomInt(100000, 999999));
       const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+      // The link half. 32 bytes so it cannot be guessed the way a 6-digit code
+      // can — the code survives only because it is rate limited and capped at
+      // five attempts, and neither of those applies to a URL.
+      const linkToken     = crypto.randomBytes(32).toString("hex");
+      const linkTokenHash = crypto.createHash("sha256").update(linkToken).digest("hex");
       const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
       // Upsert: one live code per address. Resending replaces the previous code
@@ -406,15 +417,17 @@ const authController = {
       await SignupOtp.findOneAndUpdate(
         { email: normEmail },
         {
-          email: normEmail, otpHash, expiresAt, attempts: 0,
+          email: normEmail, otpHash, linkTokenHash, expiresAt, attempts: 0,
+          verified: false,
+          handoffHash: String(handoffHash || ""),
           ip: req.ip || "",
           sendCount: existing ? existing.sendCount + 1 : 1,
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      // Send OTP to the email the user typed in the signup form
-      await sendOtpEmail(normEmail, otp, OTP_TTL_MS / 60000);
+      const verifyUrl = `${SIGNUP_SITE}/verify-email?t=${linkToken}`;
+      await sendSignupVerifyEmail(normEmail, verifyUrl, otp, OTP_TTL_MS / 60000);
 
       // Return masked email so frontend can show "OTP sent to ab***@gmail.com"
       const atIdx  = normEmail.lastIndexOf("@");
@@ -459,12 +472,7 @@ const authController = {
         return next(new AppError("Invalid code. Please check and try again.", 400));
       }
 
-      // Short-lived proof-of-email-ownership, submitted with the signup form.
-      const signupToken = jwt.sign(
-        { email: normEmail, type: "signup_verify" },
-        process.env.JWT_SECRET,
-        { expiresIn: "30m" }
-      );
+      const signupToken = issueSignupToken(normEmail);
 
       // Delete the used OTP record
       await SignupOtp.deleteOne({ email: normEmail });
@@ -472,6 +480,68 @@ const authController = {
       res.json({ success: true, signupToken });
     } catch (err) {
       next(new AppError(err.message || "OTP verification failed", 500));
+    }
+  },
+
+  // Confirms the emailed verification link.
+  //
+  // POST, deliberately, and the GET at /verify-email is only the page: mail
+  // security suites (Defender Safe Links, Proofpoint, Mimecast) fetch every
+  // URL in a message before the recipient sees it. If a GET consumed the
+  // token, the scanner would burn it and the human would land on "already
+  // used" -- which, for corporate signups, means every time. Scanners issue
+  // GETs and do not run JavaScript, so the page POSTs on mount instead.
+  async signupConfirmLink(req, res, next) {
+    try {
+      const { token } = req.body;
+      if (!token) return next(new AppError("Verification token is required", 400));
+
+      const hash   = crypto.createHash("sha256").update(String(token)).digest("hex");
+      const record = await SignupOtp.findOne({ linkTokenHash: hash });
+
+      if (!record) return next(new AppError("This link is no longer valid. Please request a new one.", 400));
+      if (Date.now() > new Date(record.expiresAt).getTime()) {
+        return next(new AppError("This link has expired. Please request a new one.", 400));
+      }
+
+      // Single use: clearing the hash means a forwarded copy of the mail, or a
+      // second click, cannot mint another token. The record itself survives so
+      // the tab that started the signup can still collect the result.
+      await SignupOtp.updateOne({ _id: record._id }, { verified: true, linkTokenHash: "" });
+
+      res.json({ success: true, email: record.email, signupToken: issueSignupToken(record.email) });
+    } catch (err) {
+      next(new AppError(err.message || "Could not verify this link", 500));
+    }
+  },
+
+  // Polled by the tab that started the signup, so opening the link on a phone
+  // advances the laptop the form is sitting on.
+  //
+  // The caller has to present the handoff secret its own browser generated;
+  // only its hash was ever sent to us. Knowing the email address is therefore
+  // not enough to collect somebody else's signup token. A mismatch returns
+  // the same "not yet" as an unverified record rather than an error, so this
+  // cannot be used to probe which addresses are mid-signup.
+  async signupLinkStatus(req, res, next) {
+    try {
+      const { email, handoff } = req.body;
+      if (!email || !handoff) return next(new AppError("email and handoff are required", 400));
+
+      const normEmail = String(email).toLowerCase().trim();
+      const record    = await SignupOtp.findOne({ email: normEmail });
+      if (!record || !record.verified || !record.handoffHash) return res.json({ verified: false });
+
+      const given    = Buffer.from(crypto.createHash("sha256").update(String(handoff)).digest("hex"));
+      const expected = Buffer.from(record.handoffHash);
+      if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+        return res.json({ verified: false });
+      }
+
+      await SignupOtp.deleteOne({ _id: record._id });
+      res.json({ verified: true, signupToken: issueSignupToken(normEmail) });
+    } catch (err) {
+      next(new AppError(err.message || "Status check failed", 500));
     }
   },
 

@@ -30,4 +30,26 @@ const authLimiter = rateLimit({
   },
 });
 
-module.exports = { authLimiter };
+// The signup tab polls this every few seconds while it waits for the emailed
+// link to be opened, so it cannot sit behind authLimiter -- a single signup
+// would spend that whole allowance in under a minute, and this is keyed by IP,
+// so one office would share the budget. That is the exact shape of the bug
+// that produced "Too many login attempts" after two or three genuine tries.
+//
+// One signup polls at most ~150 times (every 4s, giving up at 10 minutes).
+// 600 leaves room for several people signing up from one address, while still
+// capping a client stuck in a hot loop. The endpoint is a single indexed read
+// that returns {verified:false}.
+const signupPollLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_SIGNUP_POLL) || 600,
+  message: { success: false, message: "Too many status checks, please refresh and try again." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    const ip = req.ip || "";
+    return ip === "::1" || ip === "127.0.0.1";
+  },
+});
+
+module.exports = { authLimiter, signupPollLimiter };

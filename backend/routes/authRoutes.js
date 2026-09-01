@@ -4,7 +4,7 @@ const router = express.Router();
 const authController = require("../controllers/authController");
 const { protect, authorize } = require("../middlewares/auth");
 const validate = require("../middlewares/validate");
-const { authLimiter } = require("../middlewares/rateLimiters");
+const { authLimiter, signupPollLimiter } = require("../middlewares/rateLimiters");
 const {
   signupSchema,
   loginSchema,
@@ -19,8 +19,10 @@ router.post("/login",          authLimiter, validate(loginSchema),  authControll
 router.post("/admin-login",    authLimiter, authController.adminLogin); // super_admin only
 router.post("/google",         authLimiter, authController.googleAuth);
 router.post("/google/signup-profile", authLimiter, authController.googleSignupProfile);
-router.post("/signup/send-otp",    authLimiter, authController.signupSendOtp);     // signup: phone verify OTP send
-router.post("/signup/verify-otp",  authLimiter, authController.signupVerifyOtp);   // signup: phone verify OTP confirm
+router.post("/signup/send-otp",    authLimiter, authController.signupSendOtp);     // signup: mail the link + code
+router.post("/signup/verify-otp",  authLimiter, authController.signupVerifyOtp);   // signup: confirm the emailed code
+router.post("/signup/confirm-link", authLimiter, authController.signupConfirmLink); // signup: confirm the emailed link
+router.post("/signup/link-status",  signupPollLimiter, authController.signupLinkStatus); // signup: originating tab polls
 router.post("/forgot-password", authLimiter, authController.forgotPassword);
 router.post("/reset-password/:token", authLimiter, authController.resetPassword);
 
