@@ -50,6 +50,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
 
 flutter:
   uses-material-design: true
@@ -82,3 +83,36 @@ flutter_launcher_icons:
   # frontend/public/logo.png so the app matches the web mark exactly.
   adaptive_icon_background: "assets/icon/app_icon_background.png"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+
+# ── Launch screen ─────────────────────────────────────────────────────────────
+# Regenerate with:  dart run flutter_native_splash:create
+#
+# Before this, LaunchTheme set android:windowBackground twice and the second
+# declaration won, so Flutter's own launch_background drawable never rendered
+# and a cold start was a bare system-coloured rectangle.
+#
+# Two images on purpose. Below Android 12 the splash is a full drawable, so it
+# takes the complete icon -- orange tile, white mark. From Android 12 the
+# platform masks the splash icon into a circle, which would clip the tile's
+# corners; that branch gets the white mark on an orange circle instead, which
+# is the same artwork the launcher icon is built from.
+#
+# Both point at 512px derivatives rather than the 2080px sources. The generator
+# treats the supplied file as the xxxhdpi asset and scales down from there, so
+# feeding it the originals produced a 1.28MB splash.png for that bucket alone
+# and 3.5MB of drawables overall -- for a mark that renders at about 128dp.
+# assets/icon/ is build-time input and is not bundled, so these cost nothing
+# in the APK beyond the generated drawables themselves.
+flutter_native_splash:
+  color: "#ffffff"
+  color_dark: "#18171C"
+  image: assets/icon/splash_mark.png
+  android_12:
+    image: assets/icon/splash_mark_fg.png
+    icon_background_color: "#FF6B00"
+    icon_background_color_dark: "#FF6B00"
+    color: "#ffffff"
+    color_dark: "#18171C"
+  android: true
+  ios: false
+  web: false
