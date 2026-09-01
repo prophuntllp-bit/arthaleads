@@ -12,7 +12,7 @@ plugins {
 // by hand locally (copy key.properties.example) or by CI from GitHub
 // secrets (see .github/workflows/mobile-flutter-ci.yml). Falls back to
 // debug signing when the file is absent, so `flutter build apk --debug`
-// keeps working with no setup.
+// keeps working with no setup. Bundles are the exception: see buildTypes below.
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -20,6 +20,17 @@ if (keystorePropertiesFile.exists()) {
 }
 fun signingProp(key: String): String? =
     keystoreProperties.getProperty(key) ?: project.findProperty(key) as String?
+
+// CI signs through AGP's injected properties rather than key.properties -- see
+// .github/workflows/build-apk.yml -- and those override the signingConfig at
+// task level, so their presence counts as being properly signed.
+val hasInjectedSigning = project.hasProperty("android.injected.signing.store.file")
+
+// An AAB is only ever built to be uploaded. A store build that quietly falls
+// back to the debug keystore produces an artifact Play refuses at upload,
+// after the build has already reported success -- so it fails here instead,
+// where the message can say what is missing.
+val isBundleBuild = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 
 android {
     namespace = "com.arthaleads.arthaleads_mobile"
@@ -61,13 +72,34 @@ android {
 
     buildTypes {
         release {
-            // Real release signing when key.properties (local) or -P signing
-            // properties (CI) are present; falls back to debug signing so
-            // `flutter build apk --release` never hard-fails with no setup.
-            signingConfig = if (signingProp("storeFile") != null)
-                signingConfigs.getByName("release")
-            else
-                signingConfigs.getByName("debug")
+            // Real release signing when key.properties (local) or the injected
+            // -P properties (CI) are present. An unsigned APK still builds, so
+            // `flutter build apk --release` needs no setup -- but it says so
+            // loudly, and an unsigned *bundle* refuses to build at all.
+            signingConfig = when {
+                signingProp("storeFile") != null -> signingConfigs.getByName("release")
+                hasInjectedSigning -> signingConfigs.getByName("debug") // AGP overrides per task
+                isBundleBuild -> error(
+                    """
+                    Refusing to build a release bundle with debug signing.
+
+                    Play rejects debug-signed uploads, so this build would otherwise have
+                    reported success and failed only at upload, which is the expensive place
+                    to find out.
+
+                    Provide android/key.properties with storeFile, storePassword, keyAlias
+                    and keyPassword, or pass -Pandroid.injected.signing.* the way
+                    .github/workflows/build-apk.yml does.
+                    """.trimIndent()
+                )
+                else -> {
+                    logger.warn(
+                        "WARNING: this release APK is DEBUG-SIGNED. Fine for local testing, " +
+                        "not uploadable to Play. Add android/key.properties to sign it properly."
+                    )
+                    signingConfigs.getByName("debug")
+                }
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

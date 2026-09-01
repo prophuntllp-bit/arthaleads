@@ -68,26 +68,26 @@ class UpgradeWall extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 28),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-                  onPressed: () => launchUrl(
-                    Uri.parse('https://arthaleads.com/#pricing'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  child: const Text('View Plans'),
-                ),
-                const SizedBox(width: 10),
-                OutlinedButton(
-                  onPressed: () => launchUrl(
-                    Uri(scheme: 'mailto', path: 'contact@arthaleads.com'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  child: const Text('Contact Us'),
-                ),
-              ],
+            // Deliberately no link to the pricing page.
+            //
+            // Play's payments policy treats sending someone from inside the app
+            // to an outside purchase flow as steering, and this was the only
+            // screen in the app that did it. Plans are sold on the web; the app
+            // says where to go and nothing more, which is what the trial-expired
+            // screen in main.dart already does.
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () => launchUrl(
+                Uri(scheme: 'mailto', path: 'contact@arthaleads.com'),
+                mode: LaunchMode.externalApplication,
+              ),
+              child: const Text('Contact Us'),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Plans are managed from the web dashboard.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             Text(
