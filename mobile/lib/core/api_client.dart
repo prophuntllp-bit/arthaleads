@@ -53,7 +53,7 @@ class ApiClient {
           final msg = _messageOf(err.response?.data);
 
           if (status == 401) {
-            final isAuthEndpoint = RegExp(r'/auth/(login|signup|otp/verify|google|phone-login)')
+            final isAuthEndpoint = RegExp(r'/auth/(login|signup|google|phone-login)')
                 .hasMatch(path);
             if (!isAuthEndpoint && !authInProgress) {
               clearToken();

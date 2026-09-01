@@ -1,7 +1,6 @@
 ﻿const crypto      = require("crypto");
 const jwt         = require("jsonwebtoken");
 const authService = require("../services/authService");
-const otpService  = require("../services/otpService");
 const SignupOtp   = require("../models/SignupOtp");
 const User        = require("../models/User");
 const AuditLog    = require("../models/AuditLog");
@@ -473,43 +472,6 @@ const authController = {
       res.json({ success: true, signupToken });
     } catch (err) {
       next(new AppError(err.message || "OTP verification failed", 500));
-    }
-  },
-
-  // ── MSG91 OTP ────────────────────────────────────────────────────────────────
-  async sendOtp(req, res, next) {
-    try {
-      const { phone, recaptchaToken } = req.body;
-      const ok = (await checkRecaptcha(recaptchaToken, "login_send_otp")) !== "bot";
-      if (!ok) return next(new AppError("Verification failed. Please refresh and try again.", 400));
-      if (!phone) return next(new AppError("Phone number is required", 400));
-      const digits = String(phone).replace(/\D/g, "");
-      if (digits.length < 10) return next(new AppError("Enter a valid 10-digit mobile number", 400));
-      await otpService.sendOtp(phone);
-      res.json({ success: true, message: "OTP sent successfully" });
-    } catch (err) {
-      next(new AppError(err.message || "Failed to send OTP", 500));
-    }
-  },
-
-  async verifyOtp(req, res, next) {
-    try {
-      const { phone, otp } = req.body;
-      if (!phone || !otp) return next(new AppError("Phone and OTP are required", 400));
-      if (String(otp).length !== 6) return next(new AppError("OTP must be 6 digits", 400));
-
-      await otpService.verifyOtp(phone, otp);
-
-      // OTP verified — log the user in by phone number
-      const data = await authService.loginByPhone(phone);
-      sendAuthResponse(res, 200, data);
-    } catch (err) {
-      // Distinguish OTP mismatch from other errors
-      const msg = err.message || "";
-      if (msg.toLowerCase().includes("not match") || msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("expired")) {
-        return next(new AppError("Invalid or expired OTP. Please try again.", 400));
-      }
-      next(new AppError(msg || "OTP verification failed", 500));
     }
   },
 

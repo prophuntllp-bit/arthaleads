@@ -69,9 +69,9 @@ api.interceptors.response.use(
     const msg    = err.response?.data?.message;
 
     if (status === 401) {
-      // Auth endpoints (login, signup, OTP verify) return 401 for bad credentials —
+      // Auth endpoints (login, signup, Google) return 401 for bad credentials —
       // those must propagate so the form can show the error message.
-      const isAuthEndpoint = /\/auth\/(login|signup|otp\/verify|google|phone-login)/.test(err.config?.url || "");
+      const isAuthEndpoint = /\/auth\/(login|signup|google|phone-login)/.test(err.config?.url || "");
       if (isAuthEndpoint) return Promise.reject(err);
 
       // A login/signup/google/phone auth call is actively in flight — swallow the
