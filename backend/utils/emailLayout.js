@@ -311,7 +311,12 @@ function inlineCode(code) {
   </p>`;
 }
 
+/** Line breaks to <br>. Uses fromCharCode so no escape has to survive a build step. */
+function nl2br(text) {
+  return String(text == null ? "" : text).split(String.fromCharCode(10)).join("<br />");
+}
+
 module.exports = {
-  layout, plainLayout, button, panel, row, codeBlock, inlineCode, paragraph, divider, esc,
+  layout, plainLayout, button, panel, row, codeBlock, inlineCode, paragraph, divider, esc, nl2br,
   BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND, SOCIAL,
 };

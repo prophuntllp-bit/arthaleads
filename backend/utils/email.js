@@ -68,7 +68,7 @@ async function sendPasswordResetEmail(toEmail, toName, resetUrl) {
 // There is no password to reset, so say that rather than send nothing. Safe
 // against enumeration: only the owner of the address ever receives it, and the
 // HTTP response is identical either way.
-async function sendGoogleOnlyAccountEmail(toEmail, toName, loginUrl) {
+async function sendGoogleOnlyAccountEmail(toEmail, toName, loginUrl = LOGIN_URL) {
   const name = toName || "there";
   return send({
     to: toEmail,

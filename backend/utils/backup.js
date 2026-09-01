@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const { Resend } = require("resend");
 const logger   = require("../config/logger");
 const { istDateKey } = require("./datetime");
+const { layout, panel, row, paragraph, HEADING } = require("./emailLayout");
 
 // Collections to back up (in order)
 const COLLECTIONS = [
@@ -35,84 +36,27 @@ function fmtBytes(n) {
 
 // ── Build the backup email HTML ───────────────────────────────────────────────
 function buildEmail(date, stats, rawSize, gzipSize) {
-  const rows = stats.map(({ name, count }) => `
-    <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #2a2a2e;color:#d1d0cf;font-family:monospace">${name}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #2a2a2e;color:#ff6b00;text-align:right;font-weight:600">${count.toLocaleString()}</td>
-    </tr>`).join("");
+  const total = stats.reduce((sum, c) => sum + c.count, 0);
+  const rows  = stats.map(({ name, count }) => row(name, count.toLocaleString())).join("");
 
-  return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"/></head>
-<body style="margin:0;padding:0;background:#f0ede8;font-family:'Segoe UI',Inter,Arial,sans-serif;">
-<div style="max-width:520px;margin:40px auto;padding:0 16px">
-
-  <!-- Logo -->
-  <div style="text-align:center;margin-bottom:24px">
-    <img src="https://www.arthaleads.com/logo.png" width="48" height="48"
-         style="border-radius:12px" alt="Arthaleads"/>
-    <div style="font-size:18px;font-weight:800;color:#1e1d20;margin-top:8px">
-      Artha<span style="color:#ff6b00">leads</span>
-    </div>
-  </div>
-
-  <!-- Card -->
-  <div style="background:#1e1d20;border-radius:20px;padding:32px;
-              border:1px solid rgba(255,107,0,0.18);
-              box-shadow:0 0 40px rgba(255,107,0,0.08)">
-
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:36px;margin-bottom:8px">🗄️</div>
-      <h2 style="margin:0;font-size:20px;font-weight:800;color:#ffffff">
-        Daily Backup Complete
-      </h2>
-      <p style="margin:6px 0 0;font-size:13px;color:#888">${date}</p>
-    </div>
-
-    <hr style="border:none;border-top:1px solid #2a2a2e;margin:20px 0"/>
-
-    <!-- Stats table -->
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-      <thead>
-        <tr>
-          <th style="padding:8px 12px;text-align:left;color:#666;font-size:11px;
-                     text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #2a2a2e">
-            Collection
-          </th>
-          <th style="padding:8px 12px;text-align:right;color:#666;font-size:11px;
-                     text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #2a2a2e">
-            Documents
-          </th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-
-    <!-- Size info -->
-    <div style="background:#111113;border-radius:12px;padding:14px 16px;
-                display:flex;justify-content:space-between;margin-bottom:24px">
-      <div style="text-align:center;flex:1">
-        <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Raw size</div>
-        <div style="font-size:15px;font-weight:700;color:#d1d0cf">${fmtBytes(rawSize)}</div>
-      </div>
-      <div style="width:1px;background:#2a2a2e"></div>
-      <div style="text-align:center;flex:1">
-        <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Compressed</div>
-        <div style="font-size:15px;font-weight:700;color:#ff6b00">${fmtBytes(gzipSize)}</div>
-      </div>
-    </div>
-
-    <p style="font-size:12px;color:#555;text-align:center;margin:0">
-      Backup attached as <strong style="color:#888">arthaleads-backup-${date}.json.gz</strong><br/>
-      To restore: decompress the file and import using <code style="color:#ff6b00">mongorestore</code> or MongoDB Compass.
-    </p>
-  </div>
-
-  <p style="text-align:center;font-size:11px;color:#aaa;margin-top:20px">
-    © ${new Date().getFullYear()} Arthaleads · Automated backup · Do not reply
-  </p>
-</div>
-</body></html>`;
+  return layout({
+    preheader: `${total.toLocaleString()} documents, ${fmtBytes(gzipSize)} compressed.`,
+    eyebrow: "Daily backup",
+    title: `Backup for ${date}`,
+    bodyHtml: `
+      ${paragraph(`${strongDocs(total)} across ${stats.length} collections. The archive is attached.`)}
+      ${panel(
+        row("Uncompressed", fmtBytes(rawSize)) +
+        row("Compressed", fmtBytes(gzipSize)) +
+        row("Saving", `${Math.round((1 - gzipSize / rawSize) * 100)}%`, true)
+      )}
+      ${panel(rows)}`,
+    footerNote: "Sent to Arthaleads platform administrators.",
+  });
 }
+
+const strongDocs = (n) =>
+  `<strong style="color:${HEADING};">${n.toLocaleString()} documents</strong>`;
 
 // ── Main backup function ──────────────────────────────────────────────────────
 async function runBackup() {
@@ -183,4 +127,4 @@ async function runBackup() {
   return { success: true, date, totalDocs, rawSize, gzipSize, stats };
 }
 
-module.exports = { runBackup };
+module.exports = { runBackup, buildEmail };

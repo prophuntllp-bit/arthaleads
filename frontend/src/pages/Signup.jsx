@@ -353,7 +353,7 @@ export default function Signup() {
                 )}
 
                 <button type="submit" className="btn-primary w-full justify-center py-3 mt-2 disabled:opacity-50" disabled={loading}>
-                  {loading ? <><Spinner size="sm" /><span>Sending code…</span></> : "Send verification code"}
+                  {loading ? <><Spinner size="sm" /><span>Sending…</span></> : "Send verification link"}
                 </button>
               </form>
             )}
