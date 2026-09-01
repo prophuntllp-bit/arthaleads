@@ -8,6 +8,7 @@ import { Spinner } from "../components/UI";
 import { useGoogleLogin } from "@react-oauth/google";
 import { getRecaptchaToken } from "../utils/recaptcha";
 import api from "../services/api";
+import { newHandoff, getHandoff, clearHandoff, sha256Hex, takeVerified } from "../utils/signupHandoff";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -22,8 +23,8 @@ export default function Signup() {
 
   // Signup is a 3-step flow now: verify the email by OTP, then fill in the
   // details, then wait for a human to approve the trial.
-  //   "email"   → enter address, receive a code
-  //   "otp"     → enter the 6-digit code
+  //   "email"   → enter address, receive a link and a code
+  //   "otp"     → open the link, or type the code
   //   "details" → org/name/phone/password, submit
   //   "pending" → request received, awaiting approval
   const [step, setStep]           = useState("email");
@@ -45,6 +46,56 @@ export default function Signup() {
     return () => clearTimeout(t);
   }, [resendIn]);
 
+  // Coming back from the verification link in this same browser: that page
+  // stashed the proof-of-ownership token, so there is nothing left to type.
+  useEffect(() => {
+    const handed = takeVerified();
+    if (!handed) return;
+    setForm((f) => ({ ...f, email: handed.email || f.email }));
+    setToken(handed.signupToken);
+    setStep("details");
+    toast.success("Email verified");
+  }, []);
+
+  // While the code box is up, watch for the emailed link being opened — which
+  // usually happens on a phone while this tab sits on a laptop. When it does,
+  // this tab advances itself and nobody retypes anything.
+  //
+  // Polling, not a socket: it runs for a few minutes at most, on one endpoint
+  // that is a single indexed read, and a dropped connection needs no recovery
+  // path. A failed poll is ignored rather than surfaced — the code box is
+  // still sitting there and still works, so a blip should not raise an error
+  // at someone who is not stuck.
+  useEffect(() => {
+    if (step !== "otp") return;
+    const handoff = getHandoff();
+    if (!handoff) return; // no SubtleCrypto in this context — code path only
+
+    const email = form.email.trim().toLowerCase();
+    let stopped = false;
+    let polls = 0;
+    let timer;
+
+    const tick = async () => {
+      if (stopped || polls++ > 150) return; // ~10 minutes at 4s, then give up
+      try {
+        const { data } = await api.post("/auth/signup/link-status", { email, handoff });
+        if (data?.verified && data.signupToken) {
+          stopped = true;
+          clearHandoff();
+          setToken(data.signupToken);
+          setStep("details");
+          toast.success("Email verified");
+          return;
+        }
+      } catch { /* transient; the code box still works */ }
+      if (!stopped) timer = setTimeout(tick, 4000);
+    };
+
+    timer = setTimeout(tick, 4000);
+    return () => { stopped = true; clearTimeout(timer); };
+  }, [step, form.email]);
+
   const sendCode = async (e) => {
     e?.preventDefault();
     setError("");
@@ -56,11 +107,17 @@ export default function Signup() {
     setLoading(true);
     try {
       const recaptchaToken = await getRecaptchaToken("signup_send_otp");
-      const { data } = await api.post("/auth/signup/send-otp", { email, recaptchaToken });
+      // Only the hash goes to the server; the secret stays in this tab and is
+      // what proves, later, that this is the browser that started the signup.
+      // crypto.subtle needs a secure context — if there isn't one we simply
+      // don't get the cross-device handoff, and the code still works.
+      let handoffHash = "";
+      try { handoffHash = await sha256Hex(newHandoff()); } catch { clearHandoff(); }
+      const { data } = await api.post("/auth/signup/send-otp", { email, recaptchaToken, handoffHash });
       setMasked(data.maskedEmail || email);
       setStep("otp");
       setResendIn(30);
-      toast.success("Verification code sent");
+      toast.success("Verification email sent");
     } catch (err) {
       setError(err.response?.data?.message || "Could not send the code. Please try again.");
     } finally {
@@ -310,7 +367,11 @@ export default function Signup() {
                     <MailCheck className="h-6 w-6" style={{ color: "var(--app-primary)" }} />
                   </div>
                   <p className="text-sm text-app-soft">
-                    Code sent to <strong className="text-app">{maskedEmail}</strong>
+                    Sent to <strong className="text-app">{maskedEmail}</strong>
+                  </p>
+                  <p className="mt-1 text-xs text-app-soft">
+                    Open the link in that email and this page continues on its own — even if you
+                    open it on your phone. Or enter the code below.
                   </p>
                 </div>
 
@@ -345,7 +406,7 @@ export default function Signup() {
                   </button>
                   <button type="button" onClick={sendCode} disabled={resendIn > 0 || loading}
                     className="text-xs font-semibold text-orange-500 hover:text-orange-400 transition disabled:opacity-40">
-                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend email"}
                   </button>
                 </div>
               </form>

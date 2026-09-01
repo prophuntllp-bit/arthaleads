@@ -325,6 +325,7 @@ const Privacy        = lazy(() => import("./pages/Privacy"));
 const Terms          = lazy(() => import("./pages/Terms"));
 const FbCallback     = lazy(() => import("./pages/FbCallback"));
 const GoogleCallback = lazy(() => import("./pages/GoogleCallback"));
+const VerifyEmail    = lazy(() => import("./pages/VerifyEmail"));
 const Projects       = lazy(() => import("./pages/Projects"));
 const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
@@ -674,6 +675,7 @@ export default function App() {
         <Route path="/pricing"              element={<Pricing />} />
         <Route path="/fb-callback"          element={<FbCallback />} />
         <Route path="/google-callback"      element={<GoogleCallback />} />
+        <Route path="/verify-email"         element={<VerifyEmail />} />
         <Route path="/blog"                 element={<PublicBlog />} />
         <Route path="/blog/:slug"           element={<PublicBlogPost />} />
         <Route path="/about-us"             element={<AboutUs />} />
