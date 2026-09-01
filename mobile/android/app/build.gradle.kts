@@ -115,7 +115,13 @@ android {
     // (~15-20MB each) plus a universal fallback for sideloading/testing.
     splits {
         abi {
-            isEnable = true
+            // APK builds only. An app bundle already ships per-device slices --
+            // that is the point of the format -- and AGP refuses to build one
+            // while multiple APKs are configured, with "Multiple shrunk-resources
+            // files found". That is what broke bundleRelease in CI: the failure
+            // is emitted by the bundle task, so it reads like a bundle problem
+            // rather than a splits one.
+            isEnable = !isBundleBuild
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86_64")
             isUniversalApk = true
