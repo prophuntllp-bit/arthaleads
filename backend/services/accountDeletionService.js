@@ -72,6 +72,10 @@ const DISPOSITION = {
   Payment:        { scalar: [["createdBy", null]] },
   Developer:      { scalar: [["createdBy", null]] },
   BlogPost:       { scalar: [["author", null]] },
+  // Kept and unlinked rather than dropped. A report is a signal about the
+  // model's output, not a record about the person who raised it, and deleting
+  // it would throw away the moderation history Play expects us to act on.
+  ContentReport:  { scalar: [["userId", null]] },
   Organization:   { scalar: [["approvedBy", null], ["deletionRequestedBy", null]] },
 
   // The audit trail is kept — it is the record of who did what to whom, and

@@ -8,7 +8,7 @@
     "dev": "nodemon server.js",
     "seed": "node utils/seed.js",
     "audit": "npm audit --audit-level=moderate",
-    "test": "node tests/accountDeletion.coverage.test.js && node tests/accountDeletion.behaviour.test.js && node tests/accountDeletion.db.test.js"
+    "test": "node tests/accountDeletion.coverage.test.js && node tests/accountDeletion.behaviour.test.js && node tests/accountDeletion.db.test.js && node tests/contentReport.db.test.js"
   },
   "dependencies": {
     "@sentry/node": "^10.51.0",

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { X, Send, ArrowRight, Sparkles, MessageCircle, Compass, House, TicketCheck, ChevronDown, Paperclip, Zap, CheckCircle2 } from "lucide-react";
 import api from "../services/api";
+import ReportMessageButton from "./ReportMessageButton";
 import { useAuth } from "../context/AuthContext";
 import { useCopilot } from "../context/CopilotContext";
 import { QUICK_ANSWERS, TOURS } from "../data/helpData";
@@ -678,6 +679,16 @@ export default function HelpBot() {
                   >
                     {m.text}
                   </div>
+                  {/* Required on every AI answer by Play's AI-Generated Content
+                      policy: a way to flag output without leaving the app. */}
+                  {m.role === "bot" && m.text && (
+                    <ReportMessageButton
+                      reportedText={m.text}
+                      prompt={[...messages.slice(0, i)].reverse().find((x) => x.role === "user")?.text || ""}
+                      page={typeof window !== "undefined" ? window.location.pathname : ""}
+                      surface="web"
+                    />
+                  )}
                   {/* Action chips */}
                   {m.role === "bot" && (m.goto || m.tour || m.suggestTicket || m.undoKey || (m.action && !m.actionDone)) && (
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

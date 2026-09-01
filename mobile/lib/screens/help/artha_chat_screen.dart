@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/report_message_button.dart';
 import 'help_screen.dart';
 
 class _ChatMessage {
@@ -122,6 +123,16 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
     }
   }
 
+  /// The question that produced the answer at [i], walking back to the last
+  /// thing the person typed. Sent with a report so the answer can be judged in
+  /// context rather than on its own.
+  String _promptBefore(int i) {
+    for (var j = i - 1; j >= 0; j--) {
+      if (_messages[j].role == 'user') return _messages[j].text;
+    }
+    return '';
+  }
+
   Future<void> _confirmAction(_ChatMessage message) async {
     final action = message.action;
     if (action == null || _actionLoading) return;
@@ -231,13 +242,14 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
                           .toList(),
                     ),
                   ),
-                for (final m in _messages)
-                  m.role == 'user'
-                      ? _UserBubble(text: m.text)
+                for (var i = 0; i < _messages.length; i++)
+                  _messages[i].role == 'user'
+                      ? _UserBubble(text: _messages[i].text)
                       : _BotBubble(
-                          message: m,
+                          message: _messages[i],
+                          prompt: _promptBefore(i),
                           actionLoading: _actionLoading,
-                          onAction: () => _confirmAction(m),
+                          onAction: () => _confirmAction(_messages[i]),
                         ),
                 if (_loading) const _TypingBubble(),
               ],
@@ -309,11 +321,16 @@ class _BotBubble extends StatelessWidget {
   final _ChatMessage? message;
   final bool actionLoading;
   final VoidCallback? onAction;
+  /// The question that produced this answer, sent with a report. An answer on
+  /// its own is hard to judge: a reasonable reply to a hostile question reads
+  /// very differently from the same reply unprompted.
+  final String prompt;
   const _BotBubble({
     this.text,
     this.message,
     this.actionLoading = false,
     this.onAction,
+    this.prompt = '',
   });
 
   @override
@@ -375,6 +392,15 @@ class _BotBubble extends StatelessWidget {
                   ),
                   child: Text(body),
                 ),
+                // Required on every AI answer by Play's AI-Generated Content
+                // policy. The greeting is hardcoded, not generated, so it does
+                // not carry one.
+                if (m != null)
+                  ReportMessageButton(
+                    reportedText: body,
+                    prompt: prompt,
+                    page: 'artha-chat',
+                  ),
                 if (m?.suggestTicket == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),

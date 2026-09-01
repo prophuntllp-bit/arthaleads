@@ -10,11 +10,45 @@ const actions = require("../actions");
 const CopilotAction = require("../models/CopilotAction");
 const Organization = require("../models/Organization");
 const logger = require("../config/logger");
+const { AppError } = require("../middlewares/errorHandler");
 const AiUsage  = require("../models/AiUsage");
+const ContentReport = require("../models/ContentReport");
+
+router.use(protect);
+
+// POST /api/help/report — flag something the assistant said.
+//
+// Deliberately above the plan gate. Play's AI-Generated Content policy requires
+// a way to flag offensive output from inside the app, and "your trial lapsed
+// since that message" is not an acceptable reason for the flag to stop working.
+router.post("/report", async (req, res, next) => {
+  try {
+    const reportedText = (req.body.reportedText || "").toString().trim().slice(0, 8000);
+    if (!reportedText) return next(new AppError("Nothing to report", 400));
+
+    const reason = ContentReport.REASONS.includes(req.body.reason) ? req.body.reason : "other";
+
+    await ContentReport.create({
+      orgId:   req.user.orgId,
+      userId:  req.user._id,
+      reason,
+      detail:  (req.body.detail || "").toString().trim().slice(0, 1000),
+      reportedText,
+      prompt:  (req.body.prompt  || "").toString().slice(0, 2000),
+      page:    (req.body.page    || "").toString().slice(0, 80),
+      surface: req.body.surface === "mobile" ? "mobile" : "web",
+    });
+
+    logger.warn(`[copilot-report] ${reason} reported by ${req.user._id} (org ${req.user.orgId})`);
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // The AI copilot is a Growth feature. Each question costs an LLM call, so
 // this gate protects margin as well as the packaging.
-router.use(protect, planGate("growth"));
+router.use(planGate("growth"));
 
 // POST /api/help/ask
 // Body: { question, page, leadId?, history? }
