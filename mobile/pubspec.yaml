@@ -44,6 +44,9 @@ dependencies:
   flutter_svg: ^2.0.10
   package_info_plus: ^8.1.1
   shared_preferences: ^2.5.5
+  # SHA-256 for the signup handoff secret. Already present transitively;
+  # declared because we depend on it directly now.
+  crypto: ^3.0.6
 
 dev_dependencies:
   flutter_test:

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_errors.dart';
@@ -11,6 +10,7 @@ import '../core/theme.dart';
 import '../widgets/buttons.dart';
 import '../widgets/glass.dart';
 import '../widgets/labeled_field.dart';
+import 'signup_screen.dart';
 
 /// Exact SVG paths from frontend/src/pages/Login.jsx's inline Google logo.
 const _googleLogoSvg = '''
@@ -25,7 +25,7 @@ const _googleLogoSvg = '''
 /// Login — mirrors frontend/src/pages/Login.jsx's mobile ("lg:hidden")
 /// layout: logo + heading, a "Secure access" note, email/phone + password
 /// form, forgot-password link, Google sign-in, and a sign-up link out to
-/// the web app (mobile has no self-serve org signup flow).
+/// which now opens SignupScreen rather than the browser.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -370,9 +370,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                                 GestureDetector(
-                                  onTap: () => launchUrl(
-                                    Uri.parse('https://arthaleads.com/signup'),
-                                    mode: LaunchMode.externalApplication,
+                                  onTap: () => Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const SignupScreen(),
+                                    ),
                                   ),
                                   child: const Text(
                                     'Sign up',
