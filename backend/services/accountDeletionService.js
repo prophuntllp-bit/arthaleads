@@ -110,6 +110,19 @@ async function eraseUser(userId) {
 
     let changed = 0;
 
+    // Scrub before the refs are cleared, not after. These rows are found BY
+    // the ref, so clearing it first leaves nothing for this query to match --
+    // which is how the IP survived a deletion that reported success. A test
+    // that only records queries cannot see it: both statements are issued and
+    // both look right in isolation.
+    for (const field of rule.scrub || []) {
+      const q = rule.scalar
+        ? { $or: rule.scalar.map(([ref]) => ({ [ref]: id })) }
+        : { [field]: { $ne: null } };
+      const res = await Model.updateMany(q, { $set: { [field]: "" } });
+      changed += res.modifiedCount || 0;
+    }
+
     for (const [ref, nameField] of rule.scalar || []) {
       const set = { [ref]: null };
       if (nameField) set[nameField] = TOMBSTONE;
@@ -127,14 +140,6 @@ async function eraseUser(userId) {
         { $set: set },
         { arrayFilters: [{ [`el.${ref}`]: id }] }
       );
-      changed += res.modifiedCount || 0;
-    }
-
-    for (const field of rule.scrub || []) {
-      const q = rule.scalar
-        ? { $or: rule.scalar.map(([ref]) => ({ [ref]: id })) }
-        : { [field]: { $ne: null } };
-      const res = await Model.updateMany(q, { $set: { [field]: "" } });
       changed += res.modifiedCount || 0;
     }
 
