@@ -10,7 +10,8 @@
 
 const { Resend } = require("resend");
 const {
-  layout, button, panel, row, codeBlock, paragraph, divider, esc, BRAND, HEADING, MUTED, FONT,
+  layout, plainLayout, button, panel, row, codeBlock, inlineCode, paragraph, divider, esc,
+  BRAND, HEADING, BODY, MUTED, FONT,
 } = require("./emailLayout");
 
 function getResend() {
@@ -243,24 +244,42 @@ async function notifySuperAdminsOfSignup({ name, email, phone, orgName }) {
   });
 }
 
-// ── One-time code (signup email verification) ─────────────────────────────────
-async function sendOtpEmail(toEmail, code, minutes = 10) {
+// ── Signup email verification ─────────────────────────────────────────────────
+//
+// A link and a code, in that order. The link is the path we want people on --
+// one tap, no retyping a code from a phone onto a laptop -- but it is also the
+// half that breaks: corporate link rewriters (Safe Links, Proofpoint,
+// Mimecast) mangle or pre-fetch URLs, and some clients strip them outright.
+// Without a code beside it, those users have no way to finish signing up at
+// all, which is an expensive thing to discover at the front door.
+//
+// This one uses plainLayout: no bands, no social row. See emailLayout.js.
+async function sendSignupVerifyEmail(toEmail, verifyUrl, code, minutes = 15) {
   return send({
     to: toEmail,
-    subject: `${code} is your Arthaleads verification code`,
-    html: layout({
-      preheader: `Your code is ${code}. It expires in ${minutes} minutes.`,
-      eyebrow: "Email verification",
+    subject: "Verify your email address",
+    html: plainLayout({
+      preheader: `Confirm your address to finish signing up. Expires in ${minutes} minutes.`,
       title: "Verify your email address",
       bodyHtml: `
-        ${paragraph(`Use the code below to continue setting up your Arthaleads trial. It expires in ${strong(`${minutes} minutes`)}.`)}
-        ${codeBlock(code)}
+        ${paragraph(`Confirm this address to finish setting up your Arthaleads account. This link expires in ${strong(`${minutes} minutes`)}.`)}
+        ${button(verifyUrl, "Verify email address")}
+        ${inlineCode(code)}
+        <p style="margin:0 0 20px;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};word-break:break-all;">
+          If the button doesn't work, paste this into your browser:<br />${link(verifyUrl, esc(verifyUrl))}
+        </p>
         <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">
-          Never share this code with anyone. Arthaleads will never ask you for it.
+          Didn't try to sign up? You can ignore this email &mdash; nothing was created.
         </p>`,
-      footerNote: "You received this because this address was used to start an Arthaleads signup.",
     }),
-    text: `Your Arthaleads verification code is ${code}.\n\nIt expires in ${minutes} minutes. Never share this code — Arthaleads will never ask you for it.`,
+    text: `Verify your email address
+
+Confirm this address to finish setting up your Arthaleads account:
+${verifyUrl}
+
+Or enter this code: ${code}
+
+The link and code expire in ${minutes} minutes. Didn't try to sign up? Ignore this email. Nothing was created.`,
   });
 }
 
@@ -273,5 +292,5 @@ module.exports = {
   sendSignupApprovedEmail,
   sendSignupRejectedEmail,
   notifySuperAdminsOfSignup,
-  sendOtpEmail,
+  sendSignupVerifyEmail,
 };

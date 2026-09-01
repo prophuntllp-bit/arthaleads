@@ -246,7 +246,72 @@ function layout({ preheader = "", eyebrow = "", title = "", bodyHtml = "", foote
 </html>`;
 }
 
+/**
+ * The stripped-back shell, for the one email a stranger gets before they have
+ * any reason to trust the sender: signup verification.
+ *
+ * No bands, no social row, no navigation. Two reasons, and neither is taste:
+ *
+ *   * A verification mail that looks like a newsletter is a verification mail
+ *     that lands in Promotions. Filters weigh image-heavy, link-heavy,
+ *     multi-column markup; this one is a sentence, a button and a code.
+ *   * The logo carries its own colour and font on the <img>, which is what a
+ *     client uses to draw alt text. Every other template goes to someone who
+ *     has already corresponded with us and has images switched on; this one
+ *     does not, so a blocked image has to degrade to the wordmark in text
+ *     rather than to an empty box.
+ *
+ * @param {object}  o
+ * @param {string}  o.preheader  inbox preview line
+ * @param {string}  o.title      the one-line headline
+ * @param {string}  o.bodyHtml   built from paragraph/button/etc
+ */
+// Note LOGO_URL, not LOGO_DARK_URL -- this shell is white.
+function plainLayout({ preheader = "", title = "", bodyHtml = "" }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="x-apple-disable-message-reformatting" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>${esc(title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#ffffff;">
+  <div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${esc(preheader)}</div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" bgcolor="#ffffff" style="background:#ffffff;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="440" cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;max-width:440px;">
+          <tr>
+            <td style="padding:0 0 28px;">
+              <img src="${LOGO_URL}" width="150" height="45" alt="Arthaleads"
+                style="display:block;border:0;color:${HEADING};font-family:${FONT};font-size:17px;font-weight:700;letter-spacing:-.01em;" />
+            </td>
+          </tr>
+          <tr>
+            <td>
+              ${title ? `<h1 style="margin:0 0 16px;font-family:${FONT};font-size:21px;font-weight:700;line-height:1.35;color:${HEADING};">${esc(title)}</h1>` : ""}
+              ${bodyHtml}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/** The fallback code, shown inline rather than in a panel. */
+function inlineCode(code) {
+  return `<p style="margin:0 0 24px;font-family:${FONT};font-size:15px;line-height:1.65;color:${BODY};">
+    Or enter this code: <strong style="font-size:19px;letter-spacing:3px;color:${HEADING};">${esc(code)}</strong>
+  </p>`;
+}
+
 module.exports = {
-  layout, button, panel, row, codeBlock, paragraph, divider, esc,
+  layout, plainLayout, button, panel, row, codeBlock, inlineCode, paragraph, divider, esc,
   BRAND, HEADING, BODY, MUTED, FONT, SITE, LOGO_URL, LOGO_DARK_URL, BAND, SOCIAL,
 };
