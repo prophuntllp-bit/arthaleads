@@ -17,7 +17,10 @@
 // build/version/url/notes up into the fields above.
 //
 // TO CUT A NEW BUILD:
-//   1. bump `version:` in mobile/pubspec.yaml   (e.g. 1.0.1+24 -> 1.0.2+25)
+//   1. bump `version:` in mobile/pubspec.yaml — READ THE COMMENT THERE FIRST,
+//      the build number is offset by 2000 (1.0.1+24 -> 1.0.2+2028) and the
+//      obvious value builds an APK that will not install over what is already
+//      on people's phones
 //   2. push — Flutter Mobile CI builds a signed release APK (the keystore
 //      secrets ARE configured; see .github/workflows/mobile-flutter-ci.yml)
 //   3. attach that APK to a GitHub Release and point `download.url` at it
@@ -60,7 +63,11 @@ module.exports = {
     // saves them an update on day one — while the field stays on `build`.
     download: {
       version: "1.0.2",
-      build: 25,
+      // The plain build number, not Android's versionCode — the APK is stamped
+      // 2028 and the app reports it back as 28 (% 1000). mobile/pubspec.yaml
+      // explains why the two differ; the short version is that every install
+      // in the field is on versionCode 2024 and cannot be given a lower one.
+      build: 28,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.

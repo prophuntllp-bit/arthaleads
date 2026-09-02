@@ -19,7 +19,7 @@ const INSTALL_STEPS = [
   },
   {
     title: "Open the file",
-    desc: "Pull down your notifications and tap the finished download, or find arthaleads.apk in your Files app under Downloads.",
+    desc: "Pull down your notifications and tap the finished download, or find the arthaleads APK in your Files app under Downloads.",
   },
   {
     title: "Allow the install",

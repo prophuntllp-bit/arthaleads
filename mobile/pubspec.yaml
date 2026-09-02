@@ -2,13 +2,32 @@ name: arthaleads_mobile
 description: "Arthaleads CRM — native Android app."
 publish_to: 'none'
 
-# version: <name>+<buildNumber>. The build number is what the in-app update
-# check compares (see lib/core/update_service.dart) and what Android uses as
-# versionCode, so it MUST increase on every release you distribute — otherwise
-# builds are indistinguishable and no one is ever prompted to update.
-# After bumping, update backend/constants/appRelease.js to match (build number,
-# version string, and the GitHub Release download URL).
-version: 1.0.2+25
+# version: <name>+<buildNumber>. The build number is Android's versionCode, so
+# it MUST increase on every release you distribute — otherwise builds are
+# indistinguishable and no one is ever prompted to update.
+#
+# READ THIS BEFORE CHANGING THE NUMBER. It is not the build number the rest of
+# the system talks about, and picking the obvious value ships an APK that
+# nobody can install.
+#
+# Builds up to 24 were stamped with an ABI offset (versionCode = 2000 + N; see
+# trueBuildNumber in lib/core/update_service.dart). The toolchain no longer
+# adds it — versionCode is now exactly what is written here, confirmed with
+# `aapt2 dump badging` on all four outputs of a local release build. But every
+# install already in the field is on versionCode 2024, and Android refuses to
+# install a lower versionCode over a higher one. A plain "+25" here therefore
+# builds an APK that fails on every existing phone with a bare
+# "App not installed" and no explanation.
+#
+# So the number stays in the 2000 band: 2000 + the real build number. The app
+# recovers the real one with % 1000, which is what it reports and what
+# backend/constants/appRelease.js advertises.
+#
+#   here: 1.0.2+2028   ->   versionCode 2028   ->   app and backend say 28
+#
+# After bumping, update backend/constants/appRelease.js to match (the plain
+# build number, the version string, and the GitHub Release download URL).
+version: 1.0.2+2028
 
 environment:
   sdk: ^3.12.2
