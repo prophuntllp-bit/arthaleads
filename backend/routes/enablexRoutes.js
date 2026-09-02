@@ -1385,16 +1385,19 @@ ${transcript.slice(0, 3000)}`,
 }
 
 // ── Download EnableX's recording URL (pushed directly on the webhook event) →
-// upload to Cloudinary → save URL + auto-transcribe. EnableX's own recording URL
-// needs Basic Auth to fetch, so it can't be used directly by the browser player
-// or by Whisper - re-hosting on Cloudinary is what makes both work.
+// upload to object storage → save URL + auto-transcribe. EnableX's own recording
+// URL needs Basic Auth to fetch, so it can't be used directly by the browser
+// player or by Whisper - re-hosting is what makes both work.
+//
+// The WAV is stored as it arrives. Cloudinary used to transcode it to MP3
+// because a raw .wav often renders as 0:00 in the browser player and cannot be
+// scrubbed; B2 is storage, not a media pipeline, so there is no transcode step
+// to replace it with. B2 does serve Content-Length and range requests properly,
+// which is what a player actually needs to seek, so this may simply work — but
+// if recordings show 0:00, the fix is ffmpeg in the Railway build, not a
+// transformation service.
 async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl, voiceId) {
-  const { v2: cloudinary } = require("cloudinary");
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key:    process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  const { uploadCallRecording } = require("../utils/upload");
 
   const org = await Organization.findById(orgId).select("enablex").lean();
   if (!org?.enablex?.appId || !org?.enablex?.apiKey) return;
@@ -1412,29 +1415,12 @@ async function saveRecordingFromEnablexUrl(orgId, ownerRef, enablexRecordingUrl,
     timeout:      60000,
     ...basicAuth(org),
   });
-  const dataUri = `data:audio/wav;base64,${Buffer.from(audioResp.data).toString("base64")}`;
-  const baseOpts = {
-    resource_type: "video",
-    folder:        "arthaleads/call-recordings",
-    public_id:     `call-${voiceId || ownerRef}`,
-    overwrite:     true,
-  };
-
-  // Transcode WAV → MP3 so the browser player can show duration and scrub (a raw
-  // .wav frequently renders as 0:00). Transcoding can fail on its own — plan
-  // limits, an odd source codec — and a failed upload means NO recording is
-  // saved at all, which is far worse than one that shows 0:00. So fall back to
-  // storing the original audio untouched.
-  let result;
-  try {
-    result = await cloudinary.uploader.upload(dataUri, { ...baseOpts, format: "mp3" });
-  } catch (mp3Err) {
-    console.error("[enablex recording] mp3 transcode failed, storing original:",
-      mp3Err?.message || mp3Err);
-    result = await cloudinary.uploader.upload(dataUri, baseOpts);
-  }
-  const recordingUrl = result.secure_url;
-  console.info("[enablex recording] saved to Cloudinary:", recordingUrl);
+  const recordingUrl = await uploadCallRecording(
+    Buffer.from(audioResp.data),
+    `call-${voiceId || ownerRef}.wav`,
+    "audio/wav"
+  );
+  console.info("[enablex recording] saved:", recordingUrl);
 
   const saved = await saveWithVersionRetry(Model, leadId, actIdx, (lead, idx) => {
     lead.activities[idx].meta = { ...lead.activities[idx].meta, recordingUrl };

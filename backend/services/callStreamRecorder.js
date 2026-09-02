@@ -2,7 +2,8 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { v2: cloudinary } = require("cloudinary");
+const { uploadCallRecording } = require("../utils/upload");
+const storage = require("../utils/storage");
 const WebSocket = require("ws");
 
 const Lead = require("../models/Lead");
@@ -144,17 +145,16 @@ async function finalizeTrack(state) {
     await fs.promises.writeFile(state.wavPath, createWavBuffer(pcm));
 
     let trackUrl = null;
-    if (process.env.CLOUDINARY_CLOUD_NAME) {
+    if (storage.isConfigured()) {
       try {
-        const upload = await cloudinary.uploader.upload(state.wavPath, {
-          resource_type: "video",
-          folder: "arthaleads/call-recording-diagnostics",
-          public_id: `${safeId(state.ownerRef)}/${safeId(state.voiceId)}`,
-          overwrite: true,
-        });
-        trackUrl = upload.secure_url;
+        const wav = await fs.promises.readFile(state.wavPath);
+        trackUrl = await uploadCallRecording(
+          wav,
+          `diagnostics/${safeId(state.ownerRef)}/${safeId(state.voiceId)}.wav`,
+          "audio/wav"
+        );
       } catch (error) {
-        console.error("[call-stream] Cloudinary upload failed", state.voiceId, error.message);
+        console.error("[call-stream] recording upload failed", state.voiceId, error.message);
       }
     }
 
@@ -212,12 +212,6 @@ function attachCallStreamRecorder(server) {
     console.error("[call-stream] diagnostics disabled: signing secret missing");
     return;
   }
-
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
 
   const websocketServer = new WebSocket.Server({ noServer: true });
   server.on("upgrade", (request, socket, head) => {
