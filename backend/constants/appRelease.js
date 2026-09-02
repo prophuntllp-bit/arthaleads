@@ -62,25 +62,25 @@ module.exports = {
     // no app yet, so serving them the newest signed build costs nothing and
     // saves them an update on day one — while the field stays on `build`.
     download: {
-      version: "1.0.2",
+      version: "1.0.3",
       // The plain build number, not Android's versionCode — the APK is stamped
       // 2028 and the app reports it back as 28 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 28,
+      build: 29,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.2-28/arthaleads-1.0.2-28.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.3-29/arthaleads-1.0.3-29.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 77722965,
+      sizeBytes: 77739349,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "You can now sign up for Arthaleads without leaving the app — the same four steps as the web, verification email included. There is also a proper launch screen instead of a blank rectangle, you can delete your account from Settings, and you can flag anything the assistant gets wrong. Signing in with Google no longer creates an account by accident, and the app no longer asks for microphone access it never used.",
+      notes: "Artha answers with your live numbers now instead of directions: it knows which screen you opened it from, and when it can make the change itself it offers to, rather than explaining where the button is. Marking a lead Not Interested no longer moves it to Dump — it stays in your list with the status you gave it. Notes can be edited and deleted. Plus the assistant shows typing dots while it is thinking.",
     },
   },
 };

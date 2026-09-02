@@ -27,7 +27,7 @@ publish_to: 'none'
 #
 # After bumping, update backend/constants/appRelease.js to match (the plain
 # build number, the version string, and the GitHub Release download URL).
-version: 1.0.2+2028
+version: 1.0.3+2029
 
 environment:
   sdk: ^3.12.2
