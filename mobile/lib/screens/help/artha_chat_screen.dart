@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/copilot_pages.dart';
 import '../../core/theme.dart';
 import '../../widgets/report_message_button.dart';
 import 'help_screen.dart';
@@ -27,8 +28,16 @@ class _ChatMessage {
 /// Artha — the AI help assistant. Mirrors frontend/src/components/HelpBot.jsx
 /// (same /help/ask contract, same avatar, same "Artha" persona) — the tour/
 /// Includes quick questions, ticket escalation, and confirmed CRM actions.
+///
+/// [navLabel] is the drawer label of the screen the assistant was opened from.
+/// The web copilot reads location.pathname on every request; this is a screen
+/// rather than an overlay, so the shell has to hand it the same thing on the
+/// way in. Without it the backend has no page to look up live data for, and
+/// the answers degrade to directions — see core/copilot_pages.dart.
 class ArthaChatScreen extends StatefulWidget {
-  const ArthaChatScreen({super.key});
+  final String? navLabel;
+
+  const ArthaChatScreen({super.key, this.navLabel});
 
   @override
   State<ArthaChatScreen> createState() => _ArthaChatScreenState();
@@ -36,6 +45,7 @@ class ArthaChatScreen extends StatefulWidget {
 
 class _ArthaChatScreenState extends State<ArthaChatScreen> {
   final _api = ApiClient.instance;
+  late final CopilotPage? _page = copilotPageFor(widget.navLabel);
   final _input = TextEditingController();
   final _scroll = ScrollController();
   final List<_ChatMessage> _messages = [];
@@ -91,7 +101,16 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
     try {
       final res = await _api.dio.post(
         '/help/ask',
-        data: {'question': q, 'page': 'mobile', 'history': history},
+        data: {
+          'question': q,
+          // The web route, not the mobile screen name — that is what
+          // copilotContext.js keys its live lookups on.
+          'page': _page?.path ?? '',
+          // Kept separate from `page` so the answer can say "the menu" rather
+          // than "the left sidebar" without costing us the live data.
+          'surface': 'mobile',
+          'history': history,
+        },
       );
       setState(() {
         _messages.add(
@@ -143,6 +162,10 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
         data: {
           'type': action['type'],
           'params': action['params'] ?? <String, dynamic>{},
+          // authorise() gates actions by page as well as role. With no page
+          // sent this normalised to "/" and refused everything the assistant
+          // had just offered to do.
+          'page': _page?.path ?? '',
         },
       );
       final index = _messages.indexOf(message);
@@ -183,9 +206,13 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthState>().user;
     final firstName = (user?['name'] as String? ?? '').split(' ').first;
-    final greeting = firstName.isNotEmpty
-        ? "Hi $firstName! I'm Artha, your CRM assistant. How can I help you today?"
-        : "Hi! I'm Artha, your CRM assistant. How can I help you today?";
+    final hi = firstName.isNotEmpty ? 'Hi $firstName!' : 'Hi!';
+    // Same two greetings as HelpBot.jsx: name the screen when we know it, so
+    // the offer of live data is visibly tied to where the person actually is.
+    final greeting = _page != null
+        ? "$hi I can see you're on ${_page.label}. I have live data ready - "
+              'tap a chip below or ask me anything!'
+        : "$hi I'm Artha, your CRM assistant. How can I help you today?";
 
     return Scaffold(
       appBar: AppBar(
@@ -205,10 +232,23 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
                   'Artha',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
-                Text(
-                  'Help Assistant',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                if (_page == null)
+                  Text(
+                    'Help Assistant',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 11),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Copilot · ${_page.label}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
               ],
             ),
           ],
@@ -228,7 +268,7 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: _quickQuestions
+                      children: (_page?.chips ?? _quickQuestions)
                           .map(
                             (question) => ActionChip(
                               avatar: const Icon(Icons.auto_awesome, size: 14),

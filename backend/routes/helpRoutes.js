@@ -57,6 +57,11 @@ router.post("/ask", async (req, res, next) => {
     const question = (req.body.question || "").toString().trim().slice(0, 500);
     const page     = (req.body.page   || "").toString().slice(0, 80);
     const leadId   = (req.body.leadId || "").toString().slice(0, 30);
+    // Which app is asking. Only changes how navigation is worded -- the mobile
+    // client sends the same web routes in `page`, because that is what the
+    // live-context lookups and the action scoping are keyed on. Whitelisted
+    // rather than passed through: it lands in a model prompt.
+    const surface  = req.body.surface === "mobile" ? "mobile" : "web";
     const userName = (req.user?.name  || "").toString().slice(0, 80);
     const history  = Array.isArray(req.body.history)
       ? req.body.history.slice(-6).map((m) => ({
@@ -116,7 +121,7 @@ router.post("/ask", async (req, res, next) => {
     // one anyway, authorise() refuses it on the way in.
     const catalogue = actions.catalogueFor({ role: req.user.role, page });
 
-    const result = await answerHelpQuestion(question, page, userName, context, history, catalogue);
+    const result = await answerHelpQuestion(question, page, userName, context, history, catalogue, surface);
 
     // Fire-and-forget: increment monthly AI usage counter for this org
     const month = new Date().toISOString().slice(0, 7); // "2026-06"

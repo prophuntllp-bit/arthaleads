@@ -38,7 +38,11 @@ import 'team/team_screen.dart';
 /// and the same expanding-ring pulse (web's `animate-ping`) so it doesn't
 /// get lost among the rest of the screen.
 class _ArthaFab extends StatefulWidget {
-  const _ArthaFab();
+  /// Drawer label of the screen underneath, handed to the assistant so it can
+  /// look up live data for it. See core/copilot_pages.dart.
+  final String? navLabel;
+
+  const _ArthaFab({this.navLabel});
 
   @override
   State<_ArthaFab> createState() => _ArthaFabState();
@@ -111,9 +115,11 @@ class _ArthaFabState extends State<_ArthaFab>
               // the theme's default FAB shape is a rounded square, and
               // FloatingActionButton doesn't clip to `shape` unless told to.
               clipBehavior: Clip.antiAlias,
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const ArthaChatScreen())),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ArthaChatScreen(navLabel: widget.navLabel),
+                ),
+              ),
               child: ClipOval(
                 child: Image.asset(
                   'assets/images/ai_avatar.png',
@@ -135,7 +141,9 @@ class _ArthaFabState extends State<_ArthaFab>
 /// write path, which proved unreliable for rapid-fire writes on-device)
 /// so it stays where they left it next time the app opens.
 class _DraggableArthaFab extends StatefulWidget {
-  const _DraggableArthaFab();
+  final String? navLabel;
+
+  const _DraggableArthaFab({this.navLabel});
 
   @override
   State<_DraggableArthaFab> createState() => _DraggableArthaFabState();
@@ -209,7 +217,7 @@ class _DraggableArthaFabState extends State<_DraggableArthaFab> {
                   // clean pan-end, which silently dropped the save.
                   _persist(next);
                 },
-                child: const _ArthaFab(),
+                child: _ArthaFab(navLabel: widget.navLabel),
               ),
             ),
           ],
@@ -574,7 +582,10 @@ class _ShellState extends State<Shell> {
               // Persistent, user-draggable AI avatar — defaults to bottom-right
               // (matching the web app's floating HelpBot bubble) but can be
               // dragged anywhere and remembers where it was left.
-              Positioned.fill(child: _DraggableArthaFab()),
+              // `current.label` is how the assistant learns which screen it
+              // was opened over -- the web copilot reads location.pathname on
+              // every request, and this is the equivalent handle here.
+              Positioned.fill(child: _DraggableArthaFab(navLabel: current.label)),
             ],
           ),
         ),

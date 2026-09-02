@@ -734,7 +734,7 @@ You have NO write actions available on this page for this user's role. Explain h
   return HELP_SYSTEM_PROMPT.replace(ACTION_BLOCK, body);
 }
 
-async function answerHelpQuestion(question, currentPage, userName, liveContext, conversationHistory = [], actionCatalogue = null) {
+async function answerHelpQuestion(question, currentPage, userName, liveContext, conversationHistory = [], actionCatalogue = null, surface = "web") {
   const client = getClient();
 
   const firstName = userName?.split(" ")[0]?.trim() || "";
@@ -742,6 +742,12 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
     firstName ? `User's name: ${firstName} (address them by first name naturally when it fits).` : "",
     liveContext ? `=== LIVE CRM CONTEXT ===\n${liveContext}\n=== END CONTEXT ===` : "",
     `Current page: ${currentPage || "unknown"}`,
+    // Same page, different furniture. Without this the answer describes the
+    // web layout to someone holding a phone -- "the left sidebar" when there
+    // is a drawer behind the menu icon.
+    surface === "mobile"
+      ? "Surface: the Arthaleads Android app. Navigation is a drawer behind the menu icon at the top left, not a sidebar, and there are no keyboard shortcuts. Word any navigation steps for a phone."
+      : "",
     `User question: ${question}`,
   ].filter(Boolean).join("\n\n");
 
