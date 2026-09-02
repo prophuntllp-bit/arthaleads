@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +17,18 @@ class _ChatMessage {
   final bool comingSoon;
   final Map<String, dynamic>? action;
   final bool actionDone;
+
+  /// Minted once when an action is proposed and reused on every retry, so a
+  /// dropped response and a second tap on Confirm cannot apply the change
+  /// twice. It is also what makes the server write the CopilotAction receipt:
+  /// without a key there is no audit row and no undo, which is why not one
+  /// mobile action has ever been recorded.
+  final String? idempotencyKey;
+
+  /// What the person typed to get this proposal, stored with the receipt so
+  /// an action can be read back in the context that produced it.
+  final String prompt;
+
   _ChatMessage({
     required this.role,
     required this.text,
@@ -22,7 +36,15 @@ class _ChatMessage {
     this.comingSoon = false,
     this.action,
     this.actionDone = false,
+    this.idempotencyKey,
+    this.prompt = '',
   });
+}
+
+/// `<action>-<millis>-<random>`, matching the web's key format.
+String _mintIdempotencyKey(String type) {
+  final rand = Random().nextInt(1 << 32).toRadixString(36);
+  return '$type-${DateTime.now().millisecondsSinceEpoch}-$rand';
 }
 
 /// Artha — the AI help assistant. Mirrors frontend/src/components/HelpBot.jsx
@@ -112,6 +134,8 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
           'history': history,
         },
       );
+      final action = (res.data['action'] as Map?)?.cast<String, dynamic>();
+      final type = action?['type']?.toString() ?? '';
       setState(() {
         _messages.add(
           _ChatMessage(
@@ -119,7 +143,9 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
             text: (res.data['answer'] as String?) ?? "I'm not sure about that.",
             suggestTicket: res.data['suggestTicket'] == true,
             comingSoon: res.data['comingSoon'] == true,
-            action: (res.data['action'] as Map?)?.cast<String, dynamic>(),
+            action: action,
+            idempotencyKey: type.isEmpty ? null : _mintIdempotencyKey(type),
+            prompt: q,
           ),
         );
       });
@@ -162,10 +188,14 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
         data: {
           'type': action['type'],
           'params': action['params'] ?? <String, dynamic>{},
-          // authorise() gates actions by page as well as role. With no page
-          // sent this normalised to "/" and refused everything the assistant
-          // had just offered to do.
+          // authorise() gates actions by page as well as role. Most actions
+          // also list "/" so an omitted page was not refused outright, but
+          // bulk_update_status does not -- and the page is recorded on the
+          // receipt either way.
           'page': _page?.path ?? '',
+          if (message.idempotencyKey != null)
+            'idempotencyKey': message.idempotencyKey,
+          'prompt': message.prompt,
         },
       );
       final index = _messages.indexOf(message);
@@ -178,6 +208,10 @@ class _ArthaChatScreenState extends State<ArthaChatScreen> {
             comingSoon: message.comingSoon,
             action: message.action,
             actionDone: true,
+            // Carried over so a retry after a dropped response reuses the key
+            // rather than minting a second one and applying twice.
+            idempotencyKey: message.idempotencyKey,
+            prompt: message.prompt,
           );
           _messages.add(
             _ChatMessage(

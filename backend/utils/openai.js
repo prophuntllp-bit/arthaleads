@@ -673,6 +673,10 @@ ONLY propose an action when:
 
 When proposing an action, set "action" in your response AND mention in "answer" that they need to confirm.
 
+The "action" object has exactly two keys, and the key holding the action name
+is called "type" - not "id", not "name":
+  "action": { "type": "add_lead_note", "params": { "leadId": "...", "note": "..." } }
+
 If no action applies, set "action": null.
 
 ════════════════════════════════════════════════
@@ -725,6 +729,10 @@ ONLY propose an action when the target (lead or task) is identifiable from conte
 
 When proposing an action, set "action" AND say in "answer" that they need to confirm.
 
+The "action" object has exactly two keys, and the key holding the action name
+is called "type" - not "id", not "name":
+  "action": { "type": "<one of the ids listed above>", "params": { ... } }
+
 `
     : `COPILOT - WRITE ACTIONS
 You have NO write actions available on this page for this user's role. Explain how to do it through the UI instead, and set "action": null.
@@ -732,6 +740,41 @@ You have NO write actions available on this page for this user's role. Explain h
 `;
 
   return HELP_SYSTEM_PROMPT.replace(ACTION_BLOCK, body);
+}
+
+/// Coerce whatever shape the model chose into { type, params }.
+//
+// The prompt now spells the shape out, but a prompt is a request, not a
+// contract: a model that answers with "id" or "name" instead of "type", or
+// that flattens the params up a level, produced an action object the client
+// posted with no type at all -- and the only symptom was "Action type
+// required." on the confirm button, with nothing written down anywhere,
+// because the audit row is only created once the request gets past that
+// check. Every copilot action ever attempted failed this way.
+//
+// Unknown keys still fail closed: no name means no action, and authorise()
+// re-checks the id against the registry regardless of what arrives here.
+function normaliseAction(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const named = [raw.type, raw.id, raw.name, raw.action].find(
+    (v) => typeof v === "string" && v.trim()
+  );
+  if (!named) return null;
+
+  const nested = [raw.params, raw.parameters, raw.arguments].find(
+    (v) => v && typeof v === "object" && !Array.isArray(v)
+  );
+
+  // No params object means the model flattened them alongside the name, so
+  // everything that is not the name IS the params.
+  let params = nested;
+  if (!params) {
+    const { type, id, name, action, ...rest } = raw;
+    params = rest;
+  }
+
+  return { type: named.trim(), params: params || {} };
 }
 
 async function answerHelpQuestion(question, currentPage, userName, liveContext, conversationHistory = [], actionCatalogue = null, surface = "web") {
@@ -782,7 +825,7 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
       answer: parsed.answer || "I'm not sure about that. Try the quick answers below or raise a support ticket.",
       suggestTicket: Boolean(parsed.suggestTicket),
       comingSoon: Boolean(parsed.comingSoon),
-      action: parsed.action || null,
+      action: normaliseAction(parsed.action),
       _model: model,
       _usage: response.usage || null,
     };
@@ -793,6 +836,7 @@ async function answerHelpQuestion(question, currentPage, userName, liveContext, 
 
 module.exports = {
   draftWhatsAppMessage, answerHelpQuestion, answerMarketingQuestion, getClient,
+  normaliseAction,
   // Exposed so scripts/verify-copilot-registry.js can prove the per-request
   // splice actually matched. A regex that silently fails to match would
   // return the static prompt unchanged and look like it worked.
