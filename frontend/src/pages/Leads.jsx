@@ -543,16 +543,11 @@ export default function Leads() {
   };
 
   const handleInlineUpdate = (updated) => {
-    // "Not Interested" genuinely moves the lead to Dump now: the backend's Dump
-    // query matches it and the Leads query excludes it, for both regular and
-    // project leads. So dropping the row here matches what a refresh shows.
-    // Restore it from Dump Leads (which clears the booking) to bring it back.
-    if (updated?.booking === "Not Interested") {
-      removeLead(updated._id);
-      toast.success("Lead moved to Dump");
-    } else {
-      upsertLead(updated, false);
-    }
+    // Every booking status now just updates the row. "Not Interested" used to
+    // drop it from the list and announce a move to Dump; the backend no longer
+    // does that, so removing it here would only make the row reappear on the
+    // next refresh.
+    upsertLead(updated, false);
   };
 
   const exportRows = async (type, selectedIdsOverride = null) => {

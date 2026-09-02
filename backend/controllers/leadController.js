@@ -97,6 +97,26 @@ const leadController = {
     }
   },
 
+  async updateNote(req, res, next) {
+    try {
+      const lead = await leadService.updateNote(
+        req.params.id, req.params.noteId, req.body.text, req.user
+      );
+      res.json({ success: true, data: lead });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async deleteNote(req, res, next) {
+    try {
+      const lead = await leadService.deleteNote(req.params.id, req.params.noteId, req.user);
+      res.json({ success: true, data: lead });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async assign(req, res, next) {
     try {
       const lead = await leadService.assign(req.params.id, req.body.agentId, req.user);

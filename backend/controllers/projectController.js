@@ -80,6 +80,26 @@ const projectController = {
     } catch (err) { next(err); }
   },
 
+  async updateNote(req, res, next) {
+    try {
+      const { text } = req.body;
+      if (!text?.trim()) return res.status(400).json({ success: false, message: "Note text is required" });
+      const lead = await projectService.updateNote(
+        req.params.id, req.params.leadId, req.params.noteId, text, req.user
+      );
+      res.json({ success: true, data: lead });
+    } catch (err) { next(err); }
+  },
+
+  async deleteNote(req, res, next) {
+    try {
+      const lead = await projectService.deleteNote(
+        req.params.id, req.params.leadId, req.params.noteId, req.user
+      );
+      res.json({ success: true, data: lead });
+    } catch (err) { next(err); }
+  },
+
   async updateRemark(req, res, next) {
     try {
       const { remark = "", remarkNote } = req.body;

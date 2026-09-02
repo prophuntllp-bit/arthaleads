@@ -233,6 +233,9 @@ const importLeadsSchema = Joi.object({
       remark: Joi.string().allow("").optional(),
       remark1: Joi.string().allow("").optional(),
       remark2: Joi.string().allow("").optional(),
+      // Set by the Dump page's import, which archives rows rather than adding
+      // them to the working list. Admin/manager only, enforced on the route.
+      isDeleted: Joi.boolean().optional(),
     })
   ).min(1).required(),
 });

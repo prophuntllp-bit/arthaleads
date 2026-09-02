@@ -180,7 +180,7 @@ export default function DumpLeads() {
         Project: lead.projectName || "",
         PipelineStatus: lead.status || "",
         BookingStatus: lead.booking || "",
-        Reason: lead.isDeleted ? "Deleted" : "Not Interested",
+        Reason: lead.isDeleted ? "Deleted" : "Closed Lost",
         AssignedTo: lead.assignedToName || "",
         Remark: lead.remark || "",
         Remark1: lead.remark1 || "",
@@ -276,8 +276,7 @@ export default function DumpLeads() {
           remark: String(row.Remark  || row.remark  || "").trim(),
           remark1: String(row.Remark1 || row.remark1 || "").trim(),
           remark2: String(row.Remark2 || row.remark2 || "").trim(),
-          booking: "Not Interested",
-          isDeleted: false,
+          isDeleted: true,
         }))
         .filter((e) => e.name && e.phone);
 
@@ -335,7 +334,7 @@ export default function DumpLeads() {
         <div className="flex flex-1 flex-col gap-2">
           <p className="stitch-kicker mb-1">Archive</p>
           <h1 className="text-3xl font-black tracking-tight text-app">Dump Leads</h1>
-          <p className="text-sm text-app-soft">Leads marked as Not Interested or deleted - {leads.length} total</p>
+          <p className="text-sm text-app-soft">Deleted leads and leads marked Closed Lost - {leads.length} total</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -397,7 +396,7 @@ export default function DumpLeads() {
         {loading ? (
           <PageLoader />
         ) : filtered.length === 0 ? (
-          <EmptyState icon={Archive} title="No dump leads" desc="Leads marked Not Interested or deleted will appear here." />
+          <EmptyState icon={Archive} title="No dump leads" desc="Deleted leads and leads marked Closed Lost will appear here." />
         ) : (
           <>
             {/* ── Top scrollbar mirror - always-visible horizontal bar ── */}
@@ -480,7 +479,7 @@ export default function DumpLeads() {
                     <td>
                       {lead.isDeleted
                         ? <span className="badge bg-red-500/10 text-red-500 border border-red-500/20">Deleted</span>
-                        : <span className="badge bg-gray-100/50 text-gray-500">Not Interested</span>}
+                        : <span className="badge bg-gray-100/50 text-gray-500">Closed Lost</span>}
                     </td>
                     <td className="text-xs text-app-soft whitespace-nowrap">{lead.assignedToName || "-"}</td>
                     <td className="text-xs text-app-soft max-w-[180px]">

@@ -153,6 +153,8 @@ router.patch("/:id", async (req, res, next) => {
 router.patch("/:id/restore", authorize("admin", "manager"), leadController.restore);
 router.delete("/:id/permanent", authorize("admin", "manager"), leadController.permanentDelete);
 router.post("/:id/notes",  validate(addNoteSchema),   leadController.addNote);
+router.patch("/:id/notes/:noteId",  validate(addNoteSchema), leadController.updateNote);
+router.delete("/:id/notes/:noteId", leadController.deleteNote);
 router.post("/:id/assign", authorize("admin", "manager"), validate(assignLeadSchema), leadController.assign);
 router.post("/:id/transfer", leadController.transferLead);
 

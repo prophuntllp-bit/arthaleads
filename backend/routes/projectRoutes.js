@@ -64,6 +64,8 @@ router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);
 router.post("/:id/leads/:leadId/notes",   projectController.addNote);
+router.patch("/:id/leads/:leadId/notes/:noteId",  projectController.updateNote);
+router.delete("/:id/leads/:leadId/notes/:noteId", projectController.deleteNote);
 router.patch("/:id/leads/:leadId/remark", projectController.updateRemark);
 router.delete("/:id/leads/bulk", projectController.bulkDeleteLeads);
 router.patch("/:id/leads/bulk-status",    projectController.bulkUpdateStatus);

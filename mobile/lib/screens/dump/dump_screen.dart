@@ -15,12 +15,12 @@ import '../../core/theme.dart';
 import '../../widgets/chips.dart';
 import '../../widgets/motion.dart';
 
-/// Dump Leads — GET /leads/dump (deleted/lost pipeline leads + "Not
-/// Interested" project leads, merged). Restore/permanent-delete branch by
-/// `_type`: plain leads use /leads/:id/restore + /leads/:id/permanent,
-/// project leads use /projects/:projectId/leads/:id (booking reset / hard
-/// delete). Mirrors frontend/src/pages/DumpLeads.jsx including search,
-/// bulk select + bulk delete, and CSV import/export.
+/// Dump Leads — GET /leads/dump: pipeline leads that were deleted or marked
+/// Closed Lost. Booking status no longer sends anything here; a lead marked
+/// "Not Interested" stays in the working list where the agent left it.
+/// Restore/permanent-delete use /leads/:id/restore + /leads/:id/permanent.
+/// Mirrors frontend/src/pages/DumpLeads.jsx including search, bulk select +
+/// bulk delete, and CSV import/export.
 class DumpScreen extends StatefulWidget {
   const DumpScreen({super.key});
 
@@ -194,7 +194,7 @@ class _DumpScreenState extends State<DumpScreen> {
             l['projectName'] ?? '',
             l['status'] ?? '',
             l['booking'] ?? '',
-            l['isDeleted'] == true ? 'Deleted' : 'Not Interested',
+            l['isDeleted'] == true ? 'Deleted' : 'Closed Lost',
             l['assignedToName'] ?? '',
             l['remark'] ?? l['remark1'] ?? '',
             l['createdAt'] != null ? DateFormat('yyyy-MM-dd').format(DateTime.parse(l['createdAt']).toLocal()) : '',
@@ -241,8 +241,7 @@ class _DumpScreenState extends State<DumpScreen> {
           'source': sourceIdx != -1 && cell(sourceIdx).isNotEmpty ? cell(sourceIdx) : 'Manual',
           'status': 'New',
           if (remarkIdx != -1) 'remark': cell(remarkIdx),
-          'booking': 'Not Interested',
-          'isDeleted': false,
+          'isDeleted': true,
         };
       }).where((r) => (r['name'] as String).isNotEmpty && (r['phone'] as String).isNotEmpty).toList();
 
@@ -410,7 +409,7 @@ class _DumpScreenState extends State<DumpScreen> {
                                           borderRadius: BorderRadius.circular(999),
                                         ),
                                         child: Text(
-                                          lead['isDeleted'] == true ? 'Deleted' : 'Not Interested',
+                                          lead['isDeleted'] == true ? 'Deleted' : 'Closed Lost',
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,

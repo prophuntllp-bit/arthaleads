@@ -463,6 +463,51 @@ const leadService = {
     return lead;
   },
 
+  // ── Edit / remove a note ──────────────────────────────────────────────────
+  // A note carries a name and a timestamp, so it reads as a record of who said
+  // what. An agent may correct their own; only an admin or manager may touch
+  // somebody else's. Both leave an activity entry, because a note quietly
+  // changing under a colleague is worse than the typo it fixed.
+  async _noteFor(id, noteId, user) {
+    const lead = await Lead.findOne({ _id: id, orgId: user.orgId });
+    if (!lead) throw new AppError("Lead not found", 404);
+
+    if (
+      user.role === "agent" &&
+      lead.assignedTo?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("Access denied", 403);
+    }
+
+    const note = lead.notes.id(noteId);
+    if (!note) throw new AppError("Note not found", 404);
+
+    if (
+      user.role === "agent" &&
+      note.addedBy?.toString() !== user._id.toString()
+    ) {
+      throw new AppError("You can only change notes you wrote yourself", 403);
+    }
+
+    return { lead, note };
+  },
+
+  async updateNote(id, noteId, text, user) {
+    const { lead, note } = await leadService._noteFor(id, noteId, user);
+    note.text = text;
+    logActivity(lead, "note_updated", `Note edited by ${user.name}`, user);
+    await lead.save();
+    return lead;
+  },
+
+  async deleteNote(id, noteId, user) {
+    const { lead, note } = await leadService._noteFor(id, noteId, user);
+    note.deleteOne();
+    logActivity(lead, "note_deleted", `Note deleted by ${user.name}`, user);
+    await lead.save();
+    return lead;
+  },
+
   // ── Assign Lead ────────────────────────────────────────────────────────────
   async assign(id, agentId, user) {
     if (user.role === "agent") throw new AppError("Agents cannot reassign leads", 403);
@@ -600,11 +645,10 @@ const leadService = {
     if (status)   leadFilter.status   = status;
     if (source)   leadFilter.source   = source;
     if (priority) leadFilter.priority = priority;
-    // "Not Interested" leads live in Dump, so keep them out of the active list —
-    // unless the user explicitly filters for them, which would otherwise return
-    // a confusing empty result.
+    // "Not Interested" is just a booking status now. It used to also remove the
+    // lead from this list and move it to Dump, which meant marking someone Not
+    // Interested made them vanish from the only screen an agent works from.
     if (booking)  leadFilter.booking  = booking;
-    else          leadFilter.booking  = { $ne: "Not Interested" };
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
@@ -635,10 +679,8 @@ const leadService = {
       const projFilter = { orgId: user.orgId };
       if (status)  projFilter.status  = status;
       if (source)  projFilter.source  = source;
-      // Same rule as regular leads above — dumped project leads stay out of the
-      // active list (previously they appeared in BOTH Leads and Dump).
+      // Same rule as regular leads above.
       if (booking) projFilter.booking = booking;
-      else         projFilter.booking = { $ne: "Not Interested" };
       if (createdAtFilter) projFilter.createdAt = createdAtFilter;
       if (followUpToday === "true" || followUpToday === true) {
         projFilter.$or = [
@@ -963,9 +1005,10 @@ const leadService = {
     if (!lead) throw new AppError("Lead not found", 404);
     lead.isDeleted = false;
     lead.deletedAt = null;
-    // Clear the booking too, otherwise a lead dumped via "Not Interested" would
-    // be un-deleted but immediately re-match the Dump filter and appear stuck.
-    if (lead.booking === "Not Interested") lead.booking = "";
+    // The booking is left alone. It used to be cleared here because a lead
+    // dumped via "Not Interested" would otherwise re-match the Dump filter the
+    // moment it was restored -- but that also silently erased a real answer the
+    // agent had recorded. Dump is deletions now, so there is nothing to undo.
     await lead.save({ validateBeforeSave: false });
     return lead;
   },
@@ -1134,25 +1177,26 @@ const leadService = {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const lim  = parseInt(limit);
 
-    // A lead lands in Dump when it is soft-deleted, lost, or marked
-    // "Not Interested" — the last one mirrors how ProjectLeads already behave
-    // (projFilter below), so both lead types dump on the same signal.
+    // A lead lands in Dump when it is soft-deleted or lost. It used to also
+    // land here on booking "Not Interested", which is why an agent recording an
+    // honest answer watched the lead disappear from their list.
+    //
+    // ProjectLead is no longer queried at all: it has no isDeleted field, so
+    // with the booking rule gone there is nothing about a project lead that can
+    // put it in Dump. Querying for something that cannot match would just be a
+    // round trip that always returns zero.
     const leadFilter = {
       orgId: user.orgId,
       $or: [
         { isDeleted: true },
         { status: "Closed Lost" },
-        { booking: "Not Interested" },
       ],
     };
     if (user.role === "agent") {
       leadFilter.assignedTo = user._id;
     }
 
-    const projFilter = { booking: "Not Interested", orgId: user.orgId };
-    if (user.role === "agent") projFilter.importedBy = user._id;
-
-    const [regularLeads, projLeads, totalLeads, totalProj] = await Promise.all([
+    const [regularLeads, totalLeads] = await Promise.all([
       Lead.find(leadFilter)
         .sort({ updatedAt: -1 })
         .skip(skip)
@@ -1160,32 +1204,12 @@ const leadService = {
         .populate("assignedTo", "name email")
         .select("name phone email source status priority booking assignedToName assignedTo remark1 remark2 remark followUpDate followUp2 createdAt updatedAt isDeleted deletedAt")
         .lean(),
-      ProjectLead.find(projFilter)
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(lim)
-        .populate("project", "name _id")
-        .select("name phone email source booking remark remark1 remark2 createdAt updatedAt project importedBy")
-        .lean(),
       Lead.countDocuments(leadFilter),
-      ProjectLead.countDocuments(projFilter),
     ]);
 
-    const projFormatted = projLeads.map((l) => ({
-      ...l,
-      _type: "project",
-      projectName: l.project?.name,
-      projectId: l.project?._id,
-      isDeleted: false,
-    }));
+    const combined = regularLeads.map((l) => ({ ...l, _type: "lead" }));
 
-    const regularFormatted = regularLeads.map((l) => ({ ...l, _type: "lead" }));
-
-    const combined = [...regularFormatted, ...projFormatted].sort(
-      (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
-    );
-
-    const total = totalLeads + totalProj;
+    const total = totalLeads;
     return {
       leads: combined,
       total,

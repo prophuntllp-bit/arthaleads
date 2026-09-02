@@ -40,9 +40,6 @@ const BHK = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
 
 const PURPOSE = ["Buy", "Rent", "Invest", "N/A"];
 
-// Booking value that moves a lead into Dump (see leadService getDump/getAllUnified).
-const BOOKING_DUMP = "Not Interested";
-
 module.exports = {
   STATUS,
   PRIORITY,
@@ -51,5 +48,4 @@ module.exports = {
   PROPERTY_TYPE,
   BHK,
   PURPOSE,
-  BOOKING_DUMP,
 };

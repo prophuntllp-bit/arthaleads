@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X } from "lucide-react";
 import api from "../services/api";
-import { Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
+import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
 import CustomSelect from "./CustomSelect";
 import { fmtCurrency, fmtDate, fmtDateTime, STATUS_OPTIONS } from "../utils/constants";
@@ -116,6 +116,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   // appeared to be editing. Saving appended a third.
   const notesNewestFirst = [...(lead?.notes || [])].reverse();
 
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editingText, setEditingText] = useState("");
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [deletingNote, setDeletingNote] = useState(null);
+
   useEffect(() => {
     if (tab !== "calls" || !lead?._id) return;
     setCallsLoading(true);
@@ -170,6 +175,46 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   if (!lead) return null;
 
   const isProjectLead = lead._type === "project";
+
+  // Both routes reject an edit to somebody else's note unless you are an admin
+  // or manager. The controls are shown to everyone and the server decides --
+  // duplicating the rule in the UI is how the two drift apart.
+  const noteUrl = (noteId) =>
+    isProjectLead && lead.projectId
+      ? `/projects/${lead.projectId}/leads/${lead._id}/notes/${noteId}`
+      : `/leads/${lead._id}/notes/${noteId}`;
+
+  const saveNoteEdit = async () => {
+    const text = editingText.trim();
+    if (!text || noteBusy) return;
+    setNoteBusy(true);
+    try {
+      const { data } = await api.patch(noteUrl(editingNoteId), { text });
+      onUpdated(data.data);
+      setEditingNoteId(null);
+      setEditingText("");
+      toast.success("Note updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update that note");
+    } finally {
+      setNoteBusy(false);
+    }
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!deletingNote || noteBusy) return;
+    setNoteBusy(true);
+    try {
+      const { data } = await api.delete(noteUrl(deletingNote._id));
+      onUpdated(data.data);
+      setDeletingNote(null);
+      toast.success("Note deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not delete that note");
+    } finally {
+      setNoteBusy(false);
+    }
+  };
 
   // Show the Transcript tab only for leads that came in via Vistrow Voice
   // (voiceCall is set on ingestion). Non-voice leads never see the tab.
@@ -402,6 +447,15 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           </div>
         )}
 
+        <ConfirmDialog
+          open={!!deletingNote}
+          onClose={() => setDeletingNote(null)}
+          onConfirm={confirmDeleteNote}
+          loading={noteBusy}
+          title="Delete this note?"
+          message="The note will be removed from this lead. This cannot be undone."
+        />
+
         {tab === "notes" && (
           <div className="space-y-4">
             <textarea
@@ -440,22 +494,71 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                             }
                       }
                     >
-                      <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
-                      <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                        <p className="text-xs text-app-soft">
-                          {item.addedByName || "Unknown"} | {fmtDate(item.createdAt)}
-                        </p>
-                        {isFbError && (
-                          <button
-                            onClick={handleRetryFacebook}
-                            disabled={retrying}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
-                            style={{ background: "var(--app-primary)" }}
-                          >
-                            {retrying ? <><Spinner size="sm" /> Fetching…</> : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>}
-                          </button>
-                        )}
-                      </div>
+                      {editingNoteId === item._id ? (
+                        <>
+                          <textarea
+                            className="textarea"
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            rows={4}
+                            autoFocus
+                          />
+                          <div className="mt-2 flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => { setEditingNoteId(null); setEditingText(""); }}
+                              disabled={noteBusy}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-app-soft disabled:opacity-60"
+                            >
+                              <X className="w-3 h-3" /> Cancel
+                            </button>
+                            <button
+                              onClick={saveNoteEdit}
+                              disabled={noteBusy || !editingText.trim()}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
+                              style={{ background: "var(--app-primary)" }}
+                            >
+                              {noteBusy ? <Spinner size="sm" /> : <><Check className="w-3 h-3" /> Save</>}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
+                          <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+                            <p className="text-xs text-app-soft">
+                              {item.addedByName || "Unknown"} | {fmtDate(item.createdAt)}
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                              {isFbError && (
+                                <button
+                                  onClick={handleRetryFacebook}
+                                  disabled={retrying}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
+                                  style={{ background: "var(--app-primary)" }}
+                                >
+                                  {retrying ? <><Spinner size="sm" /> Fetching…</> : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => { setEditingNoteId(item._id); setEditingText(item.text || ""); }}
+                                title="Edit note"
+                                aria-label="Edit note"
+                                className="p-1.5 rounded-lg text-app-soft hover:text-app transition"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeletingNote(item)}
+                                title="Delete note"
+                                aria-label="Delete note"
+                                className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}

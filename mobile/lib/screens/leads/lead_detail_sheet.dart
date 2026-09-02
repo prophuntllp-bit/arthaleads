@@ -20,11 +20,11 @@ const _fbErrorPattern = 'Facebook lead received but field data could not be fetc
 /// Plain leads PATCH /leads/:id; project leads PATCH /projects/:pid/leads/:id
 /// — same split the web app uses for inline cells.
 /// Pops with `true` when something changed that requires a list refresh
-/// (transfer, dump), or `'edit'` to ask the caller to open the edit form for
-/// this lead. Booking status changes (including "Not Interested") patch and
-/// stay open like every other field — the agent needs the sheet to add a
-/// remark right after marking a lead Not Interested, not get kicked out of
-/// it. The list catches up to the move-to-Dump on its next natural refresh.
+/// (transfer, delete), or `'edit'` to ask the caller to open the edit form for
+/// this lead. Booking status changes patch and stay open like every other
+/// field — the agent needs the sheet to add a remark right after marking a
+/// lead Not Interested. That no longer moves the lead anywhere: it stays in
+/// the list with its new status.
 class LeadDetailSheet extends StatefulWidget {
   final Map<String, dynamic> lead;
   final List<Map<String, dynamic>> projects;
@@ -223,6 +223,94 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(ApiClient.errorMessage(e, 'Failed to add note')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _noteUrl(String noteId) => _isProject
+      ? '/projects/${lead['projectId']}/leads/${lead['_id']}/notes/$noteId'
+      : '/leads/${lead['_id']}/notes/$noteId';
+
+  /// Edit a note in place. The server rejects an edit to somebody else's note
+  /// unless you are an admin or manager, so the menu is offered on every note
+  /// and the refusal is surfaced as-is rather than the rule being guessed at
+  /// twice.
+  Future<void> _editNote(Map<String, dynamic> note) async {
+    final ctrl = TextEditingController(text: note['text'] as String? ?? '');
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit note'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 8,
+          decoration: const InputDecoration(hintText: 'Note text'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved == null || saved.isEmpty || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final res = await _api.dio.patch(_noteUrl(note['_id'].toString()), data: {'text': saved});
+      final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
+      setState(() => lead = {...lead, ...fresh});
+      widget.onUpdated(lead);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Could not update that note')),
+          backgroundColor: AppColors.danger,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _deleteNote(Map<String, dynamic> note) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this note?'),
+        content: const Text(
+          'The note will be removed from this lead. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final res = await _api.dio.delete(_noteUrl(note['_id'].toString()));
+      final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
+      setState(() => lead = {...lead, ...fresh});
+      widget.onUpdated(lead);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ApiClient.errorMessage(e, 'Could not delete that note')),
           backgroundColor: AppColors.danger,
         ));
       }
@@ -684,9 +772,35 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                         children: [
                           Text(n['text'] as String? ?? ''),
                           const SizedBox(height: 4),
-                          Text(
-                            '${n['addedByName'] ?? 'Unknown'} · ${_fmtDate(n['createdAt'] as String?)}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${n['addedByName'] ?? 'Unknown'} · ${_fmtDate(n['createdAt'] as String?)}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                              // A note with no _id predates the subdocument ids
+                              // and has no address to PATCH or DELETE, so it
+                              // gets no menu rather than a menu that 404s.
+                              if (n['_id'] != null)
+                                SizedBox(
+                                  height: 28,
+                                  width: 28,
+                                  child: PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    iconSize: 16,
+                                    tooltip: 'Note options',
+                                    enabled: !_saving,
+                                    onSelected: (v) =>
+                                        v == 'edit' ? _editNote(n) : _deleteNote(n),
+                                    itemBuilder: (_) => const [
+                                      PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
                         ],
                       ),

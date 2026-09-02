@@ -237,6 +237,39 @@ const projectService = {
     return lead;
   },
 
+  // Same authorship rule as leadService: your own note, or admin/manager.
+  async _noteFor(projectId, leadId, noteId, user) {
+    const lead = await ProjectLead.findById(leadId).populate("project", "orgId assignedTo");
+    if (!lead) throw new AppError("Lead not found", 404);
+    if (String(lead.project?._id) !== String(projectId)) throw new AppError("Lead not found", 404);
+    if (String(lead.project?.orgId) !== String(user.orgId)) throw new AppError("Access denied", 403);
+    if (user.role === "agent" && !lead.project?.assignedTo?.map(String).includes(user._id.toString())) {
+      throw new AppError("Access denied", 403);
+    }
+
+    const note = lead.notes.id(noteId);
+    if (!note) throw new AppError("Note not found", 404);
+    if (user.role === "agent" && note.addedBy?.toString() !== user._id.toString()) {
+      throw new AppError("You can only change notes you wrote yourself", 403);
+    }
+
+    return { lead, note };
+  },
+
+  async updateNote(projectId, leadId, noteId, text, user) {
+    const { lead, note } = await projectService._noteFor(projectId, leadId, noteId, user);
+    note.text = text.trim();
+    await lead.save();
+    return lead;
+  },
+
+  async deleteNote(projectId, leadId, noteId, user) {
+    const { lead, note } = await projectService._noteFor(projectId, leadId, noteId, user);
+    note.deleteOne();
+    await lead.save();
+    return lead;
+  },
+
   async updateRemark(leadId, { remark, remarkNote }, user) {
     // Verify org ownership via parent project (works for both old and new leads,
     // regardless of whether orgId is backfilled on the ProjectLead doc yet)
