@@ -27,7 +27,7 @@ const INSTALL_STEPS = [
   },
   {
     title: "Install and sign in",
-    desc: "Tap Install, then Open. Sign in with the same email and password you use on the web dashboard — there is no separate mobile account.",
+    desc: "Tap Install, then Open. Sign in with the same email and password you use on the web dashboard, or tap Sign up to create an account from the phone.",
   },
 ];
 
@@ -53,7 +53,7 @@ const FAQS = [
   },
   {
     q: "Do I need a separate mobile account?",
-    a: "No. Sign in with the same credentials as the web dashboard. Your role and permissions carry across, so an agent sees their leads and an admin sees the whole team.",
+    a: "No — one account covers both. You can create it on this site or in the app itself; either way the same email and password sign you in everywhere, and your role and permissions carry across, so an agent sees their leads and an admin sees the whole team.",
   },
   {
     q: "Will it work on my phone?",
@@ -101,11 +101,16 @@ function DownloadAppInner() {
       .catch(() => setRelease({}));
   }, []);
 
-  const url = release?.downloadUrl || "";
-  const version = release?.latestVersion || "";
-  const build = release?.latestBuild || 0;
-  const minAndroid = release?.minAndroid || "7.0";
-  const sizeMb = release?.sizeBytes ? Math.round(release.sizeBytes / 1048576) : 0;
+  // `download`, not the flat fields — those drive the in-app update prompt and
+  // are held back deliberately so existing phones are not nagged on every
+  // build. Nobody reading this page has the app yet, so they get the newest
+  // one. See backend/constants/appRelease.js.
+  const dl = release?.download || {};
+  const url = dl.url || "";
+  const version = dl.version || "";
+  const build = dl.build || 0;
+  const minAndroid = dl.minAndroid || "7.0";
+  const sizeMb = dl.sizeBytes ? Math.round(dl.sizeBytes / 1048576) : 0;
 
   const bg = isDark ? "#0d0d1a" : "#ffffff";
   const altBg = isDark ? "#0a0a14" : "#f9fafb";
@@ -240,7 +245,7 @@ function DownloadAppInner() {
           <ul className="space-y-3">
             {[
               `An Android phone running ${minAndroid} or later`,
-              "An Arthaleads account — the app has no separate sign-up",
+              "An Arthaleads account — sign in with yours, or create one in the app",
               "About 200 MB free, once installed",
               "Permission to install apps from your browser, granted during setup",
             ].map((r) => (
@@ -263,13 +268,13 @@ function DownloadAppInner() {
       </section>
 
       {/* ── What's new ── */}
-      {release?.releaseNotes && (
+      {dl.releaseNotes && (
         <section className="py-16" style={{ background: bg }}>
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-black mb-4" style={{ color: text }}>
               What&rsquo;s new in {version ? `v${version}` : "the latest build"}
             </h2>
-            <p className="text-sm leading-relaxed" style={{ color: soft }}>{release.releaseNotes}</p>
+            <p className="text-sm leading-relaxed" style={{ color: soft }}>{dl.releaseNotes}</p>
           </div>
         </section>
       )}

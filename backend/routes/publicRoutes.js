@@ -78,6 +78,9 @@ router.get("/options", (req, res) => {
 // for a hotfix that cannot wait for a deploy (e.g. a broken download link):
 //   ANDROID_LATEST_BUILD, ANDROID_LATEST_VERSION, ANDROID_MIN_BUILD,
 //   ANDROID_APK_URL, ANDROID_RELEASE_NOTES
+// and, for the public download page's separate build:
+//   ANDROID_DOWNLOAD_BUILD, ANDROID_DOWNLOAD_VERSION, ANDROID_DOWNLOAD_URL,
+//   ANDROID_DOWNLOAD_NOTES, ANDROID_APK_SIZE, ANDROID_MIN_OS
 //
 // Safe default: with no URL configured the app never prompts and never blocks.
 router.get("/app-version", (req, res) => {
@@ -102,6 +105,40 @@ router.get("/app-version", (req, res) => {
 
   res.set("Cache-Control", "public, max-age=300"); // 5 min — cheap, still prompt
 
+  // What /download-app serves. Deliberately a separate build from the one above:
+  // that one decides who gets nagged to update, this one decides what a fresh
+  // install receives, and shipping to new users should not wake the whole fleet.
+  //
+  // Falls back to the update block field by field, so a half-filled download
+  // block (a build cut but not yet uploaded, say) still leaves the page with a
+  // working link rather than a dead button.
+  const dl = rel.download || {};
+  const dlUrl = process.env.ANDROID_DOWNLOAD_URL || dl.url || "";
+  const minAndroid = process.env.ANDROID_MIN_OS || dl.minAndroid || "";
+
+  // All or nothing. A download block whose APK has not been uploaded yet must
+  // not lend its version number to the older link — that would put "v1.0.2,
+  // build 25" on the page above a button handing over the 1.0.1 file. With no
+  // URL of its own it steps aside completely and the page advertises the
+  // update build, which is at least true.
+  const download = dlUrl
+    ? {
+        build:        int(process.env.ANDROID_DOWNLOAD_BUILD, int(dl.build, latestBuild)),
+        version:      process.env.ANDROID_DOWNLOAD_VERSION || dl.version || "",
+        url:          dlUrl,
+        sizeBytes:    int(process.env.ANDROID_APK_SIZE, int(dl.sizeBytes, 0)),
+        minAndroid,
+        releaseNotes: process.env.ANDROID_DOWNLOAD_NOTES || dl.notes || "",
+      }
+    : {
+        build:        latestBuild,
+        version:      process.env.ANDROID_LATEST_VERSION || rel.version || "",
+        url:          process.env.ANDROID_APK_URL || rel.url || "",
+        sizeBytes:    0,
+        minAndroid,
+        releaseNotes: process.env.ANDROID_RELEASE_NOTES || rel.notes || "",
+      };
+
   res.json({
     success:       true,
     platform:      "android",
@@ -110,11 +147,10 @@ router.get("/app-version", (req, res) => {
     minBuild,
     downloadUrl:   process.env.ANDROID_APK_URL       || rel.url     || "",
     releaseNotes:  process.env.ANDROID_RELEASE_NOTES || rel.notes   || "",
-      // For the public download page. The app ignores both, but serving them
-      // here means the page and the in-app updater read one source and cannot
-      // drift apart.
-      sizeBytes:     int(process.env.ANDROID_APK_SIZE, int(rel.sizeBytes, 0)),
-      minAndroid:    process.env.ANDROID_MIN_OS || rel.minAndroid || "",
+    // For the public download page only — the app reads the flat fields above
+    // and ignores this. Served from the same endpoint so the page and the
+    // in-app updater cannot drift apart on where the APK actually lives.
+    download,
   });
 });
 
