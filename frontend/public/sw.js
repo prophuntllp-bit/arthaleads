@@ -1,5 +1,8 @@
 ﻿// Arthaleads Service Worker - PWA + Web Push + Background Sync + Periodic Sync
-const CACHE_NAME = "arthaleads-v1";
+// v2: v1 had cached opaque cross-origin responses, which are padded against
+// the storage quota and can never be read back usefully. Renaming the cache
+// makes the activate handler above delete the old one on next load.
+const CACHE_NAME = "arthaleads-v2";
 const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/offline.html"];
 
 // ── Install ───────────────────────────────────────────────────────────────────
@@ -25,11 +28,30 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (e.request.url.includes("/api/")) return;
 
+  // Same-origin only. Cross-origin images -- org logos on a CDN, Google
+  // profile pictures -- have no business coming through here:
+  //
+  //   * an <img> request is no-cors, so the response is opaque. Caching one is
+  //     allowed but each entry is padded to several MB against the quota, and
+  //     it can never be inspected or revalidated.
+  //   * worse, anything that goes wrong below turns a request the browser
+  //     would have handled itself into a hard load error, and an <img> has no
+  //     way to tell that apart from a missing file.
+  //
+  // Letting them go straight to the network is both simpler and what the
+  // browser already does well. This is also why a hard reload "fixed" a
+  // missing logo: it bypasses the service worker entirely.
+  let sameOrigin = false;
+  try {
+    sameOrigin = new URL(e.request.url).origin === self.location.origin;
+  } catch { sameOrigin = false; }
+  if (!sameOrigin) return;
+
   e.respondWith(
     fetch(e.request)
       .then((res) => {
         const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy)).catch(() => {});
         return res;
       })
       .catch(async () => {
@@ -37,8 +59,12 @@ self.addEventListener("fetch", (e) => {
         if (cached) return cached;
         // Navigation requests get the offline page as last resort
         if (e.request.mode === "navigate") {
-          return caches.match("/offline.html");
+          const offline = await caches.match("/offline.html");
+          if (offline) return offline;
         }
+        // Returning undefined from respondWith is itself a network error, so
+        // say so explicitly rather than leaving the caller to infer it.
+        return Response.error();
       })
   );
 });
