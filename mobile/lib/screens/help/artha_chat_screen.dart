@@ -524,6 +524,88 @@ class _BotBubble extends StatelessWidget {
   }
 }
 
+/// The three hopping dots the assistant shows while it is thinking.
+///
+/// Mirrors the indicator in frontend/src/components/HelpBot.jsx: three 6px
+/// dots on a 1s cycle, each a beat behind the last, so the wave reads left to
+/// right rather than all three pulsing at once. A spinner said "loading";
+/// these say "someone is composing a reply", which is what is actually
+/// happening.
+class _TypingDots extends StatefulWidget {
+  const _TypingDots();
+
+  @override
+  State<_TypingDots> createState() => _TypingDotsState();
+}
+
+class _TypingDotsState extends State<_TypingDots>
+    with SingleTickerProviderStateMixin {
+  static const _count = 3;
+
+  /// 0.15 of a 1000ms cycle == the 150ms animationDelay steps on the web.
+  static const _stagger = 0.15;
+
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1000),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Honour the OS "remove animations" setting instead of hopping regardless.
+    // Checked here rather than in initState because MediaQuery can change
+    // under us, and a stopped controller still paints all three dots at rest.
+    if (MediaQuery.of(context).disableAnimations) {
+      _c.stop();
+      _c.value = 0;
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        Theme.of(context).textTheme.bodySmall?.color ?? Theme.of(context).hintColor;
+
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(_count, (i) {
+          // Each dot is one beat behind the one before it. The modulo wraps
+          // the negative offset back into the cycle so dot 3 leads into the
+          // next repeat rather than sitting still until the controller resets.
+          final t = (_c.value - i * _stagger) % 1.0;
+          // Hop through the first half of the cycle, rest through the second.
+          final hop = t < 0.5 ? sin(t * 2 * pi) : 0.0;
+          return Padding(
+            padding: EdgeInsets.only(right: i == _count - 1 ? 0 : 4),
+            child: Transform.translate(
+              offset: Offset(0, -3 * hop),
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.4 + 0.4 * hop),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
 class _TypingBubble extends StatelessWidget {
   const _TypingBubble();
 
@@ -540,7 +622,7 @@ class _TypingBubble extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: const BorderRadius.only(
@@ -550,17 +632,7 @@ class _TypingBubble extends StatelessWidget {
                 bottomRight: Radius.circular(16),
               ),
             ),
-            child: const SizedBox(
-              width: 24,
-              height: 12,
-              child: Center(
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            ),
+            child: const _TypingDots(),
           ),
         ],
       ),

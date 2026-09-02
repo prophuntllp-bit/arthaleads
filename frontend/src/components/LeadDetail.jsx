@@ -99,28 +99,22 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
     }
   };
 
-  // Reset non-note state when a different lead opens
+  // Reset when a different lead opens -- the note box included, so a draft
+  // never follows you onto someone else's record.
   useEffect(() => {
     setTab("info");
     setStatus(lead?.status || "New");
     setAiDraft(null);
     setCallHistory([]);
     setExpandedCall(null);
+    setNote("");
   }, [lead?._id, open]);
 
-  // Sync textarea with the latest note whenever notes change or lead changes
-  // Uses the latest note's _id (or length) as a stable key to avoid firing on every render
-  const latestNoteKey = (() => {
-    const notes = lead?.notes || [];
-    const last = notes[notes.length - 1];
-    return last?._id ? String(last._id) : String(notes.length);
-  })();
-  useEffect(() => {
-    const notes = lead?.notes || [];
-    const latest = notes[notes.length - 1];
-    setNote(latest?.text || "");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lead?._id, open, latestNoteKey]);
+  // Newest first. The tab counts every note, so the list has to show every
+  // note -- it previously showed only the most recent one, and showed it
+  // inside the compose box, which read as "Notes (2)" above a single note you
+  // appeared to be editing. Saving appended a third.
+  const notesNewestFirst = [...(lead?.notes || [])].reverse();
 
   useEffect(() => {
     if (tab !== "calls" || !lead?._id) return;
@@ -191,24 +185,21 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   };
 
   const handleNote = async () => {
-    const latestText = lead?.notes?.[lead.notes.length - 1]?.text || "";
-    if (!note.trim() || note.trim() === latestText.trim()) return;
+    // No comparison against the last note any more: this endpoint appends, so
+    // "same text as last time" is a legitimate note, not a no-op. The old
+    // guard existed only because the box arrived pre-filled, and it swallowed
+    // the save silently -- no error, no note.
+    if (!note.trim()) return;
     setSaving(true);
     try {
       if (isProjectLead && lead.projectId) {
         const { data } = await api.post(`/projects/${lead.projectId}/leads/${lead._id}/notes`, { text: note });
-        const savedLead = data.data;
-        const latest = savedLead.notes?.[savedLead.notes.length - 1];
-        setNote(latest?.text || note);
-        onUpdated(savedLead);
+        onUpdated(data.data);
       } else {
         await api.post(`/leads/${lead._id}/notes`, { text: note });
-        const updatedLead = await refreshLead();
-        if (updatedLead) {
-          const latest = updatedLead.notes?.[updatedLead.notes.length - 1];
-          setNote(latest?.text || note);
-        }
+        await refreshLead();
       }
+      setNote("");
       toast.success("Note saved");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to add note");
@@ -425,25 +416,49 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 {saving ? <Spinner size="sm" /> : "Save Note"}
               </button>
             </div>
-            {/* FB error notes still need to be surfaced for retry */}
-            {(lead.notes || []).some(n => n.text?.includes(FB_ERROR_PATTERN)) && (
+            {/* Every note, newest first. A Facebook fetch failure keeps its
+                amber treatment and its Retry button, but lives in the same
+                list as everything else instead of being the only note shown. */}
+            {notesNewestFirst.length === 0 ? (
+              <p className="text-sm text-app-soft">No notes yet.</p>
+            ) : (
               <div className="space-y-3">
-                {(lead.notes || []).filter(n => n.text?.includes(FB_ERROR_PATTERN)).map((item) => (
-                  <div key={item._id || item.text} className="rounded-[1.25rem] p-4 border border-amber-400/30 bg-amber-50 dark:bg-amber-500/10">
-                    <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
-                    <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                      <p className="text-xs text-app-soft">{item.addedByName || "Unknown"} | {fmtDate(item.createdAt)}</p>
-                      <button
-                        onClick={handleRetryFacebook}
-                        disabled={retrying}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
-                        style={{ background: "var(--app-primary)" }}
-                      >
-                        {retrying ? <><Spinner size="sm" /> Fetching…</> : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>}
-                      </button>
+                {notesNewestFirst.map((item) => {
+                  const isFbError = item.text?.includes(FB_ERROR_PATTERN);
+                  return (
+                    <div
+                      key={item._id || item.createdAt || item.text}
+                      className={`rounded-[1.25rem] p-4 border ${
+                        isFbError ? "border-amber-400/30 bg-amber-50 dark:bg-amber-500/10" : ""
+                      }`}
+                      style={
+                        isFbError
+                          ? undefined
+                          : {
+                              borderColor: "var(--app-border)",
+                              background: "var(--app-card-solid)",
+                            }
+                      }
+                    >
+                      <p className="text-sm text-app whitespace-pre-wrap break-words">{item.text}</p>
+                      <div className="mt-2 flex items-center justify-between gap-3 flex-wrap">
+                        <p className="text-xs text-app-soft">
+                          {item.addedByName || "Unknown"} | {fmtDate(item.createdAt)}
+                        </p>
+                        {isFbError && (
+                          <button
+                            onClick={handleRetryFacebook}
+                            disabled={retrying}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white disabled:opacity-60 transition"
+                            style={{ background: "var(--app-primary)" }}
+                          >
+                            {retrying ? <><Spinner size="sm" /> Fetching…</> : <><RefreshCw className="w-3 h-3" /> Retry Fetch</>}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
