@@ -72,15 +72,15 @@ module.exports = {
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.2-28/arthaleads-1.0.2-28.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 0,
+      sizeBytes: 77722965,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "You can now create an Arthaleads account from the phone — the same four steps as the web, including the emailed verification link. Plus a proper launch screen instead of a blank rectangle.",
+      notes: "You can now sign up for Arthaleads without leaving the app — the same four steps as the web, verification email included. There is also a proper launch screen instead of a blank rectangle, you can delete your account from Settings, and you can flag anything the assistant gets wrong. Signing in with Google no longer creates an account by accident, and the app no longer asks for microphone access it never used.",
     },
   },
 };
