@@ -18,6 +18,7 @@
 //   immutable per URL, and a re-upload produces a new URL. Nothing needs
 //   purging because nothing is ever served stale.
 
+const crypto = require("crypto");
 const storage = require("./storage");
 
 /** ?v=<ms> so a re-upload to the same key is a different URL to the browser. */
@@ -26,8 +27,24 @@ const versioned = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()
 // Stable keys carry no file extension on purpose: the content type is stored
 // with the object and served from it, and a key that does not depend on the
 // uploaded format is one a delete can name without guessing.
+//
+// An org logo is public branding, so a guessable key costs nothing.
 const orgLogoKey = (orgId) => `arthaleads/logos/org-${orgId}`;
-const selfieKey = (userId, date, leg) => `arthaleads/attendance/att-${userId}-${date}-${leg}`;
+
+// Everything else gets a random segment, because the bucket is public and a
+// public bucket serves any key somebody can guess.
+//
+// att-<userId>-<date>-in was guessable in every part: a userId is an ObjectId
+// that appears in ordinary API responses and a date is a date, so anyone who
+// knew the shape could walk a colleague's clock-in photos day by day. Call
+// recordings are worse -- those are customer conversations. Cloudinary hid
+// this by accident behind the unguessable version segment in its URLs; here it
+// has to be deliberate.
+//
+// The full URL is stored on the record, so nothing needs to recompute these.
+const token = () => crypto.randomBytes(12).toString("hex");
+const selfieKey = (userId, date, leg) =>
+  `arthaleads/attendance/att-${userId}-${date}-${leg}-${token()}`;
 
 /**
  * Upload an org logo. Overwrites the org's previous logo.
@@ -71,7 +88,13 @@ async function uploadAttendanceSelfie(dataUri, userId, date, leg) {
  * recordings arrive as files on disk or as buffers, never base64.
  */
 async function uploadCallRecording(buffer, key, contentType = "audio/mpeg") {
-  return storage.put(`arthaleads/recordings/${key}`, buffer, contentType);
+  // Same reasoning as the selfies above: a recording of a customer call must
+  // not sit at a URL that can be reached by guessing a call id.
+  const dot = key.lastIndexOf(".");
+  const stamped = dot > 0
+    ? `${key.slice(0, dot)}-${token()}${key.slice(dot)}`
+    : `${key}-${token()}`;
+  return storage.put(`arthaleads/recordings/${stamped}`, buffer, contentType);
 }
 
 module.exports = {

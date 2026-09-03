@@ -20,12 +20,18 @@
  */
 
 require("dotenv").config();
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const axios = require("axios");
 const storage = require("../utils/storage");
 
 const DRY = process.argv.includes("--dry");
 const IS_CLOUDINARY = /^https?:\/\/res\.cloudinary\.com\//i;
+
+// The bucket is public, so anything sensitive needs a key nobody can guess.
+// Must match the scheme in utils/upload.js -- a migrated selfie and a newly
+// uploaded one should not be reachable by different rules.
+const token = () => crypto.randomBytes(12).toString("hex");
 
 const stats = { scanned: 0, moved: 0, skipped: 0, failed: 0 };
 
@@ -73,7 +79,7 @@ async function migrateRecordings(col) {
       if (!url || !IS_CLOUDINARY.test(url)) continue;
       stats.scanned++;
       const name = url.split("/").pop().split("?")[0];
-      const key = `arthaleads/recordings/${doc._id}-${i}-${name}`;
+      const key = `arthaleads/recordings/${doc._id}-${i}-${token()}-${name}`;
       try {
         if (DRY) { console.log(`  would move ${col} ${doc._id} activity ${i} -> ${key}`); stats.skipped++; continue; }
         const newUrl = await move(url, key);
@@ -109,10 +115,10 @@ async function migrateRecordings(col) {
     (d, url) => `arthaleads/blog/${d._id}-${url.split("/").pop().split("?")[0]}`);
 
   console.log("attendances.clockInSelfie");
-  await migrateField("attendances", "clockInSelfie", (d) => `arthaleads/attendance/att-${d._id}-in`);
+  await migrateField("attendances", "clockInSelfie", (d) => `arthaleads/attendance/att-${d._id}-in-${token()}`);
 
   console.log("attendances.clockOutSelfie");
-  await migrateField("attendances", "clockOutSelfie", (d) => `arthaleads/attendance/att-${d._id}-out`);
+  await migrateField("attendances", "clockOutSelfie", (d) => `arthaleads/attendance/att-${d._id}-out-${token()}`);
 
   console.log("leads activity recordings");
   await migrateRecordings("leads");
