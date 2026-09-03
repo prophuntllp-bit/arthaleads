@@ -50,6 +50,15 @@ router.get("/*", async (req, res) => {
     // Media is embedded by the app, never navigated to. Stops a stored SVG or
     // HTML masquerading as an image from running on our own origin.
     res.set("X-Content-Type-Options", "nosniff");
+    // helmet() sets Cross-Origin-Resource-Policy: same-origin across the API,
+    // which is right for JSON and wrong for this: app.arthaleads.com embedding
+    // an image from api.arthaleads.com is cross-origin, so the browser fetched
+    // it, got a 200, and threw the bytes away. Nothing in a request log shows
+    // that -- curl and the server both see a perfectly successful response --
+    // which is why the logo stayed missing after the URLs were correct.
+    //
+    // Overridden only on this route. The rest of the API keeps same-origin.
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
 
     obj.body.on("error", (err) => {
       logger.warn(`[media] stream failed for ${key}: ${err.message}`);
