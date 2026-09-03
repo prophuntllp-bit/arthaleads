@@ -57,3 +57,4 @@ __pycache__/
 # "fatal: No url found for submodule path '.claude/worktrees/...'".
 # Shared project config (.claude/settings.json, .claude/skills/) stays tracked.
 .claude/worktrees/
+backend/cloudinary-urls-backup.json

@@ -48,7 +48,7 @@ const superAdminController = {
       const [orgs, total] = await Promise.all([
         Organization.find()
           .sort({ createdAt: -1 }).skip(skip).limit(limit)
-          .select("-__v") // exclude internal mongoose field; logo is included but now all logos are Cloudinary URLs (small strings)
+          .select("-__v") // exclude internal mongoose field; logo is included but every logo is a URL now (small strings)
           .lean(),
         Organization.countDocuments(),
       ]);
@@ -88,7 +88,7 @@ const superAdminController = {
     }
   },
 
-  // PATCH /api/super-admin/orgs/:id/logo - upload logo to Cloudinary, store URL (logo:"" removes it)
+  // PATCH /api/super-admin/orgs/:id/logo - upload logo to object storage, store URL (logo:"" removes it)
   async updateLogo(req, res, next) {
     try {
       const { logo } = req.body;
@@ -105,21 +105,21 @@ const superAdminController = {
         }
 
         if (isBase64) {
-          // Try Cloudinary — fall back to storing base64 directly if not configured
+          // Try object storage — fall back to storing base64 directly if not configured
           try {
-            console.log(`[updateLogo] uploading logo to Cloudinary for org ${req.params.id}`);
+            console.log(`[updateLogo] uploading logo to object storage for org ${req.params.id}`);
             logoUrl = await uploadOrgLogo(logo, req.params.id);
-            console.log(`[updateLogo] ✅ Cloudinary URL: ${logoUrl}`);
+            console.log(`[updateLogo] ✅ stored at: ${logoUrl}`);
           } catch (cloudErr) {
-            console.warn(`[updateLogo] Cloudinary unavailable, storing base64 directly:`, cloudErr.message);
+            console.warn(`[updateLogo] object storage unavailable, storing base64 directly:`, cloudErr.message);
             logoUrl = logo; // store compressed base64 in MongoDB as fallback
           }
         } else {
-          // Already a hosted URL (e.g. re-submitting an existing Cloudinary URL) - store as-is
+          // Already a hosted URL (e.g. re-submitting the current one) - store as-is
           logoUrl = logo;
         }
       } else {
-        // Empty string = remove logo - clean up from Cloudinary too
+        // Empty string = remove logo - clean up the stored object too
         deleteOrgLogo(req.params.id); // fire-and-forget, don't block response
       }
 
@@ -485,7 +485,7 @@ const superAdminController = {
   },
 
   // POST /api/super-admin/migrate-logos
-  // Uploads every base64 org logo to Cloudinary and replaces it with an HTTPS URL.
+  // Uploads every base64 org logo to object storage and replaces it with an HTTPS URL.
   async migrateLogos(req, res, next) {
     try {
       const orgs = await Organization.find({

@@ -26,9 +26,9 @@ const attendanceSchema = new mongoose.Schema(
     totalMinutes:  { type: Number, default: null },
     note:          { type: String, trim: true, default: "" },
     // Geo + selfie proof (captured when org requires it)
-    clockInSelfie:  { type: String, default: "" }, // Cloudinary URL
+    clockInSelfie:  { type: String, default: "" }, // media URL, see utils/storage.js
     clockInLoc:     { lat: { type: Number, default: null }, lng: { type: Number, default: null }, accuracy: { type: Number, default: null } },
-    clockOutSelfie: { type: String, default: "" }, // Cloudinary URL
+    clockOutSelfie: { type: String, default: "" }, // media URL, see utils/storage.js
     clockOutLoc:    { lat: { type: Number, default: null }, lng: { type: Number, default: null }, accuracy: { type: Number, default: null } },
     // HRM fields — computed on clock-in / clock-out against org shift settings
     isLate:           { type: Boolean, default: false },

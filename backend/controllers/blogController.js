@@ -256,7 +256,7 @@ ${allEntries
     } catch (err) { next(err); }
   },
 
-  // ── ADMIN: upload blog image to Cloudinary ────────────────────────────────
+  // ── ADMIN: upload blog image to object storage ────────────────────────────
   async uploadImage(req, res, next) {
     try {
       const { dataUri } = req.body;
