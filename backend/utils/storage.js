@@ -19,16 +19,14 @@
 //   B2_BUCKET          bucket name, e.g. arthaleads-media
 //   B2_ENDPOINT        e.g. https://s3.us-east-005.backblazeb2.com
 //   B2_REGION          e.g. us-east-005  (the middle part of the endpoint)
-//   B2_PUBLIC_BASE     optional. Public URL prefix, no trailing slash. Defaults
-//                      to <endpoint>/<bucket>. Set this to a custom domain if
-//                      you put one in front — see the note on blockers below.
 //
-// A note on the public base: files served from backblazeb2.com are still
-// third-party to the browser. If the goal is images that no ad-blocker or
-// privacy extension can refuse, put a domain you own in front of the bucket
-// and point B2_PUBLIC_BASE at it. Nothing else in this file changes.
+// The bucket is PRIVATE. Nothing here returns a Backblaze URL: uploads return a
+// key, and routes/mediaRoutes.js streams the bytes back through our own domain
+// (see APP_URL). That keeps the credentials on the server, keeps third-party
+// hosts out of the page entirely, and avoids Backblaze's payment requirement
+// for public buckets.
 
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const logger = require("../config/logger");
 
 const REQUIRED = ["B2_KEY_ID", "B2_APP_KEY", "B2_BUCKET", "B2_ENDPOINT"];
@@ -57,15 +55,17 @@ function client() {
   return _client;
 }
 
-function publicBase() {
-  const explicit = (process.env.B2_PUBLIC_BASE || "").replace(/\/+$/, "");
-  if (explicit) return explicit;
-  return `${process.env.B2_ENDPOINT.replace(/\/+$/, "")}/${process.env.B2_BUCKET}`;
+/** Where this API is reachable from a browser. */
+function apiBase() {
+  return (process.env.APP_URL || "https://api.arthaleads.com").replace(/\/+$/, "");
 }
 
-/** Public URL for a stored key. */
+/**
+ * The URL an <img> or <audio> should point at for a stored key. Served by
+ * routes/mediaRoutes.js, on our own domain, from the private bucket.
+ */
 function publicUrl(key) {
-  return `${publicBase()}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  return `${apiBase()}/api/media/${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /**
@@ -105,9 +105,28 @@ async function put(key, buffer, contentType, { cacheSeconds = 31536000 } = {}) {
     ContentType: contentType,
     // A year. Every key that can change carries its own version in the path,
     // so a stale cache can only ever serve the bytes that key was created for.
+    // Only reaches a browser via mediaRoutes, which sets its own copy of this.
     CacheControl: `public, max-age=${cacheSeconds}, immutable`,
   }));
   return publicUrl(key);
+}
+
+/**
+ * Read an object back. Returns the raw stream plus the bits mediaRoutes needs
+ * to describe it; the caller is responsible for piping and for errors on the
+ * stream itself.
+ */
+async function getObject(key) {
+  const out = await client().send(new GetObjectCommand({
+    Bucket: process.env.B2_BUCKET,
+    Key: key,
+  }));
+  return {
+    body: out.Body,
+    contentType: out.ContentType,
+    contentLength: out.ContentLength,
+    etag: out.ETag,
+  };
 }
 
 async function putDataUri(key, dataUri, opts) {
@@ -135,8 +154,8 @@ module.exports = {
   put,
   putDataUri,
   remove,
+  getObject,
   publicUrl,
-  publicBase,
   decodeDataUri,
   isConfigured,
   missingConfig,
