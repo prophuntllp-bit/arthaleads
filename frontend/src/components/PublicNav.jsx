@@ -12,6 +12,7 @@ import { CRM_LOGIN_URL, CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks
 import MarketingChatBot from "./MarketingChatBot";
 
 const NAV_RESOURCES = [
+  { label: "Blog",             href: "/blog",             desc: "Guides, market notes & product news", icon: BookOpen },
   { label: "Case Studies",     href: "/case-studies",     desc: "Real results from real teams",       icon: BarChart2 },
   { label: "Product Updates",  href: "/product-updates",  desc: "What's new in Arthaleads",           icon: Zap },
   { label: "Help Guide",       href: "/help-guide",       desc: "Tutorials & FAQs",                  icon: HelpCircle },
@@ -251,7 +252,6 @@ function NavInner({ onScrollTo }) {
             <NavLink href="/features" label="Features" />
             <NavLink href="/about-us" label="About Us" />
             <NavLink href="/pricing"  label="Pricing" />
-            <NavLink href="/blog"     label="Blog" />
 
             {/* Resources dropdown */}
             <div className="relative" ref={resRef}>
@@ -347,7 +347,6 @@ function NavInner({ onScrollTo }) {
             <Link to="/features" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Features</Link>
             <Link to="/about-us" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>About Us</Link>
             <Link to="/pricing" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Pricing</Link>
-            <Link to="/blog" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-sm font-medium rounded-xl" style={{ color: textMuted }}>Blog</Link>
 
             {/* Resources section */}
             <p className="px-4 pt-4 pb-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: catLabel }}>

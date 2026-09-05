@@ -1167,8 +1167,8 @@ function Pricing({ isDark }) {
           ],
         },
       ],
-      cta: "Contact Sales",
-      ctaAction: "contact",
+      cta: "Start Free Trial",
+      ctaAction: "signup",
     },
   ];
 

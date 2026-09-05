@@ -96,8 +96,8 @@ const PLANS = [
         "SLA-backed uptime",
       ] },
     ],
-    cta: "Contact Sales",
-    ctaAction: "contact",
+    cta: "Start Free Trial",
+    ctaAction: "signup",
   },
 ];
 
@@ -253,6 +253,16 @@ export default function Pricing() {
           {PLANS.map((plan) => {
             const isHovered = hovered === plan.id;
             const isPopular = plan.popular;
+            // Behaviour comes from ctaAction, appearance from `popular`. They
+            // used to be one test, which meant a plan could not have a signup
+            // link without also claiming the recommended-plan styling.
+            const ctaStyle = isPopular
+              ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
+              : { border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" };
+            const ctaHover = isPopular ? {} : {
+              onMouseEnter: (e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; },
+              onMouseLeave: (e) => { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; },
+            };
             const isReco    = recommended === plan.id;
             return (
               <div key={plan.id}
@@ -367,25 +377,16 @@ export default function Pricing() {
                   </div>
 
                   {/* CTA */}
-                  {plan.ctaAction === "signup" ? (
-                    <a
-                      href={CRM_SIGNUP_URL} {...CRM_LINK_PROPS}
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
-                      style={{ background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }}
-                    >
-                      {plan.cta}
-                    </a>
-                  ) : (
-                    <a
-                      href={`mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}`}
-                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
-                      style={{ border: `1px solid ${altBtnBdr}`, color: altBtnClr, background: "transparent" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = plan.color; e.currentTarget.style.color = plan.color; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = altBtnBdr; e.currentTarget.style.color = altBtnClr; }}
-                    >
-                      {plan.cta}
-                    </a>
-                  )}
+                  <a
+                    {...(plan.ctaAction === "signup"
+                      ? { href: CRM_SIGNUP_URL, ...CRM_LINK_PROPS }
+                      : { href: `mailto:sales@arthaleads.com?subject=${encodeURIComponent(`${plan.name} plan enquiry`)}&body=${encodeURIComponent(`Hi, I'd like to know more about the ${plan.name} plan for my real estate team.`)}` })}
+                    className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 text-center block"
+                    style={ctaStyle}
+                    {...ctaHover}
+                  >
+                    {plan.cta}
+                  </a>
                 </div>
               </div>
             );
