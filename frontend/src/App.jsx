@@ -20,7 +20,7 @@ import { subscribeToPush } from "./utils/pushNotifications";
 import { isCapacitorNative, setupCapacitorPush } from "./utils/capacitorPush";
 import api from "./services/api";
 import { hydrateLeadOptions } from "./utils/constants";
-import { CRM_URL } from "./utils/crmLinks";
+import { CRM_URL, waLink, WA_MESSAGES } from "./utils/crmLinks";
 import toast from "react-hot-toast";
 
 // ── Marketing / CRM subdomain split ───────────────────────────────────────────
@@ -434,7 +434,7 @@ function TrialExpiredScreen({ onLogout }) {
         </p>
 
         {/* Primary — WhatsApp */}
-        <a href="https://wa.me/918080197945?text=Hi%2C%20my%20Arthaleads%20trial%20has%20expired.%20I%27d%20like%20to%20upgrade%20my%20plan."
+        <a href={waLink(WA_MESSAGES.trialExpired)}
           target="_blank" rel="noopener noreferrer"
           className="flex items-center justify-center gap-2.5 w-full py-3 rounded-2xl text-white font-semibold text-sm mb-3 transition hover:opacity-90 shadow-lg"
           style={{ background: "#25D366" }}>

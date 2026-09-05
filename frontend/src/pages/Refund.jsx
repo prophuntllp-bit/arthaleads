@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { waLink, WA_MESSAGES } from "../utils/crmLinks";
 import LegalLayout, { Section, ContactBox } from "../components/LegalLayout";
 import { usePublicTheme } from "../context/PublicThemeContext";
 import { useSEO } from "../utils/useSEO";
@@ -164,7 +165,7 @@ export default function Refund() {
           </p>
           <p style={{ color: "var(--app-text-soft)" }}>
             WhatsApp:{" "}
-            <a href="https://wa.me/918080197945" target="_blank" rel="noopener noreferrer" style={{ color: "var(--app-primary)" }} className="hover:underline">
+            <a href={waLink(WA_MESSAGES.support)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--app-primary)" }} className="hover:underline">
               +91 80801 97945
             </a>
           </p>

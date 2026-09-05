@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Check, Zap, Users, Star, MessageCircle, Mail, ArrowRight, Lock, Shield, Facebook, Bell, Layers } from "lucide-react";
 import api from "../services/api";
+import { waLink, WA_MESSAGES } from "../utils/crmLinks";
+
 import { useAuth } from "../context/AuthContext";
 import { canAccess, planLabel, upgradeTarget, PLAN_PRICING, formatINR } from "../utils/plan";
 import CheckoutModal from "../components/CheckoutModal";
@@ -164,7 +166,7 @@ export default function Plans() {
   const next          = upgradeTarget(org?.plan);
 
   const openWhatsApp = () => {
-    window.open("https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20upgrade%20my%20Arthaleads%20plan.", "_blank");
+    window.open(waLink(WA_MESSAGES.upgrade), "_blank");
   };
   const openEmail = () => {
     window.location.href = "mailto:sales@arthaleads.com?subject=Plan Upgrade Request&body=Hi, I'd like to upgrade my Arthaleads plan.";

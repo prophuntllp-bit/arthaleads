@@ -1,7 +1,7 @@
 ﻿// pages/Landing.jsx - Arthaleads public marketing homepage
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { CRM_SIGNUP_URL, CRM_LINK_PROPS } from "../utils/crmLinks";
+import { CRM_SIGNUP_URL, CRM_LINK_PROPS, waLink, WA_MESSAGES } from "../utils/crmLinks";
 import { FEATURES, HOME_FEATURES } from "../data/features";
 import {
   ChevronRight, ChevronLeft, Check, ArrowRight,
@@ -1455,7 +1455,7 @@ function Contact({ isDark }) {
             </div>
 
             {/* WhatsApp */}
-            <a href="https://wa.me/918080197945?text=Hi%2C%20I%27d%20like%20to%20know%20more%20about%20Arthaleads"
+            <a href={waLink(WA_MESSAGES.sales)}
               target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group"
               style={{ background: "linear-gradient(135deg, rgba(37,211,102,0.12), rgba(37,211,102,0.06))", border: "1px solid rgba(37,211,102,0.25)" }}>
