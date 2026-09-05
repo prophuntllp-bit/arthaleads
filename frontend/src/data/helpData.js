@@ -143,6 +143,34 @@ export const QUICK_ANSWERS = [
     goto: "/settings",
     tour: "callsAutoStatus",
   },
+  {
+    id: "notes-edit",
+    q: "Can I edit or delete a note?",
+    a: "Yes. Open the lead, go to the Notes tab, and use the pencil to edit a note in place or the bin to delete it - on the Android app it is the three-dot menu on the note. You can always change your own notes; Admins and Managers can change anyone's. Every edit and deletion is logged in the lead's activity, so a note cannot quietly change under a colleague.",
+    goto: "/leads",
+  },
+  {
+    id: "not-interested-dump",
+    q: "Why do 'Not Interested' leads stay in my list?",
+    a: "Because that is where they belong. Marking a lead Not Interested used to move it to Dump Leads, which meant recording the most common answer an agent gets made the lead vanish from the screen they work on. That rule is gone. Dump Leads now holds only deleted leads and ones marked Closed Lost.",
+    goto: "/leads",
+  },
+  {
+    id: "artha-actions",
+    q: "Can Artha make changes for me?",
+    a: "Yes, for the common ones. Ask in plain words - 'add a note to Jagroop Singh saying he wants a 2BHK', 'set a follow-up for Priya next Monday', 'mark this lead as Contacted' - and a 'Do it' button appears under my reply. Nothing changes until you press it, and I tell you exactly what will change first. Works for notes, follow-ups, pipeline status, assignment, lead fields, creating a lead and completing a task.",
+  },
+  {
+    id: "android-app",
+    q: "How do I get the Android app?",
+    a: "Go to arthaleads.com/download-app and tap 'Download for Android'. It installs from our site rather than the Play Store, so Android shows an 'unknown sources' warning partway through - that is expected, and the page walks through every step. One download works on every phone, and it needs Android 7.0 or later. The app checks for its own updates, so you will not need that page again. On iPhone, open app.arthaleads.com in Safari and add it to the Home Screen.",
+  },
+  {
+    id: "delete-account",
+    q: "How do I delete my account?",
+    a: "Settings -> scroll to the bottom -> 'Delete account' (Admins only). Deletion is scheduled 30 days out and nothing is removed in the meantime - you can cancel from the same place or from the link in the confirmation email at any point in that window. After 30 days the organisation and everything in it is permanently erased, so export anything worth keeping first.",
+    goto: "/settings",
+  },
 ];
 
 // Guided tours. Each step targets an element by data-tour attribute (preferred)

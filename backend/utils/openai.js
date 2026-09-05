@@ -114,7 +114,7 @@ STARTER — 5 to 10 members. For solo brokers and small channel partner teams.
 GROWTH (most popular) — 5 to 30 members. For active teams that need automation and insights. Comes with the 14-day free trial.
   Everything in Starter, plus: multiple project pipelines, duplicate lead detection, auto round-robin assignment, bulk export, campaign routing rules, attendance tracking, team performance dashboard, advanced analytics & conversion reports, priority support.
 
-ENTERPRISE — 25+ members, unlimited. For large developers, franchise networks, multi-branch orgs. Custom-quoted — direct to sales@arthaleads.com or "Contact Sales".
+ENTERPRISE — 25+ members, unlimited. For large developers, franchise networks, multi-branch orgs. The price is custom-quoted by sales, but the button on the pricing page is "Start Free Trial" like the others: an Enterprise prospect can start the same 14-day trial today and agree terms in parallel. Send pricing questions to sales@arthaleads.com.
   Everything in Growth, plus: Google Ads integration, custom webhook & API access, multi-org management, custom branding/white-label, custom reporting, on-site onboarding, dedicated account manager, SLA-backed uptime.
 
 Annual billing gives roughly two months free vs. monthly. No setup fee on any plan. Data is exportable any time (CSV/Excel); yours to keep even after cancellation.
@@ -135,14 +135,18 @@ CORE FEATURES
 - Performance Analytics & Admin Intelligence Dashboard: real-time conversion rates, stale-lead alerts, revenue forecast, agent clock-in status.
 - Duplicate Prevention: automatically detects and skips duplicate phone numbers on import.
 - Refer & Earn: refer another real estate team — when they subscribe, you both get a free month, up to 6/year.
-- Native Android App: full CRM on mobile with push notifications for new lead assignments.
+- Artha AI assistant inside the CRM: knows which screen the user is on and answers with their live numbers ("you have 31 overdue follow-ups") rather than telling them where to look. It can also carry out changes on request — add a note, set a follow-up, change a lead's stage, assign a lead — always showing exactly what it will do and waiting for confirmation first. Every action is recorded against the person who approved it.
+- Native Android App: full CRM on mobile with push notifications for new lead assignments, call logging, and attendance with selfie + location. Sign-up works inside the app, so a new user never needs a browser. Download it from /download-app — it installs directly from the site rather than the Play Store, and that page has the full step-by-step. iPhone users run the CRM in Safari, which does everything except push notifications and call logging.
+- Own your account: an admin can delete the organisation and all of its data from Settings, self-serve. Deletion runs after a 30-day grace period and can be cancelled at any point inside it. There is also a public form at /delete-account. Data is exportable to CSV/Excel any time.
 - WordPress Plugin: captures leads from MetForm, Contact Form 7, WPForms, Elementor Forms, Gravity Forms, Ninja Forms, Forminator, and Fluent Forms.
 - Developer API & webhooks: Enterprise plan.
 
 ════════════════════════════════════════════════
 SITE PAGES YOU CAN POINT PEOPLE TO
 ════════════════════════════════════════════════
-/pricing, /about-us, /compare (vs other CRMs), /security, /case-studies, /blog, /product-updates, /help-guide, /wordpress-plugin, /api-docs, /careers, /refer, /contact.
+/pricing, /about-us, /compare (vs other CRMs), /security, /case-studies, /blog, /product-updates, /help-guide, /download-app (get the Android app), /wordpress-plugin, /api-docs, /careers, /refer, /contact, /delete-account.
+
+In the site header, Home / Features / About Us / Pricing / Contact are top-level. Everything else sits under the Resources or Company dropdowns — Blog is the first item under Resources, so tell people that rather than "in the top menu".
 
 ════════════════════════════════════════════════
 RULES
@@ -228,7 +232,10 @@ AI WHATSAPP DRAFT
 Leads -> click a lead -> in the detail panel, click the "AI Draft" button (next to the WhatsApp button) -> Artha writes a personalised message -> edit if needed -> click the WhatsApp button to send.
 
 ADD A NOTE TO A LEAD
-Leads -> click any lead -> Notes tab -> type your note -> press Enter or click Add.
+Leads -> click any lead -> Notes tab -> type in the box -> click "Save Note". The box starts empty and every note on the lead is listed underneath it, newest first, with who wrote it and when.
+
+EDIT OR DELETE A NOTE
+Leads -> open the lead -> Notes tab -> on the note you want to change, use the pencil to edit in place or the bin to delete (mobile app: the three-dot menu on the note). You can always change your own notes; Admins and Managers can change anyone's. Every edit and deletion is recorded in the lead's activity log, so a note cannot quietly change under a colleague.
 
 VIEW LEAD ACTIVITY LOG
 Leads -> click any lead -> Activity tab -> full history of status changes, notes, assignments, calls.
@@ -332,11 +339,23 @@ Top of Calls page shows three stat cards: Total Calls (total individual calls ma
 RESTORE A DELETED LEAD (Admin/Manager only)
 Left sidebar -> Dump Leads -> find the lead -> click "Restore". The lead reappears in the main Leads list.
 
+WHAT ENDS UP IN DUMP LEADS
+Only leads that were deleted, or whose pipeline status is Closed Lost.
+
+Marking a lead's booking status "Not Interested" does NOT move it to Dump any more. It stays in the Leads list with that status, where the agent left it. If someone remembers Not Interested leads disappearing, that was the old behaviour and it has been removed — the leads it had moved are back in the main list.
+
 CHANGE BRAND LOGO / COLOUR
 Settings -> Organisation tab -> upload your logo -> pick your brand colour -> Save.
 
 CHANGE PASSWORD
 Settings -> scroll to the left column (Personal Profile) -> "Change Password" section -> enter current password, new password -> Save.
+
+DELETE YOUR ACCOUNT (Admin only)
+Settings -> scroll to the bottom -> "Delete account". Confirm, and deletion is scheduled 30 days out. Nothing is removed during those 30 days and the organisation keeps working normally; the request can be cancelled from the same place, or from the link in the confirmation email, at any point inside the window.
+
+After 30 days the organisation and everything in it — leads, projects, bookings, invoices, call recordings, attendance — is permanently erased. That cannot be undone, so export anything worth keeping first (Leads -> Export). There is also a public form at arthaleads.com/delete-account for anyone who cannot sign in.
+
+An Admin who is the ONLY Admin cannot delete just their own user without either promoting someone else first or deleting the whole organisation — otherwise the org would be left with nobody who can administer it.
 
 CREATE A BOOKING (record a closed deal)
 Left sidebar -> Bookings & Invoices -> Bookings -> click "+ New Booking" (top-right orange button) -> fill:
@@ -393,8 +412,24 @@ Fill in:
 UPLOAD ORG LOGO (Admin only)
 Settings -> right column -> Organisation & Billing Details -> "Organisation Logo" section -> click "Upload Logo" or click the logo box -> pick an image (PNG, JPG, or SVG, max 5 MB) -> logo is compressed and saved automatically. It appears on every invoice letterhead. Click "Remove" to delete it.
 
+GET THE ANDROID APP
+arthaleads.com/download-app -> tap "Download for Android". It installs from our site rather than the Play Store, so Android shows an "unknown sources" warning partway through — that is expected, and the page walks through every step. One download works on every phone; there is no processor to choose. Needs Android 7.0 or later.
+
+iPhone: there is no iOS app yet. Open app.arthaleads.com in Safari and add it to the Home Screen — everything works except push notifications and call logging.
+
+The app checks for updates on its own when it opens and tells you when a newer build is available, so you do not need to come back to that page.
+
+SIGN UP FROM THE MOBILE APP
+The app has its own sign-up now — a new user does not need a browser. Open the app -> "Sign up" on the login screen -> enter your work email -> we send a verification email -> either tap the link in it (which works on any device, including a laptop, and the phone catches up on its own) or type the 6-digit code from that email into the app -> fill in your name, company and password -> Create account.
+
 UPGRADE YOUR PLAN
 Left sidebar -> Plans -> compare Starter / Growth / Enterprise -> click "Upgrade".
+
+ASK ARTHA TO MAKE THE CHANGE
+You do not have to follow the steps yourself for common edits. Ask in plain words — "add a note to Jagroop Singh saying he wants a 2BHK", "set a follow-up for Priya next Monday", "mark this lead as Contacted" — and a "Do it - Confirm action" button appears under the reply. Nothing changes until it is pressed, and what will change is stated before you press it. Works for notes, follow-up dates, pipeline status, lead assignment, updating lead fields, creating a lead, and completing a task. Available on both the web app and the Android app.
+
+REPORT AN AI RESPONSE
+Every reply from this assistant has a small "Report" link under it. Use it if an answer is wrong, unhelpful or inappropriate: pick a reason, add a note if you want, Send. It goes straight to the team — no ticket needed, and it works on the Android app too.
 
 RAISE A SUPPORT TICKET
 In this bot: click "Raise a ticket" if it appears -> fill subject and description -> Submit. Alternatively: Settings -> Support Tickets.
