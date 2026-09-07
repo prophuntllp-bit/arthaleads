@@ -102,14 +102,31 @@ function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+function isAndroid() {
+  return /android/i.test(navigator.userAgent);
+}
+
 function isInStandaloneMode() {
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
 }
 
-// ── PWA Install Banner ────────────────────────────────────────────────────────
+// ── Install Banner ────────────────────────────────────────────────────────────
+// Three audiences, three different right answers:
+//
+//   Android  There is a real native app now. It logs calls and delivers push
+//            reliably, neither of which a home-screen shortcut can do, so the
+//            banner sends people to /download-app rather than offering to
+//            bookmark the website. This branch does NOT wait for
+//            beforeinstallprompt -- the offer has nothing to do with whether
+//            Chrome feels like firing that event.
+//   iOS      No app, and no install prompt either. Manual Add to Home Screen
+//            instructions are still the only thing on offer.
+//   Desktop  The APK is useless here, so the PWA prompt stays exactly as it
+//            was. beforeinstallprompt fires on desktop Chrome too.
 function InstallBanner() {
   const [prompt, setPrompt]           = useState(null);
   const [showIOS, setShowIOS]         = useState(false);
+  const [showAndroid, setShowAndroid] = useState(false);
   const [dismissed, setDismissed]     = useState(
     () => localStorage.getItem("pwa_dismissed") === "1"
   );
@@ -117,14 +134,22 @@ function InstallBanner() {
   useEffect(() => {
     // Running as Capacitor APK or already installed as PWA - don't show banner
     if (isCapacitorNative || isInStandaloneMode()) return;
+    if (dismissed) return;
+
+    // Android: offer the real app. Delayed like the iOS card so it does not
+    // land on top of whatever the person opened the CRM to do.
+    if (isAndroid()) {
+      const t = setTimeout(() => setShowAndroid(true), 3000);
+      return () => clearTimeout(t);
+    }
 
     // iOS: no beforeinstallprompt, show manual instructions after a short delay
-    if (isIOS() && !dismissed) {
+    if (isIOS()) {
       const t = setTimeout(() => setShowIOS(true), 3000);
       return () => clearTimeout(t);
     }
 
-    // Android / Chrome - capture the native prompt
+    // Desktop - capture the native PWA prompt
     const handler = (e) => { e.preventDefault(); setPrompt(e); };
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
@@ -133,6 +158,7 @@ function InstallBanner() {
   const dismiss = () => {
     setDismissed(true);
     setShowIOS(false);
+    setShowAndroid(false);
     setPrompt(null);
     localStorage.setItem("pwa_dismissed", "1");
   };
@@ -153,6 +179,34 @@ function InstallBanner() {
     border: "1px solid rgba(255,107,0,0.25)",
     boxShadow: "0 8px 32px rgba(0,0,0,0.50), 0 0 0 1px rgba(255,107,0,0.08)",
   };
+
+  // Android: the native app, not a shortcut
+  if (showAndroid && !dismissed) {
+    return (
+      <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
+        <div className="flex items-center gap-3 rounded-2xl px-4 py-3 shadow-xl" style={bannerStyle}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#a04100] to-[#ff6b00]">
+            <Download className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Get the Android app</p>
+            <p className="text-xs text-white/60">Call logging and instant lead alerts</p>
+          </div>
+          <a
+            href="https://www.arthaleads.com/download-app"
+            target="_blank" rel="noopener noreferrer"
+            onClick={dismiss}
+            className="flex-shrink-0 rounded-xl bg-orange-500 px-3 py-1.5 text-xs font-bold text-white"
+          >
+            Get app
+          </a>
+          <button onClick={dismiss} className="flex-shrink-0 text-white/40 hover:text-white/70">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // iOS manual instruction card
   if (showIOS && !dismissed) {
@@ -178,7 +232,7 @@ function InstallBanner() {
     );
   }
 
-  // Android / Chrome native prompt
+  // Desktop PWA prompt
   if (!prompt || dismissed) return null;
 
   return (

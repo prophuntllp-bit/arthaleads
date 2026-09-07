@@ -39,8 +39,8 @@ const PLANS = [
       ] },
       { label: "Support", items: ["Email support"] },
     ],
-    cta: "Get Started",
-    ctaAction: "contact",
+    cta: "Start Free Trial",
+    ctaAction: "signup",
   },
   {
     id: "growth",

@@ -1089,8 +1089,8 @@ function Pricing({ isDark }) {
           items: ["Email support"],
         },
       ],
-      cta: "Get Started",
-      ctaAction: "contact",
+      cta: "Start Free Trial",
+      ctaAction: "signup",
     },
     {
       id: "growth",
@@ -1306,7 +1306,10 @@ function Pricing({ isDark }) {
 
                   {/* CTA */}
                   <button
-                    onClick={() => plan.ctaAction === "signup" ? window.location.href = "/signup" : scrollTo("contact")}
+                    // Straight to the CRM. "/signup" also worked, but only via
+                    // the marketing host's redirect guard -- an extra hop on
+                    // the button every plan card now uses.
+                    onClick={() => plan.ctaAction === "signup" ? window.location.href = CRM_SIGNUP_URL : scrollTo("contact")}
                     className="w-full py-3 rounded-xl font-semibold text-sm transition-all duration-200 cursor-pointer"
                     style={isPopular
                       ? { background: "#ff6b00", color: "#fff", boxShadow: "0 4px 20px rgba(255,107,0,0.3)" }
