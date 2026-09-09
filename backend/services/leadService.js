@@ -7,7 +7,7 @@ const Organization = require("../models/Organization");
 const { AppError } = require("../middlewares/errorHandler");
 const { sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
-const { formatISTDate } = require("../utils/datetime");
+const { formatISTDate, istDateKey, startOfISTDay, endOfISTDay } = require("../utils/datetime");
 const OPTS = require("../constants/leadOptions");
 
 // ── Analytics cache (in-memory, 60-second TTL per org+range) ─────────────────
@@ -36,73 +36,79 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-const getDateRangeFilter = (dateRange, from, to) => {
-  const now = new Date();
+// All of this codebase's customers read dates in IST, so a boundary like
+// "today" or "this month" has to mean the IST calendar day, not whatever day
+// the server's own clock is on. Railway runs this process in UTC (no TZ env
+// var set), so the previous version — plain `new Date()` plus `setHours` —
+// was quietly anchoring every preset 5:30 hours early: "today" started at
+// 5:30am IST, and the tail end of yesterday (IST) still read as today.
+//
+// Calendar arithmetic (add N days, first-of-month, day-of-week) is done on a
+// UTC-midnight stand-in for the IST calendar date, which keeps it immune to
+// the server's own timezone and to DST-style surprises. The real +05:30
+// offset is applied exactly once, at the end, via startOfISTDay/endOfISTDay.
+const keyToAnchor = (key) => new Date(`${key}T00:00:00Z`);
+const anchorToKey = (d) => d.toISOString().slice(0, 10);
+const shiftKey = (key, days) => {
+  const d = keyToAnchor(key);
+  d.setUTCDate(d.getUTCDate() + days);
+  return anchorToKey(d);
+};
 
+const getDateRangeFilter = (dateRange, from, to) => {
   if (from || to) {
     const createdAt = {};
-    if (from) {
-      const start = new Date(from);
-      start.setHours(0, 0, 0, 0);
-      createdAt.$gte = start;
-    }
-    if (to) {
-      const end = new Date(to);
-      end.setHours(23, 59, 59, 999);
-      createdAt.$lte = end;
-    }
+    if (from) createdAt.$gte = startOfISTDay(from);
+    if (to)   createdAt.$lte = endOfISTDay(to);
     return Object.keys(createdAt).length ? createdAt : null;
   }
 
   if (!dateRange) return null;
 
-  const start = new Date(now);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
+  const todayKey = istDateKey();
 
   switch (dateRange) {
     case "today":
-      start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
-    case "yesterday":
-      start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0);
-      end.setDate(end.getDate() - 1);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(todayKey), $lte: endOfISTDay(todayKey) };
+    case "yesterday": {
+      const y = shiftKey(todayKey, -1);
+      return { $gte: startOfISTDay(y), $lte: endOfISTDay(y) };
+    }
     case "todayYesterday":
-      start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(shiftKey(todayKey, -1)), $lte: endOfISTDay(todayKey) };
     case "last7days":
-      start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(shiftKey(todayKey, -6)), $lte: endOfISTDay(todayKey) };
     case "last14days":
-      start.setDate(start.getDate() - 13); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(shiftKey(todayKey, -13)), $lte: endOfISTDay(todayKey) };
     case "last28days":
-      start.setDate(start.getDate() - 27); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(shiftKey(todayKey, -27)), $lte: endOfISTDay(todayKey) };
     case "last30days":
-      start.setDate(start.getDate() - 29); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
-    case "thisweek":
-      start.setDate(start.getDate() - start.getDay()); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+      return { $gte: startOfISTDay(shiftKey(todayKey, -29)), $lte: endOfISTDay(todayKey) };
+    case "thisweek": {
+      const dow = keyToAnchor(todayKey).getUTCDay(); // 0=Sun..6=Sat, calendar-pure
+      return { $gte: startOfISTDay(shiftKey(todayKey, -dow)), $lte: endOfISTDay(todayKey) };
+    }
     case "lastweek": {
-      const ls = new Date(now);
-      ls.setDate(ls.getDate() - ls.getDay() - 7); ls.setHours(0, 0, 0, 0);
-      const le = new Date(ls); le.setDate(le.getDate() + 6); le.setHours(23, 59, 59, 999);
-      return { $gte: ls, $lte: le };
+      const dow = keyToAnchor(todayKey).getUTCDay();
+      const lsKey = shiftKey(todayKey, -dow - 7);
+      return { $gte: startOfISTDay(lsKey), $lte: endOfISTDay(shiftKey(lsKey, 6)) };
     }
-    case "thismonth":
-      start.setDate(1); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+    case "thismonth": {
+      const a = keyToAnchor(todayKey);
+      const firstKey = `${a.getUTCFullYear()}-${String(a.getUTCMonth() + 1).padStart(2, "0")}-01`;
+      return { $gte: startOfISTDay(firstKey), $lte: endOfISTDay(todayKey) };
+    }
     case "lastmonth": {
-      const lms = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lme = new Date(now.getFullYear(), now.getMonth(), 0); lme.setHours(23, 59, 59, 999);
-      return { $gte: lms, $lte: lme };
+      const a = keyToAnchor(todayKey);
+      const y = a.getUTCFullYear(), m = a.getUTCMonth(); // 0-based current month
+      const firstOfLast = anchorToKey(new Date(Date.UTC(y, m - 1, 1)));
+      const lastOfLast  = anchorToKey(new Date(Date.UTC(y, m, 0))); // day 0 = last day of prev month
+      return { $gte: startOfISTDay(firstOfLast), $lte: endOfISTDay(lastOfLast) };
     }
-    case "thisyear":
-      start.setMonth(0, 1); start.setHours(0, 0, 0, 0);
-      return { $gte: start, $lte: end };
+    case "thisyear": {
+      const firstKey = `${keyToAnchor(todayKey).getUTCFullYear()}-01-01`;
+      return { $gte: startOfISTDay(firstKey), $lte: endOfISTDay(todayKey) };
+    }
     default:
       return null;
   }

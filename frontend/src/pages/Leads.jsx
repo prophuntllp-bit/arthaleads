@@ -16,7 +16,7 @@ import { useLeads } from "../hooks/useLeads";
 import { useColumnResize, RTh } from "../hooks/useColumnResize";
 import api from "../services/api";
 import toast from "react-hot-toast";
-import { DATE_RANGE_OPTIONS, fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
+import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 
 // Strip raw Elementor/form field-ID lines like "Field 9b10818: 8007678625"
 // These appear when a form plugin sends fields with hex IDs instead of labels.
@@ -39,6 +39,7 @@ const fmtBudget = (val) => {
 import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
+import DateRangePicker from "../components/DateRangePicker";
 
 // ── Inline editable text cell ─────────────────────────────────────────────────
 function InlineText({ value, leadId, projectId, field, onSaved, placeholder = "Add note…", multiline = false }) {
@@ -285,6 +286,25 @@ export default function Leads() {
     const next = filters.myOnly !== "true";
     setFilter("myOnly", next ? "true" : "");
     try { localStorage.setItem("leads_myOnly", String(next)); } catch {}
+  };
+
+  // DateRangePicker hands back either a preset string or, for a custom
+  // range, { preset: "custom", from, to } — see components/DateRangePicker.
+  // filters only has room for one shape at a time, so a custom pick clears
+  // dateRange and a preset pick clears from/to; the two never coexist.
+  const dateRangeValue = (filters.from || filters.to)
+    ? { preset: "custom", from: filters.from || "", to: filters.to || "" }
+    : (filters.dateRange || "");
+  const handleDateRangeChange = (v) => {
+    if (v && typeof v === "object") {
+      setFilter("dateRange", "");
+      setFilter("from", v.from || "");
+      setFilter("to", v.to || "");
+    } else {
+      setFilter("dateRange", v);
+      setFilter("from", "");
+      setFilter("to", "");
+    }
   };
 
   const [agents, setAgents] = useState([]);
@@ -555,29 +575,49 @@ export default function Leads() {
     try {
       const date = new Date().toISOString().slice(0, 10);
 
-      // Respect current filters AND the current page + row-count setting.
-      // If specific IDs are selected, fetch just enough to cover them.
+      // /leads/export, not /leads/unified — the only endpoint that is both
+      // (a) actually gated to the Growth plan ("Bulk lead export" is sold as
+      // a Growth feature; /leads/unified is the plain list and every plan
+      // can call it) and (b) uncapped at 5,000 matching rows rather than
+      // whatever rows-per-page happens to be selected on screen. Exporting
+      // via the list endpoint silently limited a download to 10-500 rows
+      // and skipped the paywall entirely — raw=1 asks it for the unified
+      // lead objects instead of a formatted file, so everything below this
+      // (row shaping, the Excel phone-as-text fix, CSV/JSON writing) stays
+      // exactly as it was.
       const params = new URLSearchParams();
-      if (filters.status)     params.set("status",     filters.status);
-      if (filters.source)     params.set("source",     filters.source);
-      if (filters.priority)   params.set("priority",   filters.priority);
-      if (filters.booking)    params.set("booking",    filters.booking);
-      if (filters.search)     params.set("search",     filters.search);
-      if (filters.siteFilter) params.set("siteFilter", filters.siteFilter);
-      if (filters.assignedTo) params.set("assignedTo", filters.assignedTo);
-      if (filters.projectId)  params.set("projectId",  filters.projectId);
-      if (filters.myOnly)     params.set("myOnly",     filters.myOnly);
-      if (filters.dateRange)  params.set("dateRange",  filters.dateRange);
-      // Use the current page + limit so export matches exactly what the user sees
-      params.set("limit", String(limit));
-      params.set("page",  String(page));
+      params.set("raw", "1");
+      if (selectedIdsOverride && selectedIdsOverride.size > 0) {
+        // Selected rows override every filter, same as the backend's own
+        // `ids` branch — sending filters alongside would be misleading, since
+        // they would be silently ignored.
+        params.set("ids", [...selectedIdsOverride].join(","));
+      } else {
+        if (filters.status)     params.set("status",     filters.status);
+        if (filters.source)     params.set("source",     filters.source);
+        if (filters.priority)   params.set("priority",   filters.priority);
+        if (filters.booking)    params.set("booking",    filters.booking);
+        if (filters.search)     params.set("search",     filters.search);
+        if (filters.siteFilter) params.set("siteFilter", filters.siteFilter);
+        if (filters.assignedTo) params.set("assignedTo", filters.assignedTo);
+        if (filters.projectId)  params.set("projectId",  filters.projectId);
+        if (filters.myOnly)     params.set("myOnly",     filters.myOnly);
+        if (filters.dateRange)  params.set("dateRange",  filters.dateRange);
+        if (filters.from)       params.set("from",       filters.from);
+        if (filters.to)         params.set("to",         filters.to);
+      }
 
-      const { data: res } = await api.get(`/leads/unified?${params.toString()}`);
+      const { data: res } = await api.get(`/leads/export?${params.toString()}`);
       let source = res.leads || [];
 
-      // If specific IDs selected, narrow to those
+      // If specific IDs selected, narrow to those (the server already does
+      // this; kept as a harmless second check).
       if (selectedIdsOverride && selectedIdsOverride.size > 0) {
         source = source.filter((l) => selectedIdsOverride.has(String(l._id)));
+      }
+
+      if (res.truncated) {
+        toast.error(`Only the first ${source.length.toLocaleString("en-IN")} matching leads were exported. Narrow the filters to get the rest.`, { duration: 6000 });
       }
 
       // Helper: force a value to a plain string so xlsx/Excel never coerces
@@ -612,9 +652,12 @@ export default function Leads() {
       toast.dismiss(tid);
       if (rows.length === 0) { toast.error("No leads to export"); return; }
 
+      // No longer tied to the on-screen page/limit -- the export now covers
+      // everything matching the filter, so the filename says how many rows
+      // that actually was rather than which page was showing.
       const label = selectedIdsOverride?.size > 0
         ? `${selectedIdsOverride.size}-selected`
-        : `page${page}-of${limit}`;
+        : `${rows.length}-leads`;
 
       if (type === "json") {
         const blob = new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" });
@@ -1167,13 +1210,17 @@ export default function Leads() {
                     style={{ width: "100%" }}
                   />
                 ))}
-                {/* Date range */}
-                <CustomSelect
-                  value={filters.dateRange}
-                  onChange={(v) => setFilter("dateRange", v)}
-                  placeholder="Date range"
-                  options={DATE_RANGE_OPTIONS}
-                  style={{ width: "100%" }}
+                {/* Date range — presets plus an exact custom range, same
+                    control already used on the Dashboard. `compact` keeps the
+                    pill to just the preset label ("Last 30 Days") rather than
+                    also appending the literal date span, so it stays the same
+                    length as its siblings ("All Priorities" etc.) in this row. */}
+                <DateRangePicker
+                  compact
+                  value={dateRangeValue}
+                  onChange={handleDateRangeChange}
+                  triggerClassName="w-full justify-between"
+                  triggerStyle={{ width: "100%", padding: "5px 10px", borderRadius: 10, fontSize: 13, backdropFilter: "none", WebkitBackdropFilter: "none" }}
                 />
                 {/* My Leads — admin/manager only */}
                 {isAdmin && (
@@ -1199,7 +1246,7 @@ export default function Leads() {
                     <button
                       className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                       onClick={() => {
-                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "myOnly", "assignedTo", "projectId"].forEach((k) => setFilter(k, ""));
+                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId"].forEach((k) => setFilter(k, ""));
                         try { localStorage.removeItem("leads_myOnly"); } catch {}
                       }}
                     >

@@ -57,9 +57,23 @@ function istDateKey(d = new Date()) {
  * timezone. 23:59:59.999 IST is 18:29:59.999 UTC the same day.
  */
 function endOfISTDay(dateStr) {
-  return new Date(`${dateStr}T18:29:59.999Z`);
+  return new Date(`${String(dateStr).slice(0, 10)}T18:29:59.999Z`);
+}
+
+/**
+ * Start of the given IST day, as a UTC instant.
+ *
+ * The counterpart to endOfISTDay — a date filter's lower bound needs the same
+ * IST anchoring as its upper bound, or "from the 1st" quietly starts 5:30
+ * hours into the 1st (or, on the UTC-running server, 5:30 hours into the
+ * previous day, going the other way). Written with an explicit +05:30 offset
+ * rather than subtracting a day and using 18:30 UTC, so there is no
+ * day-before arithmetic to get wrong.
+ */
+function startOfISTDay(dateStr) {
+  return new Date(`${String(dateStr).slice(0, 10)}T00:00:00+05:30`);
 }
 
 module.exports = {
-  IST, formatISTDate, formatISTDateShort, formatISTDateTime, formatISTTime, istDateKey, endOfISTDay,
+  IST, formatISTDate, formatISTDateShort, formatISTDateTime, formatISTTime, istDateKey, endOfISTDay, startOfISTDay,
 };

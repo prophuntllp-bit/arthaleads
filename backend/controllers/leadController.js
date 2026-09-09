@@ -297,7 +297,7 @@ const leadController = {
 
   async exportLeads(req, res, next) {
     try {
-      const { format = "csv", ids } = req.query;
+      const { format = "csv", ids, raw } = req.query;
       let sourceLeads;
 
       const EXPORT_LIMIT = 5000;
@@ -318,6 +318,22 @@ const leadController = {
         } else {
           sourceLeads = leads;
         }
+      }
+
+      // Raw mode: hand back the unified lead objects as-is, still gated to
+      // Growth and still capped/flagged the same way as the CSV/JSON paths
+      // below. Exists so the web app's own CSV/Excel/JSON export UI — which
+      // already knows how to shape a lead into a row, including the
+      // phone-as-text fix for Excel — can fetch through the ONE endpoint that
+      // is actually plan-gated and actually uncapped, rather than the plain
+      // list endpoint (/leads/unified) that every plan can call and that
+      // silently caps at whatever page size happens to be on screen. That
+      // combination — ungated, on-screen-page-sized "export" — was the two
+      // real bugs hiding behind "the date filter doesn't work": a Starter
+      // org could bulk-export for free, and everyone's download silently
+      // stopped at 10 rows unless they had bumped rows-per-page first.
+      if (raw === "1") {
+        return res.json({ success: true, leads: sourceLeads, total: sourceLeads.length, truncated });
       }
 
       const rows = sourceLeads.map((lead) => ({
