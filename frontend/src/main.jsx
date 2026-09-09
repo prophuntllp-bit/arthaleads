@@ -81,7 +81,13 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <ThemeProvider>
           <BrowserRouter>
             <App />
-            <Toaster position="top-right" />
+            {/* Modals render at z-[9999] (UI.jsx); react-hot-toast's own
+                container defaults to that same z-index, so whichever mounted
+                later in the DOM won the tie and any toast fired while a
+                modal was open rendered invisibly behind its backdrop —
+                exactly what happened saving WhatsApp settings. Toasts should
+                always sit above a modal that triggered them. */}
+            <Toaster position="top-right" containerStyle={{ zIndex: 10000 }} />
           </BrowserRouter>
         </ThemeProvider>
       </GoogleOAuthProvider>
