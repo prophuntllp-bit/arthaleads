@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bot, Check, CheckCheck, ExternalLink,
-  RefreshCw, Send, User, X,
+  RefreshCw, Send, Settings, User, X,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import WhatsAppSettings from "../components/WhatsAppSettings";
 import WhatsAppIcon from "../components/WhatsAppIcon";
+import { Modal } from "../components/UI";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(date) {
@@ -109,6 +110,7 @@ export default function Inbox() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs]   = useState(false);
   const [filter, setFilter]             = useState("all"); // all | bot | open | resolved
+  const [showSettings, setShowSettings] = useState(false);
   const threadRef = useRef(null);
   const pollRef   = useRef(null);
 
@@ -221,6 +223,7 @@ export default function Inbox() {
   if (connected === null) return null;
 
   return (
+    <>
     <div className="stitch-page !p-0 h-[calc(100vh-4rem)] flex overflow-hidden rounded-[1.25rem]"
       style={{ border: "1px solid var(--app-border)", background: "var(--app-surface)" }}>
 
@@ -235,9 +238,14 @@ export default function Inbox() {
             <WhatsAppIcon className="w-5 h-5 shrink-0" style={{ color: "#25D366" }} />
             <span className="text-sm font-bold text-app">Inbox</span>
           </div>
-          <button onClick={() => fetchConvs()} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition">
-            <RefreshCw className="w-3.5 h-3.5 text-app-soft" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowSettings(true)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition" title="WhatsApp settings">
+              <Settings className="w-3.5 h-3.5 text-app-soft" />
+            </button>
+            <button onClick={() => fetchConvs()} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition">
+              <RefreshCw className="w-3.5 h-3.5 text-app-soft" />
+            </button>
+          </div>
         </div>
 
         {/* Filter tabs */}
@@ -364,5 +372,10 @@ export default function Inbox() {
         </div>
       )}
     </div>
+
+    <Modal open={showSettings} onClose={() => setShowSettings(false)} title="WhatsApp settings" size="lg">
+      <WhatsAppSettings onConnected={() => { setConnected(true); setShowSettings(false); }} />
+    </Modal>
+    </>
   );
 }
