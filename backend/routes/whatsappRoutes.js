@@ -446,7 +446,14 @@ router.post("/send", async (req, res) => {
     await WaConversation.findByIdAndUpdate(conv._id, {
       lastMessageAt: new Date(),
       lastMessagePreview: msgBody.trim().slice(0, 80),
-      status: "open",
+      // Derive from the conversation's own botEnabled instead of hardcoding
+      // "open" — this used to force every agent-sent message to "open" even
+      // when the bot was still on (and kept auto-replying right after), so a
+      // conversation showing "Bot ON" in the header could vanish from the
+      // Bot tab and sit under Open instead. botEnabled is the source of
+      // truth here; it's changed explicitly via the Bot ON/Manual toggle,
+      // not implied by who sent the last message.
+      status: conv.botEnabled ? "bot" : "open",
     });
     res.json({ message });
   } catch (err) {
