@@ -1,6 +1,6 @@
 ﻿// App.jsx
 import { useEffect, useState, lazy, Suspense } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CopilotProvider } from "./context/CopilotContext";
 import { PublicThemeProvider } from "./context/PublicThemeContext";
@@ -528,6 +528,7 @@ function TrialExpiredScreen({ onLogout }) {
 
 function RequireAuth() {
   const { user, org, loading, logout } = useAuth();
+  const location = useLocation();
   const [orgInactive,      setOrgInactive]      = useState(false);
   const [trialExpiredFlag, setTrialExpiredFlag] = useState(false);
   const [pendingDeletion,  setPendingDeletion]  = useState(false);
@@ -603,7 +604,11 @@ function RequireAuth() {
     <div className="flex h-screen overflow-hidden text-app" style={{ background: "transparent" }}>
       <ImpersonationBanner />
       <Sidebar />
-      <main className="flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto">
+      {/* pb-24 reserves room at the bottom of every scrollable page for the
+          floating HelpBot bubble, so scrolled-to-bottom content never sits
+          underneath it. Skipped on /conversations, where HelpBot hides itself
+          and Inbox owns a fixed h-[calc(100vh-4rem)] panel with no scroll to pad. */}
+      <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname.startsWith("/conversations") ? "" : "pb-24"}`}>
         <Outlet />
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}

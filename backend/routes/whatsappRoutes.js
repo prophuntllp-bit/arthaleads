@@ -111,6 +111,35 @@ function parseWebhookPayload(provider, payload, headers) {
   }
 }
 
+// ── Provider: parse inbound webhook status updates (delivered/read ticks) ─────
+// Meta batches a message's lifecycle as separate "statuses" webhook calls —
+// sent, then delivered, then read — keyed by the same message id we stored
+// as waMsgId when we sent it. Only "meta" carries this; the other providers
+// have no equivalent event, so status here just stays whatever sendProviderMessage
+// set at send time.
+
+const STATUS_RANK = { sent: 1, delivered: 2, read: 3, failed: 4 };
+
+function parseStatusUpdates(provider, payload) {
+  if (provider !== "meta") return [];
+  const value = payload.entry?.[0]?.changes?.[0]?.value;
+  const statuses = value?.statuses;
+  if (!Array.isArray(statuses)) return [];
+  return statuses
+    .filter((s) => s.id && STATUS_RANK[s.status])
+    .map((s) => ({ msgId: s.id, status: s.status }));
+}
+
+async function applyStatusUpdates(org, updates) {
+  for (const { msgId, status } of updates) {
+    const existing = await WaMessage.findOne({ orgId: org._id, waMsgId: msgId }).select("status").lean();
+    if (!existing) continue; // status event for a message we don't have (or dup) — nothing to update
+    // Never let a late/out-of-order webhook (e.g. "sent" arriving after "read") move status backwards.
+    if (STATUS_RANK[status] <= (STATUS_RANK[existing.status] || 0)) continue;
+    await WaMessage.updateOne({ _id: existing._id }, { $set: { status } });
+  }
+}
+
 // ── Shared inbound handler ────────────────────────────────────────────────────
 
 async function handleInbound(org, parsed) {
@@ -237,7 +266,12 @@ router.post("/webhook/:orgId", async (req, res) => {
   try {
     const org = await Organization.findById(req.params.orgId).lean();
     if (!org || !org.whatsapp?.enabled) return;
-    const parsed = parseWebhookPayload(org.whatsapp.provider || "aisensy", req.body, req.headers);
+    const provider = org.whatsapp.provider || "aisensy";
+
+    const statusUpdates = parseStatusUpdates(provider, req.body);
+    if (statusUpdates.length) await applyStatusUpdates(org, statusUpdates);
+
+    const parsed = parseWebhookPayload(provider, req.body, req.headers);
     if (!parsed) return;
     await handleInbound(org, parsed);
   } catch (err) {

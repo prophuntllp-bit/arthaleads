@@ -74,6 +74,7 @@ function ConvItem({ conv, active, onClick }) {
 function Bubble({ msg }) {
   const isOut = msg.direction === "outbound";
   const isBot = msg.sender === "bot";
+  const isAgent = isOut && msg.sender === "agent";
   return (
     <div className={`flex ${isOut ? "justify-end" : "justify-start"} mb-1`}>
       <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 relative ${isOut ? "rounded-tr-sm" : "rounded-tl-sm"}`}
@@ -83,6 +84,15 @@ function Bubble({ msg }) {
         {isBot && (
           <p className="text-[9px] font-bold text-green-600 mb-0.5 flex items-center gap-1">
             <Bot className="w-2.5 h-2.5" /> Bot
+          </p>
+        )}
+        {isAgent && msg.senderName && (
+          <p className="text-[9px] font-bold mb-0.5 flex items-center gap-1.5" style={{ color: "#3a7d1f" }}>
+            <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] shrink-0"
+              style={{ background: "rgba(58,125,31,0.18)" }}>
+              {msg.senderName[0].toUpperCase()}
+            </span>
+            {msg.senderName}
           </p>
         )}
         <p className="text-[13px] leading-snug whitespace-pre-wrap break-words">{msg.body}</p>
