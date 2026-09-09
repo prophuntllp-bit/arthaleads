@@ -120,14 +120,22 @@ function parseWebhookPayload(provider, payload, headers) {
 
 const STATUS_RANK = { sent: 1, delivered: 2, read: 3, failed: 4 };
 
+// Walks every entry/change instead of assuming entry[0].changes[0] — Meta can
+// batch more than one into a single call, and a narrower read would silently
+// drop whatever wasn't first.
 function parseStatusUpdates(provider, payload) {
   if (provider !== "meta") return [];
-  const value = payload.entry?.[0]?.changes?.[0]?.value;
-  const statuses = value?.statuses;
-  if (!Array.isArray(statuses)) return [];
-  return statuses
-    .filter((s) => s.id && STATUS_RANK[s.status])
-    .map((s) => ({ msgId: s.id, status: s.status }));
+  const updates = [];
+  for (const entry of payload.entry || []) {
+    for (const change of entry.changes || []) {
+      const statuses = change.value?.statuses;
+      if (!Array.isArray(statuses)) continue;
+      for (const s of statuses) {
+        if (s.id && STATUS_RANK[s.status]) updates.push({ msgId: s.id, status: s.status });
+      }
+    }
+  }
+  return updates;
 }
 
 async function applyStatusUpdates(org, updates) {
@@ -267,6 +275,19 @@ router.post("/webhook/:orgId", async (req, res) => {
     const org = await Organization.findById(req.params.orgId).lean();
     if (!org || !org.whatsapp?.enabled) return;
     const provider = org.whatsapp.provider || "aisensy";
+
+    // Evidence, not a guess: logs exactly what Meta actually sent for this
+    // call, so a missing "read" receipt can be told apart from "Meta never
+    // sent it" vs. "Meta sent it and something here dropped it." Remove once
+    // the read-receipt gap is confirmed one way or the other.
+    if (provider === "meta") {
+      try {
+        const changes = (req.body?.entry || []).flatMap((e) => e.changes || []);
+        console.log("[WhatsApp Webhook] statuses:",
+          JSON.stringify(changes.flatMap((c) => c.value?.statuses || [])),
+          "| messageIds:", JSON.stringify(changes.flatMap((c) => (c.value?.messages || []).map((m) => m.id))));
+      } catch {}
+    }
 
     const statusUpdates = parseStatusUpdates(provider, req.body);
     if (statusUpdates.length) await applyStatusUpdates(org, statusUpdates);
