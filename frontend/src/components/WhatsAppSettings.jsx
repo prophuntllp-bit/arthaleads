@@ -89,10 +89,19 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
   const prov = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
 
-  // Per-org webhook URL (works for all providers)
+  // Per-org webhook URL (works for all providers).
+  //
+  // Must be the API's own origin, not window.location.origin. This page is
+  // served from app.arthaleads.com, which has no rewrite for /api/* — that
+  // path 404s there, but Vercel's SPA catch-all turns the 404 into a 200
+  // that returns index.html instead. A provider's webhook check reads that
+  // 200 as success and never notices the body isn't its challenge echo, so
+  // every provider using this URL (Meta included, which is stricter about
+  // it) would silently fail verification while looking like it worked.
+  const apiOrigin = (api.defaults.baseURL || "").replace(/\/api\/?$/, "");
   const webhookUrl = orgId
-    ? `${window.location.origin}/api/whatsapp/webhook/${orgId}`
-    : `${window.location.origin}/api/whatsapp/webhook`;
+    ? `${apiOrigin}/api/whatsapp/webhook/${orgId}`
+    : `${apiOrigin}/api/whatsapp/webhook`;
 
   useEffect(() => {
     api.get("/whatsapp/settings").then(r => {
