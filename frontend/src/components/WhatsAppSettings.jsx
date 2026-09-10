@@ -74,8 +74,9 @@ const PROVIDERS = [
 
 export default function WhatsAppSettings({ onConnected } = {}) {
   const [provider, setProvider]       = useState("aisensy");
+  const [savedProvider, setSavedProvider] = useState("");
   const [connected, setConnected]     = useState(false);
-  const [hasKey, setHasKey]           = useState(false);
+  const [hasKeyRaw, setHasKeyRaw]     = useState(false);
   const [orgId, setOrgId]             = useState("");
   const [apiKey, setApiKey]           = useState("");
   const [accountEndpoint, setAccountEndpoint] = useState("");
@@ -88,6 +89,12 @@ export default function WhatsAppSettings({ onConnected } = {}) {
   const [testing, setTesting]         = useState(false);
 
   const prov = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
+
+  // A saved key only counts for the provider it was saved under. Switching
+  // provider (e.g. Meta → AiSensy) makes the old key useless, so force a
+  // fresh one rather than letting "Connect & Test" fire with a stale token
+  // the new provider will just reject.
+  const hasKey = hasKeyRaw && savedProvider === provider;
 
   // Per-org webhook URL (works for all providers).
   //
@@ -107,9 +114,10 @@ export default function WhatsAppSettings({ onConnected } = {}) {
     api.get("/whatsapp/settings").then(r => {
       const s = r.data.whatsapp || {};
       setConnected(r.data.connected);
-      setHasKey(!!s.hasApiKey);
+      setHasKeyRaw(!!s.hasApiKey);
       setOrgId(r.data.orgId || "");
       setProvider(s.provider || "aisensy");
+      setSavedProvider(s.provider || "");
       setAccountEndpoint(s.accountEndpoint || "");
       setPhoneNumberId(s.phoneNumberId || "");
       setWebhookVerifyToken(s.webhookVerifyToken || "");
@@ -136,7 +144,8 @@ export default function WhatsAppSettings({ onConnected } = {}) {
       await api.patch("/whatsapp/settings", patch);
       await api.post("/whatsapp/settings/test", { testPhone: testPhone.replace(/\D/g, "") });
       setConnected(true);
-      setHasKey(true);
+      setHasKeyRaw(true);
+      setSavedProvider(provider);
       toast.success("WhatsApp connected! Check your phone for the test message.");
       onConnected?.();
     } catch (e) {
