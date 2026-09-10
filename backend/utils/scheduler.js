@@ -9,6 +9,7 @@ const { sendPushToUser } = require("./push");
 const { runBackup } = require("./backup");
 const { pollGoogleAdsLeads } = require("./googleAdsPoller");
 const { downgradeLapsedSubscriptions } = require("../services/subscriptionExpiry");
+const { runLowCreditSweep } = require("../services/creditAutoRecharge");
 
 const META_GRAPH_VERSION = "v23.0";
 
@@ -299,3 +300,16 @@ cron.schedule("30 23 * * *", () => {
 });
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
+
+// ── Every 30 minutes: warn orgs whose WhatsApp credits are running low ───────
+// Half-hourly rather than daily because credits drain in minutes during a
+// campaign, and the whole point is to catch it before replies start failing.
+// The sweep debounces to one email per org per 24h, so the frequency here only
+// affects how fast a dip is noticed, not how much mail anyone gets.
+cron.schedule("*/30 * * * *", () => {
+  runLowCreditSweep()
+    .then(({ checked, notified }) => {
+      if (notified) logger.info(`[credits] low-balance sweep — ${notified}/${checked} warned`);
+    })
+    .catch((err) => logger.error(`[credits] low-balance sweep failed: ${err.message}`));
+});

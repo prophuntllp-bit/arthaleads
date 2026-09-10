@@ -337,6 +337,43 @@ If you can still sign in, Settings > My Profile > Delete my account does the sam
   return Promise.all([support, ack]);
 }
 
+// ── WhatsApp credits running low ──────────────────────────────────────────────
+// Sent by utils/scheduler when an org with auto-recharge on drops under its
+// threshold. Deliberately not a receipt: the point is to get them topped up
+// before replies start being refused mid-conversation.
+async function sendLowCreditEmail(toEmail, toName, { orgName, balanceRupees, thresholdRupees, repliesLeft }) {
+  const topUpUrl = `${SITE_URL}/conversations/credits`;
+  const name = toName || "there";
+  return send({
+    to: toEmail,
+    subject: `WhatsApp credits running low — ${orgName}`,
+    html: layout({
+      preheader: `Balance is down to Rs ${balanceRupees}.`,
+      eyebrow: "WhatsApp credits",
+      title: "Your credits are running low",
+      bodyHtml: `
+        ${paragraph(`Hi ${esc(name)}, WhatsApp credits for ${esc(orgName)} are down to ${strong("Rs " + balanceRupees)}, below the ${esc("Rs " + thresholdRupees)} threshold you set.`)}
+        ${paragraph(`That is roughly ${strong(repliesLeft + " more replies")}. Once it reaches zero your team can still read incoming messages, but replies and campaigns stop until you top up.`)}
+        ${button(topUpUrl, "Add credits")}
+        ${panel(`
+          <p style="margin:0 0 6px;font-family:${FONT};font-size:13px;font-weight:600;color:${HEADING};">Separate from your subscription</p>
+          <p style="margin:0;font-family:${FONT};font-size:13px;line-height:1.6;color:${MUTED};">WhatsApp credits pay Meta for messages and are billed separately from your Arthaleads plan.</p>`)}
+      `,
+    }),
+    text: `Hi ${name},
+
+WhatsApp credits for ${orgName} are down to Rs ${balanceRupees}, below your Rs ${thresholdRupees} threshold.
+
+That is roughly ${repliesLeft} more replies. At zero, incoming messages still arrive but replies and campaigns stop until you top up.
+
+Top up: ${topUpUrl}
+
+WhatsApp credits are billed separately from your Arthaleads subscription.
+
+— Arthaleads`,
+  });
+}
+
 module.exports = {
   sendPasswordResetEmail,
   sendGoogleOnlyAccountEmail,
@@ -348,4 +385,5 @@ module.exports = {
   notifySuperAdminsOfSignup,
   sendSignupVerifyEmail,
   sendAccountDeletionRequestEmails,
+  sendLowCreditEmail,
 };

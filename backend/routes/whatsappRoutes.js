@@ -10,7 +10,18 @@ const credits        = require("../services/creditService");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
-async function sendProviderMessage(org, to, body) {
+/**
+ * Send a WhatsApp message.
+ *
+ * `template` turns this into a business-initiated send:
+ *   { name, language, components }  per Meta's template message schema.
+ *
+ * Without it every send is free-form, which Meta only accepts inside an open
+ * 24-hour customer service window. That is why first contact and any
+ * re-engagement has to be a template — and why campaigns were impossible
+ * until this branch existed.
+ */
+async function sendProviderMessage(org, to, body, template = null) {
   const { provider = "aisensy", apiKey, accountEndpoint, phoneNumberId } = org.whatsapp || {};
 
   switch (provider) {
@@ -41,10 +52,23 @@ async function sendProviderMessage(org, to, body) {
       return r.data?.messageId || null;
     }
     case "meta": {
+      const payload = template
+        ? {
+            messaging_product: "whatsapp", recipient_type: "individual", to,
+            type: "template",
+            template: {
+              name: template.name,
+              language: { code: template.language || "en_US" },
+              ...(template.components?.length ? { components: template.components } : {}),
+            },
+          }
+        : {
+            messaging_product: "whatsapp", recipient_type: "individual", to,
+            type: "text", text: { preview_url: false, body },
+          };
       const r = await axios.post(
-        `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`,
-        { messaging_product: "whatsapp", recipient_type: "individual", to,
-          type: "text", text: { preview_url: false, body } },
+        `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+        payload,
         { headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } }
       );
       return r.data?.messages?.[0]?.id || null;

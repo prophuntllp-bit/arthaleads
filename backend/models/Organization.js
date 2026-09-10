@@ -151,6 +151,11 @@ const orgSchema = new mongoose.Schema(
       // worst case up front and settle when the number comes back.
       reservedPaise: { type: Number, default: 0, min: 0 },
 
+      // Stamped when a low-balance warning goes out, cleared when the balance
+      // recovers — the 24h debounce in creditAutoRecharge reads it so a tenant
+      // sitting under their threshold gets one nudge, not one per sweep.
+      lowBalanceNotifiedAt: { type: Date },
+
       autoRecharge: {
         enabled:        { type: Boolean, default: false },
         thresholdPaise: { type: Number, default: 50_000 },   // ₹500
