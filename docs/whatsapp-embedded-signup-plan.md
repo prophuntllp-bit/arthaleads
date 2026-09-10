@@ -447,14 +447,189 @@ number came from.
 
 ---
 
-## 18. Open commercial decisions
+## 18. Commercial decisions — SETTLED
 
-1. **Markup %** — match ~26%, or undercut to win tenants? Blocked on verifying the
-   competitor GST question in §12.
-2. **Commit to the Meta credit line** (§13) — accepting float + default risk — or
-   have each tenant put their own card on their own WABA (no credit business, no
-   risk, no margin)? This is the fork; everything in Part 2 assumes the former.
-3. **Virtual number supplier** — lined up, or does Flow B wait?
-4. **Free credits on signup?** Competitor gives ₹50. Cheap acquisition lever, direct
-   cost per signup.
-5. **Minimum top-up** and whether unused credits expire (float vs. goodwill).
+| Decision | Settled as |
+|---|---|
+| **Markup** | **₹1.12 marketing / ₹0.15 utility-auth-service**, ex-GST (~30% over Meta). Defaults are in `Organization.credits.sellRatesPaise` and are per-org, so a tenant can be repriced without a deploy. |
+| **Meta credit line** | **Yes** — Arthaleads is the biller. Float and default risk accepted, capped by the strictly-prepaid design in §15. |
+| **GST** | Charged **once at top-up**, on the invoice. ₹1,000 of credit costs the tenant ₹1,180 and adds 100000 paise. Message debits are ex-GST. |
+| **Virtual number (Flow B)** | **Deferred.** Blocked on a supplier contract, not code. Early requests handled manually — buy the number, relay the OTP, walk them through Flow A. |
+| **Top-ups** | Razorpay, **UPI-first**. UPI MDR in India is effectively zero vs ~2% on cards; routing top-ups to UPI is what makes the 30% markup net a real 30%. |
+
+Still open:
+- **Free credits on signup?** Competitor gives ₹50. Cheap acquisition lever, direct
+  cost per signup.
+- **Minimum top-up**, and whether unused credits expire (float vs. goodwill).
+- **Competitor GST question** (§12) — does not block the rate card above, but worth
+  knowing where we actually sit against AiSensy's real price.
+
+---
+
+## 19. BUILT — the credit cap (commit `4020d9a`)
+
+Shipped and verified against the real database. This is the piece that makes the
+credit line safe to hold.
+
+**Files:** `models/CreditLedger.js`, `services/creditService.js`, credit fields on
+`models/Organization.js` and `models/WaMessage.js`, guards in `routes/whatsappRoutes.js`.
+
+### Reserve / settle
+
+Meta only reports a message's real price in the status webhook, which arrives
+*after* the send. A naive check-then-send leaks money two ways: two concurrent
+sends both pass the same balance check, and a send can succeed while the debit
+never lands. So sending is two-phase, like a card authorisation:
+
+1. `reserve()` — atomically holds the worst-case price, **fails closed**
+2. send
+3. `settle()` — converts the hold to a debit at Meta's reported price
+4. `release()` — hands the hold back on failure or a `billable: false` verdict
+
+`available = balancePaise − reservedPaise`. A tenant can only ever spend what is
+actually sitting there.
+
+The atomicity matters: the guard and the increment are **one** document update
+(`findOneAndUpdate` with an `$expr` on the balance), so MongoDB serialises
+concurrent sends. A read-then-write there is a money leak under any real load.
+
+### What is capped, and what deliberately is not
+
+| Action | At zero credits | Why |
+|---|---|---|
+| Receive inbound | **Always allowed and stored** | Receiving is free; dropping it loses data Meta never replays |
+| Bot auto-reply | **Suppressed silently** | Outbound spend — an unfunded org goes quiet rather than run up a bill |
+| Agent reply | **Blocked**, HTTP 402 `INSUFFICIENT_CREDITS` | Outbound spend; the code drives the top-up prompt |
+| Campaign send | **Blocked** (whole campaign reserved up front) | Never strand a half-sent campaign |
+
+### Two bugs the tests caught before this shipped
+
+- **`sparse` + `partialFilterExpression` is rejected by MongoDB — silently**, through
+  Mongoose's background index build. The idempotency index was therefore never
+  created, and duplicate status webhooks double-charged. Meta *does* resend them.
+  Fixed by dropping `sparse`, naming the index explicitly so it cannot collide with
+  an auto-generated one, and adding an explicit pre-check that does not depend on
+  the index existing at all.
+- `waMsgId` declared with both `index: true` and `schema.index()` — two conflicting
+  definitions for one key.
+
+### Still to build on top
+
+- Top-up endpoint + Razorpay checkout (UPI-first) and the auto-recharge worker
+- Balance/usage API and the Conversations credit UI (§16)
+- Campaign-level bulk reserve
+- Monthly reconciliation job: ledger vs. Meta's actual invoice, alert on drift
+
+---
+---
+
+# Part 3 — Templates & Campaigns
+
+**Why this is not optional:** at the agreed rate card, marketing carries ₹0.2569
+margin per message against ₹0.0350 for service — **~7.3× more**. A tenant whose
+agents answer ~3,000 inbox messages a month earns roughly **₹70** (the first 1,000
+are free). That same tenant running one 10,000-contact campaign earns **₹2,569**.
+The credit business *is* a marketing-message business; inbox replies are a rounding
+error. Without campaigns, the credit line carries risk for almost no return.
+
+**The unfair advantage:** competitors have a contact list. Arthaleads has leads with
+status, source, budget, project interest and follow-up dates. "Send this template to
+every New lead from shaporjipallonji.com in the last 30 days" is a query the CRM can
+already run — **reuse the existing Leads filters as the campaign audience picker.**
+
+---
+
+## 20. Template management
+
+Meta requires every business-initiated message to use a pre-approved template.
+Templates live **per-WABA**, so each tenant submits their own — we cannot share one
+across tenants.
+
+- CRUD against `/{waba-id}/message_templates` (create, list, delete; edit via
+  `/{template-id}`).
+- Builder form: name, category, language, header (text/image/video/doc), body with
+  `{{1}}` variables, footer, buttons (quick-reply / URL / phone).
+- WhatsApp-style live preview.
+- Approval status arrives on the **`message_template_status_update`** webhook field —
+  subscribe to it alongside `messages`. Surface PENDING / APPROVED / REJECTED with
+  Meta's rejection reason.
+
+**Product idea worth building:** a **real-estate template library** — pre-written
+content ("New Project Launch", "Site Visit Reminder", "Price Drop Alert") that a
+tenant one-clicks to submit to their own WABA. Cheap once the CRUD exists, and it
+removes the blank-page problem that otherwise stops non-technical users ever sending
+a campaign.
+
+**Backend gap:** `sendProviderMessage`'s `meta` case is **text-only** — no template
+support at all. That is the single blocker for any business-initiated message and is
+worth fixing early, independent of everything else here.
+
+---
+
+## 21. Campaign sender
+
+Flow: pick template → pick audience from lead filters → map template variables to
+lead fields → **show estimated cost before sending** → credit check → queued,
+rate-limited dispatch → per-recipient delivery tracking into the existing
+`WaMessage` records.
+
+- **Reserve the whole campaign up front** via `creditService.reserve()`. Never start
+  a 10,000-message run and stop at 6,000 — that leaves a half-sent campaign and an
+  angry tenant. Insufficient balance ⇒ refuse, or offer an explicit partial send.
+- New `WaCampaign` model: template, audience query, variable mapping, status,
+  counts, reserved/settled totals. `CreditLedger.campaignId` already links to it.
+- Dispatch through the existing scheduler/cron rather than a request thread.
+
+---
+
+## 22. The four constraints — ours, because we hold the credit line
+
+### 22.1 Opt-in is mandatory
+
+Meta requires recorded consent before marketing messages. Not optional; violating it
+risks the tenant's number **and** our standing as the biller.
+
+- `Lead.whatsappConsent = { status, source, capturedAt, evidence }`.
+- Campaign audience builder **hard-filters to consented leads only**.
+- Preview shows "X of Y excluded — no consent" so it is visible, not silent.
+- Capture points: website form checkbox, and inbound WhatsApp (implicit opt-in for
+  service, **not** for marketing — those need explicit consent).
+
+### 22.2 Quality rating
+
+A tenant blasting uninterested recipients tanks their number's quality; Meta then
+throttles or bans it. On our credit line their behaviour is our exposure.
+
+- Poll `GET /{phone-number-id}?fields=quality_rating`, cache on
+  `whatsapp.qualityRating` (field already added).
+- Badge it in the Conversations header.
+- **RED ⇒ auto-pause campaigns** for that tenant and alert them, writing the reason
+  to `whatsapp.campaignsPausedReason`.
+
+### 22.3 Messaging tiers
+
+Meta caps marketing volume per number by tier (1K / 10K / 100K / unlimited per
+rolling 24h), set by quality and verification.
+
+- Read the WABA's `messaging_limit_tier`, cache on `whatsapp.messagingTier`.
+- The dispatch queue respects the tier — exceeding it just fails the sends.
+- Show remaining 24h allowance in the campaign preview, before they hit send.
+
+### 22.4 Per-user frequency caps
+
+Meta limits how many marketing messages one person receives across *all* businesses.
+Some sends silently drop; this is not predictable in advance.
+
+- Report them as their **own bucket** in campaign stats ("Not delivered — recipient
+  limit reached"), never lumped into generic failures.
+- **Refund the credit** for anything undelivered — `settle()` already releases on a
+  `failed` status.
+
+---
+
+## 23. Sequencing
+
+Templates and campaigns come **after** Embedded Signup and the credit UI: templates
+need a live WABA, and campaigns must not run before credit deduction exists or we
+are giving away ₹0.86 messages for free. The one exception is the `sendProviderMessage`
+template branch (§20) — small, self-contained, and blocking everything else.
