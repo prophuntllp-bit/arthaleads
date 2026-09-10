@@ -8,7 +8,7 @@ import {
   FolderKanban, Archive, Bell, CalendarClock, Clock, LogIn as LogInIcon, ShieldCheck,
   PenLine, ChevronDown, ChevronUp, Tag, FileText, Plus, List,
   PanelLeftClose, PanelLeft, Zap, Search, X as XIcon, CornerDownLeft,
-  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail, MessagesSquare,
+  Receipt, BookMarked, FileCheck, Building2, ClipboardList, Phone, Mail,
 } from "lucide-react";
 import WhatsAppIcon from "./WhatsAppIcon";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -46,17 +46,10 @@ const navItems = [
   },
   { to: "/calls",       label: "Calls",        icon: Phone },
   { to: "/followups",   label: "Follow Ups",   icon: CalendarClock },
-  {
-    label: "Conversations", icon: WhatsAppIcon,
-    children: [
-      { to: "/conversations",          label: "Inbox",    icon: MessagesSquare },
-      { to: "/conversations/credits",  label: "Credits",  icon: Zap },
-      // Restricted to who can actually save: PATCH /whatsapp/settings is
-      // admin-only, so showing this to a manager would be a screen they can
-      // open and then get a 403 from.
-      { to: "/conversations/settings", label: "Settings", icon: Settings, roles: ["admin", "super_admin"] },
-    ],
-  },
+  // Flat on purpose. The section navigates itself with in-page tabs — a
+  // sidebar flyout for five WhatsApp screens buried the ones that matter and
+  // put nav in two places at once.
+  { to: "/conversations", label: "Conversations", icon: WhatsAppIcon },
   {
     label: "Tasks", icon: ClipboardList,
     children: [

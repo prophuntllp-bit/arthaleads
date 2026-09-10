@@ -391,6 +391,10 @@ const Inbox          = lazy(() => import("./pages/Inbox"));
 const ConversationsLayout   = lazy(() => import("./pages/conversations/ConversationsLayout"));
 const CreditsPage           = lazy(() => import("./pages/conversations/CreditsPage"));
 const ConversationSettings  = lazy(() => import("./pages/conversations/ConversationSettings"));
+const TemplatesPage         = lazy(() => import("./pages/conversations/TemplatesPage"));
+const TemplateBuilder       = lazy(() => import("./pages/conversations/TemplateBuilder"));
+const CampaignsPage         = lazy(() => import("./pages/conversations/CampaignsPage"));
+const CampaignBuilder       = lazy(() => import("./pages/conversations/CampaignBuilder"));
 const Tasks          = lazy(() => import("./pages/Tasks"));
 const Attendance     = lazy(() => import("./pages/Attendance"));
 const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
@@ -792,6 +796,11 @@ export default function App() {
             <Route path="/followups"     element={<FollowUps />} />
             <Route path="/conversations" element={<ConversationsLayout />}>
               <Route index element={<Inbox />} />
+              <Route path="templates"      element={<TemplatesPage />} />
+              <Route path="templates/new"  element={<TemplateBuilder />} />
+              <Route path="campaigns"      element={<CampaignsPage />} />
+              <Route path="campaigns/new"  element={<CampaignBuilder />} />
+              <Route path="campaigns/:id"  element={<CampaignBuilder />} />
               <Route path="credits"  element={<CreditsPage />} />
               <Route path="settings" element={<ConversationSettings />} />
             </Route>

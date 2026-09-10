@@ -7,6 +7,9 @@ const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
 const Lead           = require("../models/Lead");
 const credits        = require("../services/creditService");
+const templates      = require("../services/whatsappTemplateService");
+const campaignSvc    = require("../services/waCampaignService");
+const WaCampaign     = require("../models/WaCampaign");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -528,6 +531,84 @@ router.patch("/conversations/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// ── Message templates ─────────────────────────────────────────────────────────
+// Templates live on the tenant's own WABA and Meta reviews each one, so these
+// are thin proxies — we hold no local copy that could drift out of sync with
+// what Meta actually has.
+
+router.get("/templates", async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const list = await templates.listTemplates({ ...org, _id: req.orgId });
+    res.json({ templates: list });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.post("/templates", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    const created = await templates.createTemplate({ ...org, _id: req.orgId }, req.body || {});
+    res.status(201).json({ template: created });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+router.delete("/templates/:name", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    await templates.deleteTemplate({ ...org, _id: req.orgId }, req.params.name);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+// ── Campaigns ─────────────────────────────────────────────────────────────────
+
+router.get("/campaigns", async (req, res) => {
+  try {
+    const list = await WaCampaign.find({ orgId: req.orgId }).sort({ createdAt: -1 }).limit(100).lean();
+    res.json({ campaigns: list });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Everything needed to decide whether to press send: audience size, who was
+// excluded and why, the cost, and anything blocking it. No side effects.
+router.post("/campaigns/preview", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).lean();
+    const out = await campaignSvc.preview({ ...org, _id: req.orgId }, req.body || {});
+    res.json(out);
+  } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
+});
+
+router.post("/campaigns", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const { name, templateName, templateLanguage, templateCategory, variableMapping, audienceFilter } = req.body || {};
+    if (!name?.trim())     return res.status(400).json({ message: "Give the campaign a name" });
+    if (!templateName)     return res.status(400).json({ message: "Pick a template" });
+    const c = await WaCampaign.create({
+      orgId: req.orgId, createdBy: req.user._id, createdByName: req.user.name,
+      name: name.trim(), templateName, templateLanguage, templateCategory,
+      variableMapping: variableMapping || [], audienceFilter: audienceFilter || {},
+    });
+    res.status(201).json({ campaign: c });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.post("/campaigns/:id/send", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).lean();
+    // Responds once the run finishes. Fine at the volumes a single number is
+    // allowed to send; a tier above TIER_1K wants this on the scheduler.
+    const c = await campaignSvc.run({ ...org, _id: req.orgId }, req.params.id, sendProviderMessage);
+    res.json({ campaign: c });
+  } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
 });
 
 // ── Send message ──────────────────────────────────────────────────────────────

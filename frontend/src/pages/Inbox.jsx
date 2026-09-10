@@ -232,7 +232,7 @@ export default function Inbox() {
 
   return (
     <>
-    <div className="stitch-page !p-0 h-[calc(100vh-4rem)] flex overflow-hidden rounded-[1.25rem]"
+    <div className="h-full mx-4 sm:mx-6 lg:mx-8 mb-4 flex overflow-hidden rounded-[1.25rem]"
       style={{ border: "1px solid var(--app-border)", background: "var(--app-surface)" }}>
 
       {/* ── Left panel: conversation list ── */}

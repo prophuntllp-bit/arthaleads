@@ -199,7 +199,20 @@ const leadSchema = new mongoose.Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt:  { type: Date, default: null },
     orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
-    whatsappConversationId: { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", default: null },
+    // ── WhatsApp marketing consent ───────────────────────────────────────────
+  // Meta requires recorded opt-in before a marketing template goes out, and we
+  // hold the credit line, so a tenant blasting non-consented numbers is our
+  // exposure. Campaigns filter on this — an unset lead is treated as NO.
+  //
+  // Replying to us is implicit consent for service messages only. Marketing
+  // needs an explicit yes, which is why source is recorded alongside.
+  whatsappConsent: {
+    status:     { type: String, enum: ["granted", "denied", "unknown"], default: "unknown", index: true },
+    source:     { type: String, default: "" },   // web-form | imported | manual | whatsapp-reply
+    capturedAt: { type: Date },
+  },
+
+  whatsappConversationId: { type: mongoose.Schema.Types.ObjectId, ref: "WaConversation", default: null },
   },
   { timestamps: true }
 );
