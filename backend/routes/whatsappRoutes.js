@@ -6,6 +6,7 @@ const Organization   = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
 const Lead           = require("../models/Lead");
+const credits        = require("../services/creditService");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -131,7 +132,12 @@ function parseStatusUpdates(provider, payload) {
       const statuses = change.value?.statuses;
       if (!Array.isArray(statuses)) continue;
       for (const s of statuses) {
-        if (s.id && STATUS_RANK[s.status]) updates.push({ msgId: s.id, status: s.status });
+        if (s.id && STATUS_RANK[s.status]) {
+          // pricing is what we bill against — it carries Meta's own verdict on
+          // category and whether the message was billable at all. Passing it
+          // through here is what lets applyStatusUpdates settle the hold.
+          updates.push({ msgId: s.id, status: s.status, pricing: s.pricing || null });
+        }
       }
     }
   }
@@ -139,9 +145,39 @@ function parseStatusUpdates(provider, payload) {
 }
 
 async function applyStatusUpdates(org, updates) {
-  for (const { msgId, status } of updates) {
-    const existing = await WaMessage.findOne({ orgId: org._id, waMsgId: msgId }).select("status").lean();
+  for (const { msgId, status, pricing } of updates) {
+    const existing = await WaMessage.findOne({ orgId: org._id, waMsgId: msgId })
+      .select("status reservedPaise creditCategory freeTierApplied creditSettled conversationId").lean();
     if (!existing) continue; // status event for a message we don't have (or dup) — nothing to update
+
+    // ── Settle the credit hold ────────────────────────────────────────────
+    // Meta only reveals the real price here, after the send. Settle once, on
+    // whichever status first carries a pricing object (normally "sent"), and
+    // on "failed" hand the hold back — a message that never went out must not
+    // cost the tenant anything.
+    if (!existing.creditSettled) {
+      try {
+        if (status === "failed") {
+          await credits.release(org._id, existing.reservedPaise || 0);
+          await WaMessage.updateOne({ _id: existing._id }, { $set: { creditSettled: true } });
+        } else if (pricing) {
+          await credits.settle(org._id, {
+            reservedPaise: existing.reservedPaise || 0,
+            category: existing.creditCategory || "service",
+            waMsgId: msgId,
+            conversationId: existing.conversationId,
+            metaPricing: pricing,
+            freeTierApplied: existing.freeTierApplied,
+          });
+          await WaMessage.updateOne({ _id: existing._id }, { $set: { creditSettled: true } });
+        }
+      } catch (err) {
+        // Never let a billing problem drop the status update itself — the tick
+        // in the UI is independent of whether we managed to bill for it.
+        console.error("[WhatsApp Credits] settle failed for", msgId, err.message);
+      }
+    }
+
     // Never let a late/out-of-order webhook (e.g. "sent" arriving after "read") move status backwards.
     if (STATUS_RANK[status] <= (STATUS_RANK[existing.status] || 0)) continue;
     await WaMessage.updateOne({ _id: existing._id }, { $set: { status } });
@@ -232,11 +268,35 @@ async function triggerBotReply(org, conversation, inboundText) {
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
     if (reply) {
-      const msgId = await sendProviderMessage(org, conversation.contactPhone, reply);
+      // The bot spends real money on every reply. Hold the credit before the
+      // send, not after — an unfunded org must go quiet rather than run up a
+      // bill on our Meta credit line.
+      const q = await credits.quote(org._id, "service", 1);
+      let held = 0;
+      try {
+        held = await credits.reserve(org._id, { category: "service", count: 1 });
+      } catch (err) {
+        if (err instanceof credits.InsufficientCreditsError) {
+          console.warn(`[WhatsApp Bot] org ${org._id} out of credits — auto-reply suppressed`);
+          return;
+        }
+        throw err;
+      }
+
+      let msgId;
+      try {
+        msgId = await sendProviderMessage(org, conversation.contactPhone, reply);
+      } catch (err) {
+        await credits.release(org._id, held);
+        throw err;
+      }
+
       await WaMessage.create({
         orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
         direction: "outbound", sender: "bot", senderName: botName,
         body: reply, status: "sent", timestamp: new Date(),
+        reservedPaise: held, creditCategory: "service",
+        freeTierApplied: q.freeCount > 0,
       });
       await WaConversation.findByIdAndUpdate(conversation._id, {
         lastMessageAt: new Date(), lastMessagePreview: reply.slice(0, 80),
@@ -458,11 +518,38 @@ router.post("/send", async (req, res) => {
     if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
       return res.status(400).json({ message: "WhatsApp not connected" });
     }
-    const msgId = await sendProviderMessage(org, conv.contactPhone, msgBody.trim());
+    // Hard cap: hold the credit before the send. A tenant can never spend past
+    // what they have already paid for, because Meta bills us, not them.
+    const q = await credits.quote(req.orgId, "service", 1);
+    let held;
+    try {
+      held = await credits.reserve(req.orgId, { category: "service", count: 1 });
+    } catch (err) {
+      if (err instanceof credits.InsufficientCreditsError) {
+        return res.status(402).json({
+          message: "Out of WhatsApp credits. Top up to keep replying.",
+          code: "INSUFFICIENT_CREDITS",
+          needPaise: err.needPaise,
+          availablePaise: err.availablePaise,
+        });
+      }
+      throw err;
+    }
+
+    let msgId;
+    try {
+      msgId = await sendProviderMessage(org, conv.contactPhone, msgBody.trim());
+    } catch (err) {
+      await credits.release(req.orgId, held);
+      throw err;
+    }
+
     const message = await WaMessage.create({
       orgId: req.orgId, conversationId: conv._id, waMsgId: msgId || undefined,
       direction: "outbound", sender: "agent", senderName: req.user.name,
       body: msgBody.trim(), status: "sent", timestamp: new Date(),
+      reservedPaise: held, creditCategory: "service",
+      freeTierApplied: q.freeCount > 0,
     });
     await WaConversation.findByIdAndUpdate(conv._id, {
       lastMessageAt: new Date(),

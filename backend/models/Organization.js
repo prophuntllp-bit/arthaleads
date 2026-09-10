@@ -117,6 +117,63 @@ const orgSchema = new mongoose.Schema(
       botEnabled:         { type: Boolean, default: true },
       botName:            { type: String, default: "Artha Assistant" },
       botSystemPrompt:    { type: String, default: "" },
+
+      // ── Embedded Signup (see docs/whatsapp-embedded-signup-plan.md) ─────────
+      esOnboarded:        { type: Boolean, default: false },
+      onboardedAt:        { type: Date },
+      registrationPin:    { type: String, default: "" },   // 6-digit, for /register + 2FA
+      verifiedName:       { type: String, default: "" },   // display name Meta approved
+      displayPhoneNumber: { type: String, default: "" },
+
+      // ── Meta health signals ────────────────────────────────────────────────
+      // We hold the credit line, so a tenant wrecking their own quality rating
+      // is our exposure, not just theirs. Polled and cached; campaigns refuse
+      // to run when quality is RED or the tier's 24h allowance is spent.
+      qualityRating:      { type: String, default: "" },   // GREEN | YELLOW | RED
+      messagingTier:      { type: String, default: "" },   // TIER_1K | TIER_10K | ...
+      healthCheckedAt:    { type: Date },
+      campaignsPausedReason: { type: String, default: "" },
+    },
+
+    // ── WhatsApp Conversation Credits ─────────────────────────────────────────
+    // Strictly prepaid. Meta bills Arthaleads for every tenant's messages, so a
+    // tenant must never be able to spend money we have not already collected —
+    // see services/creditService.js for the reserve/settle flow that guarantees
+    // it, and docs/whatsapp-embedded-signup-plan.md Part 2 for the commercials.
+    //
+    // All amounts are integer PAISE, ex-GST. GST is charged once at top-up on
+    // the invoice, never per message: buying ₹1,000 of credit costs ₹1,180 and
+    // adds 100000 paise here.
+    credits: {
+      balancePaise:  { type: Number, default: 0, min: 0 },
+      // Held against sends that are in flight. Meta only tells us the real
+      // price in the status webhook, which arrives after the send — so we hold
+      // worst case up front and settle when the number comes back.
+      reservedPaise: { type: Number, default: 0, min: 0 },
+
+      autoRecharge: {
+        enabled:        { type: Boolean, default: false },
+        thresholdPaise: { type: Number, default: 50_000 },   // ₹500
+        rechargePaise:  { type: Number, default: 100_000 },  // ₹1,000
+      },
+
+      // Our sell rates, ex-GST, per message. Per-org so a tenant can be priced
+      // differently without a deploy. Defaults are the agreed card: ₹1.12
+      // marketing, ₹0.15 everything else (~30% over Meta's India rates).
+      sellRatesPaise: {
+        marketing:      { type: Number, default: 112 },
+        utility:        { type: Number, default: 15 },
+        authentication: { type: Number, default: 15 },
+        service:        { type: Number, default: 15 },
+      },
+
+      // Meta gives 1,000 free service messages per phone number per calendar
+      // month from 1 Oct 2026. We pass that saving through rather than pocket
+      // it — it is in Meta's public docs and tenants do check.
+      freeService: {
+        yyyymm: { type: String, default: "" },
+        used:   { type: Number, default: 0 },
+      },
     },
 
     // ── EnableX Telephony Integration ─────────────────────────────────────────
