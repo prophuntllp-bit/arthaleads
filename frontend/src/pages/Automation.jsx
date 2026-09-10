@@ -1007,6 +1007,35 @@ function WordPressIcon() {
   );
 }
 
+// Recreated from Vistrow Voice's actual app icon (a hand-drawn approximation,
+// not their exact source asset — see conversation for why). Self-contained:
+// includes its own rounded-square gradient background, so wrap it in a plain
+// sizing div (no separate bg-* class) wherever it's used.
+function VistrowVoiceIcon({ size = 40 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="vistrowVoiceGrad" x1="4" y1="37" x2="37" y2="3" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#4c1d95" />
+          <stop offset="50%" stopColor="#9333ea" />
+          <stop offset="100%" stopColor="#ec4899" />
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="9" fill="url(#vistrowVoiceGrad)" />
+      <path
+        d="M6 20 H11 C12.5 20 13 15.5 14.5 15.5 C16 15.5 16.5 24.5 18 24.5
+           C19.2 24.5 19.8 10 21.5 10 C23.2 10 23.8 24.5 25 24.5
+           C26.2 24.5 26.8 20 28 20 H31 C32 20 32 17 34 17"
+        stroke="#fff"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 /* ─── Vistrow Voice: per-connection token card ─────────────────────────────── */
 function VoiceCard({ conn, onDelete }) {
   const [copied, setCopied] = useState(false);
@@ -1122,8 +1151,8 @@ function VoiceWizard({ open, onClose, onChanged }) {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
         <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-violet-500">
-            <Mic className="h-5 w-5 text-white" />
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl overflow-hidden">
+            <VistrowVoiceIcon size={40} />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-app">Vistrow Voice</h2>
@@ -1975,6 +2004,7 @@ export default function Automation() {
             .map(([platform, preset]) => {
               const Icon = preset.icon;
               const isWebsiteForm = platform === "Website Form";
+              const isVistrowVoice = platform === "Vistrow Voice";
               return (
                 <button
                   key={platform}
@@ -1993,8 +2023,8 @@ export default function Automation() {
                     }
                   }}
                 >
-                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isWebsiteForm ? "bg-[#21759b]" : preset.tone}`}>
-                    {isWebsiteForm ? <WordPressIcon /> : <Icon className="h-5 w-5" />}
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-2xl overflow-hidden ${isWebsiteForm ? "bg-[#21759b]" : isVistrowVoice ? "" : preset.tone}`}>
+                    {isWebsiteForm ? <WordPressIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={48} /> : <Icon className="h-5 w-5" />}
                   </div>
                   <h3 className="mt-4 text-base font-semibold text-app">{preset.label || platform}</h3>
                   <p className="mt-1 text-xs text-app-soft">{preset.description.split(".")[0]}</p>
@@ -2039,13 +2069,14 @@ export default function Automation() {
               const preset = PLATFORM_PRESETS[item.platform] || PLATFORM_PRESETS.Custom;
               const Icon = preset.icon;
               const isFb = item.platform === "Facebook";
+              const isVistrowVoice = item.platform === "Vistrow Voice";
               const endpointPath = item.webhookPath || "/api/leads";
               return (
                 <article key={item._id} className="card p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${isFb ? "bg-[#1877F2]" : preset.tone}`}>
-                        {isFb ? <FacebookIcon /> : <Icon className="h-4 w-4" />}
+                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden ${isFb ? "bg-[#1877F2]" : isVistrowVoice ? "" : preset.tone}`}>
+                        {isFb ? <FacebookIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={36} /> : <Icon className="h-4 w-4" />}
                       </div>
                       <div className="min-w-0">
                         <h3 className="truncate text-sm font-semibold text-app">{item.name}</h3>
