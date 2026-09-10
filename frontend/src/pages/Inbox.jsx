@@ -2,13 +2,15 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bot, Check, CheckCheck, ExternalLink,
-  RefreshCw, Send, Settings, User, X,
+  RefreshCw, Send, Settings, User, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import WhatsAppSettings from "../components/WhatsAppSettings";
 import WhatsAppIcon from "../components/WhatsAppIcon";
+import CreditTopUpModal from "../components/CreditTopUpModal";
 import { Modal } from "../components/UI";
+import toast from "react-hot-toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function fmt(date) {
@@ -121,10 +123,23 @@ export default function Inbox() {
   const [loadingMsgs, setLoadingMsgs]   = useState(false);
   const [filter, setFilter]             = useState("all"); // all | bot | open | resolved
   const [showSettings, setShowSettings] = useState(false);
+  const [credits, setCredits]           = useState(null);
+  const [showTopUp, setShowTopUp]       = useState(false);
   const threadRef = useRef(null);
   const pollRef   = useRef(null);
 
   const activeConv = conversations.find(c => c._id === activeId);
+
+  // Replies cost credits, so the composer's state depends on the balance. Free
+  // monthly replies count as spendable — a tenant on zero balance can still use
+  // those before anything is blocked.
+  const canSend = !credits
+    || credits.availablePaise >= (credits.ratesPaise?.service || 0)
+    || (credits.freeService?.remaining || 0) > 0;
+
+  const refreshCredits = useCallback(() => {
+    api.get("/credits/balance").then(r => setCredits(r.data)).catch(() => {});
+  }, []);
 
   // Check if WhatsApp is connected
   useEffect(() => {
@@ -132,6 +147,8 @@ export default function Inbox() {
       .then(r => setConnected(r.data.connected))
       .catch(() => setConnected(false));
   }, []);
+
+  useEffect(() => { refreshCredits(); }, [refreshCredits]);
 
   // Fetch conversations
   const fetchConvs = useCallback(async (silent = false) => {
@@ -201,6 +218,16 @@ export default function Inbox() {
     } catch (e) {
       setMessages(prev => prev.filter(m => m._id !== temp._id));
       setMsgInput(text);
+      // 402 is the credit cap, not a failure — the reply was never sent and
+      // nothing was charged. Send them straight to the top-up rather than
+      // leaving a generic error they can't act on.
+      if (e.response?.status === 402) {
+        toast.error("Out of WhatsApp credits — top up to keep replying.");
+        setShowTopUp(true);
+        refreshCredits();
+      } else {
+        toast.error(e.response?.data?.message || "Message failed to send.");
+      }
     } finally { setSending(false); }
   };
 
@@ -249,6 +276,17 @@ export default function Inbox() {
             <span className="text-sm font-bold text-app">Inbox</span>
           </div>
           <div className="flex items-center gap-1">
+            {credits && (
+              <button onClick={() => setShowTopUp(true)}
+                title="WhatsApp credits — click to top up"
+                className="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold transition mr-1"
+                style={canSend
+                  ? { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }
+                  : { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444" }}>
+                <Zap className="w-3 h-3" />
+                ₹{(credits.availablePaise / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+              </button>
+            )}
             <button onClick={() => setShowSettings(true)} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition" title="WhatsApp settings">
               <Settings className="w-3.5 h-3.5 text-app-soft" />
             </button>
@@ -359,6 +397,17 @@ export default function Inbox() {
                 <button onClick={() => api.patch(`/whatsapp/conversations/${activeId}`, { status: "open" }).then(() => fetchConvs())}
                   className="text-orange-500 hover:underline text-xs font-semibold">Reopen</button>
               </div>
+            ) : !canSend ? (
+              // Out of credits. The thread above stays readable — inbound
+              // messages are free and still arriving, so hiding them would
+              // only lose the tenant context they are paying to get back.
+              <div className="flex items-center justify-center gap-3 py-2">
+                <span className="text-sm text-app-soft">Out of credits — you can read, but not reply.</span>
+                <button onClick={() => setShowTopUp(true)}
+                  className="btn-primary rounded-full px-4 py-1.5 text-xs font-bold flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" /> Add credits
+                </button>
+              </div>
             ) : (
               <div className="flex items-end gap-2">
                 <textarea
@@ -382,6 +431,12 @@ export default function Inbox() {
         </div>
       )}
     </div>
+
+    <CreditTopUpModal
+      open={showTopUp}
+      onClose={() => setShowTopUp(false)}
+      onSuccess={refreshCredits}
+    />
 
     <Modal open={showSettings} onClose={() => setShowSettings(false)} title="WhatsApp settings" size="lg">
       <WhatsAppSettings onConnected={() => { setConnected(true); setShowSettings(false); }} />

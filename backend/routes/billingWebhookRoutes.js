@@ -14,6 +14,7 @@ const router = express.Router();
 const logger = require("../config/logger");
 const rzp = require("../services/razorpayService");
 const { applyPayment, markFailed } = require("../services/billingService");
+const creditTopUp = require("../services/creditTopUpService");
 
 // Capture the untouched bytes for signature verification. express.json's verify
 // hook runs before parsing, so req.rawBody is the exact payload Razorpay signed.
@@ -47,7 +48,21 @@ router.post("/", async (req, res) => {
   const paymentId = entity.id;
 
   try {
-    if (event === "payment.captured") {
+    // Razorpay sends every captured payment on the account here, plan terms and
+    // WhatsApp credit top-ups alike, so dispatch on which table owns the order.
+    // Credits are checked first because that lookup is a cheap indexed exists().
+    const isCredit = await creditTopUp.isCreditOrder(orderId);
+
+    if (event === "payment.captured" && isCredit) {
+      const result = await creditTopUp.applyTopUp(orderId, paymentId);
+      logger.info(
+        `[billing webhook] payment.captured ${paymentId} for credit order ${orderId} — ` +
+        (result.applied ? `granted ${result.order.creditPaise}p` : "already applied")
+      );
+    } else if (event === "payment.failed" && isCredit) {
+      await creditTopUp.markFailed(orderId, entity.error_description || entity.error_reason);
+      logger.info(`[billing webhook] credit top-up failed for order ${orderId}: ${entity.error_description || "no reason given"}`);
+    } else if (event === "payment.captured") {
       const result = await applyPayment(orderId, paymentId);
       logger.info(
         `[billing webhook] payment.captured ${paymentId} for order ${orderId} — ` +

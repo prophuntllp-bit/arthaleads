@@ -3,6 +3,7 @@ import { X, Loader2, ShieldCheck, Minus, Plus } from "lucide-react";
 import api from "../services/api";
 import { formatINR, freeMonths } from "../utils/plan";
 import toast from "react-hot-toast";
+import { loadRazorpay, RZP_LOAD_ERROR } from "../utils/razorpay";
 
 /**
  * Razorpay Checkout for a plan subscription.
@@ -12,54 +13,6 @@ import toast from "react-hot-toast";
  * local estimate below is only so the seat stepper feels instant. If the two
  * ever disagreed, the server's number is the one that gets charged.
  */
-
-const RZP_SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
-
-// How long to wait for checkout.js before giving up. An ad blocker or a DNS
-// filter can drop the request in a way that fires NEITHER load nor error, so
-// waiting on those events alone can hang forever.
-const RZP_LOAD_TIMEOUT_MS = 8000;
-
-// Checkout.js is loaded on demand rather than in index.html: most sessions
-// never open this modal, and it is a third-party script on every page load.
-//
-// Every failure path must remove the <script> tag it created. An earlier
-// version looked for an existing tag and attached fresh load/error listeners
-// to it — but a tag that has already failed will never fire either event
-// again, so the promise never settled and the Pay button span forever on
-// every attempt after the first. A transient blip on the first click bricked
-// checkout until a full page reload.
-function loadRazorpay() {
-  if (window.Razorpay) return Promise.resolve(true);
-
-  return new Promise((resolve) => {
-    // Always start from a clean slate — a leftover tag is, by definition, one
-    // that did not succeed.
-    document
-      .querySelectorAll(`script[src="${RZP_SCRIPT}"]`)
-      .forEach((el) => el.remove());
-
-    const s = document.createElement("script");
-    s.src = RZP_SCRIPT;
-
-    let settled = false;
-    const finish = (ok) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      // Leave the tag in place only when it actually gave us window.Razorpay,
-      // so the next attempt genuinely retries instead of inheriting a corpse.
-      if (!ok) s.remove();
-      resolve(ok);
-    };
-
-    const timer = setTimeout(() => finish(false), RZP_LOAD_TIMEOUT_MS);
-    s.onload = () => finish(Boolean(window.Razorpay));
-    s.onerror = () => finish(false);
-
-    document.body.appendChild(s);
-  });
-}
 
 export default function CheckoutModal({ open, planId, onClose, onSuccess, org }) {
   const [config, setConfig] = useState(null);
@@ -105,15 +58,7 @@ export default function CheckoutModal({ open, planId, onClose, onSuccess, org })
     setLoadErr("");   // clear any previous failure so a retry starts clean
     try {
       const ok = await loadRazorpay();
-      // By far the most common cause is an ad blocker or privacy extension
-      // dropping checkout.razorpay.com, not a flaky connection — so name that
-      // first. "Check your connection" sends people to look in the wrong place.
-      if (!ok) {
-        throw new Error(
-          "Couldn't load the payment window. An ad blocker or privacy extension is usually the cause — " +
-          "pause it for this site, or try a different browser, then retry."
-        );
-      }
+      if (!ok) throw new Error(RZP_LOAD_ERROR);
 
       const { data } = await api.post("/billing/order", { plan: planId, seats, cycle });
       const { order, quote, keyId } = data;
