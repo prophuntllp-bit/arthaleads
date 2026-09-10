@@ -464,7 +464,7 @@ export default function HelpBot() {
   // The WhatsApp Inbox is its own conversation surface — the floating "Artha"
   // bubble sits on top of the real chat there and duplicates it, so it stays
   // off that page entirely rather than just leaving room for it.
-  if (location.pathname.startsWith("/conversations")) return null;
+  if (location.pathname === "/conversations") return null;
 
   return (
     <>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import {
   Bot, Check, CheckCheck, ExternalLink,
   RefreshCw, Send, Settings, User, X, Zap,
@@ -113,7 +113,6 @@ export default function Inbox() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [connected, setConnected]       = useState(null); // null=loading
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId]         = useState(null);
   const [messages, setMessages]         = useState([]);
@@ -123,8 +122,12 @@ export default function Inbox() {
   const [loadingMsgs, setLoadingMsgs]   = useState(false);
   const [filter, setFilter]             = useState("all"); // all | bot | open | resolved
   const [showSettings, setShowSettings] = useState(false);
-  const [credits, setCredits]           = useState(null);
   const [showTopUp, setShowTopUp]       = useState(false);
+
+  // The connection gate and the credit balance both live in
+  // ConversationsLayout, so every page under /conversations reads one
+  // consistent answer instead of each fetching its own.
+  const { credits, refreshCredits, setConnected } = useOutletContext();
   const threadRef = useRef(null);
   const pollRef   = useRef(null);
 
@@ -136,19 +139,6 @@ export default function Inbox() {
   const canSend = !credits
     || credits.availablePaise >= (credits.ratesPaise?.service || 0)
     || (credits.freeService?.remaining || 0) > 0;
-
-  const refreshCredits = useCallback(() => {
-    api.get("/credits/balance").then(r => setCredits(r.data)).catch(() => {});
-  }, []);
-
-  // Check if WhatsApp is connected
-  useEffect(() => {
-    api.get("/whatsapp/settings")
-      .then(r => setConnected(r.data.connected))
-      .catch(() => setConnected(false));
-  }, []);
-
-  useEffect(() => { refreshCredits(); }, [refreshCredits]);
 
   // Fetch conversations
   const fetchConvs = useCallback(async (silent = false) => {
@@ -238,26 +228,7 @@ export default function Inbox() {
     setConversations(prev => prev.map(c => c._id === activeId ? { ...c, ...data.conversation } : c));
   };
 
-  // ── Not connected: show setup inline, no redirect ────────────────────────
-  if (connected === false) {
-    return (
-      <div className="stitch-page">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-            style={{ background: "rgba(37,211,102,0.12)" }}>
-            <WhatsAppIcon className="w-5 h-5" style={{ color: "#25D366" }} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-app">WhatsApp Conversations</h1>
-            <p className="text-xs text-app-soft">Connect your number to start receiving and sending messages</p>
-          </div>
-        </div>
-        <WhatsAppSettings onConnected={() => setConnected(true)} />
-      </div>
-    );
-  }
 
-  if (connected === null) return null;
 
   return (
     <>

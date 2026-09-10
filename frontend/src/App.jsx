@@ -388,6 +388,9 @@ const ProjectDetail  = lazy(() => import("./pages/ProjectDetail"));
 const DumpLeads      = lazy(() => import("./pages/DumpLeads"));
 const FollowUps      = lazy(() => import("./pages/FollowUps"));
 const Inbox          = lazy(() => import("./pages/Inbox"));
+const ConversationsLayout   = lazy(() => import("./pages/conversations/ConversationsLayout"));
+const CreditsPage           = lazy(() => import("./pages/conversations/CreditsPage"));
+const ConversationSettings  = lazy(() => import("./pages/conversations/ConversationSettings"));
 const Tasks          = lazy(() => import("./pages/Tasks"));
 const Attendance     = lazy(() => import("./pages/Attendance"));
 const SuperAdmin     = lazy(() => import("./pages/SuperAdmin"));
@@ -608,7 +611,7 @@ function RequireAuth() {
           floating HelpBot bubble, so scrolled-to-bottom content never sits
           underneath it. Skipped on /conversations, where HelpBot hides itself
           and Inbox owns a fixed h-[calc(100vh-4rem)] panel with no scroll to pad. */}
-      <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname.startsWith("/conversations") ? "" : "pb-24"}`}>
+      <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname === "/conversations" ? "" : "pb-24"}`}>
         <Outlet />
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}
@@ -787,7 +790,11 @@ export default function App() {
             <Route path="/projects"      element={<Projects />} />
             <Route path="/projects/:id"  element={<ProjectDetail />} />
             <Route path="/followups"     element={<FollowUps />} />
-            <Route path="/conversations"  element={<Inbox />} />
+            <Route path="/conversations" element={<ConversationsLayout />}>
+              <Route index element={<Inbox />} />
+              <Route path="credits"  element={<CreditsPage />} />
+              <Route path="settings" element={<ConversationSettings />} />
+            </Route>
             <Route path="/calls"          element={<Calls />} />
             <Route path="/tasks"         element={<Tasks />} />
             <Route path="/attendance"    element={<Attendance />} />
