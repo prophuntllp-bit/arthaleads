@@ -430,14 +430,14 @@ export default function Settings() {
     }
   }, [org?.autoAssign]);
 
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    avatar: "",
-    role: "agent",
+  const [form, setForm] = useState(() => ({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    avatar: user?.avatar || "",
+    role: user?.role || "agent",
     currentPassword: "",
     newPassword: "",
-  });
+  }));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -451,7 +451,11 @@ export default function Settings() {
     });
   }, [user]);
 
-  const profilePreview = useMemo(() => form.avatar || user?.avatar || "", [form.avatar, user?.avatar]);
+  // form.avatar is seeded from the user and is the only thing this form edits,
+  // so it is the source of truth. Falling back to user.avatar made removal
+  // invisible: clearing the field just revealed the saved photo again, so
+  // "Remove photo" looked like it had done nothing.
+  const profilePreview = form.avatar;
 
   const setValue = (key) => (event) => {
     setForm((current) => ({ ...current, [key]: event.target.value }));

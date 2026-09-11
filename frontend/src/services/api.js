@@ -108,6 +108,15 @@ api.interceptors.response.use(
       return new Promise(() => {});
     }
 
+    // A rate limit used to surface as every request on the page failing at once
+    // with no explanation — a dashboard that fans out several calls just looked
+    // broken. One deduped toast says what actually happened; the rejection still
+    // propagates so each caller's own error handling runs as normal.
+    if (status === 429) {
+      toast.error(msg || "Too many requests — wait a moment and try again.", { id: "rate-limited" });
+      return Promise.reject(err);
+    }
+
     if (status === 403) {
       if (msg === "ORGANISATION_INACTIVE") window.dispatchEvent(new CustomEvent("org:inactive"));
       if (msg === "TRIAL_EXPIRED")         window.dispatchEvent(new CustomEvent("trial:expired"));

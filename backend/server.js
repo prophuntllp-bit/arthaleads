@@ -30,6 +30,7 @@ const helmet     = require("helmet");
 const morgan     = require("morgan");
 const rateLimit  = require("express-rate-limit");
 const cookieParser = require("cookie-parser");
+const jwt          = require("jsonwebtoken");
 
 const connectDB = require("./config/db");
 const logger = require("./config/logger");
@@ -181,10 +182,39 @@ app.use(cors({
 }));
 
 // Rate limiting
+//
+// This limiter is mounted globally, which means it runs long before any route's
+// `protect` middleware has had a chance to set req.user. Keying on
+// `req.user?._id || req.ip` therefore never once produced a user id — every
+// request fell back to the IP, so a whole office shared a single 200-request
+// budget and hit "Too many requests" during ordinary use. Dashboards that fan
+// out several calls on load burned through it especially fast.
+//
+// So the key is derived from the JWT directly. It is verified rather than just
+// decoded: an unverified token would let anyone mint a fresh bucket per request
+// and skip the limit entirely.
+function rateLimitKey(req) {
+  const token = req.cookies?.crm_token
+    || (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.slice(7) : null);
+  if (token) {
+    try {
+      const { id, _id, sub } = jwt.verify(token, process.env.JWT_SECRET);
+      const uid = id || _id || sub;
+      if (uid) return `u:${uid}`;
+    } catch { /* expired or forged — fall through to IP */ }
+  }
+  return `ip:${req.ip}`;
+}
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_GENERAL) || 200,
-  keyGenerator: (req) => req.user?._id?.toString() || req.ip,
+  // A signed-in person working normally makes far more requests than an
+  // anonymous visitor, and is now billed to their own bucket rather than the
+  // building's.
+  max: (req) => (rateLimitKey(req).startsWith("u:")
+    ? parseInt(process.env.RATE_LIMIT_USER) || 1500
+    : parseInt(process.env.RATE_LIMIT_GENERAL) || 200),
+  keyGenerator: rateLimitKey,
   message: { success: false, message: "Too many requests, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -207,6 +237,9 @@ const blogLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Cookies are parsed first so the limiter above can read the session token and
+// charge the request to the person who made it rather than to their office.
+app.use(cookieParser());
 app.use(generalLimiter);
 
 // ── Logging ───────────────────────────────────────────────────────────────────
@@ -221,7 +254,6 @@ app.use("/api/billing/webhook", require("./routes/billingWebhookRoutes"));
 // ── Body Parsing + Cookie Parsing ─────────────────────────────────────────────
 app.use(express.json({ limit: "8mb" }));
 app.use(express.urlencoded({ extended: true, limit: "8mb" }));
-app.use(cookieParser());
 
 // ── Global API hardening headers ──────────────────────────────────────────────
 // Applied to every /api/* and /webhook response - not the frontend.
