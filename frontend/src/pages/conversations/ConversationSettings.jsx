@@ -1,28 +1,38 @@
 import { useOutletContext } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import WhatsAppSettings from "../../components/WhatsAppSettings";
 
 /**
- * Settings as its own route rather than only a modal.
+ * Settings as its own route, not only a modal: linkable, survives a refresh,
+ * and has room for the connection, delivery check and assistant together.
  *
- * The modal stays — it is the right affordance for a quick credential fix
- * without losing your place in a conversation. This route exists so the screen
- * is linkable, survives a refresh, and has somewhere to grow: business profile,
- * quality rating and messaging tier all belong here and none of them fit
- * comfortably in a dialog.
+ * The tab is hidden from non-admins, but the URL can still be typed. Saving is
+ * admin-only on the server, so anyone else gets an explanation rather than a
+ * form that fails on submit.
  */
 export default function ConversationSettings() {
-  const { setConnected, refreshCredits } = useOutletContext();
+  const { reloadStatus, refreshCredits, isAdmin } = useOutletContext();
 
   return (
-    <div className="stitch-page">
+    <div className="stitch-page !pt-2">
       <div className="mb-6">
         <h1 className="text-lg font-bold text-app">WhatsApp settings</h1>
-        <p className="text-xs text-app-soft">Connection, credentials and the AI assistant</p>
+        <p className="text-xs text-app-soft">Connection, message delivery and the AI assistant</p>
       </div>
 
-      <WhatsAppSettings
-        onConnected={() => { setConnected(true); refreshCredits(); }}
-      />
+      {isAdmin ? (
+        <WhatsAppSettings
+          onConnected={() => { reloadStatus?.(); refreshCredits?.(); }}
+          onDisconnected={() => reloadStatus?.()} />
+      ) : (
+        <div className="card p-10 text-center">
+          <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center stitch-surface-muted">
+            <ShieldCheck className="w-5 h-5 text-app-soft" />
+          </div>
+          <p className="text-sm font-bold text-app">Only admins can change WhatsApp settings</p>
+          <p className="text-xs text-app-soft mt-1">Ask an admin in your organisation if something here needs to change.</p>
+        </div>
+      )}
     </div>
   );
 }

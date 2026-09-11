@@ -1,12 +1,30 @@
 import { useEffect, useState } from "react";
 import {
-  Check, Copy, ExternalLink, Loader2, Wifi, WifiOff, X,
+  Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, Wifi, WifiOff, X,
+  CheckCircle2, AlertTriangle, Info,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import WhatsAppIcon from "./WhatsAppIcon";
 
+// Meta first: it is the only connection that supports templates, campaigns and
+// the delivery check below. The BSPs still work for replying in the inbox.
 const PROVIDERS = [
+  {
+    id: "meta",
+    name: "Meta Cloud API",
+    badge: "Official",
+    tagline: "Direct · No middleman",
+    pricing: "Templates, campaigns and inbox",
+    color: "#1877F2",
+    fields: ["apiKey", "wabaId", "phoneNumberId", "webhookVerifyToken"],
+    signupUrl: "https://developers.facebook.com/docs/whatsapp/cloud-api/get-started",
+    dashboardUrl: "https://developers.facebook.com",
+    webhookPath: "WhatsApp → Configuration → Webhook URL + Verify Token",
+    apiKeyLabel: "Permanent access token",
+    apiKeyPlaceholder: "EAAxxxxx… (permanent system user token)",
+    apiKeyHelp: "Business Settings → System users → Generate token, with the whatsapp_business_messaging and whatsapp_business_management permissions.",
+  },
   {
     id: "aisensy",
     name: "AiSensy",
@@ -17,10 +35,9 @@ const PROVIDERS = [
     signupUrl: "https://wa.aisensy.com/short/ad5a3s",
     dashboardUrl: "https://app.aisensy.com",
     webhookPath: "Settings → API → Webhook URL",
-    apiKeyLabel: "AiSensy API Key",
+    apiKeyLabel: "AiSensy API key",
     apiKeyPlaceholder: "Paste your AiSensy API key",
     apiKeyHelp: "AiSensy dashboard → Settings → API",
-    testNote: null,
   },
   {
     id: "wati",
@@ -32,13 +49,12 @@ const PROVIDERS = [
     signupUrl: "https://wati.io",
     dashboardUrl: "https://app.wati.io",
     webhookPath: "Settings → API & Webhooks → Webhook URL",
-    apiKeyLabel: "Wati API Token",
+    apiKeyLabel: "Wati API token",
     apiKeyPlaceholder: "Paste your Wati Bearer token",
     apiKeyHelp: "Wati dashboard → Manage → API, Docs and Webhooks",
-    endpointLabel: "Wati Account Endpoint",
+    endpointLabel: "Wati account endpoint",
     endpointPlaceholder: "https://live-mt-server.wati.io/123456",
     endpointHelp: "Your account URL from Wati (shown in dashboard top-right)",
-    testNote: null,
   },
   {
     id: "interakt",
@@ -50,45 +66,46 @@ const PROVIDERS = [
     signupUrl: "https://app.interakt.ai/signup",
     dashboardUrl: "https://app.interakt.ai",
     webhookPath: "Settings → Developers → Webhook URL",
-    apiKeyLabel: "Interakt API Key",
+    apiKeyLabel: "Interakt API key",
     apiKeyPlaceholder: "Paste your Interakt API key",
     apiKeyHelp: "Interakt dashboard → Settings → Developers → API Key",
-    testNote: null,
-  },
-  {
-    id: "meta",
-    name: "Meta Cloud API",
-    tagline: "Direct · No middleman",
-    pricing: "Free API · Requires Meta Business",
-    color: "#1877F2",
-    fields: ["apiKey", "phoneNumberId", "webhookVerifyToken"],
-    signupUrl: "https://developers.facebook.com/docs/whatsapp/cloud-api/get-started",
-    dashboardUrl: "https://developers.facebook.com",
-    webhookPath: "WhatsApp → Configuration → Webhook URL + Verify Token",
-    apiKeyLabel: "Permanent Access Token",
-    apiKeyPlaceholder: "EAAxxxxx… (permanent system user token)",
-    apiKeyHelp: "Meta Business Manager → System Users → Generate Token",
-    testNote: "Meta requires the customer to have messaged your business first within the last 24 hours before you can send a free-form message.",
   },
 ];
 
-export default function WhatsAppSettings({ onConnected } = {}) {
-  const [provider, setProvider]       = useState("aisensy");
+function StepHead({ n, children }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
+        style={{ background: "var(--app-primary)" }}>{n}</span>
+      <h3 className="text-base font-bold text-app">{children}</h3>
+    </div>
+  );
+}
+
+export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
+  const [provider, setProvider]       = useState("meta");
   const [savedProvider, setSavedProvider] = useState("");
   const [connected, setConnected]     = useState(false);
   const [hasKeyRaw, setHasKeyRaw]     = useState(false);
   const [orgId, setOrgId]             = useState("");
   const [apiKey, setApiKey]           = useState("");
+  const [showKey, setShowKey]         = useState(false);
   const [accountEndpoint, setAccountEndpoint] = useState("");
   const [phoneNumberId, setPhoneNumberId]     = useState("");
+  const [wabaId, setWabaId]           = useState("");
+  const [savedWabaId, setSavedWabaId] = useState("");
   const [webhookVerifyToken, setWebhookVerifyToken] = useState("");
   const [testPhone, setTestPhone]     = useState("");
   const [botName, setBotName]         = useState("Artha Assistant");
   const [botPrompt, setBotPrompt]     = useState("");
   const [saving, setSaving]           = useState(false);
+  const [savingCreds, setSavingCreds] = useState(false);
   const [testing, setTesting]         = useState(false);
+  const [webhook, setWebhook]         = useState(null);   // last subscription check result
+  const [checking, setChecking]       = useState(false);
 
   const prov = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
+  const isMeta = provider === "meta";
 
   // A saved key only counts for the provider it was saved under. Switching
   // provider (e.g. Meta → AiSensy) makes the old key useless, so force a
@@ -116,10 +133,14 @@ export default function WhatsAppSettings({ onConnected } = {}) {
       setConnected(r.data.connected);
       setHasKeyRaw(!!s.hasApiKey);
       setOrgId(r.data.orgId || "");
-      setProvider(s.provider || "aisensy");
-      setSavedProvider(s.provider || "");
+      // The stored provider defaults to "aisensy" even when nothing was ever
+      // set up, so only trust it once a key has actually been saved.
+      setProvider(s.hasApiKey ? (s.provider || "aisensy") : "meta");
+      setSavedProvider(s.hasApiKey ? (s.provider || "aisensy") : "");
       setAccountEndpoint(s.accountEndpoint || "");
       setPhoneNumberId(s.phoneNumberId || "");
+      setWabaId(s.wabaId || "");
+      setSavedWabaId(s.wabaId || "");
       setWebhookVerifyToken(s.webhookVerifyToken || "");
       setBotName(s.botName || "Artha Assistant");
       setBotPrompt(s.botSystemPrompt || "");
@@ -128,51 +149,98 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
-    toast.success("Webhook URL copied!");
+    toast.success("Webhook URL copied");
+  };
+
+  const buildPatch = () => {
+    const patch = { provider };
+    if (apiKey.trim())             patch.apiKey             = apiKey.trim();
+    if (accountEndpoint.trim())    patch.accountEndpoint    = accountEndpoint.trim();
+    if (phoneNumberId.trim())      patch.phoneNumberId      = phoneNumberId.trim();
+    if (webhookVerifyToken.trim()) patch.webhookVerifyToken = webhookVerifyToken.trim();
+    if (isMeta)                    patch.wabaId             = wabaId.trim();
+    return patch;
+  };
+
+  const afterSave = () => {
+    setHasKeyRaw(true);
+    setSavedProvider(provider);
+    if (isMeta) setSavedWabaId(wabaId.trim());
+    setApiKey("");
   };
 
   const connectAndTest = async () => {
-    if (!apiKey.trim() && !hasKey) { toast.error("Enter your API key first"); return; }
+    if (!apiKey.trim() && !hasKey) { toast.error("Enter your access key first"); return; }
     if (!testPhone.trim())          { toast.error("Enter a phone number for the test message"); return; }
     setTesting(true);
     try {
-      const patch = { provider };
-      if (apiKey.trim())            patch.apiKey            = apiKey.trim();
-      if (accountEndpoint.trim())   patch.accountEndpoint   = accountEndpoint.trim();
-      if (phoneNumberId.trim())     patch.phoneNumberId     = phoneNumberId.trim();
-      if (webhookVerifyToken.trim()) patch.webhookVerifyToken = webhookVerifyToken.trim();
-      await api.patch("/whatsapp/settings", patch);
-      await api.post("/whatsapp/settings/test", { testPhone: testPhone.replace(/\D/g, "") });
+      await api.patch("/whatsapp/settings", buildPatch());
+      afterSave();
+      const { data } = await api.post("/whatsapp/settings/test", { testPhone: testPhone.replace(/\D/g, "") });
       setConnected(true);
-      setHasKeyRaw(true);
-      setSavedProvider(provider);
-      toast.success("WhatsApp connected! Check your phone for the test message.");
+      if (data?.webhook?.applicable) setWebhook(data.webhook);
+      if (data?.webhook?.applicable && !data.webhook.subscribed) {
+        toast("Test message sent — but incoming messages are not set up yet. See step 2.", { icon: "⚠️", duration: 8000 });
+      } else {
+        toast.success("WhatsApp connected. Check your phone for the test message.");
+      }
       onConnected?.();
     } catch (e) {
-      toast.error(e.response?.data?.message || "Connection failed. Check your credentials.");
+      const d = e.response?.data;
+      toast.error(d?.detail ? `${d.message} ${d.detail}` : (d?.message || "Connection failed. Check your credentials."), { duration: 8000 });
     } finally { setTesting(false); }
+  };
+
+  // For changing one field (a new WABA ID, a rotated token) without sending
+  // another test message. Only offered once a key is already saved.
+  const saveOnly = async () => {
+    setSavingCreds(true);
+    try {
+      await api.patch("/whatsapp/settings", buildPatch());
+      afterSave();
+      toast.success("Saved");
+      onConnected?.();
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Could not save");
+    } finally { setSavingCreds(false); }
+  };
+
+  const checkWebhook = async () => {
+    setChecking(true);
+    try {
+      const { data } = await api.post("/whatsapp/settings/webhook-check");
+      setWebhook(data);
+      if (data.subscribed) toast.success("Incoming messages are set up");
+    } catch (e) {
+      setWebhook({ applicable: true, subscribed: false, error: e.response?.data?.message || "Check failed" });
+    } finally { setChecking(false); }
   };
 
   const saveBotSettings = async () => {
     setSaving(true);
     try {
       await api.patch("/whatsapp/settings", { botName, botSystemPrompt: botPrompt });
-      toast.success("Bot settings saved");
+      toast.success("Assistant settings saved");
     } catch { toast.error("Failed to save"); }
     finally { setSaving(false); }
   };
 
   const disconnect = async () => {
     if (!confirm("Disconnect WhatsApp? Your conversation history will be kept.")) return;
-    await api.patch("/whatsapp/settings", { enabled: false });
-    setConnected(false);
-    toast.success("Disconnected");
+    try {
+      await api.patch("/whatsapp/settings", { enabled: false });
+      setConnected(false);
+      toast.success("Disconnected");
+      onDisconnected?.();
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Could not disconnect");
+    }
   };
 
   return (
     <div className="space-y-5">
 
-      {/* Status badge */}
+      {/* Status */}
       <div className="flex items-center gap-3 rounded-2xl px-4 py-3"
         style={connected
           ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }
@@ -180,9 +248,13 @@ export default function WhatsAppSettings({ onConnected } = {}) {
         {connected
           ? <Wifi className="w-4 h-4 text-green-500 shrink-0" />
           : <WifiOff className="w-4 h-4 text-app-soft shrink-0" />}
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-app">{connected ? "WhatsApp Connected" : "WhatsApp not connected"}</p>
-          <p className="text-sm text-app-soft">{connected ? `Connected via ${prov.name}. AI bot is active.` : "Pick a provider below and follow the steps to connect."}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-app">{connected ? "WhatsApp connected" : "WhatsApp not connected"}</p>
+          <p className="text-sm text-app-soft">
+            {connected
+              ? `Connected via ${PROVIDERS.find(p => p.id === savedProvider)?.name || prov.name}.`
+              : "Pick a provider below and follow the steps to connect."}
+          </p>
         </div>
         {connected && (
           <button onClick={disconnect} className="text-sm text-red-400 hover:text-red-500 font-semibold flex items-center gap-1 shrink-0">
@@ -193,13 +265,12 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
       {/* ── Step 1: Choose provider ──────────────────────────────────────────── */}
       <div className="card p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
-            style={{ background: "var(--app-primary)" }}>1</span>
-          <h3 className="text-base font-bold text-app">Choose your WhatsApp provider</h3>
-        </div>
-        <p className="text-sm text-app-soft pl-8">All options let you send and receive WhatsApp messages. BSPs (AiSensy, Wati, Interakt) handle Meta verification for you — no developer setup needed.</p>
-        <div className="pl-8 grid grid-cols-2 gap-3">
+        <StepHead n={1}>Choose your WhatsApp provider</StepHead>
+        <p className="text-sm text-app-soft pl-8">
+          Connect directly to Meta, or through a provider (AiSensy, Wati, Interakt) that handles
+          Meta verification for you. Templates and campaigns need the direct Meta connection.
+        </p>
+        <div className="pl-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {PROVIDERS.map(p => (
             <button key={p.id} onClick={() => setProvider(p.id)}
               className="text-left rounded-xl p-3 transition-all"
@@ -209,6 +280,10 @@ export default function WhatsAppSettings({ onConnected } = {}) {
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
                 <span className="text-sm font-bold text-app">{p.name}</span>
+                {p.badge && (
+                  <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                    style={{ background: `${p.color}1f`, color: p.color }}>{p.badge}</span>
+                )}
                 {provider === p.id && <Check className="w-3.5 h-3.5 ml-auto" style={{ color: p.color }} />}
               </div>
               <p className="text-xs text-app-soft">{p.tagline}</p>
@@ -221,7 +296,7 @@ export default function WhatsAppSettings({ onConnected } = {}) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold text-white transition"
             style={{ background: prov.color }}>
             <WhatsAppIcon className="w-4 h-4" />
-            Create {prov.name} account
+            {isMeta ? "Meta setup guide" : `Create ${prov.name} account`}
             <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </a>
           <a href={prov.dashboardUrl} target="_blank" rel="noopener noreferrer"
@@ -234,15 +309,12 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
       {/* ── Step 2: Webhook ──────────────────────────────────────────────────── */}
       <div className="card p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
-            style={{ background: "var(--app-primary)" }}>2</span>
-          <h3 className="text-base font-bold text-app">Set your Webhook URL in {prov.name}</h3>
-        </div>
+        <StepHead n={2}>Set your webhook URL in {prov.name}</StepHead>
         <p className="text-sm text-app-soft pl-8">
-          In your {prov.name} dashboard → {prov.webhookPath}, paste this URL so incoming messages reach your inbox:
+          In your {prov.name} dashboard → {prov.webhookPath}, paste this URL so incoming messages,
+          delivery updates and read receipts reach your inbox:
         </p>
-        <div className="pl-8">
+        <div className="pl-8 space-y-3">
           <div className="flex items-center gap-2 rounded-xl px-3 py-2.5"
             style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
             <code className="flex-1 text-xs text-orange-500 truncate">{webhookUrl}</code>
@@ -252,32 +324,72 @@ export default function WhatsAppSettings({ onConnected } = {}) {
               <Copy className="w-3.5 h-3.5" /> Copy
             </button>
           </div>
+
+          {/* Meta verifies the URL and still delivers nothing until the app is
+              subscribed to the business account — this checks that step. */}
+          {isMeta && (
+            <div className="rounded-xl px-3 py-3 space-y-2"
+              style={webhook?.subscribed
+                ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }
+                : webhook
+                  ? { background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)" }
+                  : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <div className="flex items-start gap-2">
+                {webhook?.subscribed
+                  ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803d" }} />
+                  : webhook
+                    ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b45309" }} />
+                    : <Info className="w-4 h-4 shrink-0 mt-0.5 text-app-soft" />}
+                <p className="text-xs flex-1" style={{ color: webhook?.subscribed ? "#15803d" : webhook ? "#b45309" : "var(--app-text-soft)" }}>
+                  {webhook?.subscribed
+                    ? `Incoming messages are set up${webhook.appName ? ` — ${webhook.appName} is subscribed to your business account` : ""}.`
+                    : webhook?.error
+                      ? webhook.error
+                      : webhook
+                        ? "Your app is not subscribed to this business account yet, so incoming messages will not arrive."
+                        : "After Meta verifies the URL, your app also has to be subscribed to your business account before any message arrives. Checking does that for you."}
+                </p>
+              </div>
+              <button onClick={checkWebhook} disabled={checking || !hasKey || !savedWabaId}
+                className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+                {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                {webhook ? "Check again" : "Check incoming messages"}
+              </button>
+              {(!hasKey || !savedWabaId) && (
+                <p className="text-[11px] text-app-soft">Save your access token and Business Account ID in step 3 first.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Step 3: Credentials ──────────────────────────────────────────────── */}
       <div className="card p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
-            style={{ background: "var(--app-primary)" }}>3</span>
-          <h3 className="text-base font-bold text-app">Enter your {prov.name} credentials</h3>
-        </div>
-
-        {prov.testNote && (
-          <div className="ml-8 rounded-xl px-3 py-2 text-sm text-amber-700"
-            style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}>
-            {prov.testNote}
-          </div>
-        )}
+        <StepHead n={3}>Enter your {prov.name} credentials</StepHead>
 
         <div className="pl-8 space-y-3">
           <div>
             <label className="text-xs font-semibold text-app-soft mb-1 block">{prov.apiKeyLabel}</label>
-            <input className="input w-full" type="password"
-              placeholder={hasKey ? "Saved — enter new key to replace" : prov.apiKeyPlaceholder}
-              value={apiKey} onChange={e => setApiKey(e.target.value)} />
+            <div className="relative">
+              <input className="input w-full pr-11" type={showKey ? "text" : "password"} autoComplete="off"
+                placeholder={hasKey ? "Saved — enter a new one to replace it" : prov.apiKeyPlaceholder}
+                value={apiKey} onChange={e => setApiKey(e.target.value)} />
+              <button type="button" onClick={() => setShowKey(v => !v)} title={showKey ? "Hide" : "Show"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg text-app-soft hover:text-app transition">
+                {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             <p className="text-xs text-app-soft mt-1">{prov.apiKeyHelp}</p>
           </div>
+
+          {prov.fields.includes("wabaId") && (
+            <div>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">WhatsApp Business Account ID</label>
+              <input className="input w-full font-mono" placeholder="e.g. 102290129340398" inputMode="numeric"
+                value={wabaId} onChange={e => setWabaId(e.target.value.replace(/\D/g, ""))} />
+              <p className="text-xs text-app-soft mt-1">WhatsApp Manager → Account tools → the ID under your business name. Needed for templates and campaigns.</p>
+            </div>
+          )}
 
           {prov.fields.includes("accountEndpoint") && (
             <div>
@@ -291,59 +403,80 @@ export default function WhatsAppSettings({ onConnected } = {}) {
 
           {prov.fields.includes("phoneNumberId") && (
             <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">Phone Number ID</label>
-              <input className="input w-full" placeholder="e.g. 123456789012345"
-                value={phoneNumberId} onChange={e => setPhoneNumberId(e.target.value)} />
-              <p className="text-xs text-app-soft mt-1">Meta Business Manager → WhatsApp → Phone Numbers → Phone Number ID</p>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">Phone number ID</label>
+              <input className="input w-full font-mono" placeholder="e.g. 123456789012345" inputMode="numeric"
+                value={phoneNumberId} onChange={e => setPhoneNumberId(e.target.value.replace(/\D/g, ""))} />
+              <p className="text-xs text-app-soft mt-1">WhatsApp Manager → Phone numbers → the ID beside your number (not the number itself).</p>
             </div>
           )}
 
           {prov.fields.includes("webhookVerifyToken") && (
             <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">Webhook Verify Token</label>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">Webhook verify token</label>
               <input className="input w-full" placeholder="A secret string you choose (e.g. artha-webhook-2024)"
                 value={webhookVerifyToken} onChange={e => setWebhookVerifyToken(e.target.value)} />
-              <p className="text-xs text-app-soft mt-1">Set the same string in Meta dashboard when configuring the webhook</p>
+              <p className="text-xs text-app-soft mt-1">Enter the same string in Meta when you add the webhook URL.</p>
             </div>
           )}
 
           <div>
-            <label className="text-xs font-semibold text-app-soft mb-1 block">Your WhatsApp number (to receive test message)</label>
+            <label className="text-xs font-semibold text-app-soft mb-1 block">Your WhatsApp number (receives the test message)</label>
             <input className="input w-full" type="tel" placeholder="e.g. 919876543210 (with country code, no +)"
               value={testPhone} onChange={e => setTestPhone(e.target.value)} />
+            {isMeta && (
+              <p className="text-xs mt-1.5 rounded-xl px-3 py-2"
+                style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#b45309" }}>
+                Meta only delivers the test message if this phone has messaged your business number in
+                the last 24 hours. Send it a quick “hi” first.
+              </p>
+            )}
           </div>
 
-          <button onClick={connectAndTest} disabled={testing || (!apiKey.trim() && !hasKey)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition disabled:opacity-40 text-white"
-            style={{ background: prov.color }}>
-            {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
-            {testing ? "Connecting…" : connected ? "Reconnect & Test" : "Connect & Test"}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <button onClick={connectAndTest} disabled={testing || savingCreds || (!apiKey.trim() && !hasKey)}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition disabled:opacity-40 text-white"
+              style={{ background: prov.color }}>
+              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
+              {testing ? "Connecting…" : connected ? "Reconnect & test" : "Connect & test"}
+            </button>
+            {hasKey && (
+              <button onClick={saveOnly} disabled={testing || savingCreds}
+                className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold disabled:opacity-40">
+                {savingCreds ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                Save without testing
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-app-soft">
+            {isMeta
+              ? "Saves your credentials, sends a test message to the number above and subscribes your app to incoming messages."
+              : "Saves your credentials and sends a test message to the number above."}
+          </p>
         </div>
       </div>
 
-      {/* ── Bot settings ─────────────────────────────────────────────────────── */}
+      {/* ── Assistant ────────────────────────────────────────────────────────── */}
       {(connected || hasKey) && (
         <div className="card p-5 space-y-4">
-          <h3 className="text-base font-bold text-app">AI Bot Settings</h3>
+          <h3 className="text-base font-bold text-app">AI assistant</h3>
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">Bot Name</label>
+              <label className="text-xs font-semibold text-app-soft mb-1 block">Assistant name</label>
               <input className="input w-full" placeholder="Artha Assistant"
                 value={botName} onChange={e => setBotName(e.target.value)} />
             </div>
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Custom Instructions <span className="text-app-soft font-normal">(optional)</span>
+                Custom instructions <span className="text-app-soft font-normal">(optional)</span>
               </label>
               <textarea className="input w-full resize-none" rows={3}
-                placeholder="Leave blank for default real estate assistant. Write custom personality or knowledge instructions here."
+                placeholder="Leave blank for the default real-estate assistant. Write a custom personality or knowledge here."
                 value={botPrompt} onChange={e => setBotPrompt(e.target.value)} />
             </div>
             <button onClick={saveBotSettings} disabled={saving}
               className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              {saving ? "Saving…" : "Save Bot Settings"}
+              {saving ? "Saving…" : "Save assistant settings"}
             </button>
           </div>
         </div>

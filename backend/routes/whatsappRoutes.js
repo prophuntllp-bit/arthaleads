@@ -408,6 +408,28 @@ router.post("/webhook", async (req, res) => {
 // ── All routes below require authentication ───────────────────────────────────
 router.use(protect);
 
+// Lightweight connection check any signed-in member can call. /settings is
+// admin/manager-only and carries configuration, so using it to decide whether
+// to show the inbox locked agents out completely: their 403 read as not
+// connected, and they were handed a setup form they could not save either.
+router.get("/status", async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId)
+      .select("whatsapp.enabled whatsapp.provider whatsapp.apiKey whatsapp.displayPhoneNumber whatsapp.qualityRating whatsapp.wabaId")
+      .lean();
+    const wa = org?.whatsapp || {};
+    res.json({
+      connected: !!(wa.apiKey && wa.enabled),
+      provider: wa.provider || null,
+      displayPhoneNumber: wa.displayPhoneNumber || "",
+      qualityRating: wa.qualityRating || "",
+      hasWabaId: !!wa.wabaId,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 router.get("/settings", authorize("admin", "manager", "super_admin"), async (req, res) => {
@@ -460,7 +482,11 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
       `Hi! This is a test message from ${org.name} CRM. Your WhatsApp is now connected successfully!`
     );
     await Organization.findByIdAndUpdate(req.orgId, { "whatsapp.enabled": true });
-    res.json({ ok: true });
+    // A fresh Meta connection receives nothing until its app is subscribed to
+    // the WABA. Do it now; never fail the connect itself over it.
+    const webhook = await subscribeAndVerify(org.whatsapp || {})
+      .catch((e) => ({ applicable: true, subscribed: false, error: e.message }));
+    res.json({ ok: true, webhook });
   } catch (err) {
     res.status(400).json({ message: "Test failed. Check your credentials.", detail: err?.response?.data?.message || err.message });
   }
@@ -478,7 +504,7 @@ router.get("/conversations", async (req, res) => {
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
         .skip((page - 1) * limit).limit(+limit)
-        .populate("leadId", "name status")
+        .populate("leadId", "name status priority propertyType bhk preferredLocation budget")
         .populate("assignedTo", "name avatar")
         .lean(),
       WaConversation.countDocuments(filter),
@@ -492,7 +518,7 @@ router.get("/conversations", async (req, res) => {
 router.get("/conversations/:id", async (req, res) => {
   try {
     const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId })
-      .populate("leadId", "name status source phone")
+      .populate("leadId", "name status source phone priority")
       .populate("assignedTo", "name avatar").lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
     res.json({ conversation: conv });
@@ -510,7 +536,9 @@ router.get("/conversations/:id/messages", async (req, res) => {
       .sort({ timestamp: -1 }).skip((page - 1) * limit).limit(+limit).lean();
     messages.reverse();
     await WaConversation.findByIdAndUpdate(req.params.id, { unreadCount: 0 });
-    res.json({ messages });
+    const lastIn = await WaMessage.findOne({ conversationId: req.params.id, direction: "inbound" })
+      .sort({ timestamp: -1 }).select("timestamp").lean();
+    res.json({ messages, lastInboundAt: lastIn?.timestamp || null });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -525,13 +553,51 @@ router.patch("/conversations/:id", async (req, res) => {
     if (assignedTo) update.assignedTo = assignedTo;
     const conv = await WaConversation.findOneAndUpdate(
       { _id: req.params.id, orgId: req.orgId }, update, { new: true }
-    ).populate("leadId", "name status").populate("assignedTo", "name avatar");
+    ).populate("leadId", "name status priority propertyType bhk preferredLocation budget").populate("assignedTo", "name avatar");
     if (!conv) return res.status(404).json({ message: "Not found" });
     res.json({ conversation: conv });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
+
+// ── Webhook subscription ──────────────────────────────────────────────────────
+// Meta only delivers a WABA's messages to apps SUBSCRIBED to that WABA, and the
+// dashboard's webhook form does not do that step. On 9 Sep 2026 PropHunt's
+// webhook verified perfectly and still received nothing until subscribed_apps
+// was called by hand. This does it, then checks it actually took.
+async function subscribeAndVerify(wa) {
+  if ((wa.provider || "aisensy") !== "meta") return { applicable: false };
+  if (!wa.wabaId || !wa.apiKey) {
+    const e = new Error("Save your WhatsApp Business Account ID and access token first.");
+    e.status = 400;
+    throw e;
+  }
+  const G = "https://graph.facebook.com/v21.0";
+  const auth = { params: { access_token: wa.apiKey } };
+  try {
+    await axios.post(G + "/" + wa.wabaId + "/subscribed_apps", null, auth);
+    const [appRes, subRes] = await Promise.all([
+      axios.get(G + "/app", { params: { access_token: wa.apiKey, fields: "id,name" } }).catch(() => ({ data: null })),
+      axios.get(G + "/" + wa.wabaId + "/subscribed_apps", auth),
+    ]);
+    const apps = (subRes.data?.data || []).map((a) => a.whatsapp_business_api_data || a);
+    const myId = appRes.data?.id;
+    const mine = myId ? apps.find((a) => String(a.id) === String(myId)) : null;
+    return {
+      applicable: true,
+      // If Meta will not say which app the token belongs to, the POST above
+      // still subscribed it — any subscriber at all is then the best evidence.
+      subscribed: myId ? !!mine : apps.length > 0,
+      appName: appRes.data?.name || mine?.name || null,
+    };
+  } catch (err) {
+    const me = err?.response?.data?.error;
+    const e = new Error(me?.error_user_msg || me?.message || err.message);
+    e.status = 400;
+    throw e;
+  }
+}
 
 // ── Message templates ─────────────────────────────────────────────────────────
 // Templates live on the tenant's own WABA and Meta reviews each one, so these
@@ -611,6 +677,100 @@ router.post("/campaigns/:id/send", authorize("admin", "manager", "super_admin"),
   } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
 });
 
+router.post("/settings/webhook-check", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    res.json(await subscribeAndVerify(org?.whatsapp || {}));
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+// Lead counts per status and source, so the campaign audience pickers can say
+// how many people each choice reaches before anyone commits to a filter.
+router.get("/campaigns/audience-counts", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    // Same scope as the campaign audience itself, so the number beside an option
+    // is the number that option would actually send to — dump leads included.
+    const match = { orgId: req.orgId };
+    const [byStatus, bySource, consented] = await Promise.all([
+      Lead.aggregate([{ $match: match }, { $group: { _id: "$status", n: { $sum: 1 } } }]),
+      Lead.aggregate([{ $match: match }, { $group: { _id: "$source", n: { $sum: 1 } } }]),
+      Lead.countDocuments({ ...match, "whatsappConsent.status": "granted" }),
+    ]);
+    const toMap = (rows) => Object.fromEntries(rows.filter((r) => r._id).map((r) => [r._id, r.n]));
+    res.json({ status: toMap(byStatus), source: toMap(bySource), consented });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Send an approved template into one conversation. This is the only way to
+// reach someone once WhatsApp's 24-hour reply window has closed.
+router.post("/send-template", async (req, res) => {
+  try {
+    const { conversationId, templateName, values = [] } = req.body || {};
+    if (!templateName) return res.status(400).json({ message: "Pick a template" });
+    const conv = await WaConversation.findOne({ _id: conversationId, orgId: req.orgId });
+    if (!conv) return res.status(404).json({ message: "Conversation not found" });
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
+      return res.status(400).json({ message: "WhatsApp not connected" });
+    }
+
+    // The price depends on the category, so it comes from Meta — never from
+    // whatever the browser claims the template is.
+    const approved = await templates.listApproved({ ...org, _id: req.orgId });
+    const tpl = approved.find((t) => t.name === templateName);
+    if (!tpl) return res.status(400).json({ message: "That template is not approved, or no longer exists." });
+
+    const category = campaignSvc.categoryToCredit(tpl.category);
+    const expected = templates.countBodyVariables(tpl);
+    const vals = Array.from({ length: expected }, (_, i) => String(values[i] ?? "").trim());
+    if (vals.some((v) => !v)) return res.status(400).json({ message: "Fill in every value in the template." });
+
+    const bodyText = ((tpl.components || []).find((c) => c.type === "BODY") || {}).text || "";
+    const rendered = bodyText.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => vals[Number(n) - 1] ?? "");
+
+    let held;
+    try {
+      held = await credits.reserve(req.orgId, { category, count: 1 });
+    } catch (err) {
+      if (err instanceof credits.InsufficientCreditsError) {
+        return res.status(402).json({ message: "Out of WhatsApp credits. Top up to send templates.", code: "INSUFFICIENT_CREDITS" });
+      }
+      throw err;
+    }
+
+    let msgId;
+    try {
+      msgId = await sendProviderMessage(org, conv.contactPhone, "", {
+        name: tpl.name, language: tpl.language,
+        components: templates.buildSendComponents(tpl, vals),
+      });
+    } catch (err) {
+      await credits.release(req.orgId, held);
+      const me = err?.response?.data?.error;
+      return res.status(502).json({ message: me?.error_user_msg || me?.message || err.message });
+    }
+
+    const message = await WaMessage.create({
+      orgId: req.orgId, conversationId: conv._id, waMsgId: msgId || undefined,
+      direction: "outbound", sender: "agent", senderName: req.user.name,
+      body: rendered, status: "sent", timestamp: new Date(),
+      reservedPaise: held, creditCategory: category,
+    });
+    await WaConversation.findByIdAndUpdate(conv._id, {
+      lastMessageAt: new Date(),
+      lastMessagePreview: rendered.slice(0, 80),
+      status: conv.botEnabled ? "bot" : "open",
+    });
+    res.json({ message });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
 // ── Send message ──────────────────────────────────────────────────────────────
 
 router.post("/send", async (req, res) => {
@@ -622,6 +782,16 @@ router.post("/send", async (req, res) => {
     const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
     if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
       return res.status(400).json({ message: "WhatsApp not connected" });
+    }
+    if ((org.whatsapp.provider || "aisensy") === "meta") {
+      const lastIn = await WaMessage.findOne({ conversationId: conv._id, direction: "inbound" })
+        .sort({ timestamp: -1 }).select("timestamp").lean();
+      if (!lastIn || Date.now() - new Date(lastIn.timestamp).getTime() > 24 * 60 * 60 * 1000) {
+        return res.status(409).json({
+          code: "WINDOW_CLOSED",
+          message: "It has been more than 24 hours since this person last wrote. WhatsApp only allows an approved template until they reply.",
+        });
+      }
     }
     // Hard cap: hold the credit before the send. A tenant can never spend past
     // what they have already paid for, because Meta bills us, not them.

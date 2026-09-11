@@ -1,36 +1,38 @@
 import { useState, useEffect } from "react";
-import { Loader2, Zap, Info } from "lucide-react";
+import { Loader2, Zap, Info, ShieldCheck, Wallet } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import { Modal } from "./UI";
 import { loadRazorpay, RZP_LOAD_ERROR, UPI_FIRST_CONFIG } from "../utils/razorpay";
 
 // Presets in rupees. The ₹500 floor matches the server's MIN_TOPUP_PAISE —
-// the server re-validates, this is only so the buttons cannot offer something
+// the server re-validates; this is only so the buttons never offer something
 // that will be refused.
 const PRESETS = [500, 1000, 2500, 5000];
+const SUGGESTED = 1000;
 
-const rupees = (paise) => `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const rupees = (paise) =>
+  `₹${((paise || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) {
-  const [amount, setAmount]   = useState(1000);   // rupees
+  const [amount, setAmount]   = useState(SUGGESTED);   // rupees
   const [quote, setQuote]     = useState(null);
   const [busy, setBusy]       = useState(false);
   const [balance, setBalance] = useState(null);
 
   useEffect(() => {
     if (!open) return;
-    api.get("/credits/balance").then(r => setBalance(r.data)).catch(() => {});
+    api.get("/credits/balance").then((r) => setBalance(r.data)).catch(() => {});
   }, [open]);
 
-  // Ask the server for the GST breakdown rather than computing 18% here — if
-  // the rate ever changes it changes in one place, and the number on screen is
-  // then the number that gets charged.
+  // The GST breakdown comes from the server rather than being computed here —
+  // if the rate ever changes it changes in one place, and the number on screen
+  // is then the number that gets charged.
   useEffect(() => {
-    if (!open || !amount || amount < 500) { setQuote(null); return; }
+    if (!open || !amount || amount < 500) { setQuote(null); return undefined; }
     let cancelled = false;
     api.get("/credits/topup/quote", { params: { creditPaise: Math.round(amount * 100) } })
-      .then(r => { if (!cancelled) setQuote(r.data); })
+      .then((r) => { if (!cancelled) setQuote(r.data); })
       .catch(() => { if (!cancelled) setQuote(null); });
     return () => { cancelled = true; };
   }, [amount, open]);
@@ -55,8 +57,8 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
           description: `WhatsApp credits — ${rupees(quote.creditPaise)}`,
           prefill: { name: orgName || "" },
           theme: { color: "#ff6b00" },
-          // UPI first: it carries effectively zero MDR against ~2% on cards,
-          // which on our margin is worth about three points.
+          // UPI first: effectively zero MDR against ~2% on cards, which on our
+          // margin is worth about three points.
           config: UPI_FIRST_CONFIG,
           handler: async (resp) => {
             try {
@@ -66,8 +68,7 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
               onClose?.();
             } catch {
               // The webhook is authoritative, so a failure here is a reporting
-              // problem, not a lost payment. Say so rather than implying the
-              // money vanished.
+              // problem, not a lost payment.
               toast.success("Payment received. Your credits will appear shortly.");
               onSuccess?.();
               onClose?.();
@@ -86,18 +87,34 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
     } finally { setBusy(false); }
   };
 
-  const tooSmall = amount && amount < 500;
+  const tooSmall = amount !== "" && amount < 500;
+
+  const title = (
+    <span className="flex items-center gap-2.5">
+      <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+        style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+        <Wallet className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+      </span>
+      Add WhatsApp credits
+    </span>
+  );
 
   return (
-    <Modal open={open} onClose={onClose} title="Add WhatsApp credits" size="md">
+    <Modal open={open} onClose={onClose} title={title} size="md">
       <div className="space-y-5">
-
         {balance && (
-          <div className="rounded-2xl px-4 py-3" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-            <p className="text-xs text-app-soft">Current balance</p>
-            <p className="text-2xl font-bold text-app">{rupees(balance.availablePaise)}</p>
+          <div className="rounded-2xl px-4 py-3.5 stitch-surface-muted">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-app-soft">Current balance</p>
+                <p className="text-2xl font-bold text-app tabular-nums">{rupees(balance.availablePaise)}</p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                style={{ background: "rgba(34,197,94,0.12)", color: "#15803d" }}>Prepaid wallet</span>
+            </div>
             {balance.freeService?.remaining > 0 && (
-              <p className="text-xs text-app-soft mt-1">
+              <p className="text-xs text-app-soft mt-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} />
                 Plus {balance.freeService.remaining.toLocaleString("en-IN")} free replies left this month
               </p>
             )}
@@ -107,41 +124,43 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
         <div>
           <label className="text-xs font-semibold text-app-soft mb-2 block">Amount to add</label>
           <div className="grid grid-cols-4 gap-2 mb-3">
-            {PRESETS.map(p => (
+            {PRESETS.map((p) => (
               <button key={p} type="button" onClick={() => setAmount(p)}
-                className="py-2 rounded-xl text-sm font-bold transition"
+                className="relative py-2.5 rounded-xl text-sm font-bold transition"
                 style={amount === p
                   ? { background: "rgba(255,107,0,0.12)", border: "1.5px solid rgba(255,107,0,0.5)", color: "var(--app-primary)" }
                   : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                {p === SUGGESTED && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-bold uppercase tracking-wider px-1.5 py-px rounded-full text-white"
+                    style={{ background: "var(--app-primary)" }}>Suggested</span>
+                )}
                 ₹{p.toLocaleString("en-IN")}
               </button>
             ))}
           </div>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-app-soft text-sm">₹</span>
-            <input
-              type="number" min={500} step={100}
-              className="input w-full pl-8"
+            <input type="number" min={500} step={100} className="input w-full pl-8 pr-14"
               value={amount}
-              onChange={e => setAmount(e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
-            />
+              onChange={(e) => setAmount(e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))} />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-app-soft">INR</span>
           </div>
           {tooSmall && <p className="text-xs text-red-500 mt-1">Minimum top-up is ₹500</p>}
         </div>
 
         {quote && (
-          <div className="rounded-2xl px-4 py-3 space-y-2" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          <div className="rounded-2xl px-4 py-3.5 space-y-2 stitch-surface-muted">
             <div className="flex justify-between text-sm">
               <span className="text-app-soft">Credits added</span>
-              <span className="text-app font-semibold">{rupees(quote.creditPaise)}</span>
+              <span className="text-app font-semibold tabular-nums">{rupees(quote.creditPaise)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-app-soft">GST ({quote.gstRate}%)</span>
-              <span className="text-app font-semibold">{rupees(quote.gstPaise)}</span>
+              <span className="text-app font-semibold tabular-nums">{rupees(quote.gstPaise)}</span>
             </div>
-            <div className="flex justify-between text-sm pt-2" style={{ borderTop: "1px solid var(--app-border)" }}>
+            <div className="flex justify-between text-base pt-2" style={{ borderTop: "1px solid var(--app-border)" }}>
               <span className="text-app font-bold">You pay</span>
-              <span className="text-app font-bold">{rupees(quote.amountPaise)}</span>
+              <span className="text-app font-bold tabular-nums">{rupees(quote.amountPaise)}</span>
             </div>
           </div>
         )}
@@ -158,12 +177,18 @@ export default function CreditTopUpModal({ open, onClose, onSuccess, orgName }) 
         )}
 
         <button onClick={pay} disabled={busy || !quote || tooSmall}
-          className="btn-primary w-full rounded-full py-3 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40">
+          className="btn-primary w-full rounded-full py-3.5 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
           {busy ? "Opening payment…" : quote ? `Pay ${rupees(quote.amountPaise)}` : "Enter an amount"}
         </button>
 
         <p className="text-[11px] text-app-soft text-center">UPI, cards, net banking and wallets accepted.</p>
+
+        <div className="-mx-6 -mb-6 px-6 py-3 flex items-center gap-1.5 text-[11px] text-app-soft"
+          style={{ borderTop: "1px solid var(--app-border)" }}>
+          <ShieldCheck className="w-3.5 h-3.5 shrink-0" style={{ color: "#15803d" }} />
+          Secure checkout by Razorpay
+        </div>
       </div>
     </Modal>
   );

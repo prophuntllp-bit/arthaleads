@@ -8,6 +8,7 @@ const topUp      = require("../services/creditTopUpService");
 const rzp        = require("../services/razorpayService");
 const CreditLedger = require("../models/CreditLedger");
 const Organization = require("../models/Organization");
+require("../models/WaConversation"); // registered for the statement populate below
 const logger     = require("../config/logger");
 
 router.use(protect);
@@ -64,6 +65,8 @@ router.get("/ledger", async (req, res) => {
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(Math.min(+limit, 200))
+        // Who each charge was for, so the statement reads as a statement.
+        .populate("conversationId", "contactName contactPhone")
         .lean(),
       CreditLedger.countDocuments(filter),
     ]);

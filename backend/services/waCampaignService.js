@@ -107,7 +107,7 @@ async function preview(org, { templateName, filter }) {
   }
 
   return {
-    template: { name: tpl.name, language: tpl.language, category: tpl.category },
+    template: { name: tpl.name, language: tpl.language, category: tpl.category, body: ((tpl.components || []).find((c) => c.type === "BODY") || {}).text || "" },
     variablesExpected: templates.countBodyVariables(tpl),
     ...audience,
     sendableCount: audience.sendable.length,
@@ -155,7 +155,7 @@ async function run(org, campaignId, sendProviderMessage) {
   await campaign.save();
 
   const perMessage = p.sendableCount > 0 ? Math.round(held / p.sendableCount) : 0;
-  let sent = 0, failed = 0;
+  let sent = 0, failed = 0, lastError = "";
 
   for (const lead of p.sendable) {
     const values = (campaign.variableMapping || []).map(field =>
@@ -183,6 +183,10 @@ async function run(org, campaignId, sendProviderMessage) {
       sent++;
     } catch (err) {
       failed++;
+      const me = err?.response?.data?.error;
+      lastError = me
+        ? "Meta error " + (me.code || "") + ": " + (me.error_user_msg || me.message || "send failed")
+        : (err.message || "send failed");
       logger.warn(`[wa-campaign] ${campaign._id} -> ${lead.phone}: ${err?.response?.data?.error?.message || err.message}`);
     }
 
@@ -197,6 +201,8 @@ async function run(org, campaignId, sendProviderMessage) {
   if (unusedPaise > 0) await credits.release(org._id, unusedPaise);
 
   campaign.status = failed && !sent ? "failed" : "sent";
+  // Surfaced on the campaign card, so a failure says why instead of just red.
+  if (failed) campaign.failureReason = lastError;
   campaign.stats.sent = sent;
   campaign.stats.failed = failed;
   campaign.spentPaise = perMessage * sent;
