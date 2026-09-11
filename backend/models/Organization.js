@@ -133,6 +133,14 @@ const orgSchema = new mongoose.Schema(
       messagingTier:      { type: String, default: "" },   // TIER_1K | TIER_10K | ...
       healthCheckedAt:    { type: Date },
       campaignsPausedReason: { type: String, default: "" },
+
+      // True when this org's own card is on file with Meta and Meta bills
+      // them directly for message costs (the "direct connection" path, as
+      // opposed to Arthaleads bearing the Meta cost and re-billing through
+      // credits.sellRatesPaise). Set alongside a zeroed sellRatesPaise below
+      // — otherwise the org pays twice for the same message: once to Meta
+      // here, once to Arthaleads through the credit wallet.
+      billedDirectlyByMeta: { type: Boolean, default: false },
     },
 
     // ── WhatsApp Conversation Credits ─────────────────────────────────────────

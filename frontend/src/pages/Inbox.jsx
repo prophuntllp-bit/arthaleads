@@ -336,11 +336,13 @@ export default function Inbox() {
     : "";
   const wants = leadContext(lead);
   const firstName = String(activeConv?.contactName || "").trim().split(/\s+/)[0] || "they";
-  const composerHint = freeLeft > 0
-    ? `${freeLeft.toLocaleString("en-IN")} free replies left this month`
-    : credits?.ratesPaise?.service
-      ? `₹${(credits.ratesPaise.service / 100).toFixed(2)} per reply`
-      : "";
+  const composerHint = credits?.billedDirectlyByMeta
+    ? "Billed directly to your Meta account, not through credits"
+    : freeLeft > 0
+      ? `${freeLeft.toLocaleString("en-IN")} free replies left this month`
+      : credits?.ratesPaise?.service
+        ? `₹${(credits.ratesPaise.service / 100).toFixed(2)} per reply`
+        : "";
 
   // Meta refuses free-form outside the window, so the composer becomes a
   // template button. Other providers keep the box, with a warning.

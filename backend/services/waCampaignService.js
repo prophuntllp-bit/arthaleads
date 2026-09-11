@@ -115,6 +115,7 @@ async function preview(org, { templateName, filter }) {
     ratePaise: cost.ratePaise,
     availablePaise: cost.availablePaise,
     creditCategory: category,
+    billedDirectlyByMeta: !!org.whatsapp?.billedDirectlyByMeta,
     tierCap: tierCap === Infinity ? null : tierCap,
     qualityRating: quality || null,
     blockers,

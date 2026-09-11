@@ -117,8 +117,9 @@ export default function TemplateSendModal({ open, onClose, conversation, credits
             <p className="text-xs text-app-soft flex items-start gap-1.5">
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
-                {rate != null ? `Costs ${rupees(rate)} as a ${credit} message.` : ""}{" "}
-                Free monthly replies do not apply to templates.
+                {credits?.billedDirectlyByMeta
+                  ? "Billed directly to your Meta account, not through credits."
+                  : <>{rate != null ? `Costs ${rupees(rate)} as a ${credit} message. ` : ""}Free monthly replies do not apply to templates.</>}
               </span>
             </p>
           )}

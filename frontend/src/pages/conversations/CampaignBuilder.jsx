@@ -287,14 +287,20 @@ export default function CampaignBuilder() {
                 )}
 
                 <div className="rounded-2xl px-3.5 py-3 mb-3 stitch-surface-muted">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-app-soft">Cost</span>
-                    <span className="text-app font-bold tabular-nums">{rupees(prev.costPaise)}</span>
-                  </div>
-                  <div className="flex justify-between text-[11px] mt-1">
-                    <span className="text-app-soft">{rupees(prev.ratePaise)} each · {prev.creditCategory}</span>
-                    <span className="text-app-soft">balance {rupees(prev.availablePaise)}</span>
-                  </div>
+                  {prev.billedDirectlyByMeta ? (
+                    <p className="text-xs text-app-soft">Billed directly to your Meta account, not through credits.</p>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-app-soft">Cost</span>
+                        <span className="text-app font-bold tabular-nums">{rupees(prev.costPaise)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] mt-1">
+                        <span className="text-app-soft">{rupees(prev.ratePaise)} each · {prev.creditCategory}</span>
+                        <span className="text-app-soft">balance {rupees(prev.availablePaise)}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {prev.blockers.map((b, i) => (

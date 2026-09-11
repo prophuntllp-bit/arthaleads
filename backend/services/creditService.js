@@ -47,6 +47,16 @@ class InsufficientCreditsError extends Error {
 
 const VALID_CATEGORIES = ["marketing", "utility", "authentication", "service"];
 
+// The agreed rate card — must match the defaults declared on
+// Organization.credits.sellRatesPaise. Duplicated here on purpose: every read
+// in this file goes through .lean(), which does NOT apply Mongoose schema
+// defaults for a field that was never actually written to the document — and
+// until 11 Sep 2026 nothing ever wrote sellRatesPaise, so every org's real
+// rate silently read as 0 (rateFor()'s own `: 0` fallback) no matter what the
+// schema said. Caught before any org had topped up or been charged, but it
+// means the schema default alone is not a rate card — this constant is.
+const DEFAULT_SELL_RATES_PAISE = { marketing: 112, utility: 15, authentication: 15, service: 15 };
+
 // Meta's free allowance: 1,000 service messages per phone number per calendar
 // month, from 1 Oct 2026. No rollover.
 const FREE_SERVICE_PER_MONTH = 1000;
@@ -60,9 +70,20 @@ function currentYyyyMm(d = new Date()) {
 
 /** Our sell rate for a category, in paise, ex-GST. */
 function rateFor(org, category) {
-  const rates = org?.credits?.sellRatesPaise || {};
-  const rate = rates[category];
-  return Number.isFinite(rate) ? rate : 0;
+  const stored = org?.credits?.sellRatesPaise || {};
+  const rate = stored[category];
+  // An org that has never had rates written gets the real rate card, not 0.
+  // An org with an explicit override (e.g. PropHunt, which pays Meta directly
+  // on its own card and would otherwise be billed twice for the same message)
+  // keeps whatever it was explicitly set to, including an explicit 0.
+  if (Number.isFinite(rate)) return rate;
+  return DEFAULT_SELL_RATES_PAISE[category] ?? 0;
+}
+
+/** Merged view of an org's rates — real numbers even when nothing is stored. */
+function ratesFor(org) {
+  const stored = org?.credits?.sellRatesPaise || {};
+  return { ...DEFAULT_SELL_RATES_PAISE, ...stored };
 }
 
 /** Balance snapshot for the UI and for pre-flight checks. */
@@ -327,7 +348,9 @@ async function recomputeBalance(orgId) {
 module.exports = {
   InsufficientCreditsError,
   FREE_SERVICE_PER_MONTH,
+  DEFAULT_SELL_RATES_PAISE,
   rateFor,
+  ratesFor,
   getBalance,
   quote,
   reserve,

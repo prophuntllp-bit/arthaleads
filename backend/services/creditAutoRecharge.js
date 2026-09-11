@@ -55,7 +55,7 @@ async function runLowCreditSweep() {
       .select("name email").lean();
     if (!admins.length) { skipped++; continue; }
 
-    const serviceRate = c.sellRatesPaise?.service || 0;
+    const serviceRate = credits.rateFor(org, "service");
     const freeLeft = freeRepliesLeft(c);
     const repliesLeft = serviceRate > 0
       ? Math.floor(available / serviceRate) + freeLeft

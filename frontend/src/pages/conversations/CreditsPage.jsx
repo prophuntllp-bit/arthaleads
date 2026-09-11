@@ -168,7 +168,9 @@ export default function CreditsPage() {
 
         <div className="card p-5 flex flex-col">
           <p className="text-xs text-app-soft">Your rates</p>
-          {credits?.ratesPaise ? (
+          {credits?.billedDirectlyByMeta ? (
+            <p className="text-sm font-bold text-app mt-2 leading-relaxed">Billed directly by Meta to your own account — not through this wallet.</p>
+          ) : credits?.ratesPaise ? (
             <div className="space-y-1 mt-2">
               {[["Reply", "service"], ["Marketing", "marketing"], ["Utility", "utility"]].map(([label, key]) => (
                 <div key={key} className="flex items-center justify-between text-xs">
@@ -178,7 +180,7 @@ export default function CreditsPage() {
               ))}
             </div>
           ) : <p className="text-3xl font-bold text-app mt-2">—</p>}
-          <p className="mt-auto pt-4 text-[11px] text-app-soft">per message, excl. GST</p>
+          {!credits?.billedDirectlyByMeta && <p className="mt-auto pt-4 text-[11px] text-app-soft">per message, excl. GST</p>}
         </div>
       </div>
 

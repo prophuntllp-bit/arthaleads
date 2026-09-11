@@ -20,10 +20,10 @@ router.get("/balance", async (req, res) => {
   try {
     const [bal, org] = await Promise.all([
       credits.getBalance(req.orgId),
-      Organization.findById(req.orgId).select("credits").lean(),
+      Organization.findById(req.orgId).select("credits whatsapp.billedDirectlyByMeta").lean(),
     ]);
 
-    const rates = org?.credits?.sellRatesPaise || {};
+    const rates = credits.ratesFor(org);
     const fs = org?.credits?.freeService || {};
     const now = new Date();
     const yyyymm = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -32,6 +32,7 @@ router.get("/balance", async (req, res) => {
     res.json({
       ...bal,
       ratesPaise: rates,
+      billedDirectlyByMeta: !!org?.whatsapp?.billedDirectlyByMeta,
       freeService: {
         used: freeUsed,
         limit: credits.FREE_SERVICE_PER_MONTH,
