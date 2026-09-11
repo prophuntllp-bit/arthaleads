@@ -116,7 +116,18 @@ const orgSchema = new mongoose.Schema(
       webhookVerifyToken: { type: String, default: "" },   // Meta: webhook challenge token
       botEnabled:         { type: Boolean, default: true },
       botName:            { type: String, default: "Artha Assistant" },
-      botSystemPrompt:    { type: String, default: "" },
+      botSystemPrompt:    { type: String, default: "" },   // legacy free-text override — still honoured if set
+
+      // ── Agent Studio (project-grounded knowledge, live-linked) ──────────────
+      // Empty botProjectIds means "all of this org's active projects" — never a
+      // frozen snapshot. The prompt is rebuilt from live Project docs on every
+      // bot reply (see buildProjectGroundedPrompt in whatsappRoutes.js), so an
+      // edited price or a newly-archived project is reflected on the very next
+      // message with nothing to re-sync.
+      botProjectIds:      [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
+      botGroundRules:      { type: String, default: "" },   // dos/don'ts, tone, escalation rules
+      botBusinessContext:  { type: String, default: "" },   // free-text: who we are, service area, policies
+      botGreeting:         { type: String, default: "" },   // sent as the first message on a brand-new conversation
 
       // ── Embedded Signup (see docs/whatsapp-embedded-signup-plan.md) ─────────
       esOnboarded:        { type: Boolean, default: false },

@@ -24,6 +24,9 @@ const AiUsage        = require("../models/AiUsage");
 const { planGate }   = require("../middlewares/planGate");
 const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
+const { getNextAssignee } = require("../utils/assignLead");
+const { sendPushToAll, sendPushToUser } = require("../utils/push");
+const OPTS = require("../constants/leadOptions");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -225,6 +228,60 @@ async function applyStatusUpdates(org, updates) {
   }
 }
 
+// ── Lead auto-capture from WhatsApp (source: "WhatsApp") ─────────────────────
+// A brand-new contact who messages in with no matching existing lead becomes
+// a real Lead right away — same as any other channel — rather than sitting
+// only as a conversation thread. Auto-assigned the same way QR/webhook leads
+// are. Never invents propertyType/purpose/bhk/budget: those start at the
+// schema's neutral "N/A"/blank and are only ever filled in later by
+// enrichExistingWhatsAppLead(), which applies the exact same
+// never-overwrite-a-real-value discipline as mapVistrowExtractedFields.
+async function autoCaptureWhatsAppLead(org, phone, name) {
+  let assignee = null;
+  if (org.autoAssign !== false) {
+    try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
+  }
+  const lead = await Lead.create({
+    name: name || phone,
+    phone,
+    source: "WhatsApp",
+    status: "New",
+    orgId: org._id,
+    createdBy: assignee?._id || null,
+    assignedTo: assignee?._id || null,
+    assignedToName: assignee?.name || "",
+    propertyType: "N/A",
+    purpose: "N/A",
+    bhk: "N/A",
+    budget: { min: null, max: null, currency: "INR" },
+    activities: [{
+      type: "created",
+      description: assignee
+        ? `Lead started a WhatsApp conversation — auto-assigned to ${assignee.name}`
+        : "Lead started a WhatsApp conversation — unassigned (auto-assignment disabled)",
+      performedBy: assignee?._id || null,
+      performedByName: assignee?.name || "",
+      meta: {},
+    }],
+  });
+  if (assignee?._id) {
+    sendPushToUser(assignee._id, {
+      type: "lead_assigned",
+      title: `New Lead: ${lead.name}`,
+      body: `${phone} · WhatsApp`,
+      data: { url: "/leads" },
+    }).catch(() => {});
+  } else {
+    sendPushToAll({
+      type: "new_lead",
+      title: "New Lead 📥",
+      body: `${lead.name} messaged in on WhatsApp`,
+      data: { url: "/leads", leadName: lead.name, source: "WhatsApp" },
+    }, org._id).catch(() => {});
+  }
+  return lead;
+}
+
 // ── Shared inbound handler ────────────────────────────────────────────────────
 
 async function handleInbound(org, parsed) {
@@ -232,12 +289,20 @@ async function handleInbound(org, parsed) {
   if (!phone || !msgText) return;
 
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
+  const isNewConversation = !conv;
   if (!conv) {
     const cleaned = phone.replace(/^91/, "");
-    const lead = await Lead.findOne({
+    let lead = await Lead.findOne({
       orgId: org._id,
       phone: { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
     }).lean();
+    if (!lead) {
+      try {
+        lead = await autoCaptureWhatsAppLead(org, phone, name);
+      } catch (err) {
+        console.error("[WhatsApp Lead Capture] auto-create failed:", err.message);
+      }
+    }
     conv = await WaConversation.create({
       orgId: org._id, leadId: lead?._id || null,
       contactPhone: phone, contactName: lead?.name || name,
@@ -265,7 +330,199 @@ async function handleInbound(org, parsed) {
   });
 
   if (conv.botEnabled) {
+    if (isNewConversation && org.whatsapp?.botGreeting?.trim()) {
+      await sendBotGreeting(org, conv);
+    }
     await triggerBotReply(org, conv, msgText);
+  }
+}
+
+// Sent once, as the very first outbound message on a brand-new conversation —
+// before the AI's contextual reply to whatever the customer actually wrote.
+// Failure here must never block the real reply that follows.
+async function sendBotGreeting(org, conversation) {
+  try {
+    const greeting = org.whatsapp.botGreeting.trim();
+    const botName = org.whatsapp?.botName || "Artha Assistant";
+    let held = 0;
+    try {
+      held = await credits.reserve(org._id, { category: "service", count: 1 });
+    } catch (err) {
+      if (err instanceof credits.InsufficientCreditsError) return;
+      throw err;
+    }
+    let msgId;
+    try {
+      msgId = await sendProviderMessage(org, conversation.contactPhone, greeting);
+    } catch (err) {
+      await credits.release(org._id, held);
+      throw err;
+    }
+    await WaMessage.create({
+      orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
+      direction: "outbound", sender: "bot", senderName: botName,
+      body: greeting, status: "sent", timestamp: new Date(),
+      reservedPaise: held, creditCategory: "service",
+    });
+    await WaConversation.findByIdAndUpdate(conversation._id, {
+      lastMessageAt: new Date(), lastMessagePreview: greeting.slice(0, 80),
+    });
+  } catch (err) {
+    console.error("[WhatsApp Bot] greeting send failed:", err?.response?.data || err.message);
+  }
+}
+
+// ── Agent Studio: project-grounded system prompt ─────────────────────────────
+// Queries live Project documents on every single call — deliberately never a
+// cached/frozen snapshot, so a price edit or a newly-archived project on the
+// Projects page is reflected on the very next reply with nothing to re-sync.
+// An org that already wrote a full custom prompt (the old free-text-only way
+// of configuring the bot) keeps getting exactly that, untouched — Agent
+// Studio only applies when botSystemPrompt is empty.
+async function buildProjectGroundedPrompt(org, leadContext) {
+  const wa = org.whatsapp || {};
+  const botName = wa.botName || "Artha Assistant";
+
+  if (wa.botSystemPrompt?.trim()) {
+    return wa.botSystemPrompt.trim() + (leadContext ? `\n\nCustomer context: ${leadContext}` : "");
+  }
+
+  const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
+  if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
+    projectFilter._id = { $in: wa.botProjectIds };
+  }
+  const projects = await Project.find(projectFilter)
+    .select("name description location priceMin priceMax bhkTypes area amenities possessionDate reraNumber")
+    .sort({ createdAt: -1 }).limit(20).lean();
+
+  const fmtPrice = (n) => (n ? `₹${(n / 100000).toFixed(n % 100000 ? 1 : 0)}L` : null);
+  const projectLines = projects.map((p) => {
+    const bits = [
+      p.location && `Location: ${p.location}`,
+      (p.priceMin || p.priceMax) && `Price: ${fmtPrice(p.priceMin) || "?"} - ${fmtPrice(p.priceMax) || "?"}`,
+      p.bhkTypes?.length && `Configurations: ${p.bhkTypes.join(", ")}`,
+      p.area && `Area: ${p.area}`,
+      p.amenities?.length && `Amenities: ${p.amenities.slice(0, 8).join(", ")}`,
+      p.possessionDate && `Possession: ${new Date(p.possessionDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`,
+      p.reraNumber && `RERA: ${p.reraNumber}`,
+      p.description && `Notes: ${p.description.slice(0, 200)}`,
+    ].filter(Boolean).join(" | ");
+    return `- ${p.name}${bits ? ` — ${bits}` : ""}`;
+  });
+
+  const knowledge = projectLines.length
+    ? `Projects you can discuss (this is the ONLY inventory you know about — never mention or invent any other project):\n${projectLines.join("\n")}`
+    : "No active projects are configured yet — if asked about specific properties, say the team will follow up with details shortly.";
+
+  const rules    = wa.botGroundRules?.trim()     ? `\nAdditional rules from the team:\n${wa.botGroundRules.trim()}\n`   : "";
+  const business = wa.botBusinessContext?.trim() ? `\nAbout us: ${wa.botBusinessContext.trim()}\n` : "";
+
+  return `You are ${botName}, a friendly real estate assistant for ${org.name} (India). Reply via WhatsApp.
+${business}
+${knowledge}
+
+Rules:
+- Keep replies SHORT — 1 to 3 sentences maximum
+- Be warm and professional
+- Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say our team will confirm shortly.
+- Do not use markdown or bullet points
+- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end
+${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
+}
+
+// ── Lead enrichment from AI WhatsApp conversations ───────────────────────────
+// Mirrors the "never fabricate" discipline mapVistrowExtractedFields already
+// established for Vistrow Voice calls: only a value the model explicitly saw
+// the CUSTOMER state, matched against a real enum, is ever written — and only
+// onto a field that is still at its untouched "N/A"/blank default, so a value
+// an agent already edited (or a fuller answer already captured) is never
+// silently overwritten by a sparser later read.
+function mapWhatsAppExtractedFields(extracted) {
+  if (!extracted || typeof extracted !== "object") return {};
+  const out = {};
+  if (extracted.property_type) {
+    const match = OPTS.PROPERTY_TYPE.find((o) => o.toLowerCase() === String(extracted.property_type).toLowerCase());
+    if (match && match !== "N/A") out.propertyType = match;
+  }
+  if (extracted.purpose) {
+    const match = OPTS.PURPOSE.find((o) => o.toLowerCase() === String(extracted.purpose).toLowerCase());
+    if (match && match !== "N/A") out.purpose = match;
+  }
+  if (extracted.bhk) {
+    const match = OPTS.BHK.find((o) => o.toLowerCase() === String(extracted.bhk).toLowerCase());
+    if (match && match !== "N/A") out.bhk = match;
+  }
+  if (extracted.location && String(extracted.location).trim()) out.preferredLocation = String(extracted.location).trim();
+  // Number(null) is 0, not NaN — the model can return an explicit null for a
+  // key it didn't extract despite the "omit it" instruction, so an absent
+  // value must never be fed straight into Number() (see the identical fix in
+  // mapVistrowExtractedFields, webhookRoutes.js — same bug class).
+  const min = extracted.budget_min != null ? Number(extracted.budget_min) : NaN;
+  const max = extracted.budget_max != null ? Number(extracted.budget_max) : NaN;
+  if (Number.isFinite(min) || Number.isFinite(max)) {
+    out.budget = {
+      min: Number.isFinite(min) ? min : (Number.isFinite(max) ? max : null),
+      max: Number.isFinite(max) ? max : (Number.isFinite(min) ? min : null),
+      currency: "INR",
+    };
+  }
+  return out;
+}
+
+// Only ever called for a lead this bot itself auto-captured (source
+// "WhatsApp"), and short-circuits once every field is already filled in — so
+// a fully-enriched lead never triggers another billed extraction call.
+async function enrichWhatsAppLead(conversation, recentMsgs) {
+  if (!conversation.leadId) return;
+  try {
+    const lead = await Lead.findById(conversation.leadId)
+      .select("source propertyType purpose bhk budget preferredLocation").lean();
+    if (!lead || lead.source !== "WhatsApp") return;
+    const alreadyComplete = lead.propertyType !== "N/A" && lead.purpose !== "N/A" && lead.bhk !== "N/A"
+      && lead.preferredLocation && (lead.budget?.min || lead.budget?.max);
+    if (alreadyComplete) return;
+
+    const transcript = recentMsgs
+      .map((m) => `${m.direction === "inbound" ? "Customer" : "Assistant"}: ${m.body}`)
+      .join("\n").slice(0, 4000);
+    if (!transcript.trim()) return;
+
+    const aiRes = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content:
+            "Extract real-estate lead details the CUSTOMER explicitly stated in this WhatsApp chat. " +
+            "Return ONLY compact JSON with keys you are confident about — omit any key not clearly and explicitly stated by the customer, never guess or infer: " +
+            '{"property_type": one of Apartment/Villa/Plot/Commercial/Office/Penthouse/Other, ' +
+            '"purpose": one of Buy/Rent/Invest, "bhk": one of 1BHK/2BHK/3BHK/4BHK/5BHK+/Studio, ' +
+            '"budget_min": number, "budget_max": number, "location": string}. ' +
+            "If nothing is clearly stated, return {}." },
+          { role: "user", content: transcript },
+        ],
+        max_tokens: 150, temperature: 0,
+        response_format: { type: "json_object" },
+      },
+      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+    );
+    const parsed = JSON.parse(aiRes.data?.choices?.[0]?.message?.content || "{}");
+    const mapped = mapWhatsAppExtractedFields(parsed);
+
+    // Only fill fields still at their neutral default — never overwrite a
+    // real value, whichever earlier message or agent edit put it there.
+    const setOps = {};
+    if (mapped.propertyType && lead.propertyType === "N/A")     setOps.propertyType = mapped.propertyType;
+    if (mapped.purpose && lead.purpose === "N/A")               setOps.purpose = mapped.purpose;
+    if (mapped.bhk && lead.bhk === "N/A")                       setOps.bhk = mapped.bhk;
+    if (mapped.preferredLocation && !lead.preferredLocation)    setOps.preferredLocation = mapped.preferredLocation;
+    if (mapped.budget && !lead.budget?.min && !lead.budget?.max) setOps.budget = mapped.budget;
+
+    if (Object.keys(setOps).length) {
+      await Lead.updateOne({ _id: conversation.leadId }, { $set: setOps });
+    }
+  } catch (err) {
+    console.error("[WhatsApp Lead Capture] enrichment failed:", err?.response?.data || err.message);
   }
 }
 
@@ -284,10 +541,11 @@ async function triggerBotReply(org, conversation, inboundText) {
       if (lead) leadContext = `Customer name: ${lead.name}. Status: ${lead.status}. Source: ${lead.source || "N/A"}. Budget: ${lead.budget || "N/A"}. Preferred location: ${lead.preferredLocation || "N/A"}.`;
     }
 
-    const botName      = org.whatsapp?.botName      || "Artha Assistant";
-    const customPrompt = org.whatsapp?.botSystemPrompt || "";
-    const systemPrompt = customPrompt ||
-      `You are ${botName}, a friendly real estate assistant for ${org.name} (India). Reply via WhatsApp.\n\nRules:\n- Keep replies SHORT — 1 to 3 sentences maximum\n- Be warm and professional\n- Never invent prices or availability — say our team will confirm shortly\n- Do not use markdown or bullet points\n- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end\n${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
+    const botName = org.whatsapp?.botName || "Artha Assistant";
+    const systemPrompt = await buildProjectGroundedPrompt(org, leadContext);
+
+    // Fire-and-forget: never let enrichment delay or fail the actual reply.
+    enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -462,6 +720,7 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     const {
       apiKey, provider, accountEndpoint, phoneNumberId, wabaId, webhookVerifyToken,
       botEnabled, botName, botSystemPrompt, enabled,
+      botProjectIds, botGroundRules, botBusinessContext, botGreeting,
     } = req.body;
     const update = {};
     if (provider            !== undefined) update["whatsapp.provider"]            = provider;
@@ -474,6 +733,19 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     if (botSystemPrompt     !== undefined) update["whatsapp.botSystemPrompt"]     = botSystemPrompt;
     if (enabled             !== undefined) update["whatsapp.enabled"]             = enabled;
     if (apiKey)                            update["whatsapp.apiKey"]              = apiKey;
+    // Agent Studio — live-linked project knowledge base. Only IDs that are
+    // actually this org's own projects are kept, so one tenant can never
+    // point their bot's prompt at another tenant's project data by pasting
+    // an ID that isn't theirs.
+    if (botProjectIds !== undefined) {
+      const ids = Array.isArray(botProjectIds) ? botProjectIds.filter(Boolean) : [];
+      update["whatsapp.botProjectIds"] = ids.length
+        ? (await Project.find({ _id: { $in: ids }, orgId: req.orgId }).select("_id").lean()).map((p) => p._id)
+        : [];
+    }
+    if (botGroundRules      !== undefined) update["whatsapp.botGroundRules"]      = botGroundRules;
+    if (botBusinessContext  !== undefined) update["whatsapp.botBusinessContext"]  = botBusinessContext;
+    if (botGreeting         !== undefined) update["whatsapp.botGreeting"]         = botGreeting;
 
     const org = await Organization.findByIdAndUpdate(req.orgId, { $set: update }, { new: true }).select("whatsapp");
     const { apiKey: _k, ...safe } = org.whatsapp.toObject();
