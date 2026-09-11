@@ -189,6 +189,23 @@ const leadSchema = new mongoose.Schema(
 
     // ── Lead Source Metadata ───────────────────────────────────────────────────
     leadSourceLabel: { type: String, trim: true, default: "" }, // e.g. "PropHunt LLP - Lead Ads", "prophuntllp.com"
+
+    // Meta "Click to WhatsApp" ad attribution — present only when this lead's
+    // first WhatsApp message carried a `referral` block (i.e. it came from an
+    // ad's "Send Message" CTA, not an organic "hi"). Lets Leads be filtered
+    // by campaign and ctwaClid fed back to Meta's Conversions API later.
+    // Undefined (not an empty object) for every non-ad lead, matching the
+    // voiceCalls convention so existing "field absent" checks keep working.
+    campaignRef: {
+      type: {
+        adId:      { type: String, trim: true, default: "" }, // Meta ad ID (referral.source_id)
+        headline:  { type: String, trim: true, default: "" },
+        body:      { type: String, trim: true, default: "" }, // the ad's pre-filled WhatsApp message
+        sourceUrl: { type: String, trim: true, default: "" },
+        ctwaClid:  { type: String, trim: true, default: "" }, // click id, for Conversions API
+      },
+      default: undefined,
+    },
     formPlugin:      { type: String, trim: true, default: "" }, // e.g. "metform", "elementor_form", "cf7"
     sourcePage:      { type: String, trim: true, default: "" }, // full page URL where the form was submitted
     sourceDomain:    { type: String, trim: true, default: "" }, // clean hostname auto-extracted from sourcePage (e.g. "shaporjipallonji.com")

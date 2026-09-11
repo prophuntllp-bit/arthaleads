@@ -129,6 +129,19 @@ const orgSchema = new mongoose.Schema(
       botBusinessContext:  { type: String, default: "" },   // free-text: who we are, service area, policies
       botGreeting:         { type: String, default: "" },   // sent as the first message on a brand-new conversation
 
+      // Meta ad ID -> specific project(s). A Click-to-WhatsApp ad's pre-filled
+      // message usually names the project, and the AI can pick that up on its
+      // own from the customer's first message - but a generic ad ("DM us for
+      // our best deals") gives it nothing to match on. Mapping the ad's own ID
+      // here guarantees the first reply is grounded in the right project(s)
+      // regardless of what the ad copy says. Checked before falling back to
+      // botProjectIds / all active projects.
+      botAdProjectMap: [{
+        adId:       { type: String, trim: true, required: true },
+        label:      { type: String, trim: true, default: "" }, // human note, e.g. "Skyline launch - Feb"
+        projectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
+      }],
+
       // ── Embedded Signup (see docs/whatsapp-embedded-signup-plan.md) ─────────
       esOnboarded:        { type: Boolean, default: false },
       onboardedAt:        { type: Date },

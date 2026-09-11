@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, Wifi, WifiOff, X,
   CheckCircle2, AlertTriangle, Info, Stethoscope, XCircle, Sparkles, ChevronDown, Building2,
+  Megaphone, Plus,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -120,6 +121,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   const [botGroundRules, setBotGroundRules]         = useState("");
   const [botBusinessContext, setBotBusinessContext] = useState("");
   const [botProjectIds, setBotProjectIds]           = useState([]); // empty = all active projects
+  const [botAdProjectMap, setBotAdProjectMap]       = useState([]); // [{ adId, label, projectIds: [] }]
   const [projects, setProjects]       = useState([]);
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [saving, setSaving]           = useState(false);
@@ -174,6 +176,9 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       setBotGroundRules(s.botGroundRules || "");
       setBotBusinessContext(s.botBusinessContext || "");
       setBotProjectIds((s.botProjectIds || []).map(String));
+      setBotAdProjectMap((s.botAdProjectMap || []).map(m => ({
+        adId: m.adId || "", label: m.label || "", projectIds: (m.projectIds || []).map(String),
+      })));
       setShowAdvancedPrompt(!!s.botSystemPrompt);
     }).catch(() => {});
     api.get("/projects").then(r => setProjects(r.data?.data || [])).catch(() => {});
@@ -272,6 +277,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
         botGroundRules,
         botBusinessContext,
         botProjectIds,
+        botAdProjectMap,
       });
       toast.success("Assistant settings saved");
     } catch { toast.error("Failed to save"); }
@@ -283,6 +289,15 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
     );
   };
+
+  const addAdMapping = () => setBotAdProjectMap((c) => [...c, { adId: "", label: "", projectIds: [] }]);
+  const removeAdMapping = (idx) => setBotAdProjectMap((c) => c.filter((_, i) => i !== idx));
+  const updateAdMapping = (idx, patch) => setBotAdProjectMap((c) => c.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const toggleAdMappingProject = (idx, projectId) => setBotAdProjectMap((c) => c.map((r, i) => {
+    if (i !== idx) return r;
+    const has = r.projectIds.includes(projectId);
+    return { ...r, projectIds: has ? r.projectIds.filter((x) => x !== projectId) : [...r.projectIds, projectId] };
+  }));
 
   const disconnect = async () => {
     if (!confirm("Disconnect WhatsApp? Your conversation history will be kept.")) return;
@@ -615,6 +630,51 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
                   {botProjectIds.length} project{botProjectIds.length > 1 ? "s" : ""} selected — only these will be discussed.
                 </p>
               )}
+            </div>
+
+            <div className="pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
+              <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1.5 pt-3">
+                <Megaphone className="w-3.5 h-3.5" /> Ad campaign mapping <span className="text-app-soft font-normal">(optional)</span>
+              </label>
+              <p className="text-xs text-app-soft mb-2">
+                Running a Click-to-WhatsApp ad? Paste its Ad ID (from Meta Ads Manager → the ad, not the
+                campaign) and pick the project(s) it's about. When someone messages in from that specific
+                ad, the assistant's very first reply is guaranteed to be about the right project — even if
+                the ad's own pre-filled message is generic.
+              </p>
+              <div className="space-y-2">
+                {botAdProjectMap.map((row, idx) => (
+                  <div key={idx} className="rounded-xl p-3 space-y-2"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <input className="input flex-1 min-w-[160px] font-mono text-xs" placeholder="Ad ID e.g. 1202101234567890"
+                        value={row.adId} onChange={e => updateAdMapping(idx, { adId: e.target.value.trim() })} />
+                      <input className="input flex-1 min-w-[160px] text-xs" placeholder="Label (optional) e.g. Skyline launch"
+                        value={row.label} onChange={e => updateAdMapping(idx, { label: e.target.value })} />
+                      <button type="button" onClick={() => removeAdMapping(idx)} title="Remove"
+                        className="shrink-0 p-1.5 rounded-lg text-app-soft hover:text-red-500 transition">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {projects.length === 0 && <span className="text-xs text-app-soft italic">Add projects on the Projects page first</span>}
+                      {projects.map((p) => (
+                        <button key={p._id} type="button" onClick={() => toggleAdMappingProject(idx, p._id)}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full transition"
+                          style={row.projectIds.includes(p._id)
+                            ? { background: "var(--app-primary)", color: "#fff" }
+                            : { background: "var(--app-border)", color: "var(--app-text-soft)" }}>
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addAdMapping}
+                className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
+                <Plus className="w-3.5 h-3.5" /> Add ad mapping
+              </button>
             </div>
 
             <button type="button" onClick={() => setShowAdvancedPrompt(v => !v)}

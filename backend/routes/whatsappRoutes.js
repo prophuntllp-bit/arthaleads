@@ -149,6 +149,10 @@ function parseWebhookPayload(provider, payload, headers) {
         msgId: msg.id,
         msgText,
         msgType: msg.type || "text",
+        // Present only on the message that opened this thread from a
+        // Click-to-WhatsApp ad's "Send Message" CTA — everything downstream
+        // (campaignRefFromReferral) treats a missing referral as "organic".
+        referral: msg.referral || null,
       };
     }
     default:
@@ -228,6 +232,28 @@ async function applyStatusUpdates(org, updates) {
   }
 }
 
+// ── Meta CTWA ad attribution ──────────────────────────────────────────────────
+// Turns a raw `referral` block (present only on the message that opened this
+// thread from an ad's "Send Message" CTA) into the shape stored on
+// Lead.campaignRef / WaConversation.campaignRef. Returns null for an organic
+// "hi" — never stores an all-empty object.
+function campaignRefFromReferral(referral) {
+  if (!referral || typeof referral !== "object") return null;
+  const ref = {
+    adId:      String(referral.source_id || "").trim(),
+    headline:  String(referral.headline || "").trim(),
+    body:      String(referral.body || "").trim(),
+    sourceUrl: String(referral.source_url || "").trim(),
+    ctwaClid:  String(referral.ctwa_clid || "").trim(),
+  };
+  return (ref.adId || ref.ctwaClid) ? ref : null;
+}
+
+function campaignLabel(campaignRef) {
+  if (!campaignRef) return "";
+  return `Facebook Ad · ${campaignRef.headline || campaignRef.adId || "Click to WhatsApp"}`;
+}
+
 // ── Lead auto-capture from WhatsApp (source: "WhatsApp") ─────────────────────
 // A brand-new contact who messages in with no matching existing lead becomes
 // a real Lead right away — same as any other channel — rather than sitting
@@ -236,7 +262,7 @@ async function applyStatusUpdates(org, updates) {
 // schema's neutral "N/A"/blank and are only ever filled in later by
 // enrichExistingWhatsAppLead(), which applies the exact same
 // never-overwrite-a-real-value discipline as mapVistrowExtractedFields.
-async function autoCaptureWhatsAppLead(org, phone, name) {
+async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
   let assignee = null;
   if (org.autoAssign !== false) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
@@ -254,14 +280,17 @@ async function autoCaptureWhatsAppLead(org, phone, name) {
     purpose: "N/A",
     bhk: "N/A",
     budget: { min: null, max: null, currency: "INR" },
+    leadSourceLabel: campaignLabel(campaignRef),
+    campaignRef: campaignRef || undefined,
     activities: [{
       type: "created",
-      description: assignee
-        ? `Lead started a WhatsApp conversation — auto-assigned to ${assignee.name}`
-        : "Lead started a WhatsApp conversation — unassigned (auto-assignment disabled)",
+      description: [
+        campaignRef ? `Lead clicked a WhatsApp ad ("${campaignRef.headline || campaignRef.adId}")` : "Lead started a WhatsApp conversation",
+        assignee ? `auto-assigned to ${assignee.name}` : "unassigned (auto-assignment disabled)",
+      ].join(" — "),
       performedBy: assignee?._id || null,
       performedByName: assignee?.name || "",
-      meta: {},
+      meta: campaignRef ? { adId: campaignRef.adId } : {},
     }],
   });
   if (assignee?._id) {
@@ -285,12 +314,16 @@ async function autoCaptureWhatsAppLead(org, phone, name) {
 // ── Shared inbound handler ────────────────────────────────────────────────────
 
 async function handleInbound(org, parsed) {
-  const { phone, name, msgId, msgText, msgType } = parsed;
+  const { phone, name, msgId, msgText, msgType, referral } = parsed;
   if (!phone || !msgText) return;
 
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
   const isNewConversation = !conv;
   if (!conv) {
+    // Meta only attaches `referral` to the message that actually opened this
+    // thread from an ad — so this is the one and only place attribution can
+    // ever be captured for it.
+    const campaignRef = campaignRefFromReferral(referral);
     const cleaned = phone.replace(/^91/, "");
     let lead = await Lead.findOne({
       orgId: org._id,
@@ -298,10 +331,18 @@ async function handleInbound(org, parsed) {
     }).lean();
     if (!lead) {
       try {
-        lead = await autoCaptureWhatsAppLead(org, phone, name);
+        lead = await autoCaptureWhatsAppLead(org, phone, name, campaignRef);
       } catch (err) {
         console.error("[WhatsApp Lead Capture] auto-create failed:", err.message);
       }
+    } else if (campaignRef && !lead.campaignRef?.adId) {
+      // A phone number already in the CRM (some other source) just clicked a
+      // WhatsApp ad for the first time — attribute it, but never overwrite an
+      // earlier campaign this lead was already tied to.
+      await Lead.updateOne(
+        { _id: lead._id },
+        { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
+      );
     }
     conv = await WaConversation.create({
       orgId: org._id, leadId: lead?._id || null,
@@ -309,6 +350,7 @@ async function handleInbound(org, parsed) {
       waContactId: phone,
       botEnabled: org.whatsapp?.botEnabled ?? true,
       status: org.whatsapp?.botEnabled ? "bot" : "open",
+      campaignRef: campaignRef || undefined,
     });
     if (lead?._id) {
       await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
@@ -379,7 +421,15 @@ async function sendBotGreeting(org, conversation) {
 // An org that already wrote a full custom prompt (the old free-text-only way
 // of configuring the bot) keeps getting exactly that, untouched — Agent
 // Studio only applies when botSystemPrompt is empty.
-async function buildProjectGroundedPrompt(org, leadContext) {
+//
+// campaignRef (from WaConversation.campaignRef, when this thread started from
+// a Click-to-WhatsApp ad) does two things: if the ad's ID is mapped to
+// specific project(s) in botAdProjectMap, the prompt is scoped to exactly
+// those — a guarantee that holds even when the ad's own copy is too generic
+// for the model to match a project by itself. Either way, the ad's headline
+// is handed to the model as context so the very first reply can address what
+// the customer actually clicked on, instead of a cold "how can I help you".
+async function buildProjectGroundedPrompt(org, leadContext, campaignRef) {
   const wa = org.whatsapp || {};
   const botName = wa.botName || "Artha Assistant";
 
@@ -388,7 +438,12 @@ async function buildProjectGroundedPrompt(org, leadContext) {
   }
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
-  if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
+  const adMapping = campaignRef?.adId && Array.isArray(wa.botAdProjectMap)
+    ? wa.botAdProjectMap.find((m) => m.adId === campaignRef.adId)
+    : null;
+  if (adMapping?.projectIds?.length) {
+    projectFilter._id = { $in: adMapping.projectIds };
+  } else if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
     projectFilter._id = { $in: wa.botProjectIds };
   }
   const projects = await Project.find(projectFilter)
@@ -416,9 +471,12 @@ async function buildProjectGroundedPrompt(org, leadContext) {
 
   const rules    = wa.botGroundRules?.trim()     ? `\nAdditional rules from the team:\n${wa.botGroundRules.trim()}\n`   : "";
   const business = wa.botBusinessContext?.trim() ? `\nAbout us: ${wa.botBusinessContext.trim()}\n` : "";
+  const adContext = (campaignRef?.headline || campaignRef?.body)
+    ? `\nThis customer messaged in by tapping a WhatsApp ad whose text was: "${campaignRef.headline || campaignRef.body}". Open by addressing that interest directly instead of a generic greeting.\n`
+    : "";
 
   return `You are ${botName}, a friendly real estate assistant for ${org.name} (India). Reply via WhatsApp.
-${business}
+${business}${adContext}
 ${knowledge}
 
 Rules:
@@ -542,7 +600,7 @@ async function triggerBotReply(org, conversation, inboundText) {
     }
 
     const botName = org.whatsapp?.botName || "Artha Assistant";
-    const systemPrompt = await buildProjectGroundedPrompt(org, leadContext);
+    const systemPrompt = await buildProjectGroundedPrompt(org, leadContext, conversation.campaignRef);
 
     // Fire-and-forget: never let enrichment delay or fail the actual reply.
     enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
@@ -720,7 +778,7 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     const {
       apiKey, provider, accountEndpoint, phoneNumberId, wabaId, webhookVerifyToken,
       botEnabled, botName, botSystemPrompt, enabled,
-      botProjectIds, botGroundRules, botBusinessContext, botGreeting,
+      botProjectIds, botGroundRules, botBusinessContext, botGreeting, botAdProjectMap,
     } = req.body;
     const update = {};
     if (provider            !== undefined) update["whatsapp.provider"]            = provider;
@@ -746,6 +804,26 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     if (botGroundRules      !== undefined) update["whatsapp.botGroundRules"]      = botGroundRules;
     if (botBusinessContext  !== undefined) update["whatsapp.botBusinessContext"]  = botBusinessContext;
     if (botGreeting         !== undefined) update["whatsapp.botGreeting"]         = botGreeting;
+
+    // Ad -> project mapping. Same ownership guard as botProjectIds above —
+    // drop any project ID that isn't actually this org's; drop any row whose
+    // ad ID is blank (nothing to match against) or that ends up with no
+    // valid projects at all (would silently fall through to the org-wide
+    // default anyway, so there's no reason to keep it).
+    if (botAdProjectMap !== undefined) {
+      const rows = Array.isArray(botAdProjectMap) ? botAdProjectMap : [];
+      const allIds = [...new Set(rows.flatMap((r) => Array.isArray(r?.projectIds) ? r.projectIds.filter(Boolean) : []))];
+      const owned = allIds.length
+        ? new Set((await Project.find({ _id: { $in: allIds }, orgId: req.orgId }).select("_id").lean()).map((p) => String(p._id)))
+        : new Set();
+      update["whatsapp.botAdProjectMap"] = rows
+        .map((r) => ({
+          adId: String(r?.adId || "").trim(),
+          label: String(r?.label || "").trim(),
+          projectIds: (Array.isArray(r?.projectIds) ? r.projectIds : []).filter((id) => owned.has(String(id))),
+        }))
+        .filter((r) => r.adId && r.projectIds.length);
+    }
 
     const org = await Organization.findByIdAndUpdate(req.orgId, { $set: update }, { new: true }).select("whatsapp");
     const { apiKey: _k, ...safe } = org.whatsapp.toObject();
