@@ -52,8 +52,11 @@ const leadController = {
 
   async getDomains(req, res, next) {
     try {
-      const domains = await leadService.getDomains(req.user);
-      res.json({ success: true, domains });
+      const [domains, pages] = await Promise.all([
+        leadService.getDomains(req.user),
+        leadService.getSitePages(req.user),
+      ]);
+      res.json({ success: true, domains, pages });
     } catch (err) {
       next(err);
     }

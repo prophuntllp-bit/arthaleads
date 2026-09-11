@@ -148,6 +148,27 @@ function normalizePhone(phone) {
   return String(phone || "").replace(/\D/g, "").slice(-10);
 }
 
+// "shaporjipallonji.com/shapoorji-pallonji-plot-khopoli" — host without www,
+// path without its trailing slash; "/" is the bare domain.
+function sitePageKey(url) {
+  try {
+    const u = new URL(String(url).trim());
+    const domain = u.hostname.toLowerCase().replace(/^www\./, "");
+    const path = u.pathname.replace(/\/+$/, "") || "/";
+    return { key: domain + (path === "/" ? "" : path.toLowerCase()), domain, path };
+  } catch { return null; }
+}
+
+// Matches one page with or without www, trailing slash, query string or hash —
+// and nothing deeper, so the bare domain does not swallow every sub-page.
+function sitePageCondition(key) {
+  const k = String(key).trim().toLowerCase();
+  const slash = k.indexOf("/");
+  const domain = slash === -1 ? k : k.slice(0, slash);
+  const path = slash === -1 ? "" : k.slice(slash).replace(/\/+$/, "");
+  return { sourcePage: { $regex: `^https?://(www\\.)?${escapeRegex(domain)}${escapeRegex(path)}/?(?:[?#]|$)`, $options: "i" } };
+}
+
 const leadService = {
   // ── Duplicate check ────────────────────────────────────────────────────────
   // Used both by create() (to flag a new lead as a possible duplicate without
@@ -231,6 +252,39 @@ const leadService = {
     return { lead, duplicate };
   },
 
+  // ── Website pages leads came from ────────────────────────────────────────
+  // One domain often carries several projects' landing pages (shaporjipallonji.com
+  // has Treetopia, Vanaha, Khopoli…), each with its own ad campaign. Grouped on
+  // host + path with the query string dropped — every ad click appends its own
+  // gclid, which would otherwise make each lead its own "page". Derived from the
+  // leads themselves, so a new page shows up the moment its first lead lands.
+  async getSitePages(user) {
+    const strip = { $arrayElemAt: [{ $split: [{ $arrayElemAt: [{ $split: ["$sourcePage", "?"] }, 0] }, "#"] }, 0] };
+    const leadMatch = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true }, sourcePage: { $nin: ["", null] } };
+    const projMatch = { orgId: user.orgId, sourcePage: { $nin: ["", null] } };
+    // Counts follow the same scope as the list an agent sees, or the number
+    // beside a page would not match what clicking it shows.
+    if (user.role === "agent") {
+      leadMatch.$or = [{ assignedTo: user._id }, { createdBy: user._id }];
+      const scoped = await Project.find({ orgId: user.orgId, assignedTo: user._id }).select("_id").lean();
+      projMatch.project = { $in: scoped.map((p) => p._id) };
+    }
+    const group = { $group: { _id: strip, n: { $sum: 1 } } };
+    const [a, b] = await Promise.all([
+      Lead.aggregate([{ $match: leadMatch }, group]),
+      ProjectLead.aggregate([{ $match: projMatch }, group]),
+    ]);
+    const byKey = new Map();
+    for (const r of [...a, ...b]) {
+      const k = sitePageKey(r._id);
+      if (!k) continue;
+      const cur = byKey.get(k.key) || { ...k, count: 0 };
+      cur.count += r.n;
+      byKey.set(k.key, cur);
+    }
+    return [...byKey.values()].sort((x, y) => x.domain.localeCompare(y.domain) || y.count - x.count);
+  },
+
   // ── Distinct website domains — powers the "Website" source sub-menu on the
   // Leads page filter bar, so agents can pick a domain instead of typing it ──
   async getDomains(user) {
@@ -280,6 +334,7 @@ const leadService = {
       const rx = { $regex: escapeRegex(query.siteFilter), $options: "i" };
       andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
     }
+    if (query.sitePage) andConditions.push(sitePageCondition(query.sitePage));
 
     if (andConditions.length) {
       filter.$and = andConditions;
@@ -648,7 +703,7 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter } = query;
+    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter, sitePage } = query;
     // Accept both names — the Leads page filter sends `assignedTo`, some
     // internal callers still send the older `userId`.
     const agentId  = query.assignedTo || query.userId;
@@ -698,6 +753,7 @@ const leadService = {
       const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
       andConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
     }
+    if (sitePage) andConditions.push(sitePageCondition(sitePage));
     if (andConditions.length) leadFilter.$and = andConditions;
 
     // ── Project-lead filter ────────────────────────────────────────────────────
@@ -709,7 +765,7 @@ const leadService = {
     // (requirements/budget/purpose) and were inflating the unfiltered list
     // with blank rows. An explicit project filter or a domain search both
     // count as deliberate intent to include them.
-    const skipProjectLeads = !!priority || !!consent || (!projectId && !siteFilter);
+    const skipProjectLeads = !!priority || !!consent || (!projectId && !siteFilter && !sitePage);
     let projLeads = [], projTotal = 0;
 
     if (!skipProjectLeads) {
@@ -734,6 +790,7 @@ const leadService = {
         const rx = { $regex: escapeRegex(siteFilter), $options: "i" };
         projAndConditions.push({ $or: [{ leadSourceLabel: rx }, { sourcePage: rx }, { sourceDomain: rx }, { "notes.text": rx }] });
       }
+      if (sitePage) projAndConditions.push(sitePageCondition(sitePage));
       if (projAndConditions.length) projFilter.$and = projAndConditions;
 
       // ProjectLead has no per-lead `assignedTo` — assignment lives on the

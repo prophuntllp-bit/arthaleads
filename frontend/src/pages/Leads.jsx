@@ -264,6 +264,13 @@ function ContactStatusCell({ lead, projectId, onUpdated }) {
   );
 }
 
+// The page a website lead came from, without the query string every ad click
+// appends — "/shapoorji-pallonji-plot-khopoli". Empty for the bare domain.
+function pagePath(url) {
+  if (!url) return "";
+  try { return new URL(url).pathname.replace(/\/+$/, ""); } catch { return ""; }
+}
+
 export default function Leads() {
   useEffect(() => { document.title = "Lead Management - Arthaleads CRM"; }, []);
   const { user } = useAuth();
@@ -346,6 +353,7 @@ export default function Leads() {
 
   // ── Distinct website domains — powers the "Website" source sub-menu below ──
   const [domains, setDomains] = useState([]);
+  const [sitePages, setSitePages] = useState([]);
 
   // ── Column widths for main leads table (resizable via drag, persisted) ──────
   const [colW, startResize] = useColumnResize("leads", {
@@ -371,7 +379,7 @@ export default function Leads() {
   }, []);
 
   useEffect(() => {
-    api.get("/leads/domains").then((r) => setDomains(r.data.domains || [])).catch(() => {});
+    api.get("/leads/domains").then((r) => { setDomains(r.data.domains || []); setSitePages(r.data.pages || []); }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -600,6 +608,7 @@ export default function Leads() {
         if (filters.booking)    params.set("booking",    filters.booking);
         if (filters.search)     params.set("search",     filters.search);
         if (filters.siteFilter) params.set("siteFilter", filters.siteFilter);
+        if (filters.sitePage)   params.set("sitePage",   filters.sitePage);
         if (filters.assignedTo) params.set("assignedTo", filters.assignedTo);
         if (filters.projectId)  params.set("projectId",  filters.projectId);
         if (filters.myOnly)     params.set("myOnly",     filters.myOnly);
@@ -1154,7 +1163,7 @@ export default function Leads() {
                     style={{ width: "100%", paddingLeft: 28, paddingRight: 10, paddingTop: 5, paddingBottom: 5, borderRadius: 10, fontSize: 13, border: "1px solid var(--app-border)", background: "var(--app-surface-low)", color: "var(--app-text)", outline: "none" }}
                     placeholder="Domain…"
                     value={filters.siteFilter || ""}
-                    onChange={(e) => setFilter("siteFilter", e.target.value)}
+                    onChange={(e) => { setFilter("siteFilter", e.target.value); setFilter("sitePage", ""); }}
                   />
                 </div>
                 {/* R1C3: Agent filter — admin/manager only */}
@@ -1189,10 +1198,13 @@ export default function Leads() {
                 <SourceDomainSelect
                   value={filters.source}
                   domain={filters.siteFilter}
+                  page={filters.sitePage || ""}
                   domains={domains}
-                  onChange={(source, dom) => {
+                  pages={sitePages}
+                  onChange={(source, dom, pg) => {
                     setFilter("source", source);
                     setFilter("siteFilter", dom);
+                    setFilter("sitePage", pg || "");
                   }}
                   placeholder="All Sources"
                   options={SOURCE_OPTIONS}
@@ -1255,7 +1267,7 @@ export default function Leads() {
                     <button
                       className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                       onClick={() => {
-                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent"].forEach((k) => setFilter(k, ""));
+                        ["search", "siteFilter", "sitePage", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent"].forEach((k) => setFilter(k, ""));
                         try { localStorage.removeItem("leads_myOnly"); } catch {}
                       }}
                     >
@@ -1371,6 +1383,11 @@ export default function Leads() {
                         {lead.sourceDomain && lead.sourceDomain !== lead.leadSourceLabel && (
                           <span className="text-[10px] text-blue-500 truncate max-w-[130px]" title={lead.sourceDomain}>
                             {lead.sourceDomain}
+                          </span>
+                        )}
+                        {pagePath(lead.sourcePage) && (
+                          <span className="text-[10px] text-app-soft truncate max-w-[130px]" title={String(lead.sourcePage).split("?")[0]}>
+                            {pagePath(lead.sourcePage)}
                           </span>
                         )}
                       </div>
