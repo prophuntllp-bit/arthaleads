@@ -33,6 +33,39 @@ const categoryToCredit = (c) => ({
   MARKETING: "marketing", UTILITY: "utility", AUTHENTICATION: "authentication",
 }[String(c || "").toUpperCase()] || "marketing");
 
+const inr = (n) => "₹" + Number(n).toLocaleString("en-IN");
+
+/** Budget as a person would say it, not as it is stored. */
+function fmtBudget(b) {
+  if (!b?.min && !b?.max) return "";
+  const one = (n) => (n >= 10_000_000 ? `₹${(n / 10_000_000).toFixed(2).replace(/\.?0+$/, "")} Cr`
+    : n >= 100_000 ? `₹${(n / 100_000).toFixed(2).replace(/\.?0+$/, "")} L` : inr(n));
+  if (b.min && b.max) return `${one(b.min)} – ${one(b.max)}`;
+  return one(b.min || b.max);
+}
+
+const istDate = (d) => (d
+  ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })
+  : "");
+
+/**
+ * Fields a template variable can be bound to, resolved per lead.
+ *
+ * Anything not in here is treated as a literal — the same text for the whole
+ * campaign — which is what you want for an agent name or a due date. Keep this
+ * in step with VAR_FIELDS in CampaignBuilder.jsx.
+ */
+const LEAD_FIELD = {
+  name:         (l) => l.name || "there",
+  phone:        (l) => l.phone || "",
+  location:     (l) => l.preferredLocation || l.city || "",
+  city:         (l) => l.city || "",
+  bhk:          (l) => l.bhk || "",
+  propertyType: (l) => l.propertyType || "",
+  budget:       (l) => fmtBudget(l.budget),
+  visitDate:    (l) => istDate(l.siteVisitDate),
+};
+
 /**
  * Resolve an audience from a Leads-page style filter.
  *
@@ -53,7 +86,9 @@ async function resolveAudience(orgId, filter = {}, { requireConsent = true } = {
     if (filter.to)   q.createdAt.$lte = new Date(`${String(filter.to).slice(0, 10)}T23:59:59.999+05:30`);
   }
 
-  const leads = await Lead.find(q).select("name phone whatsappConsent").lean();
+  const leads = await Lead.find(q)
+    .select("name phone whatsappConsent preferredLocation bhk propertyType city budget siteVisitDate")
+    .lean();
 
   const noPhone   = [];
   const noConsent = [];
@@ -159,10 +194,15 @@ async function run(org, campaignId, sendProviderMessage) {
   let sent = 0, failed = 0, lastError = "";
 
   for (const lead of p.sendable) {
-    const values = (campaign.variableMapping || []).map(field =>
-      field === "name" ? (lead.name || "there") :
-      field === "phone" ? (lead.phone || "") : field
-    );
+    // A mapped field resolves per lead; anything else is literal text that is
+    // the same for everyone. Meta rejects an empty parameter outright, so a
+    // lead missing the field falls back to the literal rather than failing the
+    // whole send.
+    const values = (campaign.variableMapping || []).map((field) => {
+      const resolve = LEAD_FIELD[field];
+      if (!resolve) return field;
+      return resolve(lead) || "—";
+    });
 
     try {
       const components = templates.buildSendComponents({ components: [] }, values);

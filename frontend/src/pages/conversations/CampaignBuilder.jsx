@@ -9,10 +9,24 @@ import { STATUS_OPTIONS, SOURCE_OPTIONS } from "../../utils/constants";
 
 const rupees = (p) => `₹${((p || 0) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const FORM_SELECT = { width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 };
+// Must stay in step with LEAD_FIELD in backend/services/waCampaignService.js —
+// a value not in that map is sent as literal text rather than resolved, which
+// is the right behaviour for an agent name but silently wrong for a lead field.
 const VAR_FIELDS = [
-  { value: "name",  label: "Lead name" },
-  { value: "phone", label: "Lead phone" },
+  { value: "name",         label: "Lead name" },
+  { value: "phone",        label: "Lead phone" },
+  { value: "location",     label: "Preferred location" },
+  { value: "city",         label: "City" },
+  { value: "bhk",          label: "Configuration (BHK)" },
+  { value: "propertyType", label: "Property type" },
+  { value: "budget",       label: "Budget range" },
+  { value: "visitDate",    label: "Site visit date" },
 ];
+const FIELD_KEYS = VAR_FIELDS.map((f) => f.value);
+const LITERAL = "__literal";
+// Some blanks are the same for the whole campaign — an agent's name, a due
+// date. Those are typed once rather than pulled off each lead.
+const VAR_OPTIONS = [...VAR_FIELDS, { value: LITERAL, label: "Same for everyone…" }];
 
 // The words around a {{n}} in the template, so "{{2}}" reads as "…visit to
 // {{2}} on…" and the person mapping it knows what it is for.
@@ -39,6 +53,7 @@ export default function CampaignBuilder() {
   const [filter, setFilter]     = useState({ status: "", source: "", from: "", to: "" });
   const [mapping, setMapping]   = useState([]);
 
+  const [tplError, setTplError] = useState("");
   const [prev, setPrev]     = useState(null);
   const [checking, setChk]  = useState(false);
   const [sending, setSend]  = useState(false);
@@ -47,7 +62,10 @@ export default function CampaignBuilder() {
   useEffect(() => {
     api.get("/whatsapp/templates")
       .then((r) => setTemplates((r.data.templates || []).filter((t) => t.status === "APPROVED")))
-      .catch(() => {})
+      // Swallowing this used to leave an empty template dropdown and no reason
+      // for it, which reads as "we have no templates" even when the real cause
+      // is an expired connection.
+      .catch((e) => setTplError(e.response?.data?.message || "Could not load templates."))
       .finally(() => setLoadingTpl(false));
     api.get("/whatsapp/campaigns/audience-counts").then((r) => setCounts(r.data)).catch(() => {});
   }, []);
@@ -157,6 +175,13 @@ export default function CampaignBuilder() {
                 <div className="flex items-center gap-2 text-xs text-app-soft py-3">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading approved templates…
                 </div>
+              ) : tplError ? (
+                <div className="rounded-2xl px-4 py-3 text-xs flex items-start gap-2 flex-wrap"
+                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#b91c1c" }}>
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  <span className="flex-1">{tplError}</span>
+                  <button onClick={() => navigate("/conversations/templates")} className="font-semibold underline">Open templates</button>
+                </div>
               ) : templates.length === 0 ? (
                 <div className="rounded-2xl px-4 py-3 text-xs flex items-start gap-2 flex-wrap"
                   style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)", color: "#b45309" }}>
@@ -229,21 +254,31 @@ export default function CampaignBuilder() {
               <p className="text-xs text-app-soft -mt-1">
                 This template has {prev.variablesExpected} value{prev.variablesExpected > 1 ? "s" : ""} filled per person
               </p>
-              {Array.from({ length: prev.variablesExpected }, (_, i) => (
-                <div key={i} className="flex items-center gap-3 rounded-2xl p-3 flex-wrap sm:flex-nowrap stitch-surface-muted">
-                  <span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg shrink-0"
-                    style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>{`{{${i + 1}}}`}</span>
-                  <p className="text-xs text-app-soft flex-1 min-w-0 truncate" title={contextFor(body, i + 1)}>
-                    {contextFor(body, i + 1) || "Value for this position"}
-                  </p>
-                  <div className="w-full sm:w-44 shrink-0">
-                    <CustomSelect
-                      value={mapping[i] || "name"}
-                      onChange={(v) => setMapping((m) => { const n = [...m]; n[i] = v; return n; })}
-                      options={VAR_FIELDS} style={{ width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 13 }} />
+              {Array.from({ length: prev.variablesExpected }, (_, i) => {
+                const val = mapping[i] ?? "name";
+                const isField = FIELD_KEYS.includes(val);
+                return (
+                  <div key={i} className="flex items-start gap-3 rounded-2xl p-3 flex-wrap sm:flex-nowrap stitch-surface-muted">
+                    <span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg shrink-0 mt-1"
+                      style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>{`{{${i + 1}}}`}</span>
+                    <p className="text-xs text-app-soft flex-1 min-w-0 truncate mt-1.5" title={contextFor(body, i + 1)}>
+                      {contextFor(body, i + 1) || "Value for this position"}
+                    </p>
+                    <div className="w-full sm:w-48 shrink-0 space-y-2">
+                      <CustomSelect
+                        value={isField ? val : LITERAL}
+                        onChange={(v) => setMapping((m) => { const n = [...m]; n[i] = v === LITERAL ? "" : v; return n; })}
+                        options={VAR_OPTIONS} style={{ width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 13 }} />
+                      {!isField && (
+                        <input className="input w-full" placeholder="Type the value"
+                          style={{ padding: "8px 12px", borderRadius: "0.75rem", fontSize: 13 }}
+                          value={val}
+                          onChange={(e) => setMapping((m) => { const n = [...m]; n[i] = e.target.value; return n; })} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

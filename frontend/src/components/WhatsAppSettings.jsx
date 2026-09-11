@@ -1,11 +1,29 @@
 import { useEffect, useState } from "react";
 import {
   Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, Wifi, WifiOff, X,
-  CheckCircle2, AlertTriangle, Info,
+  CheckCircle2, AlertTriangle, Info, Stethoscope, XCircle,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import WhatsAppIcon from "./WhatsAppIcon";
+
+// One line of the credential check. Each piece is probed on its own because
+// Meta reports every one of these failures with the same status code.
+function DiagRow({ label, ok, detail, message }) {
+  return (
+    <div className="flex items-start gap-2">
+      {ok
+        ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-px" style={{ color: "#15803d" }} />
+        : <XCircle className="w-4 h-4 shrink-0 mt-px" style={{ color: "#ef4444" }} />}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold text-app">{label}</p>
+        {(detail || message) && (
+          <p className="text-xs text-app-soft mt-0.5 break-words">{ok ? detail : message}</p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // Meta first: it is the only connection that supports templates, campaigns and
 // the delivery check below. The BSPs still work for replying in the inbox.
@@ -103,6 +121,8 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   const [testing, setTesting]         = useState(false);
   const [webhook, setWebhook]         = useState(null);   // last subscription check result
   const [checking, setChecking]       = useState(false);
+  const [diag, setDiag]               = useState(null);   // last credential diagnosis
+  const [diagging, setDiagging]       = useState(false);
 
   const prov = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
   const isMeta = provider === "meta";
@@ -203,6 +223,20 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
     } catch (e) {
       toast.error(e.response?.data?.message || "Could not save");
     } finally { setSavingCreds(false); }
+  };
+
+  // Checks the saved token and both IDs separately. Meta answers an expired
+  // token, a WABA id that is really a phone number id, and a missing object all
+  // with the same HTTP 400, so only a per-piece probe can say which it is.
+  const runDiagnose = async () => {
+    setDiagging(true);
+    try {
+      const { data } = await api.get("/whatsapp/settings/diagnose");
+      setDiag(data);
+      if (data.ok) toast.success("Connection looks good");
+    } catch (e) {
+      setDiag({ applicable: true, ok: false, token: { ok: false, message: e.response?.data?.message || "Check failed" }, warnings: [] });
+    } finally { setDiagging(false); }
   };
 
   const checkWebhook = async () => {
@@ -446,12 +480,37 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
                 Save without testing
               </button>
             )}
+            {isMeta && hasKey && (
+              <button onClick={runDiagnose} disabled={diagging || testing || savingCreds}
+                className="btn-secondary flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold disabled:opacity-40">
+                {diagging ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Stethoscope className="w-3.5 h-3.5" />}
+                Check credentials
+              </button>
+            )}
           </div>
           <p className="text-xs text-app-soft">
             {isMeta
               ? "Saves your credentials, sends a test message to the number above and subscribes your app to incoming messages."
               : "Saves your credentials and sends a test message to the number above."}
           </p>
+
+          {diag?.applicable && (
+            <div className="rounded-2xl p-3.5 space-y-2" style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <DiagRow label="Access token" ok={diag.token?.ok} message={diag.token?.message}
+                detail={diag.token?.ok ? "Valid" : null} />
+              <DiagRow label="Business Account ID" ok={diag.waba?.ok} message={diag.waba?.message}
+                detail={diag.waba?.ok ? [diag.waba.name, diag.waba.currency].filter(Boolean).join(" · ") : null} />
+              <DiagRow label="Phone number ID" ok={diag.phone?.ok} message={diag.phone?.message}
+                detail={diag.phone?.ok ? [diag.phone.displayPhoneNumber, diag.phone.verifiedName].filter(Boolean).join(" · ") : null} />
+              {(diag.warnings || []).map((w, i) => (
+                <p key={i} className="text-xs rounded-xl px-3 py-2 flex items-start gap-1.5"
+                  style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)", color: "#b45309" }}>
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  <span>{w}</span>
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

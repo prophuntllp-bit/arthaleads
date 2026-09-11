@@ -22,24 +22,32 @@ const APPROVED = "APPROVED";
 function assertMeta(org) {
   const wa = org?.whatsapp || {};
   if ((wa.provider || "aisensy") !== "meta") {
-    throw badRequest("Templates are only available on the Meta Cloud API provider.");
+    throw badRequest("Templates are only available on the Meta Cloud API provider.", { settingsFix: true });
   }
-  if (!wa.wabaId)  throw badRequest("No WhatsApp Business Account ID saved. Add it in Settings.");
-  if (!wa.apiKey)  throw badRequest("No access token saved. Reconnect in Settings.");
+  if (!wa.wabaId)  throw badRequest("No WhatsApp Business Account ID saved. Add it in Settings.", { settingsFix: true });
+  if (!wa.apiKey)  throw badRequest("No access token saved. Reconnect in Settings.", { settingsFix: true });
   return wa;
 }
 
 /** Everything on the tenant's WABA, newest first. */
 async function listTemplates(org, { limit = 100 } = {}) {
   const wa = assertMeta(org);
-  const { data } = await axios.get(`${GRAPH}/${wa.wabaId}/message_templates`, {
-    params: {
-      access_token: wa.apiKey,
-      limit,
-      fields: "id,name,status,category,language,components,quality_score,rejected_reason",
-    },
-  });
-  return data?.data || [];
+  try {
+    const { data } = await axios.get(`${GRAPH}/${wa.wabaId}/message_templates`, {
+      params: {
+        access_token: wa.apiKey,
+        limit,
+        fields: "id,name,status,category,language,components,quality_score,rejected_reason",
+      },
+    });
+    return data?.data || [];
+  } catch (err) {
+    // Without this the raw AxiosError escaped and the tenant saw "Request failed
+    // with status code 400" — Meta's actual reason (expired token, wrong WABA
+    // id) was discarded here and never logged anywhere.
+    logger.warn(`[wa-templates] list failed for org ${org._id}: ${JSON.stringify(err?.response?.data?.error || err.message)}`);
+    throw fromMeta(err, "Could not load templates from Meta.");
+  }
 }
 
 /** Approved templates only — what a campaign is allowed to send. */
@@ -127,12 +135,19 @@ function fromMeta(err, fallback) {
   const e = new Error(meta?.error_user_msg || meta?.message || fallback);
   e.status = err?.response?.status || 500;
   e.metaCode = meta?.code;
+  e.metaSubcode = meta?.error_subcode;
+  // 190 is Meta's catch-all for an access token that is expired, revoked or
+  // simply wrong. They answer it with HTTP 400, so status alone cannot tell it
+  // apart from a malformed template — the code can, and the UI needs to know
+  // because it is the one failure the tenant fixes by reconnecting.
+  if (meta?.code === 190) { e.reconnect = true; e.settingsFix = true; }
   return e;
 }
 
-function badRequest(message) {
+function badRequest(message, { settingsFix = false } = {}) {
   const e = new Error(message);
   e.status = 400;
+  if (settingsFix) e.settingsFix = true;
   return e;
 }
 

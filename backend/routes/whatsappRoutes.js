@@ -478,6 +478,69 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
   }
 });
 
+// Checks the saved credentials without sending anything.
+//
+// Worth having as its own endpoint because the three ways this breaks are
+// indistinguishable from the outside: Meta answers an expired token, a WABA id
+// that is really a phone number id, and a genuinely missing object all with
+// HTTP 400. Probing each piece separately is the only way to say which it is.
+router.get("/settings/diagnose", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const wa = org?.whatsapp || {};
+    if ((wa.provider || "aisensy") !== "meta") {
+      return res.json({ applicable: false, message: "Diagnostics only apply to the Meta Cloud API provider." });
+    }
+    if (!wa.apiKey) return res.json({ applicable: true, ok: false, token: { ok: false, message: "No access token saved." } });
+
+    const G = "https://graph.facebook.com/v21.0";
+    const probe = async (id, fields) => {
+      if (!id) return { ok: false, missing: true, message: "Not saved." };
+      try {
+        const { data } = await axios.get(`${G}/${id}`, { params: { access_token: wa.apiKey, fields } });
+        return { ok: true, data };
+      } catch (err) {
+        const e = err?.response?.data?.error || {};
+        return { ok: false, code: e.code, subcode: e.error_subcode, message: e.error_user_msg || e.message || err.message };
+      }
+    };
+
+    // `currency` exists on a WABA and not on a phone number; `display_phone_number`
+    // the other way round. That asymmetry is what tells the two IDs apart when
+    // someone has pasted one into the other's box.
+    const [waba, phone] = await Promise.all([
+      probe(wa.wabaId, "id,name,currency"),
+      probe(wa.phoneNumberId, "id,display_phone_number,verified_name,quality_rating"),
+    ]);
+
+    const tokenDead = [waba, phone].some((r) => r.code === 190);
+    const warnings = [];
+    if (wa.wabaId && wa.wabaId === wa.phoneNumberId) {
+      warnings.push("The Business Account ID and Phone Number ID are the same value. They are always two different IDs — check both in Meta's dashboard.");
+    }
+    if (!tokenDead && !waba.ok && !waba.missing && waba.code === 100) {
+      warnings.push("That Business Account ID does not look like a WABA. It may be a phone number ID or a business portfolio ID.");
+    }
+
+    res.json({
+      applicable: true,
+      ok: !tokenDead && waba.ok && phone.ok && !warnings.length,
+      token: tokenDead
+        ? { ok: false, expired: true, message: "The access token has expired or been revoked. Generate a new permanent token in Meta and save it here." }
+        : { ok: true },
+      waba: tokenDead ? { ok: false, message: "Cannot check until the token is valid." }
+        : waba.ok ? { ok: true, id: waba.data.id, name: waba.data.name || "", currency: waba.data.currency || "" }
+        : { ok: false, message: waba.message },
+      phone: tokenDead ? { ok: false, message: "Cannot check until the token is valid." }
+        : phone.ok ? { ok: true, id: phone.data.id, displayPhoneNumber: phone.data.display_phone_number || "", verifiedName: phone.data.verified_name || "", qualityRating: phone.data.quality_rating || "" }
+        : { ok: false, message: phone.message },
+      warnings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.post("/settings/test", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
@@ -651,13 +714,24 @@ async function subscribeAndVerify(wa) {
 // are thin proxies — we hold no local copy that could drift out of sync with
 // what Meta actually has.
 
+// A message alone cannot be acted on. `reconnect` and `settingsFix` are what let
+// the page offer the right button, instead of regexing English prose to guess
+// whether the failure was the tenant's to fix.
+const sendErr = (res, err) => res.status(err.status || 500).json({
+  message: err.message,
+  ...(err.metaCode    != null && { metaCode: err.metaCode }),
+  ...(err.metaSubcode != null && { metaSubcode: err.metaSubcode }),
+  ...(err.reconnect   && { reconnect: true }),
+  ...(err.settingsFix && { settingsFix: true }),
+});
+
 router.get("/templates", async (req, res) => {
   try {
     const org = await Organization.findById(req.orgId).select("whatsapp").lean();
     const list = await templates.listTemplates({ ...org, _id: req.orgId });
     res.json({ templates: list });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message });
+    sendErr(res, err);
   }
 });
 
@@ -667,7 +741,7 @@ router.post("/templates", authorize("admin", "manager", "super_admin"), async (r
     const created = await templates.createTemplate({ ...org, _id: req.orgId }, req.body || {});
     res.status(201).json({ template: created });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message });
+    sendErr(res, err);
   }
 });
 
@@ -677,7 +751,7 @@ router.delete("/templates/:name", authorize("admin", "super_admin"), async (req,
     await templates.deleteTemplate({ ...org, _id: req.orgId }, req.params.name);
     res.json({ ok: true });
   } catch (err) {
-    res.status(err.status || 500).json({ message: err.message });
+    sendErr(res, err);
   }
 });
 
@@ -697,7 +771,7 @@ router.post("/campaigns/preview", authorize("admin", "manager", "super_admin"), 
     const org = await Organization.findById(req.orgId).lean();
     const out = await campaignSvc.preview({ ...org, _id: req.orgId }, req.body || {});
     res.json(out);
-  } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
+  } catch (err) { sendErr(res, err); }
 });
 
 router.post("/campaigns", authorize("admin", "manager", "super_admin"), async (req, res) => {
