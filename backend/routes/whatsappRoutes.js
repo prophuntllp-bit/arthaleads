@@ -19,6 +19,11 @@ const credits        = require("../services/creditService");
 const templates      = require("../services/whatsappTemplateService");
 const campaignSvc    = require("../services/waCampaignService");
 const WaCampaign     = require("../models/WaCampaign");
+const Project        = require("../models/Project");
+const AiUsage        = require("../models/AiUsage");
+const { planGate }   = require("../middlewares/planGate");
+const rateLimit      = require("express-rate-limit");
+const { generateWhatsAppTemplate } = require("../utils/openai");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -714,6 +719,17 @@ async function subscribeAndVerify(wa) {
 // are thin proxies — we hold no local copy that could drift out of sync with
 // what Meta actually has.
 
+// Generation is a billed LLM call and the prompt is user-supplied, so this is
+// capped per org rather than per IP — a whole sales team shares one office IP.
+const templateGenLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => String(req.orgId || req.ip),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "That's a lot of generating. Try again in an hour." },
+});
+
 // A message alone cannot be acted on. `reconnect` and `settingsFix` are what let
 // the page offer the right button, instead of regexing English prose to guess
 // whether the failure was the tenant's to fix.
@@ -744,6 +760,59 @@ router.post("/templates", authorize("admin", "manager", "super_admin"), async (r
     sendErr(res, err);
   }
 });
+
+// Three drafts from a plain-English brief, grounded in the org's real projects.
+//
+// Nothing is submitted here — the variants come back as editable drafts. Any
+// variant the model gets structurally wrong is dropped rather than shown,
+// because a draft that cannot be submitted wastes more time than it saves.
+router.post("/templates/generate",
+  authorize("admin", "manager", "super_admin"),
+  planGate("growth"),
+  templateGenLimiter,
+  async (req, res) => {
+    try {
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(503).json({ message: "AI generation is not configured. Ask your admin to set the OPENAI_API_KEY." });
+      }
+      const { prompt, category, tone, optimizeFor } = req.body || {};
+      if (!String(prompt || "").trim()) return res.status(400).json({ message: "Describe what the message should say." });
+
+      const [org, projects] = await Promise.all([
+        Organization.findById(req.orgId).select("name").lean(),
+        Project.find({ orgId: req.orgId, isArchived: { $ne: true } })
+          .select("name location priceMin priceMax bhkTypes area possessionDate")
+          .sort({ createdAt: -1 }).limit(12).lean(),
+      ]);
+
+      const { variants, _usage } = await generateWhatsAppTemplate({
+        prompt, category, tone, optimizeFor,
+        orgName: org?.name || "", projects,
+      });
+
+      const clean = variants.map(templates.normaliseGeneratedVariant).filter(Boolean);
+      if (!clean.length) {
+        return res.status(502).json({ message: "The generated templates came back malformed. Try rephrasing your brief." });
+      }
+
+      if (_usage) {
+        const month = new Date().toISOString().slice(0, 7);
+        AiUsage.updateOne(
+          { orgId: req.orgId, month },
+          { $inc: {
+            calls: 1, promptTokens: _usage.prompt_tokens || 0,
+            completionTokens: _usage.completion_tokens || 0, totalTokens: _usage.total_tokens || 0,
+            templateGenCalls: 1, templateGenTokens: _usage.total_tokens || 0,
+          } },
+          { upsert: true }
+        ).catch(() => {});
+      }
+
+      res.json({ variants: clean, projectsUsed: projects.length });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  });
 
 router.delete("/templates/:name", authorize("admin", "super_admin"), async (req, res) => {
   try {

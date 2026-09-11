@@ -128,6 +128,57 @@ function countBodyVariables(template) {
   return new Set(found.map(m => m.replace(/\D/g, ""))).size;
 }
 
+// Fields a campaign can actually fill from a lead — must match LEAD_FIELD in
+// waCampaignService.js. A generated variable bound to anything else would leave
+// a blank somebody has to type for every single send, which is precisely the
+// thing that makes generated templates more work than writing one by hand.
+const BINDABLE_FIELDS = new Set([
+  "name", "location", "city", "bhk", "propertyType", "budget", "visitDate",
+]);
+
+/**
+ * Accept a generated template variant only if it is actually submittable.
+ *
+ * The model is good at prose and unreliable about structure — numbering, sample
+ * values, which fields exist. Returning a draft Meta would reject, or one whose
+ * blanks nothing can fill, costs more time than it saves, so anything that fails
+ * here is dropped rather than shown.
+ *
+ * Returns the cleaned variant, or null to discard it.
+ */
+function normaliseGeneratedVariant(v) {
+  if (!v || typeof v !== "object") return null;
+  const body = String(v.body || "").trim();
+  if (!body || body.length > 1024) return null;
+
+  const found = body.match(/\{\{\s*\d+\s*\}\}/g) || [];
+  const nums = [...new Set(found.map((m) => Number(m.replace(/\D/g, ""))))].sort((a, b) => a - b);
+  if (nums.join() !== nums.map((_, i) => i + 1).join()) return null;   // gaps or bad numbering
+  if (/^\s*\{\{\s*\d+\s*\}\}/.test(body)) return null;                 // opens on a variable
+  if (/\{\{\s*\d+\s*\}\}\s*$/.test(body)) return null;                 // closes on a variable
+
+  const varMap  = Array.isArray(v.varMap)  ? v.varMap.map(String) : [];
+  const example = Array.isArray(v.example) ? v.example.map((x) => String(x ?? "").trim()) : [];
+  if (varMap.length !== nums.length || example.length !== nums.length) return null;
+  if (!varMap.every((f) => BINDABLE_FIELDS.has(f))) return null;
+  if (!example.every(Boolean)) return null;
+
+  // Trailing underscores are legal but come from stray punctuation ("Launch
+  // Invite!!"), so trim both ends. The builder's own slugify deliberately only
+  // trims the front, because trimming the end as someone types stops them ever
+  // reaching "site_visit".
+  const name = String(v.name || "").toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_").replace(/^_+/, "").slice(0, 60).replace(/_+$/, "");
+  if (!/^[a-z0-9][a-z0-9_]*$/.test(name)) return null;
+
+  const buttons = (Array.isArray(v.buttons) ? v.buttons : [])
+    .filter((b) => b && String(b.text || "").trim() && String(b.text).trim().length <= 25)
+    .slice(0, 3)
+    .map((b) => ({ type: "QUICK_REPLY", text: String(b.text).trim() }));
+
+  return { name, body, footer: String(v.footer || "").trim().slice(0, 60), buttons, varMap, example };
+}
+
 // Meta's errors are far more useful than a generic 500 — surface the message
 // it actually gave, which usually names the offending component.
 function fromMeta(err, fallback) {
@@ -153,5 +204,6 @@ function badRequest(message, { settingsFix = false } = {}) {
 
 module.exports = {
   listTemplates, listApproved, createTemplate, deleteTemplate,
-  buildSendComponents, countBodyVariables, APPROVED,
+  buildSendComponents, countBodyVariables, normaliseGeneratedVariant,
+  APPROVED, BINDABLE_FIELDS,
 };

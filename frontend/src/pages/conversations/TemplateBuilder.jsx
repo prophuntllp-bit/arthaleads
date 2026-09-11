@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Loader2, Send, Info, CheckCircle2, AlertTriangle, Zap, Plus, X, Compass, XCircle,
+  Sparkles, Building2,
 } from "lucide-react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
@@ -24,6 +25,19 @@ const LANGUAGES = [
 ];
 
 const FORM_SELECT = { width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 };
+const SMALL_SELECT = { width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 13 };
+
+const TONES = [
+  { value: "normal",   label: "Normal" },
+  { value: "friendly", label: "Friendly" },
+  { value: "urgent",   label: "Direct" },
+  { value: "formal",   label: "Formal" },
+];
+
+const OPTIMISE = [
+  { value: "replies", label: "Getting a reply" },
+  { value: "clicks",  label: "Getting a tap" },
+];
 
 const BUTTON_KINDS = [
   { type: "QUICK_REPLY",  label: "Quick reply", max: 10, blank: { type: "QUICK_REPLY", text: "" } },
@@ -53,6 +67,18 @@ export default function TemplateBuilder() {
   const [buttons, setButtons]   = useState(preset?.buttons ? preset.buttons.map((b) => ({ ...b })) : []);
   const [saving, setSaving]     = useState(false);
   const [existingNames, setExistingNames] = useState([]);
+
+  // Which CRM field each {{n}} is meant to hold. Comes from a gallery preset or
+  // an AI variant; drives the labels beside the sample values.
+  const [varMap, setVarMap] = useState(preset?.varMap || []);
+
+  const [aiPrompt, setAiPrompt]     = useState("");
+  const [aiTone, setAiTone]         = useState("normal");
+  const [aiOptimise, setAiOptimise] = useState("replies");
+  const [generating, setGenerating] = useState(false);
+  const [variants, setVariants]     = useState(null);
+  const [projectsUsed, setProjectsUsed] = useState(0);
+  const [aiError, setAiError]       = useState("");
 
   // Only used to catch a duplicate name before Meta does. A failure here is not
   // worth surfacing — the submit itself will still report it.
@@ -89,6 +115,39 @@ export default function TemplateBuilder() {
       el.focus();
       el.setSelectionRange(start + token.length, start + token.length);
     });
+  };
+
+  const generate = async () => {
+    if (!aiPrompt.trim()) return toast.error("Describe what the message should say");
+    setGenerating(true); setAiError("");
+    try {
+      const { data } = await api.post("/whatsapp/templates/generate", {
+        prompt: aiPrompt, category, tone: aiTone, optimizeFor: aiOptimise,
+      });
+      setVariants(data.variants || []);
+      setProjectsUsed(data.projectsUsed || 0);
+    } catch (e) {
+      // 429 already raises its own toast from the api interceptor.
+      if (e.response?.status !== 429) {
+        setAiError(e.response?.data?.message || "Could not generate templates.");
+      }
+    } finally { setGenerating(false); }
+  };
+
+  // Fills the form from a variant. Nothing is submitted — it lands as an
+  // ordinary draft the person can edit, and the linter re-runs over it.
+  const useVariant = (v) => {
+    const taken = new Set(existingNames);
+    let candidate = v.name;
+    for (let i = 2; taken.has(candidate); i++) candidate = `${v.name}_${i}`.slice(0, 60);
+    setName(candidate);
+    setBody(v.body);
+    setFooter(v.footer || "");
+    setExamples(v.example || []);
+    setVarMap(v.varMap || []);
+    setButtons((v.buttons || []).map((b) => ({ ...b })));
+    setVariants(null);
+    toast.success("Loaded into the form — edit anything before submitting");
   };
 
   const setExample = (i, v) => setExamples((e) => { const n = [...e]; n[i] = v; return n; });
@@ -168,6 +227,112 @@ export default function TemplateBuilder() {
             </div>
           )}
 
+          <div className="card p-5 space-y-3.5">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center"
+                style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
+                <Sparkles className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-app">Write it with AI</p>
+                <p className="text-xs text-app-soft mt-0.5">
+                  Describe the message in plain English. You get three versions to choose from, written
+                  around your real projects.
+                </p>
+              </div>
+            </div>
+
+            <textarea className="input w-full resize-none" rows={3}
+              placeholder="e.g. invite leads who visited last month to the new tower launch, mention the early-bird price"
+              value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} maxLength={1000} />
+
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div>
+                <p className="stitch-kicker mb-1.5">Tone</p>
+                <CustomSelect value={aiTone} onChange={setAiTone} options={TONES} style={SMALL_SELECT} />
+              </div>
+              <div>
+                <p className="stitch-kicker mb-1.5">Optimise for</p>
+                <CustomSelect value={aiOptimise} onChange={setAiOptimise} options={OPTIMISE} style={SMALL_SELECT} />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button onClick={generate} disabled={generating || !aiPrompt.trim()}
+                className="btn-primary rounded-full px-5 py-2.5 text-sm font-bold flex items-center gap-2 disabled:opacity-40">
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generating ? "Writing three versions…" : "Generate"}
+              </button>
+              <p className="text-[11px] text-app-soft">Generates as {category.toLowerCase()}. Nothing is submitted automatically.</p>
+            </div>
+
+            {aiError && (
+              <p className="text-[11px] px-2.5 py-2 rounded-xl flex items-start gap-1.5"
+                style={{ background: "rgba(239,68,68,0.08)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <XCircle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>{aiError}</span>
+              </p>
+            )}
+
+            {variants && (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <p className="stitch-kicker">
+                    {variants.length} version{variants.length === 1 ? "" : "s"} — pick one to edit
+                  </p>
+                  {projectsUsed > 0 && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"
+                      style={{ background: "rgba(34,197,94,0.12)", color: "#15803d" }}>
+                      <Building2 className="w-3 h-3" /> using {projectsUsed} of your projects
+                    </span>
+                  )}
+                </div>
+
+                {variants.length === 0 ? (
+                  <p className="text-xs text-app-soft">
+                    Nothing came back that Meta would accept. Try describing the message differently.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    {variants.map((v, vi) => (
+                      <div key={vi} className="rounded-2xl p-3 flex flex-col gap-2"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                        <p className="text-[11px] font-mono font-bold text-app-soft truncate">{v.name}</p>
+                        <div className="rounded-xl px-3 py-2.5 flex-1" style={{ background: "#dcf8c6", color: "#111" }}>
+                          <p className="text-[12px] leading-relaxed whitespace-pre-wrap break-words">
+                            {v.body.split(/(\{\{\s*\d+\s*\}\})/).map((part, i) => {
+                              const m = part.match(/^\{\{\s*(\d+)\s*\}\}$/);
+                              if (!m) return <span key={i}>{part}</span>;
+                              return <span key={i} className="font-bold">{v.example?.[Number(m[1]) - 1] || `value ${m[1]}`}</span>;
+                            })}
+                          </p>
+                          {v.footer && <p className="text-[10px] mt-1.5 opacity-60">{v.footer}</p>}
+                        </div>
+                        {!!v.buttons?.length && (
+                          <div className="space-y-1">
+                            {v.buttons.map((b, bi) => (
+                              <div key={bi} className="rounded-lg py-1.5 text-center text-[11px] font-medium"
+                                style={{ background: "#fff", color: "#00a5f4", border: "1px solid rgba(0,0,0,0.06)" }}>
+                                {b.text}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!!v.varMap?.length && (
+                          <p className="text-[10px] text-app-soft leading-relaxed">
+                            Fills from: {v.varMap.map((f) => VAR_LABELS[f] || f).join(", ")}
+                          </p>
+                        )}
+                        <button onClick={() => useVariant(v)}
+                          className="btn-secondary rounded-full w-full py-2 text-xs font-bold">Use this</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="card p-5 space-y-4">
             <div>
               <p className="stitch-kicker mb-2">Template name</p>
@@ -237,11 +402,11 @@ export default function TemplateBuilder() {
                 <p className="stitch-kicker mb-2">Sample values</p>
                 <p className="text-xs text-app-soft mb-2.5">
                   Meta requires an example for every variable — it is how a reviewer reads the message.
-                  {preset && " These came with the template; edit them to match your business."}
+                  {varMap.length > 0 && " These came with the template; edit them to match your business."}
                 </p>
                 <div className="space-y-2">
                   {vars.map((n, i) => {
-                    const field = preset?.varMap?.[i];
+                    const field = varMap?.[i];
                     return (
                       <div key={n} className="flex items-center gap-2.5 rounded-2xl p-2.5 stitch-surface-muted">
                         <span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg shrink-0"

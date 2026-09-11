@@ -63,6 +63,112 @@ Rules:
   };
 }
 
+// ── WhatsApp template generator ──────────────────────────────────────────────
+//
+// Three variants in one call, because choosing beats regenerating.
+//
+// The rule that matters here is variable discipline. A generated template that
+// spends {{2}} on a discount percentage and {{3}} on an expiry date looks
+// impressive and is miserable to use: nothing in the CRM can fill either, so
+// every campaign needs them typed by hand. Only fields the campaign runner can
+// actually resolve are allowed to become variables — everything else has to be
+// written as literal text.
+
+// Must match LEAD_FIELD in services/waCampaignService.js.
+const BINDABLE = {
+  name: "the lead's name",
+  location: "the lead's preferred location",
+  city: "the lead's city",
+  bhk: "the configuration they want, e.g. 2BHK",
+  propertyType: "the property type they want",
+  budget: "their budget range",
+  visitDate: "their scheduled site visit date",
+};
+
+const TONES = {
+  normal:   "Warm and professional, the way a good agent actually writes.",
+  friendly: "Relaxed and personal, like a message from someone they have met.",
+  urgent:   "Direct and time-aware, without manufactured panic or fake scarcity.",
+  formal:   "Polished and restrained, suitable for premium or luxury inventory.",
+};
+
+function projectLines(projects = []) {
+  if (!projects.length) return "The business has no projects recorded in the CRM yet.";
+  return projects.slice(0, 12).map((p) => {
+    const price = p.priceMin && p.priceMax ? `₹${(p.priceMin / 1e5).toFixed(0)}L–₹${(p.priceMax / 1e5).toFixed(0)}L`
+      : p.priceMin ? `from ₹${(p.priceMin / 1e5).toFixed(0)}L` : "";
+    return "- " + [
+      p.name,
+      p.location && `in ${p.location}`,
+      p.bhkTypes?.length && p.bhkTypes.join("/"),
+      price,
+      p.area && `(${p.area})`,
+      p.possessionDate && `possession ${new Date(p.possessionDate).getFullYear()}`,
+    ].filter(Boolean).join(" · ");
+  }).join("\n");
+}
+
+async function generateWhatsAppTemplate({
+  prompt, category = "MARKETING", tone = "normal", optimizeFor = "replies",
+  orgName = "", projects = [],
+}) {
+  const client = getClient();
+
+  const system = `You write WhatsApp Business message templates for Indian real estate businesses, for submission to Meta's template review.
+
+Return JSON: { "variants": [ { "name", "body", "footer", "buttons", "varMap", "example" } ] } with EXACTLY 3 variants.
+
+Field rules:
+- "name": lowercase letters, digits and underscores only. Short and descriptive. Unique across the 3 variants.
+- "body": the message. Under 700 characters. Plain text, line breaks allowed. At most 2 emojis, often zero.
+- "footer": optional, under 60 characters, or "".
+- "buttons": 0-3 items, each { "type": "QUICK_REPLY", "text": "…" } with a label under 25 characters. Use QUICK_REPLY only — never URL or PHONE_NUMBER, since this business's links are not known.
+- "varMap": one entry per {{n}} in the body, in order, naming which field fills it.
+- "example": one realistic sample value per {{n}}, in the same order as varMap. Indian names and places.
+
+Variable rules — these are hard requirements, not preferences:
+- A {{n}} may ONLY be used for one of these fields: ${Object.entries(BINDABLE).map(([k, v]) => `"${k}" (${v})`).join(", ")}.
+- Anything else — discounts, percentages, expiry dates, project names, prices, agent names, company names — MUST be written as literal text in the body, never as a variable. Use the real project details below when you need a project name or price.
+- Number variables {{1}}, {{2}}, {{3}}… with no gaps, in the order they appear.
+- The body must NOT start or end with a variable.
+- Never place two variables next to each other.
+
+Meta compliance:
+- Category is ${category}. ${category === "UTILITY" || category === "AUTHENTICATION"
+    ? "Do NOT include promotional language — no offers, discounts, deals, scarcity or sales pressure. This must read as a transactional message about something the recipient already did."
+    : "Promotional language is allowed, but keep claims honest and avoid all-caps or excessive punctuation."}
+- No placeholder text like [Project Name] or [City]. Write real words.
+
+Business: ${orgName || "a real estate business"}
+Their actual projects (use these real names, locations and prices rather than inventing any):
+${projectLines(projects)}
+
+Tone: ${TONES[tone] || TONES.normal}
+Optimise for: ${optimizeFor === "clicks" ? "getting a tap on a button" : "getting a written reply"}.
+
+Make the 3 variants genuinely different in angle and length — not three rewordings of one sentence.`;
+
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: String(prompt || "").slice(0, 1000) },
+    ],
+    max_tokens: 1800,
+    temperature: 0.8,
+  });
+
+  const raw = response.choices[0]?.message?.content?.trim() || "{}";
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+  return {
+    variants: Array.isArray(parsed.variants) ? parsed.variants : [],
+    _usage: response.usage || null,
+  };
+}
+
 // ── Marketing Site Assistant (public, unauthenticated) ────────────────────────
 // Answers pre-sales questions on the public marketing site. Has NO access to any
 // customer's CRM data, NO login, and NO write actions — knowledge-base only.
