@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, Wifi, WifiOff, X,
-  CheckCircle2, AlertTriangle, Info, Stethoscope, XCircle, Sparkles, ChevronDown, Building2,
-  Megaphone, Plus,
+  CheckCircle2, AlertTriangle, Info, Stethoscope, XCircle, Settings2, Phone,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -101,6 +100,44 @@ function StepHead({ n, children }) {
   );
 }
 
+// Meta only delivers messages to apps actually subscribed to the WABA — a
+// webhook URL that verified fine can still receive nothing. Shared between
+// the full connect flow (step 2) and the compact "already connected" card so
+// this stays checkable without switching provider.
+function WebhookHealthCheck({ webhook, checking, onCheck, canCheck }) {
+  return (
+    <div className="rounded-xl px-3 py-3 space-y-2"
+      style={webhook?.subscribed
+        ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }
+        : webhook
+          ? { background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)" }
+          : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+      <div className="flex items-start gap-2">
+        {webhook?.subscribed
+          ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803d" }} />
+          : webhook
+            ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b45309" }} />
+            : <Info className="w-4 h-4 shrink-0 mt-0.5 text-app-soft" />}
+        <p className="text-xs flex-1" style={{ color: webhook?.subscribed ? "#15803d" : webhook ? "#b45309" : "var(--app-text-soft)" }}>
+          {webhook?.subscribed
+            ? `Incoming messages are set up${webhook.appName ? ` — ${webhook.appName} is subscribed to your business account` : ""}.`
+            : webhook?.error
+              ? webhook.error
+              : webhook
+                ? "Your app is not subscribed to this business account yet, so incoming messages will not arrive."
+                : "Meta also has to be subscribed to your business account before any message arrives. Checking does that for you."}
+        </p>
+      </div>
+      <button onClick={onCheck} disabled={checking || !canCheck}
+        className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+        {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+        {webhook ? "Check again" : "Check incoming messages"}
+      </button>
+      {!canCheck && <p className="text-[11px] text-app-soft">Save your access token and Business Account ID first.</p>}
+    </div>
+  );
+}
+
 export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   const [provider, setProvider]       = useState("meta");
   const [savedProvider, setSavedProvider] = useState("");
@@ -115,16 +152,12 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   const [savedWabaId, setSavedWabaId] = useState("");
   const [webhookVerifyToken, setWebhookVerifyToken] = useState("");
   const [testPhone, setTestPhone]     = useState("");
-  const [botName, setBotName]         = useState("Artha Assistant");
-  const [botPrompt, setBotPrompt]     = useState("");
-  const [botGreeting, setBotGreeting] = useState("");
-  const [botGroundRules, setBotGroundRules]         = useState("");
-  const [botBusinessContext, setBotBusinessContext] = useState("");
-  const [botProjectIds, setBotProjectIds]           = useState([]); // empty = all active projects
-  const [botAdProjectMap, setBotAdProjectMap]       = useState([]); // [{ adId, label, projectIds: [] }]
-  const [projects, setProjects]       = useState([]);
-  const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
-  const [saving, setSaving]           = useState(false);
+  const [displayPhoneNumber, setDisplayPhoneNumber] = useState("");
+  const [qualityRating, setQualityRating]           = useState("");
+  // Once connected, switching provider is a deliberate, separate action — see
+  // the "connected" render branch below — not something shown by default
+  // alongside credentials that already work.
+  const [showChangeProvider, setShowChangeProvider] = useState(false);
   const [savingCreds, setSavingCreds] = useState(false);
   const [testing, setTesting]         = useState(false);
   const [webhook, setWebhook]         = useState(null);   // last subscription check result
@@ -170,18 +203,9 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       setWabaId(s.wabaId || "");
       setSavedWabaId(s.wabaId || "");
       setWebhookVerifyToken(s.webhookVerifyToken || "");
-      setBotName(s.botName || "Artha Assistant");
-      setBotPrompt(s.botSystemPrompt || "");
-      setBotGreeting(s.botGreeting || "");
-      setBotGroundRules(s.botGroundRules || "");
-      setBotBusinessContext(s.botBusinessContext || "");
-      setBotProjectIds((s.botProjectIds || []).map(String));
-      setBotAdProjectMap((s.botAdProjectMap || []).map(m => ({
-        adId: m.adId || "", label: m.label || "", projectIds: (m.projectIds || []).map(String),
-      })));
-      setShowAdvancedPrompt(!!s.botSystemPrompt);
+      setDisplayPhoneNumber(s.displayPhoneNumber || "");
+      setQualityRating(s.qualityRating || "");
     }).catch(() => {});
-    api.get("/projects").then(r => setProjects(r.data?.data || [])).catch(() => {});
   }, []);
 
   const copyWebhook = () => {
@@ -204,6 +228,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
     setSavedProvider(provider);
     if (isMeta) setSavedWabaId(wabaId.trim());
     setApiKey("");
+    setShowChangeProvider(false);
   };
 
   const connectAndTest = async () => {
@@ -267,38 +292,6 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
     } finally { setChecking(false); }
   };
 
-  const saveBotSettings = async () => {
-    setSaving(true);
-    try {
-      await api.patch("/whatsapp/settings", {
-        botName,
-        botSystemPrompt: botPrompt,
-        botGreeting,
-        botGroundRules,
-        botBusinessContext,
-        botProjectIds,
-        botAdProjectMap,
-      });
-      toast.success("Assistant settings saved");
-    } catch { toast.error("Failed to save"); }
-    finally { setSaving(false); }
-  };
-
-  const toggleProject = (id) => {
-    setBotProjectIds((current) =>
-      current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
-    );
-  };
-
-  const addAdMapping = () => setBotAdProjectMap((c) => [...c, { adId: "", label: "", projectIds: [] }]);
-  const removeAdMapping = (idx) => setBotAdProjectMap((c) => c.filter((_, i) => i !== idx));
-  const updateAdMapping = (idx, patch) => setBotAdProjectMap((c) => c.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-  const toggleAdMappingProject = (idx, projectId) => setBotAdProjectMap((c) => c.map((r, i) => {
-    if (i !== idx) return r;
-    const has = r.projectIds.includes(projectId);
-    return { ...r, projectIds: has ? r.projectIds.filter((x) => x !== projectId) : [...r.projectIds, projectId] };
-  }));
-
   const disconnect = async () => {
     if (!confirm("Disconnect WhatsApp? Your conversation history will be kept.")) return;
     try {
@@ -311,28 +304,91 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
     }
   };
 
+  // Already connected AND not deliberately changing provider: show a compact
+  // summary instead of every other vendor's card. Seeing "Meta / AiSensy /
+  // Wati / Interakt" side by side once you're live reads as "you could just
+  // click one of these" — you can't, not safely, since it needs entirely new
+  // credentials and interrupts delivery until reconnected. That choice is now
+  // gated behind an explicit "Change provider" action instead of sitting in
+  // front of you by default.
+  if (connected && !showChangeProvider) {
+    const connectedProv = PROVIDERS.find(p => p.id === savedProvider) || prov;
+    return (
+      <div className="space-y-5">
+        <div className="card p-5 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: `${connectedProv.color}18` }}>
+                <WhatsAppIcon className="w-5 h-5" style={{ color: connectedProv.color }} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-app">{connectedProv.name}</p>
+                  {connectedProv.badge && (
+                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${connectedProv.color}1f`, color: connectedProv.color }}>{connectedProv.badge}</span>
+                  )}
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(34,197,94,0.1)", color: "#15803d" }}>
+                    <Wifi className="w-3 h-3" /> Connected
+                  </span>
+                </div>
+                <p className="text-xs text-app-soft mt-0.5 flex items-center gap-2 flex-wrap">
+                  {displayPhoneNumber && (
+                    <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{displayPhoneNumber}</span>
+                  )}
+                  {qualityRating && (
+                    <span>Quality: <span style={{
+                      color: qualityRating === "GREEN" ? "#15803d" : qualityRating === "RED" ? "#b91c1c" : "#b45309",
+                      fontWeight: 600,
+                    }}>{qualityRating}</span></span>
+                  )}
+                  {!displayPhoneNumber && !qualityRating && "Credentials saved and verified."}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setShowChangeProvider(true)}
+                className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5">
+                <Settings2 className="w-3.5 h-3.5" /> Change provider
+              </button>
+              <button onClick={disconnect} className="text-sm text-red-400 hover:text-red-500 font-semibold flex items-center gap-1">
+                <X className="w-3.5 h-3.5" /> Disconnect
+              </button>
+            </div>
+          </div>
+
+          {isMeta && (
+            <WebhookHealthCheck webhook={webhook} checking={checking} onCheck={checkWebhook}
+              canCheck={hasKey && !!savedWabaId} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
 
       {/* Status */}
       <div className="flex items-center gap-3 rounded-2xl px-4 py-3"
         style={connected
-          ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }
+          ? { background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)" }
           : { background: "rgba(var(--app-primary-rgb),0.05)", border: "1px solid var(--app-border)" }}>
         {connected
-          ? <Wifi className="w-4 h-4 text-green-500 shrink-0" />
+          ? <Wifi className="w-4 h-4 shrink-0" style={{ color: "#b45309" }} />
           : <WifiOff className="w-4 h-4 text-app-soft shrink-0" />}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-app">{connected ? "WhatsApp connected" : "WhatsApp not connected"}</p>
+          <p className="text-sm font-semibold text-app">{connected ? "Changing provider" : "WhatsApp not connected"}</p>
           <p className="text-sm text-app-soft">
             {connected
-              ? `Connected via ${PROVIDERS.find(p => p.id === savedProvider)?.name || prov.name}.`
+              ? `Your current ${(PROVIDERS.find(p => p.id === savedProvider) || prov).name} connection stays active until you test or save a new one below.`
               : "Pick a provider below and follow the steps to connect."}
           </p>
         </div>
         {connected && (
-          <button onClick={disconnect} className="text-sm text-red-400 hover:text-red-500 font-semibold flex items-center gap-1 shrink-0">
-            <X className="w-3.5 h-3.5" /> Disconnect
+          <button onClick={() => setShowChangeProvider(false)} className="text-sm text-app-soft hover:text-app font-semibold shrink-0">
+            Cancel
           </button>
         )}
       </div>
@@ -402,37 +458,8 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
           {/* Meta verifies the URL and still delivers nothing until the app is
               subscribed to the business account — this checks that step. */}
           {isMeta && (
-            <div className="rounded-xl px-3 py-3 space-y-2"
-              style={webhook?.subscribed
-                ? { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }
-                : webhook
-                  ? { background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)" }
-                  : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-              <div className="flex items-start gap-2">
-                {webhook?.subscribed
-                  ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#15803d" }} />
-                  : webhook
-                    ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b45309" }} />
-                    : <Info className="w-4 h-4 shrink-0 mt-0.5 text-app-soft" />}
-                <p className="text-xs flex-1" style={{ color: webhook?.subscribed ? "#15803d" : webhook ? "#b45309" : "var(--app-text-soft)" }}>
-                  {webhook?.subscribed
-                    ? `Incoming messages are set up${webhook.appName ? ` — ${webhook.appName} is subscribed to your business account` : ""}.`
-                    : webhook?.error
-                      ? webhook.error
-                      : webhook
-                        ? "Your app is not subscribed to this business account yet, so incoming messages will not arrive."
-                        : "After Meta verifies the URL, your app also has to be subscribed to your business account before any message arrives. Checking does that for you."}
-                </p>
-              </div>
-              <button onClick={checkWebhook} disabled={checking || !hasKey || !savedWabaId}
-                className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
-                {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                {webhook ? "Check again" : "Check incoming messages"}
-              </button>
-              {(!hasKey || !savedWabaId) && (
-                <p className="text-[11px] text-app-soft">Save your access token and Business Account ID in step 3 first.</p>
-              )}
-            </div>
+            <WebhookHealthCheck webhook={webhook} checking={checking} onCheck={checkWebhook}
+              canCheck={hasKey && !!savedWabaId} />
           )}
         </div>
       </div>
@@ -553,154 +580,6 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
           )}
         </div>
       </div>
-
-      {/* ── Agent Studio ─────────────────────────────────────────────────────── */}
-      {(connected || hasKey) && (
-        <div className="card p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
-            <h3 className="text-base font-bold text-app">Agent Studio</h3>
-          </div>
-          <p className="text-sm text-app-soft">
-            Your AI assistant answers from your real Projects — not a crawled website. Pick which
-            projects it can talk about; edit a price or amenity on the Projects page and the next
-            reply reflects it immediately, nothing to resync.
-          </p>
-
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">Assistant name</label>
-              <input className="input w-full" placeholder="Artha Assistant"
-                value={botName} onChange={e => setBotName(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Greeting message <span className="text-app-soft font-normal">(optional)</span>
-              </label>
-              <input className="input w-full" placeholder="Hi! Thanks for reaching out — how can I help you find your next home?"
-                value={botGreeting} onChange={e => setBotGreeting(e.target.value)} />
-              <p className="text-xs text-app-soft mt-1">Sent automatically as the first message when someone new writes in.</p>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Business context <span className="text-app-soft font-normal">(optional)</span>
-              </label>
-              <textarea className="input w-full resize-none" rows={2}
-                placeholder="Who you are, service area, working hours, anything the assistant should know about your business."
-                value={botBusinessContext} onChange={e => setBotBusinessContext(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 block">
-                Ground rules <span className="text-app-soft font-normal">(optional)</span>
-              </label>
-              <textarea className="input w-full resize-none" rows={2}
-                placeholder="Dos and don'ts — e.g. never discuss competitor pricing, always ask for preferred visit time before booking a site visit."
-                value={botGroundRules} onChange={e => setBotGroundRules(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5" /> Projects the assistant can discuss
-              </label>
-              <p className="text-xs text-app-soft mb-2">
-                Leave everything unchecked to let it discuss all of your active projects.
-              </p>
-              {projects.length === 0 ? (
-                <p className="text-xs text-app-soft italic rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
-                  No projects yet — add some on the Projects page first.
-                </p>
-              ) : (
-                <div className="rounded-xl divide-y max-h-56 overflow-y-auto"
-                  style={{ border: "1px solid var(--app-border)" }}>
-                  {projects.map((p) => (
-                    <label key={p._id} className="flex items-center gap-2.5 px-3 py-2 text-sm cursor-pointer hover:bg-[var(--app-surface-low)]">
-                      <input type="checkbox" className="shrink-0" checked={botProjectIds.includes(p._id)}
-                        onChange={() => toggleProject(p._id)} />
-                      <span className="flex-1 min-w-0 truncate text-app">{p.name}</span>
-                      {p.location && <span className="text-xs text-app-soft truncate shrink-0 max-w-[40%]">{p.location}</span>}
-                    </label>
-                  ))}
-                </div>
-              )}
-              {botProjectIds.length > 0 && (
-                <p className="text-xs mt-1.5" style={{ color: "var(--app-primary)" }}>
-                  {botProjectIds.length} project{botProjectIds.length > 1 ? "s" : ""} selected — only these will be discussed.
-                </p>
-              )}
-            </div>
-
-            <div className="pt-2 border-t" style={{ borderColor: "var(--app-border)" }}>
-              <label className="text-xs font-semibold text-app-soft mb-1 flex items-center gap-1.5 pt-3">
-                <Megaphone className="w-3.5 h-3.5" /> Ad campaign mapping <span className="text-app-soft font-normal">(optional)</span>
-              </label>
-              <p className="text-xs text-app-soft mb-2">
-                Running a Click-to-WhatsApp ad? Paste its Ad ID (from Meta Ads Manager → the ad, not the
-                campaign) and pick the project(s) it's about. When someone messages in from that specific
-                ad, the assistant's very first reply is guaranteed to be about the right project — even if
-                the ad's own pre-filled message is generic.
-              </p>
-              <div className="space-y-2">
-                {botAdProjectMap.map((row, idx) => (
-                  <div key={idx} className="rounded-xl p-3 space-y-2"
-                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <input className="input flex-1 min-w-[160px] font-mono text-xs" placeholder="Ad ID e.g. 1202101234567890"
-                        value={row.adId} onChange={e => updateAdMapping(idx, { adId: e.target.value.trim() })} />
-                      <input className="input flex-1 min-w-[160px] text-xs" placeholder="Label (optional) e.g. Skyline launch"
-                        value={row.label} onChange={e => updateAdMapping(idx, { label: e.target.value })} />
-                      <button type="button" onClick={() => removeAdMapping(idx)} title="Remove"
-                        className="shrink-0 p-1.5 rounded-lg text-app-soft hover:text-red-500 transition">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {projects.length === 0 && <span className="text-xs text-app-soft italic">Add projects on the Projects page first</span>}
-                      {projects.map((p) => (
-                        <button key={p._id} type="button" onClick={() => toggleAdMappingProject(idx, p._id)}
-                          className="text-xs font-semibold px-2.5 py-1 rounded-full transition"
-                          style={row.projectIds.includes(p._id)
-                            ? { background: "var(--app-primary)", color: "#fff" }
-                            : { background: "var(--app-border)", color: "var(--app-text-soft)" }}>
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button type="button" onClick={addAdMapping}
-                className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
-                <Plus className="w-3.5 h-3.5" /> Add ad mapping
-              </button>
-            </div>
-
-            <button type="button" onClick={() => setShowAdvancedPrompt(v => !v)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvancedPrompt ? "rotate-180" : ""}`} />
-              Advanced: replace with a fully custom prompt
-            </button>
-            {showAdvancedPrompt && (
-              <div>
-                <textarea className="input w-full resize-none" rows={3}
-                  placeholder="Leave blank to use Agent Studio above. Writing anything here overrides it entirely — the assistant will use only this prompt."
-                  value={botPrompt} onChange={e => setBotPrompt(e.target.value)} />
-                <p className="text-xs text-app-soft mt-1">
-                  When this is filled in, the greeting/business context/ground rules/projects above are ignored — you're fully in control of the prompt.
-                </p>
-              </div>
-            )}
-
-            <button onClick={saveBotSettings} disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-              {saving ? "Saving…" : "Save assistant settings"}
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );

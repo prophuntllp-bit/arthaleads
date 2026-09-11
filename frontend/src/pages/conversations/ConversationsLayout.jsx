@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck } from "lucide-react";
+import { Mail, FileText, Megaphone, Wallet, Settings as SettingsIcon, ShieldCheck, Sparkles } from "lucide-react";
 import api from "../../services/api";
 import WhatsAppSettings from "../../components/WhatsAppSettings";
 import WhatsAppIcon from "../../components/WhatsAppIcon";
@@ -31,7 +31,9 @@ const TABS = [
   { to: "/conversations/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/conversations/credits",   label: "Credits",   icon: Wallet },
   // PATCH /whatsapp/settings is admin-only, so a manager opening this would
-  // get a 403 on save. Hide rather than tease.
+  // get a 403 on save. Hide rather than tease. Same gate on Agent — it saves
+  // through the same endpoint.
+  { to: "/conversations/agent",     label: "AI Agent",  icon: Sparkles,     roles: ["admin", "super_admin"] },
   { to: "/conversations/settings",  label: "Settings",  icon: SettingsIcon, roles: ["admin", "super_admin"] },
 ];
 

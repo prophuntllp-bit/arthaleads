@@ -391,6 +391,7 @@ const Inbox          = lazy(() => import("./pages/Inbox"));
 const ConversationsLayout   = lazy(() => import("./pages/conversations/ConversationsLayout"));
 const CreditsPage           = lazy(() => import("./pages/conversations/CreditsPage"));
 const ConversationSettings  = lazy(() => import("./pages/conversations/ConversationSettings"));
+const ConversationAgent     = lazy(() => import("./pages/conversations/ConversationAgent"));
 const TemplatesPage         = lazy(() => import("./pages/conversations/TemplatesPage"));
 const TemplateBuilder       = lazy(() => import("./pages/conversations/TemplateBuilder"));
 const CampaignsPage         = lazy(() => import("./pages/conversations/CampaignsPage"));
@@ -802,6 +803,7 @@ export default function App() {
               <Route path="campaigns/new"  element={<CampaignBuilder />} />
               <Route path="campaigns/:id"  element={<CampaignBuilder />} />
               <Route path="credits"  element={<CreditsPage />} />
+              <Route path="agent"    element={<ConversationAgent />} />
               <Route path="settings" element={<ConversationSettings />} />
             </Route>
             <Route path="/calls"          element={<Calls />} />
