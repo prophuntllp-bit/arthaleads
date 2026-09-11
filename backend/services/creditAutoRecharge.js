@@ -28,7 +28,7 @@ async function runLowCreditSweep() {
     "whatsapp.enabled": true,
     "credits.autoRecharge.enabled": true,
     isActive: true,
-  }).select("name credits").lean();
+  }).select("name credits whatsapp.notifyOn.lowCredits").lean();
 
   let notified = 0, cleared = 0, skipped = 0;
 
@@ -50,9 +50,12 @@ async function runLowCreditSweep() {
     const lastAt = c.lowBalanceNotifiedAt ? new Date(c.lowBalanceNotifiedAt).getTime() : 0;
     if (Date.now() - lastAt < RENOTIFY_AFTER_MS) { skipped++; continue; }
 
-    // Only admins can top up, so only admins get told.
-    const admins = await User.find({ orgId: org._id, role: "admin", isActive: true })
-      .select("name email").lean();
+    // Only admins can top up, so only admins get told — notifyOn.lowCredits
+    // can narrow that to specific admins, never widen it past that role.
+    const notifyIds = (org.whatsapp?.notifyOn?.lowCredits || []).map(String);
+    const adminQuery = { orgId: org._id, role: "admin", isActive: true };
+    if (notifyIds.length) adminQuery._id = { $in: notifyIds };
+    const admins = await User.find(adminQuery).select("name email").lean();
     if (!admins.length) { skipped++; continue; }
 
     const serviceRate = credits.rateFor(org, "service");

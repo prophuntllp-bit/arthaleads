@@ -142,6 +142,39 @@ const orgSchema = new mongoose.Schema(
         projectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
       }],
 
+      // ── Business hours & away message ────────────────────────────────────────
+      // Disabled by default so existing orgs keep replying 24/7 until an admin
+      // opts in. schedule is one entry per weekday (0=Sun..6=Sat); a day with no
+      // entry, or closed:true, is treated as closed all day.
+      businessHours: {
+        enabled:     { type: Boolean, default: false },
+        timezone:    { type: String, default: "Asia/Kolkata" },
+        awayMessage: { type: String, default: "" },
+        schedule: [{
+          day:    { type: Number, min: 0, max: 6, required: true },
+          closed: { type: Boolean, default: false },
+          open:   { type: String, default: "09:00" }, // "HH:MM", 24h, in `timezone`
+          close:  { type: String, default: "18:00" },
+        }],
+      },
+
+      // ── Conversation auto-assignment ─────────────────────────────────────────
+      // Off by default — same reasoning as businessHours. When on, a
+      // conversation the bot hands off (or one that starts with the bot
+      // disabled org-wide) is round-robined to an agent exactly like a new
+      // Lead already is, via the same getNextAssignee helper.
+      autoAssignConversations: { type: Boolean, default: false },
+
+      // ── Notification recipients ──────────────────────────────────────────────
+      // Empty array = current behaviour (broadcast to the whole org / whoever
+      // the item is already assigned to) - these only narrow it, never turn
+      // notifications off entirely.
+      notifyOn: {
+        newConversation: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        lowCredits:      [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+        qualityDrop:     [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      },
+
       // ── Embedded Signup (see docs/whatsapp-embedded-signup-plan.md) ─────────
       esOnboarded:        { type: Boolean, default: false },
       onboardedAt:        { type: Date },

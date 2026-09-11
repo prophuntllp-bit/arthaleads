@@ -1,11 +1,13 @@
 const express = require("express");
 const axios   = require("axios");
+const mongoose = require("mongoose");
 const router  = express.Router();
 const { protect, authorize } = require("../middlewares/auth");
 const Organization   = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
 const Lead           = require("../models/Lead");
+const User           = require("../models/User");
 
 // Same rule as the frontend's toWaNumber() in components/UI.jsx — kept in
 // sync by hand since one is browser code and the other server code.
@@ -293,22 +295,121 @@ async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
       meta: campaignRef ? { adId: campaignRef.adId } : {},
     }],
   });
-  if (assignee?._id) {
-    sendPushToUser(assignee._id, {
-      type: "lead_assigned",
-      title: `New Lead: ${lead.name}`,
-      body: `${phone} · WhatsApp`,
-      data: { url: "/leads" },
-    }).catch(() => {});
-  } else {
-    sendPushToAll({
-      type: "new_lead",
-      title: "New Lead 📥",
-      body: `${lead.name} messaged in on WhatsApp`,
-      data: { url: "/leads", leadName: lead.name, source: "WhatsApp" },
-    }, org._id).catch(() => {});
-  }
   return lead;
+}
+
+// ── Conversation auto-assignment ──────────────────────────────────────────────
+// Off by default (Organization.whatsapp.autoAssignConversations). Reuses the
+// same round-robin getNextAssignee a new Lead already gets, applied at the two
+// moments a conversation actually needs a human: it starts with the bot
+// disabled org-wide, or the bot hands off mid-conversation. Never reassigns
+// a conversation that already has someone on it.
+async function autoAssignConversation(org, conversation) {
+  if (!org.whatsapp?.autoAssignConversations || conversation.assignedTo) return;
+  try {
+    const assignee = await getNextAssignee(org._id);
+    await WaConversation.findByIdAndUpdate(conversation._id, {
+      assignedTo: assignee._id, assignedToName: assignee.name,
+    });
+    sendPushToUser(assignee._id, {
+      type: "conversation_assigned",
+      title: `WhatsApp: ${conversation.contactName || conversation.contactPhone}`,
+      body: "Assigned to you",
+      data: { url: "/conversations" },
+    }).catch(() => {});
+  } catch { /* no active agents */ }
+}
+
+// ── Notification recipients ───────────────────────────────────────────────────
+// notifyOn.newConversation narrows who gets pinged for a brand-new thread; an
+// empty list keeps the old behaviour (whoever the matched lead is assigned to,
+// else broadcast to the whole org) rather than going silent.
+async function notifyNewConversation(org, conv, lead) {
+  const payload = lead
+    ? { type: "new_lead", title: `New Lead: ${lead.name}`, body: `${conv.contactPhone} · WhatsApp`, data: { url: "/leads" } }
+    : { type: "new_conversation", title: "New WhatsApp conversation", body: `${conv.contactName || conv.contactPhone} messaged in`, data: { url: "/conversations" } };
+
+  if (lead?.assignedTo) {
+    sendPushToUser(lead.assignedTo, payload).catch(() => {});
+    return;
+  }
+  const recipients = org.whatsapp?.notifyOn?.newConversation || [];
+  if (recipients.length) {
+    recipients.forEach((userId) => sendPushToUser(userId, payload).catch(() => {}));
+  } else {
+    sendPushToAll(payload, org._id).catch(() => {});
+  }
+}
+
+// ── Business hours ────────────────────────────────────────────────────────────
+// Disabled by default — an org that never configures this keeps replying
+// around the clock, same as before this existed. schedule is one entry per
+// weekday (0=Sun..6=Sat, per Intl's own weekday ordering below); a day with no
+// entry, or closed:true, means closed all day.
+function isWithinBusinessHours(org) {
+  const bh = org.whatsapp?.businessHours;
+  if (!bh?.enabled) return true;
+  try {
+    const tz = bh.timezone || "Asia/Kolkata";
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(new Date());
+    const weekday = parts.find((p) => p.type === "weekday").value.toLowerCase();
+    const hour = Number(parts.find((p) => p.type === "hour").value);
+    const minute = Number(parts.find((p) => p.type === "minute").value);
+    const dayIdx = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(weekday);
+    const day = (bh.schedule || []).find((d) => d.day === dayIdx);
+    if (!day || day.closed) return false;
+    const toMinutes = (hhmm) => {
+      const [h, m] = String(hhmm || "00:00").split(":").map(Number);
+      return (Number.isFinite(h) ? h : 0) * 60 + (Number.isFinite(m) ? m : 0);
+    };
+    const nowMinutes = hour * 60 + minute;
+    return nowMinutes >= toMinutes(day.open) && nowMinutes < toMinutes(day.close);
+  } catch {
+    // A bad timezone string or malformed schedule must never block replies —
+    // fail open exactly like "not configured".
+    return true;
+  }
+}
+
+// Sent at most once per closed calendar day per conversation, tracked via
+// WaConversation.awayMessageSentAt — an away message on every single message
+// someone sends while you're closed reads as broken, not helpful.
+async function maybeSendAwayMessage(org, conversation) {
+  const bh = org.whatsapp.businessHours;
+  if (!bh?.awayMessage?.trim()) return;
+  const last = conversation.awayMessageSentAt;
+  if (last) {
+    const tz = bh.timezone || "Asia/Kolkata";
+    const fmt = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d); // YYYY-MM-DD, stable for same-day comparison
+    if (fmt(new Date(last)) === fmt(new Date())) return;
+  }
+  const botName = org.whatsapp?.botName || "Artha Assistant";
+  let held = 0;
+  try {
+    held = await credits.reserve(org._id, { category: "service", count: 1 });
+  } catch (err) {
+    if (err instanceof credits.InsufficientCreditsError) return;
+    throw err;
+  }
+  let msgId;
+  try {
+    msgId = await sendProviderMessage(org, conversation.contactPhone, bh.awayMessage.trim());
+  } catch (err) {
+    await credits.release(org._id, held);
+    throw err;
+  }
+  await WaMessage.create({
+    orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
+    direction: "outbound", sender: "bot", senderName: botName,
+    body: bh.awayMessage.trim(), status: "sent", timestamp: new Date(),
+    reservedPaise: held, creditCategory: "service",
+  });
+  await WaConversation.findByIdAndUpdate(conversation._id, {
+    lastMessageAt: new Date(), lastMessagePreview: bh.awayMessage.trim().slice(0, 80),
+    awayMessageSentAt: new Date(),
+  });
 }
 
 // ── Shared inbound handler ────────────────────────────────────────────────────
@@ -355,6 +456,11 @@ async function handleInbound(org, parsed) {
     if (lead?._id) {
       await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
     }
+    notifyNewConversation(org, conv, lead).catch(() => {});
+    // Bot is off for the whole org, so this thread is a human's from the
+    // first message — the handoff moment in triggerBotReply never fires for
+    // it otherwise.
+    if (!conv.botEnabled) autoAssignConversation(org, conv).catch(() => {});
   }
 
   if (msgId && await WaMessage.findOne({ waMsgId: msgId })) return; // dedup
@@ -372,6 +478,10 @@ async function handleInbound(org, parsed) {
   });
 
   if (conv.botEnabled) {
+    if (!isWithinBusinessHours(org)) {
+      await maybeSendAwayMessage(org, conv);
+      return;
+    }
     if (isNewConversation && org.whatsapp?.botGreeting?.trim()) {
       await sendBotGreeting(org, conv);
     }
@@ -661,6 +771,7 @@ async function triggerBotReply(org, conversation, inboundText) {
     }
     if (takeover) {
       await WaConversation.findByIdAndUpdate(conversation._id, { botEnabled: false, status: "open" });
+      autoAssignConversation(org, conversation).catch(() => {});
     }
   } catch (err) {
     console.error("[WhatsApp Bot] error:", err?.response?.data || err.message);
@@ -773,12 +884,30 @@ router.get("/settings", authorize("admin", "manager", "super_admin"), async (req
   });
 });
 
+// Aggregate WhatsApp marketing-consent counts across this org's leads.
+// Campaigns already gate sends on whatsappConsent.status; this is just the
+// number those decisions have never had anywhere to be seen before.
+router.get("/consent-summary", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const rows = await Lead.aggregate([
+      { $match: { orgId: new mongoose.Types.ObjectId(req.orgId), isDeleted: { $ne: true } } },
+      { $group: { _id: { $ifNull: ["$whatsappConsent.status", "unknown"] }, n: { $sum: 1 } } },
+    ]);
+    const counts = { granted: 0, denied: 0, unknown: 0 };
+    for (const r of rows) if (counts[r._id] !== undefined) counts[r._id] = r.n;
+    res.json({ counts, total: counts.granted + counts.denied + counts.unknown });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.patch("/settings", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const {
       apiKey, provider, accountEndpoint, phoneNumberId, wabaId, webhookVerifyToken,
       botEnabled, botName, botSystemPrompt, enabled,
       botProjectIds, botGroundRules, botBusinessContext, botGreeting, botAdProjectMap,
+      businessHours, autoAssignConversations, notifyOn,
     } = req.body;
     const update = {};
     if (provider            !== undefined) update["whatsapp.provider"]            = provider;
@@ -825,6 +954,47 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
         .filter((r) => r.adId && r.projectIds.length);
     }
 
+    // Business hours — a day is only kept if it names a real weekday; the
+    // HH:MM fields are stored as-is (validated only for shape) since they're
+    // meaningless outside the schedule they belong to.
+    if (businessHours !== undefined) {
+      const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+      const schedule = Array.isArray(businessHours?.schedule) ? businessHours.schedule : [];
+      update["whatsapp.businessHours"] = {
+        enabled: !!businessHours?.enabled,
+        timezone: String(businessHours?.timezone || "Asia/Kolkata").trim(),
+        awayMessage: String(businessHours?.awayMessage || "").trim(),
+        schedule: schedule
+          .filter((d) => Number.isInteger(d?.day) && d.day >= 0 && d.day <= 6)
+          .map((d) => ({
+            day: d.day,
+            closed: !!d.closed,
+            open: hhmm.test(d.open) ? d.open : "09:00",
+            close: hhmm.test(d.close) ? d.close : "18:00",
+          })),
+      };
+    }
+    if (autoAssignConversations !== undefined) update["whatsapp.autoAssignConversations"] = !!autoAssignConversations;
+
+    // Notification recipients — only IDs that are actually members of this
+    // org are kept, same ownership discipline as botProjectIds/botAdProjectMap.
+    if (notifyOn !== undefined) {
+      const allIds = [...new Set(
+        ["newConversation", "lowCredits", "qualityDrop"]
+          .flatMap((k) => (Array.isArray(notifyOn?.[k]) ? notifyOn[k] : []))
+          .filter(Boolean)
+      )];
+      const owned = allIds.length
+        ? new Set((await User.find({ _id: { $in: allIds }, orgId: req.orgId }).select("_id").lean()).map((u) => String(u._id)))
+        : new Set();
+      const keep = (k) => (Array.isArray(notifyOn?.[k]) ? notifyOn[k] : []).filter((id) => owned.has(String(id)));
+      update["whatsapp.notifyOn"] = {
+        newConversation: keep("newConversation"),
+        lowCredits: keep("lowCredits"),
+        qualityDrop: keep("qualityDrop"),
+      };
+    }
+
     const org = await Organization.findByIdAndUpdate(req.orgId, { $set: update }, { new: true }).select("whatsapp");
     const { apiKey: _k, ...safe } = org.whatsapp.toObject();
     res.json({ whatsapp: { ...safe, hasApiKey: !!_k } });
@@ -841,7 +1011,7 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
 // HTTP 400. Probing each piece separately is the only way to say which it is.
 router.get("/settings/diagnose", authorize("admin", "manager", "super_admin"), async (req, res) => {
   try {
-    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
     const wa = org?.whatsapp || {};
     if ((wa.provider || "aisensy") !== "meta") {
       return res.json({ applicable: false, message: "Diagnostics only apply to the Meta Cloud API provider." });
@@ -875,6 +1045,35 @@ router.get("/settings/diagnose", authorize("admin", "manager", "super_admin"), a
     }
     if (!tokenDead && !waba.ok && !waba.missing && waba.code === 100) {
       warnings.push("That Business Account ID does not look like a WABA. It may be a phone number ID or a business portfolio ID.");
+    }
+
+    // This manual check is the only place quality_rating is ever refreshed —
+    // there is no live webhook subscription for Meta's account_update events
+    // wired up. Persist it here and notify on an actual worsening (never on
+    // first-ever check, and never on GREEN staying GREEN) so this doubles as
+    // the quality-drop alert without a separate polling job.
+    if (phone.ok && phone.data.quality_rating) {
+      const RANK = { GREEN: 0, YELLOW: 1, RED: 2 };
+      const prev = wa.qualityRating;
+      const next = phone.data.quality_rating;
+      if (prev && next !== prev && RANK[next] > (RANK[prev] ?? -1)) {
+        const recipients = wa.notifyOn?.qualityDrop || [];
+        const payload = {
+          type: "quality_drop",
+          title: "WhatsApp quality rating dropped",
+          body: `${org.name}: ${prev} → ${next}`,
+          data: { url: "/conversations/settings" },
+        };
+        if (recipients.length) {
+          recipients.forEach((userId) => sendPushToUser(userId, payload).catch(() => {}));
+        } else {
+          sendPushToAll(payload, org._id).catch(() => {});
+        }
+      }
+      Organization.updateOne(
+        { _id: req.orgId },
+        { $set: { "whatsapp.qualityRating": next, "whatsapp.healthCheckedAt": new Date() } }
+      ).catch(() => {});
     }
 
     res.json({
@@ -1223,6 +1422,106 @@ router.post("/settings/webhook-check", authorize("admin", "super_admin"), async 
     res.json(await subscribeAndVerify(org?.whatsapp || {}));
   } catch (err) {
     res.status(err.status || 500).json({ message: err.message });
+  }
+});
+
+// ── WhatsApp Business Profile (Meta only) ─────────────────────────────────────
+// The "About/address/email/website/category" fields on Meta's own WhatsApp
+// Manager → Profile tab. Meta's Business Profile API lets these be managed
+// without ever leaving Arthaleads. Profile photo and display-name changes
+// are NOT here: a photo needs Meta's separate resumable media-upload flow,
+// and a display name needs their manual review queue — both stay on
+// business.facebook.com for now.
+const BUSINESS_PROFILE_VERTICALS = [
+  "UNDEFINED", "OTHER", "AUTO", "BEAUTY", "APPAREL", "EDU", "ENTERTAIN",
+  "EVENT_PLAN", "FINANCE", "GROCERY", "GOVT", "HOTEL", "HEALTH", "NONPROFIT",
+  "PROF_SERVICES", "RETAIL", "TRAVEL", "RESTAURANT",
+];
+
+router.get("/business-profile", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const wa = org?.whatsapp || {};
+    if ((wa.provider || "aisensy") !== "meta") {
+      return res.json({ applicable: false, message: "Business Profile only applies to the Meta Cloud API provider." });
+    }
+    if (!wa.apiKey || !wa.phoneNumberId) {
+      return res.json({ applicable: true, ok: false, message: "Connect your Meta credentials first." });
+    }
+    const { data } = await axios.get(
+      `https://graph.facebook.com/v21.0/${wa.phoneNumberId}/whatsapp_business_profile`,
+      { params: { access_token: wa.apiKey, fields: "about,address,description,email,profile_picture_url,websites,vertical" } }
+    );
+    const profile = data?.data?.[0] || {};
+    res.json({ applicable: true, ok: true, profile, verticals: BUSINESS_PROFILE_VERTICALS });
+  } catch (err) {
+    const me = err?.response?.data?.error;
+    res.status(400).json({ applicable: true, ok: false, message: me?.error_user_msg || me?.message || err.message });
+  }
+});
+
+router.patch("/business-profile", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const wa = org?.whatsapp || {};
+    if ((wa.provider || "aisensy") !== "meta") {
+      return res.status(400).json({ message: "Business Profile only applies to the Meta Cloud API provider." });
+    }
+    if (!wa.apiKey || !wa.phoneNumberId) {
+      return res.status(400).json({ message: "Connect your Meta credentials first." });
+    }
+    const { about, address, description, email, websites, vertical } = req.body || {};
+    const payload = { messaging_product: "whatsapp" };
+    if (about       !== undefined) payload.about       = String(about).slice(0, 139);
+    if (address      !== undefined) payload.address     = String(address).slice(0, 256);
+    if (description   !== undefined) payload.description = String(description).slice(0, 256);
+    if (email        !== undefined) payload.email       = String(email).slice(0, 128);
+    if (vertical      !== undefined && BUSINESS_PROFILE_VERTICALS.includes(vertical)) payload.vertical = vertical;
+    if (websites     !== undefined) {
+      // Meta accepts at most 2 URLs here — silently keep the first two rather
+      // than fail the whole save over a field most orgs will only ever fill
+      // with one link anyway.
+      payload.websites = (Array.isArray(websites) ? websites : [websites])
+        .map((w) => String(w || "").trim()).filter(Boolean).slice(0, 2);
+    }
+    await axios.post(
+      `https://graph.facebook.com/v21.0/${wa.phoneNumberId}/whatsapp_business_profile`,
+      payload,
+      { params: { access_token: wa.apiKey } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    const me = err?.response?.data?.error;
+    res.status(400).json({ message: me?.error_user_msg || me?.message || err.message });
+  }
+});
+
+// Sets (never reads back) the 2-step verification PIN Meta asks a caller for
+// when re-registering this number. Meta's API has no "get current PIN" —
+// this is a set/reset action, not a form field with a saved value.
+router.post("/business-profile/pin", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const wa = org?.whatsapp || {};
+    if ((wa.provider || "aisensy") !== "meta") {
+      return res.status(400).json({ message: "Only applies to the Meta Cloud API provider." });
+    }
+    if (!wa.apiKey || !wa.phoneNumberId) {
+      return res.status(400).json({ message: "Connect your Meta credentials first." });
+    }
+    const pin = String(req.body?.pin || "");
+    if (!/^\d{6}$/.test(pin)) {
+      return res.status(400).json({ message: "PIN must be exactly 6 digits." });
+    }
+    await axios.post(
+      `https://graph.facebook.com/v21.0/${wa.phoneNumberId}`,
+      { pin },
+      { params: { access_token: wa.apiKey } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    const me = err?.response?.data?.error;
+    res.status(400).json({ message: me?.error_user_msg || me?.message || err.message });
   }
 });
 

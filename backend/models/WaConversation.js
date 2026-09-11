@@ -32,6 +32,11 @@ const waConversationSchema = new mongoose.Schema({
     },
     default: undefined,
   },
+
+  // Last time the outside-business-hours away message was sent on this
+  // thread — lets the bot send it once per closed day instead of once per
+  // message (see isWithinBusinessHours / triggerBotReply in whatsappRoutes.js).
+  awayMessageSentAt: { type: Date, default: null },
 }, { timestamps: true });
 
 waConversationSchema.index({ orgId: 1, contactPhone: 1 }, { unique: true });
