@@ -357,7 +357,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
               <h3 className="text-2xl font-black tracking-tight text-app">{lead.name}</h3>
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <PhoneActions phone={lead.phone} />
-                <WhatsAppLink phone={lead.phone} name={lead.name} />
+                <WhatsAppLink phone={lead.phone} name={lead.name} leadId={!isProjectLead ? lead._id : undefined} />
                 {lead.phone && (
                   <button
                     type="button"

@@ -6,6 +6,15 @@ const Organization   = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
 const Lead           = require("../models/Lead");
+
+// Same rule as the frontend's toWaNumber() in components/UI.jsx — kept in
+// sync by hand since one is browser code and the other server code.
+function toWaId(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length === 10) return "91" + digits;
+  if (digits.length === 11 && digits.startsWith("0")) return "91" + digits.slice(1);
+  return digits;
+}
 const credits        = require("../services/creditService");
 const templates      = require("../services/whatsappTemplateService");
 const campaignSvc    = require("../services/waCampaignService");
@@ -510,6 +519,44 @@ router.get("/conversations", async (req, res) => {
       WaConversation.countDocuments(filter),
     ]);
     res.json({ conversations, total });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Opens a thread with a lead who has never written in — the button on the
+// Leads page and lead detail that used to only offer a wa.me link. Creates
+// nothing on WhatsApp itself: no message goes out here. The frontend then
+// either sends a template (Meta, cold) or opens the composer (BSPs, which
+// are not window-gated) — same as it already does for an existing thread.
+router.post("/conversations/start", async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
+      return res.status(400).json({ message: "WhatsApp is not connected yet." });
+    }
+    const { leadId } = req.body || {};
+    const lead = leadId ? await Lead.findOne({ _id: leadId, orgId: req.orgId }).lean() : null;
+    if (leadId && !lead) return res.status(404).json({ message: "Lead not found" });
+    const phone = toWaId(lead?.phone || req.body?.phone);
+    if (!phone || phone.length < 10) return res.status(400).json({ message: "This lead has no usable phone number." });
+
+    let conv = await WaConversation.findOne({ orgId: req.orgId, contactPhone: phone });
+    if (!conv) {
+      // Agent-initiated, not the bot's to answer — a customer replying to
+      // an outreach an agent started should reach that agent, not the AI.
+      conv = await WaConversation.create({
+        orgId: req.orgId, leadId: lead?._id || null,
+        contactPhone: phone, contactName: lead?.name || req.body?.name || "",
+        waContactId: phone, botEnabled: false, status: "open",
+        assignedTo: req.user._id, assignedToName: req.user.name,
+      });
+      if (lead?._id) await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
+    }
+    res.json({
+      conversation: conv,
+      consent: lead?.whatsappConsent?.status || "unknown",
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

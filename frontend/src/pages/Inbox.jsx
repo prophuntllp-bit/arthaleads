@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, Clock, ExternalLink,
   Plus, RefreshCw, Send, Settings, User, Wallet, X, Zap,
@@ -169,6 +169,7 @@ export default function Inbox() {
   useEffect(() => { document.title = "Inbox - Arthaleads CRM"; }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId]         = useState(null);
@@ -218,6 +219,21 @@ export default function Inbox() {
   }, [filter]);
 
   useEffect(() => { fetchConvs(); }, [fetchConvs]);
+
+  // Arrived from "Message from CRM Inbox" on a lead — the conversation may be
+  // brand new, so fetch it directly instead of waiting for it to appear in a
+  // (possibly filtered) list.
+  useEffect(() => {
+    const openId = location.state?.openConversationId;
+    if (!openId) return;
+    navigate(location.pathname, { replace: true, state: {} });
+    api.get(`/whatsapp/conversations/${openId}`)
+      .then(({ data }) => {
+        setConversations((prev) => (prev.some((c) => c._id === openId) ? prev : [data.conversation, ...prev]));
+        selectConv(openId);
+      })
+      .catch(() => toast.error("Could not open that conversation"));
+  }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const iv = setInterval(() => fetchConvs(true), 4000);

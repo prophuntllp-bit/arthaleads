@@ -461,7 +461,7 @@ export default function DumpLeads() {
                       </div>
                     </td>
                     <td><PhoneActions phone={lead.phone} /></td>
-                    <td><WhatsAppLink phone={lead.phone} name={lead.name} /></td>
+                    <td><WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} /></td>
                     <td><SourceBadge source={lead.source} /></td>
                     <td>
                       {lead.projectName

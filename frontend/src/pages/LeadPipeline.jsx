@@ -251,7 +251,7 @@ export default function LeadPipeline() {
                           >
                             {/* WhatsApp + source */}
                             <div className="flex items-center gap-2 pt-2">
-                              <WhatsAppLink phone={lead.phone} name={lead.name} onContact={() => handleContact(lead)} />
+                              <WhatsAppLink phone={lead.phone} name={lead.name} leadId={lead._id} onContact={() => handleContact(lead)} />
                               <span className="text-[11px] text-app-soft">· {lead.source}</span>
                             </div>
 

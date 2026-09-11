@@ -2,7 +2,8 @@
 import { STATUS_COLORS, PRIORITY_COLORS, SOURCE_COLORS, ROLE_COLORS } from "../utils/constants";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, Phone, MessageCircle, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { X, Loader2, Phone, MessageCircle, Inbox as InboxIcon, ChevronDown, Check, Calendar, ChevronLeft, ChevronRight, Sparkles, Headphones } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -469,17 +470,59 @@ function buildWAMessage(leadName) {
   }
 }
 
+// Every WhatsAppLink instance shares one connection check — a 50-row table
+// would otherwise fire 50 identical requests on mount. First mount kicks off
+// the fetch, everyone else (this page load, this session) reads the cache.
+let waStatusPromise = null;
+function getWaStatus() {
+  if (!waStatusPromise) {
+    waStatusPromise = api.get("/whatsapp/status").then((r) => r.data).catch(() => null);
+  }
+  return waStatusPromise;
+}
+
 // Green "Chat on WhatsApp" button - pre-filled message + editable before send.
 // Dropdown is portal-rendered at document.body with position:fixed so it
 // always floats above tables regardless of overflow:hidden or z-index stacking.
 export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
+  const navigate = useNavigate();
   const [open, setOpen]               = useState(false);
   const [wabNotInstalled, setWabNotInstalled] = useState(false);
   const [msgText, setMsgText]         = useState("");
   const [dropPos, setDropPos]         = useState({ top: 0, left: 0 });
   const [generating, setGenerating]   = useState(false);
+  const [starting, setStarting]       = useState(false);
+  const [waStatus, setWaStatus]       = useState(null);
   const btnRef  = useRef(null);
   const dropRef = useRef(null);
+
+  // Only a plain Lead can hold a WaConversation — a ProjectLead (projectId
+  // set) has no whatsappConsent/campaign support yet, so the CRM-tracked
+  // option stays hidden there rather than half-working.
+  const canStartInbox = !!leadId && !projectId;
+  useEffect(() => {
+    if (!canStartInbox) return;
+    getWaStatus().then((s) => { if (s) setWaStatus(s); });
+  }, [canStartInbox]);
+
+  const startInboxConversation = async (e) => {
+    e.preventDefault();
+    if (starting) return;
+    setStarting(true);
+    try {
+      const { data } = await api.post("/whatsapp/conversations/start", { leadId });
+      setOpen(false);
+      onContact?.();
+      if (data.consent === "denied") {
+        toast("This lead has marked WhatsApp marketing consent as refused — a direct reply is still fine, a campaign will skip them.", { icon: "⚠️", duration: 6000 });
+      }
+      navigate("/conversations", { state: { openConversationId: data.conversation._id } });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not open this conversation");
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const handleAIDraft = async (e) => {
     e.stopPropagation();
@@ -620,6 +663,23 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
         />
       </div>
 
+      {canStartInbox && waStatus?.connected && (
+        <>
+          <button type="button" onClick={startInboxConversation} disabled={starting}
+            className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs text-app hover:bg-orange-500/8 transition disabled:opacity-50">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg flex-shrink-0" style={{ background: "rgba(255,107,0,0.12)" }}>
+              {starting
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: "var(--app-primary)" }} />
+                : <InboxIcon className="h-3.5 w-3.5" style={{ color: "var(--app-primary)" }} />}
+            </span>
+            <div className="text-left">
+              <p className="font-semibold">Message from CRM Inbox</p>
+              <p className="text-[10px] text-app-soft">Tracked, shared with your team</p>
+            </div>
+          </button>
+        </>
+      )}
+
       <div className="mx-3 mb-1 border-t" style={{ borderColor: "var(--app-border)" }} />
 
       {/* WhatsApp Personal */}
@@ -667,7 +727,9 @@ export function WhatsAppLink({ phone, name, leadId, projectId, onContact }) {
 
       <div className="px-3 pb-2.5 pt-1">
         <p className="text-[9px] text-app-soft text-center">
-          Message opens in WhatsApp - you send it manually
+          {canStartInbox && waStatus?.connected
+            ? "Personal / Business open your own WhatsApp app - not tracked here"
+            : "Message opens in WhatsApp - you send it manually"}
         </p>
       </div>
     </div>
