@@ -45,6 +45,10 @@ async function submitLead(req, res, next) {
     if (!token || token.length < 8) return res.status(400).json({ success: false, message: "Invalid token" });
 
     const { name, phone, email, message, budget, propertyType } = req.body;
+    // Only an explicit tick counts. The checkbox is unticked by default on the
+    // form, and an absent value is recorded as nothing rather than as a refusal
+    // — not ticking a box is not the same as saying no.
+    const agreedToWhatsApp = ["true", "on", "1", "yes"].includes(String(req.body.whatsappConsent || "").toLowerCase());
 
     if (!name?.trim()) return res.status(400).json({ success: false, message: "Name is required" });
     if (!phone?.trim()) return res.status(400).json({ success: false, message: "Phone is required" });
@@ -86,12 +90,15 @@ async function submitLead(req, res, next) {
       propertyType: propertyType || "Apartment",
       source: "QR Code",
       orgId: org._id,
+      ...(agreedToWhatsApp ? {
+        whatsappConsent: { status: "granted", source: "qr-form", capturedAt: new Date() },
+      } : {}),
       assignedTo,
       assignedToName,
       notes,
       activities: [{
         type: "created",
-        description: `Lead submitted via QR code${project ? ` for ${project.name}` : ""}`,
+        description: `Lead submitted via QR code${project ? ` for ${project.name}` : ""}${agreedToWhatsApp ? " — agreed to WhatsApp updates" : ""}`,
         performedByName: "QR Form",
         meta: {},
       }],

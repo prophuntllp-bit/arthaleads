@@ -114,6 +114,15 @@ const updateAutomationSchema = Joi.object({
 }).min(1);
 
 // ── Lead ──────────────────────────────────────────────────────────────────────
+// WhatsApp marketing consent. Only status and source are accepted — capturedAt
+// is stamped by the server in leadService, never trusted from the client.
+// Without this declared, validate() runs stripUnknown and every consent change
+// would be dropped silently while the form reported success.
+const consentSchema = Joi.object({
+  status: Joi.string().valid("granted", "denied", "unknown").required(),
+  source: Joi.string().allow("").max(40),
+});
+
 const createLeadSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
   phone: Joi.string().min(7).max(20).required(),
@@ -149,6 +158,7 @@ const createLeadSchema = Joi.object({
     })
   ).optional(),
   tags: Joi.array().items(Joi.string()).optional(),
+  whatsappConsent: consentSchema.optional(),
 });
 
 const updateLeadSchema = Joi.object({
@@ -188,6 +198,7 @@ const updateLeadSchema = Joi.object({
   booking: Joi.string().valid(...OPTS.BOOKING).allow(""),
   tags: Joi.array().items(Joi.string()),
   isArchived: Joi.boolean(),
+  whatsappConsent: consentSchema,
 }).min(1); // At least one field required for update
 
 const addNoteSchema = Joi.object({

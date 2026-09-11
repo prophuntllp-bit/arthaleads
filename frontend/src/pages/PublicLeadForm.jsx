@@ -17,6 +17,8 @@ export default function PublicLeadForm() {
   const [form, setForm] = useState({
     name: "", phone: "", email: "",
     propertyType: "Apartment", budget: "", message: "",
+    // Unticked by default on purpose: a pre-ticked consent box is not consent.
+    whatsappConsent: false,
   });
   const [errors, setErrors] = useState({});
 
@@ -169,6 +171,19 @@ export default function PublicLeadForm() {
               style={{ border: "1.5px solid #e5e7eb", background: "#f9fafb", color: "#111827" }}
             />
           </div>
+
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={form.whatsappConsent}
+              onChange={(e) => setForm((p) => ({ ...p, whatsappConsent: e.target.checked }))}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded"
+              style={{ accentColor: accent }}
+            />
+            <span className="text-xs leading-relaxed" style={{ color: "#4b5563" }}>
+              I agree to receive property updates from {meta?.org?.name || "this company"} on WhatsApp. I can opt out at any time.
+            </span>
+          </label>
 
           {errors._form && (
             <p className="text-sm text-red-500 text-center">{errors._form}</p>

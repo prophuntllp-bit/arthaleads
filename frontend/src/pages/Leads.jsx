@@ -279,6 +279,7 @@ export default function Leads() {
     status: location.state?.presetStatus || "",
     source: location.state?.presetSource || "",
     followUpToday: location.state?.presetFollowUpToday ? "true" : "",
+    consent: location.state?.presetConsent || "",
     myOnly: (() => { try { return localStorage.getItem("leads_myOnly") === "true" ? "true" : ""; } catch { return ""; } })(),
   });
 
@@ -605,6 +606,7 @@ export default function Leads() {
         if (filters.dateRange)  params.set("dateRange",  filters.dateRange);
         if (filters.from)       params.set("from",       filters.from);
         if (filters.to)         params.set("to",         filters.to);
+        if (filters.consent)    params.set("consent",    filters.consent);
       }
 
       const { data: res } = await api.get(`/leads/export?${params.toString()}`);
@@ -1102,7 +1104,7 @@ export default function Leads() {
         {(() => {
           const activeFilterCount = [
             filters.status, filters.source, filters.priority, filters.booking, filters.siteFilter,
-            filters.assignedTo, filters.projectId,
+            filters.assignedTo, filters.projectId, filters.consent,
             filters.myOnly === "true" ? "t" : null,
           ].filter(Boolean).length;
           return (
@@ -1200,6 +1202,13 @@ export default function Leads() {
                 {[
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
                   { key: "booking",  placeholder: "All Bookings",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
+                  // Campaigns only reach "given"; the campaign builder links here
+                  // to show exactly who it skipped.
+                  { key: "consent",  placeholder: "Any WhatsApp consent", opts: [
+                    { value: "granted", label: "Consent given" },
+                    { value: "unknown", label: "Consent not recorded" },
+                    { value: "denied",  label: "Consent refused" },
+                  ] },
                 ].map(({ key, placeholder, opts }) => (
                   <CustomSelect
                     key={key}
@@ -1246,7 +1255,7 @@ export default function Leads() {
                     <button
                       className="w-full flex items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-500 hover:bg-red-500/10 transition border border-red-500/20"
                       onClick={() => {
-                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId"].forEach((k) => setFilter(k, ""));
+                        ["search", "siteFilter", "status", "source", "priority", "booking", "dateRange", "from", "to", "myOnly", "assignedTo", "projectId", "consent"].forEach((k) => setFilter(k, ""));
                         try { localStorage.removeItem("leads_myOnly"); } catch {}
                       }}
                     >

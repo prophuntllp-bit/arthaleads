@@ -217,7 +217,18 @@ export default function CampaignBuilder() {
                     number with no reason reads as a bug. */}
                 {(prev.skippedNoConsent > 0 || prev.skippedNoPhone > 0) && (
                   <div className="text-[11px] text-app-soft space-y-0.5 mb-3">
-                    {prev.skippedNoConsent > 0 && <p>{prev.skippedNoConsent.toLocaleString("en-IN")} excluded — no marketing consent</p>}
+                    {prev.skippedNoConsent > 0 && (
+                      <p>
+                        {prev.skippedNoConsent.toLocaleString("en-IN")} excluded — no marketing consent.{" "}
+                        {/* No bulk "grant all" here on purpose: one click cannot capture
+                            consent on behalf of many people. Send them to the leads. */}
+                        <button type="button"
+                          onClick={() => navigate("/leads", { state: { presetConsent: "unknown", presetStatus: filter.status || "", presetSource: filter.source || "" } })}
+                          className="font-semibold underline" style={{ color: "var(--app-primary)" }}>
+                          Record consent
+                        </button>
+                      </p>
+                    )}
                     {prev.skippedNoPhone > 0 && <p>{prev.skippedNoPhone.toLocaleString("en-IN")} excluded — no phone number</p>}
                   </div>
                 )}

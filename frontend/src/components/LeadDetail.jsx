@@ -45,6 +45,77 @@ function Info({ label, value }) {
   );
 }
 
+// WhatsApp marketing consent. Campaigns only reach leads marked "given", so
+// this is the control that decides whether marketing can go to this person.
+// The server stamps the time and logs who changed it; this only asks.
+const CONSENT_STATES = [
+  { value: "granted", label: "Given",        fg: "#15803d", bg: "rgba(34,197,94,0.12)" },
+  { value: "unknown", label: "Not recorded", fg: "var(--app-text-soft)", bg: "var(--app-surface-low)" },
+  { value: "denied",  label: "Refused",      fg: "#b91c1c", bg: "rgba(239,68,68,0.12)" },
+];
+const CONSENT_SOURCE = {
+  manual: "recorded by your team",
+  "qr-form": "ticked on the enquiry form",
+  imported: "imported",
+  "whatsapp-reply": "from a WhatsApp reply",
+};
+
+function ConsentCard({ lead, onUpdated }) {
+  const [saving, setSaving] = useState(null);
+  const current = lead.whatsappConsent?.status || "unknown";
+  const meta = CONSENT_STATES.find((s) => s.value === current) || CONSENT_STATES[1];
+
+  const set = async (status) => {
+    if (status === current || saving) return;
+    if (status === "granted" && !window.confirm(
+      "Only mark consent as given if this person actually agreed to receive WhatsApp marketing. Continue?"
+    )) return;
+    setSaving(status);
+    try {
+      const { data } = await api.put("/leads/" + lead._id, { whatsappConsent: { status } });
+      onUpdated?.(data.data);
+      toast.success("Consent updated");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not update consent");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="stitch-kicker mb-2">WhatsApp marketing consent</p>
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: meta.bg, color: meta.fg }}>
+            {meta.label}
+          </span>
+          {current !== "unknown" && lead.whatsappConsent?.capturedAt && (
+            <p className="text-xs text-app-soft mt-2">
+              {CONSENT_SOURCE[lead.whatsappConsent.source] || lead.whatsappConsent.source || "recorded"}
+              {" · "}{fmtDateTime(lead.whatsappConsent.capturedAt)}
+            </p>
+          )}
+          {current === "unknown" && (
+            <p className="text-xs text-app-soft mt-2">Campaigns will skip this lead until consent is recorded.</p>
+          )}
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          {CONSENT_STATES.filter((s) => s.value !== current).map((s) => (
+            <button key={s.value} type="button" onClick={() => set(s.value)} disabled={!!saving}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full transition disabled:opacity-50"
+              style={{ border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+              {saving === s.value ? "Saving…"
+                : s.value === "granted" ? "Mark as given"
+                : s.value === "denied" ? "Mark as refused" : "Clear"}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Small labelled pill used for voice-call metadata (duration, channel, …)
 function MetaPill({ icon: Icon, children }) {
   return (
@@ -426,6 +497,12 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
             <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
             <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
+            {/* Project leads have no consent field and campaigns never reach them. */}
+            {!isProjectLead && (
+              <div className="md:col-span-2">
+                <ConsentCard lead={lead} onUpdated={onUpdated} />
+              </div>
+            )}
             <div className="md:col-span-2">
               <Info label="Follow-up Note" value={lead.followUpNote || "-"} />
             </div>

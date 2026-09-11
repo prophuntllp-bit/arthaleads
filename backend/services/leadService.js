@@ -125,6 +125,23 @@ const logActivity = (lead, type, description, user, meta = {}) => {
   });
 };
 
+// WhatsApp marketing consent is stamped here, never trusted from the client.
+// capturedAt and source only move when the status itself changes, so saving an
+// unrelated field on the lead form cannot quietly rewrite when consent was
+// really given. Every change goes into the activity log: consent with no
+// record of who recorded it, and when, is not evidence of anything.
+const CONSENT_VERB = { granted: "recorded as given", denied: "recorded as refused", unknown: "cleared" };
+function applyConsent(lead, incoming, user, defaultSource = "manual") {
+  const next = incoming?.status;
+  if (!CONSENT_VERB[next]) return;
+  const prev = lead.whatsappConsent?.status || "unknown";
+  if (next === prev) return;
+  const source = next === "unknown" ? "" : (incoming.source || defaultSource);
+  lead.whatsappConsent = { status: next, source, capturedAt: next === "unknown" ? null : new Date() };
+  logActivity(lead, "consent_changed", "WhatsApp marketing consent " + CONSENT_VERB[next], user,
+    { from: prev, to: next, source });
+}
+
 // Last-10-digits match so "+91 98765 43210", "09876543210" and "9876543210" are
 // all recognised as the same number regardless of how each source formatted it.
 function normalizePhone(phone) {
@@ -177,14 +194,18 @@ const leadService = {
       }
     }
 
+    // Consent is stamped by applyConsent below rather than copied from the
+    // request, so capturedAt is always server time.
+    const { whatsappConsent: consentIn, ...leadData } = data;
     const lead = new Lead({
-      ...data,
+      ...leadData,
       orgId: user.orgId,
       createdBy: user._id,
       assignedToName,
     });
 
     logActivity(lead, "created", `Lead created by ${user.name}`, user);
+    applyConsent(lead, consentIn, user);
 
     if (data.assignedTo) {
       logActivity(lead, "assigned", `Assigned to ${assignedToName}`, user, {
@@ -367,6 +388,11 @@ const leadService = {
     } else if (updates.followUpDate === null) {
       updates.followUpSetBy     = null;
       updates.followUpSetByName = "";
+    }
+
+    if ("whatsappConsent" in updates) {
+      applyConsent(lead, updates.whatsappConsent, user);
+      delete updates.whatsappConsent;
     }
 
     Object.assign(lead, updates);
@@ -638,6 +664,7 @@ const leadService = {
     const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
     const createdAtFilter = getDateRangeFilter(dateRange, from, to);
+    const consent = query.consent;
 
     // ── Lead filter ────────────────────────────────────────────────────────────
     const leadFilter = { orgId: user.orgId, isArchived: { $ne: true }, isDeleted: { $ne: true } };
@@ -655,6 +682,10 @@ const leadService = {
     // lead from this list and move it to Dump, which meant marking someone Not
     // Interested made them vanish from the only screen an agent works from.
     if (booking)  leadFilter.booking  = booking;
+    // "unknown" also has to match leads that predate the field entirely — every
+    // lead created before consent existed has no whatsappConsent at all.
+    if (consent === "unknown") leadFilter["whatsappConsent.status"] = { $nin: ["granted", "denied"] };
+    else if (consent)          leadFilter["whatsappConsent.status"] = consent;
     if (createdAtFilter) leadFilter.createdAt = createdAtFilter;
     if (followUpToday === "true" || followUpToday === true) {
       leadFilter.followUpDate = { $gte: todayStart, $lte: todayEnd };
@@ -678,7 +709,7 @@ const leadService = {
     // (requirements/budget/purpose) and were inflating the unfiltered list
     // with blank rows. An explicit project filter or a domain search both
     // count as deliberate intent to include them.
-    const skipProjectLeads = !!priority || (!projectId && !siteFilter);
+    const skipProjectLeads = !!priority || !!consent || (!projectId && !siteFilter);
     let projLeads = [], projTotal = 0;
 
     if (!skipProjectLeads) {

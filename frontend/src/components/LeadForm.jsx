@@ -29,8 +29,15 @@ const initialForm = {
   followUpNote: "",
   budgetMin: "",
   budgetMax: "",
-  assignedTo: ""
+  assignedTo: "",
+  whatsappConsent: "unknown"
 };
+
+const CONSENT_OPTIONS = [
+  { value: "unknown", label: "Not recorded" },
+  { value: "granted", label: "Given — happy to receive WhatsApp updates" },
+  { value: "denied",  label: "Refused — do not send marketing" },
+];
 
 export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) {
   const [form, setForm] = useState(initialForm);
@@ -83,7 +90,8 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
       followUpNote: lead.followUpNote || "",
       budgetMin: lead.budget?.min || "",
       budgetMax: lead.budget?.max || "",
-      assignedTo: lead.assignedTo?._id || lead.assignedTo || ""
+      assignedTo: lead.assignedTo?._id || lead.assignedTo || "",
+      whatsappConsent: lead.whatsappConsent?.status || "unknown"
     });
   }, [lead, open]);
 
@@ -118,6 +126,9 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
         currency: "INR"
       }
     };
+    // Project leads have no consent field and campaigns never target them, so
+    // sending it there would be a control that saves nothing.
+    if (lead?._type !== "project") payload.whatsappConsent = { status: form.whatsappConsent };
 
     try {
       const { data } = lead
@@ -207,6 +218,14 @@ export default function LeadForm({ open, onClose, onSaved, lead, agents = [] }) 
             style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
           />
         </FormField>
+        {lead?._type !== "project" && (
+          <div className="md:col-span-2">
+            <FormField label="WhatsApp marketing consent">
+              <CustomSelect value={form.whatsappConsent} onChange={setField("whatsappConsent")} options={CONSENT_OPTIONS} style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }} />
+              <p className="text-xs text-app-soft mt-1.5">Only record consent the person actually gave. Campaigns skip anyone not marked as given.</p>
+            </FormField>
+          </div>
+        )}
         <div className="md:col-span-2">
           <FormField label="Follow-up Note">
             <textarea className="textarea" value={form.followUpNote} onChange={setValue("followUpNote")} />
