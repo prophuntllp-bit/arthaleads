@@ -127,6 +127,42 @@ connectDB().then(async () => {
     }
   } catch (e) { console.error("[MIGRATION] remarkNote migration failed:", e.message); }
 
+  // One-time migration: convert the old singular `voiceCall` field (one Vistrow
+  // Voice call per lead) into the new `voiceCalls` array (a lead can now be
+  // called more than once) - see models/Lead.js and routes/webhookRoutes.js.
+  // Without this, historical transcripts/recordings under the old field name
+  // would silently stop showing up once the frontend switches to reading the
+  // array. Idempotent - only matches leads that still have the old field and
+  // haven't been converted yet.
+  try {
+    const mongoose = require("mongoose");
+    const legacyVoiceLeads = await mongoose.connection.collection("leads")
+      .find({ voiceCall: { $exists: true }, voiceCalls: { $exists: false } })
+      .project({ voiceCall: 1, createdAt: 1 })
+      .toArray();
+    if (legacyVoiceLeads.length > 0) {
+      console.log(`[MIGRATION] Converting ${legacyVoiceLeads.length} lead(s) from voiceCall -> voiceCalls[]…`);
+      for (const lead of legacyVoiceLeads) {
+        const entry = {
+          _id: new mongoose.Types.ObjectId(),
+          ...lead.voiceCall,
+          // The old field never had its own timestamp - the lead's own
+          // createdAt is the closest available approximation.
+          createdAt: lead.createdAt || new Date(),
+          updatedAt: lead.createdAt || new Date(),
+        };
+        await mongoose.connection.collection("leads").updateOne(
+          { _id: lead._id },
+          { $set: { voiceCalls: [entry] }, $unset: { voiceCall: "" } }
+        );
+      }
+      console.log(`[MIGRATION] voiceCall -> voiceCalls[] conversion complete`);
+    }
+  } catch (e) {
+    console.error("[MIGRATION] voiceCall->voiceCalls migration failed:", e.message);
+    try { require("./instrument").captureException(e, { tags: { migration: "voiceCall-to-voiceCalls" } }); } catch {}
+  }
+
 }).catch((e) => {
   console.error("[BOOT] DB connection failed - cannot start:", e.message);
   process.exit(1);

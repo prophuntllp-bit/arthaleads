@@ -34,7 +34,7 @@ const BOOKING = [
   "Other Location", "Commercial",
 ];
 
-const PROPERTY_TYPE = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other"];
+const PROPERTY_TYPE = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other", "N/A"];
 
 const BHK = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
 

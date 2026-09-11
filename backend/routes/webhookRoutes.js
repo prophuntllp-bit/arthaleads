@@ -1,5 +1,6 @@
 ﻿const express = require("express");
 const crypto  = require("crypto");
+const mongoose = require("mongoose");
 const rateLimit = require("express-rate-limit");
 const Lead = require("../models/Lead");
 const User = require("../models/User");
@@ -10,6 +11,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule     = require("../models/RoutingRule");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
+const OPTS = require("../constants/leadOptions");
 
 const router = express.Router();
 
@@ -861,6 +863,88 @@ const customLeadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// ── Vistrow Voice recording URL validation (SSRF guard) ────────────────────────
+// Vistrow's recording_url is a stable bearer link on THEIR domain that
+// redirects to a fresh, short-lived storage URL on every playback - it's
+// stored verbatim and never fetched/HEAD-checked by this server (the upload
+// can still be finishing when this webhook arrives; the client-side player
+// handles the "not ready yet" retry, not this route). Only the exact shape
+// Vistrow actually sends is accepted; anything else is silently dropped
+// (never fetched, never stored) rather than failing the whole webhook over
+// one bad field - the rest of the call data is still good.
+function sanitizeVistrowRecordingUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") return null;
+    if (u.hostname !== "api.vistrowvoice.com") return null;
+    if (!/^\/public\/calls\/\d+\/recording$/.test(u.pathname)) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+// Maps whatever recognized keys Vistrow's extracted_data happens to contain
+// onto real Lead fields. Deliberately narrow: an unrecognized key, an
+// unrecognized enum value, or a non-numeric budget is left out entirely
+// rather than guessed at - callers must never see an invented "Apartment" /
+// "Buy" / "₹0" just because a real value wasn't actually captured. The full
+// raw extracted_data is always retained on the voice call entry regardless
+// (see below), so nothing here is ever lost even when unmapped.
+function mapVistrowExtractedFields(extractedData) {
+  if (!extractedData || typeof extractedData !== "object" || Array.isArray(extractedData)) return {};
+  const get = (...keys) => {
+    for (const k of keys) {
+      const v = extractedData[k];
+      if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim();
+    }
+    return null;
+  };
+  const out = {};
+
+  const propertyType = get("property_type", "propertyType", "property");
+  if (propertyType) {
+    const match = OPTS.PROPERTY_TYPE.find((o) => o.toLowerCase() === propertyType.toLowerCase());
+    if (match && match !== "N/A") out.propertyType = match;
+  }
+
+  const purpose = get("purpose", "intent");
+  if (purpose) {
+    const match = OPTS.PURPOSE.find((o) => o.toLowerCase() === purpose.toLowerCase());
+    if (match && match !== "N/A") out.purpose = match;
+  }
+
+  const bhk = get("bhk", "bedrooms");
+  if (bhk) {
+    const match = OPTS.BHK.find((o) => o.toLowerCase() === bhk.toLowerCase());
+    if (match && match !== "N/A") out.bhk = match;
+  }
+
+  const location = get("location", "preferred_location", "area");
+  if (location) out.preferredLocation = location;
+
+  // Number(null) is 0, not NaN - get() returning null (key absent) must NOT
+  // be fed straight into Number(), or an absent budget silently becomes a
+  // real "₹0 - ₹0" budget on every voice lead. Only convert when something
+  // was actually present.
+  const budgetMinRaw = get("budget_min", "min_budget", "budgetMin");
+  const budgetMaxRaw = get("budget_max", "max_budget", "budgetMax");
+  const singleBudgetRaw = get("budget");
+  const budgetMin = budgetMinRaw !== null ? Number(budgetMinRaw) : NaN;
+  const budgetMax = budgetMaxRaw !== null ? Number(budgetMaxRaw) : NaN;
+  const singleBudget = singleBudgetRaw !== null ? Number(singleBudgetRaw) : NaN;
+  if (Number.isFinite(budgetMin) || Number.isFinite(budgetMax) || Number.isFinite(singleBudget)) {
+    out.budget = {
+      min: Number.isFinite(budgetMin) ? budgetMin : (Number.isFinite(singleBudget) ? singleBudget : null),
+      max: Number.isFinite(budgetMax) ? budgetMax : (Number.isFinite(singleBudget) ? singleBudget : null),
+      currency: "INR",
+    };
+  }
+
+  return out;
+}
+
 router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
   try {
     // Accept token from body or query string for sender flexibility
@@ -870,6 +954,11 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       // Optional Vistrow Voice enrichment (all backward-compatible — a payload
       // without any of these behaves exactly as before).
       transcript, sentiment, duration_seconds, channel, language, agent_name, extracted_data,
+      // Per-call identity + recording (Vistrow only). call_id is what makes a
+      // re-sent webhook update the same call instead of creating a duplicate -
+      // see the branching below. Unknown/future fields are simply never
+      // destructured here, so they're silently ignored rather than rejected.
+      call_id, recording_url, recording_mime_type, page_path,
     } = req.body || {};
 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
@@ -898,32 +987,27 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     // Vistrow Voice token produces "Vistrow Voice" leads, a WhatsApp token
     // produces "WhatsApp" leads, and anything else falls back to "Custom".
     const leadSource = TOKEN_INGEST_PLATFORMS.includes(automation.platform) ? automation.platform : "Custom";
-
-    // Deduplication: same phone for this org within the last 2 minutes = a
-    // double-fire from the sender — skip silently (same guard as website flow).
     const cleanPhone = String(phone).trim();
-    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
-    const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
-    if (recent) {
-      logger.info(`[custom webhook] duplicate skipped: ${name} | ${cleanPhone} | original: ${recent.createdAt}`);
-      return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
-    }
 
-    // Respect the org's Auto Lead Assignment setting
+    // ── call_id: the real idempotency key for a Vistrow call ──────────────────
+    // Present only on Vistrow's per-call webhook. When present, it (not the
+    // 2-minute phone window used below for everything else) is what decides
+    // create-vs-update-vs-append, so a legitimate second call from the same
+    // number minutes apart is never mistaken for a duplicate delivery of the
+    // first one.
+    const callIdNum = call_id !== undefined && call_id !== null && call_id !== "" ? Number(call_id) : NaN;
+    const hasCallId = Number.isFinite(callIdNum);
+
     const org = await Organization.findById(orgId).select("autoAssign").lean();
-    let assignee = null;
-    if (org?.autoAssign !== false) {
-      try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
-    }
-
     // The connection name the admin gave (e.g. "Shapoorji Pallonji Treetopia")
     // is the primary source label; source_name from the payload is a fallback.
     const sourceLabel = automation.name || source_name || automation.leadSourceLabel || "Custom";
     const msg = message ? String(message).trim() : "";
 
-    // Build the optional Vistrow Voice payload. Everything here is defensive:
-    // any missing/malformed field is dropped, and if nothing usable is present
-    // `voiceCall` stays undefined so the lead is stored exactly as before.
+    // Build the optional Vistrow Voice call payload. Everything here is
+    // defensive: any missing/malformed field is dropped, and if nothing usable
+    // is present `voiceCall` stays undefined so the lead is stored exactly as
+    // a plain Custom/WhatsApp lead would be.
     const SENTIMENTS = ["positive", "neutral", "negative"];
     const cleanTranscript = Array.isArray(transcript)
       ? transcript
@@ -937,30 +1021,38 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     const durNum = Number(duration_seconds);
     const hasExtracted = extracted_data && typeof extracted_data === "object"
       && !Array.isArray(extracted_data) && Object.keys(extracted_data).length > 0;
+    const safeRecordingUrl = sanitizeVistrowRecordingUrl(recording_url);
+    const pagePathClean = page_path && typeof page_path === "string" ? page_path.trim() : "";
 
     let voiceCall;
-    if (cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
-        || channel || language || agent_name || hasExtracted) {
+    if (hasCallId || cleanTranscript.length || SENTIMENTS.includes(sentiment) || Number.isFinite(durNum)
+        || channel || language || agent_name || hasExtracted || safeRecordingUrl) {
       voiceCall = {};
+      if (hasCallId) voiceCall.externalCallId = callIdNum;
       if (cleanTranscript.length) voiceCall.transcript = cleanTranscript;
       if (SENTIMENTS.includes(sentiment)) voiceCall.sentiment = sentiment;
       if (Number.isFinite(durNum) && durNum > 0) voiceCall.durationSeconds = durNum;
       if (channel && typeof channel === "string") voiceCall.channel = channel.trim();
       if (language && typeof language === "string") voiceCall.language = language.trim();
       if (agent_name && typeof agent_name === "string") voiceCall.agentName = agent_name.trim();
+      if (pagePathClean) voiceCall.pagePath = pagePathClean;
+      if (safeRecordingUrl) {
+        voiceCall.recordingUrl = safeRecordingUrl;
+        if (recording_mime_type && typeof recording_mime_type === "string") {
+          voiceCall.recordingMimeType = recording_mime_type.trim();
+        }
+      }
       if (hasExtracted) voiceCall.extractedData = extracted_data;
     }
 
-    // Build the note + requirements.
-    // For voice leads (Vistrow) the full transcript already lives in the
-    // Transcript tab (lead.voiceCall.transcript), so the note instead carries
-    // the useful *extracted* details (budget/location/timeline/…) and call
-    // metadata (sentiment/duration/channel/agent/language) — not a copy of the
-    // transcript. Non-voice Custom leads keep the plain message behaviour.
-    let noteText;
-    let reqText;
-    if (voiceCall) {
-      const vc = voiceCall;
+    // Build the note + requirements for a voice call. The full transcript
+    // already lives in the Transcript tab (lead.voiceCalls[].transcript), so
+    // the note instead carries the useful *extracted* details (budget/
+    // location/…) and call metadata — not a copy of the transcript/message.
+    // Requirements never falls back to the raw message/transcript here either
+    // — dumping it in floods the Leads table with a wall of text (this exact
+    // bug was fixed once already, see scripts/backfill-vistrow-requirements.js).
+    const buildVoiceNote = (vc) => {
       const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
       const durStr = Number.isFinite(vc.durationSeconds) && vc.durationSeconds > 0
         ? `${Math.floor(vc.durationSeconds / 60)}m ${Math.round(vc.durationSeconds % 60)}s`.replace(/^0m /, "")
@@ -971,26 +1063,177 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
         vc.language ? `Language: ${vc.language}` : null,
         vc.channel ? `Channel: ${vc.channel}` : null,
         vc.agentName ? `Agent: ${vc.agentName}` : null,
+        vc.pagePath ? `Page: ${vc.pagePath}` : null,
       ].filter(Boolean);
-
       const extractedEntries = vc.extractedData && typeof vc.extractedData === "object"
         ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
         : [];
       const extractedLines = extractedEntries.map(([k, v]) =>
         `${k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${v}`);
+      return {
+        noteText: [
+          `📞 ${sourceLabel} call summary`,
+          metaBits.length ? metaBits.join(" · ") : null,
+          extractedLines.length ? `\nCaptured details:\n${extractedLines.join("\n")}` : null,
+          cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
+        ].filter(Boolean).join("\n"),
+        reqText: extractedLines.length ? extractedLines.join(" · ") : "",
+      };
+    };
 
-      noteText = [
-        `📞 ${sourceLabel} call summary`,
-        metaBits.length ? metaBits.join(" · ") : null,
-        extractedLines.length ? `\nCaptured details:\n${extractedLines.join("\n")}` : null,
-        cleanTranscript.length ? `\nFull transcript is in the Transcript tab.` : null,
-      ].filter(Boolean).join("\n");
+    // ══ call_id present: idempotent per-call ingestion (Vistrow) ══════════════
+    if (hasCallId) {
+      // 1) Re-send of a call we already have — update that call in place.
+      //    Nothing else on the lead changes; only the imported call's own
+      //    data can change on a re-send.
+      const existingByCallId = await Lead.findOne({
+        orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+      }).select("_id").lean();
 
-      // Requirements = the concise extracted summary (what the caller wants).
-      // Never fall back to the raw message/transcript here — it's already
-      // fully available in the Transcript tab; dumping it into Requirements
-      // just floods the Leads table with a wall of transcript text.
-      reqText = extractedLines.length ? extractedLines.join(" · ") : "";
+      if (existingByCallId) {
+        const setOps = { "voiceCalls.$.updatedAt": new Date() };
+        if (voiceCall.transcript)        setOps["voiceCalls.$.transcript"] = voiceCall.transcript;
+        if (voiceCall.sentiment)         setOps["voiceCalls.$.sentiment"] = voiceCall.sentiment;
+        if (voiceCall.durationSeconds)   setOps["voiceCalls.$.durationSeconds"] = voiceCall.durationSeconds;
+        if (voiceCall.channel)           setOps["voiceCalls.$.channel"] = voiceCall.channel;
+        if (voiceCall.language)          setOps["voiceCalls.$.language"] = voiceCall.language;
+        if (voiceCall.agentName)         setOps["voiceCalls.$.agentName"] = voiceCall.agentName;
+        if (voiceCall.pagePath)          setOps["voiceCalls.$.pagePath"] = voiceCall.pagePath;
+        if (voiceCall.recordingUrl)      setOps["voiceCalls.$.recordingUrl"] = voiceCall.recordingUrl;
+        if (voiceCall.recordingMimeType) setOps["voiceCalls.$.recordingMimeType"] = voiceCall.recordingMimeType;
+        if (voiceCall.extractedData)     setOps["voiceCalls.$.extractedData"] = voiceCall.extractedData;
+
+        await Lead.updateOne(
+          { _id: existingByCallId._id, "voiceCalls.externalCallId": callIdNum },
+          { $set: setOps }
+        );
+        automation.status = "connected";
+        automation.lastSyncAt = new Date();
+        await automation.save();
+        logger.info(`[custom webhook] Vistrow call ${callIdNum} updated (re-send) on lead ${existingByCallId._id}`);
+        return res.status(200).json({ success: true, message: "Call updated", leadId: existingByCallId._id });
+      }
+
+      // 2) New call, existing lead (matched by phone) — append as a new call.
+      //    Deliberately never touches the lead's other top-level fields (name,
+      //    propertyType, etc.) - only ever appends new call history.
+      const existingByPhone = await Lead.findOne({ orgId, phone: cleanPhone }).select("_id").lean();
+      const newCallEntry = { _id: new mongoose.Types.ObjectId(), ...voiceCall, createdAt: new Date(), updatedAt: new Date() };
+
+      if (existingByPhone) {
+        await Lead.updateOne({ _id: existingByPhone._id }, { $push: { voiceCalls: newCallEntry } });
+        automation.status = "connected";
+        automation.lastSyncAt = new Date();
+        await automation.save();
+        logger.info(`[custom webhook] Vistrow call ${callIdNum} appended to existing lead ${existingByPhone._id}`);
+        return res.status(200).json({ success: true, message: "Call added to existing lead", leadId: existingByPhone._id });
+      }
+
+      // 3) Brand-new lead + brand-new call.
+      let assignee = null;
+      if (org?.autoAssign !== false) {
+        try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
+      }
+      const { noteText, reqText } = buildVoiceNote(voiceCall);
+      const mapped = mapVistrowExtractedFields(hasExtracted ? extracted_data : null);
+
+      let lead;
+      try {
+        lead = await Lead.create({
+          name: String(name).trim(),
+          phone: cleanPhone,
+          email: (email && String(email).trim()) || "",
+          source: leadSource,
+          status: "New",
+          requirements: reqText,
+          orgId,
+          createdBy: assignee?._id || automation.createdBy || null,
+          assignedTo: assignee?._id || null,
+          assignedToName: assignee?.name || "",
+          leadSourceLabel: sourceLabel,
+          voiceCalls: [newCallEntry],
+          // Never let the schema's own "Apartment"/"Buy"/"₹0" defaults apply
+          // to a voice lead with no real data for these - an explicit
+          // "N/A"/null here bypasses that default (Mongoose only applies a
+          // field's default when the path is truly absent, not when given an
+          // explicit value, even a blank one).
+          propertyType: mapped.propertyType || "N/A",
+          purpose: mapped.purpose || "N/A",
+          bhk: mapped.bhk || "N/A",
+          budget: mapped.budget || { min: null, max: null, currency: "INR" },
+          preferredLocation: mapped.preferredLocation || "",
+          notes: [{ text: noteText, addedBy: assignee?._id || null, addedByName: assignee?.name || "" }],
+          activities: [{
+            type: "created",
+            description: assignee
+              ? `Lead received from custom source (${sourceLabel}) - auto-assigned to ${assignee.name}`
+              : `Lead received from custom source (${sourceLabel}) - unassigned (auto-assignment disabled)`,
+            performedBy: assignee?._id || null,
+            performedByName: assignee?.name || "",
+            meta: { automationId: automation._id?.toString(), sourceName: source_name || "" },
+          }],
+        });
+      } catch (createErr) {
+        // Two near-simultaneous deliveries of the same brand-new call_id can
+        // both reach this point before either commits - the unique index on
+        // (orgId, source, voiceCalls.externalCallId) is what actually
+        // prevents the duplicate; the loser here just re-resolves the
+        // winner's document and reports success instead of failing the
+        // webhook (Vistrow would otherwise see this as a failed delivery and
+        // retry, re-triggering the exact same race).
+        if (createErr?.code === 11000) {
+          const winner = await Lead.findOne({
+            orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+          }).select("_id").lean();
+          if (winner) {
+            logger.info(`[custom webhook] create/create race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
+            return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
+          }
+        }
+        throw createErr;
+      }
+
+      automation.status = "connected";
+      automation.lastSyncAt = new Date();
+      await automation.save();
+
+      if (assignee?._id) {
+        sendPushToUser(assignee._id, {
+          type: "lead_assigned",
+          title: `New Lead: ${lead.name}`,
+          body: [cleanPhone, sourceLabel].filter(Boolean).join(" · "),
+          data: { url: "/leads" },
+        }).catch(() => {});
+      } else {
+        sendPushToAll({
+          type: "new_lead",
+          title: "New Lead 📥",
+          body: `${lead.name} came in from ${sourceLabel}`,
+          data: { url: "/leads", leadName: lead.name, source: leadSource },
+        }, orgId).catch(() => {});
+      }
+
+      logger.info(`[custom webhook] lead created: ${lead.name} | ${cleanPhone} | source: ${sourceLabel} | call: ${callIdNum}`);
+      return res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
+    }
+
+    // ══ No call_id: original behaviour, unchanged (Custom / WhatsApp / any ══
+    // ══ older Vistrow payload that never sent call_id) ════════════════════
+    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const recent = await Lead.findOne({ orgId, phone: cleanPhone, createdAt: { $gte: twoMinsAgo } }).lean();
+    if (recent) {
+      logger.info(`[custom webhook] duplicate skipped: ${name} | ${cleanPhone} | original: ${recent.createdAt}`);
+      return res.status(200).json({ success: true, message: "Duplicate lead ignored" });
+    }
+
+    let assignee = null;
+    if (org?.autoAssign !== false) {
+      try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
+    }
+
+    let noteText, reqText;
+    if (voiceCall) {
+      ({ noteText, reqText } = buildVoiceNote(voiceCall));
     } else {
       noteText = [
         msg ? `Message: ${msg}` : null,
@@ -998,6 +1241,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       ].filter(Boolean).join("\n") || "Lead received from custom source";
       reqText = msg;
     }
+    const mapped = voiceCall ? mapVistrowExtractedFields(hasExtracted ? extracted_data : null) : {};
 
     const lead = await Lead.create({
       name: String(name).trim(),
@@ -1011,8 +1255,14 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       assignedTo: assignee?._id || null,
       assignedToName: assignee?.name || "",
       leadSourceLabel: sourceLabel,
-      voiceCall, // undefined for non-voice payloads — Mongoose omits it
-
+      voiceCalls: voiceCall ? [voiceCall] : undefined, // undefined for non-voice payloads — Mongoose omits it
+      ...(voiceCall ? {
+        propertyType: mapped.propertyType || "N/A",
+        purpose: mapped.purpose || "N/A",
+        bhk: mapped.bhk || "N/A",
+        budget: mapped.budget || { min: null, max: null, currency: "INR" },
+        preferredLocation: mapped.preferredLocation || "",
+      } : {}),
       notes: [
         {
           text: noteText,

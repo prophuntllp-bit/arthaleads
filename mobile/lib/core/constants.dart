@@ -23,7 +23,7 @@ List<String> sourceOptions = List.of(_defaultSourceOptions);
 const _defaultPriorityOptions = ['Low', 'Medium', 'High', 'Hot'];
 List<String> priorityOptions = List.of(_defaultPriorityOptions);
 
-const _defaultPropertyTypes = ['Apartment', 'Villa', 'Plot', 'Commercial', 'Office', 'Penthouse', 'Other'];
+const _defaultPropertyTypes = ['Apartment', 'Villa', 'Plot', 'Commercial', 'Office', 'Penthouse', 'Other', 'N/A'];
 List<String> propertyTypes = List.of(_defaultPropertyTypes);
 
 const _defaultBhkOptions = ['1BHK', '2BHK', '3BHK', '4BHK', '5BHK+', 'Studio', 'N/A'];

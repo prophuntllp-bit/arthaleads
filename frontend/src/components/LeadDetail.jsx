@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCopilot } from "../context/CopilotContext";
-import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X } from "lucide-react";
+import { Pencil, RefreshCw, Sparkles, Phone, Mic, AlignLeft, Loader2, PhoneMissed, FileText, Clock, Headphones, PhoneIncoming, PhoneOutgoing, Trash2, Check, X, MapPin, AlertCircle, ChevronDown } from "lucide-react";
 import api from "../services/api";
 import { ConfirmDialog, Modal, PriorityBadge, SourceBadge, Spinner, StatusBadge, PhoneActions, WhatsAppLink, toWaNumber } from "./UI";
 import { useSoftPhone } from "../context/SoftPhoneContext";
@@ -25,6 +25,64 @@ function DirectionBadge({ direction }) {
       title={direction === "inbound" ? "Lead called us" : "We called the lead"}>
       <Icon className="w-3 h-3" />{d.label}
     </span>
+  );
+}
+
+// Vistrow's recording can still be finishing its own upload when the call
+// webhook arrives (the backend stores the URL immediately, not the audio
+// itself - see POST /webhook/lead), so the very first playback attempt can
+// 404. Retry once after a short delay before showing it as genuinely
+// unavailable, rather than a permanently broken-looking player.
+function RecordingPlayer({ url, mimeType }) {
+  const [status, setStatus] = useState("ready"); // ready | processing | unavailable
+  const [attempt, setAttempt] = useState(0);
+  const retriedRef = useRef(false);
+
+  useEffect(() => {
+    setStatus("ready");
+    setAttempt(0);
+    retriedRef.current = false;
+  }, [url]);
+
+  const handleError = () => {
+    if (!retriedRef.current) {
+      retriedRef.current = true;
+      setStatus("processing");
+      setTimeout(() => {
+        setAttempt((a) => a + 1);
+        setStatus("ready");
+      }, 5000);
+    } else {
+      setStatus("unavailable");
+    }
+  };
+
+  if (status === "unavailable") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs text-app-soft"
+        style={{ background: "var(--app-surface-low)" }}>
+        <AlertCircle className="w-3.5 h-3.5 shrink-0 opacity-60" />
+        Recording unavailable right now — try again shortly.
+      </div>
+    );
+  }
+
+  if (status === "processing") {
+    return (
+      <div className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs text-app-soft"
+        style={{ background: "var(--app-surface-low)" }}>
+        <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+        Recording processing — retrying shortly…
+      </div>
+    );
+  }
+
+  // key={attempt} forces a full remount on retry, so the <audio> element
+  // re-fetches src fresh rather than reusing its failed state.
+  return (
+    <audio key={attempt} controls preload="metadata" className="w-full h-9" onError={handleError}>
+      <source src={url} type={mimeType || "audio/wav"} />
+    </audio>
   );
 }
 
@@ -156,6 +214,9 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   const [callHistory, setCallHistory]     = useState([]);
   const [callsLoading, setCallsLoading]   = useState(false);
   const [expandedCall, setExpandedCall]   = useState(null);
+  // Which Vistrow voice call is expanded in the Transcript tab — null means
+  // "none yet decided", which the render below defaults to the most recent one.
+  const [expandedVoiceCall, setExpandedVoiceCall] = useState(undefined);
 
   const handleRetryFacebook = async () => {
     setRetrying(true);
@@ -288,9 +349,14 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
   };
 
   // Show the Transcript tab only for leads that came in via Vistrow Voice
-  // (voiceCall is set on ingestion). Non-voice leads never see the tab.
-  const vc = lead.voiceCall;
-  const hasVoice = !!(vc && (vc.transcript?.length || vc.sentiment || vc.channel || vc.durationSeconds || vc.agentName));
+  // (voiceCalls is set on ingestion). Non-voice leads never see the tab.
+  // A lead can now have more than one call (voiceCalls is an array) — most
+  // recent first, matching how every other list in this panel is ordered.
+  const voiceCalls = Array.isArray(lead.voiceCalls)
+    ? [...lead.voiceCalls].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    : [];
+  const hasVoice = voiceCalls.some((c) =>
+    c.transcript?.length || c.sentiment || c.channel || c.durationSeconds || c.agentName || c.recordingUrl);
   const tabList = ["info", "notes", "activity", "calls", ...(hasVoice ? ["transcript"] : [])];
 
   const refreshLead = async () => {
@@ -493,7 +559,11 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             <Info label="Preferred Location" value={lead.preferredLocation || "-"} />
             <Info label="Street Address" value={lead.streetAddress || "-"} />
             <Info label="City" value={lead.city || "-"} />
-            <Info label="Budget" value={`${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`} />
+            <Info label="Budget" value={
+              lead.budget?.min || lead.budget?.max
+                ? `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`
+                : "Not captured"
+            } />
             <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
             <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
             <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
@@ -779,78 +849,121 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
           </div>
         )}
 
-        {tab === "transcript" && vc && (() => {
-          const sent = vc.sentiment;
-          const sentColor = sent === "positive" ? "#22c55e" : sent === "negative" ? "#ef4444" : "#a1a1aa";
-          const sentLabel = sent === "positive" ? "Positive" : sent === "negative" ? "Negative" : "Neutral";
-          const secs = Number(vc.durationSeconds) || 0;
-          const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
-          const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
-          const turns = vc.transcript || [];
-          const extracted = vc.extractedData && typeof vc.extractedData === "object" && !Array.isArray(vc.extractedData)
-            ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
-            : [];
+        {tab === "transcript" && voiceCalls.length > 0 && (
+          <div className="space-y-3">
+            {voiceCalls.map((vc, idx) => {
+              const callKey = vc._id || idx;
+              // Default: most recent call (idx 0) starts open, everything
+              // else collapsed — keeps this bounded even with a long call
+              // history instead of stacking every transcript at once.
+              const isOpen = expandedVoiceCall === undefined ? idx === 0 : expandedVoiceCall === callKey;
+              const sent = vc.sentiment;
+              const sentColor = sent === "positive" ? "#22c55e" : sent === "negative" ? "#ef4444" : "#a1a1aa";
+              const sentLabel = sent === "positive" ? "Positive" : sent === "negative" ? "Negative" : "Neutral";
+              const secs = Number(vc.durationSeconds) || 0;
+              const dur = secs > 0 ? `${Math.floor(secs / 60)}m ${Math.round(secs % 60)}s`.replace(/^0m /, "") : null;
+              const langLabel = vc.language ? (LANG_NAMES[vc.language] || String(vc.language).toUpperCase()) : null;
+              const turns = vc.transcript || [];
+              const extracted = vc.extractedData && typeof vc.extractedData === "object" && !Array.isArray(vc.extractedData)
+                ? Object.entries(vc.extractedData).filter(([, v]) => v !== "" && v != null)
+                : [];
 
-          return (
-            <div className="space-y-4">
-              {/* Metadata row */}
-              <div className="flex flex-wrap items-center gap-2">
-                {sent && (
-                  <span className="inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
-                    style={{ background: `${sentColor}18`, color: sentColor }}>
-                    {sentLabel}
-                  </span>
-                )}
-                {dur && <MetaPill icon={Clock}>{dur}</MetaPill>}
-                {vc.channel && <MetaPill>{vc.channel}</MetaPill>}
-                {langLabel && <MetaPill>{langLabel}</MetaPill>}
-                {vc.agentName && <MetaPill icon={Mic}>{vc.agentName}</MetaPill>}
-              </div>
+              return (
+                <div key={callKey} className="rounded-[1.25rem] overflow-hidden stitch-surface-muted">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedVoiceCall(isOpen ? null : callKey)}
+                    className="w-full text-left px-4 py-3 flex items-center gap-3"
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "rgba(99,102,241,0.10)" }}>
+                      <Mic className="w-3.5 h-3.5" style={{ color: "#6366f1" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-app">
+                        {voiceCalls.length > 1 ? `Call ${voiceCalls.length - idx}` : "Voice Call"}
+                        {dur ? ` · ${dur}` : ""}
+                      </p>
+                      <p className="text-xs text-app-soft truncate">
+                        {vc.createdAt ? fmtDateTime(vc.createdAt) : "—"}
+                      </p>
+                    </div>
+                    {sent && (
+                      <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shrink-0"
+                        style={{ background: `${sentColor}18`, color: sentColor }}>
+                        {sentLabel}
+                      </span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-app-soft shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
 
-              {/* Captured details (extracted_data) */}
-              {extracted.length > 0 && (
-                <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
-                  <p className="stitch-kicker mb-3">Captured Details</p>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    {extracted.map(([k, v]) => (
-                      <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Transcript chat */}
-              {turns.length === 0 ? (
-                <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
-                  <AlignLeft className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
-                  <p className="text-sm font-semibold text-app">No transcript</p>
-                  <p className="text-xs text-app-soft mt-1">This call came in without a conversation transcript.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {turns.map((turn, i) => {
-                    const isCaller = turn.speaker === "Caller";
-                    return (
-                      <div key={i} className={`flex ${isCaller ? "justify-start" : "justify-end"}`}>
-                        <div className="max-w-[82%] rounded-2xl px-3.5 py-2"
-                          style={{
-                            background: isCaller ? "var(--app-surface-low)" : "rgba(249,115,22,0.10)",
-                            border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(249,115,22,0.22)"}`,
-                          }}>
-                          <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
-                            style={{ color: isCaller ? "var(--app-text-soft)" : "var(--app-primary)" }}>
-                            {turn.speaker || "—"}
-                          </p>
-                          <p className="text-sm text-app whitespace-pre-wrap break-words">{turn.text}</p>
-                        </div>
+                  {isOpen && (
+                    <div className="px-4 pb-4 space-y-4">
+                      {/* Metadata row */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {dur && <MetaPill icon={Clock}>{dur}</MetaPill>}
+                        {vc.channel && <MetaPill>{vc.channel}</MetaPill>}
+                        {langLabel && <MetaPill>{langLabel}</MetaPill>}
+                        {vc.agentName && <MetaPill icon={Mic}>{vc.agentName}</MetaPill>}
+                        {vc.pagePath && <MetaPill icon={MapPin}>{vc.pagePath}</MetaPill>}
                       </div>
-                    );
-                  })}
+
+                      {/* Recording */}
+                      {vc.recordingUrl && (
+                        <div>
+                          <p className="stitch-kicker mb-2">Recording</p>
+                          <RecordingPlayer url={vc.recordingUrl} mimeType={vc.recordingMimeType} />
+                        </div>
+                      )}
+
+                      {/* Captured details (extracted_data) */}
+                      {extracted.length > 0 && (
+                        <div className="rounded-[1.35rem] p-4 stitch-surface-muted">
+                          <p className="stitch-kicker mb-3">Captured Details</p>
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            {extracted.map(([k, v]) => (
+                              <Info key={k} label={k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())} value={String(v)} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Transcript chat */}
+                      {turns.length === 0 ? (
+                        <div className="rounded-[1.25rem] p-6 text-center stitch-surface-muted">
+                          <AlignLeft className="w-8 h-8 mx-auto mb-2 text-app-soft opacity-40" />
+                          <p className="text-sm font-semibold text-app">No transcript</p>
+                          <p className="text-xs text-app-soft mt-1">This call came in without a conversation transcript.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {turns.map((turn, i) => {
+                            const isCaller = turn.speaker === "Caller";
+                            return (
+                              <div key={i} className={`flex ${isCaller ? "justify-start" : "justify-end"}`}>
+                                <div className="max-w-[82%] rounded-2xl px-3.5 py-2"
+                                  style={{
+                                    background: isCaller ? "var(--app-surface-low)" : "rgba(249,115,22,0.10)",
+                                    border: `1px solid ${isCaller ? "var(--app-border)" : "rgba(249,115,22,0.22)"}`,
+                                  }}>
+                                  <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                                    style={{ color: isCaller ? "var(--app-text-soft)" : "var(--app-primary)" }}>
+                                    {turn.speaker || "—"}
+                                  </p>
+                                  <p className="text-sm text-app whitespace-pre-wrap break-words">{turn.text}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })()}
+              );
+            })}
+          </div>
+        )}
 
         {tab === "activity" && (
           <div className="space-y-3">

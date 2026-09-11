@@ -10,13 +10,18 @@
  * (lead.voiceCall.transcript), so it should never have been duplicated there.
  *
  * This script re-derives `requirements` for every affected lead:
- *   - if lead.voiceCall.extractedData has entries -> concise "Key: value · …" summary
+ *   - if lead.voiceCalls[0].extractedData has entries -> concise "Key: value · …" summary
  *   - otherwise -> "" (cleared, matching the new ingestion behaviour)
  * Only touches leads with source "Vistrow Voice" or "Google" that have a
- * voiceCall and whose requirements currently equals their own requirements
- * field's flattened message (i.e. looks like transcript dump, not already
- * a clean summary) — guarded further below by only running on leads whose
- * requirements is unusually long (a real summary is always short).
+ * voiceCalls entry and whose requirements currently equals their own
+ * requirements field's flattened message (i.e. looks like transcript dump,
+ * not already a clean summary) — guarded further below by only running on
+ * leads whose requirements is unusually long (a real summary is always short).
+ *
+ * NOTE: updated for the voiceCall -> voiceCalls[] rename (a lead can now have
+ * more than one Vistrow call). This script predates that change and only
+ * ever ran against leads that had a single call, so it reads voiceCalls[0] -
+ * the same data the old singular voiceCall field held.
  *
  * Dry-run by default — logs what it would change without writing anything.
  * Run: node backend/scripts/backfill-vistrow-requirements.js
@@ -45,9 +50,9 @@ async function run() {
 
   const targets = await Lead.find({
     source: { $in: ["Vistrow Voice", "Google"] },
-    voiceCall: { $exists: true },
+    voiceCalls: { $exists: true, $ne: [] },
     requirements: { $exists: true, $ne: "" },
-  }).select("_id name requirements voiceCall.extractedData").lean();
+  }).select("_id name requirements voiceCalls.extractedData").lean();
 
   const affected = targets.filter((l) => (l.requirements || "").length > SUSPICIOUSLY_LONG);
 
@@ -56,7 +61,7 @@ async function run() {
 
   const ops = [];
   for (const lead of affected) {
-    const newReq = buildSummary(lead.voiceCall?.extractedData);
+    const newReq = buildSummary(lead.voiceCalls?.[0]?.extractedData);
     console.log(`${APPLY ? "Updating" : "Would update"}: "${lead.name}" — requirements (${lead.requirements.length} chars) -> ${newReq ? `"${newReq}"` : "(cleared)"}`);
     ops.push({ updateOne: { filter: { _id: lead._id }, update: { $set: { requirements: newReq } } } });
   }

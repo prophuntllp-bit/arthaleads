@@ -7,7 +7,7 @@
 export const STATUS_OPTIONS = ["New", "Contacted", "Site Visit", "Negotiation", "Closed Won", "Closed Lost"];
 export const SOURCE_OPTIONS = ["Facebook", "Google", "WhatsApp", "Manual", "Website", "Custom", "Vistrow Voice", "Referral", "Walk-in", "PropTiger", "99acres", "MagicBricks", "QR Code", "Other"];
 export const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Hot"];
-export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other"];
+export const PROPERTY_TYPES = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse", "Other", "N/A"];
 export const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio", "N/A"];
 export const PURPOSE_OPTIONS = ["Buy", "Rent", "Invest", "N/A"];
 export const DATE_RANGE_OPTIONS = [

@@ -54,17 +54,31 @@ const voiceTurnSchema = new mongoose.Schema(
 
 const voiceCallSchema = new mongoose.Schema(
   {
+    // Vistrow's own call id (e.g. 947). The idempotency key for re-sends —
+    // see POST /webhook/lead. Only Vistrow calls set this; kept a plain Number
+    // (not required/enum) so a malformed value degrades to "treat as a new,
+    // un-deduplicated call" rather than throwing.
+    externalCallId:  { type: Number, default: undefined },
     transcript:      { type: [voiceTurnSchema], default: undefined },
     sentiment:       { type: String, enum: ["positive", "neutral", "negative"], default: undefined },
     durationSeconds: { type: Number, default: undefined },
     channel:         { type: String, trim: true, default: undefined },
     language:        { type: String, trim: true, default: undefined },
     agentName:       { type: String, trim: true, default: undefined },
+    // Page the call/chat widget was opened from (Vistrow's page_path).
+    pagePath:        { type: String, trim: true, default: undefined },
+    // A stable bearer URL on Vistrow's own domain that redirects to a fresh,
+    // short-lived storage link on every playback — never a downloaded copy or
+    // a private storage key. Validated at ingestion (SSRF guard) to only ever
+    // be an https://api.vistrowvoice.com/public/calls/<id>/recording link;
+    // treat as sensitive (bearer-style) and never log it.
+    recordingUrl:       { type: String, trim: true, default: undefined },
+    recordingMimeType:  { type: String, trim: true, default: undefined },
     // Free-form dict of whatever the voice agent captured (budget/location/…).
     // Schema is intentionally variable — stored raw, never normalized.
     extractedData:   { type: mongoose.Schema.Types.Mixed, default: undefined },
   },
-  { _id: false }
+  { timestamps: true }
 );
 
 // ── Main Lead Schema ───────────────────────────────────────────────────────────
@@ -187,8 +201,15 @@ const leadSchema = new mongoose.Schema(
     externalId: { type: String, trim: true, default: "", index: true },
 
     // ── Vistrow Voice (AI calling) transcript & metadata ───────────────────────
-    // Set only for leads ingested via /webhook/lead with voice data. Unset otherwise.
-    voiceCall: { type: voiceCallSchema, default: undefined },
+    // One entry per completed call (a lead can be called more than once).
+    // Set only for leads ingested via /webhook/lead with voice data; unset
+    // (undefined, not []) otherwise so the frontend's hasVoice check and the
+    // dump-leads / analytics aggregations that already treat "field absent" as
+    // "not a voice lead" keep working unchanged.
+    // NOTE: replaces the old singular `voiceCall` field — see the boot-time
+    // migration in server.js that folds any pre-existing `voiceCall` into this
+    // array so historical leads aren't orphaned.
+    voiceCalls: { type: [voiceCallSchema], default: undefined },
 
     // ── Response Time Tracking ────────────────────────────────────────────────
     firstContactedAt: { type: Date, default: null }, // set once when status first moves to "Contacted"
@@ -241,6 +262,19 @@ leadSchema.index({ orgId: 1, updatedAt: -1, isArchived: 1 });
 leadSchema.index({ orgId: 1, phone: 1 });
 // domain filter
 leadSchema.index({ orgId: 1, sourceDomain: 1 });
+
+// Vistrow Voice call idempotency: within one org+source, the same external
+// call_id must never be attached to two different leads/array entries. A
+// partial index (only applies where the field is actually set) — every other
+// lead source never populates voiceCalls.externalCallId, so this can't
+// collide with unrelated leads. POST /webhook/lead relies on this at the DB
+// level to close a create/create race between two near-simultaneous
+// deliveries of a brand-new call_id (see that route for the retry-as-update
+// handling of the resulting E11000 duplicate-key error).
+leadSchema.index(
+  { orgId: 1, source: 1, "voiceCalls.externalCallId": 1 },
+  { unique: true, partialFilterExpression: { "voiceCalls.externalCallId": { $exists: true } } }
+);
 
 const Lead = mongoose.model("Lead", leadSchema);
 module.exports = Lead;
