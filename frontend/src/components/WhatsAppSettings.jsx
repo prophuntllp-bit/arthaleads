@@ -139,6 +139,13 @@ function WebhookHealthCheck({ webhook, checking, onCheck, canCheck }) {
 }
 
 export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
+  // Starts unknown, not false — connected/not-connected now render two
+  // completely different layouts (compact summary vs. the full connect
+  // flow), so defaulting to false used to mean every page load flashed the
+  // "not connected" form first and only swapped to the real state once
+  // GET /whatsapp/settings resolved. On a slow or cold-starting API that
+  // flash was slow enough to look like the page was stuck showing stale UI.
+  const [loading, setLoading]         = useState(true);
   const [provider, setProvider]       = useState("meta");
   const [savedProvider, setSavedProvider] = useState("");
   const [connected, setConnected]     = useState(false);
@@ -205,7 +212,8 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       setWebhookVerifyToken(s.webhookVerifyToken || "");
       setDisplayPhoneNumber(s.displayPhoneNumber || "");
       setQualityRating(s.qualityRating || "");
-    }).catch(() => {});
+    }).catch(() => {})
+    .finally(() => setLoading(false));
   }, []);
 
   const copyWebhook = () => {
@@ -303,6 +311,15 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       toast.error(e.response?.data?.message || "Could not disconnect");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <div className="card p-5 h-24 animate-pulse" style={{ background: "var(--app-surface-low)" }} />
+        <div className="card p-5 h-40 animate-pulse" style={{ background: "var(--app-surface-low)" }} />
+      </div>
+    );
+  }
 
   // Already connected AND not deliberately changing provider: show a compact
   // summary instead of every other vendor's card. Seeing "Meta / AiSensy /
