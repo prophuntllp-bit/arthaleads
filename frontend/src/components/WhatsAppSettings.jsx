@@ -153,7 +153,7 @@ function WebhookHealthCheck({ webhook, checking, onCheck, canCheck }) {
         </p>
       </div>
       <button onClick={onCheck} disabled={checking || !canCheck}
-        className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+        className="btn-primary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
         {checking ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
         {webhook ? "Check again" : "Check incoming messages"}
       </button>

@@ -114,31 +114,25 @@ const orgSchema = new mongoose.Schema(
       phoneNumberId:      { type: String, default: "" },   // Meta: phone number ID
       wabaId:             { type: String, default: "" },   // Meta: WABA ID
       webhookVerifyToken: { type: String, default: "" },   // Meta: webhook challenge token
+      // The org-wide kill switch for every assistant at once. Each assistant
+      // also has its own active/paused state on the WaAgent record.
       botEnabled:         { type: Boolean, default: true },
+
+      // ── MIGRATED — nothing reads these any more ─────────────────────────────
+      // The assistant used to live here, one per org, with no way to add a
+      // second. It is now its own collection: see models/WaAgent.js. These
+      // fields were copied across by scripts/migrate-wa-agents.js and are kept
+      // only so that migration stays reversible by reverting code alone.
+      // Setting any of them has no effect — edit the WaAgent instead.
       botName:            { type: String, default: "Artha Assistant" },
-      botSystemPrompt:    { type: String, default: "" },   // legacy free-text override — still honoured if set
-
-      // ── Agent Studio (project-grounded knowledge, live-linked) ──────────────
-      // Empty botProjectIds means "all of this org's active projects" — never a
-      // frozen snapshot. The prompt is rebuilt from live Project docs on every
-      // bot reply (see buildProjectGroundedPrompt in whatsappRoutes.js), so an
-      // edited price or a newly-archived project is reflected on the very next
-      // message with nothing to re-sync.
+      botSystemPrompt:    { type: String, default: "" },
       botProjectIds:      [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
-      botGroundRules:      { type: String, default: "" },   // dos/don'ts, tone, escalation rules
-      botBusinessContext:  { type: String, default: "" },   // free-text: who we are, service area, policies
-      botGreeting:         { type: String, default: "" },   // sent as the first message on a brand-new conversation
-
-      // Meta ad ID -> specific project(s). A Click-to-WhatsApp ad's pre-filled
-      // message usually names the project, and the AI can pick that up on its
-      // own from the customer's first message - but a generic ad ("DM us for
-      // our best deals") gives it nothing to match on. Mapping the ad's own ID
-      // here guarantees the first reply is grounded in the right project(s)
-      // regardless of what the ad copy says. Checked before falling back to
-      // botProjectIds / all active projects.
+      botGroundRules:      { type: String, default: "" },
+      botBusinessContext:  { type: String, default: "" },
+      botGreeting:         { type: String, default: "" },
       botAdProjectMap: [{
         adId:       { type: String, trim: true, required: true },
-        label:      { type: String, trim: true, default: "" }, // human note, e.g. "Skyline launch - Feb"
+        label:      { type: String, trim: true, default: "" },
         projectIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Project" }],
       }],
 

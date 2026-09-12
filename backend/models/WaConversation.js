@@ -7,6 +7,11 @@ const waConversationSchema = new mongoose.Schema({
   contactName:  { type: String, default: "" },
   waContactId:  { type: String, default: "" },     // WhatsApp's wa_id
   botEnabled:   { type: Boolean, default: true },
+
+  // Which assistant is handling this thread. Pinned on the first bot reply and
+  // never re-resolved, so editing routing or pausing an agent cannot swap the
+  // voice a customer is already mid-conversation with.
+  agentId:      { type: mongoose.Schema.Types.ObjectId, ref: "WaAgent", default: null },
   assignedTo:   { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   assignedToName: { type: String, default: "" },
   status: {

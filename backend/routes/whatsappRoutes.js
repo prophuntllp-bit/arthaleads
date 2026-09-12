@@ -6,6 +6,7 @@ const { protect, authorize } = require("../middlewares/auth");
 const Organization   = require("../models/Organization");
 const WaConversation = require("../models/WaConversation");
 const WaMessage      = require("../models/WaMessage");
+const WaAgent        = require("../models/WaAgent");
 const Lead           = require("../models/Lead");
 const User           = require("../models/User");
 
@@ -377,7 +378,7 @@ function isWithinBusinessHours(org) {
 // Sent at most once per closed calendar day per conversation, tracked via
 // WaConversation.awayMessageSentAt — an away message on every single message
 // someone sends while you're closed reads as broken, not helpful.
-async function maybeSendAwayMessage(org, conversation) {
+async function maybeSendAwayMessage(org, agent, conversation) {
   const bh = org.whatsapp.businessHours;
   if (!bh?.awayMessage?.trim()) return;
   const last = conversation.awayMessageSentAt;
@@ -386,7 +387,7 @@ async function maybeSendAwayMessage(org, conversation) {
     const fmt = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(d); // YYYY-MM-DD, stable for same-day comparison
     if (fmt(new Date(last)) === fmt(new Date())) return;
   }
-  const botName = org.whatsapp?.botName || "Artha Assistant";
+  const botName = agent?.name || "Artha Assistant";
   let held = 0;
   try {
     held = await credits.reserve(org._id, { category: "service", count: 1 });
@@ -507,24 +508,36 @@ async function handleInbound(org, parsed) {
   });
 
   if (conv.botEnabled) {
-    if (!isWithinBusinessHours(org)) {
-      await maybeSendAwayMessage(org, conv);
+    // Resolved before anything is sent, and pinned, so the away message, the
+    // greeting and the reply are all unmistakably the same assistant.
+    const agent = await resolveAgentForConversation(org, conv);
+    if (!agent) {
+      console.warn(`[WhatsApp Bot] org ${org._id} has no active agent — leaving this thread for a human`);
+      await handOffToHuman(org, conv);
       return;
     }
-    if (isNewConversation && org.whatsapp?.botGreeting?.trim()) {
-      await sendBotGreeting(org, conv);
+    if (String(conv.agentId || "") !== String(agent._id)) {
+      await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
+      conv.agentId = agent._id;
     }
-    await triggerBotReply(org, conv, msgText);
+    if (!isWithinBusinessHours(org)) {
+      await maybeSendAwayMessage(org, agent, conv);
+      return;
+    }
+    if (isNewConversation && agent.greeting?.trim()) {
+      await sendBotGreeting(org, agent, conv);
+    }
+    await triggerBotReply(org, agent, conv, msgText);
   }
 }
 
 // Sent once, as the very first outbound message on a brand-new conversation —
 // before the AI's contextual reply to whatever the customer actually wrote.
 // Failure here must never block the real reply that follows.
-async function sendBotGreeting(org, conversation) {
+async function sendBotGreeting(org, agent, conversation) {
   try {
-    const greeting = org.whatsapp.botGreeting.trim();
-    const botName = org.whatsapp?.botName || "Artha Assistant";
+    const greeting = agent.greeting.trim();
+    const botName = agent.name || "Artha Assistant";
     let held = 0;
     try {
       held = await credits.reserve(org._id, { category: "service", count: 1 });
@@ -553,37 +566,55 @@ async function sendBotGreeting(org, conversation) {
   }
 }
 
-// ── Agent Studio: project-grounded system prompt ─────────────────────────────
+// ── Agent prompt: project-grounded, rebuilt per reply ────────────────────────
 // Queries live Project documents on every single call — deliberately never a
 // cached/frozen snapshot, so a price edit or a newly-archived project on the
 // Projects page is reflected on the very next reply with nothing to re-sync.
-// An org that already wrote a full custom prompt (the old free-text-only way
-// of configuring the bot) keeps getting exactly that, untouched — Agent
-// Studio only applies when botSystemPrompt is empty.
+// An agent with a full custom prompt gets exactly that and nothing else — the
+// greeting, business context, ground rules and project list are all ignored,
+// because a half-merged prompt is worse than either choice made deliberately.
 //
-// campaignRef (from WaConversation.campaignRef, when this thread started from
-// a Click-to-WhatsApp ad) does two things: if the ad's ID is mapped to
-// specific project(s) in botAdProjectMap, the prompt is scoped to exactly
-// those — a guarantee that holds even when the ad's own copy is too generic
-// for the model to match a project by itself. Either way, the ad's headline
-// is handed to the model as context so the very first reply can address what
-// the customer actually clicked on, instead of a cold "how can I help you".
-async function buildProjectGroundedPrompt(org, leadContext, campaignRef) {
-  const wa = org.whatsapp || {};
-  const botName = wa.botName || "Artha Assistant";
+// Which projects the agent may discuss comes from the agent itself; routing an
+// ad to a specific set of projects is now done by giving that ad its own
+// agent. campaignRef still matters for one thing: the ad's headline is handed
+// to the model so the first reply can address what the customer actually
+// tapped on, instead of a cold "how can I help you".
+/**
+ * The assistant that answers a given thread.
+ *
+ * Pinned on first use so a customer never gets handed between assistants
+ * mid-conversation because somebody edited routing. An org with no active
+ * agent gets no auto-reply at all, which is the same as pausing the org-wide
+ * switch — the thread waits for a human.
+ */
+async function resolveAgentForConversation(org, conversation) {
+  if (conversation.agentId) {
+    const pinned = await WaAgent.findOne({ _id: conversation.agentId, orgId: org._id }).lean();
+    // A pinned agent that was since deleted falls through and re-resolves,
+    // rather than leaving the thread permanently unanswerable.
+    if (pinned && pinned.status === "active") return pinned;
+  }
 
-  if (wa.botSystemPrompt?.trim()) {
-    return wa.botSystemPrompt.trim() + (leadContext ? `\n\nCustomer context: ${leadContext}` : "");
+  const adId = conversation.campaignRef?.adId;
+  if (adId) {
+    const byAd = await WaAgent.findOne({ orgId: org._id, status: "active", adIds: adId }).lean();
+    if (byAd) return byAd;
+  }
+
+  return await WaAgent.findOne({ orgId: org._id, status: "active", isDefault: true }).lean()
+    || await WaAgent.findOne({ orgId: org._id, status: "active" }).sort({ createdAt: 1 }).lean();
+}
+
+async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef) {
+  const botName = agent?.name || "Artha Assistant";
+
+  if (agent?.systemPrompt?.trim()) {
+    return agent.systemPrompt.trim() + (leadContext ? `\n\nCustomer context: ${leadContext}` : "");
   }
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
-  const adMapping = campaignRef?.adId && Array.isArray(wa.botAdProjectMap)
-    ? wa.botAdProjectMap.find((m) => m.adId === campaignRef.adId)
-    : null;
-  if (adMapping?.projectIds?.length) {
-    projectFilter._id = { $in: adMapping.projectIds };
-  } else if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
-    projectFilter._id = { $in: wa.botProjectIds };
+  if (Array.isArray(agent?.projectIds) && agent.projectIds.length) {
+    projectFilter._id = { $in: agent.projectIds };
   }
   const projects = await Project.find(projectFilter)
     .select("name description location priceMin priceMax bhkTypes area amenities possessionDate reraNumber")
@@ -608,8 +639,10 @@ async function buildProjectGroundedPrompt(org, leadContext, campaignRef) {
     ? `Projects you can discuss (this is the ONLY inventory you know about — never mention or invent any other project):\n${projectLines.join("\n")}`
     : "No active projects are configured yet — if asked about specific properties, say the team will follow up with details shortly.";
 
-  const rules    = wa.botGroundRules?.trim()     ? `\nAdditional rules from the team:\n${wa.botGroundRules.trim()}\n`   : "";
-  const business = wa.botBusinessContext?.trim() ? `\nAbout us: ${wa.botBusinessContext.trim()}\n` : "";
+  const rules    = agent?.groundRules?.trim()     ? `\nAdditional rules from the team:\n${agent.groundRules.trim()}\n`   : "";
+  const business = agent?.businessContext?.trim() ? `\nAbout us: ${agent.businessContext.trim()}\n` : "";
+  const language = agent?.language && agent.language !== "auto"
+    ? `\nReply in ${agent.language} unless the customer clearly writes in another language.\n` : "";
   const adContext = (campaignRef?.headline || campaignRef?.body)
     ? `\nThis customer messaged in by tapping a WhatsApp ad whose text was: "${campaignRef.headline || campaignRef.body}". Open by addressing that interest directly instead of a generic greeting.\n`
     : "";
@@ -624,7 +657,7 @@ Rules:
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say our team will confirm shortly.
 - Do not use markdown or bullet points
 - If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end
-${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
+${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
 }
 
 // Every OpenAI call made on an org's behalf lands here, so bot spend is
@@ -767,7 +800,7 @@ async function handOffToHuman(org, conversation, { notify = false, reason = "" }
   else sendPushToAll(payload, org._id).catch(() => {});
 }
 
-async function triggerBotReply(org, conversation, inboundText) {
+async function triggerBotReply(org, agent, conversation, inboundText) {
   // Template generation already refuses to run without a key and says so. This
   // path used to sail straight into a 401 from OpenAI and swallow it.
   if (!process.env.OPENAI_API_KEY) {
@@ -787,8 +820,8 @@ async function triggerBotReply(org, conversation, inboundText) {
       if (lead) leadContext = `Customer name: ${lead.name}. Status: ${lead.status}. Source: ${lead.source || "N/A"}. Budget: ${lead.budget || "N/A"}. Preferred location: ${lead.preferredLocation || "N/A"}.`;
     }
 
-    const botName = org.whatsapp?.botName || "Artha Assistant";
-    const systemPrompt = await buildProjectGroundedPrompt(org, leadContext, conversation.campaignRef);
+    const botName = agent?.name || "Artha Assistant";
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef);
 
     // Fire-and-forget: never let enrichment delay or fail the actual reply.
     enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
@@ -1037,8 +1070,7 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
   try {
     const {
       apiKey, provider, accountEndpoint, phoneNumberId, wabaId, webhookVerifyToken,
-      botEnabled, botName, botSystemPrompt, enabled,
-      botProjectIds, botGroundRules, botBusinessContext, botGreeting, botAdProjectMap,
+      botEnabled, enabled,
       businessHours, autoAssignConversations, notifyOn,
     } = req.body;
     const update = {};
@@ -1047,44 +1079,11 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     if (phoneNumberId       !== undefined) update["whatsapp.phoneNumberId"]       = phoneNumberId;
     if (wabaId              !== undefined) update["whatsapp.wabaId"]              = wabaId;
     if (webhookVerifyToken  !== undefined) update["whatsapp.webhookVerifyToken"]  = webhookVerifyToken;
+    // The org-wide kill switch. Each assistant has its own active/paused
+    // state; this one stops all of them at once.
     if (botEnabled          !== undefined) update["whatsapp.botEnabled"]          = botEnabled;
-    if (botName             !== undefined) update["whatsapp.botName"]             = botName;
-    if (botSystemPrompt     !== undefined) update["whatsapp.botSystemPrompt"]     = botSystemPrompt;
     if (enabled             !== undefined) update["whatsapp.enabled"]             = enabled;
     if (apiKey)                            update["whatsapp.apiKey"]              = apiKey;
-    // Agent Studio — live-linked project knowledge base. Only IDs that are
-    // actually this org's own projects are kept, so one tenant can never
-    // point their bot's prompt at another tenant's project data by pasting
-    // an ID that isn't theirs.
-    if (botProjectIds !== undefined) {
-      const ids = Array.isArray(botProjectIds) ? botProjectIds.filter(Boolean) : [];
-      update["whatsapp.botProjectIds"] = ids.length
-        ? (await Project.find({ _id: { $in: ids }, orgId: req.orgId }).select("_id").lean()).map((p) => p._id)
-        : [];
-    }
-    if (botGroundRules      !== undefined) update["whatsapp.botGroundRules"]      = botGroundRules;
-    if (botBusinessContext  !== undefined) update["whatsapp.botBusinessContext"]  = botBusinessContext;
-    if (botGreeting         !== undefined) update["whatsapp.botGreeting"]         = botGreeting;
-
-    // Ad -> project mapping. Same ownership guard as botProjectIds above —
-    // drop any project ID that isn't actually this org's; drop any row whose
-    // ad ID is blank (nothing to match against) or that ends up with no
-    // valid projects at all (would silently fall through to the org-wide
-    // default anyway, so there's no reason to keep it).
-    if (botAdProjectMap !== undefined) {
-      const rows = Array.isArray(botAdProjectMap) ? botAdProjectMap : [];
-      const allIds = [...new Set(rows.flatMap((r) => Array.isArray(r?.projectIds) ? r.projectIds.filter(Boolean) : []))];
-      const owned = allIds.length
-        ? new Set((await Project.find({ _id: { $in: allIds }, orgId: req.orgId }).select("_id").lean()).map((p) => String(p._id)))
-        : new Set();
-      update["whatsapp.botAdProjectMap"] = rows
-        .map((r) => ({
-          adId: String(r?.adId || "").trim(),
-          label: String(r?.label || "").trim(),
-          projectIds: (Array.isArray(r?.projectIds) ? r.projectIds : []).filter((id) => owned.has(String(id))),
-        }))
-        .filter((r) => r.adId && r.projectIds.length);
-    }
 
     // Business hours — a day is only kept if it names a real weekday; the
     // HH:MM fields are stored as-is (validated only for shape) since they're
@@ -1109,7 +1108,7 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
     if (autoAssignConversations !== undefined) update["whatsapp.autoAssignConversations"] = !!autoAssignConversations;
 
     // Notification recipients — only IDs that are actually members of this
-    // org are kept, same ownership discipline as botProjectIds/botAdProjectMap.
+    // org are kept, same ownership discipline as an agent's projectIds.
     if (notifyOn !== undefined) {
       const allIds = [...new Set(
         ["newConversation", "lowCredits", "qualityDrop"]
@@ -1272,17 +1271,161 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 // Idempotent — re-running it with the same waba/phone is safe (it just
 // re-subscribes/re-registers), so a retry after a partial failure never
 // leaves things worse than before.
-// Try the assistant without messaging a real customer.
+// ── AI agents ─────────────────────────────────────────────────────────────────
+// One assistant per org used to live in fields on the organisation document,
+// so there was no way to add a second, name it, pause it or delete it. These
+// manage them as real records.
+
+const AGENT_FIELDS = [
+  "name", "description", "greeting", "businessContext", "groundRules",
+  "projectIds", "systemPrompt", "language", "adIds", "status",
+];
+
+// Projects are the one field a tenant could use to point their assistant at
+// another tenant's data by pasting IDs, so ownership is checked rather than
+// trusted — same guard the old single-assistant settings route had.
+async function sanitizeAgentBody(orgId, body) {
+  const out = {};
+  for (const k of AGENT_FIELDS) if (body[k] !== undefined) out[k] = body[k];
+
+  if (out.name !== undefined) {
+    out.name = String(out.name).trim().slice(0, 60);
+    if (!out.name) { const e = new Error("Give the assistant a name."); e.status = 400; throw e; }
+  }
+  if (out.description !== undefined) out.description = String(out.description).trim().slice(0, 280);
+  if (out.status !== undefined && !["active", "paused", "draft"].includes(out.status)) {
+    const e = new Error("Unknown status."); e.status = 400; throw e;
+  }
+  if (out.projectIds !== undefined) {
+    const ids = Array.isArray(out.projectIds) ? out.projectIds.filter(Boolean) : [];
+    out.projectIds = ids.length
+      ? await Project.find({ _id: { $in: ids }, orgId }).distinct("_id")
+      : [];
+  }
+  if (out.adIds !== undefined) {
+    out.adIds = [...new Set((Array.isArray(out.adIds) ? out.adIds : [])
+      .map((a) => String(a).trim()).filter(Boolean))];
+  }
+  return out;
+}
+
+// Attaches the readiness meter the list cards show. Needs the org's active
+// project count, because "discusses all projects" only counts as ready if the
+// org actually has some.
+async function withReadiness(orgId, docs) {
+  const activeProjects = await Project.countDocuments({ orgId, isArchived: { $ne: true } });
+  return docs.map((d) => {
+    const obj = d.toObject ? d.toObject() : d;
+    const r = (d.readiness ? d : new WaAgent(obj)).readiness(activeProjects);
+    return { ...obj, readiness: r, activeProjects };
+  });
+}
+
+router.get("/agents", async (req, res) => {
+  try {
+    const agents = await WaAgent.find({ orgId: req.orgId })
+      .populate("projectIds", "name")
+      .sort({ isDefault: -1, createdAt: 1 });
+    res.json({ agents: await withReadiness(req.orgId, agents) });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.get("/agents/:id", async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId });
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const [withR] = await withReadiness(req.orgId, [agent]);
+    res.json({ agent: withR });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.post("/agents", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const fields = await sanitizeAgentBody(req.orgId, req.body || {});
+    if (!fields.name) return res.status(400).json({ message: "Give the assistant a name." });
+
+    // The first assistant an org creates becomes the default, otherwise
+    // nothing would answer until they noticed the setting.
+    const isFirst = (await WaAgent.countDocuments({ orgId: req.orgId })) === 0;
+    const agent = await WaAgent.create({
+      ...fields,
+      orgId: req.orgId,
+      isDefault: isFirst,
+      status: fields.status || "draft",
+      createdBy: req.user._id,
+      createdByName: req.user.name,
+    });
+    const [withR] = await withReadiness(req.orgId, [agent]);
+    res.status(201).json({ agent: withR });
+  } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
+});
+
+router.patch("/agents/:id", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const fields = await sanitizeAgentBody(req.orgId, req.body || {});
+    const agent = await WaAgent.findOneAndUpdate(
+      { _id: req.params.id, orgId: req.orgId }, fields, { new: true, runValidators: true }
+    );
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const [withR] = await withReadiness(req.orgId, [agent]);
+    res.json({ agent: withR });
+  } catch (err) { res.status(err.status || 500).json({ message: err.message }); }
+});
+
+// Exactly one default per org, so this moves the flag rather than setting it.
+router.post("/agents/:id/default", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId });
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    if (agent.status !== "active") {
+      return res.status(400).json({ message: "Only an active assistant can be the default one." });
+    }
+    await WaAgent.updateMany({ orgId: req.orgId, _id: { $ne: agent._id } }, { isDefault: false });
+    agent.isDefault = true;
+    await agent.save();
+    res.json({ agent });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+router.delete("/agents/:id", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId });
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+
+    // Deleting the last active assistant would silently stop every auto-reply
+    // in the org, so say so instead of letting it happen by accident.
+    const otherActive = await WaAgent.countDocuments({
+      orgId: req.orgId, _id: { $ne: agent._id }, status: "active",
+    });
+    if (agent.status === "active" && otherActive === 0) {
+      return res.status(400).json({
+        message: "This is your only active assistant. Pause it instead, or create another one first.",
+      });
+    }
+
+    await WaAgent.deleteOne({ _id: agent._id });
+    // Threads pinned to it re-resolve on their next message rather than going
+    // unanswered forever.
+    await WaConversation.updateMany({ orgId: req.orgId, agentId: agent._id }, { agentId: null });
+    if (agent.isDefault && otherActive > 0) {
+      const next = await WaAgent.findOne({ orgId: req.orgId, status: "active" }).sort({ createdAt: 1 });
+      if (next) { next.isDefault = true; await next.save(); }
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Try one assistant without messaging a real customer.
 //
-// Runs the exact prompt the webhook would build — same project query, same
-// ground rules — but sends nothing over WhatsApp and reserves no WhatsApp
-// credit. Until this existed the only way to find out what the bot would say
-// was to message the production number and spend a real credit on a real
-// person, which is why nobody ever tested it.
+// Runs the exact prompt the webhook would build for this agent — same project
+// query, same ground rules — but sends nothing over WhatsApp and reserves no
+// WhatsApp credit. Until this existed the only way to hear what an assistant
+// would say was to message the production number and spend a real credit on a
+// real person, which is why nobody ever tested it.
 //
-// The assembled prompt comes back too: "which projects does my bot actually
-// know about" was not answerable from any screen before.
-router.post("/agent/preview", authorize("admin", "super_admin"), async (req, res) => {
+// The assembled prompt comes back too: "what does this assistant actually
+// know" was not answerable from any screen before.
+router.post("/agents/:id/preview", authorize("admin", "super_admin"), async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ message: "AI is not configured. Ask your admin to set the OPENAI_API_KEY." });
@@ -1290,9 +1433,13 @@ router.post("/agent/preview", authorize("admin", "super_admin"), async (req, res
     const { message, history = [] } = req.body || {};
     if (!String(message || "").trim()) return res.status(400).json({ message: "Type a message to try first." });
 
-    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
-    const systemPrompt = await buildProjectGroundedPrompt(org, "", null);
+    const [org, agent] = await Promise.all([
+      Organization.findById(req.orgId).select("whatsapp name").lean(),
+      WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).lean(),
+    ]);
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
 
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null);
     const turns = (Array.isArray(history) ? history : []).slice(-10)
       .filter((m) => m && typeof m.body === "string")
       .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.body.slice(0, 2000) }));
@@ -1313,13 +1460,10 @@ router.post("/agent/preview", authorize("admin", "super_admin"), async (req, res
     const handoff = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
-    // Same filter buildProjectGroundedPrompt just used, so the count on screen
-    // is the inventory the model actually saw rather than a second guess.
-    const wa = org.whatsapp || {};
+    // Counted with the same filter the prompt just used, so the number on
+    // screen is the inventory the model actually saw.
     const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
-    if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
-      projectFilter._id = { $in: wa.botProjectIds };
-    }
+    if (agent.projectIds?.length) projectFilter._id = { $in: agent.projectIds };
     const [scoped, allActive] = await Promise.all([
       Project.countDocuments(projectFilter),
       Project.countDocuments({ orgId: org._id, isArchived: { $ne: true } }),
@@ -1327,7 +1471,7 @@ router.post("/agent/preview", authorize("admin", "super_admin"), async (req, res
 
     res.json({
       reply, handoff, systemPrompt,
-      usingCustomPrompt: !!wa.botSystemPrompt?.trim(),
+      usingCustomPrompt: !!agent.systemPrompt?.trim(),
       projectsInScope: scoped, activeProjects: allActive,
     });
   } catch (err) {

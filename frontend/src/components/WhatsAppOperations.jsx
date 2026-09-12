@@ -115,7 +115,7 @@ function BusinessHoursCard({ wa, patch }) {
       )}
 
       <button onClick={save} disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-primary">
         {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
         {saving ? "Saving…" : "Save business hours"}
       </button>
@@ -145,7 +145,7 @@ function AutoAssignCard({ wa, patch }) {
         Auto-assign handed-off conversations
       </label>
       <button onClick={save} disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-primary">
         {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
         {saving ? "Saving…" : "Save"}
       </button>
@@ -206,7 +206,7 @@ function NotificationsCard({ wa, patch, agents }) {
         <RecipientPicker label="Quality rating drop" agents={agents} selected={qualityDrop} onToggle={toggle(setQualityDrop)} />
       </div>
       <button onClick={save} disabled={saving}
-        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-primary">
         {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
         {saving ? "Saving…" : "Save notification settings"}
       </button>
@@ -410,7 +410,7 @@ function BusinessProfileCard() {
             options={verticals.map((v) => ({ value: v, label: v.replace(/_/g, " ") }))} style={SELECT_STYLE} />
         </div>
         <button onClick={saveProfile} disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-secondary">
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition disabled:opacity-40 btn-primary">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
           {saving ? "Saving…" : "Save profile"}
         </button>
@@ -464,12 +464,15 @@ export default function WhatsAppOperations() {
   }
 
   return (
+    // Business profile first: it is what customers actually see next to your
+    // messages, and it is the thing an admin comes here to edit. Hours,
+    // routing and notifications are set once and rarely revisited.
     <div className="space-y-5">
+      <BusinessProfileCard />
       <BusinessHoursCard wa={wa} patch={patch} />
       <AutoAssignCard wa={wa} patch={patch} />
       <NotificationsCard wa={wa} patch={patch} agents={agents} />
       <ConsentSnapshotCard />
-      <BusinessProfileCard />
     </div>
   );
 }
