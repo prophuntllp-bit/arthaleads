@@ -18,6 +18,15 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { fmtDate, fmtCurrency, PRIORITY_OPTIONS, SOURCE_OPTIONS, STATUS_OPTIONS } from "../utils/constants";
 
+// Same three values/labels as the "Any WhatsApp consent" filter above — kept
+// as its own constant since the bulk-action toolbar needs the identical list
+// without a placeholder-vs-filter distinction.
+const CONSENT_BULK_OPTIONS = [
+  { value: "granted", label: "Consent given" },
+  { value: "denied",  label: "Consent refused" },
+  { value: "unknown", label: "Consent not recorded" },
+];
+
 // Strip raw Elementor/form field-ID lines like "Field 9b10818: 8007678625"
 // These appear when a form plugin sends fields with hex IDs instead of labels.
 const cleanRequirements = (text) => {
@@ -36,7 +45,7 @@ const fmtBudget = (val) => {
   if (val >= 100_000) return `${parseFloat((val / 100_000).toFixed(1)).toString()}L`;
   return `₹${val}`;
 };
-import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, Trash2, Upload, User, Users, X } from "lucide-react";
+import { ArrowRightLeft, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, FolderKanban, Globe, MessageSquare, Pencil, Plus, QrCode, Search, Send, ShieldCheck, Trash2, Upload, User, Users, X } from "lucide-react";
 import { read as xlsxRead, utils as xlsxUtils, writeFile as xlsxWriteFile } from "xlsx";
 import DateTimePicker from "../components/DateTimePicker";
 import DateRangePicker from "../components/DateRangePicker";
@@ -342,6 +351,8 @@ export default function Leads() {
   const [bulkAssigning, setBulkAssigning]     = useState(false);
   const [bulkStatusValue, setBulkStatusValue] = useState("");
   const [bulkUpdatingStatus, setBulkUpdatingStatus] = useState(false);
+  const [bulkConsentValue, setBulkConsentValue] = useState("");
+  const [bulkUpdatingConsent, setBulkUpdatingConsent] = useState(false);
   const [bulkTransferProjectId, setBulkTransferProjectId] = useState("");
   const [bulkTransferring, setBulkTransferring] = useState(false);
   const [waBroadcast, setWaBroadcast]         = useState(null); // null | { list, msg, idx, skipped, step }
@@ -543,6 +554,32 @@ export default function Leads() {
       toast.error(e.response?.data?.message || "Bulk status update failed");
     } finally {
       setBulkUpdatingStatus(false);
+    }
+  };
+
+  // Project leads have no whatsappConsent field at all, so splitBulkSelection's
+  // usual exclusion applies here too — same as bulk status/assign.
+  const handleBulkConsent = async () => {
+    if (!bulkConsentValue) { toast.error("Please pick a consent value"); return; }
+    setBulkUpdatingConsent(true);
+    try {
+      const { plainIds, skipped } = splitBulkSelection();
+      if (plainIds.length) {
+        const r = await api.patch("/leads/bulk-consent", { ids: plainIds, status: bulkConsentValue });
+        toast.success(r.data.message || `${plainIds.length} lead(s) updated`);
+        const capturedAt = bulkConsentValue === "unknown" ? null : new Date().toISOString();
+        plainIds.forEach((id) => {
+          const lead = leads.find((l) => l._id === id);
+          if (lead) upsertLead({ ...lead, whatsappConsent: { status: bulkConsentValue, source: bulkConsentValue === "unknown" ? "" : "manual", capturedAt } }, false);
+        });
+      }
+      if (skipped) toast.error(`${skipped} project lead${skipped !== 1 ? "s" : ""} skipped — no bulk consent for those yet`);
+      setSelectedIds(new Set());
+      setBulkConsentValue("");
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Bulk consent update failed");
+    } finally {
+      setBulkUpdatingConsent(false);
     }
   };
 
@@ -1672,6 +1709,29 @@ export default function Leads() {
               </button>
             </div>
 
+            {/* Row 3a: WhatsApp consent (admin/manager only — same gate as Assign) */}
+            {user?.role !== "agent" && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkConsentValue}
+                    onChange={(v) => setBulkConsentValue(v)}
+                    placeholder="Set WhatsApp consent…"
+                    options={CONSENT_BULK_OPTIONS}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={handleBulkConsent}
+                  disabled={bulkUpdatingConsent || !bulkConsentValue}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-40 cursor-pointer"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {bulkUpdatingConsent ? "…" : "Set"}
+                </button>
+              </div>
+            )}
+
             {/* Row 3b: Transfer to project */}
             {projects.length > 0 && (
               <div className="flex items-center gap-2">
@@ -1764,6 +1824,28 @@ export default function Leads() {
                 {bulkUpdatingStatus ? "Updating…" : "Update"}
               </button>
             </div>
+
+            {user?.role !== "agent" && (
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex-1 min-w-0">
+                  <CustomSelect
+                    value={bulkConsentValue}
+                    onChange={(v) => setBulkConsentValue(v)}
+                    placeholder="Set WhatsApp consent…"
+                    options={CONSENT_BULK_OPTIONS}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={handleBulkConsent}
+                  disabled={bulkUpdatingConsent || !bulkConsentValue}
+                  className="shrink-0 flex items-center gap-1.5 rounded-xl bg-green-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-40 cursor-pointer"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {bulkUpdatingConsent ? "Setting…" : "Set"}
+                </button>
+              </div>
+            )}
 
             {projects.length > 0 && (
               <div className="flex items-center gap-1.5 flex-1 min-w-0">

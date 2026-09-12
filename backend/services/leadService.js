@@ -476,6 +476,34 @@ const leadService = {
     return { matched: result.matchedCount, modified: result.modifiedCount };
   },
 
+  // ── Bulk consent ──────────────────────────────────────────────────────────
+  // Mirrors PATCH /api/leads/bulk-consent, authorize("admin","manager").
+  //
+  // Unlike bulkUpdateStatus above, this one CANNOT skip the per-lead activity
+  // entry — consent with no record of who set it and when is not evidence of
+  // anything (same reasoning as applyConsent's own comment). So this goes
+  // through applyConsent + save per lead rather than a single updateMany, in
+  // bounded-size batches so a few hundred leads doesn't open a few hundred
+  // concurrent connections at once.
+  async bulkUpdateConsent(ids, status, user, source = "manual") {
+    if (user.role === "agent") throw new AppError("Agents cannot bulk-update leads", 403);
+    if (!Array.isArray(ids) || ids.length === 0) throw new AppError("No leads selected", 400);
+    if (!CONSENT_VERB[status]) throw new AppError("Invalid consent value", 400);
+
+    const leads = await Lead.find({ _id: { $in: ids }, orgId: user.orgId }).select("whatsappConsent activities");
+    let modified = 0;
+    const BATCH = 25;
+    for (let i = 0; i < leads.length; i += BATCH) {
+      const batch = leads.slice(i, i + BATCH).filter((lead) => (lead.whatsappConsent?.status || "unknown") !== status);
+      await Promise.all(batch.map((lead) => {
+        applyConsent(lead, { status, source }, user);
+        return lead.save();
+      }));
+      modified += batch.length;
+    }
+    return { matched: leads.length, modified };
+  },
+
   // ── Delete ────────────────────────────────────────────────────────────────
   // super_admin → permanent hard delete; everyone else → soft delete (dump)
   async delete(id, user) {

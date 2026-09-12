@@ -212,6 +212,17 @@ const leadController = {
     }
   },
 
+  async bulkUpdateConsent(req, res, next) {
+    try {
+      const { ids, status, source } = req.body;
+      const { modified } = await leadService.bulkUpdateConsent(ids, status, req.user, source);
+      const label = status === "granted" ? "marked as given" : status === "denied" ? "marked as refused" : "cleared";
+      res.json({ success: true, modified, message: `${modified} lead(s) ${label}` });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async restore(req, res, next) {
     try {
       const lead = await leadService.restore(req.params.id, req.orgId);
