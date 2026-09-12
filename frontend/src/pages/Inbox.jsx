@@ -661,10 +661,14 @@ export default function Inbox() {
                     onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
                     onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
                   />
+                  {/* Always WhatsApp green. It used to go grey on an empty
+                      composer, which read as a broken button rather than a
+                      disabled one — dimming the green says the same thing
+                      without losing the affordance. */}
                   <button onClick={sendMessage} disabled={!msgInput.trim() || sending} title="Send"
-                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
-                    style={{ background: msgInput.trim() ? "#25D366" : "var(--app-surface-low)" }}>
-                    <Send className={`w-4 h-4 ${msgInput.trim() ? "text-white" : "text-app-soft"}`} />
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-45"
+                    style={{ background: "#25D366" }}>
+                    <Send className="w-4 h-4 text-white" />
                   </button>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-1.5 px-1 text-[10px] text-app-soft">
