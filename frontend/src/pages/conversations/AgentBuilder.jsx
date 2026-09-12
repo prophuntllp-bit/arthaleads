@@ -116,16 +116,18 @@ export default function AgentBuilder() {
     } catch (e) { toast.error(e.response?.data?.message || "Could not delete"); }
   };
 
+  // Previews whatever is on screen, not what is stored — so this works before
+  // the agent has ever been saved, and a ground rule you just typed takes
+  // effect on the very next question.
   const runTry = async () => {
     const text = tryInput.trim();
     if (!text || trying) return;
-    if (isNew) return toast.error("Save the assistant first, then you can try it.");
     setTryInput("");
     const history = tryLog.filter((m) => m.role !== "error").map((m) => ({ role: m.role, body: m.body }));
     setTryLog((l) => [...l, { role: "user", body: text }]);
     setTrying(true);
     try {
-      const { data } = await api.post(`/whatsapp/agents/${id}/preview`, { message: text, history });
+      const { data } = await api.post("/whatsapp/agents/preview", { message: text, history, agent: form });
       setTryLog((l) => [...l, { role: "assistant", body: data.reply || "(no reply)", handoff: data.handoff }]);
       setTryMeta(data);
     } catch (e) {
@@ -368,9 +370,8 @@ export default function AgentBuilder() {
           )}
 
           <p className="text-sm text-app-soft">
-            {isNew
-              ? "Create the assistant first, then you can try it here."
-              : "Nothing is sent over WhatsApp and no WhatsApp credit is used. Save your changes first — this reads what is stored."}
+            Tries exactly what is on screen now, saved or not. Nothing is sent over WhatsApp and no
+            WhatsApp credit is used.
           </p>
 
           <div className="rounded-2xl p-3 space-y-2 overflow-y-auto"
@@ -410,13 +411,13 @@ export default function AgentBuilder() {
           </div>
 
           <div className="flex items-end gap-2">
-            <input className="input flex-1" placeholder="Ask what a customer would ask…" disabled={isNew}
+            <input className="input flex-1" placeholder="Ask what a customer would ask…"
               value={tryInput} onChange={(e) => setTryInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runTry(); } }} />
-            <button type="button" onClick={runTry} disabled={!tryInput.trim() || trying || isNew}
+            <button type="button" onClick={runTry} disabled={!tryInput.trim() || trying}
               className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
-              style={{ background: tryInput.trim() && !isNew ? "var(--app-primary)" : "var(--app-surface-low)" }}>
-              <Send className={`w-4 h-4 ${tryInput.trim() && !isNew ? "text-white" : "text-app-soft"}`} />
+              style={{ background: tryInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
+              <Send className={`w-4 h-4 ${tryInput.trim() ? "text-white" : "text-app-soft"}`} />
             </button>
           </div>
 

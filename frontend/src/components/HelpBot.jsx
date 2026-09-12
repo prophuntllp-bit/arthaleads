@@ -461,10 +461,12 @@ export default function HelpBot() {
     setMessages((m) => [...m, { role: "bot", text: "No problem, no changes were made." }]);
   };
 
-  // The WhatsApp Inbox is its own conversation surface — the floating "Artha"
-  // bubble sits on top of the real chat there and duplicates it, so it stays
-  // off that page entirely rather than just leaving room for it.
-  if (location.pathname === "/conversations") return null;
+  // The WhatsApp section is its own conversation surface — the floating "Artha"
+  // bubble sits on top of the real chat and duplicates it, so it stays off
+  // rather than just leaving room for it. This covers the sub-tabs too: they
+  // are full-height panels that scroll internally, so the bubble was landing
+  // on top of their content with no way to scroll clear of it.
+  if (location.pathname.startsWith("/conversations")) return null;
 
   return (
     <>

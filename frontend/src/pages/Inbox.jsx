@@ -663,7 +663,7 @@ export default function Inbox() {
                   />
                   <button onClick={sendMessage} disabled={!msgInput.trim() || sending} title="Send"
                     className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
-                    style={{ background: msgInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
+                    style={{ background: msgInput.trim() ? "#25D366" : "var(--app-surface-low)" }}>
                     <Send className={`w-4 h-4 ${msgInput.trim() ? "text-white" : "text-app-soft"}`} />
                   </button>
                 </div>

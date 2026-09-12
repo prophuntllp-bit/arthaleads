@@ -615,9 +615,12 @@ function RequireAuth() {
       <Sidebar />
       {/* pb-24 reserves room at the bottom of every scrollable page for the
           floating HelpBot bubble, so scrolled-to-bottom content never sits
-          underneath it. Skipped on /conversations, where HelpBot hides itself
-          and Inbox owns a fixed h-[calc(100vh-4rem)] panel with no scroll to pad. */}
-      <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname === "/conversations" ? "" : "pb-24"}`}>
+          underneath it. Skipped across all of /conversations, where HelpBot
+          hides itself and ConversationsLayout owns a fixed h-[calc(100vh-4rem)]
+          panel that scrolls internally. Matching only the exact path left every
+          sub-tab — Settings, AI Agents, Credits — with 96px of dead space
+          scrolled in below a panel that was already full height. */}
+      <main className={`flex-1 min-w-0 pt-16 lg:pt-[52px] overflow-y-auto ${location.pathname.startsWith("/conversations") ? "" : "pb-24"}`}>
         <Outlet />
       </main>
       {/* Notification permission prompt - only shows if permission not yet granted */}

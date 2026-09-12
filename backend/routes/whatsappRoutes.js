@@ -1288,10 +1288,9 @@ async function sanitizeAgentBody(orgId, body) {
   const out = {};
   for (const k of AGENT_FIELDS) if (body[k] !== undefined) out[k] = body[k];
 
-  if (out.name !== undefined) {
-    out.name = String(out.name).trim().slice(0, 60);
-    if (!out.name) { const e = new Error("Give the assistant a name."); e.status = 400; throw e; }
-  }
+  // Normalises only. Requiring a name is the caller's job, because an unnamed
+  // draft is fine to preview but not to save.
+  if (out.name !== undefined) out.name = String(out.name).trim().slice(0, 60);
   if (out.description !== undefined) out.description = String(out.description).trim().slice(0, 280);
   if (out.status !== undefined && !["active", "paused", "draft"].includes(out.status)) {
     const e = new Error("Unknown status."); e.status = 400; throw e;
@@ -1363,6 +1362,11 @@ router.post("/agents", authorize("admin", "super_admin"), async (req, res) => {
 router.patch("/agents/:id", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const fields = await sanitizeAgentBody(req.orgId, req.body || {});
+    // Sending name:"" would otherwise clear it and fail schema validation with
+    // a message nobody can act on.
+    if (fields.name !== undefined && !fields.name) {
+      return res.status(400).json({ message: "Give the assistant a name." });
+    }
     const agent = await WaAgent.findOneAndUpdate(
       { _id: req.params.id, orgId: req.orgId }, fields, { new: true, runValidators: true }
     );
@@ -1415,29 +1419,40 @@ router.delete("/agents/:id", authorize("admin", "super_admin"), async (req, res)
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-// Try one assistant without messaging a real customer.
+// Try an assistant without messaging a real customer.
 //
-// Runs the exact prompt the webhook would build for this agent — same project
-// query, same ground rules — but sends nothing over WhatsApp and reserves no
-// WhatsApp credit. Until this existed the only way to hear what an assistant
-// would say was to message the production number and spend a real credit on a
-// real person, which is why nobody ever tested it.
+// Takes the assistant's settings in the body rather than reading a saved
+// record, so this works on a brand-new agent that does not exist yet and
+// reflects edits you have not saved — change a ground rule, ask the same
+// question again, see the difference. Sends nothing over WhatsApp and reserves
+// no WhatsApp credit; until this existed the only way to hear what an
+// assistant would say was to message the production number and spend a real
+// credit on a real person, which is why nobody ever tested it.
 //
 // The assembled prompt comes back too: "what does this assistant actually
 // know" was not answerable from any screen before.
-router.post("/agents/:id/preview", authorize("admin", "super_admin"), async (req, res) => {
+router.post("/agents/preview", authorize("admin", "super_admin"), async (req, res) => {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(503).json({ message: "AI is not configured. Ask your admin to set the OPENAI_API_KEY." });
     }
-    const { message, history = [] } = req.body || {};
+    const { message, history = [], agent: draft } = req.body || {};
     if (!String(message || "").trim()) return res.status(400).json({ message: "Type a message to try first." });
 
-    const [org, agent] = await Promise.all([
-      Organization.findById(req.orgId).select("whatsapp name").lean(),
-      WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).lean(),
-    ]);
-    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+
+    // Same ownership guard as saving an agent: a pasted project ID belonging
+    // to another tenant must never reach the prompt.
+    const clean = await sanitizeAgentBody(req.orgId, draft || {});
+    const agent = {
+      name: clean.name || "Artha Assistant",
+      greeting: clean.greeting || "",
+      businessContext: clean.businessContext || "",
+      groundRules: clean.groundRules || "",
+      projectIds: clean.projectIds || [],
+      systemPrompt: clean.systemPrompt || "",
+      language: clean.language || "auto",
+    };
 
     const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null);
     const turns = (Array.isArray(history) ? history : []).slice(-10)
