@@ -1,12 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Clock, Users, Bell, ShieldCheck, Building2 as ProfileIcon, Loader2, Check, Lock,
+  Clock, Users, Bell, ShieldCheck, Building2 as ProfileIcon, Loader2, Check, Lock, Camera,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 import CustomSelect from "./CustomSelect";
 
 const SELECT_STYLE = { width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 };
+
+// Longer side capped to 640px — sharp enough for a profile photo (displayed
+// as a small circular avatar in WhatsApp) without pushing a phone photo's
+// several-MB original anywhere near the 4MB the backend accepts.
+function compressImage(dataUri, maxPx = 640) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => resolve(dataUri);
+    img.src = dataUri;
+  });
+}
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun, matching org.whatsapp.businessHours.schedule's day: 0=Sun..6=Sat
 const DAY_LABEL = { 0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat" };
@@ -251,6 +271,9 @@ function BusinessProfileCard() {
   const [saving, setSaving]         = useState(false);
   const [pin, setPin]               = useState("");
   const [settingPin, setSettingPin] = useState(false);
+  const [photoUrl, setPhotoUrl]     = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     api.get("/whatsapp/business-profile").then((r) => {
@@ -264,10 +287,33 @@ function BusinessProfileCard() {
       setWebsite1(p.websites?.[0] || "");
       setWebsite2(p.websites?.[1] || "");
       setVertical(p.vertical || "");
+      setPhotoUrl(p.profile_picture_url || "");
       setVerticals(r.data.verticals || []);
     }).catch(() => setLoadMessage("Could not load your Business Profile.")
     ).finally(() => setLoading(false));
   }, []);
+
+  const handlePhotoFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Only image files are supported"); return; }
+    if (file.size > 8 * 1024 * 1024) { toast.error("Image must be under 8MB"); return; }
+
+    setUploadingPhoto(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const compressed = await compressImage(ev.target.result);
+        await api.post("/whatsapp/business-profile/photo", { photo: compressed });
+        setPhotoUrl(compressed);
+        toast.success("Profile photo updated — may take a minute to appear on WhatsApp");
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Upload failed");
+      } finally { setUploadingPhoto(false); }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const saveProfile = async () => {
     setSaving(true);
@@ -310,6 +356,25 @@ function BusinessProfileCard() {
     <Card icon={ProfileIcon} title="Business Profile"
       description="What customers see about your business on WhatsApp — no need to open Meta's WhatsApp Manager for these.">
       {loadMessage && <p className="text-xs" style={{ color: "#b45309" }}>{loadMessage}</p>}
+
+      <div className="flex items-center gap-3">
+        <div className="w-16 h-16 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+          style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+          {photoUrl
+            ? <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+            : <ProfileIcon className="w-6 h-6 text-app-soft" />}
+        </div>
+        <div>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFile} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploadingPhoto}
+            className="btn-secondary rounded-full px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+            {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+            {uploadingPhoto ? "Uploading…" : "Change photo"}
+          </button>
+          <p className="text-xs text-app-soft mt-1">Square images work best. Up to 8MB — resized automatically.</p>
+        </div>
+      </div>
+
       <div className="space-y-3">
         <div>
           <label className="text-xs font-semibold text-app-soft mb-1 block">About</label>

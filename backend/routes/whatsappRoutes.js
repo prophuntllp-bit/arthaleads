@@ -1644,6 +1644,65 @@ router.post("/business-profile/pin", authorize("admin", "super_admin"), async (r
   }
 });
 
+// Profile photo. Meta doesn't take this as a normal field on
+// whatsapp_business_profile — it needs the Resumable Upload API: open a
+// session sized for the exact file, push the bytes, get back a one-time
+// "handle", then reference that handle when patching the profile. The app ID
+// the session opens under is resolved from the access token itself (the same
+// GET /app lookup subscribeAndVerify already relies on) rather than storing
+// a separate app ID nobody else here needs.
+router.post("/business-profile/photo", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const wa = org?.whatsapp || {};
+    if ((wa.provider || "aisensy") !== "meta") {
+      return res.status(400).json({ message: "Only applies to the Meta Cloud API provider." });
+    }
+    if (!wa.apiKey || !wa.phoneNumberId) {
+      return res.status(400).json({ message: "Connect your Meta credentials first." });
+    }
+    const photo = String(req.body?.photo || "");
+    const match = photo.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!match) return res.status(400).json({ message: "photo must be an image data-URI." });
+    const mimeType = match[1];
+    const buffer = Buffer.from(match[2], "base64");
+    // Comfortably under both Meta's own 5MB profile-photo cap and the
+    // server's global 8MB JSON body limit once base64 overhead is counted.
+    if (buffer.length > 4 * 1024 * 1024) {
+      return res.status(400).json({ message: "Image is too large (max 4MB)." });
+    }
+
+    const G = "https://graph.facebook.com/v21.0";
+    const { data: appData } = await axios.get(`${G}/app`, { params: { access_token: wa.apiKey, fields: "id" } });
+    const appId = appData?.id;
+    if (!appId) return res.status(400).json({ message: "Could not resolve your Meta app from this access token." });
+
+    const { data: session } = await axios.post(
+      `${G}/${appId}/uploads`, null,
+      { params: { file_length: buffer.length, file_type: mimeType, access_token: wa.apiKey } }
+    );
+    const sessionId = session?.id; // "upload:<...>"
+    if (!sessionId) return res.status(400).json({ message: "Meta did not open an upload session." });
+
+    const { data: uploadResult } = await axios.post(
+      `${G}/${sessionId}`, buffer,
+      { headers: { Authorization: `OAuth ${wa.apiKey}`, file_offset: "0", "Content-Type": "application/octet-stream" } }
+    );
+    const handle = uploadResult?.h;
+    if (!handle) return res.status(400).json({ message: "Meta did not return an upload handle." });
+
+    await axios.post(
+      `${G}/${wa.phoneNumberId}/whatsapp_business_profile`,
+      { messaging_product: "whatsapp", profile_picture_handle: handle },
+      { params: { access_token: wa.apiKey } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    const me = err?.response?.data?.error;
+    res.status(400).json({ message: me?.error_user_msg || me?.message || err.message });
+  }
+});
+
 // Lead counts per status and source, so the campaign audience pickers can say
 // how many people each choice reaches before anyone commits to a filter.
 router.get("/campaigns/audience-counts", authorize("admin", "manager", "super_admin"), async (req, res) => {
