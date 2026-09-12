@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Check, Copy, ExternalLink, Eye, EyeOff, Loader2, RefreshCw, Wifi, WifiOff, X,
   CheckCircle2, AlertTriangle, Info, Stethoscope, XCircle, Settings2, Phone,
+  ChevronDown,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -90,6 +91,29 @@ const PROVIDERS = [
   },
 ];
 
+// Loaded once, lazily — only orgs that actually see the Connect button pay for
+// it. `window.fbAsyncInit` is Meta's own required hook name, called by their
+// script once it finishes loading; a second mount just reuses the same
+// promise rather than injecting the script twice.
+let fbSdkPromise = null;
+function loadFacebookSdk(appId) {
+  if (fbSdkPromise) return fbSdkPromise;
+  fbSdkPromise = new Promise((resolve, reject) => {
+    if (window.FB) return resolve(window.FB);
+    window.fbAsyncInit = () => {
+      window.FB.init({ appId, version: "v21.0" });
+      resolve(window.FB);
+    };
+    const s = document.createElement("script");
+    s.src = "https://connect.facebook.net/en_US/sdk.js";
+    s.async = true;
+    s.defer = true;
+    s.onerror = () => reject(new Error("Could not load Facebook's connect script."));
+    document.body.appendChild(s);
+  });
+  return fbSdkPromise;
+}
+
 function StepHead({ n, children }) {
   return (
     <div className="flex items-center gap-2">
@@ -165,6 +189,22 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   const [diag, setDiag]               = useState(null);   // last credential diagnosis
   const [diagging, setDiagging]       = useState(false);
 
+  // ── Embedded Signup ──────────────────────────────────────────────────────────
+  // The one-click path: no token, no WABA ID, no webhook URL ever seen by the
+  // customer. Everything below coexists with the manual form above, which
+  // moves behind "Advanced" once this exists.
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [esConnecting, setEsConnecting] = useState(false);
+  const [esError, setEsError]           = useState("");
+  // Meta sends the waba_id/phone_number_id via a postMessage event that can
+  // arrive slightly before or after FB.login's own callback with the code —
+  // a ref survives that race without forcing a render on every message.
+  const esIds = useRef({ wabaId: "", phoneNumberId: "" });
+
+  const waAppId = import.meta.env.VITE_WA_APP_ID;
+  const waConfigId = import.meta.env.VITE_WA_ES_CONFIG_ID;
+  const esConfigured = !!(waAppId && waConfigId);
+
   const prov = PROVIDERS.find(p => p.id === provider) || PROVIDERS[0];
   const isMeta = provider === "meta";
 
@@ -207,6 +247,75 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       setQualityRating(s.qualityRating || "");
     }).catch(() => {});
   }, []);
+
+  // Meta's embedded-signup popup reports the WABA and phone it created (or the
+  // customer picked) through window.postMessage, separately from FB.login's
+  // own callback — this is the only place those IDs are ever available.
+  useEffect(() => {
+    if (!esConfigured) return;
+    const onMessage = (event) => {
+      if (!event.origin.endsWith("facebook.com")) return;
+      let data;
+      try { data = JSON.parse(event.data); } catch { return; }
+      if (data.type !== "WA_EMBEDDED_SIGNUP") return;
+      if (data.event === "FINISH" || data.event === "FINISH_ONLY_WABA") {
+        esIds.current = {
+          wabaId: data.data?.waba_id || "",
+          phoneNumberId: data.data?.phone_number_id || "",
+        };
+      }
+      // CANCEL just means the customer backed out partway — quietly reset
+      // rather than surface it as a failure.
+      if (data.event === "CANCEL") setEsConnecting(false);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [esConfigured]);
+
+  const connectWithMeta = async () => {
+    setEsError("");
+    setEsConnecting(true);
+    esIds.current = { wabaId: "", phoneNumberId: "" };
+    try {
+      const FB = await loadFacebookSdk(waAppId);
+      FB.login((response) => {
+        (async () => {
+          try {
+            if (!response.authResponse?.code) {
+              // The customer closed the popup without finishing — not an error.
+              setEsConnecting(false);
+              return;
+            }
+            const { wabaId: newWabaId, phoneNumberId: newPhoneNumberId } = esIds.current;
+            if (!newWabaId || !newPhoneNumberId) {
+              throw new Error("The connect window closed before finishing setup. Try again and complete every step in the popup.");
+            }
+            const { data } = await api.post("/whatsapp/embedded-signup/exchange", {
+              code: response.authResponse.code, wabaId: newWabaId, phoneNumberId: newPhoneNumberId,
+            });
+            setConnected(true);
+            setProvider("meta");
+            setSavedProvider("meta");
+            setHasKeyRaw(true);
+            setWabaId(newWabaId);
+            setSavedWabaId(newWabaId);
+            setPhoneNumberId(newPhoneNumberId);
+            setDisplayPhoneNumber(data.displayPhoneNumber || "");
+            setQualityRating("");
+            toast.success(`WhatsApp connected${data.verifiedName ? ` as ${data.verifiedName}` : ""}.`);
+            onConnected?.();
+          } catch (e) {
+            setEsError(e.response?.data?.message || e.message || "Could not finish connecting WhatsApp.");
+          } finally {
+            setEsConnecting(false);
+          }
+        })();
+      }, { config_id: waConfigId, response_type: "code", override_default_response_type: true, extras: {} });
+    } catch (e) {
+      setEsError(e.message || "Could not open the WhatsApp connect window.");
+      setEsConnecting(false);
+    }
+  };
 
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
@@ -393,6 +502,52 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
         )}
       </div>
 
+      {/* ── One-click connect ────────────────────────────────────────────────── */}
+      <div className="card p-6 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center" style={{ background: "rgba(37,211,102,0.12)" }}>
+          <WhatsAppIcon className="w-7 h-7" style={{ color: "#25D366" }} />
+        </div>
+        <div>
+          <p className="text-base font-bold text-app">Connect WhatsApp</p>
+          <p className="text-sm text-app-soft mt-1 max-w-md mx-auto">
+            Log in with your own Facebook account, pick or create your WhatsApp Business number, and
+            you're connected — under your own verified business name, no tokens to copy or paste.
+          </p>
+        </div>
+
+        {esConfigured ? (
+          <>
+            <button onClick={connectWithMeta} disabled={esConnecting}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white transition disabled:opacity-50"
+              style={{ background: "#25D366" }}>
+              {esConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
+              {esConnecting ? "Connecting…" : "Connect WhatsApp"}
+            </button>
+            {esError && (
+              <p className="text-xs px-3 py-2 rounded-xl inline-flex items-start gap-1.5 max-w-md mx-auto text-left"
+                style={{ background: "rgba(239,68,68,0.08)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>{esError}</span>
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-xs px-3 py-2 rounded-xl inline-flex items-start gap-1.5 max-w-md mx-auto text-left"
+            style={{ background: "rgba(251,191,36,0.10)", color: "#b45309", border: "1px solid rgba(251,191,36,0.3)" }}>
+            <Info className="w-3.5 h-3.5 shrink-0 mt-px" />
+            <span>One-click connect isn't turned on for this deployment yet — use Advanced below in the meantime.</span>
+          </p>
+        )}
+
+        <button onClick={() => setShowAdvanced((v) => !v)}
+          className="text-xs font-semibold text-app-soft hover:text-app inline-flex items-center gap-1 mx-auto transition">
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+          Advanced: connect a different way
+        </button>
+      </div>
+
+      {showAdvanced && (
+      <>
       {/* ── Step 1: Choose provider ──────────────────────────────────────────── */}
       <div className="card p-5 space-y-4">
         <StepHead n={1}>Choose your WhatsApp provider</StepHead>
@@ -580,6 +735,8 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
           )}
         </div>
       </div>
+      </>
+      )}
 
     </div>
   );

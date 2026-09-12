@@ -85,9 +85,17 @@ function MessageStatus({ status }) {
   return <Check className="w-3 h-3 text-app-soft" />;
 }
 
+// A linked lead's name is the live, editable source of truth; contactName is a
+// snapshot taken the moment the conversation was created (or a WhatsApp profile
+// name Meta sent us) and never updates again on its own — so if the two
+// disagree, the lead wins. This is also what keeps a conversation's displayed
+// name correct after a lead gets renamed, or after a mis-linked conversation is
+// relinked to the right lead.
+const displayName = (conv) => conv?.leadId?.name || conv?.contactName || conv?.contactPhone;
+
 // ── Conversation list item ───────────────────────────────────────────────────
 function ConvItem({ conv, active, onClick }) {
-  const name = conv.contactName || conv.contactPhone;
+  const name = displayName(conv);
   return (
     <button type="button" onClick={onClick}
       className={`w-full flex items-center gap-3 pl-3 pr-4 py-3 text-left transition border-b ${active ? "" : "hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"}`}
@@ -335,7 +343,7 @@ export default function Inbox() {
     ? (lead.priority === "Hot" ? "Hot lead" : `${lead.priority} priority`)
     : "";
   const wants = leadContext(lead);
-  const firstName = String(activeConv?.contactName || "").trim().split(/\s+/)[0] || "they";
+  const firstName = String(displayName(activeConv) || "").trim().split(/\s+/)[0] || "they";
   const composerHint = credits?.billedDirectlyByMeta
     ? "Billed directly to your Meta account, not through credits"
     : freeLeft > 0
@@ -433,11 +441,11 @@ export default function Inbox() {
             </button>
             <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
               style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-              {initials(activeConv?.contactName || activeConv?.contactPhone)}
+              {initials(displayName(activeConv))}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-sm font-bold text-app truncate">{activeConv?.contactName || activeConv?.contactPhone}</p>
+                <p className="text-sm font-bold text-app truncate">{displayName(activeConv)}</p>
                 {lead?.status && <StatusBadge status={lead.status} />}
                 {priorityText && <span className="text-[11px] text-app-soft">· {priorityText}</span>}
               </div>

@@ -26,6 +26,7 @@ const AiUsage        = require("../models/AiUsage");
 const { planGate }   = require("../middlewares/planGate");
 const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
+const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const OPTS = require("../constants/leadOptions");
@@ -414,6 +415,32 @@ async function maybeSendAwayMessage(org, conversation) {
 
 // ── Shared inbound handler ────────────────────────────────────────────────────
 
+/**
+ * The one Lead a phone number should resolve to, for linking a WhatsApp thread.
+ *
+ * A phone number can have more than one Lead behind it — a repeat website
+ * submission, a re-test of the same number, a lead re-captured from a second
+ * source. Two bugs in the naive version of this query let a live conversation
+ * bind to the wrong one: it had no `.sort()`, so which duplicate won was
+ * whatever order Mongo felt like returning them in, and it didn't exclude
+ * soft-deleted or archived leads, so a conversation could — and on this exact
+ * org, did — end up permanently linked to a lead someone had already thrown
+ * away, while the real, live lead for that number sat unlinked.
+ *
+ * Excluding deleted/archived leads and preferring the most recently created
+ * live one isn't a perfect heuristic, but it is a deterministic one, and it is
+ * strictly better than an arbitrary pick among duplicates.
+ */
+async function findLiveLeadByPhone(orgId, phone) {
+  const cleaned = phone.replace(/^91/, "");
+  return Lead.findOne({
+    orgId,
+    phone: { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
+    isDeleted: { $ne: true },
+    isArchived: { $ne: true },
+  }).sort({ createdAt: -1 }).lean();
+}
+
 async function handleInbound(org, parsed) {
   const { phone, name, msgId, msgText, msgType, referral } = parsed;
   if (!phone || !msgText) return;
@@ -425,11 +452,7 @@ async function handleInbound(org, parsed) {
     // thread from an ad — so this is the one and only place attribution can
     // ever be captured for it.
     const campaignRef = campaignRefFromReferral(referral);
-    const cleaned = phone.replace(/^91/, "");
-    let lead = await Lead.findOne({
-      orgId: org._id,
-      phone: { $in: [phone, `+${phone}`, cleaned, `0${cleaned}`] },
-    }).lean();
+    let lead = await findLiveLeadByPhone(org._id, phone);
     if (!lead) {
       try {
         lead = await autoCaptureWhatsAppLead(org, phone, name, campaignRef);
@@ -797,32 +820,41 @@ router.get("/webhook/:orgId", async (req, res) => {
   } catch { res.sendStatus(500); }
 });
 
+/**
+ * Everything that happens once a webhook call has been matched to an org:
+ * status ticks, then the inbound message itself. Shared by all three webhook
+ * entry points below (per-org URL, the legacy AiSensy match-by-key URL, and
+ * the app-level Embedded Signup URL) so this logic exists exactly once.
+ */
+async function processWebhookForOrg(org, provider, body, headers, logLabel) {
+  if (!org || !org.whatsapp?.enabled) return;
+
+  // Evidence, not a guess: logs exactly what Meta actually sent for this
+  // call, so a missing "read" receipt can be told apart from "Meta never
+  // sent it" vs. "Meta sent it and something here dropped it." Remove once
+  // the read-receipt gap is confirmed one way or the other.
+  if (provider === "meta") {
+    try {
+      const changes = (body?.entry || []).flatMap((e) => e.changes || []);
+      console.log(`[${logLabel}] statuses:`,
+        JSON.stringify(changes.flatMap((c) => c.value?.statuses || [])),
+        "| messageIds:", JSON.stringify(changes.flatMap((c) => (c.value?.messages || []).map((m) => m.id))));
+    } catch {}
+  }
+
+  const statusUpdates = parseStatusUpdates(provider, body);
+  if (statusUpdates.length) await applyStatusUpdates(org, statusUpdates);
+
+  const parsed = parseWebhookPayload(provider, body, headers);
+  if (!parsed) return;
+  await handleInbound(org, parsed);
+}
+
 router.post("/webhook/:orgId", async (req, res) => {
   res.sendStatus(200);
   try {
     const org = await Organization.findById(req.params.orgId).lean();
-    if (!org || !org.whatsapp?.enabled) return;
-    const provider = org.whatsapp.provider || "aisensy";
-
-    // Evidence, not a guess: logs exactly what Meta actually sent for this
-    // call, so a missing "read" receipt can be told apart from "Meta never
-    // sent it" vs. "Meta sent it and something here dropped it." Remove once
-    // the read-receipt gap is confirmed one way or the other.
-    if (provider === "meta") {
-      try {
-        const changes = (req.body?.entry || []).flatMap((e) => e.changes || []);
-        console.log("[WhatsApp Webhook] statuses:",
-          JSON.stringify(changes.flatMap((c) => c.value?.statuses || [])),
-          "| messageIds:", JSON.stringify(changes.flatMap((c) => (c.value?.messages || []).map((m) => m.id))));
-      } catch {}
-    }
-
-    const statusUpdates = parseStatusUpdates(provider, req.body);
-    if (statusUpdates.length) await applyStatusUpdates(org, statusUpdates);
-
-    const parsed = parseWebhookPayload(provider, req.body, req.headers);
-    if (!parsed) return;
-    await handleInbound(org, parsed);
+    await processWebhookForOrg(org, org?.whatsapp?.provider || "aisensy", req.body, req.headers, "WhatsApp Webhook/:orgId");
   } catch (err) {
     console.error("[WhatsApp Webhook/:orgId] error:", err.message);
   }
@@ -837,12 +869,51 @@ router.post("/webhook", async (req, res) => {
     const inApiKey = payload.apiKey || req.headers["x-aisensy-api-key"] || "";
     if (!inApiKey) return;
     const org = await Organization.findOne({ "whatsapp.apiKey": inApiKey }).lean();
-    if (!org || !org.whatsapp?.enabled) return;
-    const parsed = parseWebhookPayload("aisensy", payload, req.headers);
-    if (!parsed) return;
-    await handleInbound(org, parsed);
+    await processWebhookForOrg(org, "aisensy", payload, req.headers, "WhatsApp Webhook");
   } catch (err) {
     console.error("[WhatsApp Webhook] error:", err.message);
+  }
+});
+
+// ── App-level webhook: Embedded Signup tenants ────────────────────────────────
+// Configured ONCE in the Meta App Dashboard (WhatsApp → Configuration), not
+// per-org — every ES-onboarded tenant's events arrive here, and the tenant is
+// resolved from the payload itself rather than the URL, since there is no
+// per-org path for Meta to call. entry[].id is the WABA ID Meta puts on every
+// call; phone_number_id is the fallback for the (should never happen, but
+// cheap to guard) case where a WABA briefly matches no org.
+router.get("/meta-webhook", async (req, res) => {
+  try {
+    const mode      = req.query["hub.mode"];
+    const token     = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+    if (mode === "subscribe" && token && token === process.env.WA_WEBHOOK_VERIFY_TOKEN) {
+      return res.send(challenge);
+    }
+    res.sendStatus(403);
+  } catch { res.sendStatus(500); }
+});
+
+router.post("/meta-webhook", async (req, res) => {
+  res.sendStatus(200);
+  try {
+    const entry = req.body?.entry?.[0];
+    const wabaId = entry?.id;
+    const phoneNumberId = entry?.changes?.[0]?.value?.metadata?.phone_number_id;
+    if (!wabaId && !phoneNumberId) return;
+
+    const org = await Organization.findOne(
+      wabaId
+        ? { $or: [{ "whatsapp.wabaId": wabaId }, { "whatsapp.phoneNumberId": phoneNumberId }] }
+        : { "whatsapp.phoneNumberId": phoneNumberId }
+    ).lean();
+    if (!org) {
+      console.warn("[WhatsApp meta-webhook] no org matches wabaId", wabaId, "phoneNumberId", phoneNumberId);
+      return;
+    }
+    await processWebhookForOrg(org, "meta", req.body, req.headers, "WhatsApp meta-webhook");
+  } catch (err) {
+    console.error("[WhatsApp meta-webhook] error:", err.message);
   }
 });
 
@@ -1115,6 +1186,54 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
     res.json({ ok: true, webhook });
   } catch (err) {
     res.status(400).json({ message: "Test failed. Check your credentials.", detail: err?.response?.data?.message || err.message });
+  }
+});
+
+// One click, no pasted token: the customer logs into their own Facebook inside
+// Meta's popup, picks or creates their own WABA, and the popup hands the
+// frontend a short-lived code. Everything from here on replaces every field
+// the manual form above asks for by hand.
+//
+// Idempotent — re-running it with the same waba/phone is safe (it just
+// re-subscribes/re-registers), so a retry after a partial failure never
+// leaves things worse than before.
+router.post("/embedded-signup/exchange", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const { code, wabaId, phoneNumberId } = req.body || {};
+    if (!code)          return res.status(400).json({ message: "Missing the code from the WhatsApp connect popup." });
+    if (!wabaId)         return res.status(400).json({ message: "Missing the WhatsApp Business Account from the connect popup." });
+    if (!phoneNumberId)  return res.status(400).json({ message: "Missing the phone number from the connect popup." });
+
+    const token = await onboarding.exchangeCode(code);
+    await onboarding.subscribeApp(wabaId, token);
+    const { pinEncrypted } = await onboarding.registerNumber(phoneNumberId, token);
+    const profile = await onboarding.fetchProfile(phoneNumberId, token);
+    const { shared } = await onboarding.tryShareCreditLine(wabaId, token);
+
+    await Organization.findByIdAndUpdate(req.orgId, {
+      $set: {
+        "whatsapp.provider": "meta",
+        "whatsapp.apiKey": token,
+        "whatsapp.wabaId": wabaId,
+        "whatsapp.phoneNumberId": phoneNumberId,
+        "whatsapp.registrationPin": pinEncrypted,
+        "whatsapp.verifiedName": profile.verifiedName,
+        "whatsapp.displayPhoneNumber": profile.displayPhoneNumber,
+        "whatsapp.qualityRating": profile.qualityRating,
+        "whatsapp.enabled": true,
+        "whatsapp.esOnboarded": true,
+        "whatsapp.onboardedAt": new Date(),
+        // Until Arthaleads has a credit line to share, the customer's own card
+        // pays Meta directly — same as PropHunt today. The moment tryShareCreditLine
+        // starts succeeding for real, this flips to false with no other change
+        // anywhere in this flow.
+        "whatsapp.billedDirectlyByMeta": !shared,
+      },
+    });
+
+    res.json({ ok: true, connected: true, verifiedName: profile.verifiedName, displayPhoneNumber: profile.displayPhoneNumber, billedDirectlyByMeta: !shared });
+  } catch (err) {
+    res.status(err.status || 500).json({ message: err.message });
   }
 });
 
