@@ -10,6 +10,18 @@ const schema = new mongoose.Schema(
     totalTokens:      { type: Number, default: 0 },
     waDraftCalls:     { type: Number, default: 0 },
     waDraftTokens:    { type: Number, default: 0 },
+
+    // Template generation already incremented these two, but they were never
+    // declared — strict mode silently dropped them from every $inc.
+    templateGenCalls:  { type: Number, default: 0 },
+    templateGenTokens: { type: Number, default: 0 },
+
+    // The WhatsApp assistant. Each customer reply is an OpenAI call we pay for
+    // on the org's behalf, and until now none of it was counted anywhere.
+    botReplyCalls:     { type: Number, default: 0 },
+    botReplyTokens:    { type: Number, default: 0 },
+    botEnrichCalls:    { type: Number, default: 0 },
+    botEnrichTokens:   { type: Number, default: 0 },
   },
   { timestamps: true }
 );

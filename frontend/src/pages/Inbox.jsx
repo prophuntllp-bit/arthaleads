@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
-  AlertTriangle, Bot, Check, CheckCheck, Clock, ExternalLink,
-  Plus, RefreshCw, Send, Settings, User, Wallet, X, Zap,
+  AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
+  Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -47,6 +47,39 @@ function initials(name) {
   if (/^\+?\d[\d\s]*$/.test(s)) return s.replace(/\D/g, "").slice(-2);
   const parts = s.split(/\s+/).filter(Boolean);
   return ((parts[0]?.[0] || "") + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+}
+
+// WhatsApp does not expose a customer's profile photo: the webhook carries only
+// `profile.name`, and the Cloud API has no endpoint for a contact's picture —
+// reading one needs an unofficial WhatsApp-Web bridge, which risks the WABA.
+// So the avatar is a deterministic colour per phone number instead, which at
+// least makes threads distinguishable at a glance the way a photo would.
+const AVATAR_TINTS = [
+  ["#c2410c", "rgba(194,65,12,0.13)"],   ["#0369a1", "rgba(3,105,161,0.13)"],
+  ["#15803d", "rgba(21,128,61,0.13)"],   ["#7e22ce", "rgba(126,34,206,0.13)"],
+  ["#a16207", "rgba(161,98,7,0.14)"],    ["#be123c", "rgba(190,18,60,0.12)"],
+  ["#0f766e", "rgba(15,118,110,0.13)"],  ["#4338ca", "rgba(67,56,202,0.13)"],
+];
+
+function avatarTint(seed) {
+  const s = String(seed || "");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  const [fg, bg] = AVATAR_TINTS[h % AVATAR_TINTS.length];
+  return { color: fg, background: bg };
+}
+
+function Avatar({ name, seed, size = 40, badge = null }) {
+  const tint = avatarTint(seed || name);
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <div className="w-full h-full rounded-full flex items-center justify-center font-bold"
+        style={{ ...tint, fontSize: size <= 32 ? 10 : 12 }}>
+        {initials(name)}
+      </div>
+      {badge}
+    </div>
+  );
 }
 
 // ₹ in the units an Indian property buyer talks in.
@@ -104,18 +137,12 @@ function ConvItem({ conv, active, onClick }) {
         borderLeft: `3px solid ${active ? "var(--app-primary)" : "transparent"}`,
         background: active ? "rgba(var(--app-primary-rgb),0.07)" : undefined,
       }}>
-      <div className="relative shrink-0">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
-          style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-          {initials(name)}
-        </div>
-        {conv.botEnabled && (
-          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-            style={{ background: "#22c55e", border: "2px solid var(--app-card-solid)" }}>
-            <Bot className="w-2 h-2 text-white" />
-          </span>
-        )}
-      </div>
+      <Avatar name={name} seed={conv.contactPhone} badge={conv.botEnabled && (
+        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+          style={{ background: "#22c55e", border: "2px solid var(--app-card-solid)" }}>
+          <Bot className="w-2 h-2 text-white" />
+        </span>
+      )} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-app truncate">{name}</p>
@@ -125,11 +152,17 @@ function ConvItem({ conv, active, onClick }) {
           <p className="text-xs text-app-soft truncate">{conv.lastMessagePreview || "No messages yet"}</p>
           {conv.unreadCount > 0 && (
             <span className="shrink-0 min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1"
-              style={{ background: "#25D366", color: "#fff" }}>
+              style={{ background: "var(--app-primary)", color: "#fff" }}>
               {conv.unreadCount}
             </span>
           )}
         </div>
+        {conv.assignedTo?.name && (
+          <p className="text-[10px] text-app-soft truncate mt-0.5 flex items-center gap-1">
+            <UserCheck className="w-2.5 h-2.5 shrink-0" />
+            {conv.assignedTo.name}
+          </p>
+        )}
       </div>
     </button>
   );
@@ -156,10 +189,7 @@ function Bubble({ msg }) {
           {msg.senderName}
         </p>
       )}
-      <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${isOut ? "rounded-tr-[4px]" : "rounded-tl-[4px]"}`}
-        style={isOut
-          ? { background: "#dcf8c6", color: "#111" }
-          : { background: "var(--app-card-solid)", color: "var(--app-text)", border: "1px solid var(--app-border)" }}>
+      <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${isOut ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px] wa-bubble-in"}`}>
         <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
       </div>
       <div className="flex items-center gap-1 mt-1 px-1">
@@ -191,6 +221,13 @@ export default function Inbox() {
   const [filter, setFilter]             = useState("all");
   const [showTopUp, setShowTopUp]       = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [search, setSearch]             = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [total, setTotal]               = useState(0);
+  // The list is sorted by lastMessageAt, which reorders as messages arrive, so
+  // offset paging would duplicate and drop rows between polls. Growing one
+  // window instead keeps every already-loaded thread stable.
+  const [limit, setLimit]               = useState(50);
 
   // Connection and credit balance both live in ConversationsLayout, so every
   // page under /conversations reads one consistent answer.
@@ -219,14 +256,26 @@ export default function Inbox() {
   const fetchConvs = useCallback(async (silent = false) => {
     if (!silent) setLoadingConvs(true);
     try {
-      const params = filter !== "all" ? { status: filter } : {};
+      const params = { limit };
+      if (filter !== "all") params.status = filter;
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
       const { data } = await api.get("/whatsapp/conversations", { params });
       setConversations(data.conversations || []);
+      setTotal(data.total || 0);
     } catch {}
     finally { setLoadingConvs(false); }
-  }, [filter]);
+  }, [filter, debouncedSearch, limit]);
 
   useEffect(() => { fetchConvs(); }, [fetchConvs]);
+
+  // Typing shouldn't fire a request per keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // A new search or filter starts from the first window again.
+  useEffect(() => { setLimit(50); }, [debouncedSearch, filter]);
 
   // Arrived from "Message from CRM Inbox" on a lead — the conversation may be
   // brand new, so fetch it directly instead of waiting for it to appear in a
@@ -338,6 +387,21 @@ export default function Inbox() {
     setConversations((prev) => prev.map((c) => (c._id === activeId ? { ...c, ...data.conversation } : c)));
   };
 
+  // Claiming a thread is the one assignment action that needs no team picker,
+  // and it is the one an agent actually reaches for.
+  const claimConv = async () => {
+    if (!activeConv) return;
+    const mine = activeConv.assignedTo?._id === user._id;
+    try {
+      const { data } = await api.patch(`/whatsapp/conversations/${activeId}`,
+        { assignedTo: mine ? null : user._id });
+      setConversations((prev) => prev.map((c) => (c._id === activeId ? { ...c, ...data.conversation } : c)));
+      toast.success(mine ? "Released — now unassigned" : "Assigned to you");
+    } catch {
+      toast.error("Could not change who this is assigned to");
+    }
+  };
+
   const lead = activeConv?.leadId;
   const priorityText = lead?.priority
     ? (lead.priority === "Hot" ? "Hot lead" : `${lead.priority} priority`)
@@ -358,6 +422,9 @@ export default function Inbox() {
 
   return (
     <>
+    {/* Full-bleed chat panel: CLAUDE.md's stitch-page exception, which owns its
+        own internal padding rather than skipping the class entirely. */}
+    <div className="stitch-page !p-0 h-full">
     <div className="h-full mx-4 sm:mx-6 lg:mx-8 mb-4 flex overflow-hidden rounded-[1.25rem]"
       style={{ border: "1px solid var(--app-border)", background: "var(--app-surface)" }}>
 
@@ -396,6 +463,25 @@ export default function Inbox() {
           </div>
         </div>
 
+        <div className="px-4 pt-2.5">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-app-soft pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or number"
+              className="w-full rounded-full pl-8.5 pr-8 py-1.5 text-xs text-app outline-none"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", paddingLeft: 30 }}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10">
+                <X className="w-3 h-3 text-app-soft" />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center gap-1.5 px-4 py-2.5" style={{ borderBottom: "1px solid var(--app-border)" }}>
           {FILTERS.map(([val, label]) => (
             <button key={val} onClick={() => setFilter(val)}
@@ -417,12 +503,24 @@ export default function Inbox() {
           ) : conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2 text-center px-6">
               <WhatsAppIcon className="w-8 h-8 text-app-soft opacity-40" />
-              <p className="text-sm text-app-soft">No conversations yet</p>
+              <p className="text-sm text-app-soft">
+                {debouncedSearch ? `No conversations match "${debouncedSearch}"` : "No conversations yet"}
+              </p>
             </div>
           ) : (
-            conversations.map((conv) => (
-              <ConvItem key={conv._id} conv={conv} active={conv._id === activeId} onClick={() => selectConv(conv._id)} />
-            ))
+            <>
+              {conversations.map((conv) => (
+                <ConvItem key={conv._id} conv={conv} active={conv._id === activeId} onClick={() => selectConv(conv._id)} />
+              ))}
+              {conversations.length < total && (
+                <button onClick={() => setLimit((l) => l + 50)}
+                  className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
+                  style={{ color: "var(--app-primary)" }}>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                  Load older ({total - conversations.length} more)
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -439,10 +537,7 @@ export default function Inbox() {
             <button className="md:hidden p-1 rounded-lg hover:bg-black/5" onClick={() => setActiveId(null)} title="Back to list">
               <X className="w-4 h-4 text-app-soft" />
             </button>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-              style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
-              {initials(displayName(activeConv))}
-            </div>
+            <Avatar name={displayName(activeConv)} seed={activeConv?.contactPhone} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-app truncate">{displayName(activeConv)}</p>
@@ -454,6 +549,19 @@ export default function Inbox() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <button onClick={claimConv}
+                title={activeConv?.assignedTo ? `Assigned to ${activeConv.assignedTo.name}` : "Nobody is handling this yet"}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition max-w-[170px]"
+                style={activeConv?.assignedTo
+                  ? { background: "rgba(var(--app-primary-rgb),0.10)", color: "var(--app-primary)", border: "1px solid rgba(var(--app-primary-rgb),0.28)" }
+                  : { background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                <UserCheck className="w-3 h-3 shrink-0" />
+                <span className="truncate">
+                  {activeConv?.assignedTo
+                    ? (activeConv.assignedTo._id === user._id ? "You" : activeConv.assignedTo.name)
+                    : "Assign to me"}
+                </span>
+              </button>
               <button onClick={toggleBot}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition"
                 style={activeConv?.botEnabled
@@ -470,10 +578,10 @@ export default function Inbox() {
             </div>
           </div>
 
-          <div ref={threadRef} className="flex-1 overflow-y-auto px-4 py-3" style={{ background: "var(--app-bg)" }}>
+          <div ref={threadRef} className="wa-thread flex-1 overflow-y-auto px-4 py-3">
             {loadingMsgs ? (
               <div className="flex items-center justify-center h-24">
-                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: "#25D366", borderTopColor: "transparent" }} />
+                <div className="w-5 h-5 border-2 rounded-full animate-spin" style={{ borderColor: "var(--app-primary)", borderTopColor: "transparent" }} />
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center text-sm text-app-soft py-12">No messages yet. Start the conversation!</div>
@@ -555,7 +663,7 @@ export default function Inbox() {
                   />
                   <button onClick={sendMessage} disabled={!msgInput.trim() || sending} title="Send"
                     className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
-                    style={{ background: msgInput.trim() ? "#25D366" : "var(--app-surface-low)" }}>
+                    style={{ background: msgInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
                     <Send className={`w-4 h-4 ${msgInput.trim() ? "text-white" : "text-app-soft"}`} />
                   </button>
                 </div>
@@ -575,6 +683,7 @@ export default function Inbox() {
           </div>
         </div>
       )}
+    </div>
     </div>
 
     <CreditTopUpModal open={showTopUp} onClose={() => setShowTopUp(false)} onSuccess={refreshCredits} />

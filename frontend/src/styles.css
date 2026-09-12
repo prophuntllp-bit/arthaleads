@@ -269,6 +269,38 @@
   /* ── Page layout ── */
   .stitch-page { @apply px-4 py-6 sm:px-6 lg:px-8 lg:py-8; }
 
+  /* ── WhatsApp thread ──
+     Our own doodle wallpaper rather than WhatsApp's, in both themes. The
+     pattern is a near-seamless tile, so it repeats rather than stretching, and
+     it sits under the bubbles at low opacity so message text keeps its
+     contrast. Exported to WebP: 1.4 MB of PNG became 60-90 KB. */
+  .wa-thread {
+    background-color: var(--app-bg);
+    background-image: url("/wa-bg-light.webp");
+    background-repeat: repeat;
+    background-size: 560px auto;
+  }
+  html.dark .wa-thread { background-image: url("/wa-bg-dark.webp"); }
+
+  /* Bubbles. Light mode keeps WhatsApp's familiar mint; dark mode uses a deep
+     brand-tinted green instead, because a pale mint block on a near-black page
+     glares and is the one thing that genuinely looked broken in dark mode. */
+  .wa-bubble-out {
+    background: #dcf8c6;
+    color: #111;
+    border: 1px solid rgba(0, 0, 0, 0.04);
+  }
+  html.dark .wa-bubble-out {
+    background: #1f3d2b;
+    color: #e6f4ea;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+  .wa-bubble-in {
+    background: var(--app-card-solid);
+    color: var(--app-text);
+    border: 1px solid var(--app-border);
+  }
+
   /* ── Top bar ── */
   .stitch-topbar {
     @apply flex flex-col gap-4 rounded-[1.75rem] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between;

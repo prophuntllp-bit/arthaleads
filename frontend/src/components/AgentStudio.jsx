@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
-import { Sparkles, ChevronDown, Building2, Megaphone, Plus, X, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Sparkles, ChevronDown, Building2, Megaphone, Plus, X, Check, Loader2,
+  Power, MessageSquare, Send, AlertTriangle, Eye,
+} from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -12,6 +15,7 @@ import toast from "react-hot-toast";
  */
 export default function AgentStudio() {
   const [loading, setLoading]         = useState(true);
+  const [botEnabled, setBotEnabled]   = useState(true);
   const [botName, setBotName]         = useState("Artha Assistant");
   const [botPrompt, setBotPrompt]     = useState("");
   const [botGreeting, setBotGreeting] = useState("");
@@ -23,12 +27,22 @@ export default function AgentStudio() {
   const [showAdvancedPrompt, setShowAdvancedPrompt] = useState(false);
   const [saving, setSaving]           = useState(false);
 
+  // Try-it console
+  const [tryOpen, setTryOpen]     = useState(false);
+  const [tryInput, setTryInput]   = useState("");
+  const [tryLog, setTryLog]       = useState([]);
+  const [trying, setTrying]       = useState(false);
+  const [tryMeta, setTryMeta]     = useState(null);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const tryEndRef = useRef(null);
+
   useEffect(() => {
     Promise.all([
       api.get("/whatsapp/settings"),
       api.get("/projects"),
     ]).then(([settingsRes, projectsRes]) => {
       const s = settingsRes.data.whatsapp || {};
+      setBotEnabled(s.botEnabled ?? true);
       setBotName(s.botName || "Artha Assistant");
       setBotPrompt(s.botSystemPrompt || "");
       setBotGreeting(s.botGreeting || "");
@@ -43,6 +57,40 @@ export default function AgentStudio() {
     }).catch(() => toast.error("Could not load the AI agent's settings")
     ).finally(() => setLoading(false));
   }, []);
+
+  // The master switch saves on its own rather than waiting for the Save button
+  // — turning the assistant off is an "I need this to stop now" action, and
+  // making it wait behind a form save is how you keep replying to customers
+  // you meant to stop replying to.
+  const toggleBotEnabled = async () => {
+    const next = !botEnabled;
+    setBotEnabled(next);
+    try {
+      await api.patch("/whatsapp/settings", { botEnabled: next });
+      toast.success(next ? "AI assistant is answering new messages" : "AI assistant paused — new messages go to your team");
+    } catch {
+      setBotEnabled(!next);
+      toast.error("Could not change that");
+    }
+  };
+
+  const runTry = async () => {
+    const text = tryInput.trim();
+    if (!text || trying) return;
+    setTryInput("");
+    const history = tryLog.map((m) => ({ role: m.role, body: m.body }));
+    setTryLog((l) => [...l, { role: "user", body: text }]);
+    setTrying(true);
+    try {
+      const { data } = await api.post("/whatsapp/agent/preview", { message: text, history });
+      setTryLog((l) => [...l, { role: "assistant", body: data.reply || "(no reply)", handoff: data.handoff }]);
+      setTryMeta(data);
+    } catch (e) {
+      setTryLog((l) => [...l, { role: "error", body: e.response?.data?.message || "The assistant could not answer." }]);
+    } finally { setTrying(false); }
+  };
+
+  useEffect(() => { tryEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [tryLog, trying]);
 
   const save = async () => {
     setSaving(true);
@@ -88,6 +136,42 @@ export default function AgentStudio() {
 
   return (
     <div className="space-y-5">
+      {/* The org-wide switch. It has existed on the server since the bot was
+          built and was read on every inbound message, but no screen ever
+          rendered it — so the only way to stop the AI was to open each
+          conversation and flip it one at a time. */}
+      <div className="card p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0"
+              style={botEnabled
+                ? { background: "rgba(34,197,94,0.12)" }
+                : { background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              <Power className="w-4 h-4" style={{ color: botEnabled ? "#15803d" : "var(--app-text-soft)" }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-app">
+                {botEnabled ? "The assistant is answering automatically" : "The assistant is paused"}
+              </p>
+              <p className="text-xs text-app-soft mt-0.5 max-w-md">
+                {botEnabled
+                  ? "Every new WhatsApp message gets an AI reply unless you switch that thread to Manual in the inbox."
+                  : "New messages arrive in the inbox and wait for a person. Nothing is auto-answered."}
+              </p>
+            </div>
+          </div>
+          <button type="button" onClick={toggleBotEnabled} role="switch" aria-checked={botEnabled}
+            className="relative shrink-0 rounded-full transition"
+            style={{
+              width: 46, height: 26,
+              background: botEnabled ? "#22c55e" : "var(--app-border-strong)",
+            }}>
+            <span className="absolute top-0.5 rounded-full bg-white transition-all"
+              style={{ width: 22, height: 22, left: botEnabled ? 22 : 2 }} />
+          </button>
+        </div>
+      </div>
+
       <div className="card p-5 space-y-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
@@ -157,10 +241,21 @@ export default function AgentStudio() {
                 ))}
               </div>
             )}
+            {/* A narrow selection is easy to set once and forget, and the bot
+                then answers "our team will confirm shortly" to everything it
+                was not given. Say so plainly rather than just counting. */}
             {botProjectIds.length > 0 && (
-              <p className="text-xs mt-1.5" style={{ color: "var(--app-primary)" }}>
-                {botProjectIds.length} project{botProjectIds.length > 1 ? "s" : ""} selected — only these will be discussed.
-              </p>
+              <div className="text-xs mt-2 rounded-xl px-3 py-2 flex items-start gap-2"
+                style={botProjectIds.length < projects.length / 2
+                  ? { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.35)", color: "#b45309" }
+                  : { background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
+                {botProjectIds.length < projects.length / 2 && <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />}
+                <span>
+                  The assistant can only discuss <strong>{botProjectIds.length} of your {projects.length}</strong> active
+                  project{projects.length === 1 ? "" : "s"}. Ask it about any of the others and it will say your team
+                  will follow up. Uncheck everything to let it use all {projects.length}.
+                </span>
+              </div>
             )}
           </div>
 
@@ -231,6 +326,108 @@ export default function AgentStudio() {
             {saving ? "Saving…" : "Save assistant settings"}
           </button>
         </div>
+      </div>
+
+      {/* Try it. Runs the real prompt, sends nothing over WhatsApp, spends no
+          WhatsApp credit — previously the only way to hear what the assistant
+          would say was to message the live number and bill a real customer. */}
+      <div className="card p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+            <h3 className="text-base font-bold text-app">Try it</h3>
+          </div>
+          <button type="button" onClick={() => setTryOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${tryOpen ? "rotate-180" : ""}`} />
+            {tryOpen ? "Hide" : "Open test chat"}
+          </button>
+        </div>
+        <p className="text-sm text-app-soft">
+          Ask it something a customer would ask. Nothing is sent over WhatsApp and no WhatsApp credit is used.
+          Save your changes first — this reads the settings already stored.
+        </p>
+
+        {tryOpen && (
+          <>
+            <div className="rounded-2xl p-3 space-y-2 max-h-72 overflow-y-auto"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+              {tryLog.length === 0 && (
+                <p className="text-xs text-app-soft italic text-center py-6">
+                  Try “what projects do you have in Pune?” or “what's the price of a 2BHK?”
+                </p>
+              )}
+              {tryLog.map((m, i) => (
+                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                    m.role === "user" ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px]"}`}
+                    style={m.role === "error"
+                      ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.28)" }
+                      : m.role === "assistant"
+                        ? { background: "var(--app-card-solid)", color: "var(--app-text)", border: "1px solid var(--app-border)" }
+                        : undefined}>
+                    {m.body}
+                    {m.handoff && (
+                      <span className="block text-[10px] font-bold mt-1.5" style={{ color: "#b45309" }}>
+                        → would hand this thread to a human
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {trying && (
+                <div className="flex justify-start">
+                  <div className="rounded-2xl rounded-tl-[4px] px-3.5 py-2"
+                    style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)" }}>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-app-soft" />
+                  </div>
+                </div>
+              )}
+              <div ref={tryEndRef} />
+            </div>
+
+            <div className="flex items-end gap-2">
+              <input className="input flex-1" placeholder="Ask what a customer would ask…"
+                value={tryInput} onChange={(e) => setTryInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); runTry(); } }} />
+              <button type="button" onClick={runTry} disabled={!tryInput.trim() || trying}
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition disabled:opacity-40"
+                style={{ background: tryInput.trim() ? "var(--app-primary)" : "var(--app-surface-low)" }}>
+                <Send className={`w-4 h-4 ${tryInput.trim() ? "text-white" : "text-app-soft"}`} />
+              </button>
+            </div>
+
+            {tryMeta && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <span className="px-2.5 py-1 rounded-full font-semibold"
+                    style={tryMeta.projectsInScope === 0
+                      ? { background: "rgba(239,68,68,0.10)", color: "#b91c1c" }
+                      : { background: "var(--app-surface-low)", color: "var(--app-text-soft)" }}>
+                    {tryMeta.usingCustomPrompt
+                      ? "Using your custom prompt"
+                      : `Knows ${tryMeta.projectsInScope} of ${tryMeta.activeProjects} projects`}
+                  </span>
+                  {tryLog.length > 0 && (
+                    <button type="button" onClick={() => setTryLog([])}
+                      className="text-xs font-semibold text-app-soft hover:text-app transition">Clear chat</button>
+                  )}
+                  <button type="button" onClick={() => setShowPrompt((v) => !v)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition ml-auto">
+                    <Eye className="w-3.5 h-3.5" />
+                    {showPrompt ? "Hide" : "Show"} what it was told
+                  </button>
+                </div>
+                {showPrompt && (
+                  <pre className="text-[11px] leading-relaxed rounded-xl p-3 overflow-x-auto whitespace-pre-wrap break-words"
+                    style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text-soft)", maxHeight: 260 }}>
+                    {tryMeta.systemPrompt}
+                  </pre>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

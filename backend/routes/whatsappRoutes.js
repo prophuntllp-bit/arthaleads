@@ -468,12 +468,18 @@ async function handleInbound(org, parsed) {
         { $set: { campaignRef, leadSourceLabel: lead.leadSourceLabel || campaignLabel(campaignRef) } }
       );
     }
+    // One value for both fields. They used to be derived separately — `?? true`
+    // for the flag but a plain ternary for the status — so an org document
+    // predating this setting (the webhook reads it with .lean(), which skips
+    // Mongoose defaults) produced a thread with the bot ON but status "open",
+    // invisible under the Bot filter while the bot was actively replying to it.
+    const botOn = org.whatsapp?.botEnabled ?? true;
     conv = await WaConversation.create({
       orgId: org._id, leadId: lead?._id || null,
       contactPhone: phone, contactName: lead?.name || name,
       waContactId: phone,
-      botEnabled: org.whatsapp?.botEnabled ?? true,
-      status: org.whatsapp?.botEnabled ? "bot" : "open",
+      botEnabled: botOn,
+      status: botOn ? "bot" : "open",
       campaignRef: campaignRef || undefined,
     });
     if (lead?._id) {
@@ -621,6 +627,27 @@ Rules:
 ${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
 }
 
+// Every OpenAI call made on an org's behalf lands here, so bot spend is
+// visible per org per month the way template generation already was. Never
+// allowed to throw — accounting must not break a customer's reply.
+function recordAiUsage(orgId, usage, kind) {
+  if (!usage) return;
+  const month = new Date().toISOString().slice(0, 7);
+  const total = usage.total_tokens || 0;
+  AiUsage.updateOne(
+    { orgId, month },
+    { $inc: {
+      calls: 1,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalTokens: total,
+      [`${kind}Calls`]: 1,
+      [`${kind}Tokens`]: total,
+    } },
+    { upsert: true }
+  ).catch(() => {});
+}
+
 // ── Lead enrichment from AI WhatsApp conversations ───────────────────────────
 // Mirrors the "never fabricate" discipline mapVistrowExtractedFields already
 // established for Vistrow Voice calls: only a value the model explicitly saw
@@ -664,7 +691,7 @@ function mapWhatsAppExtractedFields(extracted) {
 // "WhatsApp"), and short-circuits once every field is already filled in — so
 // a fully-enriched lead never triggers another billed extraction call.
 async function enrichWhatsAppLead(conversation, recentMsgs) {
-  if (!conversation.leadId) return;
+  if (!conversation.leadId || !process.env.OPENAI_API_KEY) return;
   try {
     const lead = await Lead.findById(conversation.leadId)
       .select("source propertyType purpose bhk budget preferredLocation").lean();
@@ -697,6 +724,8 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
       },
       { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
     );
+    recordAiUsage(conversation.orgId, aiRes.data?.usage, "botEnrich");
+
     const parsed = JSON.parse(aiRes.data?.choices?.[0]?.message?.content || "{}");
     const mapped = mapWhatsAppExtractedFields(parsed);
 
@@ -719,7 +748,33 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
 
 // ── AI bot reply ──────────────────────────────────────────────────────────────
 
+// The bot going quiet used to be indistinguishable from the bot doing its job:
+// the error was logged to a console nobody reads, the thread kept its "bot"
+// status and its green badge, and the customer simply never heard back. Any
+// failure now hands the thread to a human and tells somebody it happened.
+async function handOffToHuman(org, conversation, { notify = false, reason = "" } = {}) {
+  await WaConversation.findByIdAndUpdate(conversation._id, { botEnabled: false, status: "open" });
+  autoAssignConversation(org, conversation).catch(() => {});
+  if (!notify) return;
+  const payload = {
+    type: "bot_failed",
+    title: "AI assistant could not reply",
+    body: `${conversation.contactName || conversation.contactPhone} is waiting for an answer${reason ? ` — ${reason}` : ""}`,
+    data: { url: "/conversations" },
+  };
+  const recipients = org.whatsapp?.notifyOn?.newConversation || [];
+  if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
+  else sendPushToAll(payload, org._id).catch(() => {});
+}
+
 async function triggerBotReply(org, conversation, inboundText) {
+  // Template generation already refuses to run without a key and says so. This
+  // path used to sail straight into a 401 from OpenAI and swallow it.
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("[WhatsApp Bot] OPENAI_API_KEY is not set — handing the thread to a human");
+    await handOffToHuman(org, conversation, { notify: true, reason: "the AI assistant is not configured" });
+    return;
+  }
   try {
     const recentMsgs = await WaMessage.find({ conversationId: conversation._id })
       .sort({ timestamp: -1 }).limit(12).lean();
@@ -752,6 +807,8 @@ async function triggerBotReply(org, conversation, inboundText) {
       { model: "gpt-4o-mini", messages, max_tokens: 200, temperature: 0.7 },
       { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
     );
+
+    recordAiUsage(org._id, aiRes.data?.usage, "botReply");
 
     let reply = aiRes.data?.choices?.[0]?.message?.content?.trim() || "";
     const takeover = reply.includes("[HUMAN_TAKEOVER]");
@@ -792,12 +849,16 @@ async function triggerBotReply(org, conversation, inboundText) {
         lastMessageAt: new Date(), lastMessagePreview: reply.slice(0, 80),
       });
     }
-    if (takeover) {
-      await WaConversation.findByIdAndUpdate(conversation._id, { botEnabled: false, status: "open" });
-      autoAssignConversation(org, conversation).catch(() => {});
-    }
+    if (takeover) await handOffToHuman(org, conversation);
   } catch (err) {
     console.error("[WhatsApp Bot] error:", err?.response?.data || err.message);
+    // An out-of-credits org is not a failure — it has already been told, and
+    // the thread should stay with the bot for when it tops up.
+    if (err instanceof credits.InsufficientCreditsError) return;
+    await handOffToHuman(org, conversation, {
+      notify: true,
+      reason: "the AI hit an error, so this needs a reply from you",
+    }).catch(() => {});
   }
 }
 
@@ -1211,6 +1272,69 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 // Idempotent — re-running it with the same waba/phone is safe (it just
 // re-subscribes/re-registers), so a retry after a partial failure never
 // leaves things worse than before.
+// Try the assistant without messaging a real customer.
+//
+// Runs the exact prompt the webhook would build — same project query, same
+// ground rules — but sends nothing over WhatsApp and reserves no WhatsApp
+// credit. Until this existed the only way to find out what the bot would say
+// was to message the production number and spend a real credit on a real
+// person, which is why nobody ever tested it.
+//
+// The assembled prompt comes back too: "which projects does my bot actually
+// know about" was not answerable from any screen before.
+router.post("/agent/preview", authorize("admin", "super_admin"), async (req, res) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ message: "AI is not configured. Ask your admin to set the OPENAI_API_KEY." });
+    }
+    const { message, history = [] } = req.body || {};
+    if (!String(message || "").trim()) return res.status(400).json({ message: "Type a message to try first." });
+
+    const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
+    const systemPrompt = await buildProjectGroundedPrompt(org, "", null);
+
+    const turns = (Array.isArray(history) ? history : []).slice(-10)
+      .filter((m) => m && typeof m.body === "string")
+      .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.body.slice(0, 2000) }));
+
+    const aiRes = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [{ role: "system", content: systemPrompt }, ...turns,
+                   { role: "user", content: String(message).slice(0, 2000) }],
+        max_tokens: 200, temperature: 0.7,
+      },
+      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+    );
+    recordAiUsage(req.orgId, aiRes.data?.usage, "botReply");
+
+    let reply = aiRes.data?.choices?.[0]?.message?.content?.trim() || "";
+    const handoff = reply.includes("[HUMAN_TAKEOVER]");
+    reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
+
+    // Same filter buildProjectGroundedPrompt just used, so the count on screen
+    // is the inventory the model actually saw rather than a second guess.
+    const wa = org.whatsapp || {};
+    const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
+    if (Array.isArray(wa.botProjectIds) && wa.botProjectIds.length) {
+      projectFilter._id = { $in: wa.botProjectIds };
+    }
+    const [scoped, allActive] = await Promise.all([
+      Project.countDocuments(projectFilter),
+      Project.countDocuments({ orgId: org._id, isArchived: { $ne: true } }),
+    ]);
+
+    res.json({
+      reply, handoff, systemPrompt,
+      usingCustomPrompt: !!wa.botSystemPrompt?.trim(),
+      projectsInScope: scoped, activeProjects: allActive,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err?.response?.data?.error?.message || err.message });
+  }
+});
+
 router.post("/embedded-signup/exchange", authorize("admin", "manager", "super_admin"), async (req, res) => {
   try {
     const { code, wabaId, phoneNumberId } = req.body || {};
@@ -1258,7 +1382,19 @@ router.get("/conversations", async (req, res) => {
     const { status, search, page = 1, limit = 50 } = req.query;
     const filter = { orgId: req.orgId };
     if (status) filter.status = status;
-    if (search) filter.contactName = { $regex: search, $options: "i" };
+    // contactName is the snapshot taken when the thread opened and goes stale
+    // the moment a lead is renamed or relinked — the list shows the linked
+    // lead's live name, so searching only contactName would miss the very rows
+    // it is displaying. Match the live lead name and the phone number too.
+    if (search && String(search).trim()) {
+      const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      const leadIds = await Lead.find({ orgId: req.orgId, name: rx }).distinct("_id");
+      filter.$or = [
+        { contactName: rx },
+        { contactPhone: rx },
+        ...(leadIds.length ? [{ leadId: { $in: leadIds } }] : []),
+      ];
+    }
     const [conversations, total] = await Promise.all([
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
@@ -1347,7 +1483,20 @@ router.patch("/conversations/:id", async (req, res) => {
     const update = {};
     if (botEnabled !== undefined) { update.botEnabled = botEnabled; update.status = botEnabled ? "bot" : "open"; }
     if (status)     update.status     = status;
-    if (assignedTo) update.assignedTo = assignedTo;
+    // An explicit null means "release this thread". Testing truthiness alone
+    // made unassigning silently do nothing. assignedToName is denormalised on
+    // the document, so it has to move with the id or the two disagree.
+    if (assignedTo !== undefined) {
+      if (assignedTo === null || assignedTo === "") {
+        update.assignedTo = null;
+        update.assignedToName = "";
+      } else {
+        const assignee = await User.findOne({ _id: assignedTo, orgId: req.orgId }).select("name").lean();
+        if (!assignee) return res.status(400).json({ message: "That user is not in your organisation." });
+        update.assignedTo = assignee._id;
+        update.assignedToName = assignee.name;
+      }
+    }
     const conv = await WaConversation.findOneAndUpdate(
       { _id: req.params.id, orgId: req.orgId }, update, { new: true }
     ).populate("leadId", "name status priority propertyType bhk preferredLocation budget").populate("assignedTo", "name avatar");
