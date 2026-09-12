@@ -1066,6 +1066,20 @@ router.patch("/settings", authorize("admin", "super_admin"), async (req, res) =>
       };
     }
 
+    // A pure disconnect (only `enabled: false` sent, nothing else) revokes the
+    // stored credentials rather than just flipping a flag — the privacy policy
+    // promises this, and holding a live access token for a connection the
+    // tenant explicitly ended is exactly the kind of standing access Meta's
+    // Platform Terms expect a Tech Provider to give up promptly. wabaId/
+    // phoneNumberId are left alone: they are identifiers, not secrets, and
+    // keeping them means a reconnect doesn't need Meta to hand them over again.
+    const keys = Object.keys(req.body || {});
+    const isPureDisconnect = enabled === false && keys.length === 1 && keys[0] === "enabled";
+    if (isPureDisconnect) {
+      update["whatsapp.apiKey"] = "";
+      update["whatsapp.registrationPin"] = "";
+    }
+
     const org = await Organization.findByIdAndUpdate(req.orgId, { $set: update }, { new: true }).select("whatsapp");
     const { apiKey: _k, ...safe } = org.whatsapp.toObject();
     res.json({ whatsapp: { ...safe, hasApiKey: !!_k } });

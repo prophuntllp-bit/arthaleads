@@ -9,7 +9,7 @@ export default function Privacy() {
   });
 
   return (
-    <LegalLayout title="Privacy Policy" badge="Privacy" updated="25 June 2026">
+    <LegalLayout title="Privacy Policy" badge="Privacy" updated="12 September 2026">
 
       <Section title="1. Introduction">
         <p>
@@ -66,10 +66,15 @@ export default function Privacy() {
             submissions. We store the Page ID, Form ID, and Page Access Token to receive leads via webhook.
           </li>
           <li>
-            <strong style={{ color: "var(--app-text)" }}>WhatsApp data:</strong>{" "}
-            When WhatsApp Business is connected, we store message delivery metadata and conversation
-            thread IDs to display message history in the CRM. We do not read or store the content of
-            personal WhatsApp conversations beyond what is required to display your CRM interaction log.
+            <strong style={{ color: "var(--app-text)" }}>WhatsApp Business Platform data:</strong>{" "}
+            Arthaleads is a Meta Tech Provider for the WhatsApp Business Platform. When you connect
+            WhatsApp — whether through Arthaleads' own Meta-hosted onboarding ("Embedded Signup") or by
+            entering your own credentials — we store your WhatsApp Business Account (WABA) ID, phone
+            number ID, business profile fields (verified business name, display phone number, quality
+            rating), the access token issued to us for your account, and the number's registration PIN
+            (encrypted at rest). We also store message delivery metadata and conversation thread IDs, and
+            message content, to display your conversation history in the CRM. See Section 6 for full
+            details.
           </li>
           <li>
             <strong style={{ color: "var(--app-text)" }}>Telephony data:</strong>{" "}
@@ -129,15 +134,23 @@ export default function Privacy() {
 
       <Section title="6. WhatsApp Business Integration">
         <p>
-          When you connect WhatsApp Business to Arthaleads through a supported WhatsApp Business Solution
-          Provider:
+          Arthaleads is registered with Meta as a <strong style={{ color: "var(--app-text)" }}>Tech
+          Provider</strong> for the WhatsApp Business Platform. This means Arthaleads' own Meta app can
+          connect your WhatsApp Business Account (WABA) directly — you log in with your own Facebook
+          account and pick or create your own WABA and phone number inside Meta's own onboarding flow
+          ("Embedded Signup"); nothing about your business identity, verified name, or phone number
+          becomes Arthaleads'. You can alternatively connect a WhatsApp Business Solution Provider you
+          already use, or enter Meta Cloud API credentials you generated yourself.
         </p>
+        <p>Whichever way you connect, once WhatsApp is active on your account:</p>
         <ul className="list-disc pl-5 space-y-1.5">
-          <li>We store your WhatsApp Business Account (WABA) ID and phone number ID to route messages.</li>
+          <li>We store your WhatsApp Business Account (WABA) ID, phone number ID, and business profile fields (verified name, display phone number, quality rating) to route messages and display your connection status.</li>
+          <li>Where you connect via Arthaleads' own Meta Tech Provider integration, we store the access token Meta issues for your WhatsApp Business Account, and the number's registration PIN (encrypted at rest), so Arthaleads can send and receive messages on your behalf.</li>
           <li>Inbound and outbound message content is stored within your organisation's CRM account to display conversation history to your agents.</li>
           <li>Message delivery status and timestamps are stored for operational purposes.</li>
-          <li>We do not access WhatsApp messages for any purpose other than displaying them within your CRM and, where applicable, triggering automation workflows you have configured.</li>
-          <li>You remain responsible for obtaining consent from contacts before initiating WhatsApp conversations and complying with Meta's WhatsApp Business Policy.</li>
+          <li>We do not access WhatsApp messages for any purpose other than displaying them within your CRM and, where applicable, triggering automation workflows (including AI-assisted replies) you have configured.</li>
+          <li>Disconnecting WhatsApp from the Connections page revokes and deletes the stored access token and registration PIN. Your WhatsApp Business Account itself is not affected — it remains yours, under your own Meta Business Portfolio, and continues to exist independently of Arthaleads.</li>
+          <li>You remain responsible for obtaining consent from contacts before initiating WhatsApp conversations and complying with Meta's WhatsApp Business Policy and Platform Terms.</li>
         </ul>
       </Section>
 
@@ -199,7 +212,7 @@ export default function Privacy() {
           <li><strong style={{ color: "var(--app-text)" }}>OpenAI:</strong> AI feature processing (Artha AI), under their API data processing agreement.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Resend / email provider:</strong> Transactional emails (support replies, notifications).</li>
           <li><strong style={{ color: "var(--app-text)" }}>EnableX:</strong> Telephony services (calls, recordings) when connected by your organisation.</li>
-          <li><strong style={{ color: "var(--app-text)" }}>WhatsApp BSP:</strong> WhatsApp Business message routing when connected by your organisation.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>Meta (WhatsApp Business Platform):</strong> WhatsApp message routing, either through Arthaleads' own Meta Tech Provider integration or a third-party WhatsApp Business Solution Provider you connect, when WhatsApp is enabled by your organisation.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Firebase (Google):</strong> Push notification delivery for Android app users.</li>
         </ul>
         <p>All sub-processors are required to handle data in accordance with applicable data protection law.</p>
@@ -215,6 +228,7 @@ export default function Privacy() {
           <li><strong style={{ color: "var(--app-text)" }}>Call recordings:</strong> Retained for up to 90 days by default, or as configured by your organisation administrator.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Audit logs and support access records:</strong> Retained for up to 12 months for security and compliance purposes.</li>
           <li><strong style={{ color: "var(--app-text)" }}>Account data:</strong> Deleted within 30 days of account closure upon written request.</li>
+          <li><strong style={{ color: "var(--app-text)" }}>WhatsApp access tokens and registration PINs:</strong> Deleted immediately when you disconnect WhatsApp from the Connections page, or within 30 days of account closure — whichever is sooner. Message history is retained under the same terms as Lead data above.</li>
         </ul>
         <p>
           You may request deletion of your data at any time by contacting us at{" "}
