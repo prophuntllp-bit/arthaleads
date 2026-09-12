@@ -470,7 +470,7 @@ export default function Inbox() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search name or number"
-              className="w-full rounded-full pl-8.5 pr-8 py-1.5 text-xs text-app outline-none"
+              className="w-full rounded-full pr-8 py-1.5 text-xs text-app outline-none"
               style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", paddingLeft: 30 }}
             />
             {search && (
