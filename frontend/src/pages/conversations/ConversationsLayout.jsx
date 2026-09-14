@@ -37,7 +37,11 @@ const TABS = [
   { to: "/conversations/settings",  label: "Settings",  icon: SettingsIcon, roles: ["admin", "super_admin"] },
 ];
 
-const PROVIDER_NAME = { meta: "Meta Cloud API", aisensy: "AiSensy", wati: "Wati", interakt: "Interakt" };
+// "meta" is Arthaleads' own direct connection — shown to every user as
+// Arthaleads itself, never the underlying platform it's built on. The other
+// three are the customer's own separate BSP account, so their real names are
+// exactly what that customer already expects to see.
+const PROVIDER_NAME = { meta: "Arthaleads", aisensy: "AiSensy", wati: "Wati", interakt: "Interakt" };
 
 export default function ConversationsLayout() {
   const { user } = useAuth();

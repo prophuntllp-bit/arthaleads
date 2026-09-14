@@ -136,7 +136,7 @@ export default function TemplatesPage() {
         <div>
           <h1 className="text-lg font-bold text-app">Message templates</h1>
           <p className="text-xs text-app-soft">
-            Required for any message outside the 24-hour reply window. Meta reviews each one.
+            Required for any message outside the 24-hour reply window. Each one is reviewed before it can be used.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -266,8 +266,8 @@ export default function TemplatesPage() {
                   <p className="text-xs text-app-soft mt-1">{err.message}</p>
                   {err.reconnect && (
                     <p className="text-xs text-app-soft mt-1.5">
-                      Meta access tokens expire. Generate a new permanent token in Meta and save it in
-                      settings — templates, campaigns and the inbox all use it.
+                      Your access token has expired. Reconnect WhatsApp from settings — templates,
+                      campaigns and the inbox all use it.
                     </p>
                   )}
                   {err.settingsFix && !isAdmin && (

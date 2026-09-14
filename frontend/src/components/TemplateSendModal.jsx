@@ -77,7 +77,7 @@ export default function TemplateSendModal({ open, onClose, conversation, credits
         <div className="text-center py-8">
           <p className="text-sm font-bold text-app">No approved templates yet</p>
           <p className="text-xs text-app-soft mt-1 max-w-xs mx-auto">
-            A template has to be approved by Meta before it can be sent. Approval usually takes minutes.
+            A template has to be approved before it can be sent. Approval usually takes minutes.
           </p>
           <button onClick={() => { onClose?.(); navigate("/conversations/templates/new"); }}
             className="btn-primary rounded-full px-5 py-2.5 text-sm font-bold inline-flex items-center gap-2 mt-4">
@@ -118,7 +118,7 @@ export default function TemplateSendModal({ open, onClose, conversation, credits
               <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
               <span>
                 {credits?.billedDirectlyByMeta
-                  ? "Billed directly to your Meta account, not through credits."
+                  ? "Billed directly to your own account, not through Arthaleads credits."
                   : <>{rate != null ? `Costs ${rupees(rate)} as a ${credit} message. ` : ""}Free monthly replies do not apply to templates.</>}
               </span>
             </p>

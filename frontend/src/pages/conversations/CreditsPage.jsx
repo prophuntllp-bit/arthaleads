@@ -119,7 +119,7 @@ export default function CreditsPage() {
           </div>
           <p className="text-xs text-app-soft flex items-center gap-1.5 mt-0.5">
             <Info className="w-3.5 h-3.5 shrink-0" />
-            Separate from your Arthaleads subscription — these pay Meta for messages
+            Separate from your Arthaleads subscription — these pay for WhatsApp messages
           </p>
         </div>
         {isAdmin && (
@@ -154,14 +154,14 @@ export default function CreditsPage() {
           <div className="flex items-center justify-between">
             <p className="text-xs text-app-soft">Free replies left this month</p>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(34,197,94,0.12)", color: "#15803d" }}>From Meta</span>
+              style={{ background: "rgba(34,197,94,0.12)", color: "#15803d" }}>Included free</span>
           </div>
           <p className="text-3xl font-bold text-app mt-2 tabular-nums">
             {free ? free.remaining.toLocaleString("en-IN") : "—"}
             {free && <span className="text-xs font-normal text-app-soft ml-1.5">remaining</span>}
           </p>
           <div className="mt-auto pt-4 flex items-center justify-between text-[11px] text-app-soft">
-            <span>of {free?.limit?.toLocaleString("en-IN") || "1,000"} from Meta</span>
+            <span>of {free?.limit?.toLocaleString("en-IN") || "1,000"} included</span>
             <span>Resets on the 1st</span>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function CreditsPage() {
         <div className="card p-5 flex flex-col">
           <p className="text-xs text-app-soft">Your rates</p>
           {credits?.billedDirectlyByMeta ? (
-            <p className="text-sm font-bold text-app mt-2 leading-relaxed">Billed directly by Meta to your own account — not through this wallet.</p>
+            <p className="text-sm font-bold text-app mt-2 leading-relaxed">Billed directly to your own account — not through this wallet.</p>
           ) : credits?.ratesPaise ? (
             <div className="space-y-1 mt-2">
               {[["Reply", "service"], ["Marketing", "marketing"], ["Utility", "utility"]].map(([label, key]) => (

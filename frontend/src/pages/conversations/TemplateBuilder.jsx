@@ -182,7 +182,7 @@ export default function TemplateBuilder() {
         });
       }
       await api.post("/whatsapp/templates", { name, category, language, components });
-      toast.success("Submitted to Meta for review");
+      toast.success("Submitted for review");
       navigate("/conversations/templates");
     } catch (e) {
       toast.error(e.response?.data?.message || "Could not submit", { duration: 8000 });
@@ -204,7 +204,7 @@ export default function TemplateBuilder() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-app">{preset ? preset.title : "New template"}</h1>
         <p className="text-xs text-app-soft mt-0.5">
-          Meta reviews every template. Approval usually takes minutes but can take up to 24 hours.
+          Every template is reviewed. Approval usually takes minutes but can take up to 24 hours.
         </p>
       </div>
 
@@ -290,7 +290,7 @@ export default function TemplateBuilder() {
 
                 {variants.length === 0 ? (
                   <p className="text-xs text-app-soft">
-                    Nothing came back that Meta would accept. Try describing the message differently.
+                    Nothing came back that would pass review. Try describing the message differently.
                   </p>
                 ) : (
                   <div className="grid gap-3 lg:grid-cols-3">
@@ -401,7 +401,7 @@ export default function TemplateBuilder() {
               <div>
                 <p className="stitch-kicker mb-2">Sample values</p>
                 <p className="text-xs text-app-soft mb-2.5">
-                  Meta requires an example for every variable — it is how a reviewer reads the message.
+                  An example is required for every variable — it is how a reviewer reads the message.
                   {varMap.length > 0 && " These came with the template; edit them to match your business."}
                 </p>
                 <div className="space-y-2">
@@ -553,7 +553,7 @@ export default function TemplateBuilder() {
               <Zap className="w-3.5 h-3.5" style={{ color: "#f59e0b" }} /> Review time
             </p>
             <p className="text-[11px] text-app-soft mt-1 leading-relaxed">
-              Meta reviews every template — usually within minutes, occasionally up to 24 hours. You can
+              Every template is reviewed — usually within minutes, occasionally up to 24 hours. You can
               see the result on the Templates tab.
             </p>
             <p className="text-[11px] text-app-soft mt-2 flex items-start gap-1.5">

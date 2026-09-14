@@ -149,7 +149,7 @@ function WebhookHealthCheck({ webhook, checking, onCheck, canCheck }) {
               ? webhook.error
               : webhook
                 ? "Your app is not subscribed to this business account yet, so incoming messages will not arrive."
-                : "Meta also has to be subscribed to your business account before any message arrives. Checking does that for you."}
+                : "WhatsApp also has to be subscribed to your business account before any message arrives. Checking does that for you."}
         </p>
       </div>
       <button onClick={onCheck} disabled={checking || !canCheck}
@@ -439,6 +439,12 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
   // front of you by default.
   if (connected && !showChangeProvider) {
     const connectedProv = PROVIDERS.find(p => p.id === savedProvider) || prov;
+    // Customer-facing label only. connectedProv.name stays "Meta Cloud API"
+    // for the technical setup copy further down this file (webhook path,
+    // dashboard links) — an admin manually pasting real Graph API credentials
+    // needs the real vendor name to find the right screen. The live status
+    // badge every user sees is the one place that needs to read as Arthaleads.
+    const displayName = connectedProv.id === "meta" ? "Arthaleads" : connectedProv.name;
     return (
       <div className="space-y-5">
         <div className="card p-5 space-y-4">
@@ -449,7 +455,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-bold text-app">{connectedProv.name}</p>
+                  <p className="text-sm font-bold text-app">{displayName}</p>
                   {connectedProv.badge && (
                     <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                       style={{ background: `${connectedProv.color}1f`, color: connectedProv.color }}>{connectedProv.badge}</span>
@@ -569,8 +575,8 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
       <div className="card p-5 space-y-4">
         <StepHead n={1}>Choose your WhatsApp provider</StepHead>
         <p className="text-sm text-app-soft pl-8">
-          Connect directly to Meta, or through a provider (AiSensy, Wati, Interakt) that handles
-          Meta verification for you. Templates and campaigns need the direct Meta connection.
+          Connect directly through Arthaleads, or through a separate provider (AiSensy, Wati, Interakt)
+          you already have your own account with. Templates and campaigns need the direct connection.
         </p>
         <div className="pl-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {PROVIDERS.map(p => (
@@ -598,7 +604,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold text-white transition"
             style={{ background: prov.color }}>
             <WhatsAppIcon className="w-4 h-4" />
-            {isMeta ? "Meta setup guide" : `Create ${prov.name} account`}
+            {isMeta ? "Advanced setup guide" : `Create ${prov.name} account`}
             <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </a>
           <a href={prov.dashboardUrl} target="_blank" rel="noopener noreferrer"
@@ -699,7 +705,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
             {isMeta && (
               <p className="text-xs mt-1.5 rounded-xl px-3 py-2"
                 style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", color: "#b45309" }}>
-                Meta only delivers the test message if this phone has messaged your business number in
+                WhatsApp only delivers the test message if this phone has messaged your business number in
                 the last 24 hours. Send it a quick “hi” first.
               </p>
             )}

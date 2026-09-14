@@ -154,7 +154,7 @@ export default function CampaignBuilder() {
           <div className="card p-5 space-y-4">
             <div>
               <h2 className="text-base font-bold text-app">Campaign details</h2>
-              <p className="text-xs text-app-soft mt-0.5">Pick a template Meta has approved to begin the broadcast</p>
+              <p className="text-xs text-app-soft mt-0.5">Pick an approved template to begin the broadcast</p>
             </div>
             <div>
               <label className="text-xs font-semibold text-app-soft mb-1 block">Campaign name</label>
@@ -167,7 +167,7 @@ export default function CampaignBuilder() {
                 <label className="text-xs font-semibold text-app-soft">Template</label>
                 {templateName && (
                   <span className="text-[10px] font-bold flex items-center gap-1" style={{ color: "#15803d" }}>
-                    <CheckCircle2 className="w-3 h-3" /> Approved by Meta
+                    <CheckCircle2 className="w-3 h-3" /> Approved
                   </span>
                 )}
               </div>
@@ -186,7 +186,7 @@ export default function CampaignBuilder() {
                 <div className="rounded-2xl px-4 py-3 text-xs flex items-start gap-2 flex-wrap"
                   style={{ background: "rgba(251,191,36,0.10)", border: "1px solid rgba(251,191,36,0.3)", color: "#b45309" }}>
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
-                  <span className="flex-1">No approved templates yet. Create one and wait for Meta to approve it before running a campaign.</span>
+                  <span className="flex-1">No approved templates yet. Create one and wait for it to be approved before running a campaign.</span>
                   <button onClick={() => navigate("/conversations/templates/new")} className="font-semibold underline">Create a template</button>
                 </div>
               ) : (
@@ -323,7 +323,7 @@ export default function CampaignBuilder() {
 
                 <div className="rounded-2xl px-3.5 py-3 mb-3 stitch-surface-muted">
                   {prev.billedDirectlyByMeta ? (
-                    <p className="text-xs text-app-soft">Billed directly to your Meta account, not through credits.</p>
+                    <p className="text-xs text-app-soft">Billed directly to your own account, not through Arthaleads credits.</p>
                   ) : (
                     <>
                       <div className="flex justify-between text-sm">

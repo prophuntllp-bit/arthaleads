@@ -348,13 +348,13 @@ function BusinessProfileCard() {
   if (!applicable) {
     return (
       <Card icon={ProfileIcon} title="Business Profile"
-        description="Only available for the Meta Cloud API provider — manage your profile in your BSP's own dashboard." />
+        description="Only available on the direct Arthaleads connection — manage your profile in your provider's own dashboard for other connections." />
     );
   }
 
   return (
     <Card icon={ProfileIcon} title="Business Profile"
-      description="What customers see about your business on WhatsApp — no need to open Meta's WhatsApp Manager for these.">
+      description="What customers see about your business on WhatsApp — no need to open WhatsApp Manager for these.">
       {loadMessage && <p className="text-xs" style={{ color: "#b45309" }}>{loadMessage}</p>}
 
       <div className="flex items-center gap-3">
@@ -420,7 +420,7 @@ function BusinessProfileCard() {
         <label className="text-xs font-semibold text-app-soft flex items-center gap-1.5">
           <Lock className="w-3.5 h-3.5" /> Two-step verification PIN
         </label>
-        <p className="text-xs text-app-soft">Meta asks for this if the number is ever re-registered. Setting a new PIN replaces the old one — there's nothing to display here for security.</p>
+        <p className="text-xs text-app-soft">WhatsApp asks for this if the number is ever re-registered. Setting a new PIN replaces the old one — there's nothing to display here for security.</p>
         <div className="flex items-center gap-2">
           <input className="input w-32 font-mono" inputMode="numeric" maxLength={6} placeholder="6 digits"
             value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} />

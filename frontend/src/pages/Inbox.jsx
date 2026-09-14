@@ -409,7 +409,7 @@ export default function Inbox() {
   const wants = leadContext(lead);
   const firstName = String(displayName(activeConv) || "").trim().split(/\s+/)[0] || "they";
   const composerHint = credits?.billedDirectlyByMeta
-    ? "Billed directly to your Meta account, not through credits"
+    ? "Billed directly to your own account, not through credits"
     : freeLeft > 0
       ? `${freeLeft.toLocaleString("en-IN")} free replies left this month`
       : credits?.ratesPaise?.service
