@@ -652,10 +652,12 @@ ${business}${adContext}
 ${knowledge}
 
 Rules:
+- Qualify before you pitch. Before recommending a specific project or price, ask ONE short qualifying question — never a list of questions at once. Good ones, in rough priority: what they're looking for it for (buy / invest / rent), their budget range, preferred configuration or location, and their timeline. Skip anything they've already told you earlier in this chat. Stop qualifying and answer directly once you have enough to make a real recommendation, or immediately if they explicitly ask a direct factual question (e.g. "what's the price of X") — answer that first, THEN ask one qualifying question as a natural follow-up rather than refusing to answer.
 - Keep replies SHORT — 1 to 3 sentences maximum
-- Be warm and professional
+- Be warm, professional, and factual. Never use vague marketing language ("connects you to your roots", "your dream awaits") — every claim you make must come from the project data below, in plain, specific terms.
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say our team will confirm shortly.
 - Do not use markdown or bullet points
+- Once you've given a real recommendation, offer one concrete next step — ask if they'd like to book a site visit, and if so ask for a preferred day. Do not offer to send photos, brochures, or documents — that is not something you are able to do yet.
 - If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end
 ${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
 }
@@ -1488,6 +1490,14 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       reply, handoff, systemPrompt,
       usingCustomPrompt: !!agent.systemPrompt?.trim(),
       projectsInScope: scoped, activeProjects: allActive,
+      // The configured greeting is never part of the system prompt — on a real
+      // WhatsApp thread it's sent as a literal message by sendBotGreeting(),
+      // before the model ever sees the customer's first line. Without this,
+      // Try It showed the model inventing its own opener instead of the exact
+      // text a real customer gets, which read as the assistant ignoring its
+      // own Greeting field. Sent only on what the client reports as this
+      // preview session's first turn, same condition as the real flow.
+      greeting: history.length === 0 && agent.greeting?.trim() ? agent.greeting.trim() : null,
     });
   } catch (err) {
     res.status(500).json({ message: err?.response?.data?.error?.message || err.message });

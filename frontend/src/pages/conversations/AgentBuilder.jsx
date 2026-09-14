@@ -128,7 +128,13 @@ export default function AgentBuilder() {
     setTrying(true);
     try {
       const { data } = await api.post("/whatsapp/agents/preview", { message: text, history, agent: form });
-      setTryLog((l) => [...l, { role: "assistant", body: data.reply || "(no reply)", handoff: data.handoff }]);
+      // On a real WhatsApp thread this exact text is sent, verbatim, before the
+      // customer's message is even answered — show it the same way here rather
+      // than letting the model invent its own opener, which is what silently
+      // happened before this existed.
+      const greetingMsg = data.greeting
+        ? [{ role: "assistant", body: data.greeting, isGreeting: true }] : [];
+      setTryLog((l) => [...l, ...greetingMsg, { role: "assistant", body: data.reply || "(no reply)", handoff: data.handoff }]);
       setTryMeta(data);
     } catch (e) {
       setTryLog((l) => [...l, { role: "error", body: e.response?.data?.message || "The assistant could not answer." }]);
@@ -390,6 +396,11 @@ export default function AgentBuilder() {
                     : m.role === "assistant"
                       ? { background: "var(--app-card-solid)", color: "var(--app-text)", border: "1px solid var(--app-border)" }
                       : undefined}>
+                  {m.isGreeting && (
+                    <span className="block text-[10px] font-bold mb-1" style={{ color: "var(--app-primary)" }}>
+                      Sent automatically — real Greeting text, not generated
+                    </span>
+                  )}
                   {m.body}
                   {m.handoff && (
                     <span className="block text-[10px] font-bold mt-1.5" style={{ color: "#b45309" }}>
