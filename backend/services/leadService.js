@@ -754,21 +754,17 @@ const leadService = {
     const andConditions = [];
 
     if (user.role === "agent" || query.myOnly === "true") {
-      // An agent also sees a lead nobody owns yet — not just their own. Without
-      // this, a lead created with no assignee (org.autoAssign off, or no active
-      // agents to round-robin to at the moment — a real, current state for at
-      // least one org) was invisible to every single-agent-role user forever,
-      // until an admin went and manually assigned it. That's the exact gap that
-      // would bite a WhatsApp ad campaign: a new contact who doesn't match an
-      // existing lead becomes a brand-new unassigned Lead, and the one person
-      // actually meant to work it might never see it existed. myOnly keeps
-      // meaning "mine" for anyone toggling it deliberately — an unassigned lead
-      // is not "mine" by that reading, but it is one nobody else can claim
-      // either, so agents get to see it regardless of the toggle.
-      andConditions.push({
-        $or: [{ assignedTo: user._id }, { createdBy: user._id },
-          ...(query.myOnly === "true" && user.role !== "agent" ? [] : [{ assignedTo: null, createdBy: null }])],
-      });
+      // An agent sees only what's actually assigned to (or created by) them —
+      // strictly "mine", same as the /leads/hot widget already enforces.
+      // This used to also let through any lead nobody owns yet, specifically
+      // to cover org.autoAssign being off — but that meant every unassigned
+      // lead in the org, whatever project or campaign it came from, was
+      // visible (and click-to-callable) by every single agent, which is
+      // exactly the leak: an agent with no relationship to a lead could open
+      // and call it purely because nobody had assigned it yet. An admin or
+      // manager assigning it explicitly is now the only way an agent sees a
+      // previously-unassigned lead.
+      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
     } else if (agentId && (user.role === "admin" || user.role === "manager")) {
       andConditions.push({ $or: [{ assignedTo: agentId }, { createdBy: agentId }] });
     }
