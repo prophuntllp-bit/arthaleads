@@ -136,7 +136,13 @@ export default function AgentBuilder() {
       // happened before this existed.
       const greetingMsg = data.greeting
         ? [{ role: "assistant", body: data.greeting, isGreeting: true }] : [];
-      setTryLog((l) => [...l, ...greetingMsg, { role: "assistant", body: data.reply || "(no reply)", handoff: data.handoff }]);
+      setTryLog((l) => [...l, ...greetingMsg, {
+        role: "assistant",
+        body: data.reply || "(no reply)",
+        handoff: data.handoff,
+        wantsPhotos: data.wantsPhotos,
+        wantsBrochure: data.wantsBrochure,
+      }]);
       setTryMeta(data);
     } catch (e) {
       setTryLog((l) => [...l, { role: "error", body: e.response?.data?.message || "The assistant could not answer." }]);
@@ -439,6 +445,11 @@ export default function AgentBuilder() {
                     </span>
                   )}
                   {m.body}
+                  {(m.wantsPhotos || m.wantsBrochure) && (
+                    <span className="block text-[10px] font-bold mt-1.5" style={{ color: "var(--app-primary)" }}>
+                      📎 would send {[m.wantsPhotos && "project photos", m.wantsBrochure && "the brochure"].filter(Boolean).join(" and ")} here — not sent in Try It
+                    </span>
+                  )}
                   {m.handoff && (
                     <span className="block text-[10px] font-bold mt-1.5" style={{ color: "#b45309" }}>
                       → would hand this thread to a human

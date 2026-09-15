@@ -1655,6 +1655,14 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
     const handoff = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
+    // Same tags the real WhatsApp flow strips before sending — Try It never
+    // calls sendQualifiedMedia (no WhatsApp credit, nothing actually sent),
+    // so without this the raw [SHARE_PHOTOS]/[SHARE_BROCHURE] tokens leaked
+    // into the preview bubble verbatim instead of a "would send" indicator.
+    const wantsPhotos = reply.includes("[SHARE_PHOTOS]");
+    const wantsBrochure = reply.includes("[SHARE_BROCHURE]");
+    reply = reply.replace("[SHARE_PHOTOS]", "").replace("[SHARE_BROCHURE]", "").trim();
+
     // Counted with the same filter the prompt just used, so the number on
     // screen is the inventory the model actually saw.
     const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
@@ -1666,6 +1674,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
 
     res.json({
       reply, handoff, systemPrompt,
+      wantsPhotos, wantsBrochure,
       usingCustomPrompt: !!agent.systemPrompt?.trim(),
       projectsInScope: scoped, activeProjects: allActive,
       // The configured greeting is never part of the system prompt — on a real
