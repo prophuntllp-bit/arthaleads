@@ -122,10 +122,12 @@ export default function CustomSelect({ value, onChange, options, placeholder = "
             overflowY: "auto",
             borderRadius: 12,
             border: "1px solid var(--app-border)",
-            background: "var(--app-surface)",
+            // Opaque rather than var(--app-surface) (~58-75% alpha) — this
+            // panel is a fixed-position portal that can land right over
+            // whatever's on the page beneath the trigger, and a translucent
+            // panel let that content bleed through and read as merged text.
+            background: "var(--app-surface-solid)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
           }}
         >
           {/* Placeholder / all option */}

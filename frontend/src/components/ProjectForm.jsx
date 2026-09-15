@@ -270,7 +270,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={project ? "Edit Project" : "New Project"} size="2xl">
+    <Modal open={open} onClose={onClose} title={project ? "Edit Project" : "New Project"} size="xl">
       <form onSubmit={handleSubmit} className="space-y-5 -mx-2 sm:mx-0">
 
         {/* ── Basic Info ── */}
@@ -300,97 +300,101 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           </div>
         </div>
 
-        {/* ── Images ── */}
-        <div className="space-y-3">
-          <p className="stitch-kicker">Project Images</p>
+        {/* ── Images + Brochure — side by side once editing, each was its own
+             full-width row before, which was most of the extra scrolling on
+             this form for two things that are both just "attach a file". ── */}
+        <div className={project ? "grid gap-5 sm:grid-cols-2" : ""}>
+          <div className="space-y-3">
+            <p className="stitch-kicker">Project Images</p>
 
-          {/* Upload from device */}
-          <div className="flex gap-2">
-            <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
-            <button type="button" onClick={() => imgFileRef.current?.click()}
-              className="btn-secondary flex items-center gap-2" disabled={uploadingImg}>
-              {uploadingImg ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
-              Upload Photos
-            </button>
+            {/* Upload from device */}
+            <div className="flex gap-2">
+              <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
+              <button type="button" onClick={() => imgFileRef.current?.click()}
+                className="btn-secondary flex items-center gap-2" disabled={uploadingImg}>
+                {uploadingImg ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+                Upload Photos
+              </button>
+            </div>
+
+            {/* OR paste URL */}
+            <div className="flex gap-2 items-center">
+              <span className="text-xs text-app-soft flex-shrink-0">Or paste URL:</span>
+              <input
+                className="input flex-1"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://..."
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
+              />
+              <button type="button" onClick={addImageUrl} className="btn-secondary flex-shrink-0">
+                <Plus className="h-4 w-4" /> Add
+              </button>
+            </div>
+
+            {form.images.length > 0 && (
+              <div className="flex flex-wrap gap-3">
+                {form.images.map((url, i) => (
+                  <div key={i} className="relative group flex-shrink-0">
+                    <SmartImage
+                      src={url} alt=""
+                      className="h-20 w-20 rounded-2xl object-cover border"
+                      style={{ borderColor: "var(--app-border)" }}
+                      fallback={
+                        <div className="flex h-20 w-20 rounded-2xl items-center justify-center stitch-surface-muted">
+                          <ImageOff className="h-6 w-6 text-app-soft" />
+                        </div>
+                      }
+                    />
+                    <button
+                      type="button" onClick={() => removeImage(i)}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* OR paste URL */}
-          <div className="flex gap-2 items-center">
-            <span className="text-xs text-app-soft flex-shrink-0">Or paste URL:</span>
-            <input
-              className="input flex-1"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://..."
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
-            />
-            <button type="button" onClick={addImageUrl} className="btn-secondary flex-shrink-0">
-              <Plus className="h-4 w-4" /> Add
-            </button>
-          </div>
-
-          {form.images.length > 0 && (
-            <div className="flex flex-wrap gap-3">
-              {form.images.map((url, i) => (
-                <div key={i} className="relative group flex-shrink-0">
-                  <SmartImage
-                    src={url} alt=""
-                    className="h-20 w-20 rounded-2xl object-cover border"
-                    style={{ borderColor: "var(--app-border)" }}
-                    fallback={
-                      <div className="flex h-20 w-20 rounded-2xl items-center justify-center stitch-surface-muted">
-                        <ImageOff className="h-6 w-6 text-app-soft" />
-                      </div>
-                    }
-                  />
-                  <button
-                    type="button" onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-                  >
-                    <X className="h-3 w-3" />
+          {/* ── Brochure (PDF) — only once the project exists ── */}
+          {project && (
+            <div className="space-y-3">
+              <p className="stitch-kicker">Brochure</p>
+              <p className="text-xs text-app-soft">
+                Sent by the WhatsApp AI agent when its "Can send the brochure" permission is on
+                (Conversations → AI Agents).
+              </p>
+              {brochureUrl ? (
+                <div className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
+                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                  <FileText className="h-5 w-5 shrink-0" style={{ color: "#ef4444" }} />
+                  <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
+                    className="text-sm font-semibold text-app hover:underline flex-1 min-w-0 truncate">
+                    {form.name || "Brochure"}.pdf
+                  </a>
+                  <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
+                    className="text-xs font-semibold text-app-soft hover:text-app transition disabled:opacity-40">
+                    Replace
+                  </button>
+                  <button type="button" onClick={removeBrochure} title="Remove brochure"
+                    className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition shrink-0">
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              ))}
+              ) : (
+                <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
+                  style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
+                  {uploadingBrochure ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+                  {uploadingBrochure ? "Uploading…" : "Upload brochure PDF"}
+                </button>
+              )}
+              <input ref={brochureFileRef} type="file" accept="application/pdf" className="hidden" onChange={handleBrochureFile} />
             </div>
           )}
         </div>
-
-        {/* ── Brochure (PDF) — only once the project exists ── */}
-        {project && (
-          <div className="space-y-3">
-            <p className="stitch-kicker">Brochure</p>
-            <p className="text-xs text-app-soft">
-              Sent by the WhatsApp AI agent when its "Can send the brochure" permission is on
-              (Conversations → AI Agents).
-            </p>
-            {brochureUrl ? (
-              <div className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                <FileText className="h-5 w-5 shrink-0" style={{ color: "#ef4444" }} />
-                <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
-                  className="text-sm font-semibold text-app hover:underline flex-1 min-w-0 truncate">
-                  {form.name || "Brochure"}.pdf
-                </a>
-                <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
-                  className="text-xs font-semibold text-app-soft hover:text-app transition disabled:opacity-40">
-                  Replace
-                </button>
-                <button type="button" onClick={removeBrochure} title="Remove brochure"
-                  className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition shrink-0">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
-                style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
-                {uploadingBrochure ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
-                {uploadingBrochure ? "Uploading…" : "Upload brochure PDF"}
-              </button>
-            )}
-            <input ref={brochureFileRef} type="file" accept="application/pdf" className="hidden" onChange={handleBrochureFile} />
-          </div>
-        )}
 
         {/* ── Pricing & Config ── */}
         <div className="space-y-4">
@@ -417,7 +421,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)] lg:items-start">
             <div>
               <label className="label">Property Type</label>
               <CustomSelect
@@ -476,15 +480,14 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             {form.amenities.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.amenities.map((a, i) => (
-                  // stitch-pill's translucent, blurred surface all but disappeared
-                  // against this modal's own translucent background — a solid
-                  // card color keeps the tag readable regardless of what's behind it.
+                  // Same rounded-full/px-3/py-1.5/text-xs pill as a selected
+                  // Plot Type chip just above — one visual language for "this
+                  // is on" across the form, instead of a second pill style.
                   <span key={i}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
-                    style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                    className="inline-flex items-center gap-1.5 rounded-full border border-orange-500 bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white">
                     {a}
                     <button type="button" onClick={() => removeAmenity(i)}
-                      className="text-app-soft hover:text-red-500 transition-colors">
+                      className="text-white/80 hover:text-white transition-colors">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -521,9 +524,14 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </button>
 
             {agentDropOpen && (
+              // var(--app-surface) is only ~58-75% opaque — this panel sits
+              // right on top of the assigned-member chips below it (it's
+              // absolutely positioned, so that row never moves out of the
+              // way), and the chip text was bleeding through, reading as the
+              // two merging together. A fully opaque surface fixes it.
               <div
                 className="absolute z-50 left-0 right-0 mt-1 rounded-xl shadow-xl overflow-hidden"
-                style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+                style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)" }}
               >
                 {/* Search box */}
                 <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
