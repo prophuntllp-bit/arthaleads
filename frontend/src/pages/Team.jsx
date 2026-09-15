@@ -326,14 +326,22 @@ export default function Team() {
       )}
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title={editingUser ? "Edit Team Member" : "Add Team Member"} size="lg">
-        <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit} autoComplete="off">
           <div>
             <label className="label">Full Name <span className="text-red-500">*</span></label>
             <input className="input" value={form.name} onChange={handleChange("name")} required />
           </div>
           <div>
             <label className="label">Email <span className="text-red-500">*</span></label>
-            <input className="input" type="email" value={form.email} onChange={handleChange("email")} required />
+            <input
+              className="input"
+              type="email"
+              name="member-email"
+              autoComplete="off"
+              value={form.email}
+              onChange={handleChange("email")}
+              required
+            />
           </div>
           <div>
             <label className="label">Mobile Number {!editingUser && <span className="text-red-500">*</span>}</label>
@@ -387,7 +395,16 @@ export default function Team() {
           <div className="md:col-span-2">
             <label className="label">{editingUser ? "Set New Password (optional)" : "Temporary Password"} {!editingUser && <span className="text-red-500">*</span>}</label>
             <div className="relative">
-              <input className="input pr-10" type={showPwd ? "text" : "password"} value={form.password} onChange={handleChange("password")} required={!editingUser} placeholder="8+ chars, uppercase, number, special" />
+              <input
+                className="input pr-10"
+                type={showPwd ? "text" : "password"}
+                name="member-password"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={handleChange("password")}
+                required={!editingUser}
+                placeholder="8+ chars, uppercase, number, special"
+              />
               <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-app-soft hover:text-app" onClick={() => setShowPwd((v) => !v)}>
                 {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
