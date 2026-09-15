@@ -303,8 +303,13 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
         {/* ── Images + Brochure — side by side once editing, each was its own
              full-width row before, which was most of the extra scrolling on
              this form for two things that are both just "attach a file". ── */}
-        <div className={project ? "grid gap-5 sm:grid-cols-2" : ""}>
-          <div className="space-y-3">
+        <div className={project ? "grid gap-5 sm:grid-cols-2 sm:items-stretch" : ""}>
+          {/* h-full + the card border is what makes the leftover space when
+              this column is shorter than its sibling (e.g. Brochure once
+              Images has a photo in it) read as "empty room inside this
+              card" instead of a stray gap floating on the page. */}
+          <div className={`space-y-3 ${project ? "h-full rounded-2xl border p-4" : ""}`}
+            style={project ? { borderColor: "var(--app-border)" } : {}}>
             <p className="stitch-kicker">Project Images</p>
 
             {/* Upload from device */}
@@ -360,7 +365,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
 
           {/* ── Brochure (PDF) — only once the project exists ── */}
           {project && (
-            <div className="space-y-3">
+            <div className="space-y-3 h-full rounded-2xl border p-4"
+              style={{ borderColor: "var(--app-border)" }}>
               <p className="stitch-kicker">Brochure</p>
               <p className="text-xs text-app-soft">
                 Sent by the WhatsApp AI agent when its "Can send the brochure" permission is on
