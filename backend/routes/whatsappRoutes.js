@@ -1765,10 +1765,31 @@ router.post("/embedded-signup/exchange", authorize("admin", "manager", "super_ad
 
 // ── Conversations ─────────────────────────────────────────────────────────────
 
+// Mirrors the exact rule leadService.getAllUnified already enforces for the
+// Leads list: an agent sees their own assigned records plus whatever nobody
+// owns yet (so an unclaimed thread stays pickable), never a thread another
+// specific agent already owns. Nothing here checked this at all before —
+// every route below only scoped by orgId, so any agent could open, message,
+// or reassign literally any conversation in the org regardless of who it was
+// assigned to.
+function canAccessConversation(user, conv) {
+  if (user.role !== "agent") return true;
+  if (!conv.assignedTo) return true;
+  return String(conv.assignedTo._id || conv.assignedTo) === String(user._id);
+}
+
 router.get("/conversations", async (req, res) => {
   try {
     const { status, search, page = 1, limit = 50 } = req.query;
     const filter = { orgId: req.orgId };
+    // Both this and the search block below need their own $or — combined
+    // under $and instead of two assignments, since the second would
+    // otherwise silently clobber the first and search away an agent's
+    // scoping the moment they typed anything into the search box.
+    const andConditions = [];
+    if (req.user.role === "agent") {
+      andConditions.push({ $or: [{ assignedTo: req.user._id }, { assignedTo: null }] });
+    }
     if (status) filter.status = status;
     // contactName is the snapshot taken when the thread opened and goes stale
     // the moment a lead is renamed or relinked — the list shows the linked
@@ -1777,12 +1798,15 @@ router.get("/conversations", async (req, res) => {
     if (search && String(search).trim()) {
       const rx = new RegExp(String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       const leadIds = await Lead.find({ orgId: req.orgId, name: rx }).distinct("_id");
-      filter.$or = [
-        { contactName: rx },
-        { contactPhone: rx },
-        ...(leadIds.length ? [{ leadId: { $in: leadIds } }] : []),
-      ];
+      andConditions.push({
+        $or: [
+          { contactName: rx },
+          { contactPhone: rx },
+          ...(leadIds.length ? [{ leadId: { $in: leadIds } }] : []),
+        ],
+      });
     }
+    if (andConditions.length) filter.$and = andConditions;
     const [conversations, total] = await Promise.all([
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
@@ -1848,6 +1872,10 @@ router.get("/conversations/:id", async (req, res) => {
       .populate("leadId", LEAD_SCORE_FIELDS)
       .populate("assignedTo", "name avatar").lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
+    // Same "not found" rather than 403 as everywhere else here — an agent
+    // guessing another agent's conversation id by URL shouldn't even learn
+    // it exists.
+    if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Not found" });
     attachLeadScores([conv]);
     res.json({ conversation: conv });
   } catch (err) {
@@ -1860,6 +1888,7 @@ router.get("/conversations/:id/messages", async (req, res) => {
     const { page = 1, limit = 60 } = req.query;
     const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId }).lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
+    if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Not found" });
     const messages = await WaMessage.find({ conversationId: req.params.id })
       .sort({ timestamp: -1 }).skip((page - 1) * limit).limit(+limit).lean();
     messages.reverse();
@@ -1874,6 +1903,10 @@ router.get("/conversations/:id/messages", async (req, res) => {
 
 router.patch("/conversations/:id", async (req, res) => {
   try {
+    const existing = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId }).lean();
+    if (!existing) return res.status(404).json({ message: "Not found" });
+    if (!canAccessConversation(req.user, existing)) return res.status(404).json({ message: "Not found" });
+
     const { botEnabled, status, assignedTo } = req.body;
     const update = {};
     if (botEnabled !== undefined) { update.botEnabled = botEnabled; update.status = botEnabled ? "bot" : "open"; }
@@ -2289,6 +2322,7 @@ router.post("/send-template", async (req, res) => {
     if (!templateName) return res.status(400).json({ message: "Pick a template" });
     const conv = await WaConversation.findOne({ _id: conversationId, orgId: req.orgId });
     if (!conv) return res.status(404).json({ message: "Conversation not found" });
+    if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Conversation not found" });
     const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
     if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
       return res.status(400).json({ message: "WhatsApp not connected" });
@@ -2355,6 +2389,7 @@ router.post("/send", async (req, res) => {
     if (!msgBody?.trim()) return res.status(400).json({ message: "Message body required" });
     const conv = await WaConversation.findOne({ _id: conversationId, orgId: req.orgId });
     if (!conv) return res.status(404).json({ message: "Conversation not found" });
+    if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Conversation not found" });
     const org = await Organization.findById(req.orgId).select("whatsapp name").lean();
     if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) {
       return res.status(400).json({ message: "WhatsApp not connected" });
