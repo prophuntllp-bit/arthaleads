@@ -22,19 +22,39 @@ class LeadFormScreen extends StatefulWidget {
 
 class _LeadFormScreenState extends State<LeadFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final _name = TextEditingController(text: widget.lead?['name'] as String? ?? '');
-  late final _phone = TextEditingController(text: widget.lead?['phone'] as String? ?? '');
-  late final _email = TextEditingController(text: widget.lead?['email'] as String? ?? '');
-  late final _location = TextEditingController(text: widget.lead?['preferredLocation'] as String? ?? '');
-  late final _streetAddress = TextEditingController(text: widget.lead?['streetAddress'] as String? ?? '');
-  late final _city = TextEditingController(text: widget.lead?['city'] as String? ?? '');
-  late final _requirements = TextEditingController(text: widget.lead?['requirements'] as String? ?? '');
-  late final _followUpNote = TextEditingController(text: widget.lead?['followUpNote'] as String? ?? '');
+  late final _name = TextEditingController(
+    text: widget.lead?['name'] as String? ?? '',
+  );
+  late final _phone = TextEditingController(
+    text: widget.lead?['phone'] as String? ?? '',
+  );
+  late final _email = TextEditingController(
+    text: widget.lead?['email'] as String? ?? '',
+  );
+  late final _location = TextEditingController(
+    text: widget.lead?['preferredLocation'] as String? ?? '',
+  );
+  late final _streetAddress = TextEditingController(
+    text: widget.lead?['streetAddress'] as String? ?? '',
+  );
+  late final _city = TextEditingController(
+    text: widget.lead?['city'] as String? ?? '',
+  );
+  late final _requirements = TextEditingController(
+    text: widget.lead?['requirements'] as String? ?? '',
+  );
+  late final _followUpNote = TextEditingController(
+    text: widget.lead?['followUpNote'] as String? ?? '',
+  );
   late final _budgetMin = TextEditingController(
-      text: (widget.lead?['budget'] as Map?)?['min']?.toString() ?? '');
+    text: (widget.lead?['budget'] as Map?)?['min']?.toString() ?? '',
+  );
   late final _budgetMax = TextEditingController(
-      text: (widget.lead?['budget'] as Map?)?['max']?.toString() ?? '');
-  late DateTime? _followUpDate = DateTime.tryParse(widget.lead?['followUpDate'] as String? ?? '');
+    text: (widget.lead?['budget'] as Map?)?['max']?.toString() ?? '',
+  );
+  late DateTime? _followUpDate = DateTime.tryParse(
+    widget.lead?['followUpDate'] as String? ?? '',
+  );
 
   late String _source = widget.lead?['source'] as String? ?? 'Manual';
   late String _status = widget.lead?['status'] as String? ?? 'New';
@@ -45,17 +65,29 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   late String _assignedTo = widget.lead?['assignedTo'] is Map
       ? (widget.lead!['assignedTo'] as Map)['_id'] as String? ?? ''
       : widget.lead?['assignedTo'] as String? ?? '';
+  late String _whatsappConsent =
+      (widget.lead?['whatsappConsent'] as Map?)?['status'] as String? ??
+      'unknown';
 
   bool _saving = false;
 
   bool get isEdit => widget.lead != null;
-  bool get _isProjectLead => widget.lead?['_type'] == 'project' && widget.lead?['projectId'] != null;
+  bool get _isProjectLead =>
+      widget.lead?['_type'] == 'project' && widget.lead?['projectId'] != null;
 
   @override
   void dispose() {
     for (final c in [
-      _name, _phone, _email, _location, _streetAddress, _city,
-      _requirements, _followUpNote, _budgetMin, _budgetMax,
+      _name,
+      _phone,
+      _email,
+      _location,
+      _streetAddress,
+      _city,
+      _requirements,
+      _followUpNote,
+      _budgetMin,
+      _budgetMax,
     ]) {
       c.dispose();
     }
@@ -74,15 +106,19 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
         'status': _status,
       };
       try {
-        await ApiClient.instance.dio
-            .patch('/projects/${widget.lead!['projectId']}/leads/${widget.lead!['_id']}', data: body);
+        await ApiClient.instance.dio.patch(
+          '/projects/${widget.lead!['projectId']}/leads/${widget.lead!['_id']}',
+          data: body,
+        );
         if (mounted) Navigator.pop(context, true);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Save failed')),
-            backgroundColor: AppColors.danger,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(ApiClient.errorMessage(e, 'Save failed')),
+              backgroundColor: AppColors.danger,
+            ),
+          );
         }
       } finally {
         if (mounted) setState(() => _saving = false);
@@ -99,32 +135,44 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
       if (_propertyType.isNotEmpty) 'propertyType': _propertyType,
       if (_bhk.isNotEmpty) 'bhk': _bhk,
       if (_purpose.isNotEmpty) 'purpose': _purpose,
-      if (_location.text.trim().isNotEmpty) 'preferredLocation': _location.text.trim(),
-      if (_streetAddress.text.trim().isNotEmpty) 'streetAddress': _streetAddress.text.trim(),
+      if (_location.text.trim().isNotEmpty)
+        'preferredLocation': _location.text.trim(),
+      if (_streetAddress.text.trim().isNotEmpty)
+        'streetAddress': _streetAddress.text.trim(),
       if (_city.text.trim().isNotEmpty) 'city': _city.text.trim(),
-      if (_requirements.text.trim().isNotEmpty) 'requirements': _requirements.text.trim(),
+      if (_requirements.text.trim().isNotEmpty)
+        'requirements': _requirements.text.trim(),
       'followUpDate': _followUpDate?.toIso8601String(),
-      if (_followUpNote.text.trim().isNotEmpty) 'followUpNote': _followUpNote.text.trim(),
+      if (_followUpNote.text.trim().isNotEmpty)
+        'followUpNote': _followUpNote.text.trim(),
       if (_budgetMin.text.isNotEmpty || _budgetMax.text.isNotEmpty)
         'budget': {
           if (_budgetMin.text.isNotEmpty) 'min': num.tryParse(_budgetMin.text),
           if (_budgetMax.text.isNotEmpty) 'max': num.tryParse(_budgetMax.text),
         },
       if (_assignedTo.isNotEmpty) 'assignedTo': _assignedTo,
+      // Project leads have no consent field and campaigns never target
+      // them, so this only goes out for plain leads — same as LeadForm.jsx.
+      'whatsappConsent': {'status': _whatsappConsent},
     };
     try {
       if (isEdit) {
-        await ApiClient.instance.dio.put('/leads/${widget.lead!['_id']}', data: body);
+        await ApiClient.instance.dio.put(
+          '/leads/${widget.lead!['_id']}',
+          data: body,
+        );
       } else {
         await ApiClient.instance.dio.post('/leads', data: body);
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Save failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Save failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -140,28 +188,78 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            _field(_name, 'Name *', validator: (v) => v!.trim().isEmpty ? 'Required' : null),
-            _field(_phone, 'Phone *',
-                keyboard: TextInputType.phone,
-                validator: (v) => v!.trim().isEmpty ? 'Required' : null),
+            _field(
+              _name,
+              'Name *',
+              validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+            ),
+            _field(
+              _phone,
+              'Phone *',
+              keyboard: TextInputType.phone,
+              validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+            ),
             _field(_email, 'Email', keyboard: TextInputType.emailAddress),
-            _dropdown('Source', sourceOptions, _source, (v) => setState(() => _source = v)),
-            _dropdown('Status', statusOptions, _status, (v) => setState(() => _status = v)),
+            _dropdown(
+              'Source',
+              sourceOptions,
+              _source,
+              (v) => setState(() => _source = v),
+            ),
+            _dropdown(
+              'Status',
+              statusOptions,
+              _status,
+              (v) => setState(() => _status = v),
+            ),
             if (!_isProjectLead) ...[
-              _dropdown('Priority', priorityOptions, _priority, (v) => setState(() => _priority = v)),
-              _dropdown('Property Type', propertyTypes, _propertyType,
-                  (v) => setState(() => _propertyType = v), allowEmpty: true),
-              _dropdown('BHK', bhkOptions, _bhk, (v) => setState(() => _bhk = v), allowEmpty: true),
-              _dropdown('Purpose', purposeOptions, _purpose, (v) => setState(() => _purpose = v),
-                  allowEmpty: true),
+              _dropdown(
+                'Priority',
+                priorityOptions,
+                _priority,
+                (v) => setState(() => _priority = v),
+              ),
+              _dropdown(
+                'Property Type',
+                propertyTypes,
+                _propertyType,
+                (v) => setState(() => _propertyType = v),
+                allowEmpty: true,
+              ),
+              _dropdown(
+                'BHK',
+                bhkOptions,
+                _bhk,
+                (v) => setState(() => _bhk = v),
+                allowEmpty: true,
+              ),
+              _dropdown(
+                'Purpose',
+                purposeOptions,
+                _purpose,
+                (v) => setState(() => _purpose = v),
+                allowEmpty: true,
+              ),
               _field(_location, 'Preferred Location'),
               _field(_streetAddress, 'Street Address'),
               _field(_city, 'City'),
               Row(
                 children: [
-                  Expanded(child: _field(_budgetMin, 'Budget Min', keyboard: TextInputType.number)),
+                  Expanded(
+                    child: _field(
+                      _budgetMin,
+                      'Budget Min',
+                      keyboard: TextInputType.number,
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_budgetMax, 'Budget Max', keyboard: TextInputType.number)),
+                  Expanded(
+                    child: _field(
+                      _budgetMax,
+                      'Budget Max',
+                      keyboard: TextInputType.number,
+                    ),
+                  ),
                 ],
               ),
               _field(_requirements, 'Requirements', maxLines: 3),
@@ -173,14 +271,51 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
                     onTap: _pickFollowUpDate,
                     child: InputDecorator(
                       decoration: const InputDecoration(isDense: true),
-                      child: Text(_followUpDate == null
-                          ? 'Not set'
-                          : DateFormat('dd MMM yyyy').format(_followUpDate!)),
+                      child: Text(
+                        _followUpDate == null
+                            ? 'Not set'
+                            : DateFormat('dd MMM yyyy').format(_followUpDate!),
+                      ),
                     ),
                   ),
                 ),
               ),
               _field(_followUpNote, 'Follow-up Note', maxLines: 2),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: LabeledField(
+                  label: 'WhatsApp marketing consent',
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _whatsappConsent,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'unknown',
+                        child: Text('Not recorded'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'granted',
+                        child: Text(
+                          'Given — happy to receive WhatsApp updates',
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'denied',
+                        child: Text('Refused — do not send marketing'),
+                      ),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _whatsappConsent = v ?? 'unknown'),
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 2, bottom: 4),
+                child: Text(
+                  'Only record consent the person actually gave. Campaigns skip anyone not marked as given.',
+                  style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                ),
+              ),
             ],
             if (!_isProjectLead && widget.agents.isNotEmpty)
               Padding(
@@ -191,11 +326,16 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
                     initialValue: _assignedTo.isEmpty ? '' : _assignedTo,
                     decoration: const InputDecoration(isDense: true),
                     items: [
-                      const DropdownMenuItem(value: '', child: Text('Auto-assign')),
-                      ...widget.agents.map((a) => DropdownMenuItem(
-                            value: a['_id'] as String,
-                            child: Text(a['name'] as String? ?? ''),
-                          )),
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('Auto-assign'),
+                      ),
+                      ...widget.agents.map(
+                        (a) => DropdownMenuItem(
+                          value: a['_id'] as String,
+                          child: Text(a['name'] as String? ?? ''),
+                        ),
+                      ),
                     ],
                     onChanged: (v) => setState(() => _assignedTo = v ?? ''),
                   ),
@@ -259,7 +399,9 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
       child: LabeledField(
         label: label,
         child: DropdownButtonFormField<String>(
-          initialValue: value.isEmpty && allowEmpty ? '' : (options.contains(value) ? value : options.first),
+          initialValue: value.isEmpty && allowEmpty
+              ? ''
+              : (options.contains(value) ? value : options.first),
           decoration: const InputDecoration(isDense: true),
           items: [
             if (allowEmpty) const DropdownMenuItem(value: '', child: Text('—')),

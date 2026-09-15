@@ -31,6 +31,11 @@ const versioned = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()
 // An org logo is public branding, so a guessable key costs nothing.
 const orgLogoKey = (orgId) => `arthaleads/logos/org-${orgId}`;
 
+// Same reasoning — a project brochure is meant to be handed to any prospect
+// who asks, so a guessable key is fine, and it's what lets a re-upload
+// overwrite the same object instead of orphaning the old one.
+const projectBrochureKey = (projectId) => `arthaleads/brochures/project-${projectId}`;
+
 // Everything else gets a random segment, because the bucket is public and a
 // public bucket serves any key somebody can guess.
 //
@@ -97,11 +102,29 @@ async function uploadCallRecording(buffer, key, contentType = "audio/mpeg") {
   return storage.put(`arthaleads/recordings/${stamped}`, buffer, contentType);
 }
 
+/**
+ * Upload a project's brochure PDF. Overwrites the project's previous one.
+ * Returns the public HTTPS URL — this is what the WhatsApp AI agent sends
+ * when its Share Brochure permission is on (see whatsappRoutes.js).
+ */
+async function uploadProjectBrochure(dataUri, projectId) {
+  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  const url = await storage.put(projectBrochureKey(projectId), buffer, contentType);
+  return versioned(url);
+}
+
+/** Delete a project's brochure. Never throws — see storage.remove. */
+async function deleteProjectBrochure(projectId) {
+  return storage.remove(projectBrochureKey(projectId));
+}
+
 module.exports = {
   uploadOrgLogo,
   deleteOrgLogo,
   uploadBlogImage,
   uploadAttendanceSelfie,
   uploadCallRecording,
+  uploadProjectBrochure,
+  deleteProjectBrochure,
   isConfigured: storage.isConfigured,
 };

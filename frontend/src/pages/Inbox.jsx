@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
-  Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
+  FileText, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -69,14 +69,34 @@ function avatarTint(seed) {
   return { color: fg, background: bg };
 }
 
-function Avatar({ name, seed, size = 40, badge = null }) {
+// WhatsApp exposes no way to fetch a contact's real profile photo, so the
+// avatar circle's only other job is initials — this is what actually uses
+// that otherwise-permanently-empty space. Score/label come from the same
+// rule-based scorer the Dashboard's "Hot Today" widget already uses.
+function scoreTier(score) {
+  if (score == null) return null;
+  if (score >= 80) return { color: "#dc2626", label: "Hot" };
+  if (score >= 60) return { color: "#d97706", label: "Warm" };
+  if (score >= 40) return { color: "#2563eb", label: "Lukewarm" };
+  return { color: "#6b7280", label: "Cold" };
+}
+
+function Avatar({ name, seed, size = 40, badge = null, score = null }) {
   const tint = avatarTint(seed || name);
+  const tier = scoreTier(score);
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <div className="w-full h-full rounded-full flex items-center justify-center font-bold"
-        style={{ ...tint, fontSize: size <= 32 ? 10 : 12 }}>
+        style={{ ...tint, fontSize: size <= 32 ? 10 : 12, ...(tier ? { boxShadow: `0 0 0 2px ${tier.color}` } : {}) }}>
         {initials(name)}
       </div>
+      {tier && (
+        <span className="absolute -bottom-1 -left-1 min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm"
+          title={`Lead score: ${score} · ${tier.label}`}
+          style={{ background: tier.color, color: "#fff", border: "2px solid var(--app-card-solid)" }}>
+          {score}
+        </span>
+      )}
       {badge}
     </div>
   );
@@ -137,7 +157,7 @@ function ConvItem({ conv, active, onClick }) {
         borderLeft: `3px solid ${active ? "var(--app-primary)" : "transparent"}`,
         background: active ? "rgba(var(--app-primary-rgb),0.07)" : undefined,
       }}>
-      <Avatar name={name} seed={conv.contactPhone} badge={conv.botEnabled && (
+      <Avatar name={name} seed={conv.contactPhone} score={conv.leadId?._score} badge={conv.botEnabled && (
         <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
           style={{ background: "#22c55e", border: "2px solid var(--app-card-solid)" }}>
           <Bot className="w-2 h-2 text-white" />
@@ -190,7 +210,22 @@ function Bubble({ msg }) {
         </p>
       )}
       <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${isOut ? "rounded-tr-[4px] wa-bubble-out" : "rounded-tl-[4px] wa-bubble-in"}`}>
-        <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
+        {msg.mediaType === "image" && msg.mediaUrl && (
+          <img src={msg.mediaUrl} alt={msg.body || "Photo"}
+            className="rounded-xl mb-1.5 max-w-full max-h-64 object-cover"
+            loading="lazy" />
+        )}
+        {msg.mediaType === "document" && msg.mediaUrl && (
+          <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 mb-1.5 transition hover:opacity-80"
+            style={{ background: "rgba(0,0,0,0.05)" }}>
+            <FileText className="w-6 h-6 shrink-0" style={{ color: "#ef4444" }} />
+            <span className="text-xs font-semibold truncate">{msg.body || "Document"}</span>
+          </a>
+        )}
+        {msg.body && (msg.mediaType === "text" || !msg.mediaType || (msg.mediaType !== "image" && msg.mediaType !== "document")) && (
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
+        )}
       </div>
       <div className="flex items-center gap-1 mt-1 px-1">
         <span className="text-[10px] text-app-soft">{fmtClock(msg.timestamp)}</span>
@@ -309,6 +344,15 @@ export default function Inbox() {
     finally { setLoadingMsgs(false); }
   }, []);
 
+  const fetchConversationDetails = useCallback(async (id) => {
+    if (!id) return;
+    try {
+      const { data } = await api.get(`/whatsapp/conversations/${id}`);
+      if (!data?.conversation) return;
+      setConversations((prev) => prev.map((c) => (c._id === id ? { ...c, ...data.conversation } : c)));
+    } catch {}
+  }, []);
+
   useEffect(() => {
     if (activeId) {
       fetchMessages(activeId);
@@ -339,6 +383,7 @@ export default function Inbox() {
     setMessages([]);
     setLastInbound(undefined);
     setMsgInput("");
+    fetchConversationDetails(id);
   };
 
   const needCredits = () => {
@@ -537,11 +582,17 @@ export default function Inbox() {
             <button className="md:hidden p-1 rounded-lg hover:bg-black/5" onClick={() => setActiveId(null)} title="Back to list">
               <X className="w-4 h-4 text-app-soft" />
             </button>
-            <Avatar name={displayName(activeConv)} seed={activeConv?.contactPhone} />
+            <Avatar name={displayName(activeConv)} seed={activeConv?.contactPhone} score={activeConv?.leadId?._score} />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-sm font-bold text-app truncate">{displayName(activeConv)}</p>
                 {lead?.status && <StatusBadge status={lead.status} />}
+                {lead?._score != null && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ color: scoreTier(lead._score)?.color, background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                    Score {lead._score}
+                  </span>
+                )}
                 {priorityText && <span className="text-[11px] text-app-soft">· {priorityText}</span>}
               </div>
               <p className="text-[11px] text-app-soft truncate">

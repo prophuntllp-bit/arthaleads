@@ -48,6 +48,14 @@ const waAgentSchema = new mongoose.Schema(
     // Full override. When set, everything above is ignored.
     systemPrompt: { type: String, default: "" },
 
+    // ── Media permission ─────────────────────────────────────────────────────
+    // Off by default. Some tenants deliberately don't want prices, photos or
+    // documents going out before a human has qualified the lead themselves —
+    // this is their gate for it, independent of whether the project actually
+    // has photos/a brochure uploaded (buildProjectGroundedPrompt checks both).
+    shareProjectPhotos: { type: Boolean, default: false },
+    shareBrochure:      { type: Boolean, default: false },
+
     // A hint in the prompt, not a translation layer — the model answers in
     // whatever the customer writes unless told otherwise.
     language: { type: String, default: "auto" },

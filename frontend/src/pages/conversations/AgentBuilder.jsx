@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Sparkles, Building2, Megaphone, Plus, X, Check, Loader2,
-  ChevronDown, MessageSquare, Send, AlertTriangle, Eye, Trash2,
+  ChevronDown, MessageSquare, Send, AlertTriangle, Eye, Trash2, Image as ImageIcon,
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
@@ -51,6 +51,7 @@ export default function AgentBuilder() {
     name: "", description: "", status: "draft", greeting: "",
     businessContext: "", groundRules: "", projectIds: [],
     systemPrompt: "", language: "auto", adIds: [],
+    shareProjectPhotos: false, shareBrochure: false,
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -78,6 +79,7 @@ export default function AgentBuilder() {
           projectIds: (a.projectIds || []).map((p) => String(p?._id || p)),
           systemPrompt: a.systemPrompt || "", language: a.language || "auto",
           adIds: a.adIds || [],
+          shareProjectPhotos: a.shareProjectPhotos === true, shareBrochure: a.shareBrochure === true,
         });
         setShowAdvanced(!!a.systemPrompt);
         setReadiness(a.readiness);
@@ -302,6 +304,41 @@ export default function AgentBuilder() {
                 </span>
               </div>
             )}
+          </div>
+
+          <div className="card p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+              <h3 className="text-base font-bold text-app">What it can send</h3>
+            </div>
+            <p className="text-sm text-app-soft">
+              Off by default. Some teams want a human to qualify a lead before anything visual goes out —
+              this is that gate, separate from what the assistant is allowed to talk about.
+            </p>
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+              <input type="checkbox" className="mt-0.5 shrink-0"
+                checked={form.shareProjectPhotos} onChange={(e) => set({ shareProjectPhotos: e.target.checked })} />
+              <span>
+                <span className="text-app font-semibold block">Can send project photos</span>
+                <span className="text-xs text-app-soft">
+                  Only for projects that actually have photos uploaded — add them on the Projects page.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+              <input type="checkbox" className="mt-0.5 shrink-0"
+                checked={form.shareBrochure} onChange={(e) => set({ shareBrochure: e.target.checked })} />
+              <span>
+                <span className="text-app font-semibold block">Can send the brochure (PDF)</span>
+                <span className="text-xs text-app-soft">
+                  Only for projects that have a brochure uploaded — add one on the Projects page.
+                </span>
+              </span>
+            </label>
+            <p className="text-xs text-app-soft rounded-xl px-3 py-2" style={{ background: "var(--app-surface-low)" }}>
+              Works on the direct Arthaleads connection only — not on AiSensy, Wati or Interakt. The
+              assistant only ever sends what's relevant to what was just discussed, never on the first reply.
+            </p>
           </div>
 
           <div className="card p-5 space-y-3">

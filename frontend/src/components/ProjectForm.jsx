@@ -1,11 +1,19 @@
 ﻿// components/ProjectForm.jsx
 import { useEffect, useRef, useState } from "react";
 import { Modal, Spinner, AppDatePicker, SmartImage } from "./UI";
-import { ChevronDown, ImageOff, Plus, Search, Upload, X } from "lucide-react";
+import { ChevronDown, FileText, ImageOff, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
-const BHK_OPTIONS = ["1BHK", "2BHK", "3BHK", "4BHK", "4BHK+", "Studio", "Duplex", "Penthouse"];
+const PROJECT_TYPE_GROUPS = {
+  Apartment: ["1BHK", "2BHK", "3BHK", "4BHK", "4BHK+", "5BHK+", "Studio", "Duplex", "Penthouse"],
+  Plot: ["Residential Plot", "Farm Plot", "NA Plot", "Collector NA Plot", "Bungalow Plot", "Commercial Plot", "Agricultural Land"],
+  Villa: ["2BHK Villa", "3BHK Villa", "4BHK Villa", "5BHK+ Villa", "Row House", "Twin Bungalow", "Independent Villa"],
+  Commercial: ["Office Space", "Shop", "Showroom", "Retail Space", "Co-working Space", "Commercial Unit"],
+};
+
+const PROPERTY_TYPES = Object.keys(PROJECT_TYPE_GROUPS);
+const BHK_OPTIONS = PROJECT_TYPE_GROUPS.Apartment;
 
 const AMENITY_OPTIONS = [
   "Swimming Pool", "Gymnasium", "Clubhouse", "24/7 Security", "CCTV Surveillance",
@@ -19,7 +27,7 @@ const AMENITY_OPTIONS = [
 const empty = {
   name: "", description: "", location: "",
   images: [], priceMin: "", priceMax: "",
-  bhkTypes: [], area: "", amenities: [],
+  propertyType: "Apartment", unitTypes: [], bhkTypes: [], area: "", amenities: [],
   possessionDate: "", reraNumber: "",
   assignedTo: [], // array of { _id, name } objects for display
 };
@@ -29,6 +37,8 @@ function toForm(p) {
   return {
     name: p.name || "", description: p.description || "", location: p.location || "",
     images: p.images || [], priceMin: p.priceMin || "", priceMax: p.priceMax || "",
+    propertyType: p.propertyType || inferPropertyType(p.unitTypes || p.bhkTypes || []),
+    unitTypes: p.unitTypes?.length ? p.unitTypes : p.bhkTypes || [],
     bhkTypes: p.bhkTypes || [], area: p.area || "", amenities: p.amenities || [],
     possessionDate: p.possessionDate ? p.possessionDate.slice(0, 10) : "",
     reraNumber: p.reraNumber || "",
@@ -37,6 +47,14 @@ function toForm(p) {
       ? p.assignedTo.map((m) => (typeof m === "object" ? { _id: m._id, name: m.name } : { _id: m, name: m }))
       : [],
   };
+}
+
+function inferPropertyType(types = []) {
+  const joined = types.join(" ").toLowerCase();
+  if (joined.includes("plot") || joined.includes("land")) return "Plot";
+  if (joined.includes("villa") || joined.includes("bungalow") || joined.includes("row house")) return "Villa";
+  if (joined.includes("office") || joined.includes("shop") || joined.includes("showroom") || joined.includes("commercial")) return "Commercial";
+  return "Apartment";
 }
 
 // Resize + compress uploaded image to a small base64 thumbnail
@@ -71,6 +89,49 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const [uploadingImg, setUploadingImg]   = useState(false);
   const [saving, setSaving]       = useState(false);
   const imgFileRef = useRef(null);
+
+  // ── Brochure ──────────────────────────────────────────────────────────────
+  // Uploaded immediately on file select rather than deferred to form submit —
+  // a PDF goes to B2 through its own dedicated endpoint (not stored as base64
+  // in the project document the way a compressed thumbnail is), and that
+  // endpoint needs a real project id that a brand-new "Add Project" form does
+  // not have yet. So this section only appears when editing an existing one.
+  const [brochureUrl, setBrochureUrl] = useState(project?.brochureUrl || "");
+  const [uploadingBrochure, setUploadingBrochure] = useState(false);
+  const brochureFileRef = useRef(null);
+
+  useEffect(() => { if (open) setBrochureUrl(project?.brochureUrl || ""); }, [open, project]);
+
+  const handleBrochureFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !project) return;
+    if (file.type !== "application/pdf") return toast.error("Brochure must be a PDF");
+    if (file.size > 10 * 1024 * 1024) return toast.error("Max 10MB for a brochure");
+    setUploadingBrochure(true);
+    try {
+      const dataUri = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { data } = await api.post(`/projects/${project._id}/brochure`, { dataUri });
+      setBrochureUrl(data.brochureUrl);
+      toast.success("Brochure uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload brochure");
+    } finally { setUploadingBrochure(false); }
+  };
+
+  const removeBrochure = async () => {
+    if (!project) return;
+    try {
+      await api.delete(`/projects/${project._id}/brochure`);
+      setBrochureUrl("");
+      toast.success("Brochure removed");
+    } catch { toast.error("Failed to remove brochure"); }
+  };
 
   // Re-sync form whenever the modal opens or the project prop changes
   useEffect(() => {
@@ -129,13 +190,24 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   const removeImage = (i) =>
     setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
 
-  // ── BHK ───────────────────────────────────────────────────────────────────
-  const toggleBhk = (val) =>
+  // ── Project type / unit configuration ─────────────────────────────────────
+  const setPropertyType = (propertyType) =>
     setForm((f) => ({
       ...f,
-      bhkTypes: f.bhkTypes.includes(val)
-        ? f.bhkTypes.filter((v) => v !== val)
-        : [...f.bhkTypes, val],
+      propertyType,
+      unitTypes: [],
+      bhkTypes: propertyType === "Apartment" ? [] : [],
+    }));
+
+  const toggleUnitType = (val) =>
+    setForm((f) => ({
+      ...f,
+      unitTypes: f.unitTypes.includes(val)
+        ? f.unitTypes.filter((v) => v !== val)
+        : [...f.unitTypes, val],
+      bhkTypes: f.propertyType === "Apartment"
+        ? (f.bhkTypes.includes(val) ? f.bhkTypes.filter((v) => v !== val) : [...f.bhkTypes, val])
+        : [],
     }));
 
   // ── Amenities ─────────────────────────────────────────────────────────────
@@ -177,6 +249,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
       priceMin: form.priceMin ? Number(form.priceMin) : 0,
       priceMax: form.priceMax ? Number(form.priceMax) : 0,
       possessionDate: form.possessionDate || null,
+      unitTypes: form.unitTypes,
+      bhkTypes: form.propertyType === "Apartment" ? form.unitTypes : [],
       // Send only IDs to the backend
       assignedTo: form.assignedTo.map((m) => m._id),
     };
@@ -197,8 +271,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={project ? "Edit Project" : "New Project"} size="xl">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal open={open} onClose={onClose} title={project ? "Edit Project" : "New Project"} size="2xl">
+      <form onSubmit={handleSubmit} className="space-y-5 -mx-2 sm:mx-0">
 
         {/* ── Basic Info ── */}
         <div className="space-y-4">
@@ -282,10 +356,47 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           )}
         </div>
 
+        {/* ── Brochure (PDF) — only once the project exists ── */}
+        {project && (
+          <div className="space-y-3">
+            <p className="stitch-kicker">Brochure</p>
+            <p className="text-xs text-app-soft">
+              Sent by the WhatsApp AI agent when its "Can send the brochure" permission is on
+              (Conversations → AI Agents).
+            </p>
+            {brochureUrl ? (
+              <div className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
+                style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                <FileText className="h-5 w-5 shrink-0" style={{ color: "#ef4444" }} />
+                <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-sm font-semibold text-app hover:underline flex-1 min-w-0 truncate">
+                  {form.name || "Brochure"}.pdf
+                </a>
+                <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
+                  className="text-xs font-semibold text-app-soft hover:text-app transition disabled:opacity-40">
+                  Replace
+                </button>
+                <button type="button" onClick={removeBrochure} title="Remove brochure"
+                  className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition shrink-0">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
+                style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
+                {uploadingBrochure ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+                {uploadingBrochure ? "Uploading…" : "Upload brochure PDF"}
+              </button>
+            )}
+            <input ref={brochureFileRef} type="file" accept="application/pdf" className="hidden" onChange={handleBrochureFile} />
+          </div>
+        )}
+
         {/* ── Pricing & Config ── */}
         <div className="space-y-4">
           <p className="stitch-kicker">Pricing & Configuration</p>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="label">Min Price (₹)</label>
               <input className="input" type="number" min="0" value={form.priceMin} onChange={set("priceMin")}
@@ -297,8 +408,9 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
                 placeholder="12000000" />
             </div>
             <div>
-              <label className="label">Area Range</label>
-              <input className="input" value={form.area} onChange={set("area")} placeholder="1200–1800 sq ft" />
+              <label className="label">{form.propertyType === "Plot" ? "Plot Area Range" : "Area Range"}</label>
+              <input className="input" value={form.area} onChange={set("area")}
+                placeholder={form.propertyType === "Plot" ? "1,000 to 10,000 sqft" : "1200–1800 sq ft"} />
             </div>
             <div>
               <label className="label">Possession Date</label>
@@ -306,22 +418,45 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             </div>
           </div>
 
-          {/* BHK chips */}
-          <div>
-            <label className="label">BHK Types Available</label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {BHK_OPTIONS.map((bhk) => (
-                <button key={bhk} type="button" onClick={() => toggleBhk(bhk)}
+          <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div>
+              <label className="label">Property Type</label>
+              <div className="grid grid-cols-2 gap-2 mt-1 sm:grid-cols-4 lg:grid-cols-1">
+                {PROPERTY_TYPES.map((type) => (
+                  <button key={type} type="button" onClick={() => setPropertyType(type)}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${
+                      form.propertyType === type
+                        ? "bg-orange-500 border-orange-500 text-white shadow-sm"
+                        : "text-app-soft hover:border-orange-500/50"
+                    }`}
+                    style={form.propertyType !== type ? { borderColor: "var(--app-border)", background: "var(--app-surface-low)" } : {}}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label">
+                {form.propertyType === "Apartment" ? "Apartment Configurations"
+                  : form.propertyType === "Plot" ? "Plot Types Available"
+                  : form.propertyType === "Villa" ? "Villa Types Available"
+                  : "Commercial Types Available"}
+              </label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {(PROJECT_TYPE_GROUPS[form.propertyType] || BHK_OPTIONS).map((unit) => (
+                  <button key={unit} type="button" onClick={() => toggleUnitType(unit)}
                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    form.bhkTypes.includes(bhk)
+                    form.unitTypes.includes(unit)
                       ? "bg-orange-500 border-orange-500 text-white"
                       : "text-app-soft hover:border-orange-500/50"
                   }`}
-                  style={!form.bhkTypes.includes(bhk) ? { borderColor: "var(--app-border)" } : {}}
+                  style={!form.unitTypes.includes(unit) ? { borderColor: "var(--app-border)" } : {}}
                 >
-                  {bhk}
+                  {unit}
                 </button>
               ))}
+              </div>
             </div>
           </div>
 

@@ -754,7 +754,21 @@ const leadService = {
     const andConditions = [];
 
     if (user.role === "agent" || query.myOnly === "true") {
-      andConditions.push({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] });
+      // An agent also sees a lead nobody owns yet — not just their own. Without
+      // this, a lead created with no assignee (org.autoAssign off, or no active
+      // agents to round-robin to at the moment — a real, current state for at
+      // least one org) was invisible to every single-agent-role user forever,
+      // until an admin went and manually assigned it. That's the exact gap that
+      // would bite a WhatsApp ad campaign: a new contact who doesn't match an
+      // existing lead becomes a brand-new unassigned Lead, and the one person
+      // actually meant to work it might never see it existed. myOnly keeps
+      // meaning "mine" for anyone toggling it deliberately — an unassigned lead
+      // is not "mine" by that reading, but it is one nobody else can claim
+      // either, so agents get to see it regardless of the toggle.
+      andConditions.push({
+        $or: [{ assignedTo: user._id }, { createdBy: user._id },
+          ...(query.myOnly === "true" && user.role !== "agent" ? [] : [{ assignedTo: null, createdBy: null }])],
+      });
     } else if (agentId && (user.role === "admin" || user.role === "manager")) {
       andConditions.push({ $or: [{ assignedTo: agentId }, { createdBy: agentId }] });
     }

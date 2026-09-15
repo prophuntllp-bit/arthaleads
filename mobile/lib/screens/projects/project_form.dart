@@ -22,16 +22,45 @@ class ProjectFormScreen extends StatefulWidget {
 }
 
 class _ProjectFormScreenState extends State<ProjectFormScreen> {
-  static const _bhkOptions = [
-    '1BHK',
-    '2BHK',
-    '3BHK',
-    '4BHK',
-    '4BHK+',
-    'Studio',
-    'Duplex',
-    'Penthouse',
-  ];
+  static const Map<String, List<String>> _typeGroups = {
+    'Apartment': [
+      '1BHK',
+      '2BHK',
+      '3BHK',
+      '4BHK',
+      '4BHK+',
+      '5BHK+',
+      'Studio',
+      'Duplex',
+      'Penthouse',
+    ],
+    'Plot': [
+      'Residential Plot',
+      'Farm Plot',
+      'NA Plot',
+      'Collector NA Plot',
+      'Bungalow Plot',
+      'Commercial Plot',
+      'Agricultural Land',
+    ],
+    'Villa': [
+      '2BHK Villa',
+      '3BHK Villa',
+      '4BHK Villa',
+      '5BHK+ Villa',
+      'Row House',
+      'Twin Bungalow',
+      'Independent Villa',
+    ],
+    'Commercial': [
+      'Office Space',
+      'Shop',
+      'Showroom',
+      'Retail Space',
+      'Co-working Space',
+      'Commercial Unit',
+    ],
+  };
   static const _amenityOptions = [
     'Swimming Pool',
     'Gymnasium',
@@ -84,10 +113,9 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
   final _imageUrl = TextEditingController();
   final _customAmenity = TextEditingController();
 
-  late final Set<String> _bhkTypes =
-      ((widget.project?['bhkTypes'] as List?) ?? [])
-          .map((e) => e.toString())
-          .toSet();
+  late String _propertyType =
+      widget.project?['propertyType'] as String? ?? 'Apartment';
+  late final Set<String> _unitTypes = _initialUnitTypes();
   late final List<String> _amenities =
       ((widget.project?['amenities'] as List?) ?? [])
           .map((e) => e.toString())
@@ -106,6 +134,16 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
   bool _saving = false;
   bool _pickingImages = false;
   bool get isEdit => widget.project != null;
+
+  Set<String> _initialUnitTypes() {
+    final units = widget.project?['unitTypes'];
+    if (units is List && units.isNotEmpty) {
+      return units.map((e) => e.toString()).toSet();
+    }
+    final bhk = widget.project?['bhkTypes'];
+    if (bhk is List) return bhk.map((e) => e.toString()).toSet();
+    return {};
+  }
 
   @override
   void dispose() {
@@ -203,7 +241,9 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
       'possessionDate': _possessionDate == null
           ? null
           : DateFormat('yyyy-MM-dd').format(_possessionDate!),
-      'bhkTypes': _bhkTypes.toList(),
+      'propertyType': _propertyType,
+      'unitTypes': _unitTypes.toList(),
+      'bhkTypes': _propertyType == 'Apartment' ? _unitTypes.toList() : [],
       'amenities': _amenities,
       'images': _images,
       'assignedTo': _assignedTo.toList(),
@@ -287,19 +327,45 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                     ),
               onTap: _pickPossessionDate,
             ),
-            _sectionTitle('BHK types'),
+            _sectionTitle('Property type'),
             Wrap(
-              spacing: 7,
-              runSpacing: 4,
-              children: _bhkOptions
+              spacing: 8,
+              runSpacing: 6,
+              children: _typeGroups.keys
                   .map(
                     (value) => FilterChip(
                       label: Text(value),
-                      selected: _bhkTypes.contains(value),
+                      selected: _propertyType == value,
+                      onSelected: (selected) => setState(() {
+                        if (!selected) return;
+                        _propertyType = value;
+                        _unitTypes.clear();
+                      }),
+                    ),
+                  )
+                  .toList(),
+            ),
+            _sectionTitle(
+              _propertyType == 'Apartment'
+                  ? 'Apartment configurations'
+                  : _propertyType == 'Plot'
+                  ? 'Plot types'
+                  : _propertyType == 'Villa'
+                  ? 'Villa types'
+                  : 'Commercial types',
+            ),
+            Wrap(
+              spacing: 7,
+              runSpacing: 4,
+              children: (_typeGroups[_propertyType] ?? const <String>[])
+                  .map(
+                    (value) => FilterChip(
+                      label: Text(value),
+                      selected: _unitTypes.contains(value),
                       onSelected: (selected) => setState(
                         () => selected
-                            ? _bhkTypes.add(value)
-                            : _bhkTypes.remove(value),
+                            ? _unitTypes.add(value)
+                            : _unitTypes.remove(value),
                       ),
                     ),
                   )

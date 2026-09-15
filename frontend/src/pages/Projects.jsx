@@ -162,10 +162,10 @@ export default function Projects() {
                   </p>
                 ) : null}
 
-                {/* BHK chips */}
-                {proj.bhkTypes?.length > 0 && (
+                {/* Unit type chips */}
+                {(proj.unitTypes?.length || proj.bhkTypes?.length) > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {proj.bhkTypes.map((b) => (
+                    {(proj.unitTypes?.length ? proj.unitTypes : proj.bhkTypes).map((b) => (
                       <span key={b} className="rounded-full border px-2 py-0.5 text-[11px] font-semibold text-app-soft"
                         style={{ borderColor: "var(--app-border)" }}>
                         {b}

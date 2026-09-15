@@ -60,6 +60,41 @@ router.get("/:id", projectController.getById);
 router.put("/:id", authorize("admin", "manager"), projectController.update);
 router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 
+// A PDF has no business sitting as base64 inside the Project document the
+// way a compressed thumbnail does — this uploads it to B2 like an org logo
+// and stores only the resulting URL. Same admin/manager gate as PUT /:id,
+// since a brochure is exactly the kind of thing that ends up in a customer's
+// hands via the AI agent (see shareBrochure on WaAgent).
+router.post("/:id/brochure", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const { dataUri } = req.body || {};
+    if (!dataUri) return res.status(400).json({ success: false, message: "dataUri is required." });
+    if (!dataUri.startsWith("data:application/pdf")) {
+      return res.status(400).json({ success: false, message: "Only PDF files are accepted for a brochure." });
+    }
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+
+    const { uploadProjectBrochure } = require("../utils/upload");
+    const url = await uploadProjectBrochure(dataUri, project._id.toString());
+    project.brochureUrl = url;
+    await project.save();
+    res.json({ success: true, brochureUrl: url });
+  } catch (err) { next(err); }
+});
+
+router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+    const { deleteProjectBrochure } = require("../utils/upload");
+    await deleteProjectBrochure(project._id.toString());
+    project.brochureUrl = "";
+    await project.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);

@@ -170,13 +170,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             .join(', ');
                         final priceMin = p['priceMin'] as num?;
                         final priceMax = p['priceMax'] as num?;
-                        final priceLabel = (priceMin == null && priceMax == null)
+                        final priceLabel =
+                            (priceMin == null && priceMax == null)
                             ? ''
                             : [
                                 if (priceMin != null) fmtBudget(priceMin),
                                 if (priceMax != null) fmtBudget(priceMax),
                               ].join(' – ');
-                        final bhk = (p['bhkTypes'] as List?)?.cast<String>() ?? [];
+                        final unitTypes =
+                            (((p['unitTypes'] as List?)?.isNotEmpty ?? false)
+                                    ? p['unitTypes'] as List
+                                    : (p['bhkTypes'] as List?) ?? [])
+                                .map((e) => e.toString())
+                                .toList();
                         return FadeSlideIn(
                           delay: Duration(milliseconds: 20 * (i % 12)),
                           child: Card(
@@ -231,13 +237,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                         ),
                                       ),
                                     ),
-                                  if (bhk.isNotEmpty)
+                                  if (unitTypes.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Wrap(
                                         spacing: 4,
                                         runSpacing: 4,
-                                        children: bhk
+                                        children: unitTypes
                                             .map(
                                               (b) => Container(
                                                 padding:
@@ -247,8 +253,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                                     ),
                                                 decoration: BoxDecoration(
                                                   border: Border.all(
-                                                    color: Theme.of(context)
-                                                        .dividerColor,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).dividerColor,
                                                   ),
                                                   borderRadius:
                                                       BorderRadius.circular(

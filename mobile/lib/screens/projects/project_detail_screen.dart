@@ -161,7 +161,12 @@ class _InfoTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final images = (project['images'] as List?)?.cast<String>() ?? [];
-    final bhk = (project['bhkTypes'] as List?)?.cast<String>() ?? [];
+    final unitTypes =
+        (((project['unitTypes'] as List?)?.isNotEmpty ?? false)
+                ? project['unitTypes'] as List
+                : (project['bhkTypes'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toList();
     final amenities = (project['amenities'] as List?)?.cast<String>() ?? [];
     final assigned = (project['assignedTo'] as List? ?? [])
         .map((u) => u is Map ? u['name'] as String? ?? '' : '')
@@ -180,10 +185,7 @@ class _InfoTab extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, i) => ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 200,
-                  child: _projectImage(images[i]),
-                ),
+                child: SizedBox(width: 200, child: _projectImage(images[i])),
               ),
             ),
           ),
@@ -200,15 +202,23 @@ class _InfoTab extends StatelessWidget {
           'Price Range',
           '${fmtBudget((project['priceMin'] as num?))} – ${fmtBudget((project['priceMax'] as num?))}',
         ),
+        _row(
+          context,
+          'Property Type',
+          project['propertyType'] as String? ?? 'Apartment',
+        ),
         _row(context, 'Area', project['area'] as String? ?? '—'),
         _row(context, 'RERA Number', project['reraNumber'] as String? ?? '—'),
-        if (bhk.isNotEmpty) ...[
+        if (unitTypes.isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text('BHK Types', style: Theme.of(context).textTheme.labelLarge),
+          Text(
+            'Available Types',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
           const SizedBox(height: 4),
           Wrap(
             spacing: 6,
-            children: bhk.map((b) => Chip(label: Text(b))).toList(),
+            children: unitTypes.map((b) => Chip(label: Text(b))).toList(),
           ),
         ],
         if (amenities.isNotEmpty) ...[
@@ -265,8 +275,7 @@ class _InfoTab extends StatelessWidget {
         return Image.memory(
           base64Decode(value.split(',').last),
           fit: BoxFit.cover,
-          errorBuilder: (_, _, _) =>
-              Container(color: Colors.grey.shade800),
+          errorBuilder: (_, _, _) => Container(color: Colors.grey.shade800),
         );
       } catch (_) {
         return Container(color: Colors.grey.shade800);
@@ -339,7 +348,10 @@ class _LeadsTabState extends State<_LeadsTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
+            content: Text(
+              res.data['message'] as String? ??
+                  'Call initiated — check your phone.',
+            ),
             backgroundColor: AppColors.success,
           ),
         );
@@ -348,7 +360,9 @@ class _LeadsTabState extends State<_LeadsTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
+            content: Text(
+              ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'),
+            ),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -607,7 +621,9 @@ class _LeadsTabState extends State<_LeadsTab> {
     try {
       List<Map<String, dynamic>> sourceLeads;
       if (_selected.isNotEmpty) {
-        sourceLeads = _leads.where((l) => _selected.contains(l['_id'])).toList();
+        sourceLeads = _leads
+            .where((l) => _selected.contains(l['_id']))
+            .toList();
       } else {
         final res = await _api.dio.get(
           '/projects/$_projectId/leads',
@@ -671,12 +687,15 @@ class _LeadsTabState extends State<_LeadsTab> {
             fmtDate(l['followUp2']),
             l['remark1'] ?? '',
             l['remark2'] ?? '',
-            if (widget.isProspective) ...[l['remark3'] ?? '', l['remark4'] ?? ''],
+            if (widget.isProspective) ...[
+              l['remark3'] ?? '',
+              l['remark4'] ?? '',
+            ],
             l['remarkNote'] ?? '',
             if (widget.isProspective) ...[
               (l['remarkUpdatedBy'] is Map
-                  ? l['remarkUpdatedBy']['name']
-                  : null) ??
+                      ? l['remarkUpdatedBy']['name']
+                      : null) ??
                   '',
               fmtDate(l['remarkUpdatedAt']),
             ],

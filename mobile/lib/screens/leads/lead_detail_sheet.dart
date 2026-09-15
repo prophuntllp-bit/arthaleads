@@ -14,7 +14,8 @@ import '../../widgets/chips.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../calls/call_history_screen.dart';
 
-const _fbErrorPattern = 'Facebook lead received but field data could not be fetched';
+const _fbErrorPattern =
+    'Facebook lead received but field data could not be fetched';
 
 /// Lead quick-detail bottom sheet with inline edits.
 /// Plain leads PATCH /leads/:id; project leads PATCH /projects/:pid/leads/:id
@@ -56,32 +57,43 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     super.dispose();
   }
 
-  bool get _isProject => lead['_type'] == 'project' && lead['projectId'] != null;
+  bool get _isProject =>
+      lead['_type'] == 'project' && lead['projectId'] != null;
 
   List<Map<String, dynamic>> get _notes =>
       ((lead['notes'] as List?) ?? []).cast<Map<String, dynamic>>();
 
-  List<Map<String, dynamic>> get _fbNotes =>
-      _notes.where((n) => (n['text'] as String? ?? '').contains(_fbErrorPattern)).toList();
+  List<Map<String, dynamic>> get _fbNotes => _notes
+      .where((n) => (n['text'] as String? ?? '').contains(_fbErrorPattern))
+      .toList();
 
-  Future<void> _patch(Map<String, dynamic> updates, {bool refreshList = false, bool usePut = false}) async {
+  Future<void> _patch(
+    Map<String, dynamic> updates, {
+    bool refreshList = false,
+    bool usePut = false,
+  }) async {
     setState(() => _saving = true);
     try {
       final res = _isProject
-          ? await _api.dio.patch('/projects/${lead['projectId']}/leads/${lead['_id']}', data: updates)
+          ? await _api.dio.patch(
+              '/projects/${lead['projectId']}/leads/${lead['_id']}',
+              data: updates,
+            )
           : usePut
-              ? await _api.dio.put('/leads/${lead['_id']}', data: updates)
-              : await _api.dio.patch('/leads/${lead['_id']}', data: updates);
+          ? await _api.dio.put('/leads/${lead['_id']}', data: updates)
+          : await _api.dio.patch('/leads/${lead['_id']}', data: updates);
       final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
       setState(() => lead = {...lead, ...updates, ...fresh});
       widget.onUpdated(lead);
       if (refreshList && mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Save failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Save failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -99,8 +111,14 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
         title: Text(label),
         content: TextField(controller: ctrl, autofocus: true, maxLines: 3),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Save')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Save'),
+          ),
         ],
       ),
     );
@@ -129,14 +147,50 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       widget.onUpdated(lead);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to save remark')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to save remark')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  /// WhatsApp marketing-consent status. Campaigns only reach leads marked
+  /// "granted" — mirrors LeadDetail.jsx's ConsentCard. Project leads have no
+  /// consent field at all (never called for those — gated by `!_isProject`).
+  Future<void> _setConsent(String status) async {
+    final current =
+        (lead['whatsappConsent'] as Map?)?['status'] as String? ?? 'unknown';
+    if (status == current || _saving) return;
+    if (status == 'granted') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Mark consent as given?'),
+          content: const Text(
+            'Only mark consent as given if this person actually agreed to receive WhatsApp marketing.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await _patch({
+      'whatsappConsent': {'status': status},
+    }, usePut: true);
   }
 
   Future<void> _pickFollowUp(String field) async {
@@ -151,9 +205,17 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     if (date == null || !mounted) return;
     final time = await showTimePicker(
       context: context,
-      initialTime: existing != null ? TimeOfDay.fromDateTime(existing) : const TimeOfDay(hour: 10, minute: 0),
+      initialTime: existing != null
+          ? TimeOfDay.fromDateTime(existing)
+          : const TimeOfDay(hour: 10, minute: 0),
     );
-    final dt = DateTime(date.year, date.month, date.day, time?.hour ?? 10, time?.minute ?? 0);
+    final dt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time?.hour ?? 10,
+      time?.minute ?? 0,
+    );
     await _patch({field: dt.toUtc().toIso8601String()});
   }
 
@@ -165,15 +227,20 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Transfer to project', style: Theme.of(ctx).textTheme.titleMedium),
+            Text(
+              'Transfer to project',
+              style: Theme.of(ctx).textTheme.titleMedium,
+            ),
             Flexible(
               child: ListView(
                 shrinkWrap: true,
                 children: widget.projects
-                    .map((p) => ListTile(
-                          title: Text(p['name'] as String? ?? ''),
-                          onTap: () => Navigator.pop(ctx, p['_id'] as String),
-                        ))
+                    .map(
+                      (p) => ListTile(
+                        title: Text(p['name'] as String? ?? ''),
+                        onTap: () => Navigator.pop(ctx, p['_id'] as String),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -189,18 +256,25 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
           data: {'toProjectId': projectId},
         );
       } else {
-        await _api.dio.post('/leads/${lead['_id']}/transfer', data: {'toProjectId': projectId});
+        await _api.dio.post(
+          '/leads/${lead['_id']}/transfer',
+          data: {'toProjectId': projectId},
+        );
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead transferred')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Lead transferred')));
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Transfer failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Transfer failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -211,8 +285,14 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     setState(() => _saving = true);
     try {
       final res = _isProject
-          ? await _api.dio.post('/projects/${lead['projectId']}/leads/${lead['_id']}/notes', data: {'text': text})
-          : await _api.dio.post('/leads/${lead['_id']}/notes', data: {'text': text});
+          ? await _api.dio.post(
+              '/projects/${lead['projectId']}/leads/${lead['_id']}/notes',
+              data: {'text': text},
+            )
+          : await _api.dio.post(
+              '/leads/${lead['_id']}/notes',
+              data: {'text': text},
+            );
       final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
       setState(() {
         lead = {...lead, ...fresh};
@@ -221,10 +301,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       widget.onUpdated(lead);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to add note')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to add note')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -253,7 +335,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
           decoration: const InputDecoration(hintText: 'Note text'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
             child: const Text('Save'),
@@ -265,16 +350,23 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
 
     setState(() => _saving = true);
     try {
-      final res = await _api.dio.patch(_noteUrl(note['_id'].toString()), data: {'text': saved});
+      final res = await _api.dio.patch(
+        _noteUrl(note['_id'].toString()),
+        data: {'text': saved},
+      );
       final fresh = (res.data['data'] as Map? ?? {}).cast<String, dynamic>();
       setState(() => lead = {...lead, ...fresh});
       widget.onUpdated(lead);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Could not update that note')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Could not update that note'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -290,7 +382,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
           'The note will be removed from this lead. This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
@@ -309,10 +404,14 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       widget.onUpdated(lead);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Could not delete that note')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Could not delete that note'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -328,15 +427,19 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       widget.onUpdated(lead);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Lead data fetched! Name, phone and email updated.')),
+          const SnackBar(
+            content: Text('Lead data fetched! Name, phone and email updated.'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Retry fetch failed')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Retry fetch failed')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _retrying = false);
@@ -361,7 +464,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: statusOptions
-              .map((s) => ListTile(title: Text(s), onTap: () => Navigator.pop(ctx, s)))
+              .map(
+                (s) => ListTile(
+                  title: Text(s),
+                  onTap: () => Navigator.pop(ctx, s),
+                ),
+              )
               .toList(),
         ),
       ),
@@ -388,7 +496,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               : '"${lead['name']}" will be moved to the Dump.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
@@ -402,22 +513,33 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     if (ok != true) return;
     try {
       if (_isProject) {
-        await _api.dio.delete('/projects/${lead['projectId']}/leads/${lead['_id']}');
+        await _api.dio.delete(
+          '/projects/${lead['projectId']}/leads/${lead['_id']}',
+        );
       } else {
-        await _api.dio.delete('/leads/bulk', data: {'ids': [lead['_id']]});
+        await _api.dio.delete(
+          '/leads/bulk',
+          data: {
+            'ids': [lead['_id']],
+          },
+        );
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(isSuperAdmin ? 'Lead deleted' : 'Moved to Dump'),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isSuperAdmin ? 'Lead deleted' : 'Moved to Dump'),
+          ),
+        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Failed to delete lead')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Failed to delete lead')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     }
   }
@@ -453,19 +575,31 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }
     setState(() => _calling = true);
     try {
-      final res = await _api.dio.post('/calls/initiate', data: callTargetPayload(lead));
+      final res = await _api.dio.post(
+        '/calls/initiate',
+        data: callTargetPayload(lead),
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(res.data['message'] as String? ?? 'Call initiated — check your phone.'),
-          backgroundColor: AppColors.success,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              res.data['message'] as String? ??
+                  'Call initiated — check your phone.',
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.')),
-          backgroundColor: AppColors.danger,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'),
+            ),
+            backgroundColor: AppColors.danger,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _calling = false);
@@ -498,7 +632,9 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   Expanded(
                     child: Text(
                       lead['name'] as String? ?? '—',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -508,17 +644,25 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.danger),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      size: 20,
+                      color: AppColors.danger,
+                    ),
                     onPressed: _deleteLead,
                   ),
-                  InkWell(onTap: _pickStatus, child: StatusChip(lead['status'] as String?)),
+                  InkWell(
+                    onTap: _pickStatus,
+                    child: StatusChip(lead['status'] as String?),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 [
                   lead['phone'] as String? ?? '',
-                  if ((lead['email'] as String? ?? '').isNotEmpty) lead['email'] as String,
+                  if ((lead['email'] as String? ?? '').isNotEmpty)
+                    lead['email'] as String,
                 ].join('  ·  '),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -527,7 +671,11 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     'Project: ${lead['projectName']}',
-                    style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               const SizedBox(height: 12),
@@ -535,10 +683,13 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: (lead['phone'] as String? ?? '').isEmpty ? null : _callLead,
+                      onPressed: (lead['phone'] as String? ?? '').isEmpty
+                          ? null
+                          : _callLead,
                       icon: _calling
                           ? const SizedBox(
-                              width: 14, height: 14,
+                              width: 14,
+                              height: 14,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.call_outlined, size: 18),
@@ -574,13 +725,19 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     onSelected: (_) => setState(() => _tab = 'info'),
                   ),
                   ChoiceChip(
-                    label: const Text('Activity', style: TextStyle(fontSize: 12)),
+                    label: const Text(
+                      'Activity',
+                      style: TextStyle(fontSize: 12),
+                    ),
                     selected: _tab == 'activity',
                     onSelected: (_) => setState(() => _tab = 'activity'),
                   ),
                   if (_hasVoice)
                     ChoiceChip(
-                      label: const Text('Transcript', style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        'Transcript',
+                        style: TextStyle(fontSize: 12),
+                      ),
                       selected: _tab == 'transcript',
                       onSelected: (_) => setState(() => _tab = 'transcript'),
                     ),
@@ -592,172 +749,275 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
               if (_tab == 'info') ...[
-              // ── Booking ──
-              Text('Booking', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: bookingOptions
-                    .map((o) => ChoiceChip(
-                          label: Text(o.label, style: const TextStyle(fontSize: 12)),
-                          selected: (lead['booking'] as String? ?? '') == o.value,
-                          selectedColor: (o.color ?? Colors.grey).withValues(alpha: 0.2),
+                // ── Booking ──
+                Text('Booking', style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: bookingOptions
+                      .map(
+                        (o) => ChoiceChip(
+                          label: Text(
+                            o.label,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          selected:
+                              (lead['booking'] as String? ?? '') == o.value,
+                          selectedColor: (o.color ?? Colors.grey).withValues(
+                            alpha: 0.2,
+                          ),
                           onSelected: (_) => _patch({'booking': o.value}),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Follow-ups ──
-              _row(
-                'Follow-up',
-                _fmtDate(lead[_followUpField] as String?),
-                onTap: () => _pickFollowUp(_followUpField),
-                icon: Icons.alarm,
-              ),
-              _row(
-                'Follow-up 2',
-                _fmtDate(lead['followUp2'] as String?),
-                onTap: () => _pickFollowUp('followUp2'),
-                icon: Icons.alarm_add,
-              ),
-
-              // ── Contact status (fixed Contacted/Not Contacted, matching web) ──
-              Text('Contact Status', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Contacted', style: TextStyle(fontSize: 12)),
-                    selected: (lead['remark'] as String? ?? '') == 'Contacted',
-                    selectedColor: AppColors.success.withValues(alpha: 0.2),
-                    onSelected: (_) => _setContactStatus('Contacted'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Not Contacted', style: TextStyle(fontSize: 12)),
-                    selected: (lead['remark'] as String? ?? '') == 'Not Contacted',
-                    selectedColor: AppColors.danger.withValues(alpha: 0.2),
-                    onSelected: (_) => _setContactStatus('Not Contacted'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // ── Remarks ──
-              _row('Remark 1', lead['remark1'] as String? ?? '—',
-                  onTap: () => _editText('remark1', 'Remark 1'), icon: Icons.notes),
-              _row('Remark 2', lead['remark2'] as String? ?? '—',
-                  onTap: () => _editText('remark2', 'Remark 2'), icon: Icons.notes),
-              // Remark 3/4 only exist on project leads — the plain-lead PATCH
-              // route's allow-list doesn't support them (would 400).
-              if (_isProject) ...[
-                _row('Remark 3', lead['remark3'] as String? ?? '—',
-                    onTap: () => _editText('remark3', 'Remark 3'), icon: Icons.notes),
-                _row('Remark 4', lead['remark4'] as String? ?? '—',
-                    onTap: () => _editText('remark4', 'Remark 4'), icon: Icons.notes),
-              ],
-
-              // ── Read-only info (plain leads only — LeadDetail.jsx's Info tab) ──
-              if (!_isProject) ...[
-                if ((lead['propertyType'] as String? ?? '').isNotEmpty)
-                  _row('Property Type', lead['propertyType'] as String, icon: Icons.home_outlined),
-                if ((lead['bhk'] as String? ?? '').isNotEmpty)
-                  _row('BHK', lead['bhk'] as String, icon: Icons.meeting_room_outlined),
-                if ((lead['purpose'] as String? ?? '').isNotEmpty)
-                  _row('Purpose', lead['purpose'] as String, icon: Icons.flag_outlined),
-                if ((lead['preferredLocation'] as String? ?? '').isNotEmpty)
-                  _row('Preferred Location', lead['preferredLocation'] as String, icon: Icons.place_outlined),
-                if ((lead['streetAddress'] as String? ?? '').isNotEmpty)
-                  _row('Street Address', lead['streetAddress'] as String, icon: Icons.signpost_outlined),
-                if ((lead['city'] as String? ?? '').isNotEmpty)
-                  _row('City', lead['city'] as String, icon: Icons.location_city_outlined),
-                _row('Source', lead['source'] as String? ?? '—', icon: FontAwesomeIcons.globe.data),
-                if (budget != null && (budget['min'] != null || budget['max'] != null))
-                  _row(
-                    'Budget',
-                    '${fmtBudget(budget['min'] as num?)} – ${fmtBudget(budget['max'] as num?)}',
-                    icon: Icons.currency_rupee,
-                  ),
-                if ((lead['requirements'] as String? ?? '').isNotEmpty)
-                  _row('Requirements', lead['requirements'] as String, icon: Icons.list_alt),
-                _row('Created On', _fmtDate(lead['createdAt'] as String?), icon: Icons.event_note_outlined),
-                if ((lead['followUpNote'] as String? ?? '').isNotEmpty)
-                  _row('Follow-up Note', lead['followUpNote'] as String, icon: Icons.sticky_note_2_outlined),
-                if ((lead['remarkNote'] as String? ?? '').isNotEmpty)
-                  _row('Remark / Imported Info', lead['remarkNote'] as String, icon: Icons.description_outlined),
-                if ((lead['formResponses'] as List?)?.isNotEmpty ?? false) ...[
-                  const SizedBox(height: 8),
-                  Text('FORM QUESTIONS', style: AppText.kicker(context)),
-                  const SizedBox(height: 4),
-                  for (final item in (lead['formResponses'] as List).cast<Map<String, dynamic>>())
-                    _row(
-                      item['label'] as String? ?? '—',
-                      (item['value'] as String? ?? '').isNotEmpty ? item['value'] as String : '—',
-                    ),
-                ],
-              ],
-              if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
-                _row('Assigned to', lead['assignedToName'] as String, icon: Icons.person),
-
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _transfer,
-                      icon: const Icon(Icons.drive_file_move, size: 18),
-                      label: const Text('Transfer'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _whatsapp,
-                      icon: Icon(FontAwesomeIcons.whatsapp.data, size: 18),
-                      label: const Text('WhatsApp'),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_fbNotes.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_fbNotes.last['text'] as String? ?? '', style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: FilledButton.icon(
-                          onPressed: _retrying ? null : _retryFacebook,
-                          icon: _retrying
-                              ? const SizedBox(
-                                  width: 14, height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.refresh, size: 16),
-                          label: Text(_retrying ? 'Fetching…' : 'Retry Fetch'),
                         ),
-                      ),
-                    ],
-                  ),
+                      )
+                      .toList(),
                 ),
-              ],
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 20),
-              Text('Notes', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: 8),
-              ..._notes.reversed.map((n) => Padding(
+                // ── Follow-ups ──
+                _row(
+                  'Follow-up',
+                  _fmtDate(lead[_followUpField] as String?),
+                  onTap: () => _pickFollowUp(_followUpField),
+                  icon: Icons.alarm,
+                ),
+                _row(
+                  'Follow-up 2',
+                  _fmtDate(lead['followUp2'] as String?),
+                  onTap: () => _pickFollowUp('followUp2'),
+                  icon: Icons.alarm_add,
+                ),
+
+                // ── Contact status (fixed Contacted/Not Contacted, matching web) ──
+                Text(
+                  'Contact Status',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    ChoiceChip(
+                      label: const Text(
+                        'Contacted',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      selected:
+                          (lead['remark'] as String? ?? '') == 'Contacted',
+                      selectedColor: AppColors.success.withValues(alpha: 0.2),
+                      onSelected: (_) => _setContactStatus('Contacted'),
+                    ),
+                    ChoiceChip(
+                      label: const Text(
+                        'Not Contacted',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      selected:
+                          (lead['remark'] as String? ?? '') == 'Not Contacted',
+                      selectedColor: AppColors.danger.withValues(alpha: 0.2),
+                      onSelected: (_) => _setContactStatus('Not Contacted'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ── Remarks ──
+                _row(
+                  'Remark 1',
+                  lead['remark1'] as String? ?? '—',
+                  onTap: () => _editText('remark1', 'Remark 1'),
+                  icon: Icons.notes,
+                ),
+                _row(
+                  'Remark 2',
+                  lead['remark2'] as String? ?? '—',
+                  onTap: () => _editText('remark2', 'Remark 2'),
+                  icon: Icons.notes,
+                ),
+                // Remark 3/4 only exist on project leads — the plain-lead PATCH
+                // route's allow-list doesn't support them (would 400).
+                if (_isProject) ...[
+                  _row(
+                    'Remark 3',
+                    lead['remark3'] as String? ?? '—',
+                    onTap: () => _editText('remark3', 'Remark 3'),
+                    icon: Icons.notes,
+                  ),
+                  _row(
+                    'Remark 4',
+                    lead['remark4'] as String? ?? '—',
+                    onTap: () => _editText('remark4', 'Remark 4'),
+                    icon: Icons.notes,
+                  ),
+                ],
+
+                // ── Read-only info (plain leads only — LeadDetail.jsx's Info tab) ──
+                if (!_isProject) ...[
+                  if ((lead['propertyType'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Property Type',
+                      lead['propertyType'] as String,
+                      icon: Icons.home_outlined,
+                    ),
+                  if ((lead['bhk'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'BHK',
+                      lead['bhk'] as String,
+                      icon: Icons.meeting_room_outlined,
+                    ),
+                  if ((lead['purpose'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Purpose',
+                      lead['purpose'] as String,
+                      icon: Icons.flag_outlined,
+                    ),
+                  if ((lead['preferredLocation'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Preferred Location',
+                      lead['preferredLocation'] as String,
+                      icon: Icons.place_outlined,
+                    ),
+                  if ((lead['streetAddress'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Street Address',
+                      lead['streetAddress'] as String,
+                      icon: Icons.signpost_outlined,
+                    ),
+                  if ((lead['city'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'City',
+                      lead['city'] as String,
+                      icon: Icons.location_city_outlined,
+                    ),
+                  _row(
+                    'Source',
+                    lead['source'] as String? ?? '—',
+                    icon: FontAwesomeIcons.globe.data,
+                  ),
+                  if (budget != null &&
+                      (budget['min'] != null || budget['max'] != null))
+                    _row(
+                      'Budget',
+                      '${fmtBudget(budget['min'] as num?)} – ${fmtBudget(budget['max'] as num?)}',
+                      icon: Icons.currency_rupee,
+                    ),
+                  if ((lead['requirements'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Requirements',
+                      lead['requirements'] as String,
+                      icon: Icons.list_alt,
+                    ),
+                  _row(
+                    'Created On',
+                    _fmtDate(lead['createdAt'] as String?),
+                    icon: Icons.event_note_outlined,
+                  ),
+                  if ((lead['followUpNote'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Follow-up Note',
+                      lead['followUpNote'] as String,
+                      icon: Icons.sticky_note_2_outlined,
+                    ),
+                  if ((lead['remarkNote'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Remark / Imported Info',
+                      lead['remarkNote'] as String,
+                      icon: Icons.description_outlined,
+                    ),
+                  if ((lead['formResponses'] as List?)?.isNotEmpty ??
+                      false) ...[
+                    const SizedBox(height: 8),
+                    Text('FORM QUESTIONS', style: AppText.kicker(context)),
+                    const SizedBox(height: 4),
+                    for (final item
+                        in (lead['formResponses'] as List)
+                            .cast<Map<String, dynamic>>())
+                      _row(
+                        item['label'] as String? ?? '—',
+                        (item['value'] as String? ?? '').isNotEmpty
+                            ? item['value'] as String
+                            : '—',
+                      ),
+                  ],
+                  const SizedBox(height: 12),
+                  _consentCard(),
+                ],
+                if ((lead['assignedToName'] as String? ?? '').isNotEmpty)
+                  _row(
+                    'Assigned to',
+                    lead['assignedToName'] as String,
+                    icon: Icons.person,
+                  ),
+
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _transfer,
+                        icon: const Icon(Icons.drive_file_move, size: 18),
+                        label: const Text('Transfer'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _whatsapp,
+                        icon: Icon(FontAwesomeIcons.whatsapp.data, size: 18),
+                        label: const Text('WhatsApp'),
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (_fbNotes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.amber.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _fbNotes.last['text'] as String? ?? '',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: FilledButton.icon(
+                            onPressed: _retrying ? null : _retryFacebook,
+                            icon: _retrying
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.refresh, size: 16),
+                            label: Text(
+                              _retrying ? 'Fetching…' : 'Retry Fetch',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+                Text('Notes', style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                ..._notes.reversed.map(
+                  (n) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Container(
                       width: double.infinity,
@@ -765,7 +1025,11 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).cardTheme.color,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Theme.of(context).dividerTheme.color ?? Colors.transparent),
+                        border: Border.all(
+                          color:
+                              Theme.of(context).dividerTheme.color ??
+                              Colors.transparent,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -792,11 +1056,18 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                                     iconSize: 16,
                                     tooltip: 'Note options',
                                     enabled: !_saving,
-                                    onSelected: (v) =>
-                                        v == 'edit' ? _editNote(n) : _deleteNote(n),
+                                    onSelected: (v) => v == 'edit'
+                                        ? _editNote(n)
+                                        : _deleteNote(n),
                                     itemBuilder: (_) => const [
-                                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                                      PopupMenuItem(
+                                        value: 'edit',
+                                        child: Text('Edit'),
+                                      ),
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text('Delete'),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -805,22 +1076,29 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                         ],
                       ),
                     ),
-                  )),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _noteCtrl,
-                      minLines: 1,
-                      maxLines: 3,
-                      decoration: const InputDecoration(hintText: 'Add a note for the sales team…', isDense: true),
-                    ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(onPressed: _addNote, icon: const Icon(Icons.send, size: 18)),
-                ],
-              ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _noteCtrl,
+                        minLines: 1,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          hintText: 'Add a note for the sales team…',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: _addNote,
+                      icon: const Icon(Icons.send, size: 18),
+                    ),
+                  ],
+                ),
               ], // if (_tab == 'info')
             ],
           ),
@@ -829,8 +1107,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               top: 4,
               right: 16,
               child: SizedBox(
-                width: 18, height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
               ),
             ),
         ],
@@ -838,7 +1120,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     );
   }
 
-  Widget _row(String label, String value, {VoidCallback? onTap, IconData? icon}) {
+  Widget _row(
+    String label,
+    String value, {
+    VoidCallback? onTap,
+    IconData? icon,
+  }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
@@ -850,14 +1137,108 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     );
   }
 
-  Color _sentimentColor(String? s) =>
-      s == 'positive' ? AppColors.success : s == 'negative' ? AppColors.danger : Colors.grey;
+  static const _consentStates = [
+    ('granted', 'Given', Color(0xFF15803D), Color(0x2222C55E)),
+    ('unknown', 'Not recorded', Colors.grey, Color(0x11888888)),
+    ('denied', 'Refused', Color(0xFFB91C1C), Color(0x22EF4444)),
+  ];
 
-  String _sentimentLabel(String? s) =>
-      s == 'positive' ? 'Positive' : s == 'negative' ? 'Negative' : 'Neutral';
+  static const _consentSourceLabels = {
+    'manual': 'recorded by your team',
+    'qr-form': 'ticked on the enquiry form',
+    'imported': 'imported',
+    'whatsapp-reply': 'from a WhatsApp reply',
+  };
 
-  Color _callStatusColor(String? s) =>
-      s == 'answered' ? AppColors.success : s == 'missed' ? AppColors.danger : Colors.orange;
+  /// Mirrors LeadDetail.jsx's ConsentCard — plain leads only, project leads
+  /// have no consent field and campaigns never reach them.
+  Widget _consentCard() {
+    final consent = (lead['whatsappConsent'] as Map?) ?? {};
+    final current = consent['status'] as String? ?? 'unknown';
+    final meta = _consentStates.firstWhere(
+      (s) => s.$1 == current,
+      orElse: () => _consentStates[1],
+    );
+    final capturedAt = consent['capturedAt'] as String?;
+    final source = consent['source'] as String?;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('WHATSAPP MARKETING CONSENT', style: AppText.kicker(context)),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: meta.$4,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              meta.$2,
+              style: TextStyle(
+                color: meta.$3,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          if (current != 'unknown' && capturedAt != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              '${_consentSourceLabels[source] ?? source ?? 'recorded'} · ${_fmtDate(capturedAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ] else if (current == 'unknown') ...[
+            const SizedBox(height: 6),
+            Text(
+              'Campaigns will skip this lead until consent is recorded.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _consentStates.where((s) => s.$1 != current).map((s) {
+              final label = s.$1 == 'granted'
+                  ? 'Mark as given'
+                  : s.$1 == 'denied'
+                  ? 'Mark as refused'
+                  : 'Clear';
+              return OutlinedButton(
+                onPressed: _saving ? null : () => _setConsent(s.$1),
+                child: Text(label, style: const TextStyle(fontSize: 12)),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _sentimentColor(String? s) => s == 'positive'
+      ? AppColors.success
+      : s == 'negative'
+      ? AppColors.danger
+      : Colors.grey;
+
+  String _sentimentLabel(String? s) => s == 'positive'
+      ? 'Positive'
+      : s == 'negative'
+      ? 'Negative'
+      : 'Neutral';
+
+  Color _callStatusColor(String? s) => s == 'answered'
+      ? AppColors.success
+      : s == 'missed'
+      ? AppColors.danger
+      : Colors.orange;
 
   /// Mirrors LeadDetail.jsx's `tab === "activity"` — reverse-chronological
   /// activity feed with inline call-specific rendering (status/sentiment
@@ -897,8 +1278,13 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     const SizedBox(width: 6),
                   ],
                   Expanded(
-                    child: Text(item['description'] as String? ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    child: Text(
+                      item['description'] as String? ?? '',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -912,22 +1298,38 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 Wrap(
                   spacing: 6,
                   children: [
-                    if (status != null) Pill(status.toUpperCase(), _callStatusColor(status)),
-                    if (sentiment != null) Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
+                    if (status != null)
+                      Pill(status.toUpperCase(), _callStatusColor(status)),
+                    if (sentiment != null)
+                      Pill(
+                        _sentimentLabel(sentiment),
+                        _sentimentColor(sentiment),
+                      ),
                   ],
                 ),
               ],
-              if (isCall && recordingUrl != null && recordingUrl.isNotEmpty) ...[
+              if (isCall &&
+                  recordingUrl != null &&
+                  recordingUrl.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 InkWell(
-                  onTap: () => launchUrl(Uri.parse(recordingUrl), mode: LaunchMode.externalApplication),
+                  onTap: () => launchUrl(
+                    Uri.parse(recordingUrl),
+                    mode: LaunchMode.externalApplication,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.mic, size: 14, color: Colors.orange),
                       const SizedBox(width: 4),
-                      Text('Play recording',
-                          style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Play recording',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -940,17 +1342,29 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   decoration: BoxDecoration(
                     color: Colors.indigo.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.indigo.withValues(alpha: 0.18)),
+                    border: Border.all(
+                      color: Colors.indigo.withValues(alpha: 0.18),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.auto_awesome, size: 12, color: Colors.indigo),
+                          const Icon(
+                            Icons.auto_awesome,
+                            size: 12,
+                            color: Colors.indigo,
+                          ),
                           const SizedBox(width: 4),
-                          const Text('AI SUMMARY',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.indigo)),
+                          const Text(
+                            'AI SUMMARY',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.indigo,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -963,11 +1377,17 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                 const SizedBox(height: 8),
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
-                  title: const Text('View Transcript', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  title: const Text(
+                    'View Transcript',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
                   childrenPadding: const EdgeInsets.only(bottom: 8),
                   expandedAlignment: Alignment.centerLeft,
                   children: [
-                    Text(transcript!, style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      transcript!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ],
                 ),
               ],
@@ -986,12 +1406,15 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     final vc = _voiceCall!;
     final sentiment = vc['sentiment'] as String?;
     final secs = (vc['durationSeconds'] as num?)?.toInt() ?? 0;
-    final dur = secs > 0 ? '${secs ~/ 60}m ${secs % 60}s'.replaceFirst('0m ', '') : null;
+    final dur = secs > 0
+        ? '${secs ~/ 60}m ${secs % 60}s'.replaceFirst('0m ', '')
+        : null;
     final channel = vc['channel'] as String?;
     final language = vc['language'] as String?;
     final agentName = vc['agentName'] as String?;
     final turns = ((vc['transcript'] as List?) ?? []).cast<Map>();
-    final extracted = (vc['extractedData'] as Map?)
+    final extracted =
+        (vc['extractedData'] as Map?)
             ?.cast<String, dynamic>()
             .entries
             .where((e) => e.value != null && e.value != '')
@@ -1003,11 +1426,14 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
         spacing: 6,
         runSpacing: 6,
         children: [
-          if ((sentiment ?? '').isNotEmpty) Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
+          if ((sentiment ?? '').isNotEmpty)
+            Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
           if (dur != null) Pill(dur, Colors.grey, icon: Icons.schedule),
           if ((channel ?? '').isNotEmpty) Pill(channel!, Colors.grey),
-          if ((language ?? '').isNotEmpty) Pill(language!.toUpperCase(), Colors.grey),
-          if ((agentName ?? '').isNotEmpty) Pill(agentName!, Colors.grey, icon: Icons.mic),
+          if ((language ?? '').isNotEmpty)
+            Pill(language!.toUpperCase(), Colors.grey),
+          if ((agentName ?? '').isNotEmpty)
+            Pill(agentName!, Colors.grey, icon: Icons.mic),
         ],
       ),
       if (extracted.isNotEmpty) ...[
@@ -1023,15 +1449,25 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('CAPTURED DETAILS',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+              const Text(
+                'CAPTURED DETAILS',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 8),
               for (final e in extracted)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: _row(
-                    e.key.replaceAll('_', ' ').replaceAllMapped(
-                        RegExp(r'\b\w'), (m) => m.group(0)!.toUpperCase()),
+                    e.key
+                        .replaceAll('_', ' ')
+                        .replaceAllMapped(
+                          RegExp(r'\b\w'),
+                          (m) => m.group(0)!.toUpperCase(),
+                        ),
                     e.value.toString(),
                   ),
                 ),
@@ -1041,34 +1477,54 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
       ],
       const SizedBox(height: 12),
       if (turns.isEmpty)
-        const Text('No transcript — this call came in without a conversation transcript.')
+        const Text(
+          'No transcript — this call came in without a conversation transcript.',
+        )
       else
         for (final turn in turns)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Align(
-              alignment: (turn['speaker'] == 'Caller') ? Alignment.centerLeft : Alignment.centerRight,
+              alignment: (turn['speaker'] == 'Caller')
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
               child: Container(
-                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: (turn['speaker'] == 'Caller') ? t.surfaceLow : AppColors.primary.withValues(alpha: 0.1),
+                  color: (turn['speaker'] == 'Caller')
+                      ? t.surfaceLow
+                      : AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: (turn['speaker'] == 'Caller') ? t.border : AppColors.primary.withValues(alpha: 0.22),
+                    color: (turn['speaker'] == 'Caller')
+                        ? t.border
+                        : AppColors.primary.withValues(alpha: 0.22),
                   ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text((turn['speaker'] as String? ?? '—').toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: (turn['speaker'] == 'Caller') ? t.textSoft : AppColors.primary,
-                        )),
+                    Text(
+                      (turn['speaker'] as String? ?? '—').toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: (turn['speaker'] == 'Caller')
+                            ? t.textSoft
+                            : AppColors.primary,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(turn['text'] as String? ?? '', style: const TextStyle(fontSize: 13)),
+                    Text(
+                      turn['text'] as String? ?? '',
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ],
                 ),
               ),

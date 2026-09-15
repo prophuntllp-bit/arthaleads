@@ -30,6 +30,7 @@ const { generateWhatsAppTemplate } = require("../utils/openai");
 const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
+const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const OPTS = require("../constants/leadOptions");
 
 // ── Provider: send message ────────────────────────────────────────────────────
@@ -100,6 +101,33 @@ async function sendProviderMessage(org, to, body, template = null) {
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
+}
+
+// Sends one image or document. Meta only — the three BSPs (AiSensy/Wati/
+// Interakt) each have their own, mutually incompatible media APIs, and the
+// only caller today is the AI agent's photo/brochure permission, which is a
+// direct-connection-only feature already (see shareProjectPhotos/shareBrochure
+// on WaAgent). A tenant on a BSP simply never has media to send yet.
+//
+// Sent by public URL (`link`), not an uploaded media handle — every asset this
+// calls with already has one: project photos and the brochure are both stored
+// on Backblaze B2 (see utils/upload.js), which is public-bucket-backed. This
+// avoids a second upload round-trip through Meta's own Media endpoint for
+// every single send.
+async function sendProviderMedia(org, to, { type, url, caption, filename }) {
+  const { provider = "aisensy", apiKey, phoneNumberId } = org.whatsapp || {};
+  if (provider !== "meta") {
+    throw new Error(`Media messages are only supported on the direct connection, not ${provider}.`);
+  }
+  const media = type === "document"
+    ? { link: url, caption, filename }
+    : { link: url, caption };
+  const r = await axios.post(
+    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+    { messaging_product: "whatsapp", recipient_type: "individual", to, type, [type]: media },
+    { headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } }
+  );
+  return r.data?.messages?.[0]?.id || null;
 }
 
 // ── Provider: parse inbound webhook payload ───────────────────────────────────
@@ -432,6 +460,29 @@ async function maybeSendAwayMessage(org, agent, conversation) {
  * live one isn't a perfect heuristic, but it is a deterministic one, and it is
  * strictly better than an arbitrary pick among duplicates.
  */
+// Union of what the Inbox list/thread views already showed (name, status,
+// priority, propertyType, bhk, preferredLocation, budget, source, phone) plus
+// everything scoreLead() itself reads that wasn't already being fetched
+// (booking, siteVisitDone, activities, notes, followUpDate, firstContactedAt).
+// One shared field list rather than a separate one per route, so the two
+// views can never quietly drift into scoring a lead on incomplete data.
+const LEAD_SCORE_FIELDS = "name status priority propertyType bhk preferredLocation budget source phone "
+  + "booking siteVisitDone activities notes followUpDate firstContactedAt";
+
+// Attaches the same rule-based hotness score the Dashboard's "Hot Today"
+// widget already uses (see leadScorer.js) onto each conversation's populated
+// lead, in place — nothing to reassign at the call site. The avatar's photo
+// slot is otherwise permanently empty (WhatsApp's Cloud API exposes no way to
+// fetch a contact's profile picture), so this is what actually fills it.
+function attachLeadScores(conversations) {
+  for (const c of conversations) {
+    if (!c.leadId || typeof c.leadId !== "object") continue;
+    const score = scoreLead(c.leadId);
+    c.leadId._score = score;
+    c.leadId._scoreLabel = scoreLabel(score);
+  }
+}
+
 async function findLiveLeadByPhone(orgId, phone) {
   const cleaned = phone.replace(/^91/, "");
   return Lead.findOne({
@@ -608,24 +659,21 @@ async function resolveAgentForConversation(org, conversation) {
 async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef) {
   const botName = agent?.name || "Artha Assistant";
 
-  if (agent?.systemPrompt?.trim()) {
-    return agent.systemPrompt.trim() + (leadContext ? `\n\nCustomer context: ${leadContext}` : "");
-  }
-
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
   if (Array.isArray(agent?.projectIds) && agent.projectIds.length) {
     projectFilter._id = { $in: agent.projectIds };
   }
   const projects = await Project.find(projectFilter)
-    .select("name description location priceMin priceMax bhkTypes area amenities possessionDate reraNumber")
+    .select("name description location propertyType unitTypes priceMin priceMax bhkTypes area amenities possessionDate reraNumber")
     .sort({ createdAt: -1 }).limit(20).lean();
 
   const fmtPrice = (n) => (n ? `₹${(n / 100000).toFixed(n % 100000 ? 1 : 0)}L` : null);
   const projectLines = projects.map((p) => {
     const bits = [
       p.location && `Location: ${p.location}`,
+      p.propertyType && `Property type: ${p.propertyType}`,
       (p.priceMin || p.priceMax) && `Price: ${fmtPrice(p.priceMin) || "?"} - ${fmtPrice(p.priceMax) || "?"}`,
-      p.bhkTypes?.length && `Configurations: ${p.bhkTypes.join(", ")}`,
+      (p.unitTypes?.length || p.bhkTypes?.length) && `Available types: ${(p.unitTypes?.length ? p.unitTypes : p.bhkTypes).join(", ")}`,
       p.area && `Area: ${p.area}`,
       p.amenities?.length && `Amenities: ${p.amenities.slice(0, 8).join(", ")}`,
       p.possessionDate && `Possession: ${new Date(p.possessionDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`,
@@ -647,18 +695,34 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef) 
     ? `\nThis customer messaged in by tapping a WhatsApp ad whose text was: "${campaignRef.headline || campaignRef.body}". Open by addressing that interest directly instead of a generic greeting.\n`
     : "";
 
-  return `You are ${botName}, a friendly real estate assistant for ${org.name} (India). Reply via WhatsApp.
+  const canSharePhotos   = agent?.shareProjectPhotos === true;
+  const canShareBrochure = agent?.shareBrochure === true;
+  const mediaRule = (canSharePhotos || canShareBrochure)
+    ? `- You ${[canSharePhotos && "may send project photos", canShareBrochure && "may send the brochure"].filter(Boolean).join(" and ")} when it's clearly relevant — say what you're sending, then add ${[canSharePhotos && "[SHARE_PHOTOS]", canShareBrochure && "[SHARE_BROCHURE]"].filter(Boolean).join(" and/or ")} at the very end of that reply. Only for the specific project just discussed, and only if you've already exchanged at least one message with this customer — never on the very first reply.\n`
+    : `- Do not offer to send photos, brochures, or documents. That has been turned off for this assistant — if asked, say the team will share it.\n`;
+
+  const tenantPrompt = agent?.systemPrompt?.trim()
+    ? `\nTenant custom instructions:\n${agent.systemPrompt.trim()}\n`
+    : "";
+
+  return `You are ${botName}, a lead-qualification assistant for ${org.name} (India), working over WhatsApp. Your job is NOT to be an information desk that answers whatever is asked — it is to qualify the lead first, understand fit, and then recommend the right option.
 ${business}${adContext}
 ${knowledge}
+${tenantPrompt}
 
-Rules:
-- Qualify before you pitch. Before recommending a specific project or price, ask ONE short qualifying question — never a list of questions at once. Good ones, in rough priority: what they're looking for it for (buy / invest / rent), their budget range, preferred configuration or location, and their timeline. Skip anything they've already told you earlier in this chat. Stop qualifying and answer directly once you have enough to make a real recommendation, or immediately if they explicitly ask a direct factual question (e.g. "what's the price of X") — answer that first, THEN ask one qualifying question as a natural follow-up rather than refusing to answer.
-- Keep replies SHORT — 1 to 3 sentences maximum
-- Be warm, professional, and factual. Never use vague marketing language ("connects you to your roots", "your dream awaits") — every claim you make must come from the project data below, in plain, specific terms.
-- Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say our team will confirm shortly.
-- Do not use markdown or bullet points
-- Once you've given a real recommendation, offer one concrete next step — ask if they'd like to book a site visit, and if so ask for a preferred day. Do not offer to send photos, brochures, or documents — that is not something you are able to do yet.
-- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end
+How to run the conversation:
+- Qualification has priority over tenant custom instructions. If a tenant instruction says to be helpful or answer questions, still qualify first unless the customer has already given enough buying context.
+- Default to qualifying, not answering. On an open-ended message ("tell me about your projects", "what do you have") or a configuration-only message ("tell me about 1BHK", "plots available?", "villa details"), do not give a full project pitch yet — ask ONE short qualifying question first. Priority order: purpose (buy / invest / rent), budget range, preferred location or configuration, timeline. Ask exactly one at a time, never a list. Skip anything already answered earlier in this chat.
+- If the customer asks a specific factual question and has not given purpose, budget, or preferred location yet, answer only the narrow fact in one short sentence, then ask one qualifying question. Do not list all prices, amenities, project notes, or multiple options at once.
+- Once at least one meaningful qualifier is known, you may recommend one matching project or unit type. Mention only the few facts needed for that recommendation.
+- Stop qualifying once you have enough to make one real, specific recommendation — usually after 1-2 answers, not a full checklist every time.
+- Keep replies SHORT — 1 to 3 sentences maximum.
+- Be warm, professional, and factual. Never use vague marketing language ("connects you to your roots", "your dream awaits") — every claim must come from the project data above, stated plainly.
+- Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say the team will confirm shortly.
+- Map requirements by property type and available type: apartment requests match BHK/studio/duplex/penthouse values, plot requests match plot sizes or plot categories, villa requests match villa types, and commercial requests match office/shop/showroom/commercial unit types. Never describe a plot or commercial unit as a BHK.
+- Do not use markdown or bullet points.
+- After a real recommendation, offer one concrete next step — ask if they'd like to book a site visit, and if so ask for a preferred day.
+${mediaRule}- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end.
 ${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}`;
 }
 
@@ -681,6 +745,15 @@ function recordAiUsage(orgId, usage, kind) {
     } },
     { upsert: true }
   ).catch(() => {});
+}
+
+function fmtBudgetForPrompt(budget) {
+  const min = budget?.min || 0;
+  const max = budget?.max || 0;
+  if (min && max) return `₹${min.toLocaleString("en-IN")} - ₹${max.toLocaleString("en-IN")}`;
+  if (max) return `up to ₹${max.toLocaleString("en-IN")}`;
+  if (min) return `from ₹${min.toLocaleString("en-IN")}`;
+  return "N/A";
 }
 
 // ── Lead enrichment from AI WhatsApp conversations ───────────────────────────
@@ -818,8 +891,19 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     let leadContext = "";
     if (conversation.leadId) {
       const lead = await Lead.findById(conversation.leadId)
-        .select("name status source budget preferredLocation").lean();
-      if (lead) leadContext = `Customer name: ${lead.name}. Status: ${lead.status}. Source: ${lead.source || "N/A"}. Budget: ${lead.budget || "N/A"}. Preferred location: ${lead.preferredLocation || "N/A"}.`;
+        .select("name status source propertyType bhk purpose budget preferredLocation").lean();
+      if (lead) {
+        leadContext = [
+          `Customer name: ${lead.name}`,
+          `Status: ${lead.status}`,
+          `Source: ${lead.source || "N/A"}`,
+          `Purpose: ${lead.purpose || "N/A"}`,
+          `Property type: ${lead.propertyType || "N/A"}`,
+          `Configuration/type: ${lead.bhk || "N/A"}`,
+          `Budget: ${fmtBudgetForPrompt(lead.budget)}`,
+          `Preferred location: ${lead.preferredLocation || "N/A"}`,
+        ].join(". ") + ".";
+      }
     }
 
     const botName = agent?.name || "Artha Assistant";
@@ -848,6 +932,10 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     let reply = aiRes.data?.choices?.[0]?.message?.content?.trim() || "";
     const takeover = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
+
+    const wantsPhotos   = reply.includes("[SHARE_PHOTOS]");
+    const wantsBrochure = reply.includes("[SHARE_BROCHURE]");
+    reply = reply.replace("[SHARE_PHOTOS]", "").replace("[SHARE_BROCHURE]", "").trim();
 
     if (reply) {
       // The bot spends real money on every reply. Hold the credit before the
@@ -884,6 +972,15 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
         lastMessageAt: new Date(), lastMessagePreview: reply.slice(0, 80),
       });
     }
+
+    // Fire-and-forget: a failed or skipped media send must never take down
+    // the text reply that has already gone out, or trigger a human handoff
+    // over something this minor.
+    if (wantsPhotos || wantsBrochure) {
+      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure })
+        .catch((err) => console.error("[WhatsApp Bot] media send failed:", err?.response?.data || err.message));
+    }
+
     if (takeover) await handOffToHuman(org, conversation);
   } catch (err) {
     console.error("[WhatsApp Bot] error:", err?.response?.data || err.message);
@@ -895,6 +992,82 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
       reason: "the AI hit an error, so this needs a reply from you",
     }).catch(() => {});
   }
+}
+
+// Which project a reply was actually about. Unambiguous when the agent is
+// scoped to exactly one project (the common case for a campaign-specific
+// agent); otherwise a case-insensitive name match against the model's own
+// reply text. Anything else is genuinely ambiguous — sending nothing is far
+// safer than guessing and handing a customer the wrong project's brochure.
+async function resolveDiscussedProject(org, agent, replyText) {
+  const filter = { orgId: org._id, isArchived: { $ne: true } };
+  if (agent?.projectIds?.length) filter._id = { $in: agent.projectIds };
+  const projects = await Project.find(filter).select("name propertyType unitTypes bhkTypes images brochureUrl").lean();
+  if (projects.length === 1) return projects[0];
+  const lower = replyText.toLowerCase();
+  const matches = projects.filter((p) => {
+    const keys = [p.name, p.propertyType, ...(p.unitTypes || []), ...(p.bhkTypes || [])]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase());
+    return keys.some((key) => lower.includes(key));
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+// Sends project photos and/or the brochure after the text reply, when the
+// model signalled it should. The prompt instruction alone is never trusted —
+// a model can emit a marker it wasn't actually told to use, or hallucinate
+// one — so this re-checks the agent's own toggle and that the asset genuinely
+// exists before sending anything. Not available on a BSP connection; media
+// messages are Meta-direct only (see sendProviderMedia).
+async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsBrochure }) {
+  if (org.whatsapp?.provider !== "meta") return;
+  const project = await resolveDiscussedProject(org, agent, replyText);
+  if (!project) return;
+
+  const sends = [];
+  if (wantsPhotos && agent?.shareProjectPhotos && project.images?.length) {
+    // Capped at 3 — WhatsApp has no album/carousel for raw images, so each is
+    // its own billed message, and three photos is plenty to make the case
+    // without turning a single reply into a spam burst.
+    for (const url of project.images.slice(0, 3)) sends.push({ type: "image", url, caption: project.name });
+  }
+  if (wantsBrochure && agent?.shareBrochure && project.brochureUrl) {
+    sends.push({ type: "document", url: project.brochureUrl, caption: `${project.name} brochure`, filename: `${project.name}.pdf` });
+  }
+  if (!sends.length) return;
+
+  for (const m of sends) {
+    const q = await credits.quote(org._id, "service", 1);
+    let held = 0;
+    try {
+      held = await credits.reserve(org._id, { category: "service", count: 1 });
+    } catch (err) {
+      if (err instanceof credits.InsufficientCreditsError) {
+        console.warn(`[WhatsApp Bot] org ${org._id} out of credits — media send skipped`);
+        return; // keep whatever already sent in this loop; stop here
+      }
+      throw err;
+    }
+    let msgId;
+    try {
+      msgId = await sendProviderMedia(org, conversation.contactPhone, m);
+    } catch (err) {
+      await credits.release(org._id, held);
+      console.error("[WhatsApp Bot] media send failed:", err?.response?.data || err.message);
+      continue;
+    }
+    await WaMessage.create({
+      orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
+      direction: "outbound", sender: "bot", senderName: botName,
+      body: m.caption || "", mediaType: m.type, mediaUrl: m.url,
+      status: "sent", timestamp: new Date(),
+      reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
+    });
+  }
+  await WaConversation.findByIdAndUpdate(conversation._id, {
+    lastMessageAt: new Date(), lastMessagePreview: wantsBrochure ? "📄 Brochure" : "📷 Photo",
+  });
 }
 
 // ── Per-org webhook: all providers ───────────────────────────────────────────
@@ -1281,6 +1454,7 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 const AGENT_FIELDS = [
   "name", "description", "greeting", "businessContext", "groundRules",
   "projectIds", "systemPrompt", "language", "adIds", "status",
+  "shareProjectPhotos", "shareBrochure",
 ];
 
 // Projects are the one field a tenant could use to point their assistant at
@@ -1307,6 +1481,8 @@ async function sanitizeAgentBody(orgId, body) {
     out.adIds = [...new Set((Array.isArray(out.adIds) ? out.adIds : [])
       .map((a) => String(a).trim()).filter(Boolean))];
   }
+  if (out.shareProjectPhotos !== undefined) out.shareProjectPhotos = out.shareProjectPhotos === true;
+  if (out.shareBrochure      !== undefined) out.shareBrochure      = out.shareBrochure === true;
   return out;
 }
 
@@ -1454,6 +1630,8 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       projectIds: clean.projectIds || [],
       systemPrompt: clean.systemPrompt || "",
       language: clean.language || "auto",
+      shareProjectPhotos: clean.shareProjectPhotos === true,
+      shareBrochure: clean.shareBrochure === true,
     };
 
     const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null);
@@ -1568,11 +1746,12 @@ router.get("/conversations", async (req, res) => {
       WaConversation.find(filter)
         .sort({ lastMessageAt: -1 })
         .skip((page - 1) * limit).limit(+limit)
-        .populate("leadId", "name status priority propertyType bhk preferredLocation budget")
+        .populate("leadId", LEAD_SCORE_FIELDS)
         .populate("assignedTo", "name avatar")
         .lean(),
       WaConversation.countDocuments(filter),
     ]);
+    attachLeadScores(conversations);
     res.json({ conversations, total });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -1608,8 +1787,13 @@ router.post("/conversations/start", async (req, res) => {
       });
       if (lead?._id) await Lead.findByIdAndUpdate(lead._id, { whatsappConversationId: conv._id });
     }
+    const hydrated = await WaConversation.findOne({ _id: conv._id, orgId: req.orgId })
+      .populate("leadId", LEAD_SCORE_FIELDS)
+      .populate("assignedTo", "name avatar")
+      .lean();
+    if (hydrated) attachLeadScores([hydrated]);
     res.json({
-      conversation: conv,
+      conversation: hydrated || conv,
       consent: lead?.whatsappConsent?.status || "unknown",
     });
   } catch (err) {
@@ -1620,9 +1804,10 @@ router.post("/conversations/start", async (req, res) => {
 router.get("/conversations/:id", async (req, res) => {
   try {
     const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId })
-      .populate("leadId", "name status source phone priority")
+      .populate("leadId", LEAD_SCORE_FIELDS)
       .populate("assignedTo", "name avatar").lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
+    attachLeadScores([conv]);
     res.json({ conversation: conv });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -1668,8 +1853,9 @@ router.patch("/conversations/:id", async (req, res) => {
     }
     const conv = await WaConversation.findOneAndUpdate(
       { _id: req.params.id, orgId: req.orgId }, update, { new: true }
-    ).populate("leadId", "name status priority propertyType bhk preferredLocation budget").populate("assignedTo", "name avatar");
+    ).populate("leadId", LEAD_SCORE_FIELDS).populate("assignedTo", "name avatar").lean();
     if (!conv) return res.status(404).json({ message: "Not found" });
+    attachLeadScores([conv]);
     res.json({ conversation: conv });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -1781,7 +1967,7 @@ router.post("/templates/generate",
       const [org, projects] = await Promise.all([
         Organization.findById(req.orgId).select("name").lean(),
         Project.find({ orgId: req.orgId, isArchived: { $ne: true } })
-          .select("name location priceMin priceMax bhkTypes area possessionDate")
+          .select("name location propertyType unitTypes priceMin priceMax bhkTypes area possessionDate")
           .sort({ createdAt: -1 }).limit(12).lean(),
       ]);
 

@@ -13,8 +13,11 @@ const projectSchema = new mongoose.Schema(
     description: { type: String, trim: true, default: "" },
     location:    { type: String, trim: true, default: "" },
     images:      [{ type: String, trim: true }], // array of URLs
+    brochureUrl: { type: String, trim: true, default: "" }, // single PDF URL — sent by the WhatsApp AI agent when its Share Brochure permission is on
 
     // Pricing & config
+    propertyType:    { type: String, trim: true, default: "Apartment" },
+    unitTypes:       [{ type: String, trim: true }], // generic configurations: BHKs, plot sizes/types, villa/commercial unit types
     priceMin:       { type: Number, default: 0 },
     priceMax:       { type: Number, default: 0 },
     bhkTypes:       [{ type: String, trim: true }], // ["2BHK","3BHK"]

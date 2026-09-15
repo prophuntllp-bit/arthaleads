@@ -100,7 +100,8 @@ function projectLines(projects = []) {
     return "- " + [
       p.name,
       p.location && `in ${p.location}`,
-      p.bhkTypes?.length && p.bhkTypes.join("/"),
+      p.propertyType,
+      (p.unitTypes?.length || p.bhkTypes?.length) && (p.unitTypes?.length ? p.unitTypes : p.bhkTypes).join("/"),
       price,
       p.area && `(${p.area})`,
       p.possessionDate && `possession ${new Date(p.possessionDate).getFullYear()}`,

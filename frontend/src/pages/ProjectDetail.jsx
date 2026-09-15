@@ -975,11 +975,13 @@ export default function ProjectDetail() {
                   </p>
                 </div>
               )}
-              {project.bhkTypes?.length > 0 && (
+              {(project.unitTypes?.length || project.bhkTypes?.length) > 0 && (
                 <div>
-                  <p className="text-xs text-app-soft mb-2">BHK Options</p>
+                  <p className="text-xs text-app-soft mb-2">
+                    {project.propertyType ? `${project.propertyType} Options` : "Available Options"}
+                  </p>
                   <div className="flex flex-wrap gap-2">
-                    {project.bhkTypes.map((b) => (
+                    {(project.unitTypes?.length ? project.unitTypes : project.bhkTypes).map((b) => (
                       <span key={b} className="rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1 text-xs font-bold text-orange-500">{b}</span>
                     ))}
                   </div>

@@ -242,6 +242,44 @@ class LeadsScreenState extends State<LeadsScreen> {
     }
   }
 
+  /// Same PATCH /leads/bulk-consent as Leads.jsx's handleBulkConsent —
+  /// admin/manager only (gated by auth.isAdmin at the call site), and project
+  /// leads have no consent field so they're skipped like every other bulk op.
+  Future<void> _bulkConsent() async {
+    final status = await _pickFromList(
+      title: 'Set WhatsApp consent',
+      options: const [
+        ('granted', 'Consent given'),
+        ('denied', 'Consent refused'),
+        ('unknown', 'Consent not recorded'),
+      ],
+    );
+    if (status == null) return;
+    final sel = _splitSelection();
+    try {
+      if (sel.plainIds.isNotEmpty) {
+        final r = await _api.dio.patch(
+          '/leads/bulk-consent',
+          data: {'ids': sel.plainIds, 'status': status},
+        );
+        _snack(r.data['message'] as String? ?? 'Updated');
+      }
+      if (sel.skipped > 0) {
+        _snack(
+          '${sel.skipped} project lead(s) skipped — no bulk consent for those yet',
+          error: true,
+        );
+      }
+      setState(() => _selected.clear());
+      _load(reset: true);
+    } catch (e) {
+      _snack(
+        ApiClient.errorMessage(e, 'Bulk consent update failed'),
+        error: true,
+      );
+    }
+  }
+
   Future<void> _bulkTransfer() async {
     final projectId = await _pickFromList(
       title: 'Transfer to project',
@@ -265,7 +303,11 @@ class LeadsScreenState extends State<LeadsScreen> {
 
   void _bulkWhatsApp() {
     final list = _leads
-        .where((l) => _selected.contains(l['_id']) && (l['phone'] as String? ?? '').isNotEmpty)
+        .where(
+          (l) =>
+              _selected.contains(l['_id']) &&
+              (l['phone'] as String? ?? '').isNotEmpty,
+        )
         .toList();
     if (list.isEmpty) {
       _snack('No selected leads have a phone number', error: true);
@@ -375,12 +417,18 @@ class LeadsScreenState extends State<LeadsScreen> {
         data: {'leadId': lead['_id']},
       );
       if (mounted) {
-        _snack(res.data['message'] as String? ?? 'Call initiated — check your phone.');
+        _snack(
+          res.data['message'] as String? ??
+              'Call initiated — check your phone.',
+        );
       }
       _markContacted(lead);
     } catch (e) {
       if (mounted) {
-        _snack(ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'), error: true);
+        _snack(
+          ApiClient.errorMessage(e, 'Call failed. Check EnableX settings.'),
+          error: true,
+        );
       }
     }
   }
@@ -437,7 +485,10 @@ class LeadsScreenState extends State<LeadsScreen> {
         // no list-row data to fall back on, there's nothing worth showing.
         if (lead['name'] == null) {
           if (mounted) {
-            _snack(ApiClient.errorMessage(e, 'Could not open lead'), error: true);
+            _snack(
+              ApiClient.errorMessage(e, 'Could not open lead'),
+              error: true,
+            );
           }
           return;
         }
@@ -580,10 +631,7 @@ class LeadsScreenState extends State<LeadsScreen> {
           ),
         ]);
       } else {
-        final rows = <List<dynamic>>[
-          _exportHeader,
-          ...source.map(_exportRow),
-        ];
+        final rows = <List<dynamic>>[_exportHeader, ...source.map(_exportRow)];
         final csv = const ListToCsvConverter().convert(rows);
         await Share.shareXFiles([
           XFile.fromData(
@@ -637,7 +685,8 @@ class LeadsScreenState extends State<LeadsScreen> {
       builder: (_) => const QrSheet(
         endpoint: '/org/me/qr-token',
         title: 'Lead Capture QR Code',
-        description: 'Prospects can scan this to submit an enquiry directly to your CRM.',
+        description:
+            'Prospects can scan this to submit an enquiry directly to your CRM.',
       ),
     );
   }
@@ -705,19 +754,21 @@ class LeadsScreenState extends State<LeadsScreen> {
                             ? 'Export leads'
                             : 'Export ${_selected.length} selected',
                         enabled: _leads.isNotEmpty,
-                        onSelected: (asExcel) =>
-                            _exportLeads(asExcel: asExcel),
+                        onSelected: (asExcel) => _exportLeads(asExcel: asExcel),
                         itemBuilder: (ctx) => const [
-                          PopupMenuItem(value: false, child: Text('Export CSV')),
-                          PopupMenuItem(value: true, child: Text('Export Excel')),
+                          PopupMenuItem(
+                            value: false,
+                            child: Text('Export CSV'),
+                          ),
+                          PopupMenuItem(
+                            value: true,
+                            child: Text('Export Excel'),
+                          ),
                         ],
                         child: IgnorePointer(
                           child: IconButton.outlined(
                             onPressed: _leads.isEmpty ? null : () {},
-                            icon: const Icon(
-                              Icons.download_rounded,
-                              size: 19,
-                            ),
+                            icon: const Icon(Icons.download_rounded, size: 19),
                           ),
                         ),
                       ),
@@ -1042,6 +1093,12 @@ class LeadsScreenState extends State<LeadsScreen> {
                 _bulkAssign,
               ),
               _bulkBtn(Icons.flag, 'Status', AppColors.info, _bulkStatus),
+              _bulkBtn(
+                Icons.verified_user,
+                'Consent',
+                const Color(0xFF16A34A),
+                _bulkConsent,
+              ),
               _bulkBtn(
                 Icons.drive_file_move,
                 'Transfer',
