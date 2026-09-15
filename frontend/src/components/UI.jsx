@@ -142,16 +142,19 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${widths[size]} rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden`}
+        className={`relative w-full ${widths[size]} max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col`}
         style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
       >
-        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid var(--app-border)" }}>
+        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <h2 className="text-base font-bold text-app">{title}</h2>
           <button onClick={onClose} aria-label="Close dialog" className="text-app-soft hover:text-app transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="overflow-y-auto p-6" style={{ maxHeight: "75vh" }}>{children}</div>
+        {/* flex-1 lets this fill whatever height the max-h-[92vh] cap on mobile
+            leaves it, instead of the old fixed 75vh — which left the sheet
+            floating with a dead gap above it on a tall form like Edit Project. */}
+        <div className="overflow-y-auto p-6 flex-1">{children}</div>
       </div>
     </div>,
     document.body

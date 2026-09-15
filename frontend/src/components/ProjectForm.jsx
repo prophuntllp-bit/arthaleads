@@ -1,6 +1,7 @@
 ﻿// components/ProjectForm.jsx
 import { useEffect, useRef, useState } from "react";
 import { Modal, Spinner, AppDatePicker, SmartImage } from "./UI";
+import CustomSelect from "./CustomSelect";
 import { ChevronDown, FileText, ImageOff, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -84,7 +85,6 @@ async function fileToBase64(file) {
 export default function ProjectForm({ open, onClose, project, onSaved }) {
   const [form, setForm]           = useState(() => toForm(project));
   const [urlInput, setUrlInput]   = useState("");
-  const [amenitySelect, setAmenitySelect] = useState("");
   const [customAmenity, setCustomAmenity] = useState("");
   const [uploadingImg, setUploadingImg]   = useState(false);
   const [saving, setSaving]       = useState(false);
@@ -211,10 +211,9 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
     }));
 
   // ── Amenities ─────────────────────────────────────────────────────────────
-  const addAmenityFromSelect = () => {
-    if (!amenitySelect || form.amenities.includes(amenitySelect)) return;
-    setForm((f) => ({ ...f, amenities: [...f.amenities, amenitySelect] }));
-    setAmenitySelect("");
+  const addAmenity = (val) => {
+    if (!val || form.amenities.includes(val)) return;
+    setForm((f) => ({ ...f, amenities: [...f.amenities, val] }));
   };
 
   const addCustomAmenity = () => {
@@ -421,20 +420,12 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
             <div>
               <label className="label">Property Type</label>
-              <div className="grid grid-cols-2 gap-2 mt-1 sm:grid-cols-4 lg:grid-cols-1">
-                {PROPERTY_TYPES.map((type) => (
-                  <button key={type} type="button" onClick={() => setPropertyType(type)}
-                    className={`rounded-xl border px-3 py-2 text-left text-xs font-semibold transition ${
-                      form.propertyType === type
-                        ? "bg-orange-500 border-orange-500 text-white shadow-sm"
-                        : "text-app-soft hover:border-orange-500/50"
-                    }`}
-                    style={form.propertyType !== type ? { borderColor: "var(--app-border)", background: "var(--app-surface-low)" } : {}}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
+              <CustomSelect
+                value={form.propertyType}
+                onChange={setPropertyType}
+                options={PROPERTY_TYPES}
+                style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
+              />
             </div>
             <div>
               <label className="label">
@@ -463,21 +454,13 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           {/* Amenities - dropdown + custom */}
           <div>
             <label className="label">Amenities</label>
-            <div className="flex gap-2">
-              <select
-                className="select flex-1"
-                value={amenitySelect}
-                onChange={(e) => setAmenitySelect(e.target.value)}
-              >
-                <option value="">Select amenity...</option>
-                {AMENITY_OPTIONS.filter((a) => !form.amenities.includes(a)).map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-              <button type="button" onClick={addAmenityFromSelect} className="btn-secondary flex-shrink-0">
-                <Plus className="h-4 w-4" /> Add
-              </button>
-            </div>
+            <CustomSelect
+              value=""
+              onChange={addAmenity}
+              options={AMENITY_OPTIONS.filter((a) => !form.amenities.includes(a))}
+              placeholder="Select amenity..."
+              style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
+            />
             <div className="flex gap-2 mt-2">
               <input
                 className="input flex-1"
@@ -493,10 +476,15 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             {form.amenities.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {form.amenities.map((a, i) => (
-                  <span key={i} className="stitch-pill gap-1">
+                  // stitch-pill's translucent, blurred surface all but disappeared
+                  // against this modal's own translucent background — a solid
+                  // card color keeps the tag readable regardless of what's behind it.
+                  <span key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                    style={{ background: "var(--app-card-solid)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
                     {a}
                     <button type="button" onClick={() => removeAmenity(i)}
-                      className="hover:text-red-500 transition-colors">
+                      className="text-app-soft hover:text-red-500 transition-colors">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -603,9 +591,14 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
               ))}
             </div>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/10 border border-red-400/30">
-              <span className="text-red-500 text-sm">⚠</span>
-              <p className="text-xs font-medium text-red-600 dark:text-red-400">
+            // Tailwind's /10 and /30 opacity utilities read as barely-there
+            // against this modal's own translucent surface — solid rgba
+            // values and a literal text color keep this legible regardless
+            // of what's behind it, same fix as the amenity tags above.
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+              style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)" }}>
+              <span className="text-sm" style={{ color: "#b91c1c" }}>⚠</span>
+              <p className="text-xs font-medium" style={{ color: "#b91c1c" }}>
                 No agents assigned - agents won't see this project and notifications won't be sent.
               </p>
             </div>
