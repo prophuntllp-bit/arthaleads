@@ -312,28 +312,25 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             style={project ? { borderColor: "var(--app-border)" } : {}}>
             <p className="stitch-kicker">Project Images</p>
 
-            {/* Upload from device */}
-            <div className="flex gap-2">
+            {/* Upload from device + paste URL, one row instead of two */}
+            <div className="flex flex-wrap gap-2 items-center">
               <input ref={imgFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
               <button type="button" onClick={() => imgFileRef.current?.click()}
-                className="btn-secondary flex items-center gap-2" disabled={uploadingImg}>
+                className="btn-secondary flex items-center gap-2 flex-shrink-0" disabled={uploadingImg}>
                 {uploadingImg ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
                 Upload Photos
               </button>
-            </div>
-
-            {/* OR paste URL */}
-            <div className="flex gap-2 items-center">
-              <span className="text-xs text-app-soft flex-shrink-0">Or paste URL:</span>
+              <span className="text-xs text-app-soft flex-shrink-0">or paste URL:</span>
               <input
                 className="input flex-1"
+                style={{ minWidth: 120 }}
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 placeholder="https://..."
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addImageUrl(); } }}
               />
-              <button type="button" onClick={addImageUrl} className="btn-secondary flex-shrink-0">
-                <Plus className="h-4 w-4" /> Add
+              <button type="button" onClick={addImageUrl} aria-label="Add image URL" className="btn-secondary flex-shrink-0 !px-2.5">
+                <Plus className="h-4 w-4" />
               </button>
             </div>
 
@@ -452,7 +449,8 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
                       ? "bg-orange-500 border-orange-500 text-white"
                       : "text-app-soft hover:border-orange-500/50"
                   }`}
-                  style={!form.unitTypes.includes(unit) ? { borderColor: "var(--app-border)" } : {}}
+                  style={!form.unitTypes.includes(unit)
+                    ? { borderColor: "var(--app-border)", background: "var(--app-card-solid)" } : {}}
                 >
                   {unit}
                 </button>
