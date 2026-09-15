@@ -11,6 +11,11 @@ const waMessageSchema = new mongoose.Schema({
   mediaType:       { type: String, enum: ["text", "image", "audio", "document", "sticker", "video"], default: "text" },
   mediaUrl:        { type: String, default: "" },
   status:          { type: String, enum: ["sent", "delivered", "read", "failed"], default: "sent" },
+  // The configured Greeting is sent verbatim before the bot ever sees the
+  // customer's message — it doesn't count as a real qualifying reply, so it
+  // has to be told apart from the bot's actual answers when deciding whether
+  // this is still the customer's first real exchange with the assistant.
+  isGreeting:      { type: Boolean, default: false },
   timestamp:       { type: Date, default: Date.now },
 
   // ── Credit accounting (outbound only) ────────────────────────────────────

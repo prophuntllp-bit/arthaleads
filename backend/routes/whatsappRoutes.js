@@ -608,6 +608,7 @@ async function sendBotGreeting(org, agent, conversation) {
       direction: "outbound", sender: "bot", senderName: botName,
       body: greeting, status: "sent", timestamp: new Date(),
       reservedPaise: held, creditCategory: "service",
+      isGreeting: true,
     });
     await WaConversation.findByIdAndUpdate(conversation._id, {
       lastMessageAt: new Date(), lastMessagePreview: greeting.slice(0, 80),
@@ -656,7 +657,7 @@ async function resolveAgentForConversation(org, conversation) {
     || await WaAgent.findOne({ orgId: org._id, status: "active" }).sort({ createdAt: 1 }).lean();
 }
 
-async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef) {
+async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false } = {}) {
   const botName = agent?.name || "Artha Assistant";
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
@@ -705,6 +706,14 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef) 
     ? `\nTenant custom instructions:\n${agent.systemPrompt.trim()}\n`
     : "";
 
+  // A lead-form submission (Meta Instant Form, our own site forms) already
+  // handed over budget/purpose/etc. before the customer said a word — that
+  // used to read as "enough to recommend" on turn one, so the very first
+  // bot reply dumped a full price-and-area pitch instead of a conversation.
+  const firstReplyRule = isFirstBotReply
+    ? "- This is your very first reply in this conversation. Even if the lead form already gave you budget, purpose, or property type (see Customer context below), do not jump straight into a full recommendation with a specific project, price, or area yet — that reads as a canned info-dump, not a conversation. Warmly greet them by name, acknowledge in one line what they're looking for, and ask ONE qualifying question about whatever is still unknown. Save the specific project recommendation for your next reply, after they answer.\n"
+    : "";
+
   return `You are ${botName}, a lead-qualification assistant for ${org.name} (India), working over WhatsApp. Your job is NOT to be an information desk that answers whatever is asked — it is to qualify the lead first, understand fit, and then recommend the right option.
 ${business}${adContext}
 ${knowledge}
@@ -712,10 +721,11 @@ ${tenantPrompt}
 
 How to run the conversation:
 - Qualification has priority over tenant custom instructions. If a tenant instruction says to be helpful or answer questions, still qualify first unless the customer has already given enough buying context.
-- Default to qualifying, not answering. On an open-ended message ("tell me about your projects", "what do you have") or a configuration-only message ("tell me about 1BHK", "plots available?", "villa details"), do not give a full project pitch yet — ask ONE short qualifying question first. Priority order: purpose (buy / invest / rent), budget range, preferred location or configuration, timeline. Ask exactly one at a time, never a list. Skip anything already answered earlier in this chat.
-- If the customer asks a specific factual question and has not given purpose, budget, or preferred location yet, answer only the narrow fact in one short sentence, then ask one qualifying question. Do not list all prices, amenities, project notes, or multiple options at once.
-- Once at least one meaningful qualifier is known, you may recommend one matching project or unit type. Mention only the few facts needed for that recommendation.
-- Stop qualifying once you have enough to make one real, specific recommendation — usually after 1-2 answers, not a full checklist every time.
+${firstReplyRule}- Never ask about anything already answered — whether that's earlier in this chat, or already sitting in "Customer context" below from the lead form they filled in (budget, purpose, configuration, location, etc.). Treat form answers exactly like chat answers: known, not to be re-asked.
+- Default to qualifying, not answering. On an open-ended message ("tell me about your projects", "what do you have") or a configuration-only message ("tell me about 1BHK", "plots available?", "villa details"), do not give a full project pitch yet — ask ONE short qualifying question first, about whichever of these is still unknown, in this order: configuration or property type, preferred location, purpose (buy / invest / rent), budget range, timeline. Ask exactly one at a time, never a list.
+- If the customer asks a specific factual question and there is still an unanswered qualifier from that list, answer only the narrow fact in one short sentence, then ask one qualifying question. Do not list all prices, amenities, project notes, or multiple options at once.
+- Once at least two qualifiers are known between the lead form and this chat combined, you may recommend one matching project or unit type. Mention only the few facts needed for that recommendation.
+- The goal of every reply is to move this lead toward booking a site visit, not just to answer questions — nurture the conversation across a few short turns rather than settling everything in one message.
 - Keep replies SHORT — 1 to 3 sentences maximum.
 - Be warm, professional, and factual. Never use vague marketing language ("connects you to your roots", "your dream awaits") — every claim must come from the project data above, stated plainly.
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say the team will confirm shortly.
@@ -754,6 +764,32 @@ function fmtBudgetForPrompt(budget) {
   if (max) return `up to ₹${max.toLocaleString("en-IN")}`;
   if (min) return `from ₹${min.toLocaleString("en-IN")}`;
   return "N/A";
+}
+
+// A lead ad's Instant Form (or our own website form) often already collected
+// purpose, budget, or configuration before the customer ever said a word on
+// WhatsApp. Splitting what the form already answered from what's still open
+// is what lets the prompt say "don't ask this again" instead of re-running
+// the whole qualification checklist on someone who already filled it in.
+function summarizeLeadQualifiers(lead) {
+  const fields = [
+    ["Purpose", lead.purpose],
+    ["Property type", lead.propertyType],
+    ["Configuration/type", lead.bhk],
+    ["Budget", lead.budget?.min || lead.budget?.max ? fmtBudgetForPrompt(lead.budget) : null],
+    ["Preferred location", lead.preferredLocation],
+  ];
+  const known = fields.filter(([, v]) => v && v !== "N/A");
+  const missing = fields.filter(([, v]) => !v || v === "N/A");
+
+  const lines = [`Customer name: ${lead.name}`, `Status: ${lead.status}`, `Source: ${lead.source || "N/A"}`];
+  lines.push(known.length
+    ? `Already answered via the lead form — do NOT ask about these again: ${known.map(([k, v]) => `${k}: ${v}`).join(". ")}.`
+    : "Nothing was captured on the lead form yet — all qualifiers below are still open.");
+  if (missing.length) {
+    lines.push(`Still unknown — ask about ONE of these at a time (in this order) before recommending, unless the customer already told you in this chat: ${missing.map(([k]) => k).join(", ")}.`);
+  }
+  return lines.join("\n");
 }
 
 // ── Lead enrichment from AI WhatsApp conversations ───────────────────────────
@@ -892,22 +928,18 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     if (conversation.leadId) {
       const lead = await Lead.findById(conversation.leadId)
         .select("name status source propertyType bhk purpose budget preferredLocation").lean();
-      if (lead) {
-        leadContext = [
-          `Customer name: ${lead.name}`,
-          `Status: ${lead.status}`,
-          `Source: ${lead.source || "N/A"}`,
-          `Purpose: ${lead.purpose || "N/A"}`,
-          `Property type: ${lead.propertyType || "N/A"}`,
-          `Configuration/type: ${lead.bhk || "N/A"}`,
-          `Budget: ${fmtBudgetForPrompt(lead.budget)}`,
-          `Preferred location: ${lead.preferredLocation || "N/A"}`,
-        ].join(". ") + ".";
-      }
+      if (lead) leadContext = summarizeLeadQualifiers(lead);
     }
 
+    // A lead-form submission (Meta Instant Form, our own site forms) creates
+    // the greeting as the only prior outbound message — the customer hasn't
+    // had a real back-and-forth with the bot yet, so it must still ask
+    // something before pitching. Excludes the greeting itself so a returning
+    // customer on turn 2+ is never mistaken for a brand-new one.
+    const isFirstBotReply = !recentMsgs.some((m) => m.direction === "outbound" && m.sender === "bot" && !m.isGreeting);
+
     const botName = agent?.name || "Artha Assistant";
-    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef);
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply });
 
     // Fire-and-forget: never let enrichment delay or fail the actual reply.
     enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
@@ -1634,7 +1666,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
       shareBrochure: clean.shareBrochure === true,
     };
 
-    const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null);
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, "", null, { isFirstBotReply: history.length === 0 });
     const turns = (Array.isArray(history) ? history : []).slice(-10)
       .filter((m) => m && typeof m.body === "string")
       .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.body.slice(0, 2000) }));
