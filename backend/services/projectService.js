@@ -12,6 +12,21 @@ function escapeRegex(str) {
 
 const Organization = require("../models/Organization");
 const { levelOf } = require("../middlewares/planGate");
+const { uploadProjectImage } = require("../utils/upload");
+
+// The images picked in the project form arrive as base64 data URIs (the
+// browser compresses each to a small JPEG thumbnail before sending). Storing
+// those directly on the document — the old behaviour — bloats Mongo and, more
+// importantly, is not a URL Meta's WhatsApp API can fetch when the AI agent
+// tries to send a photo (`link` must resolve over HTTPS). So every data URI
+// gets uploaded to B2 here and replaced with the real URL before saving;
+// anything already a URL (pasted by hand) passes through untouched.
+async function migrateImages(images, projectId) {
+  if (!Array.isArray(images) || !images.length) return images;
+  return Promise.all(images.map((img) =>
+    typeof img === "string" && img.startsWith("data:") ? uploadProjectImage(img, projectId) : img
+  ));
+}
 
 const projectService = {
   async create(data, user) {
@@ -28,7 +43,12 @@ const projectService = {
         }
       }
     }
-    const project = await Project.create({ ...data, createdBy: user._id, orgId: user.orgId });
+    const { images, ...rest } = data;
+    const project = await Project.create({ ...rest, createdBy: user._id, orgId: user.orgId });
+    if (images?.length) {
+      project.images = await migrateImages(images, project._id.toString());
+      await project.save();
+    }
     return project;
   },
 
@@ -79,9 +99,12 @@ const projectService = {
   },
 
   async update(id, data, user) {
+    const payload = data.images?.length
+      ? { ...data, images: await migrateImages(data.images, id) }
+      : data;
     const project = await Project.findOneAndUpdate(
       { _id: id, isArchived: { $ne: true }, orgId: user.orgId },
-      data,
+      payload,
       { new: true, runValidators: true }
     );
     if (!project) throw new AppError("Project not found", 404);

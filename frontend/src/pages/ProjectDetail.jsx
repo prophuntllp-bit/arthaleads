@@ -384,6 +384,18 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab]         = useState(() => location.state?.searchLead ? "leads" : "info");
   const [showEdit, setShowEdit] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null); // index into project.images, or null when closed
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightboxIndex(null);
+      if (e.key === "ArrowRight") setLightboxIndex((i) => (i + 1) % project.images.length);
+      if (e.key === "ArrowLeft") setLightboxIndex((i) => (i - 1 + project.images.length) % project.images.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIndex, project?.images?.length]);
 
   // Project delete
   const [showDeleteProject, setShowDeleteProject] = useState(false);
@@ -922,7 +934,8 @@ export default function ProjectDetail() {
           {project.images?.length > 0 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {project.images.map((url, i) => (
-                <div key={i} className="relative flex-shrink-0 h-52 w-80 rounded-2xl overflow-hidden border"
+                <button key={i} type="button" onClick={() => setLightboxIndex(i)}
+                  className="relative flex-shrink-0 h-52 w-80 rounded-2xl overflow-hidden border cursor-zoom-in"
                   style={{ borderColor: "var(--app-border)" }}>
                   <SmartImage src={url} alt="" className="h-full w-full object-cover"
                     fallback={
@@ -931,7 +944,7 @@ export default function ProjectDetail() {
                       </div>
                     }
                   />
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -994,7 +1007,10 @@ export default function ProjectDetail() {
                 <p className="stitch-kicker mb-3">Amenities</p>
                 <div className="flex flex-wrap gap-2">
                   {project.amenities.map((a, i) => (
-                    <span key={i} className="stitch-pill">{a}</span>
+                    <span key={i}
+                      className="rounded-full bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 text-xs font-bold text-orange-500">
+                      {a}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -1725,6 +1741,49 @@ export default function ProjectDetail() {
           onUpdated={(updated) => { setDetailLead({ ...updated, _type: "project", projectId: id }); handleLeadUpdated(updated); }}
           onEdit={() => { setEditingLead(detailLead); setDetailLead(null); }}
         />
+      )}
+
+      {/* Image lightbox — full-size view of a project photo, with prev/next
+          through the whole set. Thumbnails on the Info tab only ever show a
+          cropped 320x208 preview; this is the "view every image" surface. */}
+      {lightboxIndex !== null && project.images?.length > 0 && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button type="button" onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition">
+            <XIcon className="h-5 w-5" />
+          </button>
+
+          {project.images.length > 1 && (
+            <>
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + project.images.length) % project.images.length); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition">
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % project.images.length); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition">
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+
+          <img
+            src={project.images[lightboxIndex]}
+            alt=""
+            className="max-h-[85vh] max-w-[90vw] rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {project.images.length > 1 && (
+            <span className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs font-semibold text-white/80">
+              {lightboxIndex + 1} / {project.images.length}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );

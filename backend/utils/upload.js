@@ -36,6 +36,10 @@ const orgLogoKey = (orgId) => `arthaleads/logos/org-${orgId}`;
 // overwrite the same object instead of orphaning the old one.
 const projectBrochureKey = (projectId) => `arthaleads/brochures/project-${projectId}`;
 
+// A project can hold several images (unlike the single brochure), so each
+// upload needs its own key rather than one shared, overwritable slot.
+const projectImageKey = (projectId) => `arthaleads/projects/${projectId}/${crypto.randomBytes(8).toString("hex")}`;
+
 // Everything else gets a random segment, because the bucket is public and a
 // public bucket serves any key somebody can guess.
 //
@@ -118,6 +122,26 @@ async function deleteProjectBrochure(projectId) {
   return storage.remove(projectBrochureKey(projectId));
 }
 
+/**
+ * Upload one project photo. Returns the public HTTPS URL — this, along with
+ * the brochure, is what the WhatsApp AI agent sends when its "Can send
+ * photos" permission is on (see whatsappRoutes.js sendProviderMedia). Meta's
+ * media API fetches this URL server-side by `link`, so it must resolve to
+ * real bytes over HTTPS — a base64 data URI stored directly on the project
+ * document (the old behaviour) is not fetchable and silently fails to send.
+ */
+async function uploadProjectImage(dataUri, projectId) {
+  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  return storage.put(projectImageKey(projectId), buffer, contentType);
+}
+
+/** Delete one project photo by its stored URL. Never throws — see storage.remove. */
+async function deleteProjectImage(url) {
+  const key = String(url || "").split("/api/media/")[1];
+  if (!key) return;
+  return storage.remove(decodeURIComponent(key));
+}
+
 module.exports = {
   uploadOrgLogo,
   deleteOrgLogo,
@@ -126,5 +150,7 @@ module.exports = {
   uploadCallRecording,
   uploadProjectBrochure,
   deleteProjectBrochure,
+  uploadProjectImage,
+  deleteProjectImage,
   isConfigured: storage.isConfigured,
 };
