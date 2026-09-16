@@ -125,8 +125,11 @@ module.exports = function createCtwaFlowService({
    */
   async function terminalAdvisor(org, agent, conversation, botName, project) {
     const advisor = project?.advisorId;
+    // The phone number is what actually lets the lead act right now instead
+    // of waiting on a callback — WhatsApp auto-links a plain digit string
+    // like this into a tappable number.
     const line = advisor?.name
-      ? `Connecting you with ${advisor.name} from our team — they'll reach out to you shortly.`
+      ? `Connecting you with ${advisor.name} from our team — they'll reach out to you shortly.${advisor.phone ? ` You can also reach them directly on ${advisor.phone}.` : ""}`
       : "Connecting you with our team — someone will reach out to you shortly.";
     await sendFlowStep(org, conversation, botName, { bodyText: line, previewLabel: "→ Connected to advisor" });
     if (advisor?._id) {
@@ -187,105 +190,105 @@ module.exports = function createCtwaFlowService({
 
     const exitFlow = async () => WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
 
-    if (step === "purpose") {
-      const opt = flow.purposeOptions.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
-      await updateLeadIfBlank(conversation.leadId, { purpose: /invest/i.test(opt.label) ? "Invest" : "Buy" });
+    // Matched by button id across every step this flow has, not by whatever
+    // step we last recorded — Meta doesn't let us disable a button on a
+    // message already sent, and a lead often wants to revisit an earlier
+    // question (see the location, then still tap the floor plan; pick a
+    // different budget after moving on) rather than being stuck wherever
+    // they last left off. So any earlier message's button keeps doing
+    // exactly what it says, for as long as the flow hasn't reached a true
+    // terminal (advisor connected, or a site-visit slot picked — both hand
+    // off to a human and clear flowState, so nothing reaches this function
+    // again after that).
+    const purposeOpt  = flow.purposeOptions.find((o) => o.id === interactiveId);
+    const budgetOpt   = flow.budgetBrackets.find((o) => o.id === interactiveId);
+    const timelineOpt = flow.timelineOptions.find((o) => o.id === interactiveId);
+    const menuOpt      = flow.menuOptions.find((o) => o.id === interactiveId);
+    const closingOpt   = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
+    const slotOpt       = flow.siteVisitSlots.find((o) => o.id === interactiveId);
+
+    if (purposeOpt) {
+      await updateLeadIfBlank(conversation.leadId, { purpose: /invest/i.test(purposeOpt.label) ? "Invest" : "Buy" });
       await sendFlowStep(org, conversation, botName, budgetStep(agent));
       await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "budget" });
       return true;
     }
 
-    if (step === "budget") {
-      const opt = flow.budgetBrackets.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
-      if (opt.max > 0) await updateLeadIfBlank(conversation.leadId, { "budget.min": opt.min || 0, "budget.max": opt.max });
+    if (budgetOpt) {
+      if (budgetOpt.max > 0) await updateLeadIfBlank(conversation.leadId, { "budget.min": budgetOpt.min || 0, "budget.max": budgetOpt.max });
       await sendFlowStep(org, conversation, botName, timelineStep(agent));
       await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "timeline" });
       return true;
     }
 
-    if (step === "timeline") {
-      const opt = flow.timelineOptions.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
+    if (timelineOpt) {
       if (conversation.leadId) {
-        await Lead.updateOne({ _id: conversation.leadId }, { $addToSet: { tags: `timeline:${opt.id}` } });
+        await Lead.updateOne({ _id: conversation.leadId }, { $addToSet: { tags: `timeline:${timelineOpt.id}` } });
       }
       await sendFlowStep(org, conversation, botName, menuStep(agent));
       await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       return true;
     }
 
-    if (step === "menu") {
-      const opt = flow.menuOptions.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
-      const project = await resolveFlowProject(org, agent);
+    if (slotOpt) return completeSiteVisit(org, conversation, botName, slotOpt);
 
-      if (opt.action === "site_visit") {
+    if (menuOpt || closingOpt) {
+      const action = menuOpt ? menuOpt.action : closingOpt.id; // closing ids ARE their action
+      if (action === "site_visit") {
         await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
         return true;
       }
-      if (opt.action === "advisor") {
-        await terminalAdvisor(org, agent, conversation, botName, project);
-        await exitFlow();
-        return true;
-      }
-
-      // Informational branches — photos and location are never a dead end:
-      // after showing what was asked for, always offer the same two real
-      // endings (advisor or site visit) instead of just going quiet.
-      if (opt.action === "photos" && project) {
-        await sendQualifiedMedia(org, agent, conversation, botName, project.name, { wantsPhotos: true, wantsBrochure: true });
-      } else if (opt.action === "location" && project?.location) {
-        await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
-      }
-      await sendFlowStep(org, conversation, botName, closingStep());
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "closing" });
-      return true;
-    }
-
-    if (step === "closing") {
-      const opt = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
-      if (opt.id === "advisor") {
+      if (action === "advisor") {
         await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent));
         await exitFlow();
         return true;
       }
-      // site_visit
-      await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
-      return true;
-    }
-
-    if (step === "site_visit") {
-      const opt = flow.siteVisitSlots.find((o) => o.id === interactiveId);
-      if (!opt) { await exitFlow(); return false; }
-      if (conversation.leadId) {
-        await Lead.updateOne(
-          { _id: conversation.leadId },
-          {
-            $set: { status: "Site Visit", booking: "Site Visit Booked" },
-            $push: {
-              activities: {
-                type: "site_visit",
-                description: `Requested a site visit via WhatsApp (preferred slot: ${opt.label})`,
-                meta: { slot: opt.id, source: "ctwa_flow" },
-              },
-            },
-          }
-        );
+      // Informational — photos / location — never a dead end: after
+      // showing what was asked for, nudge toward the same two real endings
+      // again, and stay open for more exploring.
+      const project = await resolveFlowProject(org, agent);
+      if (action === "photos" && project) {
+        await sendQualifiedMedia(org, agent, conversation, botName, project.name, { wantsPhotos: true, wantsBrochure: true });
+      } else if (action === "location" && project?.location) {
+        await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
       }
-      await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful — our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
-      await exitFlow();
-      await autoAssignConversation(org, conversation);
-      await handOffToHuman(org, conversation, { notify: true, reason: "requested a site visit" });
+      await sendFlowStep(org, conversation, botName, closingStep());
+      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       return true;
     }
 
+    // No known button matched — a free-typed message. Exit the flow rather
+    // than dead-ending; the normal GPT agent answers it instead.
     await exitFlow();
     return false;
+  }
+
+  // The other true terminal (besides terminalAdvisor above): a picked
+  // site-visit slot. Lead written the same way the rest of this flow writes
+  // it — real fields the existing scorer already weights, not a second
+  // scoring system — then handed to a human, same as the advisor path.
+  async function completeSiteVisit(org, conversation, botName, opt) {
+    if (conversation.leadId) {
+      await Lead.updateOne(
+        { _id: conversation.leadId },
+        {
+          $set: { status: "Site Visit", booking: "Site Visit Booked" },
+          $push: {
+            activities: {
+              type: "site_visit",
+              description: `Requested a site visit via WhatsApp (preferred slot: ${opt.label})`,
+              meta: { slot: opt.id, source: "ctwa_flow" },
+            },
+          },
+        }
+      );
+    }
+    await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful — our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
+    await WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
+    await autoAssignConversation(org, conversation);
+    await handOffToHuman(org, conversation, { notify: true, reason: "requested a site visit" });
+    return true;
   }
 
   return { shouldStartFlow, startFlow, advanceFlow };

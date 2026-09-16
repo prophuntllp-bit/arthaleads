@@ -708,60 +708,67 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
     return true;
   };
 
+  // Matched by button id across every step, not by whatever step is
+  // currently recorded — mirrors ctwaFlowService.advanceFlow exactly. A real
+  // WhatsApp message's buttons never stop being tappable once a newer one
+  // is sent, and a lead often wants to revisit an earlier question (check
+  // the floor plan after already seeing the location; pick a different
+  // budget) rather than being stuck wherever they last left off — so every
+  // button in this preview stays live too, for as long as the flow hasn't
+  // reached a true ending (advisor connected, or a site visit booked).
   const tap = (opt) => {
     push({ from: "user", text: opt.label });
 
-    if (step === "purpose") {
+    const inPurpose  = flow.purposeOptions.some((o) => o.id === opt.id);
+    const inBudget   = flow.budgetBrackets.some((o) => o.id === opt.id);
+    const inTimeline = flow.timelineOptions.some((o) => o.id === opt.id);
+    const inMenu     = flow.menuOptions.some((o) => o.id === opt.id);
+    const inClosing  = CLOSING_BUTTONS.some((o) => o.id === opt.id);
+    const inSlots    = flow.siteVisitSlots.some((o) => o.id === opt.id);
+
+    if (inPurpose) {
       if (needOptions(flow.budgetBrackets, "budget brackets")) return;
       push({ from: "bot", text: "Perfect. What's your approximate budget range?", list: flow.budgetBrackets });
       setStep("budget"); return;
     }
-    if (step === "budget") {
+    if (inBudget) {
       if (needOptions(flow.timelineOptions, "timeline options")) return;
       push({ from: "bot", text: "Got it. When are you looking to finalize?", list: flow.timelineOptions });
       setStep("timeline"); return;
     }
-    if (step === "timeline") {
+    if (inTimeline) {
       if (needOptions(flow.menuOptions, "\"what next\" options")) return;
       push({ from: "bot", text: "Great — what would you like to see next?", buttons: flow.menuOptions });
       setStep("menu"); return;
     }
-    if (step === "menu") {
-      if (opt.action === "site_visit") {
-        if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
-        push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
-        setStep("site_visit"); return;
-      }
-      if (opt.action === "advisor") {
-        pushAdvisorTerminal();
-        setStep(null); return;
-      }
-      // Informational — never a dead end: always followed by the same two
-      // real endings instead of just going quiet.
-      if (opt.action === "photos") {
-        push({ from: "bot", note: true, text: "📷 Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
-      } else if (opt.action === "location") {
-        push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
-      }
-      push({ from: "bot", text: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
-      setStep("closing"); return;
-    }
-    if (step === "closing") {
-      if (opt.id === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
-      if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
-      push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
-      setStep("site_visit"); return;
-    }
-    if (step === "site_visit") {
+    if (inSlots) {
       push({ from: "bot", text: "Wonderful — our team will confirm your visit shortly and take it from here." });
       push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
       setStep(null); return;
     }
+    if (inMenu || inClosing) {
+      const action = inMenu ? opt.action : opt.id; // closing ids ARE their action
+      if (action === "site_visit") {
+        if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
+        push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
+        setStep("site_visit"); return;
+      }
+      if (action === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
+      // Informational — never a dead end, and never retires the menu: the
+      // same message's other buttons (and this one) stay tappable after.
+      if (action === "photos") {
+        push({ from: "bot", note: true, text: "📷 Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
+      } else if (action === "location") {
+        push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
+      }
+      push({ from: "bot", text: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
+      setStep("menu"); return;
+    }
   };
 
   const pushAdvisorTerminal = () => {
-    push({ from: "bot", text: "Connecting you with our advisor — they'll reach out to you shortly." });
-    push({ from: "bot", note: true, text: "✅ Uses this project's \"Talk to Advisor\" contact if one is set (Projects page); otherwise falls back to normal round-robin assignment. Bot pauses and that person is notified." });
+    push({ from: "bot", text: "Connecting you with our advisor — they'll reach out to you shortly. You can also reach them directly on <their phone number>." });
+    push({ from: "bot", note: true, text: "✅ Uses this project's \"Talk to Advisor\" contact if one is set (Projects page) — real name and phone number included so the lead can call directly; otherwise falls back to normal round-robin assignment with no number shown. Bot pauses and that person is notified." });
   };
 
   const sendFreeText = () => {
