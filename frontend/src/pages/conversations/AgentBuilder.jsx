@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
-import { Modal } from "../../components/UI";
 import toast from "react-hot-toast";
 
 /**
@@ -124,7 +123,6 @@ export default function AgentBuilder() {
   const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
-  const [showFlowPreview, setShowFlowPreview] = useState(false);
 
   // Try-it console
   const [tryInput, setTryInput] = useState("");
@@ -253,19 +251,12 @@ export default function AgentBuilder() {
           className="flex items-center gap-1.5 text-sm font-semibold text-app-soft hover:text-app transition">
           <ArrowLeft className="w-4 h-4" /> All agents
         </button>
-        <div className="flex items-center gap-2">
-          {!isNew && (
-            <button onClick={remove}
-              className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5">
-              <Trash2 className="w-3.5 h-3.5" /> Delete
-            </button>
-          )}
-          <button onClick={save} disabled={saving}
-            className="btn-primary rounded-full px-4 py-2 text-sm font-bold flex items-center gap-1.5 disabled:opacity-40">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-            {saving ? "Saving…" : isNew ? "Create agent" : "Save changes"}
+        {!isNew && (
+          <button onClick={remove}
+            className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5">
+            <Trash2 className="w-3.5 h-3.5" /> Delete
           </button>
-        </div>
+        )}
       </div>
 
       <div className="mb-6">
@@ -514,19 +505,10 @@ export default function AgentBuilder() {
 
             <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3} presets={PRESET_SITE_VISIT_SLOTS}
               rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
-
-            <button type="button" onClick={() => setShowFlowPreview(true)}
-              className="btn-secondary rounded-full px-4 py-2 text-xs font-bold flex items-center gap-2 w-full justify-center">
-              <Eye className="w-3.5 h-3.5" /> Preview this flow — see exactly what a customer taps through
-            </button>
             <p className="text-[11px] text-app-soft text-center">
-              Simulated in your browser — nothing is sent, no credit is spent, no lead is touched. Uses
-              whatever is on screen now, saved or not — the same way "Try it" below works.
+              Preview of this flow is alongside "Try it" →
             </p>
           </div>
-
-          <CtwaFlowPreview open={showFlowPreview} onClose={() => setShowFlowPreview(false)}
-            flow={form.ctwaFlow} projectName={projects.find((p) => form.projectIds.includes(String(p._id)))?.name} />
 
           <div className="card p-5 space-y-3">
             <button type="button" onClick={() => setShowAdvanced((v) => !v)}
@@ -548,9 +530,11 @@ export default function AgentBuilder() {
           </div>
         </div>
 
-        {/* Try it, alongside the form rather than under it, so you can change a
-            ground rule and immediately ask the same question again. */}
-        <div className="card p-5 space-y-4 lg:sticky lg:top-4">
+        {/* Try it + the CTWA flow preview, alongside the form rather than
+            under it, so you can change a ground rule or a button label and
+            immediately re-check it without losing your place. */}
+        <div className="space-y-4 lg:sticky lg:top-4">
+        <div className="card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
             <h3 className="text-base font-bold text-app">Try it</h3>
@@ -656,6 +640,18 @@ export default function AgentBuilder() {
             </div>
           )}
         </div>
+
+        <CtwaFlowPreviewPanel flow={form.ctwaFlow}
+          projectName={projects.find((p) => form.projectIds.includes(String(p._id)))?.name} />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6 pt-4" style={{ borderTop: "1px solid var(--app-border)" }}>
+        <button onClick={save} disabled={saving}
+          className="btn-primary rounded-full px-6 py-2.5 text-sm font-bold flex items-center gap-1.5 disabled:opacity-40">
+          {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+          {saving ? "Saving…" : isNew ? "Create agent" : "Save changes"}
+        </button>
       </div>
     </div>
   );
@@ -670,7 +666,7 @@ function fillVars(text, vars) {
   return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 }
 
-function CtwaFlowPreview({ open, onClose, flow, projectName }) {
+function CtwaFlowPreviewPanel({ flow, projectName }) {
   const [log, setLog] = useState([]);
   const [step, setStep] = useState(null); // mirrors WaConversation.flowState.step
   const [freeText, setFreeText] = useState("");
@@ -680,6 +676,10 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
 
   const restart = () => {
     setLog([]); setFreeText("");
+    if (!flow.enabled) {
+      setStep(null);
+      return;
+    }
     // Two separate messages, exactly like ctwaFlowService.startFlow — a
     // greeting bundled into the same message as the first question reads as
     // the bot talking over itself.
@@ -693,7 +693,7 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
     setStep("purpose");
   };
 
-  useEffect(() => { if (open) restart(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { restart(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const needOptions = (rows, label) => {
     if (rows.length) return false;
@@ -751,8 +751,22 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Preview: CTWA button flow" size="md">
-      <div className="space-y-3">
+    <div className="card p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <MousePointerClick className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+        <h3 className="text-base font-bold text-app">Preview: CTWA button flow</h3>
+      </div>
+      <p className="text-xs text-app-soft">
+        Simulated in your browser — nothing is sent, no credit is spent, no lead is touched. Uses whatever
+        is on screen now, saved or not, the same way "Try it" above does.
+      </p>
+
+      {!flow.enabled ? (
+        <p className="text-xs text-app-soft rounded-xl px-3 py-2.5" style={{ background: "var(--app-surface-low)" }}>
+          Turn on the CTWA button flow above to preview it here.
+        </p>
+      ) : (
+      <>
         <div className="rounded-2xl p-3 space-y-2.5 overflow-y-auto" style={{ background: "var(--app-surface-low)", maxHeight: 420 }}>
           {log.map((m, i) => (
             <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
@@ -797,8 +811,9 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
           <p className="text-[11px] text-app-soft">{step ? `Currently at: ${step}` : "Flow finished — restart to try a different path."}</p>
           <button type="button" onClick={restart} className="text-xs font-semibold text-app-soft hover:text-app transition">Restart</button>
         </div>
-      </div>
-    </Modal>
+      </>
+      )}
+    </div>
   );
 }
 
