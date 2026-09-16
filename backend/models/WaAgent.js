@@ -66,6 +66,24 @@ const waAgentSchema = new mongoose.Schema(
     // here is what guarantees the first reply is about the right thing.
     adIds: [{ type: String, trim: true }],
 
+    // ── CTWA button-driven qualification flow ───────────────────────────────
+    // An alternative to the free-text GPT qualification, only for threads that
+    // started from a Click-to-WhatsApp ad (conversation.campaignRef set) — real
+    // WhatsApp interactive buttons/lists for the first few qualifying
+    // questions, deterministic branching, answers written straight onto the
+    // Lead record. See services/ctwaFlowService.js. A fixed 5-step shape
+    // (purpose → budget → timeline → menu → site-visit slot) with every
+    // label/option tenant-editable — not a generic flow builder.
+    ctwaFlow: {
+      enabled:     { type: Boolean, default: false },
+      welcomeText: { type: String, default: "" }, // "{{name}}" placeholder supported
+      purposeOptions:  [{ id: String, label: String }],                              // ≤3
+      budgetBrackets:  [{ id: String, label: String, min: Number, max: Number }],     // ≤10
+      timelineOptions: [{ id: String, label: String }],                              // ≤10
+      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "location", "site_visit"] } }], // ≤3
+      siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
+    },
+
     createdBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     createdByName: { type: String, default: "" },
   },

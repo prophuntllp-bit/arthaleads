@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Sparkles, Building2, Megaphone, Plus, X, Check, Loader2,
   ChevronDown, MessageSquare, Send, AlertTriangle, Eye, Trash2, Image as ImageIcon,
+  MousePointerClick, Lock,
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
@@ -37,6 +38,47 @@ const STATUSES = [
   { value: "draft",  label: "Draft — still being written" },
 ];
 
+const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "option"}_${i}`;
+
+// Sensible starting point for an Indian real-estate CTWA flow — every label
+// (and the wording) is editable per agent; only the 5-step shape is fixed.
+const DEFAULT_CTWA_FLOW = {
+  enabled: false,
+  welcomeText: "Hi {{name}} 👋 Thanks for your interest! Are you looking for this primarily for:",
+  purposeOptions: [
+    { id: "self_use_0", label: "Self Use" },
+    { id: "investment_1", label: "Investment" },
+  ],
+  budgetBrackets: [
+    { id: "b0", label: "Under ₹50L", min: 0, max: 5000000 },
+    { id: "b1", label: "₹50L – ₹1Cr", min: 5000000, max: 10000000 },
+    { id: "b2", label: "₹1Cr+", min: 10000000, max: 0 },
+    { id: "b3", label: "Just Exploring", min: 0, max: 0 },
+  ],
+  timelineOptions: [
+    { id: "t0", label: "Within 30 Days" },
+    { id: "t1", label: "1–3 Months" },
+    { id: "t2", label: "3–6 Months" },
+    { id: "t3", label: "Just Exploring" },
+  ],
+  menuOptions: [
+    { id: "m0", label: "📄 Price & Floor Plan", action: "photos" },
+    { id: "m1", label: "📍 Location Details", action: "location" },
+    { id: "m2", label: "🏡 Book Site Visit", action: "site_visit" },
+  ],
+  siteVisitSlots: [
+    { id: "s0", label: "Morning" },
+    { id: "s1", label: "Afternoon" },
+    { id: "s2", label: "Evening" },
+  ],
+};
+
+const MENU_ACTIONS = [
+  { value: "photos",     label: "Send photos & brochure" },
+  { value: "location",   label: "Send project location" },
+  { value: "site_visit", label: "Ask for a site-visit time" },
+];
+
 export default function AgentBuilder() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -52,8 +94,10 @@ export default function AgentBuilder() {
     businessContext: "", groundRules: "", projectIds: [],
     systemPrompt: "", language: "auto", adIds: [],
     shareProjectPhotos: false, shareBrochure: false,
+    ctwaFlow: DEFAULT_CTWA_FLOW,
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
 
@@ -80,6 +124,7 @@ export default function AgentBuilder() {
           systemPrompt: a.systemPrompt || "", language: a.language || "auto",
           adIds: a.adIds || [],
           shareProjectPhotos: a.shareProjectPhotos === true, shareBrochure: a.shareBrochure === true,
+          ctwaFlow: a.ctwaFlow?.welcomeText !== undefined ? a.ctwaFlow : DEFAULT_CTWA_FLOW,
         });
         setShowAdvanced(!!a.systemPrompt);
         setReadiness(a.readiness);
@@ -383,6 +428,53 @@ export default function AgentBuilder() {
           </div>
 
           <div className="card p-5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <MousePointerClick className="w-4 h-4" style={{ color: "var(--app-primary)" }} />
+                <h3 className="text-base font-bold text-app">CTWA button flow</h3>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: "rgba(var(--app-primary-rgb),0.12)", color: "var(--app-primary)" }}>
+                  <Lock className="w-2.5 h-2.5" /> Growth+
+                </span>
+              </div>
+              <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
+                <input type="checkbox" checked={form.ctwaFlow.enabled}
+                  onChange={(e) => setFlow({ enabled: e.target.checked })} />
+                <span className="text-xs font-semibold text-app">{form.ctwaFlow.enabled ? "On" : "Off"}</span>
+              </label>
+            </div>
+            <p className="text-sm text-app-soft">
+              For a customer arriving from a Click-to-WhatsApp ad (route it above first), replace the first
+              few free-text qualifying questions with real WhatsApp buttons/lists: purpose → budget →
+              timeline → what they want next → site-visit time. Answers write straight onto the lead. Anyone
+              who free-types instead of tapping drops back into this assistant's usual conversation.
+            </p>
+
+            <div>
+              <label className="text-xs font-semibold text-app-soft block mb-1">Welcome message (first thing they see)</label>
+              <textarea className="input w-full resize-none" rows={2}
+                placeholder="Hi {{name}} 👋 Thanks for your interest! ..."
+                value={form.ctwaFlow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
+              <p className="text-[11px] text-app-soft mt-1">Use <code>{"{{name}}"}</code> for the customer's name.</p>
+            </div>
+
+            <ChipRowEditor label="Purpose — up to 3 buttons" max={3}
+              rows={form.ctwaFlow.purposeOptions} onChange={(rows) => setFlow({ purposeOptions: rows })} />
+
+            <BudgetBracketEditor rows={form.ctwaFlow.budgetBrackets}
+              onChange={(rows) => setFlow({ budgetBrackets: rows })} />
+
+            <ChipRowEditor label="Timeline — up to 10, shown as a list" max={10}
+              rows={form.ctwaFlow.timelineOptions} onChange={(rows) => setFlow({ timelineOptions: rows })} />
+
+            <MenuOptionEditor rows={form.ctwaFlow.menuOptions}
+              onChange={(rows) => setFlow({ menuOptions: rows })} />
+
+            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3}
+              rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
+          </div>
+
+          <div className="card p-5 space-y-3">
             <button type="button" onClick={() => setShowAdvanced((v) => !v)}
               className="flex items-center gap-1.5 text-xs font-semibold text-app-soft hover:text-app transition">
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
@@ -511,6 +603,120 @@ export default function AgentBuilder() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── CTWA flow step editors ──────────────────────────────────────────────────
+// Three small, focused editors rather than one generic table: each step's
+// options need a slightly different shape (plain label, label+budget range,
+// label+action), and forcing them through one config-driven table would be
+// harder to read than three short components.
+
+const ROW_CLS = "flex items-center gap-2";
+const SMALL_INPUT = "input text-xs py-1.5";
+
+function ChipRowEditor({ label, rows, max, onChange }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const text = draft.trim();
+    if (!text || rows.length >= max) return;
+    onChange([...rows, { id: slugify(text, rows.length), label: text }]);
+    setDraft("");
+  };
+  return (
+    <div>
+      <label className="text-xs font-semibold text-app-soft block mb-1">{label}</label>
+      <div className={ROW_CLS}>
+        <input className={`${SMALL_INPUT} flex-1`} value={draft} onChange={(e) => setDraft(e.target.value)}
+          placeholder="Add an option…" disabled={rows.length >= max}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
+        <button type="button" onClick={add} disabled={!draft.trim() || rows.length >= max}
+          className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40"><Plus className="w-3.5 h-3.5" /></button>
+      </div>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {rows.map((r) => (
+            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+              {r.label}
+              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BudgetBracketEditor({ rows, onChange }) {
+  const [label, setLabel] = useState(""); const [min, setMin] = useState(""); const [max, setMax] = useState("");
+  const add = () => {
+    if (!label.trim() || rows.length >= 10) return;
+    onChange([...rows, { id: slugify(label, rows.length), label: label.trim(), min: Number(min) || 0, max: Number(max) || 0 }]);
+    setLabel(""); setMin(""); setMax("");
+  };
+  return (
+    <div>
+      <label className="text-xs font-semibold text-app-soft block mb-1">Budget brackets — up to 10, shown as a list</label>
+      <div className={ROW_CLS}>
+        <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
+          placeholder="Label, e.g. ₹50L – ₹1Cr" disabled={rows.length >= 10} />
+        <input className={`${SMALL_INPUT} w-24`} type="number" min="0" value={min} onChange={(e) => setMin(e.target.value)}
+          placeholder="Min ₹" disabled={rows.length >= 10} />
+        <input className={`${SMALL_INPUT} w-24`} type="number" min="0" value={max} onChange={(e) => setMax(e.target.value)}
+          placeholder="Max ₹ (0 = no cap)" disabled={rows.length >= 10} />
+        <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 10}
+          className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
+      </div>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {rows.map((r) => (
+            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+              {r.label}
+              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuOptionEditor({ rows, onChange }) {
+  const [label, setLabel] = useState(""); const [action, setAction] = useState("photos");
+  const add = () => {
+    if (!label.trim() || rows.length >= 3) return;
+    onChange([...rows, { id: slugify(label, rows.length), label: label.trim(), action }]);
+    setLabel("");
+  };
+  return (
+    <div>
+      <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
+      <div className={ROW_CLS}>
+        <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
+          placeholder="Label, e.g. 📄 Price & Floor Plan" disabled={rows.length >= 3} />
+        <select className={`${SMALL_INPUT} w-48`} value={action} onChange={(e) => setAction(e.target.value)} disabled={rows.length >= 3}>
+          {MENU_ACTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+        </select>
+        <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 3}
+          className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
+      </div>
+      {rows.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {rows.map((r) => (
+            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+              {r.label} <span className="text-app-soft font-normal">→ {MENU_ACTIONS.find((a) => a.value === r.action)?.label}</span>
+              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

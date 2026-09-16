@@ -24,7 +24,7 @@ const campaignSvc    = require("../services/waCampaignService");
 const WaCampaign     = require("../models/WaCampaign");
 const Project        = require("../models/Project");
 const AiUsage        = require("../models/AiUsage");
-const { planGate }   = require("../middlewares/planGate");
+const { planGate, levelOf } = require("../middlewares/planGate");
 const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
 const onboarding = require("../services/whatsappOnboardingService");
@@ -32,6 +32,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const OPTS = require("../constants/leadOptions");
+const createCtwaFlowService = require("../services/ctwaFlowService");
 
 // ── Provider: send message ────────────────────────────────────────────────────
 
@@ -130,6 +131,48 @@ async function sendProviderMedia(org, to, { type, url, caption, filename }) {
   return r.data?.messages?.[0]?.id || null;
 }
 
+// Sends one interactive message: up to 3 reply buttons, or a list of up to 10
+// rows when there are more options than fit as buttons. Meta only, same
+// reasoning as sendProviderMedia — the BSPs each have their own incompatible
+// (or absent) interactive-message support. The only caller today is
+// ctwaFlowService; nothing else in the bot sends anything but plain text.
+//
+// `buttons`/`list` rows carry a stable machine `id` (never the display label)
+// — that id is exactly what comes back on the customer's tap in
+// interactive.button_reply.id / list_reply.id (see parseWebhookPayload),
+// which is what the flow engine matches against.
+async function sendInteractive(org, to, { bodyText, buttons, list }) {
+  const { provider = "aisensy", apiKey, phoneNumberId } = org.whatsapp || {};
+  if (provider !== "meta") {
+    throw new Error(`Interactive messages are only supported on the direct connection, not ${provider}.`);
+  }
+  if (!Array.isArray(buttons) && !list) {
+    throw new Error("sendInteractive needs either buttons or a list.");
+  }
+
+  const interactive = buttons
+    ? {
+        type: "button",
+        body: { text: bodyText },
+        action: { buttons: buttons.slice(0, 3).map((b) => ({ type: "reply", reply: { id: b.id, title: String(b.title).slice(0, 20) } })) },
+      }
+    : {
+        type: "list",
+        body: { text: bodyText },
+        action: {
+          button: String(list.buttonLabel || "Choose").slice(0, 20),
+          sections: [{ rows: list.rows.slice(0, 10).map((r) => ({ id: r.id, title: String(r.title).slice(0, 24), description: r.description ? String(r.description).slice(0, 72) : undefined })) }],
+        },
+      };
+
+  const r = await axios.post(
+    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
+    { messaging_product: "whatsapp", recipient_type: "individual", to, type: "interactive", interactive },
+    { headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } }
+  );
+  return r.data?.messages?.[0]?.id || null;
+}
+
 // ── Provider: parse inbound webhook payload ───────────────────────────────────
 
 function parseWebhookPayload(provider, payload, headers) {
@@ -181,6 +224,10 @@ function parseWebhookPayload(provider, payload, headers) {
         msgId: msg.id,
         msgText,
         msgType: msg.type || "text",
+        // The stable machine id of a button/list tap — never the display
+        // title, which can be edited or duplicated. Only ctwaFlowService
+        // reads this; everything else keeps using msgText as before.
+        interactiveId: msg.interactive?.button_reply?.id || msg.interactive?.list_reply?.id || null,
         // Present only on the message that opened this thread from a
         // Click-to-WhatsApp ad's "Send Message" CTA — everything downstream
         // (campaignRefFromReferral) treats a missing referral as "organic".
@@ -493,8 +540,17 @@ async function findLiveLeadByPhone(orgId, phone) {
   }).sort({ createdAt: -1 }).lean();
 }
 
+// Instantiated once at module load — sendQualifiedMedia, handOffToHuman and
+// autoAssignConversation are function declarations further down this file,
+// hoisted, so this is safe here regardless of source order.
+const ctwaFlow = createCtwaFlowService({
+  WaConversation, Lead, Project,
+  sendInteractive, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
+  credits, WaMessage,
+});
+
 async function handleInbound(org, parsed) {
-  const { phone, name, msgId, msgText, msgType, referral } = parsed;
+  const { phone, name, msgId, msgText, msgType, referral, interactiveId } = parsed;
   if (!phone || !msgText) return;
 
   let conv = await WaConversation.findOne({ orgId: org._id, contactPhone: phone });
@@ -575,6 +631,20 @@ async function handleInbound(org, parsed) {
       await maybeSendAwayMessage(org, agent, conv);
       return;
     }
+
+    // Mid-flow: the customer's tap (or free-typed message, which exits the
+    // flow rather than dead-ending) is handled entirely by ctwaFlowService —
+    // never falls through to the greeting/GPT path below for this message.
+    if (conv.flowState?.step) {
+      const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText });
+      if (handled) return;
+      // advanceFlow already cleared flowState on a no-match — fall through to
+      // the normal reply below so this message still gets answered.
+    } else if (isNewConversation && ctwaFlow.shouldStartFlow(agent, conv)) {
+      await ctwaFlow.startFlow(org, agent, conv);
+      return;
+    }
+
     if (isNewConversation && agent.greeting?.trim()) {
       await sendBotGreeting(org, agent, conv);
     }
@@ -1490,8 +1560,56 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 const AGENT_FIELDS = [
   "name", "description", "greeting", "businessContext", "groundRules",
   "projectIds", "systemPrompt", "language", "adIds", "status",
-  "shareProjectPhotos", "shareBrochure",
+  "shareProjectPhotos", "shareBrochure", "ctwaFlow",
 ];
+
+// Caps mirror WhatsApp's own interactive-message limits (3 reply buttons, 10
+// list rows) — enforced here so a misconfigured flow fails on save with a
+// clear message instead of failing silently at Meta send time mid-conversation.
+const CTWA_STEP_CAPS = {
+  purposeOptions: 3, budgetBrackets: 10, timelineOptions: 10, menuOptions: 3, siteVisitSlots: 3,
+};
+const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit"];
+
+function sanitizeCtwaFlow(input) {
+  if (!input || typeof input !== "object") return undefined;
+  const clean = { enabled: input.enabled === true, welcomeText: String(input.welcomeText || "").trim().slice(0, 500) };
+
+  for (const [key, cap] of Object.entries(CTWA_STEP_CAPS)) {
+    const rows = Array.isArray(input[key]) ? input[key] : [];
+    clean[key] = rows
+      .map((r) => ({
+        id: String(r?.id || "").trim().slice(0, 60),
+        label: String(r?.label || "").trim().slice(0, 60),
+        ...(key === "budgetBrackets" ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
+        ...(key === "menuOptions" ? { action: CTWA_MENU_ACTIONS.includes(r?.action) ? r.action : "photos" } : {}),
+      }))
+      .filter((r) => r.id && r.label)
+      .slice(0, cap);
+  }
+
+  if (clean.enabled) {
+    const missing = Object.keys(CTWA_STEP_CAPS).filter((k) => !clean[k].length);
+    if (!clean.welcomeText || missing.length) {
+      const e = new Error(
+        `The CTWA flow needs a welcome message and at least one option for each step before it can be turned on${missing.length ? ` (missing: ${missing.join(", ")})` : ""}.`
+      );
+      e.status = 400; throw e;
+    }
+  }
+  return clean;
+}
+
+// The scripted CTWA flow is a paid feature (Growth+) — same tier the Projects
+// feature is already gated at. Checked here rather than with router.use(planGate(...))
+// because it's conditional on what's actually being turned on, not the whole route.
+function assertCtwaFlowAllowed(req, fields) {
+  if (!fields.ctwaFlow?.enabled) return;
+  if (req.user?.role === "super_admin") return;
+  if (levelOf(req.org?.plan) >= levelOf("growth")) return;
+  const e = new Error("The CTWA button flow needs a Growth plan or higher. Upgrade to turn it on.");
+  e.status = 403; throw e;
+}
 
 // Projects are the one field a tenant could use to point their assistant at
 // another tenant's data by pasting IDs, so ownership is checked rather than
@@ -1519,6 +1637,7 @@ async function sanitizeAgentBody(orgId, body) {
   }
   if (out.shareProjectPhotos !== undefined) out.shareProjectPhotos = out.shareProjectPhotos === true;
   if (out.shareBrochure      !== undefined) out.shareBrochure      = out.shareBrochure === true;
+  if (out.ctwaFlow !== undefined) out.ctwaFlow = sanitizeCtwaFlow(out.ctwaFlow);
   return out;
 }
 
@@ -1555,6 +1674,7 @@ router.get("/agents/:id", async (req, res) => {
 router.post("/agents", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const fields = await sanitizeAgentBody(req.orgId, req.body || {});
+    assertCtwaFlowAllowed(req, fields);
     if (!fields.name) return res.status(400).json({ message: "Give the assistant a name." });
 
     // The first assistant an org creates becomes the default, otherwise
@@ -1576,6 +1696,7 @@ router.post("/agents", authorize("admin", "super_admin"), async (req, res) => {
 router.patch("/agents/:id", authorize("admin", "super_admin"), async (req, res) => {
   try {
     const fields = await sanitizeAgentBody(req.orgId, req.body || {});
+    assertCtwaFlowAllowed(req, fields);
     // Sending name:"" would otherwise clear it and fail schema validation with
     // a message nobody can act on.
     if (fields.name !== undefined && !fields.name) {

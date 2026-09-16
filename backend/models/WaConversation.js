@@ -42,6 +42,18 @@ const waConversationSchema = new mongoose.Schema({
   // thread — lets the bot send it once per closed day instead of once per
   // message (see isWithinBusinessHours / triggerBotReply in whatsappRoutes.js).
   awayMessageSentAt: { type: Date, default: null },
+
+  // Where this thread is inside the agent's CTWA button flow (see
+  // services/ctwaFlowService.js). undefined — not "purpose" — for every
+  // conversation not currently in a flow, same convention as campaignRef
+  // above: "field absent" means "doesn't apply", not "at the first step".
+  flowState: {
+    type: {
+      step:      { type: String, enum: ["purpose", "budget", "timeline", "menu", "site_visit"] },
+      startedAt: { type: Date, default: Date.now },
+    },
+    default: undefined,
+  },
 }, { timestamps: true });
 
 waConversationSchema.index({ orgId: 1, contactPhone: 1 }, { unique: true });
