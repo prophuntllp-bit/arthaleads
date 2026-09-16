@@ -30,11 +30,25 @@ module.exports = function createCtwaFlowService({
   const fill = (text, vars) =>
     String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 
-  /** True only when this agent+conversation should start the button flow instead of the usual greeting/GPT path. */
+  /**
+   * True only when this agent+conversation should start the button flow
+   * instead of the usual greeting/GPT path.
+   *
+   * Whether a real ad click is required depends on how "Route ads to this
+   * agent" (WaAgent.adIds) is set up:
+   *   - left empty → nothing to restrict to, so the flow runs for every
+   *     conversation this agent handles. This is also what makes the flow
+   *     testable before a real ad exists — message the number yourself and
+   *     it behaves exactly as it will once ads are live.
+   *   - one or more ad IDs set → the flow is reserved for leads that
+   *     genuinely came from one of those ads (conversation.campaignRef set
+   *     by campaignRefFromReferral); an organic "hi" that reached this
+   *     agent as the org's default still gets the normal free-text agent.
+   */
   function shouldStartFlow(agent, conversation) {
-    return !!agent?.ctwaFlow?.enabled
-      && !!conversation.campaignRef
-      && !conversation.flowState?.step;
+    if (!agent?.ctwaFlow?.enabled || conversation.flowState?.step) return false;
+    if (agent.adIds?.length) return !!conversation.campaignRef;
+    return true;
   }
 
   // The one project this flow is grounded in. Unlike the GPT path's

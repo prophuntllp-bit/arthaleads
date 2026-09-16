@@ -464,10 +464,14 @@ export default function AgentBuilder() {
               </label>
             </div>
             <p className="text-sm text-app-soft">
-              For a customer arriving from a Click-to-WhatsApp ad (route it above first), replace the first
-              few free-text qualifying questions with real WhatsApp buttons/lists: purpose → budget →
-              timeline → what they want next → site-visit time. Answers write straight onto the lead. Anyone
-              who free-types instead of tapping drops back into this assistant's usual conversation.
+              Replace the first few free-text qualifying questions with real WhatsApp buttons/lists: purpose →
+              budget → timeline → what they want next → site-visit time. Answers write straight onto the lead.
+              Anyone who free-types instead of tapping drops back into this assistant's usual conversation.
+            </p>
+            <p className="text-xs rounded-xl px-3 py-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
+              {form.adIds.length
+                ? <>Reserved for leads from the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above — anyone else reaching this assistant gets the normal free-text conversation instead.</>
+                : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including you messaging it yourself right now. That's what lets you test the real thing before any ad exists. Add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
             </p>
 
             <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
