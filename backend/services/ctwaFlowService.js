@@ -160,12 +160,20 @@ module.exports = function createCtwaFlowService({
    * greeting with the first question into one interactive body reads as the
    * bot talking over itself rather than a real opening exchange — and marks
    * the conversation as being in the flow.
+   *
+   * The greeting is skipped entirely when welcomeText is blank — a tenant
+   * running Meta's own "automated greeting" on the ad itself (Ads Manager →
+   * Conversations, shown the instant someone taps the ad, before this bot
+   * ever sees a message) doesn't want a second, redundant "thanks for your
+   * interest" from here too.
    */
   async function startFlow(org, agent, conversation) {
     const botName = agent.name || "Artha Assistant";
     const vars = { name: conversation.contactName || "there", project: (await resolveFlowProject(org, agent))?.name || "" };
-    const greetingSent = await sendFlowStep(org, conversation, botName, { bodyText: fill(agent.ctwaFlow.welcomeText, vars) });
-    if (!greetingSent) return;
+    if (agent.ctwaFlow.welcomeText?.trim()) {
+      const greetingSent = await sendFlowStep(org, conversation, botName, { bodyText: fill(agent.ctwaFlow.welcomeText, vars) });
+      if (!greetingSent) return;
+    }
     const questionSent = await sendFlowStep(org, conversation, botName, { ...purposeStep(agent, vars), previewLabel: "Started qualification" });
     if (questionSent) {
       await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "purpose", startedAt: new Date() } });

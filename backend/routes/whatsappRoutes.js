@@ -1593,10 +1593,14 @@ function sanitizeCtwaFlow(input) {
   }
 
   if (clean.enabled) {
+    // welcomeText is deliberately optional — a tenant running Meta's own
+    // "automated greeting" on the ad itself (Ads Manager → Conversations)
+    // doesn't want a second, redundant one from this bot; leaving it blank
+    // skips straight to the purpose question (see ctwaFlowService.startFlow).
     const missing = Object.keys(CTWA_STEP_CAPS).filter((k) => !clean[k].length);
-    if (!clean.welcomeText || !clean.purposeQuestion || missing.length) {
+    if (!clean.purposeQuestion || missing.length) {
       const e = new Error(
-        `The CTWA flow needs a welcome message, a purpose question, and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
+        `The CTWA flow needs a purpose question and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
       );
       e.status = 400; throw e;
     }

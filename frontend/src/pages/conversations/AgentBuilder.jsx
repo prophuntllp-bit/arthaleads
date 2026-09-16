@@ -475,7 +475,7 @@ export default function AgentBuilder() {
             </p>
 
             <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 1 of 2 — sent first, plain text</p>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 1 of 2 — sent first, plain text (optional)</p>
               <div>
                 <label className="text-xs font-semibold text-app-soft block mb-1">Welcome message</label>
                 <textarea className="input w-full resize-none" rows={2}
@@ -483,7 +483,9 @@ export default function AgentBuilder() {
                   value={form.ctwaFlow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
                 <p className="text-[11px] text-app-soft mt-1">
                   Use <code>{"{{name}}"}</code> and <code>{"{{project}}"}</code>. Sent on its own — a greeting bundled
-                  into the same message as the first question reads as the bot talking over itself.
+                  into the same message as the first question reads as the bot talking over itself. Leave this blank
+                  if the ad's own "Automated greeting" (Ads Manager → Conversations) already covers it — the flow
+                  then opens straight with the purpose question below, no double greeting.
                 </p>
               </div>
             </div>
@@ -692,8 +694,12 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
     }
     // Two separate messages, exactly like ctwaFlowService.startFlow — a
     // greeting bundled into the same message as the first question reads as
-    // the bot talking over itself.
-    push({ from: "bot", text: fillVars(flow.welcomeText, vars) || "(welcome message is empty)" });
+    // the bot talking over itself. Skipped entirely when blank, same as the
+    // backend — for when Meta's own ad-level "Automated greeting" is already
+    // covering it and a second one here would be redundant.
+    if (flow.welcomeText.trim()) {
+      push({ from: "bot", text: fillVars(flow.welcomeText, vars) });
+    }
     if (!flow.purposeOptions.length) {
       push({ from: "bot", warn: true, text: "No purpose options configured yet — add at least one above to preview past this step." });
       setStep(null);
