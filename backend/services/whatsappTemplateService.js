@@ -89,6 +89,39 @@ async function createTemplate(org, { name, category, language, components }) {
   }
 }
 
+/**
+ * Edit an existing template's category and/or components.
+ *
+ * Meta's own behaviour, not something enforced here: editing a template —
+ * APPROVED, REJECTED or PAUSED — resets its status to PENDING and sends it
+ * through review again. There is no local "are you sure" needed because
+ * Meta's response already reflects the new PENDING status; the caller just
+ * needs to know to re-read it, which listTemplates already does on refresh.
+ *
+ * Takes Meta's own numeric template `id` (from listTemplates), not the
+ * template name — that's what Meta's edit endpoint addresses by.
+ */
+async function updateTemplate(org, templateId, { category, components }) {
+  const wa = assertMeta(org);
+  if (category && !["MARKETING", "UTILITY", "AUTHENTICATION"].includes(category)) {
+    throw badRequest("Category must be MARKETING, UTILITY or AUTHENTICATION.");
+  }
+  if (!Array.isArray(components) || !components.length) {
+    throw badRequest("A template needs at least a body.");
+  }
+  try {
+    const { data } = await axios.post(
+      `${GRAPH}/${templateId}`,
+      { ...(category ? { category } : {}), components },
+      { params: { access_token: wa.apiKey } }
+    );
+    logger.info(`[wa-templates] org ${org._id} edited template ${templateId} — back to review`);
+    return data;
+  } catch (err) {
+    throw fromMeta(err, "Could not save the edit.");
+  }
+}
+
 async function deleteTemplate(org, name) {
   const wa = assertMeta(org);
   try {
@@ -203,7 +236,7 @@ function badRequest(message, { settingsFix = false } = {}) {
 }
 
 module.exports = {
-  listTemplates, listApproved, createTemplate, deleteTemplate,
+  listTemplates, listApproved, createTemplate, updateTemplate, deleteTemplate,
   buildSendComponents, countBodyVariables, normaliseGeneratedVariant,
   APPROVED, BINDABLE_FIELDS,
 };

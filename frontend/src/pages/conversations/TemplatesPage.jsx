@@ -327,8 +327,9 @@ export default function TemplatesPage() {
               {shown.map((t) => {
                 const rejected = t.status === "REJECTED";
                 return (
-                  <div key={t.id || t.name} className="card p-4 flex flex-col"
-                    style={rejected ? { borderColor: "rgba(239,68,68,0.35)" } : undefined}>
+                  <div key={t.id || t.name} className="card p-4 flex flex-col cursor-pointer transition hover:border-[var(--app-primary)]"
+                    style={rejected ? { borderColor: "rgba(239,68,68,0.35)" } : undefined}
+                    onClick={() => t.id && navigate(`/conversations/templates/${t.id}/edit`)}>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-app truncate">{t.name}</p>
@@ -354,7 +355,7 @@ export default function TemplatesPage() {
                     <div className="flex items-center justify-between gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--app-border)" }}>
                       <span className="text-[10px] text-app-soft font-mono truncate">{t.id ? `ID: ${t.id}` : ""}</span>
                       {canEdit && (
-                        <button onClick={() => remove(t.name)}
+                        <button onClick={(e) => { e.stopPropagation(); remove(t.name); }}
                           className="text-[11px] font-semibold text-app-soft hover:text-red-500 transition flex items-center gap-1 shrink-0">
                           <Trash2 className="w-3 h-3" /> Delete
                         </button>

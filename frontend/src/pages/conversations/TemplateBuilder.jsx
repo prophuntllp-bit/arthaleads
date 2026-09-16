@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ArrowLeft, Loader2, Send, Info, CheckCircle2, AlertTriangle, Zap, Plus, X, Compass, XCircle,
-  Sparkles, Building2,
+  Sparkles, Building2, RotateCcw,
 } from "lucide-react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
@@ -51,11 +51,34 @@ const nowClock = () => new Date()
 
 const slugify = (v) => v.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+/, "").slice(0, 60);
 
+// Meta's edit endpoint addresses a template by its numeric id and only
+// accepts category + components back — name and language are fixed once a
+// template is created, so editForm only ever needs to feed the rest of the
+// same field set submit() already builds components from.
+function componentsToForm(components = []) {
+  const header = components.find((c) => c.type === "HEADER");
+  const body   = components.find((c) => c.type === "BODY");
+  const footer = components.find((c) => c.type === "FOOTER");
+  const buttonsComp = components.find((c) => c.type === "BUTTONS");
+  return {
+    headerText: header?.format === "TEXT" ? (header.text || "") : "",
+    body: body?.text || "",
+    examples: body?.example?.body_text?.[0]?.map(String) || [],
+    footer: footer?.text || "",
+    buttons: (buttonsComp?.buttons || []).map((b) => ({ ...b })),
+  };
+}
+
 export default function TemplateBuilder() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: editId } = useParams();
+  const isEditing = !!editId;
   const bodyRef = useRef(null);
   const preset = location.state?.preset || null;
+
+  const [loadingExisting, setLoadingExisting] = useState(isEditing);
+  const [originalStatus, setOriginalStatus] = useState("");
 
   const [name, setName]         = useState(preset ? slugify(preset.key) : "");
   const [category, setCategory] = useState(preset?.category || "MARKETING");
@@ -88,12 +111,32 @@ export default function TemplateBuilder() {
       .catch(() => {});
   }, []);
 
+  // Editing an existing template — load its current category/components. Name
+  // and language are fixed by Meta once created, so those come along read-only.
+  useEffect(() => {
+    if (!isEditing) return;
+    api.get(`/whatsapp/templates/${editId}`)
+      .then(({ data }) => {
+        const t = data.template;
+        const parsed = componentsToForm(t.components);
+        setName(t.name); setCategory(t.category); setLanguage(t.language || "en_US");
+        setOriginalStatus(t.status || "");
+        setHeaderText(parsed.headerText); setBody(parsed.body); setFooter(parsed.footer);
+        setExamples(parsed.examples); setButtons(parsed.buttons);
+      })
+      .catch(() => toast.error("Could not load this template"))
+      .finally(() => setLoadingExisting(false));
+  }, [isEditing, editId]);
+
   const vars = useMemo(() => varNumbers(body), [body]);
   const nextVar = (vars[vars.length - 1] || 0) + 1;
 
+  // Editing this template's own name must never trip the "name already
+  // taken" check against itself.
   const issues = useMemo(
-    () => lintTemplate({ name, category, body, footer, headerText, examples, buttons }, { existingNames }),
-    [name, category, body, footer, headerText, examples, buttons, existingNames]
+    () => lintTemplate({ name, category, body, footer, headerText, examples, buttons },
+      { existingNames: isEditing ? existingNames.filter((n) => n !== name) : existingNames }),
+    [name, category, body, footer, headerText, examples, buttons, existingNames, isEditing]
   );
   const blocked = hasBlockers(issues);
   const blockers = issues.filter((i) => i.level === "block");
@@ -181,8 +224,13 @@ export default function TemplateBuilder() {
           ),
         });
       }
-      await api.post("/whatsapp/templates", { name, category, language, components });
-      toast.success("Submitted for review");
+      if (isEditing) {
+        await api.put(`/whatsapp/templates/${editId}`, { category, components });
+        toast.success("Saved — back in review with Meta");
+      } else {
+        await api.post("/whatsapp/templates", { name, category, language, components });
+        toast.success("Submitted for review");
+      }
       navigate("/conversations/templates");
     } catch (e) {
       toast.error(e.response?.data?.message || "Could not submit", { duration: 8000 });
@@ -202,15 +250,31 @@ export default function TemplateBuilder() {
       </button>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-app">{preset ? preset.title : "New template"}</h1>
+        <h1 className="text-2xl font-bold text-app">{isEditing ? name || "Edit template" : preset ? preset.title : "New template"}</h1>
         <p className="text-xs text-app-soft mt-0.5">
-          Every template is reviewed. Approval usually takes minutes but can take up to 24 hours.
+          {isEditing
+            ? "Every template is reviewed. Approval usually takes minutes but can take up to 24 hours."
+            : "Every template is reviewed. Approval usually takes minutes but can take up to 24 hours."}
         </p>
       </div>
 
+      {isEditing && originalStatus && (
+        <div className="card p-4 flex items-start gap-3 mb-5"
+          style={{ borderColor: "rgba(251,191,36,0.35)", background: "rgba(251,191,36,0.08)" }}>
+          <RotateCcw className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b45309" }} />
+          <p className="text-xs" style={{ color: "#b45309" }}>
+            This template is currently <strong>{originalStatus.toLowerCase()}</strong>. Saving any change here
+            resubmits it to Meta — it goes back to <strong>Pending</strong> and can't be used until approved again.
+          </p>
+        </div>
+      )}
+
+      {loadingExisting ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-app-soft" /></div>
+      ) : (
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="space-y-5 lg:col-start-1 lg:row-start-1">
-          {!preset && (
+          {!preset && !isEditing && (
             <div className="card p-4 flex items-start gap-3">
               <div className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center"
                 style={{ background: "rgba(var(--app-primary-rgb),0.12)" }}>
@@ -227,6 +291,7 @@ export default function TemplateBuilder() {
             </div>
           )}
 
+          {!isEditing && (
           <div className="card p-5 space-y-3.5">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 rounded-2xl shrink-0 flex items-center justify-center"
@@ -332,18 +397,22 @@ export default function TemplateBuilder() {
               </div>
             )}
           </div>
+          )}
 
           <div className="card p-5 space-y-4">
             <div>
               <p className="stitch-kicker mb-2">Template name</p>
               <div className="relative">
                 <input className="input w-full pr-10 font-mono" placeholder="site_visit_reminder_v2"
-                  value={name} onChange={(e) => onName(e.target.value)} />
-                {name && !blockers.some((b) => b.message.toLowerCase().includes("name")) && (
+                  value={name} onChange={(e) => onName(e.target.value)} readOnly={isEditing}
+                  style={isEditing ? { opacity: 0.6, cursor: "not-allowed" } : undefined} />
+                {name && !isEditing && !blockers.some((b) => b.message.toLowerCase().includes("name")) && (
                   <CheckCircle2 className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "#15803d" }} />
                 )}
               </div>
-              <p className="text-xs text-app-soft mt-1">Lowercase, numbers and underscores. Cannot be changed later.</p>
+              <p className="text-xs text-app-soft mt-1">
+                {isEditing ? "Name and language can't be changed once a template exists — only category and content." : "Lowercase, numbers and underscores. Cannot be changed later."}
+              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -353,7 +422,8 @@ export default function TemplateBuilder() {
               </div>
               <div>
                 <p className="stitch-kicker mb-2">Language</p>
-                <CustomSelect value={language} onChange={setLanguage} options={LANGUAGES} style={FORM_SELECT} />
+                <CustomSelect value={language} onChange={isEditing ? () => {} : setLanguage} options={LANGUAGES}
+                  style={isEditing ? { ...FORM_SELECT, opacity: 0.6, pointerEvents: "none" } : FORM_SELECT} />
               </div>
             </div>
           </div>
@@ -571,13 +641,14 @@ export default function TemplateBuilder() {
           <button onClick={submit} disabled={saving || blocked}
             className="btn-primary rounded-full px-6 py-3 text-sm font-bold flex items-center gap-2 disabled:opacity-40">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            {saving ? "Submitting…" : "Submit for review"}
+            {saving ? "Saving…" : isEditing ? "Save & resubmit for review" : "Submit for review"}
           </button>
           {blocked && (
             <p className="text-xs text-app-soft mt-2">{blockers.length} thing{blockers.length > 1 ? "s" : ""} to fix first.</p>
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

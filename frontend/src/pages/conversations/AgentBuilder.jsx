@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
+import { Modal } from "../../components/UI";
 import toast from "react-hot-toast";
 
 /**
@@ -100,6 +101,7 @@ export default function AgentBuilder() {
   const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
+  const [showFlowPreview, setShowFlowPreview] = useState(false);
 
   // Try-it console
   const [tryInput, setTryInput] = useState("");
@@ -472,7 +474,19 @@ export default function AgentBuilder() {
 
             <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3}
               rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
+
+            <button type="button" onClick={() => setShowFlowPreview(true)}
+              className="btn-secondary rounded-full px-4 py-2 text-xs font-bold flex items-center gap-2 w-full justify-center">
+              <Eye className="w-3.5 h-3.5" /> Preview this flow — see exactly what a customer taps through
+            </button>
+            <p className="text-[11px] text-app-soft text-center">
+              Simulated in your browser — nothing is sent, no credit is spent, no lead is touched. Uses
+              whatever is on screen now, saved or not — the same way "Try it" below works.
+            </p>
           </div>
+
+          <CtwaFlowPreview open={showFlowPreview} onClose={() => setShowFlowPreview(false)}
+            flow={form.ctwaFlow} projectName={projects.find((p) => form.projectIds.includes(String(p._id)))?.name} />
 
           <div className="card p-5 space-y-3">
             <button type="button" onClick={() => setShowAdvanced((v) => !v)}
@@ -604,6 +618,143 @@ export default function AgentBuilder() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ── CTWA flow preview ────────────────────────────────────────────────────────
+// A client-side simulation of exactly what services/ctwaFlowService.js does
+// on the backend — same branching, same step order — so a tenant can see the
+// whole thing tap-through before ever pointing a real ad at it. Nothing here
+// touches the API: no credit spent, no lead written, no message sent.
+function fillVars(text, vars) {
+  return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
+}
+
+function CtwaFlowPreview({ open, onClose, flow, projectName }) {
+  const [log, setLog] = useState([]);
+  const [step, setStep] = useState(null); // mirrors WaConversation.flowState.step
+  const [freeText, setFreeText] = useState("");
+  const vars = { name: "Ananya", project: projectName || "this project" };
+
+  const push = (entry) => setLog((l) => [...l, entry]);
+
+  const restart = () => {
+    setLog([]); setFreeText("");
+    if (!flow.purposeOptions.length) {
+      push({ from: "bot", warn: true, text: "No purpose options configured yet — add at least one above to preview past this step." });
+      setStep(null);
+      return;
+    }
+    push({ from: "bot", text: fillVars(flow.welcomeText, vars) || "(welcome message is empty)", buttons: flow.purposeOptions });
+    setStep("purpose");
+  };
+
+  useEffect(() => { if (open) restart(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const needOptions = (rows, label) => {
+    if (rows.length) return false;
+    push({ from: "bot", warn: true, text: `No ${label} configured yet — add at least one above to preview past this step.` });
+    setStep(null);
+    return true;
+  };
+
+  const tap = (opt) => {
+    push({ from: "user", text: opt.label });
+
+    if (step === "purpose") {
+      if (needOptions(flow.budgetBrackets, "budget brackets")) return;
+      push({ from: "bot", text: "Perfect. What's your approximate budget range?", list: flow.budgetBrackets });
+      setStep("budget"); return;
+    }
+    if (step === "budget") {
+      if (needOptions(flow.timelineOptions, "timeline options")) return;
+      push({ from: "bot", text: "Got it. When are you looking to finalize?", list: flow.timelineOptions });
+      setStep("timeline"); return;
+    }
+    if (step === "timeline") {
+      if (needOptions(flow.menuOptions, "\"what next\" options")) return;
+      push({ from: "bot", text: "Great — what would you like to see next?", buttons: flow.menuOptions });
+      setStep("menu"); return;
+    }
+    if (step === "menu") {
+      if (opt.action === "site_visit") {
+        if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
+        push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
+        setStep("site_visit"); return;
+      }
+      if (opt.action === "photos") {
+        push({ from: "bot", note: true, text: "📷 Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
+        push({ from: "bot", note: true, text: "→ Flow ends here — the rest of this conversation is handled by this assistant's usual replies." });
+      } else if (opt.action === "location") {
+        push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
+        push({ from: "bot", note: true, text: "→ Flow ends here — the rest of this conversation is handled by this assistant's usual replies." });
+      }
+      setStep(null); return;
+    }
+    if (step === "site_visit") {
+      push({ from: "bot", text: "Wonderful — our team will confirm your visit shortly and take it from here." });
+      push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
+      setStep(null); return;
+    }
+  };
+
+  const sendFreeText = () => {
+    const text = freeText.trim();
+    if (!text) return;
+    push({ from: "user", text });
+    push({ from: "bot", note: true, text: "→ No button was tapped, so the flow exits here — this assistant's normal AI conversation answers this message instead." });
+    setFreeText(""); setStep(null);
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Preview: CTWA button flow" size="md">
+      <div className="space-y-3">
+        <div className="rounded-2xl p-3 space-y-2.5 overflow-y-auto" style={{ background: "var(--app-surface-low)", maxHeight: 420 }}>
+          {log.map((m, i) => (
+            <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+              <div className="max-w-[85%]">
+                <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed ${m.from === "user" ? "rounded-tr-sm" : "rounded-tl-sm"}`}
+                  style={m.warn
+                    ? { background: "rgba(239,68,68,0.12)", color: "#b91c1c", border: "1px solid rgba(239,68,68,0.3)" }
+                    : m.note
+                    ? { background: "transparent", color: "var(--app-text-soft)", fontStyle: "italic", padding: "2px 4px" }
+                    : m.from === "user"
+                    ? { background: "var(--app-primary)", color: "#fff" }
+                    : { background: "var(--app-card-solid)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                  {m.text}
+                </div>
+                {(m.buttons?.length > 0 || m.list?.length > 0) && (
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {(m.buttons || m.list).map((o) => (
+                      <button key={o.id} type="button" onClick={() => tap(o)}
+                        className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border transition hover:opacity-80"
+                        style={{ borderColor: "var(--app-primary)", color: "var(--app-primary)", background: "var(--app-card-solid)" }}>
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {step && (
+          <div className="flex items-center gap-2">
+            <input className="input flex-1 text-xs" placeholder="Or type something instead of tapping a button…"
+              value={freeText} onChange={(e) => setFreeText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendFreeText(); } }} />
+            <button type="button" onClick={sendFreeText} disabled={!freeText.trim()}
+              className="btn-secondary rounded-full px-3 py-2 disabled:opacity-40"><Send className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+
+        <div className="flex justify-between items-center pt-1">
+          <p className="text-[11px] text-app-soft">{step ? `Currently at: ${step}` : "Flow finished — restart to try a different path."}</p>
+          <button type="button" onClick={restart} className="text-xs font-semibold text-app-soft hover:text-app transition">Restart</button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -2146,6 +2146,35 @@ router.post("/templates", authorize("admin", "manager", "super_admin"), async (r
   }
 });
 
+// One template's full detail, by Meta's own numeric id — the Edit screen
+// needs its current category/components, and the list endpoint already has
+// them, so this just re-fetches the list and picks one out rather than
+// adding a second shape of Graph call for the same data.
+router.get("/templates/:id", async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const list = await templates.listTemplates({ ...org, _id: req.orgId });
+    const template = list.find((t) => String(t.id) === req.params.id);
+    if (!template) return res.status(404).json({ message: "Template not found." });
+    res.json({ template });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
+
+// Editing ANY template — approved, rejected or paused — resets it to PENDING
+// and sends it through Meta's review again. That's Meta's own behaviour, not
+// something enforced here (see whatsappTemplateService.updateTemplate).
+router.put("/templates/:id", authorize("admin", "manager", "super_admin"), async (req, res) => {
+  try {
+    const org = await Organization.findById(req.orgId).select("whatsapp").lean();
+    const updated = await templates.updateTemplate({ ...org, _id: req.orgId }, req.params.id, req.body || {});
+    res.json({ template: updated });
+  } catch (err) {
+    sendErr(res, err);
+  }
+});
+
 // Three drafts from a plain-English brief, grounded in the org's real projects.
 //
 // Nothing is submitted here — the variants come back as editable drafts. Any

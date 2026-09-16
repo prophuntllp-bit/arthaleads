@@ -804,6 +804,7 @@ export default function App() {
               <Route path=":id" element={<Inbox />} />
               <Route path="templates"      element={<TemplatesPage />} />
               <Route path="templates/new"  element={<TemplateBuilder />} />
+              <Route path="templates/:id/edit" element={<TemplateBuilder />} />
               <Route path="campaigns"      element={<CampaignsPage />} />
               <Route path="campaigns/new"  element={<CampaignBuilder />} />
               <Route path="campaigns/:id"  element={<CampaignBuilder />} />
