@@ -23,7 +23,7 @@
 // service would invert the codebase's normal dependency direction.
 module.exports = function createCtwaFlowService({
   WaConversation, Lead, Project,
-  sendInteractive, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
+  sendInteractive, sendProviderMessage, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
   credits,
   WaMessage,
 }) {
@@ -49,7 +49,11 @@ module.exports = function createCtwaFlowService({
     return projects.length === 1 ? projects[0] : null;
   }
 
-  /** Reserves a credit, sends one interactive message, and logs it exactly like every other bot send. */
+  /**
+   * Reserves a credit, sends one message — plain text if neither `buttons`
+   * nor `list` is given, interactive otherwise — and logs it exactly like
+   * every other bot send.
+   */
   async function sendFlowStep(org, conversation, botName, { bodyText, buttons, list, previewLabel }) {
     const q = await credits.quote(org._id, "service", 1);
     let held = 0;
@@ -64,10 +68,12 @@ module.exports = function createCtwaFlowService({
     }
     let msgId;
     try {
-      msgId = await sendInteractive(org, conversation.contactPhone, { bodyText, buttons, list });
+      msgId = buttons || list
+        ? await sendInteractive(org, conversation.contactPhone, { bodyText, buttons, list })
+        : await sendProviderMessage(org, conversation.contactPhone, bodyText);
     } catch (err) {
       await credits.release(org._id, held);
-      console.error("[CTWA Flow] interactive send failed:", err?.response?.data || err.message);
+      console.error("[CTWA Flow] send failed:", err?.response?.data || err.message);
       return false;
     }
     await WaMessage.create({
@@ -83,7 +89,7 @@ module.exports = function createCtwaFlowService({
   }
 
   function purposeStep(agent, vars) {
-    return { bodyText: fill(agent.ctwaFlow.welcomeText, vars), buttons: agent.ctwaFlow.purposeOptions.map((o) => ({ id: o.id, title: o.label })) };
+    return { bodyText: fill(agent.ctwaFlow.purposeQuestion, vars), buttons: agent.ctwaFlow.purposeOptions.map((o) => ({ id: o.id, title: o.label })) };
   }
   function budgetStep(agent) {
     return { bodyText: "Perfect. What's your approximate budget range?", list: { buttonLabel: "Select budget", rows: agent.ctwaFlow.budgetBrackets.map((b) => ({ id: b.id, title: b.label })) } };
@@ -98,12 +104,20 @@ module.exports = function createCtwaFlowService({
     return { bodyText: "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
   }
 
-  /** Sends the welcome + first (purpose) question, and marks the conversation as being in the flow. */
+  /**
+   * Sends the greeting as its own plain-text message, then the purpose
+   * question with its buttons as a second, separate message — combining a
+   * greeting with the first question into one interactive body reads as the
+   * bot talking over itself rather than a real opening exchange — and marks
+   * the conversation as being in the flow.
+   */
   async function startFlow(org, agent, conversation) {
     const botName = agent.name || "Artha Assistant";
     const vars = { name: conversation.contactName || "there", project: (await resolveFlowProject(org, agent))?.name || "" };
-    const sent = await sendFlowStep(org, conversation, botName, { ...purposeStep(agent, vars), previewLabel: "Started qualification" });
-    if (sent) {
+    const greetingSent = await sendFlowStep(org, conversation, botName, { bodyText: fill(agent.ctwaFlow.welcomeText, vars) });
+    if (!greetingSent) return;
+    const questionSent = await sendFlowStep(org, conversation, botName, { ...purposeStep(agent, vars), previewLabel: "Started qualification" });
+    if (questionSent) {
       await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "purpose", startedAt: new Date() } });
     }
   }

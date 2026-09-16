@@ -45,7 +45,8 @@ const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z
 // (and the wording) is editable per agent; only the 5-step shape is fixed.
 const DEFAULT_CTWA_FLOW = {
   enabled: false,
-  welcomeText: "Hi {{name}} 👋 Thanks for your interest! Are you looking for this primarily for:",
+  welcomeText: "Hi {{name}} 👋 Thanks for your interest in {{project}}!",
+  purposeQuestion: "Are you looking for this primarily for:",
   purposeOptions: [
     { id: "self_use_0", label: "Self Use" },
     { id: "investment_1", label: "Investment" },
@@ -78,6 +79,28 @@ const MENU_ACTIONS = [
   { value: "photos",     label: "Send photos & brochure" },
   { value: "location",   label: "Send project location" },
   { value: "site_visit", label: "Ask for a site-visit time" },
+];
+
+// Common lead-qualifying buttons most real-estate WhatsApp bots use — a
+// quick-add dropdown next to each step's manual input, same pattern as the
+// Amenities dropdown on the Project form. Picking one adds it instantly;
+// wording can still be edited or removed like any other chip.
+const PRESET_PURPOSE = ["Self Use", "Investment", "Buy", "Rent", "Just Exploring"];
+const PRESET_TIMELINE = ["Within 30 Days", "1–3 Months", "3–6 Months", "6–12 Months", "Just Exploring"];
+const PRESET_SITE_VISIT_SLOTS = ["Morning", "Afternoon", "Evening", "This Weekend", "Weekday"];
+const PRESET_BUDGET_BRACKETS = [
+  { label: "Under ₹50L", min: 0, max: 5000000 },
+  { label: "₹50L – ₹75L", min: 5000000, max: 7500000 },
+  { label: "₹75L – ₹1Cr", min: 7500000, max: 10000000 },
+  { label: "₹1Cr – ₹1.5Cr", min: 10000000, max: 15000000 },
+  { label: "₹1.5Cr+", min: 15000000, max: 0 },
+  { label: "Just Exploring", min: 0, max: 0 },
+];
+const PRESET_MENU_OPTIONS = [
+  { label: "📄 Price & Floor Plan", action: "photos" },
+  { label: "📍 Location Details", action: "location" },
+  { label: "🏡 Book Site Visit", action: "site_visit" },
+  { label: "📞 Talk to Advisor", action: "site_visit" },
 ];
 
 export default function AgentBuilder() {
@@ -126,7 +149,10 @@ export default function AgentBuilder() {
           systemPrompt: a.systemPrompt || "", language: a.language || "auto",
           adIds: a.adIds || [],
           shareProjectPhotos: a.shareProjectPhotos === true, shareBrochure: a.shareBrochure === true,
-          ctwaFlow: a.ctwaFlow?.welcomeText !== undefined ? a.ctwaFlow : DEFAULT_CTWA_FLOW,
+          // Merged over the defaults rather than used as-is — an agent saved
+          // before purposeQuestion existed would otherwise load that field as
+          // undefined and turn its textarea into an uncontrolled input.
+          ctwaFlow: a.ctwaFlow?.welcomeText !== undefined ? { ...DEFAULT_CTWA_FLOW, ...a.ctwaFlow } : DEFAULT_CTWA_FLOW,
         });
         setShowAdvanced(!!a.systemPrompt);
         setReadiness(a.readiness);
@@ -452,27 +478,41 @@ export default function AgentBuilder() {
               who free-types instead of tapping drops back into this assistant's usual conversation.
             </p>
 
-            <div>
-              <label className="text-xs font-semibold text-app-soft block mb-1">Welcome message (first thing they see)</label>
-              <textarea className="input w-full resize-none" rows={2}
-                placeholder="Hi {{name}} 👋 Thanks for your interest! ..."
-                value={form.ctwaFlow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
-              <p className="text-[11px] text-app-soft mt-1">Use <code>{"{{name}}"}</code> for the customer's name.</p>
+            <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 1 of 2 — sent first, plain text</p>
+              <div>
+                <label className="text-xs font-semibold text-app-soft block mb-1">Welcome message</label>
+                <textarea className="input w-full resize-none" rows={2}
+                  placeholder="Hi {{name}} 👋 Thanks for your interest in {{project}}!"
+                  value={form.ctwaFlow.welcomeText} onChange={(e) => setFlow({ welcomeText: e.target.value })} />
+                <p className="text-[11px] text-app-soft mt-1">
+                  Use <code>{"{{name}}"}</code> and <code>{"{{project}}"}</code>. Sent on its own — a greeting bundled
+                  into the same message as the first question reads as the bot talking over itself.
+                </p>
+              </div>
             </div>
 
-            <ChipRowEditor label="Purpose — up to 3 buttons" max={3}
-              rows={form.ctwaFlow.purposeOptions} onChange={(rows) => setFlow({ purposeOptions: rows })} />
+            <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 2 of 2 — sent right after, with the purpose buttons</p>
+              <div>
+                <label className="text-xs font-semibold text-app-soft block mb-1">Purpose question</label>
+                <input className="input w-full" placeholder="Are you looking for this primarily for:"
+                  value={form.ctwaFlow.purposeQuestion} onChange={(e) => setFlow({ purposeQuestion: e.target.value })} />
+              </div>
+              <ChipRowEditor label="Purpose — up to 3 buttons" max={3} presets={PRESET_PURPOSE}
+                rows={form.ctwaFlow.purposeOptions} onChange={(rows) => setFlow({ purposeOptions: rows })} />
+            </div>
 
             <BudgetBracketEditor rows={form.ctwaFlow.budgetBrackets}
               onChange={(rows) => setFlow({ budgetBrackets: rows })} />
 
-            <ChipRowEditor label="Timeline — up to 10, shown as a list" max={10}
+            <ChipRowEditor label="Timeline — up to 10, shown as a list" max={10} presets={PRESET_TIMELINE}
               rows={form.ctwaFlow.timelineOptions} onChange={(rows) => setFlow({ timelineOptions: rows })} />
 
             <MenuOptionEditor rows={form.ctwaFlow.menuOptions}
               onChange={(rows) => setFlow({ menuOptions: rows })} />
 
-            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3}
+            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3} presets={PRESET_SITE_VISIT_SLOTS}
               rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
 
             <button type="button" onClick={() => setShowFlowPreview(true)}
@@ -640,12 +680,16 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
 
   const restart = () => {
     setLog([]); setFreeText("");
+    // Two separate messages, exactly like ctwaFlowService.startFlow — a
+    // greeting bundled into the same message as the first question reads as
+    // the bot talking over itself.
+    push({ from: "bot", text: fillVars(flow.welcomeText, vars) || "(welcome message is empty)" });
     if (!flow.purposeOptions.length) {
       push({ from: "bot", warn: true, text: "No purpose options configured yet — add at least one above to preview past this step." });
       setStep(null);
       return;
     }
-    push({ from: "bot", text: fillVars(flow.welcomeText, vars) || "(welcome message is empty)", buttons: flow.purposeOptions });
+    push({ from: "bot", text: fillVars(flow.purposeQuestion, vars) || "(purpose question is empty)", buttons: flow.purposeOptions });
     setStep("purpose");
   };
 
@@ -767,22 +811,29 @@ function CtwaFlowPreview({ open, onClose, flow, projectName }) {
 const ROW_CLS = "flex items-center gap-2";
 const SMALL_INPUT = "input text-xs py-1.5";
 
-function ChipRowEditor({ label, rows, max, onChange }) {
+const PRESET_SELECT_STYLE = { width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 12 };
+
+function ChipRowEditor({ label, rows, max, onChange, presets }) {
   const [draft, setDraft] = useState("");
-  const add = () => {
-    const text = draft.trim();
-    if (!text || rows.length >= max) return;
+  const add = (text) => {
+    text = text.trim();
+    if (!text || rows.length >= max || rows.some((r) => r.label.toLowerCase() === text.toLowerCase())) return;
     onChange([...rows, { id: slugify(text, rows.length), label: text }]);
     setDraft("");
   };
+  const remaining = presets?.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.toLowerCase()));
   return (
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">{label}</label>
-      <div className={ROW_CLS}>
+      {presets && remaining.length > 0 && (
+        <CustomSelect value="" onChange={add} options={remaining}
+          placeholder="Quick add a common option…" style={PRESET_SELECT_STYLE} />
+      )}
+      <div className={`${ROW_CLS} ${presets ? "mt-2" : ""}`}>
         <input className={`${SMALL_INPUT} flex-1`} value={draft} onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add an option…" disabled={rows.length >= max}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
-        <button type="button" onClick={add} disabled={!draft.trim() || rows.length >= max}
+          placeholder="Or type your own…" disabled={rows.length >= max}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} />
+        <button type="button" onClick={() => add(draft)} disabled={!draft.trim() || rows.length >= max}
           className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40"><Plus className="w-3.5 h-3.5" /></button>
       </div>
       {rows.length > 0 && (
@@ -803,15 +854,24 @@ function ChipRowEditor({ label, rows, max, onChange }) {
 
 function BudgetBracketEditor({ rows, onChange }) {
   const [label, setLabel] = useState(""); const [min, setMin] = useState(""); const [max, setMax] = useState("");
+  const addRow = (row) => {
+    if (rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === row.label.toLowerCase())) return;
+    onChange([...rows, { id: slugify(row.label, rows.length), ...row }]);
+  };
   const add = () => {
-    if (!label.trim() || rows.length >= 10) return;
-    onChange([...rows, { id: slugify(label, rows.length), label: label.trim(), min: Number(min) || 0, max: Number(max) || 0 }]);
+    if (!label.trim()) return;
+    addRow({ label: label.trim(), min: Number(min) || 0, max: Number(max) || 0 });
     setLabel(""); setMin(""); setMax("");
   };
+  const remaining = PRESET_BUDGET_BRACKETS.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
   return (
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">Budget brackets — up to 10, shown as a list</label>
-      <div className={ROW_CLS}>
+      {remaining.length > 0 && (
+        <CustomSelect value="" onChange={(v) => addRow(remaining.find((p) => p.label === v))}
+          options={remaining.map((p) => p.label)} placeholder="Quick add a common bracket…" style={PRESET_SELECT_STYLE} />
+      )}
+      <div className={`${ROW_CLS} mt-2`}>
         <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
           placeholder="Label, e.g. ₹50L – ₹1Cr" disabled={rows.length >= 10} />
         <input className={`${SMALL_INPUT} w-24`} type="number" min="0" value={min} onChange={(e) => setMin(e.target.value)}
@@ -839,15 +899,24 @@ function BudgetBracketEditor({ rows, onChange }) {
 
 function MenuOptionEditor({ rows, onChange }) {
   const [label, setLabel] = useState(""); const [action, setAction] = useState("photos");
+  const addRow = (row) => {
+    if (rows.length >= 3 || rows.some((r) => r.label.toLowerCase() === row.label.toLowerCase())) return;
+    onChange([...rows, { id: slugify(row.label, rows.length), ...row }]);
+  };
   const add = () => {
-    if (!label.trim() || rows.length >= 3) return;
-    onChange([...rows, { id: slugify(label, rows.length), label: label.trim(), action }]);
+    if (!label.trim()) return;
+    addRow({ label: label.trim(), action });
     setLabel("");
   };
+  const remaining = PRESET_MENU_OPTIONS.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
   return (
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
-      <div className={ROW_CLS}>
+      {remaining.length > 0 && (
+        <CustomSelect value="" onChange={(v) => addRow(remaining.find((p) => p.label === v))}
+          options={remaining.map((p) => p.label)} placeholder="Quick add a common option…" style={PRESET_SELECT_STYLE} />
+      )}
+      <div className={`${ROW_CLS} mt-2`}>
         <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
           placeholder="Label, e.g. 📄 Price & Floor Plan" disabled={rows.length >= 3} />
         <select className={`${SMALL_INPUT} w-48`} value={action} onChange={(e) => setAction(e.target.value)} disabled={rows.length >= 3}>

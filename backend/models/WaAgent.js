@@ -76,7 +76,14 @@ const waAgentSchema = new mongoose.Schema(
     // label/option tenant-editable — not a generic flow builder.
     ctwaFlow: {
       enabled:     { type: Boolean, default: false },
-      welcomeText: { type: String, default: "" }, // "{{name}}" placeholder supported
+      // Sent as its own plain-text message, before the purpose question —
+      // combining a greeting with the first question into one interactive
+      // message read as the bot talking over itself. "{{name}}"/"{{project}}" supported.
+      welcomeText:     { type: String, default: "" },
+      // The line sent alongside the purpose buttons — kept separate from
+      // welcomeText so the greeting and the actual question are two messages,
+      // not one run-on.
+      purposeQuestion: { type: String, default: "" },
       purposeOptions:  [{ id: String, label: String }],                              // ≤3
       budgetBrackets:  [{ id: String, label: String, min: Number, max: Number }],     // ≤10
       timelineOptions: [{ id: String, label: String }],                              // ≤10

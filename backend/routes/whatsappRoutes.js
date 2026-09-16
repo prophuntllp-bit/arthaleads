@@ -545,7 +545,7 @@ async function findLiveLeadByPhone(orgId, phone) {
 // hoisted, so this is safe here regardless of source order.
 const ctwaFlow = createCtwaFlowService({
   WaConversation, Lead, Project,
-  sendInteractive, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
+  sendInteractive, sendProviderMessage, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
   credits, WaMessage,
 });
 
@@ -1573,7 +1573,11 @@ const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit"];
 
 function sanitizeCtwaFlow(input) {
   if (!input || typeof input !== "object") return undefined;
-  const clean = { enabled: input.enabled === true, welcomeText: String(input.welcomeText || "").trim().slice(0, 500) };
+  const clean = {
+    enabled: input.enabled === true,
+    welcomeText:     String(input.welcomeText || "").trim().slice(0, 500),
+    purposeQuestion: String(input.purposeQuestion || "").trim().slice(0, 300),
+  };
 
   for (const [key, cap] of Object.entries(CTWA_STEP_CAPS)) {
     const rows = Array.isArray(input[key]) ? input[key] : [];
@@ -1590,9 +1594,9 @@ function sanitizeCtwaFlow(input) {
 
   if (clean.enabled) {
     const missing = Object.keys(CTWA_STEP_CAPS).filter((k) => !clean[k].length);
-    if (!clean.welcomeText || missing.length) {
+    if (!clean.welcomeText || !clean.purposeQuestion || missing.length) {
       const e = new Error(
-        `The CTWA flow needs a welcome message and at least one option for each step before it can be turned on${missing.length ? ` (missing: ${missing.join(", ")})` : ""}.`
+        `The CTWA flow needs a welcome message, a purpose question, and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
       );
       e.status = 400; throw e;
     }
