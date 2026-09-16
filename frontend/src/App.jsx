@@ -801,6 +801,7 @@ export default function App() {
             <Route path="/followups"     element={<FollowUps />} />
             <Route path="/conversations" element={<ConversationsLayout />}>
               <Route index element={<Inbox />} />
+              <Route path=":id" element={<Inbox />} />
               <Route path="templates"      element={<TemplatesPage />} />
               <Route path="templates/new"  element={<TemplateBuilder />} />
               <Route path="campaigns"      element={<CampaignsPage />} />

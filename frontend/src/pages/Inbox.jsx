@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
   FileText, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
@@ -197,7 +197,7 @@ function Bubble({ msg }) {
     <div className={`flex flex-col ${isOut ? "items-end" : "items-start"} mb-3`}>
       {isBot && (
         <p className="text-[10px] font-bold text-green-600 mb-1 px-1 flex items-center gap-1">
-          <Bot className="w-3 h-3" /> Bot
+          <Bot className="w-3 h-3" /> {msg.senderName ? `${msg.senderName} (Bot)` : "Bot"}
         </p>
       )}
       {isAgent && msg.senderName && (
@@ -243,6 +243,7 @@ export default function Inbox() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: routeId } = useParams();
 
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId]         = useState(null);
@@ -318,11 +319,10 @@ export default function Inbox() {
   useEffect(() => {
     const openId = location.state?.openConversationId;
     if (!openId) return;
-    navigate(location.pathname, { replace: true, state: {} });
     api.get(`/whatsapp/conversations/${openId}`)
       .then(({ data }) => {
         setConversations((prev) => (prev.some((c) => c._id === openId) ? prev : [data.conversation, ...prev]));
-        selectConv(openId);
+        navigate(`/conversations/${openId}`, { replace: true, state: {} });
       })
       .catch(() => toast.error("Could not open that conversation"));
   }, [location.state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -378,13 +378,23 @@ export default function Inbox() {
     return out;
   }, [messages]);
 
-  const selectConv = (id) => {
+  const loadConv = useCallback((id) => {
     setActiveId(id);
     setMessages([]);
     setLastInbound(undefined);
     setMsgInput("");
     fetchConversationDetails(id);
-  };
+  }, [fetchConversationDetails]);
+
+  // The URL is the source of truth for which conversation is open — lets a
+  // reload, a shared link, or the browser back/forward button land on the
+  // right thread instead of always dropping back to an empty inbox.
+  useEffect(() => {
+    if (routeId && routeId !== activeId) loadConv(routeId);
+    else if (!routeId && activeId) setActiveId(null);
+  }, [routeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectConv = (id) => navigate(`/conversations/${id}`);
 
   const needCredits = () => {
     toast.error("Out of WhatsApp credits — top up to keep sending.");
@@ -579,7 +589,7 @@ export default function Inbox() {
       ) : (
         <div className="flex flex-1 flex-col min-w-0">
           <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ borderBottom: "1px solid var(--app-border)" }}>
-            <button className="md:hidden p-1 rounded-lg hover:bg-black/5" onClick={() => setActiveId(null)} title="Back to list">
+            <button className="md:hidden p-1 rounded-lg hover:bg-black/5" onClick={() => navigate("/conversations")} title="Back to list">
               <X className="w-4 h-4 text-app-soft" />
             </button>
             <Avatar name={displayName(activeConv)} seed={activeConv?.contactPhone} score={activeConv?.leadId?._score} />

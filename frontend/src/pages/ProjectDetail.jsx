@@ -1,6 +1,6 @@
 ﻿// pages/ProjectDetail.jsx
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker, SmartImage } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
@@ -382,7 +382,9 @@ export default function ProjectDetail() {
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab]         = useState(() => location.state?.searchLead ? "leads" : "info");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || (location.state?.searchLead ? "leads" : "info");
+  const setTab = (key) => setSearchParams((p) => { p.set("tab", key); return p; }, { replace: true });
   const [showEdit, setShowEdit] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null); // index into project.images, or null when closed
 
