@@ -81,8 +81,12 @@ export default function ConversationsLayout() {
 
   const tabs = TABS.filter((t) => !t.roles || t.roles.includes(user?.role));
 
-  // Builder routes own the full width and bring their own back button.
-  const isBuilder = /\/(new|[a-f0-9]{24})$/i.test(location.pathname);
+  // Builder routes own the full width and bring their own back button. Named
+  // explicitly rather than by a generic "/new or /<id>$" pattern — an open
+  // conversation is also /conversations/<id> and matched that pattern too,
+  // which hid the tab bar the moment a thread was opened.
+  const isBuilder = /^\/conversations\/(templates\/new|campaigns\/(new|[a-f0-9]{24})|agent\/(new|[a-f0-9]{24}))$/i
+    .test(location.pathname);
 
   if (connected === null) {
     return (
