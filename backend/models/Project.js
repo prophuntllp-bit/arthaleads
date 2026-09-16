@@ -28,6 +28,13 @@ const projectSchema = new mongoose.Schema(
 
     assignedTo: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+    // The one person a WhatsApp AI agent hands a lead to for this specific
+    // project when its "Talk to Advisor" CTWA button is tapped — separate
+    // from assignedTo above (who sees the project/leads in the CRM), because
+    // a tenant with several projects often wants a different point-of-contact
+    // per project, not just whoever the lead happens to be round-robined to.
+    advisorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
     qrToken:    { type: String, default: "", index: true, sparse: true },
 
     isArchived: { type: Boolean, default: false },

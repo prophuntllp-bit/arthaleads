@@ -28,6 +28,13 @@ async function migrateImages(images, projectId) {
   ));
 }
 
+// An empty-string advisorId (CustomSelect's "none selected" value) would
+// otherwise hit Mongoose as an invalid ObjectId cast, not a clear "no advisor".
+function sanitizeAdvisorId(data) {
+  if (data.advisorId === "") return { ...data, advisorId: null };
+  return data;
+}
+
 const projectService = {
   async create(data, user) {
     // Starter plan: limit to 1 project
@@ -43,7 +50,7 @@ const projectService = {
         }
       }
     }
-    const { images, ...rest } = data;
+    const { images, ...rest } = sanitizeAdvisorId(data);
     const project = await Project.create({ ...rest, createdBy: user._id, orgId: user.orgId });
     if (images?.length) {
       project.images = await migrateImages(images, project._id.toString());
@@ -63,6 +70,7 @@ const projectService = {
     const projects = await Project.find(filter)
       .populate("createdBy", "name")
       .populate("assignedTo", "name avatar")
+      .populate("advisorId", "name phone")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -93,20 +101,20 @@ const projectService = {
 
     const project = await Project.findOne(filter)
       .populate("createdBy", "name")
-      .populate("assignedTo", "name avatar");
+      .populate("assignedTo", "name avatar")
+      .populate("advisorId", "name phone");
     if (!project) throw new AppError("Project not found", 404);
     return project;
   },
 
   async update(id, data, user) {
-    const payload = data.images?.length
-      ? { ...data, images: await migrateImages(data.images, id) }
-      : data;
+    let payload = sanitizeAdvisorId(data);
+    if (payload.images?.length) payload = { ...payload, images: await migrateImages(payload.images, id) };
     const project = await Project.findOneAndUpdate(
       { _id: id, isArchived: { $ne: true }, orgId: user.orgId },
       payload,
       { new: true, runValidators: true }
-    );
+    ).populate("advisorId", "name phone");
     if (!project) throw new AppError("Project not found", 404);
     return project;
   },

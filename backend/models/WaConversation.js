@@ -49,7 +49,7 @@ const waConversationSchema = new mongoose.Schema({
   // above: "field absent" means "doesn't apply", not "at the first step".
   flowState: {
     type: {
-      step:      { type: String, enum: ["purpose", "budget", "timeline", "menu", "site_visit"] },
+      step:      { type: String, enum: ["purpose", "budget", "timeline", "menu", "closing", "site_visit"] },
       startedAt: { type: Date, default: Date.now },
     },
     default: undefined,

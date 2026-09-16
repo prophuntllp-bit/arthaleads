@@ -45,7 +45,10 @@ module.exports = function createCtwaFlowService({
   async function resolveFlowProject(org, agent) {
     const filter = { orgId: org._id, isArchived: { $ne: true } };
     if (agent.projectIds?.length) filter._id = { $in: agent.projectIds };
-    const projects = await Project.find(filter).select("name location images brochureUrl").limit(2).lean();
+    const projects = await Project.find(filter)
+      .select("name location images brochureUrl advisorId")
+      .populate("advisorId", "name phone")
+      .limit(2).lean();
     return projects.length === 1 ? projects[0] : null;
   }
 
@@ -102,6 +105,36 @@ module.exports = function createCtwaFlowService({
   }
   function siteVisitStep(agent) {
     return { bodyText: "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
+  }
+
+  // The only two ways this flow is allowed to end: a human advisor, or a
+  // booked site visit — fixed, not agent-configurable, so "Price & Floor
+  // Plan" / "Location Details" never become dead ends with no next step.
+  const CLOSING_OPTIONS = [{ id: "advisor", title: "Talk to Advisor" }, { id: "site_visit", title: "Book Site Visit" }];
+  function closingStep() {
+    return { bodyText: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
+  }
+
+  /**
+   * The one real terminal action: hands the conversation to a human. If the
+   * discussed project has its own designated advisor (Project.advisorId —
+   * set in the Projects page so different projects can route to different
+   * people), the conversation goes straight to them instead of round-robin —
+   * a tenant running several projects usually wants each one's leads landing
+   * with that project's own point of contact, not whoever's turn it is.
+   */
+  async function terminalAdvisor(org, agent, conversation, botName, project) {
+    const advisor = project?.advisorId;
+    const line = advisor?.name
+      ? `Connecting you with ${advisor.name} from our team — they'll reach out to you shortly.`
+      : "Connecting you with our team — someone will reach out to you shortly.";
+    await sendFlowStep(org, conversation, botName, { bodyText: line, previewLabel: "→ Connected to advisor" });
+    if (advisor?._id) {
+      await WaConversation.findByIdAndUpdate(conversation._id, { assignedTo: advisor._id, assignedToName: advisor.name });
+    } else {
+      await autoAssignConversation(org, conversation);
+    }
+    await handOffToHuman(org, conversation, { notify: true, reason: "asked to talk to an advisor" });
   }
 
   /**
@@ -186,20 +219,43 @@ module.exports = function createCtwaFlowService({
     if (step === "menu") {
       const opt = flow.menuOptions.find((o) => o.id === interactiveId);
       if (!opt) { await exitFlow(); return false; }
+      const project = await resolveFlowProject(org, agent);
 
       if (opt.action === "site_visit") {
         await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
         return true;
       }
+      if (opt.action === "advisor") {
+        await terminalAdvisor(org, agent, conversation, botName, project);
+        await exitFlow();
+        return true;
+      }
 
-      const project = await resolveFlowProject(org, agent);
+      // Informational branches — photos and location are never a dead end:
+      // after showing what was asked for, always offer the same two real
+      // endings (advisor or site visit) instead of just going quiet.
       if (opt.action === "photos" && project) {
         await sendQualifiedMedia(org, agent, conversation, botName, project.name, { wantsPhotos: true, wantsBrochure: true });
       } else if (opt.action === "location" && project?.location) {
-        await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}`, buttons: [{ id: "site_visit", title: "Book Site Visit" }] });
+        await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
       }
-      await exitFlow();
+      await sendFlowStep(org, conversation, botName, closingStep());
+      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "closing" });
+      return true;
+    }
+
+    if (step === "closing") {
+      const opt = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
+      if (!opt) { await exitFlow(); return false; }
+      if (opt.id === "advisor") {
+        await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent));
+        await exitFlow();
+        return true;
+      }
+      // site_visit
+      await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
+      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
       return true;
     }
 

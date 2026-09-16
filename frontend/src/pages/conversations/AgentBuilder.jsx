@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Sparkles, Building2, Megaphone, Plus, X, Check, Loader2,
   ChevronDown, MessageSquare, Send, AlertTriangle, Eye, Trash2, Image as ImageIcon,
-  MousePointerClick, Lock,
+  MousePointerClick, Lock, GripVertical,
 } from "lucide-react";
 import api from "../../services/api";
 import CustomSelect from "../../components/CustomSelect";
@@ -64,7 +64,7 @@ const DEFAULT_CTWA_FLOW = {
   ],
   menuOptions: [
     { id: "m0", label: "📄 Price & Floor Plan", action: "photos" },
-    { id: "m1", label: "📍 Location Details", action: "location" },
+    { id: "m1", label: "📞 Talk to Advisor", action: "advisor" },
     { id: "m2", label: "🏡 Book Site Visit", action: "site_visit" },
   ],
   siteVisitSlots: [
@@ -78,6 +78,7 @@ const MENU_ACTIONS = [
   { value: "photos",     label: "Send photos & brochure" },
   { value: "location",   label: "Send project location" },
   { value: "site_visit", label: "Ask for a site-visit time" },
+  { value: "advisor",    label: "Connect to a human advisor" },
 ];
 
 // Common lead-qualifying buttons most real-estate WhatsApp bots use — a
@@ -99,7 +100,7 @@ const PRESET_MENU_OPTIONS = [
   { label: "📄 Price & Floor Plan", action: "photos" },
   { label: "📍 Location Details", action: "location" },
   { label: "🏡 Book Site Visit", action: "site_visit" },
-  { label: "📞 Talk to Advisor", action: "site_visit" },
+  { label: "📞 Talk to Advisor", action: "advisor" },
 ];
 
 export default function AgentBuilder() {
@@ -666,6 +667,11 @@ function fillVars(text, vars) {
   return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 }
 
+// Mirrors ctwaFlowService.js's CLOSING_OPTIONS exactly — fixed, not
+// agent-configurable, so "Price & Floor Plan" / "Location Details" always
+// land on one of these two real endings instead of going quiet.
+const CLOSING_BUTTONS = [{ id: "advisor", label: "Talk to Advisor" }, { id: "site_visit", label: "Book Site Visit" }];
+
 function CtwaFlowPreviewPanel({ flow, projectName }) {
   const [log, setLog] = useState([]);
   const [step, setStep] = useState(null); // mirrors WaConversation.flowState.step
@@ -726,20 +732,36 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
         push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
         setStep("site_visit"); return;
       }
+      if (opt.action === "advisor") {
+        pushAdvisorTerminal();
+        setStep(null); return;
+      }
+      // Informational — never a dead end: always followed by the same two
+      // real endings instead of just going quiet.
       if (opt.action === "photos") {
         push({ from: "bot", note: true, text: "📷 Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
-        push({ from: "bot", note: true, text: "→ Flow ends here — the rest of this conversation is handled by this assistant's usual replies." });
       } else if (opt.action === "location") {
         push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
-        push({ from: "bot", note: true, text: "→ Flow ends here — the rest of this conversation is handled by this assistant's usual replies." });
       }
-      setStep(null); return;
+      push({ from: "bot", text: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
+      setStep("closing"); return;
+    }
+    if (step === "closing") {
+      if (opt.id === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
+      if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
+      push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
+      setStep("site_visit"); return;
     }
     if (step === "site_visit") {
       push({ from: "bot", text: "Wonderful — our team will confirm your visit shortly and take it from here." });
       push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
       setStep(null); return;
     }
+  };
+
+  const pushAdvisorTerminal = () => {
+    push({ from: "bot", text: "Connecting you with our advisor — they'll reach out to you shortly." });
+    push({ from: "bot", note: true, text: "✅ Uses this project's \"Talk to Advisor\" contact if one is set (Projects page); otherwise falls back to normal round-robin assignment. Bot pauses and that person is notified." });
   };
 
   const sendFreeText = () => {
@@ -828,6 +850,45 @@ const SMALL_INPUT = "input text-xs py-1.5";
 
 const PRESET_SELECT_STYLE = { width: "100%", padding: "8px 12px", borderRadius: "0.75rem", fontSize: 12 };
 
+// Shared drag-to-reorder chip list for all three editors below — order here
+// is the order WhatsApp shows the buttons/list rows in, so a tenant sets
+// their preferred sequence by dragging instead of deleting and re-adding.
+function DraggableChips({ rows, onChange, renderLabel }) {
+  const dragIndex = useRef(null);
+  const [overIndex, setOverIndex] = useState(null);
+
+  const reorder = (from, to) => {
+    if (from === to) return;
+    const next = [...rows];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {rows.map((r, i) => (
+        <span key={r.id} draggable
+          onDragStart={(e) => { dragIndex.current = i; e.dataTransfer.effectAllowed = "move"; }}
+          onDragOver={(e) => { e.preventDefault(); if (overIndex !== i) setOverIndex(i); }}
+          onDrop={(e) => { e.preventDefault(); if (dragIndex.current !== null) reorder(dragIndex.current, i); dragIndex.current = null; setOverIndex(null); }}
+          onDragEnd={() => { dragIndex.current = null; setOverIndex(null); }}
+          className="inline-flex items-center gap-1 text-xs font-semibold pl-1.5 pr-2.5 py-1 rounded-full cursor-grab active:cursor-grabbing"
+          style={{
+            background: "var(--app-surface-low)",
+            border: overIndex === i ? "1px dashed var(--app-primary)" : "1px solid var(--app-border)",
+            color: "var(--app-text)",
+          }}>
+          <GripVertical className="w-3 h-3 text-app-soft shrink-0" />
+          {renderLabel ? renderLabel(r) : r.label}
+          <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+            className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function ChipRowEditor({ label, rows, max, onChange, presets }) {
   const [draft, setDraft] = useState("");
   const add = (text) => {
@@ -851,18 +912,7 @@ function ChipRowEditor({ label, rows, max, onChange, presets }) {
         <button type="button" onClick={() => add(draft)} disabled={!draft.trim() || rows.length >= max}
           className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40"><Plus className="w-3.5 h-3.5" /></button>
       </div>
-      {rows.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {rows.map((r) => (
-            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-              {r.label}
-              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
-                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
-            </span>
-          ))}
-        </div>
-      )}
+      {rows.length > 0 && <DraggableChips rows={rows} onChange={onChange} />}
     </div>
   );
 }
@@ -896,61 +946,49 @@ function BudgetBracketEditor({ rows, onChange }) {
         <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 10}
           className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
       </div>
-      {rows.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {rows.map((r) => (
-            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-              {r.label}
-              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
-                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
-            </span>
-          ))}
-        </div>
-      )}
+      {rows.length > 0 && <DraggableChips rows={rows} onChange={onChange} />}
     </div>
   );
 }
 
+// No manual action picker here — every real action (photos, location,
+// advisor, site visit) is already covered by the 4 presets below, and a
+// second control that duplicated what the preset already set was more
+// confusing than useful. A custom-worded button defaults to "advisor" (the
+// one action that's always safe — it just hands the customer to a person).
 function MenuOptionEditor({ rows, onChange }) {
-  const [label, setLabel] = useState(""); const [action, setAction] = useState("photos");
+  const [label, setLabel] = useState("");
   const addRow = (row) => {
     if (rows.length >= 3 || rows.some((r) => r.label.toLowerCase() === row.label.toLowerCase())) return;
     onChange([...rows, { id: slugify(row.label, rows.length), ...row }]);
   };
   const add = () => {
     if (!label.trim()) return;
-    addRow({ label: label.trim(), action });
+    addRow({ label: label.trim(), action: "advisor" });
     setLabel("");
   };
   const remaining = PRESET_MENU_OPTIONS.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
   return (
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
+      <p className="text-[11px] text-app-soft mb-1">
+        Price &amp; Floor Plan and Location Details always follow up with "Talk to Advisor" / "Book Site
+        Visit" — this flow never dead-ends on just a photo or an address.
+      </p>
       {remaining.length > 0 && (
         <CustomSelect value="" onChange={(v) => addRow(remaining.find((p) => p.label === v))}
           options={remaining.map((p) => p.label)} placeholder="Quick add a common option…" style={PRESET_SELECT_STYLE} />
       )}
       <div className={`${ROW_CLS} mt-2`}>
         <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
-          placeholder="Label, e.g. 📄 Price & Floor Plan" disabled={rows.length >= 3} />
-        <select className={`${SMALL_INPUT} w-48`} value={action} onChange={(e) => setAction(e.target.value)} disabled={rows.length >= 3}>
-          {MENU_ACTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-        </select>
+          placeholder="Or type your own — becomes a 'Talk to Advisor' style button" disabled={rows.length >= 3}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
         <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 3}
           className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
       </div>
       {rows.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {rows.map((r) => (
-            <span key={r.id} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
-              {r.label} <span className="text-app-soft font-normal">→ {MENU_ACTIONS.find((a) => a.value === r.action)?.label}</span>
-              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
-                className="text-app-soft hover:text-red-500 transition"><X className="w-3 h-3" /></button>
-            </span>
-          ))}
-        </div>
+        <DraggableChips rows={rows} onChange={onChange}
+          renderLabel={(r) => <>{r.label} <span className="text-app-soft font-normal">→ {MENU_ACTIONS.find((a) => a.value === r.action)?.label}</span></>} />
       )}
     </div>
   );

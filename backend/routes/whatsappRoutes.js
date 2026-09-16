@@ -1569,7 +1569,7 @@ const AGENT_FIELDS = [
 const CTWA_STEP_CAPS = {
   purposeOptions: 3, budgetBrackets: 10, timelineOptions: 10, menuOptions: 3, siteVisitSlots: 3,
 };
-const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit"];
+const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit", "advisor"];
 
 function sanitizeCtwaFlow(input) {
   if (!input || typeof input !== "object") return undefined;
@@ -1586,7 +1586,7 @@ function sanitizeCtwaFlow(input) {
         id: String(r?.id || "").trim().slice(0, 60),
         label: String(r?.label || "").trim().slice(0, 60),
         ...(key === "budgetBrackets" ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
-        ...(key === "menuOptions" ? { action: CTWA_MENU_ACTIONS.includes(r?.action) ? r.action : "photos" } : {}),
+        ...(key === "menuOptions" ? { action: CTWA_MENU_ACTIONS.includes(r?.action) ? r.action : "advisor" } : {}),
       }))
       .filter((r) => r.id && r.label)
       .slice(0, cap);

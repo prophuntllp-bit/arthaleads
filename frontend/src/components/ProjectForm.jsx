@@ -31,6 +31,7 @@ const empty = {
   propertyType: "Apartment", unitTypes: [], bhkTypes: [], area: "", amenities: [],
   possessionDate: "", reraNumber: "",
   assignedTo: [], // array of { _id, name } objects for display
+  advisorId: "", // who the WhatsApp AI agent's "Talk to Advisor" button hands this project's leads to
 };
 
 function toForm(p) {
@@ -47,6 +48,7 @@ function toForm(p) {
     assignedTo: Array.isArray(p.assignedTo)
       ? p.assignedTo.map((m) => (typeof m === "object" ? { _id: m._id, name: m.name } : { _id: m, name: m }))
       : [],
+    advisorId: p.advisorId ? String(p.advisorId?._id || p.advisorId) : "",
   };
 }
 
@@ -615,6 +617,24 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
               </p>
             </div>
           )}
+        </div>
+
+        {/* ── Talk to Advisor ── */}
+        <div className="space-y-3">
+          <div>
+            <p className="stitch-kicker">Talk to Advisor</p>
+            <p className="text-xs text-app-soft mt-0.5">
+              Who the WhatsApp AI agent's "Talk to Advisor" button hands this project's leads to — set a
+              different advisor per project instead of everyone landing on the same round-robin queue.
+            </p>
+          </div>
+          <CustomSelect
+            value={form.advisorId}
+            onChange={(v) => setForm((f) => ({ ...f, advisorId: v }))}
+            options={[{ value: "", label: "No advisor set — use normal round-robin assignment" },
+              ...allAgents.map((a) => ({ value: a._id, label: a.name }))]}
+            style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
+          />
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
