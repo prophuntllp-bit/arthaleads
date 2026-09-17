@@ -22,6 +22,7 @@ const automationService = require("../services/automationService");
 const { getNextAssignee } = require("./assignLead");
 const { sendPushToAll, sendPushToUser } = require("./push");
 const { mapGoogleLeadFields, fromApiFields } = require("./googleLeadFields");
+const { mapCustomFieldsToLead } = require("./formFieldMapper");
 
 const GOOGLE_ADS_API_VERSION = "v17";
 // First-ever sync for a freshly connected account: look back this far rather
@@ -127,8 +128,9 @@ async function pollOneGoogleAdsConnection(automation) {
     if (already) { skipped++; continue; }
 
     const fields = sub.leadFormSubmissionFields || sub.customLeadFormSubmissionFields || [];
-    const { fullName, phone, email, formResponses, requirements, customFields } =
+    const { fullName, phone, email, formResponses: allFormResponses, requirements, customFields } =
       mapGoogleLeadFields(fromApiFields(fields));
+    const { leadUpdates: mappedLeadFields, remaining: formResponses } = mapCustomFieldsToLead(allFormResponses);
 
     const isTestLead = sub.isTestLead === true;
     const name = isTestLead ? "Test Lead (Google)" : (fullName || "Google Lead");
@@ -167,6 +169,7 @@ async function pollOneGoogleAdsConnection(automation) {
         status: "New",
         requirements: isTestLead ? "" : requirements,
         formResponses: isTestLead ? [] : formResponses,
+        ...(isTestLead ? {} : mappedLeadFields),
         externalId: resourceName,
         orgId,
         createdBy: assignee?._id || automation.createdBy || null,

@@ -901,6 +901,12 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       '${fmtBudget(budget['min'] as num?)} – ${fmtBudget(budget['max'] as num?)}',
                       icon: Icons.currency_rupee,
                     ),
+                  if ((lead['timeline'] as String? ?? '').isNotEmpty)
+                    _row(
+                      'Timeline',
+                      lead['timeline'] as String,
+                      icon: Icons.schedule_outlined,
+                    ),
                   if ((lead['requirements'] as String? ?? '').isNotEmpty)
                     _row(
                       'Requirements',
@@ -927,7 +933,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   if ((lead['formResponses'] as List?)?.isNotEmpty ??
                       false) ...[
                     const SizedBox(height: 8),
-                    Text('FORM QUESTIONS', style: AppText.kicker(context)),
+                    Text('ADDITIONAL QUESTIONS', style: AppText.kicker(context)),
                     const SizedBox(height: 4),
                     for (final item
                         in (lead['formResponses'] as List)

@@ -4,7 +4,7 @@ Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,7 +51,7 @@ Arthaleads is a CRM platform built for real estate teams. It manages leads, foll
 This plugin connects to the Arthaleads CRM API (`api.arthaleads.com`) to deliver form submissions from your site as leads. This is core to what the plugin does — it cannot function without it.
 
 * **What it is and what it's used for:** Arthaleads CRM, a lead management platform. Every time a visitor submits one of your supported contact/lead forms, the plugin sends that submission to Arthaleads so it appears in your CRM pipeline instead of only in your WordPress database.
-* **What data is sent and when:** On each form submission — name, phone, email, message/enquiry text, the form plugin used, the page URL the form was submitted from, and your configured site name. When you click "Send Test Lead" in the plugin settings, the same fields are sent with fixed placeholder values (`Test Lead`, `9999999999`, `test@arthaleads.com`) so you can verify the connection. When you save the plugin settings, your account token and which form plugins you've enabled are sent so the CRM can register which integrations are active for your site. No data is sent unless you have entered a valid Arthaleads account token in the plugin settings.
+* **What data is sent and when:** On each form submission — name, phone, email, message/enquiry text, any other question the form asks (Elementor Pro Forms and MetForm only), the form plugin used, the page URL the form was submitted from, and your configured site name. When you click "Send Test Lead" in the plugin settings, the same fields are sent with fixed placeholder values (`Test Lead`, `9999999999`, `test@arthaleads.com`) so you can verify the connection. When you save the plugin settings, your account token and which form plugins you've enabled are sent so the CRM can register which integrations are active for your site. No data is sent unless you have entered a valid Arthaleads account token in the plugin settings.
 * **Service links:** [Terms of Service](https://arthaleads.com/terms), [Privacy Policy](https://arthaleads.com/privacy)
 
 == Installation ==
@@ -79,7 +79,7 @@ Yes. Any form submission from any supported plugin on your site will be sent to 
 
 = What data is sent to Arthaleads? =
 
-The plugin sends: name, phone, email, message, the page URL where the form was submitted, and the form plugin name. No other data is transmitted.
+The plugin sends: name, phone, email, message, the page URL where the form was submitted, and the form plugin name. For Elementor Pro Forms and MetForm, any other question the form asks (e.g. budget, configuration, purpose, timeline) is sent too, labeled with the question text, so it appears against the right field in your CRM instead of being lost. No other data is transmitted.
 
 = Is my data secure? =
 
@@ -99,6 +99,9 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.6 =
+* Elementor Pro Forms and MetForm now forward every custom question answer (budget, configuration/BHK, purpose, timeline, etc.), not just name/phone/email/message, so the CRM can map real answers onto the lead's actual fields instead of losing them.
 
 = 1.0.5 =
 * Moved the admin settings page's CSS and JavaScript into properly enqueued files (`wp_enqueue_style`/`wp_enqueue_script`) instead of inline `<style>`/`<script>` tags.

@@ -471,8 +471,8 @@ class LeadsScreenState extends State<LeadsScreen> {
   Future<void> _openDetail(Map<String, dynamic> lead) async {
     // /leads/unified's list projection is deliberately narrow (perf) and
     // omits several Info-tab-only fields (propertyType, bhk, purpose,
-    // preferredLocation, streetAddress, city, followUpNote, remarkNote,
-    // formResponses) — fetch the full doc before opening so those aren't
+    // preferredLocation, streetAddress, city, timeline, followUpNote,
+    // remarkNote, formResponses) — fetch the full doc before opening so those aren't
     // silently blank. Project-lead rows are already complete, skip the fetch.
     var detail = lead;
     if (lead['_type'] != 'project') {

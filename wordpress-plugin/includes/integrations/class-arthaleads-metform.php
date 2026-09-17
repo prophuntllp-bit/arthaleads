@@ -54,16 +54,29 @@ class Arthaleads_Metform {
         } );
     }
 
+    // Any key/label that normalizes to one of these is already carried as its
+    // own name/phone/email/message field — never duplicated into custom_fields.
+    private static $standard_keys = [
+        'name', 'full_name', 'fullname', 'your_name', 'contact_name', 'first_name',
+        'mf_full_name', 'mf_name', 'mf_text',
+        'phone', 'mobile', 'phone_number', 'tel', 'mf_phone', 'mf_mobile', 'contact', 'number', 'mobile_number',
+        'email', 'email_address', 'mf_email', 'your_email', 'mail',
+        'message', 'your_message', 'mf_message', 'description', 'mf_textarea', 'enquiry', 'looking_for',
+    ];
+
     private function process( $form_data, $form_name = '' ) {
         $map = [];
+        $raw_fields = [];
         foreach ( $form_data as $key => $value ) {
             $clean = strtolower( trim( preg_replace( '/[\-\s\.\[\]]+/', '_', (string) $key ) ) );
+            $label = $clean;
 
             // MetForm may store each field as ['value'=>'...','label'=>'...','type'=>'...']
             if ( is_array( $value ) && array_key_exists( 'value', $value ) ) {
                 $val = sanitize_text_field( (string) $value['value'] );
                 // Also index by label
                 if ( ! empty( $value['label'] ) ) {
+                    $label = $value['label'];
                     $lbl = strtolower( trim( preg_replace( '/[\-\s\.\[\]]+/', '_', $value['label'] ) ) );
                     if ( $lbl ) $map[ $lbl ] = $val;
                 }
@@ -75,6 +88,7 @@ class Arthaleads_Metform {
             }
 
             $map[ $clean ] = $val;
+            $raw_fields[]  = [ 'key' => $clean, 'label' => $label, 'value' => $val ];
 
             // Strip common prefixes: mf_full_name → full_name
             $stripped = preg_replace( '/^(mf__|mf_|field_)/', '', $clean );
@@ -109,12 +123,25 @@ class Arthaleads_Metform {
             }
         }
 
+        // Everything that isn't a recognized name/phone/email/message field —
+        // e.g. budget, BHK, purpose, timeline — forwarded so the CRM can map
+        // it onto the lead's real fields instead of it being dropped silently.
+        $custom_fields = [];
+        foreach ( $raw_fields as $f ) {
+            if ( $f['value'] === '' || $f['value'] === null ) continue;
+            $lbl_key = strtolower( trim( preg_replace( '/[\-\s\.\[\]]+/', '_', $f['label'] ) ) );
+            if ( in_array( $f['key'], self::$standard_keys, true ) ) continue;
+            if ( $lbl_key && in_array( $lbl_key, self::$standard_keys, true ) ) continue;
+            $custom_fields[] = [ 'fieldKey' => $f['key'], 'label' => $f['label'], 'value' => (string) $f['value'] ];
+        }
+
         ( new Arthaleads_API( 'metform' ) )->send_lead( [
-            'name'      => $name  ?: 'MetForm Lead',
-            'phone'     => $phone ?: '',
-            'email'     => $email ?: '',
-            'message'   => $message ?: '',
-            'form_name' => $form_name ?: '',
+            'name'          => $name  ?: 'MetForm Lead',
+            'phone'         => $phone ?: '',
+            'email'         => $email ?: '',
+            'message'       => $message ?: '',
+            'form_name'     => $form_name ?: '',
+            'custom_fields' => $custom_fields,
         ] );
     }
 }

@@ -130,6 +130,11 @@ const leadSchema = new mongoose.Schema(
     preferredLocation: { type: String, trim: true, default: "" },
     bhk: { type: String, enum: OPTS.BHK, default: "N/A" },
     purpose: { type: String, enum: OPTS.PURPOSE, default: "Buy" },
+    // Free text, not an enum — every source phrases this differently
+    // ("within_30_days", "0-3 months", "6+ months"...) and it's purely
+    // informational, not branched on anywhere, so normalizing to a fixed set
+    // would only lose the tenant's original wording for no benefit.
+    timeline: { type: String, trim: true, default: "" },
 
     // ── Pipeline ──────────────────────────────────────────────────────────────
     status: {

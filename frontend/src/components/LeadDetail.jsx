@@ -564,6 +564,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
                 ? `${fmtCurrency(lead.budget?.min)} - ${fmtCurrency(lead.budget?.max)}`
                 : "Not captured"
             } />
+            {lead.timeline && <Info label="Timeline" value={lead.timeline} />}
             <Info label="Assigned To" value={lead.assignedToName || lead.assignedTo?.name || "-"} />
             <Info label="Follow-up Date" value={fmtDate(lead.followUpDate)} />
             <Info label="Created On" value={fmtDateTime(lead.createdAt)} />
@@ -583,7 +584,7 @@ export default function LeadDetail({ open, onClose, lead, onUpdated, onEdit }) {
             )}
             {!!lead.formResponses?.length && (
               <div className="md:col-span-2 rounded-[1.35rem] p-4 stitch-surface-muted">
-                <p className="stitch-kicker mb-3">Form Questions</p>
+                <p className="stitch-kicker mb-3">Additional Questions</p>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {lead.formResponses.map((item, index) => (
                     <Info key={`${item.fieldKey}-${index}`} label={item.label} value={item.value || "-"} />

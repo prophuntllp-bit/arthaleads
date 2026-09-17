@@ -140,6 +140,7 @@ const createLeadSchema = Joi.object({
   preferredLocation: Joi.string().allow("").optional(),
   bhk: Joi.string().valid(...OPTS.BHK).default("N/A"),
   purpose: Joi.string().valid(...OPTS.PURPOSE).default("Buy"),
+  timeline: Joi.string().allow("").max(100).optional(),
   status: Joi.string()
     .valid(...OPTS.STATUS)
     .default("New"),
@@ -176,6 +177,7 @@ const updateLeadSchema = Joi.object({
   preferredLocation: Joi.string().allow(""),
   bhk: Joi.string().valid(...OPTS.BHK),
   purpose: Joi.string().valid(...OPTS.PURPOSE),
+  timeline: Joi.string().allow("").max(100),
   status: Joi.string().valid(...OPTS.STATUS),
   priority: Joi.string().valid(...OPTS.PRIORITY),
   source: Joi.string().valid(...OPTS.SOURCE),

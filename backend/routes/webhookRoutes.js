@@ -11,6 +11,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const RoutingRule     = require("../models/RoutingRule");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
+const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
 const OPTS = require("../constants/leadOptions");
 
 const router = express.Router();
@@ -528,11 +529,16 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         const requirements = customFields.map((f) => `${f.name.replace(/_/g, " ")}: ${f.values?.[0]}`).join(" · ");
 
         // Build formResponses for Info tab "Form Questions" section
-        const formResponses = customFields.map((f) => ({
+        const allFormResponses = customFields.map((f) => ({
           fieldKey: f.name,
           label:    f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
           value:    f.values?.[0] || "",
         }));
+        // Recognized answers (budget, BHK, purpose, timeline, city...) get
+        // written straight onto their real Lead field instead of only living
+        // in the generic Q&A list — see formFieldMapper.js. Only whatever's
+        // left unrecognized stays in formResponses.
+        const { leadUpdates: mappedLeadFields, remaining: formResponses } = mapCustomFieldsToLead(allFormResponses);
 
         const name = isTestLead
           ? "Test Lead (Facebook)"
@@ -600,6 +606,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
           status: "New",
           requirements: isTestLead ? "" : requirements,
           formResponses: isTestLead ? [] : formResponses,
+          ...(isTestLead ? {} : mappedLeadFields),
           orgId,
           createdBy: assignee?._id || null,
           assignedTo: assignee?._id || null,
@@ -660,11 +667,12 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
               const fm2 = Object.fromEntries((retryResult.leadDetails.field_data || []).map((item) => [item.name, item.values?.[0] || ""]));
               const cf2 = (retryResult.leadDetails.field_data || []).filter((f) => !STANDARD_FIELDS.has(f.name) && f.values?.[0]);
               const req2 = cf2.map((f) => `${f.name.replace(/_/g, " ")}: ${f.values?.[0]}`).join(" · ");
-              const fr2 = cf2.map((f) => ({
+              const allFr2 = cf2.map((f) => ({
                 fieldKey: f.name,
                 label: f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
                 value: f.values?.[0] || "",
               }));
+              const { leadUpdates: mappedFields2, remaining: fr2 } = mapCustomFieldsToLead(allFr2);
               const name2 = fm2.full_name || [fm2.first_name, fm2.last_name].filter(Boolean).join(" ").trim() || "Facebook Lead";
               const lines2 = cf2.map((f) => `${f.name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${f.values?.[0]}`).join("\n");
               await Lead.updateOne({ _id: leadId }, {
@@ -674,6 +682,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
                   email: fm2.email || "",
                   requirements: req2,
                   formResponses: fr2,
+                  ...mappedFields2,
                 },
                 $push: {
                   notes: {
@@ -729,7 +738,7 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
 // POST /webhook/website  { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url }
 router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => {
   try {
-    const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url } = req.body || {};
+    const { token, name, phone, email, message, source_name, form_plugin, form_name, page_url, website_url, custom_fields } = req.body || {};
 
     // Honeypot: the plugin always sends this field empty. A generic bot that
     // blindly fills every field it finds in the plugin's public source will
@@ -779,6 +788,20 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
     // Always show the connection/website name — form_name goes into notes only
     const sourceLabel = siteName;
 
+    // custom_fields is only present from plugin versions that forward every
+    // field the visitor answered (not just name/phone/email/message) — older
+    // installs simply omit it, so this is a no-op until a site updates.
+    const rawCustomFields = Array.isArray(custom_fields)
+      ? custom_fields
+          .filter((f) => f && f.value)
+          .map((f) => ({
+            fieldKey: String(f.fieldKey || f.key || f.label || ""),
+            label: String(f.label || f.fieldKey || f.key || ""),
+            value: String(f.value),
+          }))
+      : [];
+    const { leadUpdates: mappedLeadFields, remaining: formResponses } = mapCustomFieldsToLead(rawCustomFields);
+
     const lead = await Lead.create({
       name: name || "Website Lead",
       phone: phone || "N/A",
@@ -786,6 +809,8 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
       source: "Website",
       status: "New",
       requirements: message || "",
+      formResponses,
+      ...mappedLeadFields,
       orgId,
       createdBy: assignee?._id || automation.createdBy || null,
       assignedTo: assignee?._id || null,
@@ -1346,8 +1371,11 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
 
     const orgId = automation.orgId;
 
-    const { fullName, phone, email, formResponses, requirements, customFields } =
+    const { fullName, phone, email, formResponses: allFormResponses, requirements, customFields } =
       mapGoogleLeadFields(fromWebhookColumns(user_column_data));
+    // Same treatment as the Facebook webhook — recognized answers land on
+    // their real Lead field, only genuine leftovers stay in formResponses.
+    const { leadUpdates: mappedLeadFields, remaining: formResponses } = mapCustomFieldsToLead(allFormResponses);
 
     const isTestLead = is_test === true || is_test === "true";
     const name = isTestLead
@@ -1401,6 +1429,7 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
       status: "New",
       requirements: isTestLead ? "" : requirements,
       formResponses: isTestLead ? [] : formResponses,
+      ...(isTestLead ? {} : mappedLeadFields),
       orgId,
       createdBy: assignee?._id || automation.createdBy || null,
       assignedTo: assignee?._id || null,
