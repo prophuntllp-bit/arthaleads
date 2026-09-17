@@ -1020,8 +1020,15 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
 // the error was logged to a console nobody reads, the thread kept its "bot"
 // status and its green badge, and the customer simply never heard back. Any
 // failure now hands the thread to a human and tells somebody it happened.
+// Marks a conversation as needing a human's attention and assigns/notifies
+// one — but deliberately never turns the bot off. A lead who reaches this
+// (asked for a human, tapped "Talk to Advisor", booked a site visit, or hit
+// a genuine system failure) still gets an answer if no one on the team
+// replies before they message again; leaving them on read because an agent
+// hasn't picked it up yet is how a lead goes cold. Bot OFF is a decision
+// only a human on the team makes explicitly, from the Inbox toggle.
 async function handOffToHuman(org, conversation, { notify = false, reason = "" } = {}) {
-  await WaConversation.findByIdAndUpdate(conversation._id, { botEnabled: false, status: "open" });
+  await WaConversation.findByIdAndUpdate(conversation._id, { status: "open" });
   autoAssignConversation(org, conversation).catch(() => {});
   if (!notify) return;
   const payload = {
@@ -1988,7 +1995,10 @@ router.post("/embedded-signup/exchange", authorize("admin", "manager", "super_ad
 // assigned to.
 function canAccessConversation(user, conv) {
   if (user.role !== "agent") return true;
-  if (!conv.assignedTo) return true;
+  // Strict "mine only", matching the list route above — an unassigned
+  // conversation (including a brand-new campaign lead nobody's claimed yet)
+  // isn't visible to an agent just because no one owns it yet.
+  if (!conv.assignedTo) return false;
   return String(conv.assignedTo._id || conv.assignedTo) === String(user._id);
 }
 
@@ -2001,8 +2011,14 @@ router.get("/conversations", async (req, res) => {
     // otherwise silently clobber the first and search away an agent's
     // scoping the moment they typed anything into the search box.
     const andConditions = [];
+    // Strict "mine only" — matches leadRoutes.js/leadService.js's scoping for
+    // every other agent-facing list. Previously also allowed assignedTo:null
+    // through, meaning every agent could see every unassigned conversation —
+    // including brand-new campaign leads nobody's claimed yet — before a
+    // manager ever routed them. That's real lead data, not something an
+    // agent should see until it's actually theirs.
     if (req.user.role === "agent") {
-      andConditions.push({ $or: [{ assignedTo: req.user._id }, { assignedTo: null }] });
+      andConditions.push({ assignedTo: req.user._id });
     }
     if (status) filter.status = status;
     // contactName is the snapshot taken when the thread opened and goes stale
@@ -2713,8 +2729,12 @@ router.post("/send", async (req, res) => {
 
 router.get("/unread", async (req, res) => {
   try {
+    // Same scoping as GET /conversations — an agent's badge should only
+    // count what they can actually open, not every conversation in the org.
+    const match = { orgId: req.user.orgId };
+    if (req.user.role === "agent") match.assignedTo = req.user._id;
     const result = await WaConversation.aggregate([
-      { $match: { orgId: req.user.orgId } },
+      { $match: match },
       { $group: { _id: null, total: { $sum: "$unreadCount" } } },
     ]);
     res.json({ unread: result[0]?.total || 0 });
