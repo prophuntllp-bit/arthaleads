@@ -615,41 +615,72 @@ async function handleInbound(org, parsed) {
   });
 
   if (conv.botEnabled) {
-    // Resolved before anything is sent, and pinned, so the away message, the
-    // greeting and the reply are all unmistakably the same assistant.
-    const agent = await resolveAgentForConversation(org, conv);
-    if (!agent) {
-      console.warn(`[WhatsApp Bot] org ${org._id} has no active agent — leaving this thread for a human`);
-      await handOffToHuman(org, conv);
-      return;
-    }
-    if (String(conv.agentId || "") !== String(agent._id)) {
-      await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
-      conv.agentId = agent._id;
-    }
-    if (!isWithinBusinessHours(org)) {
-      await maybeSendAwayMessage(org, agent, conv);
-      return;
-    }
-
-    // Mid-flow: the customer's tap (or free-typed message, which exits the
-    // flow rather than dead-ending) is handled entirely by ctwaFlowService —
-    // never falls through to the greeting/GPT path below for this message.
-    if (conv.flowState?.step) {
-      const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText });
-      if (handled) return;
-      // advanceFlow already cleared flowState on a no-match — fall through to
-      // the normal reply below so this message still gets answered.
-    } else if (isNewConversation && ctwaFlow.shouldStartFlow(agent, conv)) {
-      await ctwaFlow.startFlow(org, agent, conv);
-      return;
-    }
-
-    if (isNewConversation && agent.greeting?.trim()) {
-      await sendBotGreeting(org, agent, conv);
-    }
-    await triggerBotReply(org, agent, conv, msgText);
+    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation });
   }
+}
+
+/**
+ * Everything that happens once the bot is confirmed to owe this conversation
+ * a reply: resolve the assistant, respect business hours, run the CTWA flow
+ * or the free-text agent. Shared by the live webhook path (handleInbound)
+ * and by resumeBotIfOwed below — turning "Bot ON" back on for a thread whose
+ * last message never got answered (the bot was off when it arrived) replies
+ * to that pending message immediately, the same way a fresh inbound message
+ * would, instead of silently waiting for a second message that may never come.
+ */
+async function respondAsBot(org, conv, { interactiveId, msgText, isNewConversation }) {
+  // Resolved before anything is sent, and pinned, so the away message, the
+  // greeting and the reply are all unmistakably the same assistant.
+  const agent = await resolveAgentForConversation(org, conv);
+  if (!agent) {
+    console.warn(`[WhatsApp Bot] org ${org._id} has no active agent — leaving this thread for a human`);
+    await handOffToHuman(org, conv);
+    return;
+  }
+  if (String(conv.agentId || "") !== String(agent._id)) {
+    await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
+    conv.agentId = agent._id;
+  }
+  if (!isWithinBusinessHours(org)) {
+    await maybeSendAwayMessage(org, agent, conv);
+    return;
+  }
+
+  // Mid-flow: the customer's tap (or free-typed message, which exits the
+  // flow rather than dead-ending) is handled entirely by ctwaFlowService —
+  // never falls through to the greeting/GPT path below for this message.
+  if (conv.flowState?.step) {
+    const handled = await ctwaFlow.advanceFlow(org, agent, conv, { interactiveId, msgText });
+    if (handled) return;
+    // advanceFlow already cleared flowState on a no-match — fall through to
+    // the normal reply below so this message still gets answered.
+  } else if (isNewConversation && ctwaFlow.shouldStartFlow(agent, conv)) {
+    await ctwaFlow.startFlow(org, agent, conv);
+    return;
+  }
+
+  if (isNewConversation && agent.greeting?.trim()) {
+    await sendBotGreeting(org, agent, conv);
+  }
+  await triggerBotReply(org, agent, conv, msgText);
+}
+
+/**
+ * Called right after "Bot ON" flips a conversation's botEnabled from false to
+ * true. If the customer's last message is still unanswered (the bot was off
+ * when it arrived, so handleInbound's botEnabled branch never ran for it),
+ * answer it now. `isNewConversation` for this purpose means "the bot has
+ * never sent anything in this thread" — not "the document was just
+ * created" — so a lead whose very first message arrived with the bot off
+ * still gets the real greeting/CTWA-start treatment, not just a bare reply.
+ */
+async function resumeBotIfOwed(org, convId) {
+  const lastMsg = await WaMessage.findOne({ conversationId: convId }).sort({ timestamp: -1 }).lean();
+  if (!lastMsg || lastMsg.direction !== "inbound") return; // nothing pending
+  const everReplied = await WaMessage.exists({ conversationId: convId, direction: "outbound" });
+  const conv = await WaConversation.findById(convId);
+  if (!conv?.botEnabled) return; // toggled off again before this ran
+  await respondAsBot(org, conv, { interactiveId: null, msgText: lastMsg.body, isNewConversation: !everReplied });
 }
 
 // Sent once, as the very first outbound message on a brand-new conversation —
@@ -2064,6 +2095,17 @@ router.patch("/conversations/:id", async (req, res) => {
     if (!conv) return res.status(404).json({ message: "Not found" });
     attachLeadScores([conv]);
     res.json({ conversation: conv });
+
+    // Fire-and-forget, after the response — the customer already sent their
+    // message and is waiting; flipping "Bot ON" back on shouldn't require a
+    // second message from them before the bot notices. Only fires on an
+    // actual off->on transition, never on every PATCH (assigning a person,
+    // marking resolved, etc. must not trigger an unrelated bot reply).
+    if (botEnabled === true && existing.botEnabled === false) {
+      Organization.findById(req.orgId).lean()
+        .then((org) => org && resumeBotIfOwed(org, conv._id))
+        .catch((err) => console.error("[WhatsApp Bot] resumeBotIfOwed failed:", err.message));
+    }
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
