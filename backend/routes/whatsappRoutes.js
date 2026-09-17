@@ -602,10 +602,19 @@ async function handleInbound(org, parsed) {
 
   if (msgId && await WaMessage.findOne({ waMsgId: msgId })) return; // dedup
 
+  // WaMessage.mediaType only enumerates genuine media kinds — an interactive
+  // button/list tap (msgType "interactive", or "button" for older quick-reply
+  // template replies) isn't media, it's still a text-shaped reply (msgText is
+  // already the button's title). Passing msgType straight through here threw
+  // a Mongoose validation error on every one of those — silently swallowing
+  // the entire inbound message (and everything downstream: the CTWA flow
+  // never advancing, no WaMessage ever appearing in the Inbox) for every
+  // customer who ever tapped a button, not just CTWA leads.
+  const MEDIA_TYPES = new Set(["image", "audio", "document", "sticker", "video"]);
   await WaMessage.create({
     orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
     direction: "inbound", sender: "customer", senderName: name,
-    body: msgText, mediaType: msgType === "text" ? "text" : msgType,
+    body: msgText, mediaType: MEDIA_TYPES.has(msgType) ? msgType : "text",
     status: "delivered", timestamp: new Date(),
   });
   await WaConversation.findByIdAndUpdate(conv._id, {
