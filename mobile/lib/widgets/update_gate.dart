@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/theme.dart';
@@ -55,17 +56,74 @@ Future<void> showUpdateDialog(BuildContext context, UpdateInfo info) {
   );
 }
 
-class _UpdateDialog extends StatelessWidget {
+enum _Stage { idle, downloading, installing, failed }
+
+class _UpdateDialog extends StatefulWidget {
   final UpdateInfo info;
   const _UpdateDialog({required this.info});
 
-  Future<void> _download(BuildContext context) async {
+  @override
+  State<_UpdateDialog> createState() => _UpdateDialogState();
+}
+
+class _UpdateDialogState extends State<_UpdateDialog> {
+  _Stage _stage = _Stage.idle;
+  double _progress = 0;
+  String? _error;
+
+  UpdateInfo get info => widget.info;
+
+  /// Downloads the APK ourselves and hands it straight to the system
+  /// installer — no browser round-trip. Falls back to the old
+  /// open-in-browser behaviour on any failure (network, storage, a GitHub
+  /// hiccup) so this can only add a better path, never remove the old one.
+  Future<void> _installInApp() async {
+    setState(() {
+      _stage = _Stage.downloading;
+      _progress = 0;
+      _error = null;
+    });
+    try {
+      final path = await UpdateService.downloadApk(
+        info.downloadUrl,
+        onProgress: (received, total) {
+          if (total > 0 && mounted) {
+            setState(() => _progress = received / total);
+          }
+        },
+      );
+      if (!mounted) return;
+      setState(() => _stage = _Stage.installing);
+      final result = await OpenFile.open(path);
+      if (result.type != ResultType.done && mounted) {
+        setState(() {
+          _stage = _Stage.failed;
+          _error = result.message.isNotEmpty
+              ? result.message
+              : 'Could not open the installer.';
+        });
+      }
+      // ResultType.done just means Android accepted the install intent —
+      // the system installer takes over the screen from here. Whatever the
+      // user does in it (install / cancel) is theirs to decide; we don't
+      // need to react to it, and the app may be backgrounded while it shows.
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _stage = _Stage.failed;
+          _error = 'Download failed — check your connection and try again.';
+        });
+      }
+    }
+  }
+
+  Future<void> _openInBrowser() async {
     final uri = Uri.tryParse(info.downloadUrl);
     if (uri == null) return;
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not open the download link.')),
         );
@@ -78,13 +136,16 @@ class _UpdateDialog extends StatelessWidget {
     final version = info.latestVersion.isNotEmpty
         ? info.latestVersion
         : 'build ${info.latestBuild}';
+    final busy = _stage == _Stage.downloading || _stage == _Stage.installing;
 
-    // A mandatory update must survive the Android back button too.
+    // A mandatory update must survive the Android back button too, and a
+    // download in progress must not be interruptible either way — there is
+    // nowhere useful for "back" to go mid-download.
     return PopScope(
-      canPop: !info.mandatory,
+      canPop: !info.mandatory && !busy,
       child: AlertDialog(
-        icon: const Icon(
-          Icons.system_update_rounded,
+        icon: Icon(
+          busy ? Icons.download_rounded : Icons.system_update_rounded,
           size: 40,
           color: AppColors.primary,
         ),
@@ -103,7 +164,7 @@ class _UpdateDialog extends StatelessWidget {
                   : 'Arthaleads $version is available.',
               textAlign: TextAlign.center,
             ),
-            if (info.releaseNotes.isNotEmpty) ...[
+            if (info.releaseNotes.isNotEmpty && !busy && _stage != _Stage.failed) ...[
               const SizedBox(height: 12),
               Text(
                 info.releaseNotes,
@@ -111,24 +172,67 @@ class _UpdateDialog extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            if (_stage == _Stage.downloading) ...[
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: _progress > 0 ? _progress : null,
+                  minHeight: 6,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _progress > 0 ? '${(_progress * 100).round()}%' : 'Starting…',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+            if (_stage == _Stage.installing) ...[
+              const SizedBox(height: 16),
+              const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              const SizedBox(height: 8),
+              Text('Opening installer…', style: Theme.of(context).textTheme.bodySmall),
+            ],
+            if (_stage == _Stage.failed) ...[
+              const SizedBox(height: 12),
+              Text(
+                _error ?? 'Something went wrong.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.danger, fontSize: 13),
+              ),
+            ],
           ],
         ),
         actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          if (!info.mandatory)
-            TextButton(
-              onPressed: () {
-                UpdateService.skip(info.latestBuild);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Later'),
-            ),
-          ElevatedButton.icon(
-            onPressed: () => _download(context),
-            icon: const Icon(Icons.download_rounded, size: 18),
-            label: const Text('Update now'),
-          ),
-        ],
+        actions: busy
+            ? const []
+            : [
+                if (!info.mandatory && _stage != _Stage.failed)
+                  TextButton(
+                    onPressed: () {
+                      UpdateService.skip(info.latestBuild);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Later'),
+                  ),
+                if (_stage == _Stage.failed)
+                  TextButton(
+                    onPressed: _openInBrowser,
+                    child: const Text('Open in browser'),
+                  ),
+                ElevatedButton.icon(
+                  onPressed: _installInApp,
+                  icon: Icon(
+                    _stage == _Stage.failed ? Icons.refresh_rounded : Icons.download_rounded,
+                    size: 18,
+                  ),
+                  label: Text(_stage == _Stage.failed ? 'Try again' : 'Update now'),
+                ),
+              ],
       ),
     );
   }

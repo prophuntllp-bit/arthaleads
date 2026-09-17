@@ -6,6 +6,14 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <!-- In-app update install (update_gate.dart). We're not on Play Store, so
+         this "special" permission is the only way to hand a downloaded APK to
+         the system installer without leaving the app. Android still gates it
+         with a one-time OS prompt the first time a user updates this way
+         ("Allow Arthaleads to install unknown apps") — that's the OS's own
+         per-app-source security model, not something we can or should skip. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+
     <!-- The camera plugin declares RECORD_AUDIO because it supports video, and
          the merged manifest is what Play reads. We only ever take stills:
          attendance_capture_sheet.dart builds its CameraController with

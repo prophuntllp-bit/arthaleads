@@ -27,7 +27,7 @@ publish_to: 'none'
 #
 # After bumping, update backend/constants/appRelease.js to match (the plain
 # build number, the version string, and the GitHub Release download URL).
-version: 1.0.3+2029
+version: 1.0.4+2030
 
 environment:
   sdk: ^3.12.2
@@ -63,6 +63,13 @@ dependencies:
   flutter_svg: ^2.0.10
   package_info_plus: ^8.1.1
   shared_preferences: ^2.5.5
+  # In-app update install: downloads the APK ourselves (dio) then hands it to
+  # the system installer via open_file's own namespaced FileProvider — no
+  # manual FileProvider wiring, no collision risk with other plugins' own.
+  # NOT open_filex: that fork deliberately dropped APK-install support to
+  # satisfy Google Play policy, which doesn't apply to us (sideloaded app).
+  open_file: ^4.0.0
+  path_provider: ^2.1.6
   # SHA-256 for the signup handoff secret. Already present transitively;
   # declared because we depend on it directly now.
   crypto: ^3.0.6

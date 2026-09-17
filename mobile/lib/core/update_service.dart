@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'api_client.dart';
 
@@ -117,6 +120,31 @@ class UpdateService {
     } catch (_) {
       // Storage failure just means they get prompted again — harmless.
     }
+  }
+
+  // Plain Dio, deliberately not ApiClient.instance.dio — that instance
+  // attaches our backend Bearer token to every request via interceptor, and
+  // this downloads from a public GitHub Releases URL, not our API.
+  static final Dio _downloadDio = Dio();
+
+  /// Downloads the APK at [url] into the app's private cache dir (no storage
+  /// permission needed) and returns the local file path. Unlike [check], this
+  /// lets exceptions through — a failed download needs to fall back to the
+  /// browser (see update_gate.dart), not disappear silently.
+  static Future<String> downloadApk(
+    String url, {
+    void Function(int received, int total)? onProgress,
+  }) async {
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/arthaleads-update.apk');
+    if (await file.exists()) await file.delete();
+    await _downloadDio.download(
+      url,
+      file.path,
+      onReceiveProgress: onProgress,
+      options: Options(receiveTimeout: const Duration(minutes: 5)),
+    );
+    return file.path;
   }
 
   static int _int(dynamic v) {

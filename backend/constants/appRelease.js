@@ -38,9 +38,18 @@ module.exports = {
   android: {
     // ── The update prompt (existing installs) ────────────────────────────────
     // Must match the "+N" build number of the APK at `url` below.
-    build: 24,
+    //
+    // 14 Sep -> 17 Sep 2026: raised straight from 24 to 30, skipping the
+    // intermediate download-only builds (28/29) entirely — an Android update
+    // is never incremental, so a build-24 phone updating to 30 gets every
+    // change in between in one install, same as anyone who updated along the
+    // way. Also the first build the field receives through the new in-app
+    // installer (see update_gate.dart) rather than a browser download; a
+    // build-24 phone still uses the old browser flow for THIS one update
+    // (it doesn't have the new code yet), then gets in-app installs after.
+    build: 30,
     // Human-readable, shown in the update prompt.
-    version: "1.0.1",
+    version: "1.0.4",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -53,34 +62,43 @@ module.exports = {
     minBuild: 19,
     // Where the update prompt sends people. Until this is set, the app never
     // prompts — an update you cannot deliver is worse than no prompt at all.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.1-24/arthaleads-1.0.1%2B24-arm64.apk",
+    //
+    // Universal APK, not an arm64 split, unlike build 24's link below it in
+    // history — this is going out to the whole existing fleet in one push and
+    // we cannot see who is on a 32-bit device; the download block's own
+    // comment already documents why an ABI split is the wrong call for an
+    // audience we don't control. Bigger file, installs everywhere.
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.4-30/arthaleads-1.0.4-30.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "The Calls screen is fixed: the daily volume chart no longer fills the whole screen, and call rows no longer overlap the duration with the call count.",
+    notes: "WhatsApp Inbox and chat now look and feel like a real WhatsApp client. Added WhatsApp consent tracking and conversation assignment on Leads. Lead-gen form answers (budget, BHK, timeline, city) now fill in the lead's real fields instead of a generic Q&A list. Updates now install right in the app — no more browser download.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
     // no app yet, so serving them the newest signed build costs nothing and
     // saves them an update on day one — while the field stays on `build`.
+    //
+    // Kept equal to the block above this time since the fleet is being pushed
+    // to the same build — normally this one runs ahead (see history above).
     download: {
-      version: "1.0.3",
+      version: "1.0.4",
       // The plain build number, not Android's versionCode — the APK is stamped
-      // 2028 and the app reports it back as 28 (% 1000). mobile/pubspec.yaml
+      // 2030 and the app reports it back as 30 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 29,
+      build: 30,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.3-29/arthaleads-1.0.3-29.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.4-30/arthaleads-1.0.4-30.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 77739349,
+      sizeBytes: 77916552,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "Artha answers with your live numbers now instead of directions: it knows which screen you opened it from, and when it can make the change itself it offers to, rather than explaining where the button is. Marking a lead Not Interested no longer moves it to Dump — it stays in your list with the status you gave it. Notes can be edited and deleted. Plus the assistant shows typing dots while it is thinking.",
+      notes: "WhatsApp Inbox and chat now look and feel like a real WhatsApp client. Added WhatsApp consent tracking and conversation assignment on Leads. Lead-gen form answers (budget, BHK, timeline, city) now fill in the lead's real fields instead of a generic Q&A list. Updates now install right in the app — no more browser download.",
     },
   },
 };
