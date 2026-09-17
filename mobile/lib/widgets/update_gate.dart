@@ -95,7 +95,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       if (!mounted) return;
       setState(() => _stage = _Stage.installing);
       final result = await OpenFile.open(path);
-      if (result.type != ResultType.done && mounted) {
+      if (!mounted) return;
+      if (result.type == ResultType.done) {
+        // ResultType.done just means Android accepted the install intent —
+        // the system installer (or its "allow unknown apps" gate, the first
+        // time) now owns the screen. Our dialog has nothing left to show and
+        // must get out of the way, or it sits on "Opening installer…"
+        // forever on top of whatever the OS is doing.
+        Navigator.of(context).pop();
+      } else {
         setState(() {
           _stage = _Stage.failed;
           _error = result.message.isNotEmpty
@@ -103,10 +111,6 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               : 'Could not open the installer.';
         });
       }
-      // ResultType.done just means Android accepted the install intent —
-      // the system installer takes over the screen from here. Whatever the
-      // user does in it (install / cancel) is theirs to decide; we don't
-      // need to react to it, and the app may be backgrounded while it shows.
     } catch (e) {
       if (mounted) {
         setState(() {
