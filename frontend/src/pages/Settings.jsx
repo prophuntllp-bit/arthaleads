@@ -520,7 +520,10 @@ export default function Settings() {
         name: form.name,
         phone: form.phone,
         avatar: form.avatar,
-        role: form.role,
+        // Only admins can change roles (enforced server-side too) — never
+        // send it for anyone else, so a non-admin saving their own name or
+        // phone doesn't trip that guard on an unchanged, always-included field.
+        ...(isAdmin ? { role: form.role } : {}),
       };
 
       if (form.newPassword) {
@@ -643,20 +646,32 @@ export default function Settings() {
               </div>
             </div>
 
-            {/* Role */}
-            <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role</div>
-              <CustomSelect
-                value={form.role}
-                onChange={(v) => setValue("role")({ target: { value: v } })}
-                options={[
-                  { value: "admin",   label: "Admin" },
-                  { value: "manager", label: "Manager" },
-                  { value: "agent",   label: "Sales Agent" },
-                ]}
-                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
-              />
-            </div>
+            {/* Role — editable by admins only. Everyone else just sees what
+                their role is; only an admin can change someone's role, and
+                that's done from Team management, not here on your own
+                profile (an admin changing their own role away from admin
+                here would be a good way to lock themselves out). */}
+            {isAdmin ? (
+              <div className="rounded-[1.25rem] p-4 stitch-surface-muted space-y-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-app"><ShieldCheck className="h-4 w-4 text-orange-500" /> Role</div>
+                <CustomSelect
+                  value={form.role}
+                  onChange={(v) => setValue("role")({ target: { value: v } })}
+                  options={[
+                    { value: "admin",   label: "Admin" },
+                    { value: "manager", label: "Manager" },
+                    { value: "agent",   label: "Sales Agent" },
+                  ]}
+                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                />
+              </div>
+            ) : (
+              <div className="rounded-[1.25rem] p-4 stitch-surface-muted flex items-center gap-2 text-sm">
+                <ShieldCheck className="h-4 w-4 text-orange-500" />
+                <span className="font-semibold text-app">Role</span>
+                <span className="text-app-soft">— {form.role === "manager" ? "Manager" : "Sales Agent"} (set by your admin)</span>
+              </div>
+            )}
 
             {/* Change password.
                 An account created through Google has no password, so there is
