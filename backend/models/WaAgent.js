@@ -87,8 +87,15 @@ const waAgentSchema = new mongoose.Schema(
       purposeOptions:  [{ id: String, label: String }],                              // ≤3
       budgetBrackets:  [{ id: String, label: String, min: Number, max: Number }],     // ≤10
       timelineOptions: [{ id: String, label: String }],                              // ≤10
-      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "location", "site_visit"] } }], // ≤3
+      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "location", "site_visit", "advisor"] } }], // ≤3
       siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
+      // Temporary testing gate: when non-empty, the flow only starts for a
+      // conversation whose contact phone is in this list — regardless of
+      // adIds/campaignRef — so the team can verify it live on themselves
+      // without it also firing for genuine inbound leads while unproven.
+      // Clear this once the flow's confirmed working to go back to normal
+      // (adIds-set = real ad leads only, adIds-empty = every lead).
+      testPhones:      [String],
     },
 
     createdBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

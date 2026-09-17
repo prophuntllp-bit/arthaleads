@@ -44,9 +44,18 @@ module.exports = function createCtwaFlowService({
    *     genuinely came from one of those ads (conversation.campaignRef set
    *     by campaignRefFromReferral); an organic "hi" that reached this
    *     agent as the org's default still gets the normal free-text agent.
+   *
+   * ctwaFlow.testPhones is a stronger, temporary override on top of either
+   * mode: when set, ONLY those exact numbers get the flow — including while
+   * adIds is empty, which otherwise means "everyone." It exists so a team can
+   * verify the flow live on themselves without it also reaching genuine
+   * inbound leads before it's proven out. Clear it to go back to normal.
    */
   function shouldStartFlow(agent, conversation) {
     if (!agent?.ctwaFlow?.enabled || conversation.flowState?.step) return false;
+    if (agent.ctwaFlow.testPhones?.length) {
+      return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
+    }
     if (agent.adIds?.length) return !!conversation.campaignRef;
     return true;
   }

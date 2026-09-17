@@ -1623,6 +1623,12 @@ function sanitizeCtwaFlow(input) {
       .slice(0, cap);
   }
 
+  // Temporary testing allowlist — digits only (matches WaConversation.contactPhone's
+  // "no +, no spaces" shape), deduped, capped well above any real team size.
+  clean.testPhones = Array.isArray(input.testPhones)
+    ? [...new Set(input.testPhones.map((p) => String(p || "").replace(/\D/g, "")).filter(Boolean))].slice(0, 25)
+    : [];
+
   if (clean.enabled) {
     // welcomeText is deliberately optional — a tenant running Meta's own
     // "automated greeting" on the ad itself (Ads Manager → Conversations)

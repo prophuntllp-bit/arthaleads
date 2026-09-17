@@ -72,6 +72,7 @@ const DEFAULT_CTWA_FLOW = {
     { id: "s1", label: "Afternoon" },
     { id: "s2", label: "Evening" },
   ],
+  testPhones: [],
 };
 
 const MENU_ACTIONS = [
@@ -124,6 +125,7 @@ export default function AgentBuilder() {
   const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
+  const [testPhoneDraft, setTestPhoneDraft] = useState("");
 
   // Try-it console
   const [tryInput, setTryInput] = useState("");
@@ -226,6 +228,14 @@ export default function AgentBuilder() {
       ? form.projectIds.filter((x) => x !== pid)
       : [...form.projectIds, pid],
   });
+
+  const addTestPhone = () => {
+    const v = testPhoneDraft.replace(/\D/g, "");
+    if (!v) return;
+    if (form.ctwaFlow.testPhones.includes(v)) return setTestPhoneDraft("");
+    setFlow({ testPhones: [...form.ctwaFlow.testPhones, v] });
+    setTestPhoneDraft("");
+  };
 
   const addAd = () => {
     const v = adDraft.trim();
@@ -469,10 +479,46 @@ export default function AgentBuilder() {
               Anyone who free-types instead of tapping drops back into this assistant's usual conversation.
             </p>
             <p className="text-xs rounded-xl px-3 py-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
-              {form.adIds.length
+              {form.ctwaFlow.testPhones.length
+                ? <>Locked to testing — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.</>
+                : form.adIds.length
                 ? <>Reserved for leads from the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above — anyone else reaching this assistant gets the normal free-text conversation instead.</>
-                : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including you messaging it yourself right now. That's what lets you test the real thing before any ad exists. Add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
+                : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including genuine leads reaching it right now. Add test numbers below to restrict it to just your own team while you verify it, or add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
             </p>
+
+            <div className="rounded-2xl p-4 space-y-2" style={{ border: "1px solid var(--app-border)" }}>
+              <p className="text-xs font-semibold text-app">
+                Test phone numbers <span className="font-normal text-app-soft">(temporary — for verifying live before real leads see it)</span>
+              </p>
+              <p className="text-xs text-app-soft">
+                Add your own WhatsApp numbers here. While this list isn't empty, the button flow only replies to
+                these numbers — every other conversation this assistant handles falls back to the normal chat,
+                so you can message the number yourself and watch it work without touching real leads.
+              </p>
+              <div className="flex items-center gap-2">
+                <input className="input flex-1 font-mono text-xs" placeholder="e.g. 919876543210"
+                  value={testPhoneDraft} onChange={(e) => setTestPhoneDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTestPhone(); } }} />
+                <button type="button" onClick={addTestPhone} disabled={!testPhoneDraft.trim()}
+                  className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-40">
+                  <Plus className="w-3.5 h-3.5" /> Add
+                </button>
+              </div>
+              {form.ctwaFlow.testPhones.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {form.ctwaFlow.testPhones.map((p) => (
+                    <span key={p} className="inline-flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-full"
+                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}>
+                      {p}
+                      <button type="button" onClick={() => setFlow({ testPhones: form.ctwaFlow.testPhones.filter((x) => x !== p) })}
+                        className="text-app-soft hover:text-red-500 transition">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
               <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 1 of 2 — sent first, plain text (optional)</p>
