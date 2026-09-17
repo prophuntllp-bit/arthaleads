@@ -18,6 +18,15 @@ const waMessageSchema = new mongoose.Schema({
   isGreeting:      { type: Boolean, default: false },
   timestamp:       { type: Date, default: Date.now },
 
+  // The buttons or list rows this message was actually sent with — WhatsApp
+  // interactive messages (see ctwaFlowService.js's sendInteractive), stored
+  // so the Inbox can show what the customer really saw. Without this, an
+  // interactive send with real tappable buttons rendered as if it were a
+  // plain-text message in the CRM even though it went out correctly — the
+  // buttons weren't missing from the send, only from what we remembered
+  // about it.
+  interactiveOptions: [{ id: String, title: String, _id: false }],
+
   // ── Credit accounting (outbound only) ────────────────────────────────────
   // What creditService held before this went out, and which category we held
   // it at. The status webhook settles against these — without them we would

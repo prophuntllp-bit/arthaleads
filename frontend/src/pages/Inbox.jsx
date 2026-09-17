@@ -226,6 +226,19 @@ function Bubble({ msg }) {
         {msg.body && (msg.mediaType === "text" || !msg.mediaType || (msg.mediaType !== "image" && msg.mediaType !== "document")) && (
           <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{msg.body}</p>
         )}
+        {msg.interactiveOptions?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2 pt-2" style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+            {msg.interactiveOptions.map((o) => (
+              // Read-only — this is what the customer's own WhatsApp app
+              // showed as real tappable buttons; tapping happens on their
+              // phone, not here, so these are just a record of what was sent.
+              <span key={o.id} className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                style={{ border: "1px solid rgba(0,0,0,0.15)", color: "inherit" }}>
+                {o.title}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1 mt-1 px-1">
         <span className="text-[10px] text-app-soft">{fmtClock(msg.timestamp)}</span>

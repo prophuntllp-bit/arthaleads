@@ -93,11 +93,16 @@ module.exports = function createCtwaFlowService({
       console.error("[CTWA Flow] send failed:", err?.response?.data || err.message);
       return false;
     }
+    // Stored so the Inbox can show what the customer actually saw — a
+    // button/list send that isn't remembered as one renders as if it were
+    // plain text in the CRM even though it went out with real buttons.
+    const interactiveOptions = (buttons || list?.rows || []).map((o) => ({ id: o.id, title: o.title }));
     await WaMessage.create({
       orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
       direction: "outbound", sender: "bot", senderName: botName,
       body: bodyText, status: "sent", timestamp: new Date(),
       reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
+      ...(interactiveOptions.length ? { interactiveOptions } : {}),
     });
     await WaConversation.findByIdAndUpdate(conversation._id, {
       lastMessageAt: new Date(), lastMessagePreview: previewLabel || bodyText.slice(0, 80),
