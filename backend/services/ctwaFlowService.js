@@ -4,23 +4,29 @@
 // triggerBotReply), only for threads that started from a Click-to-WhatsApp ad
 // (conversation.campaignRef set — see campaignRefFromReferral) on an agent
 // that has opted into it (WaAgent.ctwaFlow.enabled). Real WhatsApp interactive
-// buttons/lists for the first few qualifying questions, deterministic
-// branching, answers written straight onto the Lead record using the exact
-// "never overwrite a real value" discipline enrichWhatsAppLead already uses —
-// so the existing rule-based scorer (utils/leadScorer.js) reacts to a CTWA
-// lead exactly the same way it reacts to any other lead. No second scoring
-// system.
+// buttons/lists for the qualifying questions, deterministic branching,
+// answers written straight onto the Lead record using the exact "never
+// overwrite a real value" discipline enrichWhatsAppLead already uses — so the
+// existing rule-based scorer (utils/leadScorer.js) reacts to a CTWA lead
+// exactly the same way it reacts to any other lead. No second scoring system.
 //
-// Fixed 5-step shape (purpose → budget → timeline → menu → site-visit slot),
-// matching the flow product/support specced out — every label/option is
-// tenant-editable through AgentBuilder, the branching shape itself is not.
-// A generic drag-and-drop flow builder is explicitly out of scope here; see
-// the plan this was built from.
+// The backbone (qualify → menu → close) is fixed, matching the flow product/
+// support specced out — but the qualifying phase itself is a tenant-managed
+// list of 1-5 questions (WaAgent.ctwaFlow.qualifyingQuestions), each with its
+// own explicit mapsTo telling this file which real Lead field the answer
+// should write to (or "none"). This is a platform feature every tenant uses,
+// not just real-estate ones — the leads data this session's form-field-mapper
+// work surfaced tenants whose questions look nothing like Purpose/Budget/
+// Timeline, so those three can no longer be hardcoded. A generic drag-and-
+// drop flow builder covering the menu/close phase too is separate, explicitly
+// out-of-scope future work; see the plan this was built from.
 //
 // Constructed with its dependencies rather than requiring whatsappRoutes.js
 // directly — those helpers (sendInteractive, sendQualifiedMedia, ...) are
 // private closures in that file, and reaching into a route file from a
 // service would invert the codebase's normal dependency direction.
+const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline } = require("../utils/formFieldMapper");
+
 module.exports = function createCtwaFlowService({
   WaConversation, Lead, Project,
   sendInteractive, sendProviderMessage, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
@@ -138,28 +144,52 @@ module.exports = function createCtwaFlowService({
       : { bodyText, list: { buttonLabel, rows } };
   }
 
-  function purposeStep(agent, vars) {
-    return { bodyText: fill(agent.ctwaFlow.purposeQuestion, vars), buttons: agent.ctwaFlow.purposeOptions.map((o) => ({ id: o.id, title: o.label })) };
+  // One qualifying question, tenant-authored — questionText and options are
+  // never hardcoded. {{name}}/{{project}} supported like welcomeText, though
+  // only the very first question (sent from startFlow) actually has
+  // {{project}} available; later ones in the same conversation just get name.
+  function questionStep(question, vars) {
+    return optionsAsButtonsOrList(question.options, { bodyText: fill(question.questionText, vars), buttonLabel: "Select" });
   }
-  function budgetStep(agent) {
-    return optionsAsButtonsOrList(agent.ctwaFlow.budgetBrackets, { bodyText: "Perfect. What's your approximate budget range?", buttonLabel: "Select budget" });
+
+  // Pre-existing agent docs (e.g. Riya's, saved before qualifyingQuestions
+  // existed) still have the old purposeQuestion/purposeOptions/budgetBrackets/
+  // timelineOptions fields and nothing else — synthesized into the same
+  // 3-question shape they always behaved as, so nothing about them changes
+  // until the tenant actually edits and re-saves through the new UI. No
+  // migration script needed; this runs on every read instead.
+  function legacyToQualifyingQuestions(ctwaFlow) {
+    const qs = [];
+    if (ctwaFlow?.purposeOptions?.length) {
+      qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions, mapsTo: "purpose" });
+    }
+    if (ctwaFlow?.budgetBrackets?.length) {
+      qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets, mapsTo: "budget" });
+    }
+    if (ctwaFlow?.timelineOptions?.length) {
+      qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions, mapsTo: "timeline" });
+    }
+    return qs;
   }
-  function timelineStep(agent) {
-    return optionsAsButtonsOrList(agent.ctwaFlow.timelineOptions, { bodyText: "Got it. When are you looking to finalize?", buttonLabel: "Select timeline" });
+
+  function getQualifyingQuestions(agent) {
+    const qs = agent?.ctwaFlow?.qualifyingQuestions;
+    return qs?.length ? qs : legacyToQualifyingQuestions(agent?.ctwaFlow);
   }
+
   function menuStep(agent) {
-    return { bodyText: "Great, what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
+    return { bodyText: agent.ctwaFlow.menuPrompt || "Great, what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
   }
   function siteVisitStep(agent) {
-    return { bodyText: "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
+    return { bodyText: agent.ctwaFlow.siteVisitPrompt || "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
   }
 
   // The only two ways this flow is allowed to end: a human advisor, or a
-  // booked site visit — fixed, not agent-configurable, so "Price & Floor
-  // Plan" / "Location Details" never become dead ends with no next step.
+  // booked site visit — fixed, not agent-configurable, so "Photos &
+  // Brochure" / "Location Details" never become dead ends with no next step.
   const CLOSING_OPTIONS = [{ id: "advisor", title: "Talk to Advisor" }, { id: "site_visit", title: "Book Site Visit" }];
-  function closingStep() {
-    return { bodyText: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
+  function closingStep(agent) {
+    return { bodyText: agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
   }
 
   /**
@@ -209,9 +239,12 @@ module.exports = function createCtwaFlowService({
       const greetingSent = await sendFlowStep(org, conversation, botName, { bodyText: fill(agent.ctwaFlow.welcomeText, vars) });
       if (!greetingSent) return;
     }
-    const questionSent = await sendFlowStep(org, conversation, botName, { ...purposeStep(agent, vars), previewLabel: "Started qualification" });
+    const questions = getQualifyingQuestions(agent);
+    if (!questions.length) return; // sanitizeCtwaFlow blocks enabling without this — never crash live traffic over it regardless
+    const first = questions[0];
+    const questionSent = await sendFlowStep(org, conversation, botName, { ...questionStep(first, vars), previewLabel: "Started qualification" });
     if (questionSent) {
-      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "purpose", startedAt: new Date() } });
+      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date() } });
     }
   }
 
@@ -232,6 +265,64 @@ module.exports = function createCtwaFlowService({
   }
 
   /**
+   * Writes a qualifying-question answer onto the real Lead field the tenant
+   * chose (question.mapsTo), reusing formFieldMapper.js's exact value
+   * normalizers — the same ones a webhook-sourced lead (Facebook/Google/
+   * website forms) is mapped through, so a "budget" question behaves
+   * identically regardless of where it came from. A mapping that doesn't
+   * apply (mapsTo "none") or whose value doesn't cleanly parse for that
+   * field (a custom, non-real-estate question) never forces a bad value —
+   * it's recorded on Lead.formResponses instead, replacing any earlier
+   * answer to the same question, exactly like the "Additional Questions"
+   * leftovers a webhook-sourced lead gets.
+   */
+  async function applyQuestionAnswer(leadId, question, option) {
+    const value = option.label;
+    let mapped = null;
+    switch (question.mapsTo) {
+      case "purpose":
+        mapped = normalizePurpose(value);
+        if (mapped) await updateLeadIfBlank(leadId, { purpose: mapped });
+        break;
+      case "budget": {
+        const range = option.max > 0 ? { min: option.min || 0, max: option.max } : parseIndianCurrencyRange(value);
+        if (range) { mapped = range; await updateLeadIfBlank(leadId, { "budget.min": range.min, "budget.max": range.max }); }
+        break;
+      }
+      case "timeline":
+        mapped = normalizeTimeline(value);
+        if (mapped) await updateLeadIfBlank(leadId, { timeline: mapped });
+        break;
+      case "bhk":
+        mapped = normalizeBhk(value);
+        if (mapped) await updateLeadIfBlank(leadId, { bhk: mapped });
+        break;
+      case "propertyType":
+        mapped = normalizePropertyType(value);
+        if (mapped) await updateLeadIfBlank(leadId, { propertyType: mapped });
+        break;
+      case "city":
+      case "preferredLocation":
+      case "streetAddress": {
+        const trimmed = String(value || "").trim();
+        mapped = trimmed || null;
+        if (mapped) await updateLeadIfBlank(leadId, { [question.mapsTo]: mapped });
+        break;
+      }
+      default:
+        mapped = null;
+    }
+
+    if (!mapped && leadId) {
+      // Latest answer wins here (unlike updateLeadIfBlank above) — this is
+      // just a record of what was asked, not a scored field, so revisiting
+      // and changing an answer should show the current one, not the first.
+      await Lead.updateOne({ _id: leadId }, { $pull: { formResponses: { fieldKey: question.id } } });
+      await Lead.updateOne({ _id: leadId }, { $push: { formResponses: { fieldKey: question.id, label: question.questionText, value } } });
+    }
+  }
+
+  /**
    * Advances the flow by one step given the customer's tap (or free-typed
    * message, which never matches and falls the conversation out of the flow
    * back to the normal GPT path rather than dead-ending).
@@ -244,6 +335,7 @@ module.exports = function createCtwaFlowService({
     if (!step || !agent?.ctwaFlow?.enabled) return false;
     const botName = agent.name || "Artha Assistant";
     const flow = agent.ctwaFlow;
+    const questions = getQualifyingQuestions(agent);
 
     const exitFlow = async () => WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
 
@@ -257,33 +349,26 @@ module.exports = function createCtwaFlowService({
     // terminal (advisor connected, or a site-visit slot picked — both hand
     // off to a human and clear flowState, so nothing reaches this function
     // again after that).
-    const purposeOpt  = flow.purposeOptions.find((o) => o.id === interactiveId);
-    const budgetOpt   = flow.budgetBrackets.find((o) => o.id === interactiveId);
-    const timelineOpt = flow.timelineOptions.find((o) => o.id === interactiveId);
-    const menuOpt      = flow.menuOptions.find((o) => o.id === interactiveId);
-    const closingOpt   = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
-    const slotOpt       = flow.siteVisitSlots.find((o) => o.id === interactiveId);
-
-    if (purposeOpt) {
-      await updateLeadIfBlank(conversation.leadId, { purpose: /invest/i.test(purposeOpt.label) ? "Invest" : "Buy" });
-      await sendFlowStep(org, conversation, botName, budgetStep(agent));
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "budget" });
-      return true;
+    let matchedQuestionIndex = -1, matchedOption = null;
+    for (let i = 0; i < questions.length; i++) {
+      const opt = questions[i].options.find((o) => o.id === interactiveId);
+      if (opt) { matchedQuestionIndex = i; matchedOption = opt; break; }
     }
+    const menuOpt     = flow.menuOptions.find((o) => o.id === interactiveId);
+    const closingOpt  = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
+    const slotOpt      = flow.siteVisitSlots.find((o) => o.id === interactiveId);
 
-    if (budgetOpt) {
-      if (budgetOpt.max > 0) await updateLeadIfBlank(conversation.leadId, { "budget.min": budgetOpt.min || 0, "budget.max": budgetOpt.max });
-      await sendFlowStep(org, conversation, botName, timelineStep(agent));
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "timeline" });
-      return true;
-    }
-
-    if (timelineOpt) {
-      if (conversation.leadId) {
-        await Lead.updateOne({ _id: conversation.leadId }, { $addToSet: { tags: `timeline:${timelineOpt.id}` } });
+    if (matchedQuestionIndex !== -1) {
+      const question = questions[matchedQuestionIndex];
+      await applyQuestionAnswer(conversation.leadId, question, matchedOption);
+      const next = questions[matchedQuestionIndex + 1];
+      if (next) {
+        await sendFlowStep(org, conversation, botName, questionStep(next, { name: conversation.contactName || "there" }));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
+      } else {
+        await sendFlowStep(org, conversation, botName, menuStep(agent));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       }
-      await sendFlowStep(org, conversation, botName, menuStep(agent));
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       return true;
     }
 
@@ -310,7 +395,7 @@ module.exports = function createCtwaFlowService({
       } else if (action === "location" && project?.location) {
         await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
       }
-      await sendFlowStep(org, conversation, botName, closingStep());
+      await sendFlowStep(org, conversation, botName, closingStep(agent));
       await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       return true;
     }

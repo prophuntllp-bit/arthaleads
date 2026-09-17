@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, Sparkles, Building2, Megaphone, Plus, X, Check, Loader2,
-  ChevronDown, MessageSquare, Send, AlertTriangle, Eye, Trash2, Image as ImageIcon,
+  ChevronDown, ChevronUp, MessageSquare, Send, AlertTriangle, Eye, Trash2, Image as ImageIcon,
   MousePointerClick, Lock, GripVertical,
 } from "lucide-react";
 import api from "../../services/api";
@@ -41,39 +41,87 @@ const STATUSES = [
 const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "option"}_${i}`;
 
 // Sensible starting point for an Indian real-estate CTWA flow — every label
-// (and the wording) is editable per agent; only the 5-step shape is fixed.
+// (and the wording) is editable per agent; only the qualify → menu → close
+// backbone shape is fixed. The qualifying phase itself is an open-ended list
+// (1-5 questions), not a hardcoded Purpose/Budget/Timeline triad — this is a
+// platform feature every tenant uses, not just real-estate ones.
 const DEFAULT_CTWA_FLOW = {
   enabled: false,
   welcomeText: "Hi {{name}} 👋 Thanks for your interest in {{project}}!",
-  purposeQuestion: "Are you looking for this primarily for:",
-  purposeOptions: [
-    { id: "self_use_0", label: "Self Use" },
-    { id: "investment_1", label: "Investment" },
+  qualifyingQuestions: [
+    {
+      id: "purpose", questionText: "Are you looking for this primarily for:", mapsTo: "purpose",
+      options: [
+        { id: "self_use_0", label: "Self Use" },
+        { id: "investment_1", label: "Investment" },
+      ],
+    },
+    {
+      id: "budget", questionText: "Perfect. What's your approximate budget range?", mapsTo: "budget",
+      options: [
+        { id: "b0", label: "Under ₹50L", min: 0, max: 5000000 },
+        { id: "b1", label: "₹50L - ₹1Cr", min: 5000000, max: 10000000 },
+        { id: "b2", label: "₹1Cr+", min: 10000000, max: 0 },
+        { id: "b3", label: "Just Exploring", min: 0, max: 0 },
+      ],
+    },
+    {
+      id: "timeline", questionText: "Got it. When are you looking to finalize?", mapsTo: "timeline",
+      options: [
+        { id: "t0", label: "Within 30 Days" },
+        { id: "t1", label: "1-3 Months" },
+        { id: "t2", label: "3-6 Months" },
+        { id: "t3", label: "Just Exploring" },
+      ],
+    },
   ],
-  budgetBrackets: [
-    { id: "b0", label: "Under ₹50L", min: 0, max: 5000000 },
-    { id: "b1", label: "₹50L - ₹1Cr", min: 5000000, max: 10000000 },
-    { id: "b2", label: "₹1Cr+", min: 10000000, max: 0 },
-    { id: "b3", label: "Just Exploring", min: 0, max: 0 },
-  ],
-  timelineOptions: [
-    { id: "t0", label: "Within 30 Days" },
-    { id: "t1", label: "1-3 Months" },
-    { id: "t2", label: "3-6 Months" },
-    { id: "t3", label: "Just Exploring" },
-  ],
+  menuPrompt: "Great, what would you like to see next?",
   menuOptions: [
-    { id: "m0", label: "📄 Price & Floor Plan", action: "photos" },
+    { id: "m0", label: "🖼️ Photos & Brochure", action: "photos" },
     { id: "m1", label: "📞 Talk to Advisor", action: "advisor" },
     { id: "m2", label: "🏡 Book Site Visit", action: "site_visit" },
   ],
+  siteVisitPrompt: "Which time works best for your visit?",
   siteVisitSlots: [
     { id: "s0", label: "Morning" },
     { id: "s1", label: "Afternoon" },
     { id: "s2", label: "Evening" },
   ],
+  closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
   testPhones: [],
 };
+
+// Pre-existing agents saved before qualifyingQuestions existed (e.g. any
+// agent saved through this page before this change shipped) still carry the
+// old purposeQuestion/purposeOptions/budgetBrackets/timelineOptions fields
+// and nothing else — synthesized into the same 3-question shape they always
+// behaved as. Mirrors ctwaFlowService.js's legacyToQualifyingQuestions
+// exactly. The very next Save persists the new shape for good.
+function legacyToQualifyingQuestions(ctwaFlow) {
+  const qs = [];
+  if (ctwaFlow?.purposeOptions?.length) {
+    qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions, mapsTo: "purpose" });
+  }
+  if (ctwaFlow?.budgetBrackets?.length) {
+    qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets, mapsTo: "budget" });
+  }
+  if (ctwaFlow?.timelineOptions?.length) {
+    qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions, mapsTo: "timeline" });
+  }
+  return qs;
+}
+
+const MAPS_TO_OPTIONS = [
+  { value: "none",              label: "Don't map — just record the answer" },
+  { value: "purpose",           label: "Purpose (Buy / Rent / Invest)" },
+  { value: "budget",            label: "Budget range" },
+  { value: "timeline",          label: "Timeline" },
+  { value: "bhk",                label: "Configuration (BHK)" },
+  { value: "propertyType",      label: "Property type" },
+  { value: "city",               label: "City" },
+  { value: "preferredLocation", label: "Preferred location" },
+  { value: "streetAddress",     label: "Street address" },
+];
 
 const MENU_ACTIONS = [
   { value: "photos",     label: "Send photos & brochure" },
@@ -89,6 +137,17 @@ const MENU_ACTIONS = [
 const PRESET_PURPOSE = ["Self Use", "Investment", "Buy", "Rent", "Just Exploring"];
 const PRESET_TIMELINE = ["Within 30 Days", "1-3 Months", "3-6 Months", "6-12 Months", "Just Exploring"];
 const PRESET_SITE_VISIT_SLOTS = ["Morning", "Afternoon", "Evening", "This Weekend", "Weekday"];
+const PRESET_BHK = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio"];
+const PRESET_PROPERTY_TYPE = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse"];
+// Which quick-add presets make sense once a question is mapped to a
+// specific field — "none" (and anything not listed) gets no presets, since
+// there's nothing to suggest for an arbitrary custom question.
+const MAPS_TO_PRESETS = {
+  purpose: PRESET_PURPOSE,
+  timeline: PRESET_TIMELINE,
+  bhk: PRESET_BHK,
+  propertyType: PRESET_PROPERTY_TYPE,
+};
 const PRESET_BUDGET_BRACKETS = [
   { label: "Under ₹50L", min: 0, max: 5000000 },
   { label: "₹50L - ₹75L", min: 5000000, max: 7500000 },
@@ -98,7 +157,7 @@ const PRESET_BUDGET_BRACKETS = [
   { label: "Just Exploring", min: 0, max: 0 },
 ];
 const PRESET_MENU_OPTIONS = [
-  { label: "📄 Price & Floor Plan", action: "photos" },
+  { label: "🖼️ Photos & Brochure", action: "photos" },
   { label: "📍 Location Details", action: "location" },
   { label: "🏡 Book Site Visit", action: "site_visit" },
   { label: "📞 Talk to Advisor", action: "advisor" },
@@ -151,9 +210,21 @@ export default function AgentBuilder() {
           adIds: a.adIds || [],
           shareProjectPhotos: a.shareProjectPhotos === true, shareBrochure: a.shareBrochure === true,
           // Merged over the defaults rather than used as-is — an agent saved
-          // before purposeQuestion existed would otherwise load that field as
+          // before welcomeText existed would otherwise load that field as
           // undefined and turn its textarea into an uncontrolled input.
-          ctwaFlow: a.ctwaFlow?.welcomeText !== undefined ? { ...DEFAULT_CTWA_FLOW, ...a.ctwaFlow } : DEFAULT_CTWA_FLOW,
+          // qualifyingQuestions specifically: an agent saved before it existed
+          // (old purposeQuestion/purposeOptions/budgetBrackets/timelineOptions
+          // shape) gets it synthesized on load — the next Save persists the
+          // new shape for good, no separate migration needed.
+          ctwaFlow: a.ctwaFlow?.welcomeText !== undefined
+            ? {
+                ...DEFAULT_CTWA_FLOW,
+                ...a.ctwaFlow,
+                qualifyingQuestions: a.ctwaFlow.qualifyingQuestions?.length
+                  ? a.ctwaFlow.qualifyingQuestions
+                  : legacyToQualifyingQuestions(a.ctwaFlow),
+              }
+            : DEFAULT_CTWA_FLOW,
         });
         setShowAdvanced(!!a.systemPrompt);
         setReadiness(a.readiness);
@@ -243,6 +314,31 @@ export default function AgentBuilder() {
     if (form.adIds.includes(v)) return setAdDraft("");
     set({ adIds: [...form.adIds, v] });
     setAdDraft("");
+  };
+
+  const MAX_QUALIFYING_QUESTIONS = 5;
+  const updateQuestion = (index, next) => setFlow({
+    qualifyingQuestions: form.ctwaFlow.qualifyingQuestions.map((q, i) => (i === index ? next : q)),
+  });
+  const removeQuestion = (index) => {
+    if (form.ctwaFlow.qualifyingQuestions.length <= 1) return;
+    setFlow({ qualifyingQuestions: form.ctwaFlow.qualifyingQuestions.filter((_, i) => i !== index) });
+  };
+  const moveQuestion = (index, dir) => {
+    const target = index + dir;
+    if (target < 0 || target >= form.ctwaFlow.qualifyingQuestions.length) return;
+    const next = [...form.ctwaFlow.qualifyingQuestions];
+    [next[index], next[target]] = [next[target], next[index]];
+    setFlow({ qualifyingQuestions: next });
+  };
+  const addQuestion = () => {
+    if (form.ctwaFlow.qualifyingQuestions.length >= MAX_QUALIFYING_QUESTIONS) return;
+    setFlow({
+      qualifyingQuestions: [
+        ...form.ctwaFlow.qualifyingQuestions,
+        { id: `q_${Date.now().toString(36)}`, questionText: "", options: [], mapsTo: "none" },
+      ],
+    });
   };
 
   if (loading) {
@@ -474,9 +570,11 @@ export default function AgentBuilder() {
               </label>
             </div>
             <p className="text-sm text-app-soft">
-              Replace the first few free-text qualifying questions with real WhatsApp buttons/lists: purpose →
-              budget → timeline → what they want next → site-visit time. Answers write straight onto the lead.
-              Anyone who free-types instead of tapping drops back into this assistant's usual conversation.
+              Replace the first few free-text qualifying questions with real WhatsApp buttons/lists — your own
+              questions, in your own order — followed by what they want next and a site-visit time. Answers write
+              straight onto the lead when they clearly map to a field; anything else is still recorded, just not
+              forced onto the wrong one. Anyone who free-types instead of tapping drops back into this assistant's
+              usual conversation.
             </p>
             <p className="text-xs rounded-xl px-3 py-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
               {form.ctwaFlow.testPhones.length
@@ -531,33 +629,52 @@ export default function AgentBuilder() {
                   Use <code>{"{{name}}"}</code> and <code>{"{{project}}"}</code>. Sent on its own — a greeting bundled
                   into the same message as the first question reads as the bot talking over itself. Leave this blank
                   if the ad's own "Automated greeting" (Ads Manager → Conversations) already covers it — the flow
-                  then opens straight with the purpose question below, no double greeting.
+                  then opens straight with the first question below, no double greeting.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
-              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Message 2 of 2 — sent right after, with the purpose buttons</p>
-              <div>
-                <label className="text-xs font-semibold text-app-soft block mb-1">Purpose question</label>
-                <input className="input w-full" placeholder="Are you looking for this primarily for:"
-                  value={form.ctwaFlow.purposeQuestion} onChange={(e) => setFlow({ purposeQuestion: e.target.value })} />
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft mb-2">
+                Qualifying questions — sent one at a time, in this order
+              </p>
+              <div className="space-y-3">
+                {form.ctwaFlow.qualifyingQuestions.map((q, i) => (
+                  <QualifyingQuestionEditor key={q.id} question={q} index={i} total={form.ctwaFlow.qualifyingQuestions.length}
+                    onChange={(next) => updateQuestion(i, next)}
+                    onRemove={() => removeQuestion(i)}
+                    onMoveUp={() => moveQuestion(i, -1)}
+                    onMoveDown={() => moveQuestion(i, 1)} />
+                ))}
               </div>
-              <ChipRowEditor label="Purpose — up to 3 buttons" max={3} presets={PRESET_PURPOSE}
-                rows={form.ctwaFlow.purposeOptions} onChange={(rows) => setFlow({ purposeOptions: rows })} />
+              <button type="button" onClick={addQuestion} disabled={form.ctwaFlow.qualifyingQuestions.length >= MAX_QUALIFYING_QUESTIONS}
+                className="btn-secondary rounded-full px-3.5 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 w-full mt-3">
+                <Plus className="w-3.5 h-3.5" /> Add another question
+              </button>
             </div>
 
-            <BudgetBracketEditor rows={form.ctwaFlow.budgetBrackets}
-              onChange={(rows) => setFlow({ budgetBrackets: rows })} />
-
-            <ChipRowEditor label="Timeline — up to 10, shown as a list" max={10} presets={PRESET_TIMELINE}
-              rows={form.ctwaFlow.timelineOptions} onChange={(rows) => setFlow({ timelineOptions: rows })} />
-
+            <div>
+              <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" prompt</label>
+              <input className="input w-full" placeholder="Great, what would you like to see next?"
+                value={form.ctwaFlow.menuPrompt} onChange={(e) => setFlow({ menuPrompt: e.target.value })} />
+            </div>
             <MenuOptionEditor rows={form.ctwaFlow.menuOptions}
               onChange={(rows) => setFlow({ menuOptions: rows })} />
 
+            <div>
+              <label className="text-xs font-semibold text-app-soft block mb-1">Site-visit prompt</label>
+              <input className="input w-full" placeholder="Which time works best for your visit?"
+                value={form.ctwaFlow.siteVisitPrompt} onChange={(e) => setFlow({ siteVisitPrompt: e.target.value })} />
+            </div>
             <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3} presets={PRESET_SITE_VISIT_SLOTS}
               rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
+
+            <div>
+              <label className="text-xs font-semibold text-app-soft block mb-1">Closing prompt</label>
+              <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
+                value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
+              <p className="text-[11px] text-app-soft mt-1">Sent after Photos &amp; Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.</p>
+            </div>
             <p className="text-[11px] text-app-soft text-center">
               Preview of this flow is alongside "Try it" →
             </p>
@@ -746,13 +863,14 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
     if (flow.welcomeText.trim()) {
       push({ from: "bot", text: fillVars(flow.welcomeText, vars) });
     }
-    if (!flow.purposeOptions.length) {
-      push({ from: "bot", warn: true, text: "No purpose options configured yet — add at least one above to preview past this step." });
+    const first = flow.qualifyingQuestions?.[0];
+    if (!first || !first.options.length) {
+      push({ from: "bot", warn: true, text: "No qualifying questions configured yet — add at least one above to preview past this step." });
       setStep(null);
       return;
     }
-    push({ from: "bot", text: fillVars(flow.purposeQuestion, vars) || "(purpose question is empty)", buttons: flow.purposeOptions });
-    setStep("purpose");
+    push({ from: "bot", text: fillVars(first.questionText, vars) || "(question text is empty)", buttons: first.options });
+    setStep(first.id);
   };
 
   useEffect(() => { restart(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -775,33 +893,22 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
   const tap = (opt) => {
     push({ from: "user", text: opt.label });
 
-    const inPurpose  = flow.purposeOptions.some((o) => o.id === opt.id);
-    const inBudget   = flow.budgetBrackets.some((o) => o.id === opt.id);
-    const inTimeline = flow.timelineOptions.some((o) => o.id === opt.id);
-    const inMenu     = flow.menuOptions.some((o) => o.id === opt.id);
-    const inClosing  = CLOSING_BUTTONS.some((o) => o.id === opt.id);
-    const inSlots    = flow.siteVisitSlots.some((o) => o.id === opt.id);
+    const qIndex   = (flow.qualifyingQuestions || []).findIndex((q) => q.options.some((o) => o.id === opt.id));
+    const inMenu    = flow.menuOptions.some((o) => o.id === opt.id);
+    const inClosing = CLOSING_BUTTONS.some((o) => o.id === opt.id);
+    const inSlots   = flow.siteVisitSlots.some((o) => o.id === opt.id);
 
-    if (inPurpose) {
-      if (needOptions(flow.budgetBrackets, "budget brackets")) return;
-      // Mirrors ctwaFlowService's optionsAsButtonsOrList: inline buttons when
-      // there are 3 or fewer, a "Select..." list only once there are more.
-      push(flow.budgetBrackets.length <= 3
-        ? { from: "bot", text: "Perfect. What's your approximate budget range?", buttons: flow.budgetBrackets }
-        : { from: "bot", text: "Perfect. What's your approximate budget range?", list: flow.budgetBrackets });
-      setStep("budget"); return;
-    }
-    if (inBudget) {
-      if (needOptions(flow.timelineOptions, "timeline options")) return;
-      push(flow.timelineOptions.length <= 3
-        ? { from: "bot", text: "Got it. When are you looking to finalize?", buttons: flow.timelineOptions }
-        : { from: "bot", text: "Got it. When are you looking to finalize?", list: flow.timelineOptions });
-      setStep("timeline"); return;
-    }
-    if (inTimeline) {
-      if (needOptions(flow.menuOptions, "\"what next\" options")) return;
-      push({ from: "bot", text: "Great, what would you like to see next?", buttons: flow.menuOptions });
-      setStep("menu"); return;
+    if (qIndex !== -1) {
+      const next = flow.qualifyingQuestions[qIndex + 1];
+      if (next) {
+        push({ from: "bot", text: fillVars(next.questionText, vars) || "(question text is empty)", buttons: next.options });
+        setStep(next.id);
+      } else {
+        if (needOptions(flow.menuOptions, "\"what next\" options")) return;
+        push({ from: "bot", text: flow.menuPrompt || "Great, what would you like to see next?", buttons: flow.menuOptions });
+        setStep("menu");
+      }
+      return;
     }
     if (inSlots) {
       push({ from: "bot", text: "Wonderful! Our team will confirm your visit shortly and take it from here." });
@@ -812,18 +919,18 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       const action = inMenu ? opt.action : opt.id; // closing ids ARE their action
       if (action === "site_visit") {
         if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
-        push({ from: "bot", text: "Which time works best for your visit?", buttons: flow.siteVisitSlots });
+        push({ from: "bot", text: flow.siteVisitPrompt || "Which time works best for your visit?", buttons: flow.siteVisitSlots });
         setStep("site_visit"); return;
       }
       if (action === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
       // Informational — never a dead end, and never retires the menu: the
       // same message's other buttons (and this one) stay tappable after.
       if (action === "photos") {
-        push({ from: "bot", note: true, text: "📷 Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
+        push({ from: "bot", note: true, text: "🖼️ Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
       } else if (action === "location") {
         push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
       }
-      push({ from: "bot", text: "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
+      push({ from: "bot", text: flow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
       setStep("menu"); return;
     }
   };
@@ -986,6 +1093,59 @@ function ChipRowEditor({ label, rows, max, onChange, presets }) {
   );
 }
 
+// One qualifying question: its own text, which real Lead field (if any) the
+// answer maps to, and its options — a budget-mapped question gets the
+// min/max-aware BudgetBracketEditor, everything else gets the plain
+// label-only ChipRowEditor. Replaces what used to be three separate fixed
+// Purpose/Budget/Timeline sections with one repeatable card, since the
+// qualifying phase is now an open-ended tenant-authored list.
+function QualifyingQuestionEditor({ question, index, total, onChange, onRemove, onMoveUp, onMoveDown }) {
+  const setQ = (patch) => onChange({ ...question, ...patch });
+  const presets = MAPS_TO_PRESETS[question.mapsTo];
+  return (
+    <div className="rounded-2xl p-4 space-y-3" style={{ border: "1px solid var(--app-border)" }}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-app-soft">Question {index + 1} of {total}</p>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={onMoveUp} disabled={index === 0} title="Move up"
+            className="p-1 rounded-lg text-app-soft hover:text-app transition disabled:opacity-30 disabled:hover:text-app-soft">
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={onMoveDown} disabled={index === total - 1} title="Move down"
+            className="p-1 rounded-lg text-app-soft hover:text-app transition disabled:opacity-30 disabled:hover:text-app-soft">
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+          <button type="button" onClick={onRemove} disabled={total <= 1} title="Remove question"
+            className="p-1 rounded-lg text-app-soft hover:text-red-500 transition disabled:opacity-30 disabled:hover:text-app-soft">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-app-soft block mb-1">Question text</label>
+        <input className="input w-full" placeholder="e.g. Are you looking for this primarily for:"
+          value={question.questionText} onChange={(e) => setQ({ questionText: e.target.value })} />
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-app-soft block mb-1">Maps to</label>
+        <CustomSelect value={question.mapsTo} onChange={(v) => setQ({ mapsTo: v })} options={MAPS_TO_OPTIONS} style={SELECT_STYLE} />
+        <p className="text-[11px] text-app-soft mt-1">
+          {question.mapsTo === "none"
+            ? "The answer is just recorded and shown on the lead's Info tab — nothing is forced onto a specific field."
+            : "Only written to this field when the tapped option actually resolves to something real for it — anything else is recorded instead of guessed at, same as the field above."}
+        </p>
+      </div>
+
+      {question.mapsTo === "budget"
+        ? <BudgetBracketEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} />
+        : <ChipRowEditor label="Options — up to 10, shown as buttons if 3 or fewer, a list if more" max={10} presets={presets}
+            rows={question.options} onChange={(rows) => setQ({ options: rows })} />}
+    </div>
+  );
+}
+
 function BudgetBracketEditor({ rows, onChange }) {
   const [label, setLabel] = useState(""); const [min, setMin] = useState(""); const [max, setMax] = useState("");
   const addRow = (row) => {
@@ -1041,7 +1201,7 @@ function MenuOptionEditor({ rows, onChange }) {
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
       <p className="text-[11px] text-app-soft mb-1">
-        Price &amp; Floor Plan and Location Details always follow up with "Talk to Advisor" / "Book Site
+        Photos &amp; Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site
         Visit" — this flow never dead-ends on just a photo or an address.
       </p>
       {remaining.length > 0 && (

@@ -69,26 +69,42 @@ const waAgentSchema = new mongoose.Schema(
     // ── CTWA button-driven qualification flow ───────────────────────────────
     // An alternative to the free-text GPT qualification, only for threads that
     // started from a Click-to-WhatsApp ad (conversation.campaignRef set) — real
-    // WhatsApp interactive buttons/lists for the first few qualifying
-    // questions, deterministic branching, answers written straight onto the
-    // Lead record. See services/ctwaFlowService.js. A fixed 5-step shape
-    // (purpose → budget → timeline → menu → site-visit slot) with every
-    // label/option tenant-editable — not a generic flow builder.
+    // WhatsApp interactive buttons/lists for the qualifying questions,
+    // deterministic branching, answers written straight onto the Lead
+    // record. See services/ctwaFlowService.js. The backbone (qualify → menu
+    // → close) is fixed, but the qualifying phase is a tenant-managed list
+    // of 1-5 questions (add/remove/reorder), not a hardcoded Purpose/
+    // Budget/Timeline triad — this is a platform feature every tenant uses,
+    // not just real-estate ones.
     ctwaFlow: {
       enabled:     { type: Boolean, default: false },
-      // Sent as its own plain-text message, before the purpose question —
-      // combining a greeting with the first question into one interactive
-      // message read as the bot talking over itself. "{{name}}"/"{{project}}" supported.
+      // Sent as its own plain-text message, before the first qualifying
+      // question — combining a greeting with the first question into one
+      // interactive message reads as the bot talking over itself.
+      // "{{name}}"/"{{project}}" supported.
       welcomeText:     { type: String, default: "" },
-      // The line sent alongside the purpose buttons — kept separate from
-      // welcomeText so the greeting and the actual question are two messages,
-      // not one run-on.
-      purposeQuestion: { type: String, default: "" },
-      purposeOptions:  [{ id: String, label: String }],                              // ≤3
-      budgetBrackets:  [{ id: String, label: String, min: Number, max: Number }],     // ≤10
-      timelineOptions: [{ id: String, label: String }],                              // ≤10
+      // 1-5 questions, each with its own options (≤10) and an explicit
+      // mapsTo telling ctwaFlowService.advanceFlow which real Lead field
+      // (if any) the answer should write to. mapsTo is a statement of
+      // intent, not a guarantee — the answer's VALUE still has to parse
+      // for that field (see formFieldMapper.js's normalizers); anything
+      // that doesn't, or is "none", lands in Lead.formResponses instead of
+      // forcing a bad value.
+      qualifyingQuestions: [{
+        id: String,
+        questionText: String,
+        options: [{ id: String, label: String, min: Number, max: Number }], // min/max only meaningful when mapsTo is "budget"
+        mapsTo: {
+          type: String,
+          enum: ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"],
+          default: "none",
+        },
+      }],
+      menuPrompt:      { type: String, default: "Great, what would you like to see next?" },
       menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "location", "site_visit", "advisor"] } }], // ≤3
+      siteVisitPrompt: { type: String, default: "Which time works best for your visit?" },
       siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
+      closingPrompt:   { type: String, default: "Would you like to talk to our advisor, or book a site visit?" },
       // Temporary testing gate: when non-empty, the flow only starts for a
       // conversation whose contact phone is in this list — regardless of
       // adIds/campaignRef — so the team can verify it live on themselves
@@ -96,6 +112,16 @@ const waAgentSchema = new mongoose.Schema(
       // Clear this once the flow's confirmed working to go back to normal
       // (adIds-set = real ad leads only, adIds-empty = every lead).
       testPhones:      [String],
+
+      // ── Legacy shape, kept for existing agent docs (e.g. Riya's live
+      // config) — no longer written by sanitizeCtwaFlow, read only by
+      // ctwaFlowService's migration fallback when qualifyingQuestions is
+      // empty. Safe to remove once every live tenant has saved through the
+      // new AgentBuilder UI at least once.
+      purposeQuestion: { type: String, default: "" },
+      purposeOptions:  [{ id: String, label: String }],
+      budgetBrackets:  [{ id: String, label: String, min: Number, max: Number }],
+      timelineOptions: [{ id: String, label: String }],
     },
 
     createdBy:     { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },

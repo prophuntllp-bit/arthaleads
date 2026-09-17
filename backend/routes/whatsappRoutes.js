@@ -1616,26 +1616,51 @@ const AGENT_FIELDS = [
 // Caps mirror WhatsApp's own interactive-message limits (3 reply buttons, 10
 // list rows) — enforced here so a misconfigured flow fails on save with a
 // clear message instead of failing silently at Meta send time mid-conversation.
-const CTWA_STEP_CAPS = {
-  purposeOptions: 3, budgetBrackets: 10, timelineOptions: 10, menuOptions: 3, siteVisitSlots: 3,
-};
+const CTWA_STEP_CAPS = { menuOptions: 3, siteVisitSlots: 3 };
 const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit", "advisor"];
+const CTWA_MAX_QUESTIONS = 5;
+const CTWA_MAPS_TO = ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"];
+
+function sanitizeOptionRow(r, { withBudget = false } = {}) {
+  return {
+    id: String(r?.id || "").trim().slice(0, 60),
+    label: String(r?.label || "").trim().slice(0, 60),
+    ...(withBudget ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
+  };
+}
 
 function sanitizeCtwaFlow(input) {
   if (!input || typeof input !== "object") return undefined;
   const clean = {
     enabled: input.enabled === true,
     welcomeText:     String(input.welcomeText || "").trim().slice(0, 500),
-    purposeQuestion: String(input.purposeQuestion || "").trim().slice(0, 300),
+    menuPrompt:      String(input.menuPrompt || "").trim().slice(0, 300),
+    siteVisitPrompt: String(input.siteVisitPrompt || "").trim().slice(0, 300),
+    closingPrompt:   String(input.closingPrompt || "").trim().slice(0, 300),
   };
+
+  // 1-5 tenant-authored qualifying questions — each with its own options and
+  // an explicit mapsTo (see ctwaFlowService.applyQuestionAnswer). Unlike the
+  // old fixed purpose/budget/timeline fields, questionText/mapsTo are no
+  // longer implied by which array a row lives in.
+  const questionRows = Array.isArray(input.qualifyingQuestions) ? input.qualifyingQuestions : [];
+  clean.qualifyingQuestions = questionRows
+    .map((q) => {
+      const mapsTo = CTWA_MAPS_TO.includes(q?.mapsTo) ? q.mapsTo : "none";
+      const options = (Array.isArray(q?.options) ? q.options : [])
+        .map((r) => sanitizeOptionRow(r, { withBudget: mapsTo === "budget" }))
+        .filter((r) => r.id && r.label)
+        .slice(0, 10);
+      return { id: String(q?.id || "").trim().slice(0, 60), questionText: String(q?.questionText || "").trim().slice(0, 300), options, mapsTo };
+    })
+    .filter((q) => q.id && q.questionText && q.options.length)
+    .slice(0, CTWA_MAX_QUESTIONS);
 
   for (const [key, cap] of Object.entries(CTWA_STEP_CAPS)) {
     const rows = Array.isArray(input[key]) ? input[key] : [];
     clean[key] = rows
       .map((r) => ({
-        id: String(r?.id || "").trim().slice(0, 60),
-        label: String(r?.label || "").trim().slice(0, 60),
-        ...(key === "budgetBrackets" ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
+        ...sanitizeOptionRow(r),
         ...(key === "menuOptions" ? { action: CTWA_MENU_ACTIONS.includes(r?.action) ? r.action : "advisor" } : {}),
       }))
       .filter((r) => r.id && r.label)
@@ -1652,11 +1677,11 @@ function sanitizeCtwaFlow(input) {
     // welcomeText is deliberately optional — a tenant running Meta's own
     // "automated greeting" on the ad itself (Ads Manager → Conversations)
     // doesn't want a second, redundant one from this bot; leaving it blank
-    // skips straight to the purpose question (see ctwaFlowService.startFlow).
+    // skips straight to the first qualifying question (see ctwaFlowService.startFlow).
     const missing = Object.keys(CTWA_STEP_CAPS).filter((k) => !clean[k].length);
-    if (!clean.purposeQuestion || missing.length) {
+    if (!clean.qualifyingQuestions.length || missing.length) {
       const e = new Error(
-        `The CTWA flow needs a purpose question and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
+        `The CTWA flow needs at least one qualifying question (with at least one option and question text) and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
       );
       e.status = 400; throw e;
     }

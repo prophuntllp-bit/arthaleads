@@ -49,7 +49,10 @@ const waConversationSchema = new mongoose.Schema({
   // above: "field absent" means "doesn't apply", not "at the first step".
   flowState: {
     type: {
-      step:      { type: String, enum: ["purpose", "budget", "timeline", "menu", "closing", "site_visit"] },
+      // Not an enum: a qualifying step is identified by its own
+      // tenant-generated question id (see WaAgent.ctwaFlow.qualifyingQuestions),
+      // not a fixed name, plus the fixed backbone steps "menu"/"site_visit".
+      step:      { type: String, trim: true },
       startedAt: { type: Date, default: Date.now },
     },
     default: undefined,
