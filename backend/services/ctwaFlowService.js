@@ -127,17 +127,28 @@ module.exports = function createCtwaFlowService({
     return true;
   }
 
+  // WhatsApp allows at most 3 reply buttons — a list is only actually needed
+  // once there are more options than that. Renders as inline buttons (same as
+  // purpose/menu/site-visit) whenever the tenant has kept it to 3 or fewer,
+  // which is the common case, rather than always opening a "Select..." list.
+  function optionsAsButtonsOrList(options, { bodyText, buttonLabel }) {
+    const rows = options.map((o) => ({ id: o.id, title: o.label }));
+    return rows.length <= 3
+      ? { bodyText, buttons: rows }
+      : { bodyText, list: { buttonLabel, rows } };
+  }
+
   function purposeStep(agent, vars) {
     return { bodyText: fill(agent.ctwaFlow.purposeQuestion, vars), buttons: agent.ctwaFlow.purposeOptions.map((o) => ({ id: o.id, title: o.label })) };
   }
   function budgetStep(agent) {
-    return { bodyText: "Perfect. What's your approximate budget range?", list: { buttonLabel: "Select budget", rows: agent.ctwaFlow.budgetBrackets.map((b) => ({ id: b.id, title: b.label })) } };
+    return optionsAsButtonsOrList(agent.ctwaFlow.budgetBrackets, { bodyText: "Perfect. What's your approximate budget range?", buttonLabel: "Select budget" });
   }
   function timelineStep(agent) {
-    return { bodyText: "Got it. When are you looking to finalize?", list: { buttonLabel: "Select timeline", rows: agent.ctwaFlow.timelineOptions.map((t) => ({ id: t.id, title: t.label })) } };
+    return optionsAsButtonsOrList(agent.ctwaFlow.timelineOptions, { bodyText: "Got it. When are you looking to finalize?", buttonLabel: "Select timeline" });
   }
   function menuStep(agent) {
-    return { bodyText: "Great — what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
+    return { bodyText: "Great, what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
   }
   function siteVisitStep(agent) {
     return { bodyText: "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
@@ -163,10 +174,12 @@ module.exports = function createCtwaFlowService({
     const advisor = project?.advisorId;
     // The phone number is what actually lets the lead act right now instead
     // of waiting on a callback — WhatsApp auto-links a plain digit string
-    // like this into a tappable number.
-    const line = advisor?.name
-      ? `Connecting you with ${advisor.name} from our team — they'll reach out to you shortly.${advisor.phone ? ` You can also reach them directly on ${advisor.phone}.` : ""}`
-      : "Connecting you with our team — someone will reach out to you shortly.";
+    // like this into a tappable number. First name only, not the advisor's
+    // full name — reads like a person texting, not a formal handoff notice.
+    const advisorFirstName = advisor?.name ? advisor.name.trim().split(/\s+/)[0] : "";
+    const line = advisorFirstName
+      ? `Connecting you with ${advisorFirstName} from our team, they'll reach out to you shortly.${advisor.phone ? ` You can also reach them directly on ${advisor.phone}.` : ""}`
+      : "Connecting you with our team, someone will reach out to you shortly.";
     await sendFlowStep(org, conversation, botName, { bodyText: line, previewLabel: "→ Connected to advisor" });
     if (advisor?._id) {
       await WaConversation.findByIdAndUpdate(conversation._id, { assignedTo: advisor._id, assignedToName: advisor.name });
@@ -328,7 +341,7 @@ module.exports = function createCtwaFlowService({
         }
       );
     }
-    await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful — our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
+    await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful! Our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
     await WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     await autoAssignConversation(org, conversation);
     await handOffToHuman(org, conversation, { notify: true, reason: "requested a site visit" });

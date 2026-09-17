@@ -150,18 +150,27 @@ async function sendInteractive(org, to, { bodyText, buttons, list }) {
     throw new Error("sendInteractive needs either buttons or a list.");
   }
 
+  // WhatsApp's title limits (20 chars for a button, 24 for a list row) count
+  // real characters, not UTF-16 code units — a JS `.slice()` on a string that
+  // starts with an emoji cuts a character early, since an emoji outside the
+  // BMP (e.g. 📄) is 2 UTF-16 units but 1 real character. Array.from() splits
+  // on actual code points, so an emoji-prefixed label like "📄 Price & Floor
+  // Plan" (20 real characters) survives intact instead of losing its last
+  // letter to a phantom 21st "unit".
+  const truncate = (str, max) => Array.from(String(str || "")).slice(0, max).join("");
+
   const interactive = buttons
     ? {
         type: "button",
         body: { text: bodyText },
-        action: { buttons: buttons.slice(0, 3).map((b) => ({ type: "reply", reply: { id: b.id, title: String(b.title).slice(0, 20) } })) },
+        action: { buttons: buttons.slice(0, 3).map((b) => ({ type: "reply", reply: { id: b.id, title: truncate(b.title, 20) } })) },
       }
     : {
         type: "list",
         body: { text: bodyText },
         action: {
-          button: String(list.buttonLabel || "Choose").slice(0, 20),
-          sections: [{ rows: list.rows.slice(0, 10).map((r) => ({ id: r.id, title: String(r.title).slice(0, 24), description: r.description ? String(r.description).slice(0, 72) : undefined })) }],
+          button: truncate(list.buttonLabel || "Choose", 20),
+          sections: [{ rows: list.rows.slice(0, 10).map((r) => ({ id: r.id, title: truncate(r.title, 24), description: r.description ? truncate(r.description, 72) : undefined })) }],
         },
       };
 
@@ -841,6 +850,7 @@ ${firstReplyRule}- Never ask about anything already answered — whether that's 
 - Once at least two qualifiers are known between the lead form and this chat combined, you may recommend one matching project or unit type. Mention only the few facts needed for that recommendation.
 - The goal of every reply is to move this lead toward booking a site visit, not just to answer questions — nurture the conversation across a few short turns rather than settling everything in one message.
 - Keep replies SHORT — 1 to 3 sentences maximum.
+- Never use em dashes or en dashes (—, –) anywhere in a reply — use a comma, period, or "to" instead (e.g. "1 to 3 months", not "1–3 months"). It reads like a real person texting, not generated text.
 - Be warm, professional, and factual. Never use vague marketing language ("connects you to your roots", "your dream awaits") — every claim must come from the project data above, stated plainly.
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say the team will confirm shortly.
 - Map requirements by property type and available type: apartment requests match BHK/studio/duplex/penthouse values, plot requests match plot sizes or plot categories, villa requests match villa types, and commercial requests match office/shop/showroom/commercial unit types. Never describe a plot or commercial unit as a BHK.

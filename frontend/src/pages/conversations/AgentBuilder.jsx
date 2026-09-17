@@ -52,14 +52,14 @@ const DEFAULT_CTWA_FLOW = {
   ],
   budgetBrackets: [
     { id: "b0", label: "Under ₹50L", min: 0, max: 5000000 },
-    { id: "b1", label: "₹50L – ₹1Cr", min: 5000000, max: 10000000 },
+    { id: "b1", label: "₹50L - ₹1Cr", min: 5000000, max: 10000000 },
     { id: "b2", label: "₹1Cr+", min: 10000000, max: 0 },
     { id: "b3", label: "Just Exploring", min: 0, max: 0 },
   ],
   timelineOptions: [
     { id: "t0", label: "Within 30 Days" },
-    { id: "t1", label: "1–3 Months" },
-    { id: "t2", label: "3–6 Months" },
+    { id: "t1", label: "1-3 Months" },
+    { id: "t2", label: "3-6 Months" },
     { id: "t3", label: "Just Exploring" },
   ],
   menuOptions: [
@@ -87,13 +87,13 @@ const MENU_ACTIONS = [
 // Amenities dropdown on the Project form. Picking one adds it instantly;
 // wording can still be edited or removed like any other chip.
 const PRESET_PURPOSE = ["Self Use", "Investment", "Buy", "Rent", "Just Exploring"];
-const PRESET_TIMELINE = ["Within 30 Days", "1–3 Months", "3–6 Months", "6–12 Months", "Just Exploring"];
+const PRESET_TIMELINE = ["Within 30 Days", "1-3 Months", "3-6 Months", "6-12 Months", "Just Exploring"];
 const PRESET_SITE_VISIT_SLOTS = ["Morning", "Afternoon", "Evening", "This Weekend", "Weekday"];
 const PRESET_BUDGET_BRACKETS = [
   { label: "Under ₹50L", min: 0, max: 5000000 },
-  { label: "₹50L – ₹75L", min: 5000000, max: 7500000 },
-  { label: "₹75L – ₹1Cr", min: 7500000, max: 10000000 },
-  { label: "₹1Cr – ₹1.5Cr", min: 10000000, max: 15000000 },
+  { label: "₹50L - ₹75L", min: 5000000, max: 7500000 },
+  { label: "₹75L - ₹1Cr", min: 7500000, max: 10000000 },
+  { label: "₹1Cr - ₹1.5Cr", min: 10000000, max: 15000000 },
   { label: "₹1.5Cr+", min: 15000000, max: 0 },
   { label: "Just Exploring", min: 0, max: 0 },
 ];
@@ -784,21 +784,27 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
     if (inPurpose) {
       if (needOptions(flow.budgetBrackets, "budget brackets")) return;
-      push({ from: "bot", text: "Perfect. What's your approximate budget range?", list: flow.budgetBrackets });
+      // Mirrors ctwaFlowService's optionsAsButtonsOrList: inline buttons when
+      // there are 3 or fewer, a "Select..." list only once there are more.
+      push(flow.budgetBrackets.length <= 3
+        ? { from: "bot", text: "Perfect. What's your approximate budget range?", buttons: flow.budgetBrackets }
+        : { from: "bot", text: "Perfect. What's your approximate budget range?", list: flow.budgetBrackets });
       setStep("budget"); return;
     }
     if (inBudget) {
       if (needOptions(flow.timelineOptions, "timeline options")) return;
-      push({ from: "bot", text: "Got it. When are you looking to finalize?", list: flow.timelineOptions });
+      push(flow.timelineOptions.length <= 3
+        ? { from: "bot", text: "Got it. When are you looking to finalize?", buttons: flow.timelineOptions }
+        : { from: "bot", text: "Got it. When are you looking to finalize?", list: flow.timelineOptions });
       setStep("timeline"); return;
     }
     if (inTimeline) {
       if (needOptions(flow.menuOptions, "\"what next\" options")) return;
-      push({ from: "bot", text: "Great — what would you like to see next?", buttons: flow.menuOptions });
+      push({ from: "bot", text: "Great, what would you like to see next?", buttons: flow.menuOptions });
       setStep("menu"); return;
     }
     if (inSlots) {
-      push({ from: "bot", text: "Wonderful — our team will confirm your visit shortly and take it from here." });
+      push({ from: "bot", text: "Wonderful! Our team will confirm your visit shortly and take it from here." });
       push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
       setStep(null); return;
     }
@@ -823,7 +829,7 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
   };
 
   const pushAdvisorTerminal = () => {
-    push({ from: "bot", text: "Connecting you with our advisor — they'll reach out to you shortly. You can also reach them directly on <their phone number>." });
+    push({ from: "bot", text: "Connecting you with our advisor, they'll reach out to you shortly. You can also reach them directly on <their phone number>." });
     push({ from: "bot", note: true, text: "✅ Uses this project's \"Talk to Advisor\" contact if one is set (Projects page) — real name and phone number included so the lead can call directly; otherwise falls back to normal round-robin assignment with no number shown. Bot pauses and that person is notified." });
   };
 
