@@ -50,12 +50,20 @@ module.exports = function createCtwaFlowService({
    * adIds is empty, which otherwise means "everyone." It exists so a team can
    * verify the flow live on themselves without it also reaching genuine
    * inbound leads before it's proven out. Clear it to go back to normal.
+   *
+   * Every other path only ever starts on a conversation's genuine first
+   * message (isNewConversation) — nobody should be re-qualified on message
+   * #50. Test numbers are the one exception: they can retrigger the flow on
+   * any message (as long as they're not already mid-flow), so the team can
+   * retest repeatedly from the same number instead of needing a fresh one or
+   * wiping conversation history every time.
    */
-  function shouldStartFlow(agent, conversation) {
+  function shouldStartFlow(agent, conversation, { isNewConversation = true } = {}) {
     if (!agent?.ctwaFlow?.enabled || conversation.flowState?.step) return false;
     if (agent.ctwaFlow.testPhones?.length) {
       return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
     }
+    if (!isNewConversation) return false;
     if (agent.adIds?.length) return !!conversation.campaignRef;
     return true;
   }

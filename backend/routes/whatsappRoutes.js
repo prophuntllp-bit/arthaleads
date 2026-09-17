@@ -654,7 +654,7 @@ async function respondAsBot(org, conv, { interactiveId, msgText, isNewConversati
     if (handled) return;
     // advanceFlow already cleared flowState on a no-match — fall through to
     // the normal reply below so this message still gets answered.
-  } else if (isNewConversation && ctwaFlow.shouldStartFlow(agent, conv)) {
+  } else if (ctwaFlow.shouldStartFlow(agent, conv, { isNewConversation })) {
     await ctwaFlow.startFlow(org, agent, conv);
     return;
   }
