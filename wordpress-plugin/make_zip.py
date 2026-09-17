@@ -34,7 +34,7 @@ with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
                     zf.write(path, f"arthaleads-integration/{rel.as_posix()}")
 
 size_kb = out.stat().st_size / 1024
-print(f"Done. {size_kb:.1f} KB  →  {out}")
+print(f"Done. {size_kb:.1f} KB  ->  {out}")
 with zipfile.ZipFile(out) as z:
     for n in sorted(z.namelist()):
         print(f"  {n}")

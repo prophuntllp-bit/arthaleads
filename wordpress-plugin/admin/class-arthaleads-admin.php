@@ -18,6 +18,29 @@ class Arthaleads_Admin {
     public function enqueue_assets( $hook ) {
         if ( $hook !== 'toplevel_page_arthaleads-integration' ) return;
         // No external font resources — admin UI uses system fonts defined inline.
+
+        wp_enqueue_style(
+            'arthaleads-admin',
+            plugin_dir_url( __FILE__ ) . 'assets/admin.css',
+            [],
+            ARTHALEADS_VERSION
+        );
+
+        wp_enqueue_script(
+            'arthaleads-admin',
+            plugin_dir_url( __FILE__ ) . 'assets/admin.js',
+            [],
+            ARTHALEADS_VERSION,
+            true
+        );
+
+        wp_localize_script( 'arthaleads-admin', 'ArthaleadsAdmin', [
+            'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+            'nonce'        => wp_create_nonce( 'arthaleads_nonce' ),
+            'action'       => Arthaleads_Constants::WP_SAVE_ACTION,
+            'status'       => Arthaleads_Status::to_array(),
+            'integrations' => Arthaleads_Options::get_available_integrations(),
+        ] );
     }
 
     public function render_page() {
