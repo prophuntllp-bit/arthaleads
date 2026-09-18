@@ -776,11 +776,48 @@ async function resolveAgentForConversation(org, conversation) {
     || await WaAgent.findOne({ orgId: org._id, status: "active" }).sort({ createdAt: 1 }).lean();
 }
 
-async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false } = {}) {
+const normalizeForMatch = (str) => String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * For a multi-project agent (no agent.projectIds restriction — e.g. the org's
+ * default assistant), figures out whether this particular lead's inbound
+ * source unambiguously names ONE of the org's projects, so that agent never
+ * has to guess between all of them for a lead that plainly came from one
+ * specific project's campaign. Checked against, in order of reliability: the
+ * lead's leadSourceLabel (the actual ad/campaign name a tenant configured,
+ * e.g. "Everglades II | Short Form V2 | Sep 2026" — reliable for every lead
+ * source, Instant Form or CTWA), then the CTWA ad's creative headline/body
+ * (only present for a real ad click, may or may not mention the project by
+ * name). Returns a project only on an unambiguous single match — matching
+ * two projects, or none, means "don't guess," not "pick one."
+ */
+async function resolveSourceProject(org, agent, campaignRef, lead) {
+  const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
+  if (Array.isArray(agent?.projectIds) && agent.projectIds.length) {
+    projectFilter._id = { $in: agent.projectIds };
+  }
+  const projects = await Project.find(projectFilter).select("name").lean();
+  if (projects.length < 2) return null; // one (or zero) project — nothing to disambiguate
+
+  const sourceText = normalizeForMatch(
+    [lead?.leadSourceLabel, campaignRef?.headline, campaignRef?.body].filter(Boolean).join(" ")
+  );
+  if (!sourceText) return null;
+
+  const matches = projects.filter((p) => {
+    const words = normalizeForMatch(p.name).split(" ").filter((w) => w.length >= 5);
+    return words.length && words.some((w) => sourceText.includes(w));
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, { isFirstBotReply = false, sourceProjectId = null } = {}) {
   const botName = agent?.name || "Artha Assistant";
 
   const projectFilter = { orgId: org._id, isArchived: { $ne: true } };
-  if (Array.isArray(agent?.projectIds) && agent.projectIds.length) {
+  if (sourceProjectId) {
+    projectFilter._id = sourceProjectId;
+  } else if (Array.isArray(agent?.projectIds) && agent.projectIds.length) {
     projectFilter._id = { $in: agent.projectIds };
   }
   const projects = await Project.find(projectFilter)
@@ -814,6 +851,9 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
   const adContext = (campaignRef?.headline || campaignRef?.body)
     ? `\nThis customer messaged in by tapping a WhatsApp ad whose text was: "${campaignRef.headline || campaignRef.body}". Open by addressing that interest directly instead of a generic greeting.\n`
     : "";
+  const sourceProjectRule = sourceProjectId
+    ? `\nThis lead's ad/form was specifically for the project listed above — that is the ONLY project you know about for this conversation. Do not mention, compare to, or offer any other project, even if asked generally ("what projects do you have", "any other options"). If they clearly want to see other options, say the team will share a few more shortly rather than naming one yourself.\n`
+    : "";
 
   const canSharePhotos   = agent?.shareProjectPhotos === true;
   const canShareBrochure = agent?.shareBrochure === true;
@@ -834,7 +874,7 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
     : "";
 
   return `You are ${botName}, on the sales team at ${org.name} (India), chatting with a prospective customer over WhatsApp. Your job is NOT to be an information desk that answers whatever is asked — it is to qualify the lead first, understand fit, and then recommend the right option.
-${business}${adContext}
+${business}${adContext}${sourceProjectRule}
 ${knowledge}
 ${tenantPrompt}
 
@@ -1056,9 +1096,10 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     recentMsgs.reverse();
 
     let leadContext = "";
+    let lead = null;
     if (conversation.leadId) {
-      const lead = await Lead.findById(conversation.leadId)
-        .select("name status source propertyType bhk purpose budget preferredLocation").lean();
+      lead = await Lead.findById(conversation.leadId)
+        .select("name status source propertyType bhk purpose budget preferredLocation leadSourceLabel").lean();
       if (lead) leadContext = summarizeLeadQualifiers(lead);
     }
 
@@ -1070,7 +1111,8 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const isFirstBotReply = !recentMsgs.some((m) => m.direction === "outbound" && m.sender === "bot" && !m.isGreeting);
 
     const botName = agent?.name || "Artha Assistant";
-    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply });
+    const sourceProject = await resolveSourceProject(org, agent, conversation.campaignRef, lead);
+    const systemPrompt = await buildProjectGroundedPrompt(org, agent, leadContext, conversation.campaignRef, { isFirstBotReply, sourceProjectId: sourceProject?._id });
 
     // Fire-and-forget: never let enrichment delay or fail the actual reply.
     enrichWhatsAppLead(conversation, recentMsgs).catch(() => {});
