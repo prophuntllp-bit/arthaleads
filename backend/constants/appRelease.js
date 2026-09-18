@@ -85,28 +85,34 @@ module.exports = {
     // no app yet, so serving them the newest signed build costs nothing and
     // saves them an update on day one — while the field stays on `build`.
     //
-    // Kept equal to the block above this time since the fleet is being pushed
-    // to the same build — normally this one runs ahead (see history above).
+    // 18 Sep 2026: 32 replaces flutter_secure_storage with plain
+    // shared_preferences — 31's Jetpack-Crypto fix still lost its key on this
+    // device, so the storage layer itself (not just the cipher) was swapped.
+    // Also: Notes/Calls tabs split out of Info/Activity, a WhatsApp button
+    // next to Call on Lead Details, and the Transcript tab fixed (it was
+    // silently broken — still reading the old singular `voiceCall` field
+    // after a backend migration to `voiceCalls`) plus its recording now
+    // plays inline instead of opening in another tab/app.
     download: {
-      version: "1.0.5",
+      version: "1.0.6",
       // The plain build number, not Android's versionCode — the APK is stamped
-      // 2031 and the app reports it back as 31 (% 1000). mobile/pubspec.yaml
+      // 2032 and the app reports it back as 32 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 31,
+      build: 32,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.5-31/arthaleads-1.0.5-31.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.6-32/arthaleads-1.0.6-32.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 77965500,
+      sizeBytes: 77817828,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "Fixes the random logout bug — the app could sign you out on its own after sitting in the background for a while, even though your session was still valid. Also: Inbox moved up next to Leads, a tighter side menu, and a cleaner date range picker.",
+      notes: "Fixes the random logout bug for real this time (storage layer swap, not just a cipher change). Adds Notes/Calls tabs and a WhatsApp button on Lead Details, fixes the Transcript tab that had gone silently missing, and recordings now play inline instead of opening elsewhere.",
     },
   },
 };

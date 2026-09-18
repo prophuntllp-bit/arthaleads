@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -544,18 +545,29 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }
   }
 
-  Map<String, dynamic>? get _voiceCall =>
-      (lead['voiceCall'] as Map?)?.cast<String, dynamic>();
-
-  bool get _hasVoice {
-    final vc = _voiceCall;
-    if (vc == null) return false;
-    return (vc['transcript'] as List?)?.isNotEmpty == true ||
-        (vc['sentiment'] as String? ?? '').isNotEmpty ||
-        (vc['channel'] as String? ?? '').isNotEmpty ||
-        vc['durationSeconds'] != null ||
-        (vc['agentName'] as String? ?? '').isNotEmpty;
+  // `voiceCall` (singular) was replaced by `voiceCalls` (array — a lead can
+  // now have more than one call) when Vistrow Voice gained multi-call
+  // support; this mirrors LeadDetail.jsx's own read of the new field.
+  // Newest first, matching every other list in this sheet.
+  List<Map<String, dynamic>> get _voiceCalls {
+    final raw = (lead['voiceCalls'] as List?) ?? const [];
+    final list = raw.cast<Map>().map((m) => m.cast<String, dynamic>()).toList();
+    list.sort((a, b) {
+      final da = DateTime.tryParse(a['createdAt'] as String? ?? '');
+      final db = DateTime.tryParse(b['createdAt'] as String? ?? '');
+      if (da == null || db == null) return 0;
+      return db.compareTo(da);
+    });
+    return list;
   }
+
+  bool get _hasVoice => _voiceCalls.any((vc) =>
+      (vc['transcript'] as List?)?.isNotEmpty == true ||
+      (vc['sentiment'] as String? ?? '').isNotEmpty ||
+      (vc['channel'] as String? ?? '').isNotEmpty ||
+      vc['durationSeconds'] != null ||
+      (vc['agentName'] as String? ?? '').isNotEmpty ||
+      (vc['recordingUrl'] as String? ?? '').isNotEmpty);
 
   List<Map<String, dynamic>> get _activities =>
       ((lead['activities'] as List?) ?? []).cast<Map<String, dynamic>>();
@@ -679,8 +691,20 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   ),
                 ),
               const SizedBox(height: 12),
+              // WhatsApp + Call side by side, matching the persistent top
+              // action row in LeadDetail.jsx (WhatsApp / Call / AI Draft) —
+              // previously WhatsApp only lived down by Transfer, in the Info
+              // tab, invisible from any other tab.
               Row(
                 children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _whatsapp,
+                      icon: Icon(FontAwesomeIcons.whatsapp.data, size: 18),
+                      label: const Text('WhatsApp'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: (lead['phone'] as String? ?? '').isEmpty
@@ -696,26 +720,16 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                       label: Text(_calling ? 'Calling…' : 'Call'),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CallHistoryScreen(
-                            leadId: lead['_id'] as String,
-                            leadName: lead['name'] as String? ?? '—',
-                            leadPhone: lead['phone'] as String?,
-                          ),
-                        ),
-                      ),
-                      icon: const Icon(Icons.history, size: 18),
-                      label: const Text('Call History'),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
+              // Same tab set/order as LeadDetail.jsx: Info, Notes, Activity,
+              // Calls, Transcript. Calls opens CallHistoryScreen instead of
+              // switching _tab — that screen already does more than a tab
+              // embedded in this sheet reasonably could (audio playback with
+              // scrubbing, AI pattern analysis across calls, follow-up
+              // scheduling), so "Calls" is a shortcut into it rather than a
+              // second, weaker implementation of the same data.
               Wrap(
                 spacing: 6,
                 children: [
@@ -725,12 +739,34 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     onSelected: (_) => setState(() => _tab = 'info'),
                   ),
                   ChoiceChip(
+                    label: Text(
+                      'Notes (${_notes.length})',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    selected: _tab == 'notes',
+                    onSelected: (_) => setState(() => _tab = 'notes'),
+                  ),
+                  ChoiceChip(
                     label: const Text(
                       'Activity',
                       style: TextStyle(fontSize: 12),
                     ),
                     selected: _tab == 'activity',
                     onSelected: (_) => setState(() => _tab = 'activity'),
+                  ),
+                  ChoiceChip(
+                    label: const Text('Calls', style: TextStyle(fontSize: 12)),
+                    selected: false,
+                    onSelected: (_) => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CallHistoryScreen(
+                          leadId: lead['_id'] as String,
+                          leadName: lead['name'] as String? ?? '—',
+                          leadPhone: lead['phone'] as String?,
+                        ),
+                      ),
+                    ),
                   ),
                   if (_hasVoice)
                     ChoiceChip(
@@ -745,6 +781,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
               ),
               const SizedBox(height: 16),
 
+              if (_tab == 'notes') ..._notesTab(),
               if (_tab == 'activity') ..._activityTab(),
               if (_tab == 'transcript' && _hasVoice) ..._transcriptTab(),
 
@@ -956,24 +993,10 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   ),
 
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _transfer,
-                        icon: const Icon(Icons.drive_file_move, size: 18),
-                        label: const Text('Transfer'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _whatsapp,
-                        icon: Icon(FontAwesomeIcons.whatsapp.data, size: 18),
-                        label: const Text('WhatsApp'),
-                      ),
-                    ),
-                  ],
+                OutlinedButton.icon(
+                  onPressed: _transfer,
+                  icon: const Icon(Icons.drive_file_move, size: 18),
+                  label: const Text('Transfer'),
                 ),
 
                 if (_fbNotes.isNotEmpty) ...[
@@ -1018,93 +1041,6 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                     ),
                   ),
                 ],
-
-                const SizedBox(height: 20),
-                Text('Notes', style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 8),
-                ..._notes.reversed.map(
-                  (n) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardTheme.color,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color:
-                              Theme.of(context).dividerTheme.color ??
-                              Colors.transparent,
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(n['text'] as String? ?? ''),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${n['addedByName'] ?? 'Unknown'} · ${_fmtDate(n['createdAt'] as String?)}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                              // A note with no _id predates the subdocument ids
-                              // and has no address to PATCH or DELETE, so it
-                              // gets no menu rather than a menu that 404s.
-                              if (n['_id'] != null)
-                                SizedBox(
-                                  height: 28,
-                                  width: 28,
-                                  child: PopupMenuButton<String>(
-                                    padding: EdgeInsets.zero,
-                                    iconSize: 16,
-                                    tooltip: 'Note options',
-                                    enabled: !_saving,
-                                    onSelected: (v) => v == 'edit'
-                                        ? _editNote(n)
-                                        : _deleteNote(n),
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(
-                                        value: 'edit',
-                                        child: Text('Edit'),
-                                      ),
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text('Delete'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _noteCtrl,
-                        minLines: 1,
-                        maxLines: 3,
-                        decoration: const InputDecoration(
-                          hintText: 'Add a note for the sales team…',
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      onPressed: _addNote,
-                      icon: const Icon(Icons.send, size: 18),
-                    ),
-                  ],
-                ),
               ], // if (_tab == 'info')
             ],
           ),
@@ -1249,6 +1185,87 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   /// Mirrors LeadDetail.jsx's `tab === "activity"` — reverse-chronological
   /// activity feed with inline call-specific rendering (status/sentiment
   /// pills, AI summary, collapsible transcript, tap-to-open recording).
+  /// Mirrors LeadDetail.jsx's `tab === "notes"` — newest first, each with an
+  /// edit/delete menu, plus the compose field.
+  List<Widget> _notesTab() {
+    return [
+      ..._notes.reversed.map(
+        (n) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: Theme.of(context).dividerTheme.color ?? Colors.transparent,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(n['text'] as String? ?? ''),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${n['addedByName'] ?? 'Unknown'} · ${_fmtDate(n['createdAt'] as String?)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    // A note with no _id predates the subdocument ids
+                    // and has no address to PATCH or DELETE, so it
+                    // gets no menu rather than a menu that 404s.
+                    if (n['_id'] != null)
+                      SizedBox(
+                        height: 28,
+                        width: 28,
+                        child: PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          iconSize: 16,
+                          tooltip: 'Note options',
+                          enabled: !_saving,
+                          onSelected: (v) =>
+                              v == 'edit' ? _editNote(n) : _deleteNote(n),
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(value: 'delete', child: Text('Delete')),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _noteCtrl,
+              minLines: 1,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'Add a note for the sales team…',
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton.filled(
+            onPressed: _addNote,
+            icon: const Icon(Icons.send, size: 18),
+          ),
+        ],
+      ),
+    ];
+  }
+
   List<Widget> _activityTab() {
     final t = AppTheme.of(context);
     if (_activities.isEmpty) {
@@ -1318,27 +1335,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
                   recordingUrl != null &&
                   recordingUrl.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                InkWell(
-                  onTap: () => launchUrl(
-                    Uri.parse(recordingUrl),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.mic, size: 14, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Play recording',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _RecordingPlayer(url: recordingUrl),
               ],
               if (isCall && (summary ?? '').isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -1404,12 +1401,28 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     }).toList();
   }
 
-  /// Mirrors LeadDetail.jsx's `tab === "transcript"` — sentiment/duration/
-  /// channel/language/agent meta pills, extracted-data grid, then a chat-style
-  /// turn-by-turn transcript (Caller left, Agent right).
+  /// Mirrors LeadDetail.jsx's `tab === "transcript"` — one expandable card per
+  /// call (a lead can have more than one, newest first), each with sentiment/
+  /// duration/channel/language/agent meta pills, a recording link, an
+  /// extracted-data grid, then a chat-style turn-by-turn transcript (Caller
+  /// left, Agent right). Most recent call starts expanded; the rest collapsed.
   List<Widget> _transcriptTab() {
+    final calls = _voiceCalls;
+    return [
+      for (int i = 0; i < calls.length; i++)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _voiceCallCard(calls[i], index: i, total: calls.length),
+        ),
+    ];
+  }
+
+  Widget _voiceCallCard(
+    Map<String, dynamic> vc, {
+    required int index,
+    required int total,
+  }) {
     final t = AppTheme.of(context);
-    final vc = _voiceCall!;
     final sentiment = vc['sentiment'] as String?;
     final secs = (vc['durationSeconds'] as num?)?.toInt() ?? 0;
     final dur = secs > 0
@@ -1418,6 +1431,8 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     final channel = vc['channel'] as String?;
     final language = vc['language'] as String?;
     final agentName = vc['agentName'] as String?;
+    final pagePath = vc['pagePath'] as String?;
+    final recordingUrl = vc['recordingUrl'] as String?;
     final turns = ((vc['transcript'] as List?) ?? []).cast<Map>();
     final extracted =
         (vc['extractedData'] as Map?)
@@ -1426,116 +1441,246 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
             .where((e) => e.value != null && e.value != '')
             .toList() ??
         const [];
+    final title = total > 1 ? 'Call ${total - index}' : 'Voice Call';
 
-    return [
-      Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          if ((sentiment ?? '').isNotEmpty)
-            Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment)),
-          if (dur != null) Pill(dur, Colors.grey, icon: Icons.schedule),
-          if ((channel ?? '').isNotEmpty) Pill(channel!, Colors.grey),
-          if ((language ?? '').isNotEmpty)
-            Pill(language!.toUpperCase(), Colors.grey),
-          if ((agentName ?? '').isNotEmpty)
-            Pill(agentName!, Colors.grey, icon: Icons.mic),
-        ],
+    return Container(
+      decoration: BoxDecoration(
+        color: t.surfaceLow,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        border: Border.all(color: t.border),
       ),
-      if (extracted.isNotEmpty) ...[
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: t.surfaceLow,
-            borderRadius: BorderRadius.circular(AppRadii.card),
-            border: Border.all(color: t.border),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: index == 0,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.indigo.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.mic, size: 16, color: Colors.indigo),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'CAPTURED DETAILS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final e in extracted)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _row(
-                    e.key
-                        .replaceAll('_', ' ')
-                        .replaceAllMapped(
-                          RegExp(r'\b\w'),
-                          (m) => m.group(0)!.toUpperCase(),
-                        ),
-                    e.value.toString(),
-                  ),
-                ),
+          title: Text(
+            dur != null ? '$title · $dur' : title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            _fmtDate(vc['createdAt'] as String?),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          trailing: sentiment != null && sentiment.isNotEmpty
+              ? Pill(_sentimentLabel(sentiment), _sentimentColor(sentiment))
+              : const Icon(Icons.expand_more, size: 20),
+          children: [
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                if (dur != null) Pill(dur, Colors.grey, icon: Icons.schedule),
+                if ((channel ?? '').isNotEmpty) Pill(channel!, Colors.grey),
+                if ((language ?? '').isNotEmpty)
+                  Pill(language!.toUpperCase(), Colors.grey),
+                if ((agentName ?? '').isNotEmpty)
+                  Pill(agentName!, Colors.grey, icon: Icons.mic),
+                if ((pagePath ?? '').isNotEmpty)
+                  Pill(pagePath!, Colors.grey, icon: Icons.place_outlined),
+              ],
+            ),
+            if ((recordingUrl ?? '').isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _RecordingPlayer(url: recordingUrl!),
             ],
-          ),
-        ),
-      ],
-      const SizedBox(height: 12),
-      if (turns.isEmpty)
-        const Text(
-          'No transcript — this call came in without a conversation transcript.',
-        )
-      else
-        for (final turn in turns)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Align(
-              alignment: (turn['speaker'] == 'Caller')
-                  ? Alignment.centerLeft
-                  : Alignment.centerRight,
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.75,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+            if (extracted.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (turn['speaker'] == 'Caller')
-                      ? t.surfaceLow
-                      : AppColors.primary.withValues(alpha: 0.1),
+                  color: t.surfaceHigh,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: (turn['speaker'] == 'Caller')
-                        ? t.border
-                        : AppColors.primary.withValues(alpha: 0.22),
-                  ),
+                  border: Border.all(color: t.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      (turn['speaker'] as String? ?? '—').toUpperCase(),
+                    const Text(
+                      'CAPTURED DETAILS',
                       style: TextStyle(
-                        fontSize: 9,
+                        fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: (turn['speaker'] == 'Caller')
-                            ? t.textSoft
-                            : AppColors.primary,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      turn['text'] as String? ?? '',
-                      style: const TextStyle(fontSize: 13),
-                    ),
+                    const SizedBox(height: 8),
+                    for (final e in extracted)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: _row(
+                          e.key
+                              .replaceAll('_', ' ')
+                              .replaceAllMapped(
+                                RegExp(r'\b\w'),
+                                (m) => m.group(0)!.toUpperCase(),
+                              ),
+                          e.value.toString(),
+                        ),
+                      ),
                   ],
                 ),
               ),
+            ],
+            const SizedBox(height: 12),
+            if (turns.isEmpty)
+              const Text(
+                'No transcript — this call came in without a conversation transcript.',
+              )
+            else
+              for (final turn in turns)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Align(
+                    alignment: (turn['speaker'] == 'Caller')
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.68,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (turn['speaker'] == 'Caller')
+                            ? t.surfaceHigh
+                            : AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: (turn['speaker'] == 'Caller')
+                              ? t.border
+                              : AppColors.primary.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            (turn['speaker'] as String? ?? '—').toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: (turn['speaker'] == 'Caller')
+                                  ? t.textSoft
+                                  : AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            turn['text'] as String? ?? '',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Inline recording playback — matches how the EnableX call recordings show
+/// up elsewhere in the app (play/pause + scrubber right in the card), not a
+/// "Play recording" link that hands the file off to another app.
+class _RecordingPlayer extends StatefulWidget {
+  final String url;
+  const _RecordingPlayer({required this.url});
+
+  @override
+  State<_RecordingPlayer> createState() => _RecordingPlayerState();
+}
+
+class _RecordingPlayerState extends State<_RecordingPlayer> {
+  AudioPlayer? _player;
+  bool _playerReady = false;
+  bool _playing = false;
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _togglePlay() async {
+    if (_player == null) {
+      _player = AudioPlayer();
+      try {
+        await _player!.setUrl(widget.url);
+        _player!.playerStateStream.listen((s) {
+          if (mounted) setState(() => _playing = s.playing);
+        });
+        if (mounted) setState(() => _playerReady = true);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not play recording: $e'),
+              backgroundColor: AppColors.danger,
             ),
-          ),
-    ];
+          );
+        }
+        return;
+      }
+    }
+    if (_playing) {
+      await _player!.pause();
+    } else {
+      await _player!.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton.filledTonal(
+          onPressed: _togglePlay,
+          icon: Icon(_playing ? Icons.pause : Icons.play_arrow, size: 20),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _playerReady && _player != null
+              ? StreamBuilder<Duration>(
+                  stream: _player!.positionStream,
+                  builder: (context, snap) {
+                    final pos = snap.data ?? Duration.zero;
+                    final dur = _player!.duration ?? Duration.zero;
+                    return Slider(
+                      value: dur.inMilliseconds > 0
+                          ? pos.inMilliseconds
+                              .clamp(0, dur.inMilliseconds)
+                              .toDouble()
+                          : 0,
+                      max: dur.inMilliseconds > 0
+                          ? dur.inMilliseconds.toDouble()
+                          : 1,
+                      onChanged: (v) =>
+                          _player!.seek(Duration(milliseconds: v.toInt())),
+                    );
+                  },
+                )
+              : const Text(
+                  'Tap play to load recording',
+                  style: TextStyle(fontSize: 12),
+                ),
+        ),
+      ],
+    );
   }
 }

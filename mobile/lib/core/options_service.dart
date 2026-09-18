@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart' show Color;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 import 'constants.dart';
@@ -26,7 +26,6 @@ import 'constants.dart';
 class OptionsService {
   OptionsService._();
 
-  static const _storage = FlutterSecureStorage();
   static const _cacheKey = 'lead_options_cache';
 
   /// Loads the cache immediately, then refreshes from the API in the background.
@@ -38,7 +37,8 @@ class OptionsService {
 
   static Future<void> _applyCached() async {
     try {
-      final raw = await _storage.read(key: _cacheKey);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
       if (raw == null) return;
       _apply(jsonDecode(raw));
     } catch (_) {
@@ -58,7 +58,8 @@ class OptionsService {
       final opts = (res.data is Map) ? res.data['options'] : null;
       if (opts is! Map) return;
       _apply(opts);
-      await _storage.write(key: _cacheKey, value: jsonEncode(opts));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, jsonEncode(opts));
     } catch (_) {
       // Offline or backend down — cached/default values remain in use.
     }

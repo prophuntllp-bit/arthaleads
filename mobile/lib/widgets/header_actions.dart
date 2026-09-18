@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
 import '../core/theme.dart';
@@ -11,7 +11,6 @@ import 'chips.dart';
 import 'motion.dart';
 
 const _alertsSeenKey = 'crm_alerts_seen';
-const _secureStorage = FlutterSecureStorage();
 
 Future<List<Map<String, dynamic>>> _fetchProjectsForSheet() async {
   try {
@@ -221,7 +220,8 @@ class _HeaderAlertsButtonState extends State<HeaderAlertsButton> {
       final res = await ApiClient.instance.dio.get('/leads/alerts');
       final alerts = (res.data['data'] as List? ?? [])
           .cast<Map<String, dynamic>>();
-      final seenAt = await _secureStorage.read(key: _alertsSeenKey);
+      final prefs = await SharedPreferences.getInstance();
+      final seenAt = prefs.getString(_alertsSeenKey);
       final seenTime = seenAt != null ? DateTime.tryParse(seenAt) : null;
       final unseen = seenTime == null
           ? alerts.length
@@ -257,10 +257,8 @@ class _HeaderAlertsButtonState extends State<HeaderAlertsButton> {
         rootContext: rootContext,
       ),
     );
-    await _secureStorage.write(
-      key: _alertsSeenKey,
-      value: DateTime.now().toIso8601String(),
-    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_alertsSeenKey, DateTime.now().toIso8601String());
     if (mounted) setState(() => _unseen = 0);
   }
 

@@ -1,6 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Mirrors frontend/src/services/api.js:
 /// - base URL from --dart-define=API_BASE_URL (defaults to prod)
@@ -16,10 +15,6 @@ class ApiClient {
     'API_BASE_URL',
     defaultValue: 'https://api.arthaleads.com/api',
   );
-
-  // Default AndroidOptions (no encryptedSharedPreferences — see pubspec.yaml's
-  // comment on the flutter_secure_storage version bump for why).
-  static const _storage = FlutterSecureStorage();
 
   String? _token;
   bool authInProgress = false;
@@ -92,29 +87,27 @@ class ApiClient {
     return fallback;
   }
 
+  // Plain SharedPreferences, deliberately not flutter_secure_storage.
+  //
+  // The token used to live behind an Android Keystore-wrapped key (first via
+  // Jetpack's EncryptedSharedPreferences, then via the plugin's own AES-GCM
+  // cipher after a version bump meant to fix this) — but on at least one real
+  // device in the field, BOTH implementations lost or invalidated that key
+  // across ordinary background/process-restart cycles, silently signing
+  // people out of a still-valid session with no server round trip involved
+  // (confirmed via Railway's HTTP logs: no /auth/me request at all at the
+  // moment a logout was observed — the token was gone locally before
+  // anything was ever sent). That is an OS/OEM-level Keystore reliability
+  // issue, not something either cipher choice can paper over.
+  //
+  // A bearer JWT sitting unencrypted in this app's private storage is a
+  // materially smaller risk than the alternative (already true for every
+  // other value this app persists, all of which use SharedPreferences) — it
+  // is HTTPS-only in transit, sandboxed to this app by Android on a
+  // non-rooted device, and expires server-side regardless. Reliability wins.
   Future<void> loadToken() async {
-    // Reading can throw, not just return null. The token is encrypted with an
-    // Android Keystore key, and that key can stop matching the stored
-    // ciphertext — reinstall, restore-from-backup, or a keystore reset all do
-    // it — which surfaces as AEADBadTagException / "Signature/MAC verification
-    // failed" (seen in logcat on a real device).
-    //
-    // Letting that propagate would leave AuthState.restore() abandoned midway,
-    // pinning `restoring` true forever and hanging the app on the launch
-    // screen with no error and no way out but clearing app data. An
-    // unreadable token is simply a logged-out user, so treat it as one and
-    // drop the unusable entry so the next write starts clean.
-    try {
-      _token = await _storage.read(key: 'auth_token');
-    } catch (e) {
-      debugPrint('[auth] stored token unreadable, clearing: $e');
-      _token = null;
-      try {
-        await _storage.delete(key: 'auth_token');
-      } catch (_) {
-        // Nothing more to do — the user just logs in again.
-      }
-    }
+    final prefs = await SharedPreferences.getInstance();
+    _token = prefs.getString('auth_token');
   }
 
   bool get hasToken => _token != null;
@@ -122,11 +115,13 @@ class ApiClient {
 
   Future<void> setToken(String token) async {
     _token = token;
-    await _storage.write(key: 'auth_token', value: token);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('auth_token', token);
   }
 
   Future<void> clearToken() async {
     _token = null;
-    await _storage.delete(key: 'auth_token');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
   }
 }

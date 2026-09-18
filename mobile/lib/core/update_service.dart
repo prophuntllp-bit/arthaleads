@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 
@@ -41,7 +41,6 @@ class UpdateInfo {
 class UpdateService {
   UpdateService._();
 
-  static const _storage = FlutterSecureStorage();
   static const _skippedKey = 'update_skipped_build';
   static const _skippedAtKey = 'update_skipped_at';
   // A "Later" used to suppress the prompt for that build forever — someone
@@ -86,9 +85,10 @@ class UpdateService {
       // the backend, so a one-time dismissal can never turn into forever. A
       // mandatory update always shows regardless of any prior dismissal.
       if (!mandatory) {
-        final skipped = int.tryParse(await _storage.read(key: _skippedKey) ?? '');
+        final prefs = await SharedPreferences.getInstance();
+        final skipped = prefs.getInt(_skippedKey);
         if (skipped == latestBuild) {
-          final skippedAtRaw = await _storage.read(key: _skippedAtKey);
+          final skippedAtRaw = prefs.getString(_skippedAtKey);
           final skippedAt = skippedAtRaw != null ? DateTime.tryParse(skippedAtRaw) : null;
           if (skippedAt != null && DateTime.now().difference(skippedAt) < _skipCooldown) {
             return null;
@@ -113,8 +113,9 @@ class UpdateService {
   /// _skipCooldown elapses, then it asks again.
   static Future<void> skip(int build) async {
     try {
-      await _storage.write(key: _skippedKey, value: '$build');
-      await _storage.write(key: _skippedAtKey, value: DateTime.now().toIso8601String());
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_skippedKey, build);
+      await prefs.setString(_skippedAtKey, DateTime.now().toIso8601String());
     } catch (_) {
       // Storage failure just means they get prompted again — harmless.
     }

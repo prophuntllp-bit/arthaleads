@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api_client.dart';
 import '../core/auth_state.dart';
@@ -33,7 +33,7 @@ const _steps = [
 
 /// Ports `frontend/src/components/OnboardingChecklist.jsx` — a dismissible
 /// setup checklist on the Dashboard. "Mark done" / permanent-dismiss persist
-/// via [FlutterSecureStorage] (same house pattern as `theme_state.dart`);
+/// via [SharedPreferences] (same house pattern as `theme_state.dart`);
 /// "Skip for now" only hides it for this in-memory session, same as the
 /// web's sessionStorage-backed skip.
 class OnboardingChecklist extends StatefulWidget {
@@ -47,7 +47,6 @@ class OnboardingChecklist extends StatefulWidget {
 }
 
 class _OnboardingChecklistState extends State<OnboardingChecklist> {
-  static const _storage = FlutterSecureStorage();
   final _api = ApiClient.instance;
 
   bool _loaded = false;
@@ -68,8 +67,9 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
 
   Future<void> _restore() async {
     final orgId = _orgId;
-    final doneRaw = await _storage.read(key: 'ol_done_$orgId');
-    final dismissedRaw = await _storage.read(key: 'ol_dismissed_$orgId');
+    final prefs = await SharedPreferences.getInstance();
+    final doneRaw = prefs.getString('ol_done_$orgId');
+    final dismissedRaw = prefs.getString('ol_dismissed_$orgId');
     if (!mounted) return;
     setState(() {
       _manualDone = (doneRaw?.split(',') ?? const []).where((s) => s.isNotEmpty).toSet();
@@ -105,12 +105,14 @@ class _OnboardingChecklistState extends State<OnboardingChecklist> {
 
   Future<void> _markDone(String id) async {
     setState(() => _manualDone = {..._manualDone, id});
-    await _storage.write(key: 'ol_done_$_orgId', value: _manualDone.join(','));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ol_done_$_orgId', _manualDone.join(','));
   }
 
   Future<void> _dismiss() async {
     setState(() => _dismissed = true);
-    await _storage.write(key: 'ol_dismissed_$_orgId', value: '1');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ol_dismissed_$_orgId', '1');
   }
 
   void _skip() => setState(() => _skippedThisSession = true);
