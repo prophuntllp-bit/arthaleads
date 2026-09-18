@@ -26,9 +26,7 @@ import 'constants.dart';
 class OptionsService {
   OptionsService._();
 
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _storage = FlutterSecureStorage();
   static const _cacheKey = 'lead_options_cache';
 
   /// Loads the cache immediately, then refreshes from the API in the background.

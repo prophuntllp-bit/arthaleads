@@ -27,7 +27,7 @@ publish_to: 'none'
 #
 # After bumping, update backend/constants/appRelease.js to match (the plain
 # build number, the version string, and the GitHub Release download URL).
-version: 1.0.4+2030
+version: 1.0.5+2031
 
 environment:
   sdk: ^3.12.2
@@ -38,7 +38,20 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   dio: ^5.7.0
-  flutter_secure_storage: ^9.2.2
+  # Pinned >=10.3.1 (not 11+: its flutter_secure_storage_windows requires
+  # win32 ^6, which conflicts with share_plus's win32 ^5.5.3 — a Windows-only
+  # transitive clash, irrelevant to the Android app, but pub's solver is
+  # cross-platform so it still blocks resolution). 10.3.1 already has what we
+  # need: AndroidOptions(encryptedSharedPreferences: true) — the Jetpack-
+  # Crypto-backed mode that caused sessions to randomly invalidate across an
+  # Android process restart (AEADBadTagException on some OEM skins) — is
+  # deprecated and, critically, no longer the default. Every call site in
+  # this app now omits that flag entirely, so they use the plugin's own
+  # cipher instead, which doesn't have this failure class, and 10.3.1 also
+  # turns on resetOnError by default, so a genuine corruption now fails as
+  # "log in again" instead of throwing. See core/api_client.dart's
+  # loadToken().
+  flutter_secure_storage: ">=10.3.1 <11.0.0"
   provider: ^6.1.2
   intl: ^0.20.0
   url_launcher: ^6.3.1

@@ -47,9 +47,7 @@ class OnboardingChecklist extends StatefulWidget {
 }
 
 class _OnboardingChecklistState extends State<OnboardingChecklist> {
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _storage = FlutterSecureStorage();
   final _api = ApiClient.instance;
 
   bool _loaded = false;

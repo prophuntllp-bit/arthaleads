@@ -5,9 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// The web defaults to light and remembers the last explicit choice.
 class ThemeState extends ChangeNotifier {
   static const _storageKey = 'arthaleads_theme';
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _storage = FlutterSecureStorage();
 
   ThemeMode _mode = ThemeMode.light;
 

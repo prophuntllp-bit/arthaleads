@@ -41,9 +41,7 @@ class UpdateInfo {
 class UpdateService {
   UpdateService._();
 
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _storage = FlutterSecureStorage();
   static const _skippedKey = 'update_skipped_build';
   static const _skippedAtKey = 'update_skipped_at';
   // A "Later" used to suppress the prompt for that build forever — someone

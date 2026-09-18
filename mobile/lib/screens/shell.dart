@@ -357,6 +357,7 @@ class _ShellState extends State<Shell> {
       () => const DashboardScreen(),
     ),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
+    _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),
     _NavItem(
       'Follow-ups',
       Icons.event_repeat_rounded,
@@ -375,7 +376,6 @@ class _ShellState extends State<Shell> {
     ),
     _NavItem('Tasks', Icons.task_alt_rounded, () => const TasksScreen()),
     _NavItem('Calls', Icons.call_rounded, () => const CallsScreen()),
-    _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),
     _NavItem(
       'Attendance',
       Icons.fingerprint_rounded,
@@ -528,20 +528,25 @@ class _ShellState extends State<Shell> {
                             .where((item) => item.showInDrawer)
                             .toList();
                         return ListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 4),
                           itemCount: drawerItems.length,
                           itemBuilder: (context, i) {
                             final item = drawerItems[i];
                             final realIndex = visible.indexOf(item);
                             final selected = realIndex == _index;
                             return ListTile(
+                              dense: true,
+                              visualDensity: const VisualDensity(vertical: -3),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                               leading: Icon(
                                 item.icon,
+                                size: 20,
                                 color: selected ? AppColors.primary : null,
                               ),
                               title: Text(
                                 item.label,
                                 style: TextStyle(
+                                  fontSize: 14,
                                   fontWeight: selected
                                       ? FontWeight.w700
                                       : FontWeight.w400,

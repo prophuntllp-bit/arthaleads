@@ -17,9 +17,9 @@ class ApiClient {
     defaultValue: 'https://api.arthaleads.com/api',
   );
 
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // Default AndroidOptions (no encryptedSharedPreferences — see pubspec.yaml's
+  // comment on the flutter_secure_storage version bump for why).
+  static const _storage = FlutterSecureStorage();
 
   String? _token;
   bool authInProgress = false;

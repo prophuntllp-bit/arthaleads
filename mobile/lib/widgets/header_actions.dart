@@ -11,9 +11,7 @@ import 'chips.dart';
 import 'motion.dart';
 
 const _alertsSeenKey = 'crm_alerts_seen';
-const _secureStorage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
+const _secureStorage = FlutterSecureStorage();
 
 Future<List<Map<String, dynamic>>> _fetchProjectsForSheet() async {
   try {

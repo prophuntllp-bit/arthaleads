@@ -49,7 +49,7 @@ const navItems = [
   // Flat on purpose. The section navigates itself with in-page tabs — a
   // sidebar flyout for five WhatsApp screens buried the ones that matter and
   // put nav in two places at once.
-  { to: "/conversations", label: "Conversations", icon: WhatsAppIcon },
+  { to: "/conversations", label: "Inbox", icon: WhatsAppIcon },
   {
     label: "Tasks", icon: ClipboardList,
     children: [

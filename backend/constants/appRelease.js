@@ -47,9 +47,17 @@ module.exports = {
     // installer (see update_gate.dart) rather than a browser download; a
     // build-24 phone still uses the old browser flow for THIS one update
     // (it doesn't have the new code yet), then gets in-app installs after.
-    build: 30,
+    //
+    // 18 Sep 2026: 31 fixes the random forced-logout bug reported this week —
+    // flutter_secure_storage's Jetpack-Crypto-backed AndroidOptions could
+    // lose its key across a background process restart on some devices,
+    // sending someone to the login screen despite a still-valid session.
+    // Not marked mandatory (minBuild unchanged) — it's an annoyance, not
+    // data loss or a blocked workflow, so a normal dismissible prompt is
+    // enough.
+    build: 31,
     // Human-readable, shown in the update prompt.
-    version: "1.0.4",
+    version: "1.0.5",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -68,9 +76,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.4-30/arthaleads-1.0.4-30.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.5-31/arthaleads-1.0.5-31.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "WhatsApp Inbox and chat now look and feel like a real WhatsApp client. Added WhatsApp consent tracking and conversation assignment on Leads. Lead-gen form answers (budget, BHK, timeline, city) now fill in the lead's real fields instead of a generic Q&A list. Updates now install right in the app — no more browser download.",
+    notes: "Fixes the random logout bug — the app could sign you out on its own after sitting in the background for a while, even though your session was still valid. Also: Inbox moved up next to Leads, a tighter side menu, and a cleaner date range picker.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -80,25 +88,25 @@ module.exports = {
     // Kept equal to the block above this time since the fleet is being pushed
     // to the same build — normally this one runs ahead (see history above).
     download: {
-      version: "1.0.4",
+      version: "1.0.5",
       // The plain build number, not Android's versionCode — the APK is stamped
-      // 2030 and the app reports it back as 30 (% 1000). mobile/pubspec.yaml
+      // 2031 and the app reports it back as 31 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 30,
+      build: 31,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.4-30/arthaleads-1.0.4-30.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.5-31/arthaleads-1.0.5-31.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 77916552,
+      sizeBytes: 77965500,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "WhatsApp Inbox and chat now look and feel like a real WhatsApp client. Added WhatsApp consent tracking and conversation assignment on Leads. Lead-gen form answers (budget, BHK, timeline, city) now fill in the lead's real fields instead of a generic Q&A list. Updates now install right in the app — no more browser download.",
+      notes: "Fixes the random logout bug — the app could sign you out on its own after sitting in the background for a while, even though your session was still valid. Also: Inbox moved up next to Leads, a tighter side menu, and a cleaner date range picker.",
     },
   },
 };

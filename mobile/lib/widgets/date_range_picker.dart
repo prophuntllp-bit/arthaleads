@@ -12,7 +12,11 @@ const dateRangePresets = [
   {'value': 'todayYesterday', 'label': 'Today & Yesterday'},
   {'value': 'last7days', 'label': 'Last 7 days'},
   {'value': 'last14days', 'label': 'Last 14 days'},
-  {'value': 'last28days', 'label': 'Last 28 days'},
+  // 'last28days' deliberately dropped from this preset list (unlike web's
+  // DateRangePicker.jsx, which still offers it) — two days apart from
+  // last30days below, it read as a mistake rather than a real choice on a
+  // small screen. The backend's getDateRangeFilter still accepts the value,
+  // so nothing else needs to change if this preset ever needs to come back.
   {'value': 'last30days', 'label': 'Last 30 days'},
   {'value': 'thisweek', 'label': 'This week'},
   {'value': 'lastweek', 'label': 'Last week'},
