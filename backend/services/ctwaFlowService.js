@@ -70,7 +70,7 @@ module.exports = function createCtwaFlowService({
       return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
     }
     if (!isNewConversation) return false;
-    if (agent.adIds?.length) return !!conversation.campaignRef;
+    if (agent.adIds?.length) return agent.adIds.includes(conversation.campaignRef?.adId);
     return true;
   }
 
