@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "../services/api";
 
 export function useLeads(mode = "normal", initialFilters = {}) {
@@ -48,6 +48,28 @@ export function useLeads(mode = "normal", initialFilters = {}) {
       controller.abort();
     };
   }, [filters, page, limit, endpoint, refreshKey]);
+
+  // Background refresh so a lead that arrives while the page is open shows up
+  // without a manual reload. Silent: no loading flash, and it never wipes the
+  // list on a failed poll. Skipped while the tab is hidden.
+  const paramsRef = useRef({});
+  paramsRef.current = { endpoint, params: { ...filters, page, limit } };
+  useEffect(() => {
+    const tick = async () => {
+      if (document.hidden) return;
+      const { endpoint: ep, params } = paramsRef.current;
+      try {
+        const { data } = await api.get(ep, { params });
+        if (paramsRef.current.endpoint !== ep || paramsRef.current.params.page !== params.page) return;
+        setLeads(data.leads || []);
+        setTotal(data.total || 0);
+        setPages(data.pages || 1);
+      } catch { /* keep the current list */ }
+    };
+    const iv = setInterval(tick, 15000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearInterval(iv); document.removeEventListener("visibilitychange", tick); };
+  }, []);
 
   const refetch = () => setRefreshKey((k) => k + 1);
 
