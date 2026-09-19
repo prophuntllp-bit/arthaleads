@@ -168,6 +168,15 @@ connectDB().then(async () => {
   process.exit(1);
 });
 
+// WhatsApp Embedded Signup bridge page for the mobile app's WebView — must
+// come before helmet() so its default CSP (script-src 'self') doesn't block
+// loading the Facebook SDK from connect.facebook.net. See
+// backend/views/waEmbeddedSignupPage.js for why this exists at all.
+app.get("/wa-embedded-signup.html", (req, res) => {
+  const { waEmbeddedSignupPage } = require("./views/waEmbeddedSignupPage");
+  res.type("html").send(waEmbeddedSignupPage());
+});
+
 // ── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
 

@@ -27,7 +27,7 @@ publish_to: 'none'
 #
 # After bumping, update backend/constants/appRelease.js to match (the plain
 # build number, the version string, and the GitHub Release download URL).
-version: 1.0.6+2032
+version: 1.0.7+2033
 
 environment:
   sdk: ^3.12.2
@@ -72,6 +72,14 @@ dependencies:
   # SHA-256 for the signup handoff secret. Already present transitively;
   # declared because we depend on it directly now.
   crypto: ^3.0.6
+  # Native Razorpay Checkout for WhatsApp-credit top-ups (Credits tab) — same
+  # order/verify contract the web app already uses against
+  # backend/routes/creditRoutes.js.
+  razorpay_flutter: ^1.4.0
+  # Hosts backend/views/waEmbeddedSignupPage.js (the Facebook JS SDK popup
+  # flow) for WhatsApp's one-click connect (Settings tab) — the app has no JS
+  # runtime of its own to run the FB SDK in.
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
   flutter_test:

@@ -22,7 +22,7 @@ import 'developers/developers_screen.dart';
 import 'dump/dump_screen.dart';
 import 'followups/followups_screen.dart';
 import 'help/help_screen.dart';
-import 'inbox/inbox_screen.dart';
+import 'inbox/conversations_shell.dart';
 import 'invoices/invoices_screen.dart';
 import 'leads/leads_screen.dart';
 import 'performance/performance_screen.dart';
@@ -357,7 +357,7 @@ class _ShellState extends State<Shell> {
       () => const DashboardScreen(),
     ),
     _NavItem('Leads', Icons.people_alt_rounded, () => const LeadsScreen()),
-    _NavItem('Inbox', Icons.chat_rounded, () => const InboxScreen()),
+    _NavItem('Inbox', Icons.chat_rounded, () => const ConversationsShell()),
     _NavItem(
       'Follow-ups',
       Icons.event_repeat_rounded,

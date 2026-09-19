@@ -658,22 +658,82 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                     children: [
                                       Icon(
                                         Icons.smart_toy,
-                                        size: 10,
+                                        size: 12,
                                         color: wa.sendGreen,
                                       ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        'Bot',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          color: wa.sendGreen,
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          (m['senderName'] as String?)?.isNotEmpty == true
+                                              ? '${m['senderName']} (Bot)'
+                                              : 'Bot',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: wa.sendGreen,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
+                                )
+                              else if (outbound &&
+                                  m['sender'] == 'agent' &&
+                                  (m['senderName'] as String?)?.isNotEmpty == true)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: Text(
+                                    m['senderName'] as String,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF3A7D1F),
+                                    ),
+                                  ),
                                 ),
                               _mediaContent(m, wa),
+                              if (m['interactiveOptions'] is List &&
+                                  (m['interactiveOptions'] as List).isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.only(top: 6),
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(
+                                        color: (wa.isDark ? Colors.white : Colors.black)
+                                            .withValues(alpha: 0.12),
+                                      ),
+                                    ),
+                                  ),
+                                  child: Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: [
+                                      for (final o in (m['interactiveOptions'] as List))
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(999),
+                                            border: Border.all(
+                                              color: (wa.isDark ? Colors.white : Colors.black)
+                                                  .withValues(alpha: 0.25),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            '${(o is Map ? o['title'] : o) ?? ''}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: wa.isDark ? Colors.white : Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               const SizedBox(height: 2),
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -775,6 +835,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                     fontSize: 14.5,
                                   ),
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  filled: false,
+                                  contentPadding: EdgeInsets.zero,
                                   isDense: true,
                                 ),
                                 minLines: 1,

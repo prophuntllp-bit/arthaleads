@@ -19,6 +19,9 @@ class AuthState extends ChangeNotifier {
   bool get loggedIn => user != null;
   String get role => (user?['role'] as String?) ?? 'agent';
   bool get isAdmin => role != 'agent';
+  /// Web's Inbox sub-sections (Agents, Settings, template/credit edits) are
+  /// admin/super_admin only; the backend rejects managers, so mirror that.
+  bool get isWaAdmin => role == 'admin' || role == 'super_admin';
 
   AuthState() {
     _api.onSessionExpired = () {

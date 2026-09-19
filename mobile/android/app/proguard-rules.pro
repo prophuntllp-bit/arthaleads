@@ -19,3 +19,22 @@
 -keepclassmembers class * implements android.os.Parcelable {
     static ** CREATOR;
 }
+
+# Razorpay Checkout (Credits tab top-up) — its own documented proguard rules;
+# without these R8 strips/renames classes the Checkout activity resolves by
+# name at runtime, which fails silently only in release builds.
+-keep class com.razorpay.** { *; }
+-dontwarn com.razorpay.**
+-keepattributes JavascriptInterface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-optimizations !method/inlining/*
+-keep class proguard.annotation.KeepClassMembers { *; }
+-keep @proguard.annotation.KeepClassMembers class * { *; }
+-keep class proguard.annotation.Keep { *; }
+-keep @proguard.annotation.Keep class * { *; }
+-keepclassmembers,allowobfuscation class * {
+    @proguard.annotation.Keep <fields>;
+    @proguard.annotation.Keep <methods>;
+}

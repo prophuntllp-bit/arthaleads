@@ -8,6 +8,19 @@ const { answerMarketingQuestion } = require("../utils/openai");
 router.get("/form/:token", getForm);
 router.post("/form/:token", submitLead);
 
+// ── WhatsApp Embedded Signup config ──────────────────────────────────────────
+// appId/configId are the same values baked into the web bundle as
+// VITE_WA_APP_ID/VITE_WA_ES_CONFIG_ID — public, client-safe Meta app
+// identifiers, not secrets. The mobile app can't read a Vite build-time env,
+// so it fetches these at runtime instead; that also means rotating the
+// config_id never needs a mobile release.
+router.get("/whatsapp-es-config", (req, res) => {
+  const appId = process.env.WA_APP_ID || "";
+  const configId = process.env.WA_ES_CONFIG_ID || "";
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({ appId, configId, configured: !!(appId && configId) });
+});
+
 // ── Marketing site chatbot ───────────────────────────────────────────────────
 // POST /api/public/chat — Body: { question, history? }
 // No auth, no access to any customer data — pre-sales Q&A only. Inherits the

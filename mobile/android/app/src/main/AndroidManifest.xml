@@ -99,5 +99,13 @@
              even when the app IS installed. -->
         <package android:name="com.whatsapp"/>
         <package android:name="com.whatsapp.w4b"/>
+        <!-- Razorpay Checkout (Credits tab top-up) launches the customer's own
+             UPI app directly when one is installed, instead of falling back to
+             a card/UPI-ID web form — same Android 11+ package-visibility gate
+             as WhatsApp above. Per Razorpay's own integration docs. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="upi"/>
+        </intent>
     </queries>
 </manifest>
