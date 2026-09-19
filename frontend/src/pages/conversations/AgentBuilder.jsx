@@ -523,7 +523,7 @@ export default function AgentBuilder() {
               <h3 className="text-base font-bold text-app">Route ads to this agent</h3>
             </div>
             <p className="text-sm text-app-soft">
-              Running a Click-to-WhatsApp ad? Paste its Ad ID (from Meta Ads Manager — the ad, not the
+              Running a Click-to-WhatsApp ad? Paste its Ad ID (from Ads Manager — the ad, not the
               campaign). Anyone who messages in from that ad reaches this assistant, whichever one is
               your default.
             </p>

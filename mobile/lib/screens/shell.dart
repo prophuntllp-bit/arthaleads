@@ -445,7 +445,9 @@ class _ShellState extends State<Shell> {
       child: AppBackdrop(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
+          // Inbox carries its own single header strip (drawer button, tabs,
+          // theme toggle) — a second AppBar above it just doubled the chrome.
+          appBar: current.label == 'Inbox' ? null : AppBar(
             title: Text(current.label),
             actions: [
               const HeaderSearchButton(),

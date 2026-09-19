@@ -226,7 +226,7 @@ export default function TemplateBuilder() {
       }
       if (isEditing) {
         await api.put(`/whatsapp/templates/${editId}`, { category, components });
-        toast.success("Saved — back in review with Meta");
+        toast.success("Saved — back in review");
       } else {
         await api.post("/whatsapp/templates", { name, category, language, components });
         toast.success("Submitted for review");
@@ -264,7 +264,7 @@ export default function TemplateBuilder() {
           <RotateCcw className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#b45309" }} />
           <p className="text-xs" style={{ color: "#b45309" }}>
             This template is currently <strong>{originalStatus.toLowerCase()}</strong>. Saving any change here
-            resubmits it to Meta — it goes back to <strong>Pending</strong> and can't be used until approved again.
+            resubmits it for review — it goes back to <strong>Pending</strong> and can't be used until approved again.
           </p>
         </div>
       )}

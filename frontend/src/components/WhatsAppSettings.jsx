@@ -31,7 +31,7 @@ function DiagRow({ label, ok, detail, message }) {
 const PROVIDERS = [
   {
     id: "meta",
-    name: "Meta Cloud API",
+    name: "Arthaleads WhatsApp API",
     badge: "Official",
     tagline: "Direct · No middleman",
     pricing: "Templates, campaigns and inbox",
@@ -694,7 +694,7 @@ export default function WhatsAppSettings({ onConnected, onDisconnected } = {}) {
               <label className="text-xs font-semibold text-app-soft mb-1 block">Webhook verify token</label>
               <input className="input w-full" placeholder="A secret string you choose (e.g. artha-webhook-2024)"
                 value={webhookVerifyToken} onChange={e => setWebhookVerifyToken(e.target.value)} />
-              <p className="text-xs text-app-soft mt-1">Enter the same string in Meta when you add the webhook URL.</p>
+              <p className="text-xs text-app-soft mt-1">Enter the same string in your WhatsApp dashboard when you add the webhook URL.</p>
             </div>
           )}
 

@@ -190,6 +190,35 @@ ${members.map(m => `- ${m.name} (${m.role})`).join("\n")}`);
 - Top overdue: ${overdueTasks.length ? overdueTasks.map(t => `"${t.title}" (${t.assignedToName || "unassigned"}, due ${formatISTDate(t.dueDate)}, ${t.priority})`).join(" | ") : "none"}`);
     }
 
+    // The WhatsApp Inbox area (Inbox, Templates, Campaigns, Credits, AI Agents,
+    // Settings all live under /conversations). Without this the assistant can
+    // only point at the tabs instead of quoting the numbers on them.
+    if (cleanPage.startsWith("/conversations")) {
+      try {
+        const WaConversation = require("../models/WaConversation");
+        const WaAgent = require("../models/WaAgent");
+        const WaCampaign = require("../models/WaCampaign");
+        const Organization = require("../models/Organization");
+        const [open, resolved, botOn, unread, agents, campaigns, org] = await Promise.all([
+          WaConversation.countDocuments({ orgId, status: "open" }),
+          WaConversation.countDocuments({ orgId, status: "resolved" }),
+          WaConversation.countDocuments({ orgId, botEnabled: true }),
+          WaConversation.countDocuments({ orgId, unreadCount: { $gt: 0 } }),
+          WaAgent.find({ orgId }).select("name status isDefault").lean(),
+          WaCampaign.find({ orgId }).sort({ createdAt: -1 }).limit(3).select("name status stats").lean(),
+          Organization.findById(orgId).select("credits whatsapp.provider whatsapp.enabled whatsapp.billedDirectlyByMeta").lean(),
+        ]);
+        const avail = Math.max(0, (org?.credits?.balancePaise || 0) - (org?.credits?.reservedPaise || 0));
+        const free = org?.credits?.freeService || {};
+        parts.push(`LIVE WHATSAPP INBOX DATA:
+- WhatsApp connected: ${org?.whatsapp?.enabled ? "yes" : "no"}${org?.whatsapp?.billedDirectlyByMeta ? " (messages are billed directly to the customer's own account, not from the credit wallet)" : ""}
+- Conversations: ${open} open, ${resolved} resolved, ${botOn} with the AI assistant on, ${unread} unread
+- Wallet balance: ₹${(avail / 100).toFixed(2)}${free.remaining != null ? `, free replies left this month: ${free.remaining}` : ""}
+- AI agents: ${agents.length ? agents.map((a) => `${a.name} (${a.status}${a.isDefault ? ", default" : ""})`).join(" | ") : "none yet"}
+- Recent campaigns: ${campaigns.length ? campaigns.map((c) => `${c.name} (${c.status})`).join(" | ") : "none yet"}`);
+      } catch { /* non-critical */ }
+    }
+
     if (cleanPage === "/attendance") {
       const rec = await Attendance.findOne({ userId, date: today }).lean();
       parts.push(`ATTENDANCE TODAY:

@@ -535,7 +535,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final score = _leadScore;
 
     return Scaffold(
-      backgroundColor: wa.chatBg,
+      backgroundColor: AppTheme.of(context).bg,
       appBar: AppBar(
         backgroundColor: wa.headerBg,
         foregroundColor: wa.headerFg,
@@ -707,7 +707,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _loading
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppTheme.of(context).bg,
+                image: DecorationImage(
+                  image: AssetImage(wa.isDark ? 'assets/images/wa_bg_dark.webp' : 'assets/images/wa_bg_light.webp'),
+                  repeat: ImageRepeat.repeat,
+                  alignment: Alignment.topLeft,
+                  scale: 4,
+                ),
+              ),
+              child: _loading
                 ? const Center(child: AppSpinner(size: 32))
                 : _messages.isEmpty
                 ? Center(
@@ -866,6 +876,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       );
                     },
                   ),
+            ),
           ),
           SafeArea(
             top: false,

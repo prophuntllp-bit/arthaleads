@@ -266,10 +266,10 @@ class _CreditsPageState extends State<CreditsPage> {
             _StatCard(
               title: 'Your rates',
               value: billedByMeta
-                  ? 'Billed directly by Meta'
+                  ? 'Billed to your own account'
                   : '${_rupees(rates?['service'])} / reply',
               note: billedByMeta
-                  ? 'Charged directly to your own Meta account, not through Arthaleads credits.'
+                  ? 'Charged directly to your own WhatsApp account, not through Arthaleads credits.'
                   : 'Marketing ${_rupees(rates?['marketing'])} · Utility ${_rupees(rates?['utility'])} · excl. GST',
             ),
             const SizedBox(height: 10),

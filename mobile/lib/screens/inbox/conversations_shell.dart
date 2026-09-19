@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_state.dart';
+import '../../core/theme.dart';
+import '../../core/theme_state.dart';
 import 'campaigns_page.dart';
 import 'credits_page.dart';
 import 'inbox_screen.dart';
@@ -64,17 +66,42 @@ class _ConversationsShellState extends State<ConversationsShell>
     // top-level screen that way) — no nested Scaffold/AppBar here, just the
     // tab strip + content, matching how InboxScreen's own body used to sit
     // directly under that AppBar.
+    // Shell hides its own AppBar on this screen, so this single strip is the
+    // only header: drawer button, the tabs, then the theme toggle.
     return Column(
       children: [
         Material(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: tabs
-                .map((t) => Tab(text: t.label, icon: Icon(t.icon, size: 18)))
-                .toList(),
+          color: Colors.transparent,
+          child: SafeArea(
+            bottom: false,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'Menu',
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+                Expanded(
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    dividerColor: Colors.transparent,
+                    tabs: tabs.map((t) => Tab(text: t.label)).toList(),
+                  ),
+                ),
+                Consumer<ThemeState>(
+                  builder: (context, theme, _) => IconButton(
+                    tooltip: theme.isDark ? 'Switch to light mode' : 'Switch to dark mode',
+                    onPressed: theme.toggle,
+                    icon: Icon(
+                      theme.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         Expanded(

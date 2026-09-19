@@ -338,7 +338,7 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Saved — back in review with Meta')),
+            const SnackBar(content: Text('Saved — back in review')),
           );
         }
       } else {
@@ -419,7 +419,7 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
                   border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.35)),
                 ),
                 child: Text(
-                  "This template is currently ${_originalStatus!.toLowerCase()}. Saving any change here resubmits it to Meta — it goes back to Pending and can't be used until approved again.",
+                  "This template is currently ${_originalStatus!.toLowerCase()}. Saving any change here resubmits it for review — it goes back to Pending and can't be used until approved again.",
                   style: const TextStyle(fontSize: 12, height: 1.4, color: Color(0xFFB45309)),
                 ),
               ),

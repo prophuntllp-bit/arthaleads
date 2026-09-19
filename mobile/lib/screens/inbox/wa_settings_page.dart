@@ -10,7 +10,7 @@ import 'wa_ui.dart';
 
 const _providers = {
   'meta': {
-    'name': 'Meta Cloud API',
+    'name': 'Arthaleads WhatsApp API',
     'badge': 'Official',
     'fields': ['apiKey', 'wabaId', 'phoneNumberId', 'webhookVerifyToken'],
     'tagline': 'Direct · No middleman',
@@ -615,7 +615,7 @@ class _WaSettingsPageState extends State<WaSettingsPage> {
               label: 'Webhook verify token',
               controller: _webhookTokenCtrl,
               hint: 'A secret string you choose (e.g. artha-webhook-2024)',
-              help: 'Enter the same string in Meta when you add the webhook URL.',
+              help: 'Enter the same string in your WhatsApp dashboard when you add the webhook URL.',
             ),
           WaField(
             label: 'Your WhatsApp number (receives the test message)',
