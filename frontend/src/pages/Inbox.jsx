@@ -375,9 +375,18 @@ export default function Inbox() {
     return () => clearInterval(pollRef.current);
   }, [activeId, fetchMessages]);
 
+  const scrolledConvRef = useRef(null);
+  const lastMsgCountRef = useRef(0);
   useEffect(() => {
-    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  }, [messages]);
+    const el = threadRef.current;
+    if (!el) return;
+    const switched = scrolledConvRef.current !== activeId;
+    const grew = messages.length > lastMsgCountRef.current;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (switched || (grew && nearBottom)) el.scrollTop = el.scrollHeight;
+    if (messages.length) scrolledConvRef.current = activeId;
+    lastMsgCountRef.current = messages.length;
+  }, [messages, activeId]);
 
   // Day separators, grouped on IST calendar days.
   const threadItems = useMemo(() => {
