@@ -136,7 +136,6 @@ const MENU_ACTIONS = [
 // wording can still be edited or removed like any other chip.
 const PRESET_PURPOSE = ["Self Use", "Investment", "Buy", "Rent", "Just Exploring"];
 const PRESET_TIMELINE = ["Within 30 Days", "1-3 Months", "3-6 Months", "6-12 Months", "Just Exploring"];
-const PRESET_SITE_VISIT_SLOTS = ["Morning", "Afternoon", "Evening", "This Weekend", "Weekday"];
 const PRESET_BHK = ["1BHK", "2BHK", "3BHK", "4BHK", "5BHK+", "Studio"];
 const PRESET_PROPERTY_TYPE = ["Apartment", "Villa", "Plot", "Commercial", "Office", "Penthouse"];
 // Which quick-add presets make sense once a question is mapped to a
@@ -666,7 +665,7 @@ export default function AgentBuilder() {
               <input className="input w-full" placeholder="Which time works best for your visit?"
                 value={form.ctwaFlow.siteVisitPrompt} onChange={(e) => setFlow({ siteVisitPrompt: e.target.value })} />
             </div>
-            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3} presets={PRESET_SITE_VISIT_SLOTS}
+            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3}
               rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
 
             <div>
@@ -1146,16 +1145,28 @@ function QualifyingQuestionEditor({ question, index, total, onChange, onRemove, 
   );
 }
 
+// Min/max are inferred from the label ("₹50L - ₹75L", "Under ₹50L", "₹1.5Cr+")
+// so the tenant only types one thing. Unparseable labels get 0/0 and are
+// recorded as an answer instead of written to the budget field.
+function parseBracketLabel(label) {
+  const nums = [...String(label).replace(/,/g, "").matchAll(/(\d+(?:\.\d+)?)\s*(cr|crore|l|lac|lakh|k)?/gi)]
+    .map((m) => Number(m[1]) * ({ cr: 1e7, crore: 1e7, l: 1e5, lac: 1e5, lakh: 1e5, k: 1e3 }[(m[2] || "").toLowerCase()] || 1));
+  if (!nums.length) return { min: 0, max: 0 };
+  if (/under|below|upto|up to|<|less/i.test(label)) return { min: 0, max: nums[0] };
+  if (nums.length === 1) return { min: nums[0], max: 0 };
+  return { min: Math.min(nums[0], nums[1]), max: Math.max(nums[0], nums[1]) };
+}
+
 function BudgetBracketEditor({ rows, onChange }) {
-  const [label, setLabel] = useState(""); const [min, setMin] = useState(""); const [max, setMax] = useState("");
+  const [label, setLabel] = useState("");
   const addRow = (row) => {
     if (rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === row.label.toLowerCase())) return;
     onChange([...rows, { id: slugify(row.label, rows.length), ...row }]);
   };
   const add = () => {
     if (!label.trim()) return;
-    addRow({ label: label.trim(), min: Number(min) || 0, max: Number(max) || 0 });
-    setLabel(""); setMin(""); setMax("");
+    addRow({ label: label.trim(), ...parseBracketLabel(label) });
+    setLabel("");
   };
   const remaining = PRESET_BUDGET_BRACKETS.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
   return (
@@ -1168,10 +1179,6 @@ function BudgetBracketEditor({ rows, onChange }) {
       <div className={`${ROW_CLS} mt-2`}>
         <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
           placeholder="Label, e.g. ₹50L – ₹1Cr" disabled={rows.length >= 10} />
-        <input className={`${SMALL_INPUT} w-24`} type="number" min="0" value={min} onChange={(e) => setMin(e.target.value)}
-          placeholder="Min ₹" disabled={rows.length >= 10} />
-        <input className={`${SMALL_INPUT} w-24`} type="number" min="0" value={max} onChange={(e) => setMax(e.target.value)}
-          placeholder="Max ₹ (0 = no cap)" disabled={rows.length >= 10} />
         <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 10}
           className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
       </div>
