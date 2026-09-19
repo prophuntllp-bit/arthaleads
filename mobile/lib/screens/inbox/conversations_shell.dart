@@ -74,7 +74,9 @@ class _ConversationsShellState extends State<ConversationsShell>
           color: Colors.transparent,
           child: SafeArea(
             bottom: false,
-            child: Row(
+            child: SizedBox(
+              height: 66,
+              child: Row(
               children: [
                 IconButton(
                   tooltip: 'Menu',
@@ -87,7 +89,10 @@ class _ConversationsShellState extends State<ConversationsShell>
                     isScrollable: true,
                     tabAlignment: TabAlignment.start,
                     dividerColor: Colors.transparent,
-                    tabs: tabs.map((t) => Tab(text: t.label)).toList(),
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+                    tabs: tabs
+                        .map((t) => Tab(height: 62, icon: Icon(t.icon, size: 20), text: t.label))
+                        .toList(),
                   ),
                 ),
                 Consumer<ThemeState>(
@@ -102,12 +107,19 @@ class _ConversationsShellState extends State<ConversationsShell>
                 ),
               ],
             ),
+            ),
           ),
         ),
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: tabs.map((t) => t.child).toList(),
+          // The header above already sat inside the status-bar inset; without
+          // this every ListView below re-applies it as a blank band at its top.
+          child: MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: TabBarView(
+              controller: _tabController,
+              children: tabs.map((t) => t.child).toList(),
+            ),
           ),
         ),
       ],
