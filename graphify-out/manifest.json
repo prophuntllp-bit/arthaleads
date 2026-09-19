@@ -20,8 +20,8 @@
     "hash": "5a171d0db153e3f21c6ed1c4cbb02770"
   },
   "E:\\PROPHUNT CRM\\backend\\server.js": {
-    "mtime": 1789192659.465159,
-    "hash": "4c931b5bf39ca3839d66a0335c715a0d"
+    "mtime": 1789735053.8660738,
+    "hash": "8270e8e659c0e7706ec16a3b4f5488c3"
   },
   "E:\\PROPHUNT CRM\\backend\\actions\\addLeadNote.js": {
     "mtime": 1787830325.5165079,
@@ -76,8 +76,8 @@
     "hash": "43930cffb57df07d9c4bfaf0af817619"
   },
   "E:\\PROPHUNT CRM\\backend\\constants\\appRelease.js": {
-    "mtime": 1789716361.979242,
-    "hash": "fa9811d127b18264f00d5c5abd7211ec"
+    "mtime": 1789730281.2656684,
+    "hash": "c279de5fb86f149a21da2d0b43a67494"
   },
   "E:\\PROPHUNT CRM\\backend\\constants\\leadOptions.js": {
     "mtime": 1789192659.4591591,
@@ -92,8 +92,8 @@
     "hash": "43a88e4bdb20c2eaf32a4268f15bb894"
   },
   "E:\\PROPHUNT CRM\\backend\\controllers\\authController.js": {
-    "mtime": 1788250673.1194527,
-    "hash": "d74e2bf35802bebb510fb433d859ed1a"
+    "mtime": 1789807860.8005738,
+    "hash": "ebd8fac6807f2dff4729ea37021a5928"
   },
   "E:\\PROPHUNT CRM\\backend\\controllers\\automationController.js": {
     "mtime": 1787731008.5225034,
@@ -292,8 +292,8 @@
     "hash": "b079387f6bd3fd3a578a1995e02812b5"
   },
   "E:\\PROPHUNT CRM\\backend\\routes\\authRoutes.js": {
-    "mtime": 1788250673.1204574,
-    "hash": "aee165becab437c9c325df43a97392b3"
+    "mtime": 1789807860.801574,
+    "hash": "20f4961029fd7773472b1df76356e9b9"
   },
   "E:\\PROPHUNT CRM\\backend\\routes\\automationRoutes.js": {
     "mtime": 1787640540.5645561,
@@ -364,8 +364,8 @@
     "hash": "4c377fb305a5d4eace62ae5d8c1fee80"
   },
   "E:\\PROPHUNT CRM\\backend\\routes\\publicRoutes.js": {
-    "mtime": 1788326905.5772617,
-    "hash": "83a7f0fd8353f3a4a066134ff8f82053"
+    "mtime": 1789735008.0882876,
+    "hash": "777c69577b74772999a17911740cf78c"
   },
   "E:\\PROPHUNT CRM\\backend\\routes\\pushRoutes.js": {
     "mtime": 1780644444.6432297,
@@ -612,8 +612,8 @@
     "hash": "da000aa7883a61ac2ea2faf010440de7"
   },
   "E:\\PROPHUNT CRM\\backend\\services\\authService.js": {
-    "mtime": 1788242940.5186927,
-    "hash": "f58a607aa4fc93abe5a590c2405ef4d8"
+    "mtime": 1789807860.8005738,
+    "hash": "f781d703ca9b9a4f7aff3f88207936ab"
   },
   "E:\\PROPHUNT CRM\\backend\\services\\automationService.js": {
     "mtime": 1787297038.3472292,
@@ -708,8 +708,8 @@
     "hash": "753ef8b5fc7fdd8d4c0e281e61b7f751"
   },
   "E:\\PROPHUNT CRM\\backend\\utils\\copilotContext.js": {
-    "mtime": 1787731008.5995042,
-    "hash": "8fb579e85883c91dfddd4d7a5c20d8cc"
+    "mtime": 1789805208.5885422,
+    "hash": "089c169200ddeac277d56fd652f1e145"
   },
   "E:\\PROPHUNT CRM\\backend\\utils\\datetime.js": {
     "mtime": 1788935839.904735,
@@ -752,8 +752,8 @@
     "hash": "73ac4d441eaf13239d53015866e0dfd1"
   },
   "E:\\PROPHUNT CRM\\backend\\utils\\openai.js": {
-    "mtime": 1789470806.0392015,
-    "hash": "0efcebe2ee7a3717012b64e84387e77a"
+    "mtime": 1789805320.7867124,
+    "hash": "ec90ee4a7c708127091813a9d0f8d4cc"
   },
   "E:\\PROPHUNT CRM\\backend\\utils\\push.js": {
     "mtime": 1787400096.5060062,
@@ -782,6 +782,10 @@
   "E:\\PROPHUNT CRM\\backend\\validations\\schemas.js": {
     "mtime": 1789626948.4687295,
     "hash": "045f6ad6b532c3371fc917561867c31e"
+  },
+  "E:\\PROPHUNT CRM\\backend\\views\\waEmbeddedSignupPage.js": {
+    "mtime": 1789735047.828549,
+    "hash": "85d1c46f89a3b41230973b203a02792b"
   },
   "E:\\PROPHUNT CRM\\frontend\\capacitor.config.ts": {
     "mtime": 1781587415.0019412,
@@ -1480,8 +1484,8 @@
     "hash": "c447ea3a1ed26ed4cf23cd76cff41697"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\components\\WhatsAppSettings.jsx": {
-    "mtime": 1789372805.8628604,
-    "hash": "3a8c355968a448786951290e5dd11855"
+    "mtime": 1789804877.0642195,
+    "hash": "eb80b41008b3cc88b13450f0786d9d05"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\context\\AuthContext.jsx": {
     "mtime": 1788250540.267099,
@@ -1520,8 +1524,8 @@
     "hash": "3098790f96ed5add62228c0de2d89503"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\hooks\\useLeads.js": {
-    "mtime": 1781185972.0797977,
-    "hash": "c1eb05c503128f22dcaa49f0f64dcac1"
+    "mtime": 1789798117.0908093,
+    "hash": "6afa4366d7c14bc2523b93fb190731f4"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\AboutUs.jsx": {
     "mtime": 1786968987.8422923,
@@ -1636,8 +1640,8 @@
     "hash": "fce4f204083e5924b147dd8647fe892d"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\Inbox.jsx": {
-    "mtime": 1789623757.1626577,
-    "hash": "b8f2f2d5ced45aba4d5b8f4501916d1d"
+    "mtime": 1789798013.7869186,
+    "hash": "0df04e309b3b79bb9729e1ce9fa6cc8a"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\Invoices.jsx": {
     "mtime": 1781185972.0857968,
@@ -1664,8 +1668,8 @@
     "hash": "921a70f7e217e9ce30eff7ea151981dc"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\Performance.jsx": {
-    "mtime": 1787997774.6758559,
-    "hash": "5fd1ff2735f89bcc69de4b057ff45097"
+    "mtime": 1789808040.1235013,
+    "hash": "2fdf7d858af34d29eceb27c4fe40a157"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\Plans.jsx": {
     "mtime": 1788611224.3467338,
@@ -1800,8 +1804,8 @@
     "hash": "91a5a13e2eee3ffb2d786a7f5595e6d3"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\conversations\\AgentBuilder.jsx": {
-    "mtime": 1789648249.672995,
-    "hash": "816affffe2445f1463fddb4e3083cb2a"
+    "mtime": 1789804877.1267755,
+    "hash": "df27ce8f7d6f2e085b3be1ddc9505f12"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\conversations\\AgentsPage.jsx": {
     "mtime": 1789216782.7976058,
@@ -1828,8 +1832,8 @@
     "hash": "b2cf0f057ba4e01c9a2539b10bc89bde"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\conversations\\TemplateBuilder.jsx": {
-    "mtime": 1789551082.0342698,
-    "hash": "020f7b812d8df7106e34cd7d9b3ace02"
+    "mtime": 1789804877.0169983,
+    "hash": "c102fbc8bd0de606902046974e7d26d6"
   },
   "E:\\PROPHUNT CRM\\frontend\\src\\pages\\conversations\\TemplatesPage.jsx": {
     "mtime": 1789550945.7187934,
@@ -1904,8 +1908,8 @@
     "hash": "b020c77e9fe4ae45a974e226e4c67cc9"
   },
   "E:\\PROPHUNT CRM\\mobile\\android\\app\\src\\main\\java\\io\\flutter\\plugins\\GeneratedPluginRegistrant.java": {
-    "mtime": 1789729818.4235117,
-    "hash": "df2046972c8d15e29ed45b1ccd85af02"
+    "mtime": 1789808179.454657,
+    "hash": "9da398afe479569781230188f0a8a9ee"
   },
   "E:\\PROPHUNT CRM\\mobile\\android\\app\\src\\main\\kotlin\\com\\arthaleads\\arthaleads_mobile\\MainActivity.kt": {
     "mtime": 1783166297.661768,
@@ -1924,16 +1928,16 @@
     "hash": "ba9fbf13f159ba6d4b668d870f05edc1"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\core\\auth_state.dart": {
-    "mtime": 1787567647.622042,
-    "hash": "d5baa199314d9183a619edaf0bd12643"
+    "mtime": 1789796217.1206462,
+    "hash": "810ae650d96c0ad3cd480e91dc302e1a"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\core\\constants.dart": {
     "mtime": 1789192659.473671,
     "hash": "7eb7ffb99a9f379d1c768862501eca68"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\core\\copilot_pages.dart": {
-    "mtime": 1788331257.0382679,
-    "hash": "3c4fffdca40339042f835fba68bc99ca"
+    "mtime": 1789805236.3275795,
+    "hash": "ab61405498bd0ca9d7d833656e44e4a4"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\core\\deep_link.dart": {
     "mtime": 1784617620.7760339,
@@ -1967,13 +1971,17 @@
     "mtime": 1789728559.849017,
     "hash": "03e08683b73f08aaa75fd0f15ad48330"
   },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\data\\template_gallery.dart": {
+    "mtime": 1789734505.8152347,
+    "hash": "6416f772f545269d91864e82c5b39b90"
+  },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\login_screen.dart": {
     "mtime": 1788269092.9301116,
     "hash": "e44428dd331dfe57905d1284af48e980"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\shell.dart": {
-    "mtime": 1789715411.7532506,
-    "hash": "1c4ecc43411b3d7fa3ce804016e81f84"
+    "mtime": 1789804985.1919787,
+    "hash": "ff647a96ca2f5dd419bf31a4194aab39"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\signup_screen.dart": {
     "mtime": 1788269022.9952676,
@@ -2043,17 +2051,65 @@
     "mtime": 1784373193.9732907,
     "hash": "b2b60be49cf515716030d14d9adc26ea"
   },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\agents_page.dart": {
+    "mtime": 1789801031.0990992,
+    "hash": "0910e6c7f5e111007038a7ebb90d5076"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\agent_builder.dart": {
+    "mtime": 1789804877.1417832,
+    "hash": "351e37e332274ec10dbb6d150cb8feeb"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\campaigns_page.dart": {
+    "mtime": 1789800630.9270203,
+    "hash": "073f4bb660e7b266ca7024de376bf04a"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\campaign_builder.dart": {
+    "mtime": 1789800623.1703215,
+    "hash": "8a44d2654b0b0baac04729fc5a82e2e1"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\conversations_shell.dart": {
+    "mtime": 1789806301.7518208,
+    "hash": "c692106de6d5f106c9edcce34c7bd96c"
+  },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\conversation_screen.dart": {
-    "mtime": 1789470806.0672007,
-    "hash": "b1f9ff13c5c59fa421d048e92b7b3b1d"
+    "mtime": 1789805042.4571555,
+    "hash": "da15cfa8fadd13cfbb9e9e45bcc45381"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\credits_page.dart": {
+    "mtime": 1789804877.1889162,
+    "hash": "7af194fec5a7240d0c6b68c4d652bfee"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\inbox_screen.dart": {
     "mtime": 1789470806.0672007,
     "hash": "a53d9ab448d069fad33e79baf7f5348f"
   },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\templates_page.dart": {
+    "mtime": 1789796217.2072146,
+    "hash": "f8a2cbbae2e5c464a67bb9adeac34707"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\template_builder.dart": {
+    "mtime": 1789804877.0300057,
+    "hash": "323d61aa845062cb55add6fd070feb0b"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\template_send_sheet.dart": {
+    "mtime": 1789801995.8177948,
+    "hash": "0f964d4298aec489243378757b772a1e"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\wa_embedded_signup_screen.dart": {
+    "mtime": 1789735081.0601192,
+    "hash": "d9525d448aac01c1bc4dc126d8ef82e4"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\wa_settings_page.dart": {
+    "mtime": 1789804877.097776,
+    "hash": "19cb9a4f73f4da1025a2f5f22132c95a"
+  },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\wa_theme.dart": {
     "mtime": 1789470806.068202,
     "hash": "d76436d52f83c45de57157141c703865"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\inbox\\wa_ui.dart": {
+    "mtime": 1789804923.7056012,
+    "hash": "f04565135d660f668f429c5a501d7841"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\invoices\\invoices_screen.dart": {
     "mtime": 1784377144.772145,
@@ -2087,9 +2143,13 @@
     "mtime": 1784541065.4853122,
     "hash": "598822443d9f8288a8297b0c9ccd18d1"
   },
+  "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\performance\\performance_leads_sheet.dart": {
+    "mtime": 1789808190.7497413,
+    "hash": "b8e885d2c437c6edcfa74dd2fdbf44ff"
+  },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\performance\\performance_screen.dart": {
-    "mtime": 1786102430.001762,
-    "hash": "5790ea40fa258b3e8d792a3dcdb15470"
+    "mtime": 1789808168.5103278,
+    "hash": "c8f4942106f6bdb100a54b96006ac8e5"
   },
   "E:\\PROPHUNT CRM\\mobile\\lib\\screens\\pipeline\\pipeline_screen.dart": {
     "mtime": 1787395038.2138898,
@@ -2428,8 +2488,8 @@
     "hash": "e85928c008c15261b4fd3e3e4a32b00b"
   },
   "E:\\PROPHUNT CRM\\mobile\\pubspec.yaml": {
-    "mtime": 1789728664.8235273,
-    "hash": "8ad7d85300ad0de323366ff24e822686"
+    "mtime": 1789735214.588286,
+    "hash": "fe7af73439d52023094282af6247c80e"
   },
   "E:\\PROPHUNT CRM\\mobile\\README.md": {
     "mtime": 1783166297.8659332,
@@ -2982,6 +3042,14 @@
   "E:\\PROPHUNT CRM\\mobile\\assets\\images\\logo.png": {
     "mtime": 1788265368.8807588,
     "hash": "edeed284c3495f7a3e5bd5f9b098394e"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\assets\\images\\wa_bg_dark.webp": {
+    "mtime": 1789805002.3233316,
+    "hash": "ad5211beff84ba0d82fb877cbcc46394"
+  },
+  "E:\\PROPHUNT CRM\\mobile\\assets\\images\\wa_bg_light.webp": {
+    "mtime": 1789805002.2993307,
+    "hash": "8b1654177787ab5b8f51c4317b90d8cb"
   },
   "E:\\PROPHUNT CRM\\videos\\arthaleads-launch\\assets\\arthaleads-crm-dashboard.png": {
     "mtime": 1782307830.7682817,
