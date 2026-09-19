@@ -10,6 +10,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
+import 'template_send_sheet.dart';
 import 'wa_theme.dart';
 
 /// WhatsApp message thread — GET /whatsapp/conversations/:id/messages,
@@ -38,11 +39,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _sending = false;
   Map<String, dynamic>? _conv;
   Timer? _poll;
+  DateTime? _lastInboundAt;
+  bool _windowKnown = false;
+  Map<String, dynamic>? _credits;
+  bool _isMeta = false;
 
   @override
   void initState() {
     super.initState();
     _loadConv();
+    _loadChannel();
     _load();
     _poll = Timer.periodic(
       const Duration(seconds: 3),
@@ -56,6 +62,91 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _inputCtrl.dispose();
     _scroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadChannel() async {
+    try {
+      final s = await _api.dio.get('/whatsapp/status');
+      final c = await _api.dio.get('/credits/balance');
+      if (!mounted) return;
+      setState(() {
+        _isMeta = s.data['provider'] == 'meta';
+        _credits = (c.data as Map).cast<String, dynamic>();
+      });
+    } catch (_) {}
+  }
+
+  Duration get _windowLeft => _lastInboundAt == null
+      ? Duration.zero
+      : const Duration(hours: 24) - DateTime.now().difference(_lastInboundAt!);
+
+  String _fmtLeft(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
+  Future<void> _openTemplateSheet() async {
+    final msg = await showTemplateSendSheet(
+      context,
+      conversationId: widget.conversationId,
+      contactName: _liveDisplayName,
+      credits: _credits,
+    );
+    if (msg == null || !mounted) return;
+    if (msg.isNotEmpty) setState(() => _messages.add(msg));
+    _load(silent: true);
+    _loadChannel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
+  }
+
+  Widget _templateOnlyBar(WaTheme wa, String firstName) {
+    final who = firstName.isEmpty ? 'They' : firstName;
+    return Container(
+      margin: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBBF24).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFBBF24).withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.schedule, size: 16, color: Color(0xFFB45309)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _lastInboundAt != null
+                      ? 'More than 24 hours since $who last wrote. WhatsApp only allows an approved template until they reply.'
+                      : '$who has not written to you yet. WhatsApp only allows an approved template to start a conversation.',
+                  style: const TextStyle(fontSize: 12, height: 1.4, color: Color(0xFFB45309)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: wa.sendGreen,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: _openTemplateSheet,
+              icon: const Icon(Icons.bolt, size: 18),
+              label: const Text('Send a template', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadConv() async {
@@ -80,6 +171,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
       final fresh = (res.data['messages'] as List? ?? [])
           .cast<Map<String, dynamic>>();
+      final li = res.data['lastInboundAt'];
+      _lastInboundAt = li is String ? DateTime.tryParse(li) : null;
+      _windowKnown = res.data is Map && (res.data as Map).containsKey('lastInboundAt');
       final wasAtBottom =
           !_scroll.hasClients ||
           _scroll.position.pixels >= _scroll.position.maxScrollExtent - 60;
@@ -413,6 +507,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final wa = WaTheme.of(context);
     final botEnabled = _conv?['botEnabled'] == true;
     final resolved = _conv?['status'] == 'resolved';
+    final windowLeft = _windowLeft;
+    final windowOpen = windowLeft > Duration.zero;
+    final templateOnly = _windowKnown && !windowOpen && _isMeta;
+    final firstName = _liveDisplayName.trim().split(RegExp(r'\s+')).first;
+    final freeLeft = ((_credits?['freeService'] as Map?)?['remaining'] as num?)?.toInt() ?? 0;
+    final byMeta = _credits?['billedDirectlyByMeta'] == true;
+    final serviceRate = ((_credits?['ratesPaise'] as Map?)?['service'] as num?) ?? 0;
+    final hint = byMeta
+        ? 'Billed directly to your own account, not through credits'
+        : freeLeft > 0
+            ? '$freeLeft free replies left this month'
+            : serviceRate > 0
+                ? '₹${(serviceRate / 100).toStringAsFixed(2)} per reply'
+                : '';
     final lead = _conv?['leadId'] is Map
         ? (_conv!['leadId'] as Map).cast<String, dynamic>()
         : null;
@@ -796,11 +904,39 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         ],
                       ),
                     )
-                  : Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                  : templateOnly
+                  ? _templateOnlyBar(wa, firstName)
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_windowKnown && !windowOpen)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.schedule, size: 14, color: Color(0xFFB45309)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    "More than 24 hours since they last wrote — WhatsApp will only deliver an approved template. Send one from your provider's dashboard.",
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                          if (_isMeta)
+                            IconButton(
+                              icon: const Icon(Icons.bolt, color: Color(0xFFF59E0B)),
+                              tooltip: 'Send a template',
+                              onPressed: _openTemplateSheet,
+                            ),
                           IconButton(
                             icon: Icon(
                               Icons.check_circle_outline,
@@ -874,6 +1010,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           ),
                         ],
                       ),
+                    ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text.rich(
+                              TextSpan(
+                                text: hint,
+                                children: [
+                                  if (windowOpen)
+                                    TextSpan(
+                                      text: '${hint.isNotEmpty ? ' · ' : ''}reply window closes in ${_fmtLeft(windowLeft)}',
+                                      style: windowLeft < const Duration(hours: 2) ? const TextStyle(color: Color(0xFFB45309)) : null,
+                                    ),
+                                ],
+                              ),
+                              style: TextStyle(fontSize: 10.5, color: wa.timeText),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
             ),
           ),

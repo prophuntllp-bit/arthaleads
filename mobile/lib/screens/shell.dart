@@ -473,7 +473,7 @@ class _ShellState extends State<Shell> {
             // rather than a panel. Scale it instead, so a useful strip of the
             // page stays visible to tap back to, and cap it so it does not
             // sprawl on a tablet.
-            width: math.min(300.0, MediaQuery.sizeOf(context).width * 0.76),
+            width: math.min(272.0, MediaQuery.sizeOf(context).width * 0.68),
             child: SafeArea(
               child: Column(
                 children: [
@@ -535,18 +535,19 @@ class _ShellState extends State<Shell> {
                             final realIndex = visible.indexOf(item);
                             final selected = realIndex == _index;
                             return ListTile(
-                              dense: true,
-                              visualDensity: const VisualDensity(vertical: -3),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                              dense: false,
+                              visualDensity: const VisualDensity(vertical: -2),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+                              horizontalTitleGap: 14,
                               leading: Icon(
                                 item.icon,
-                                size: 20,
+                                size: 23,
                                 color: selected ? AppColors.primary : null,
                               ),
                               title: Text(
                                 item.label,
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 15.5,
                                   fontWeight: selected
                                       ? FontWeight.w700
                                       : FontWeight.w400,
