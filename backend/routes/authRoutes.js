@@ -46,6 +46,7 @@ router.delete("/account/deletion", authLimiter, authController.cancelAccountDele
 router.put("/me",             validate(updateProfileSchema), authController.updateProfile);
 router.get("/agents",         authController.getAgents);
 router.get("/performance",    authorize("admin", "manager"), authController.getPerformance);
+router.get("/performance/leads", authorize("admin", "manager"), authController.getPerformanceLeads);
 
 // Team list is viewable by admin + manager; managers see it read-only
 // (create/edit/toggle/delete stay admin-only — same split the UI already

@@ -1,9 +1,10 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown, Phone } from "lucide-react";
+import { BarChart3, Target, Trophy, Users, RefreshCw, FolderKanban, Layers, FileDown, Phone, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 import api from "../services/api";
-import { PageLoader, AppSelect, AppDatePicker, RoleBadge } from "../components/UI";
+import { PageLoader, AppSelect, AppDatePicker, RoleBadge, Modal, StatusBadge } from "../components/UI";
+import LeadDetail from "../components/LeadDetail";
 import { useAuth } from "../context/AuthContext";
 import UpgradeWall from "../components/UpgradeWall";
 import { canAccess } from "../utils/plan";
@@ -20,6 +21,18 @@ export default function Performance() {
   const [filterMemberId,  setFilterMemberId]  = useState("");
   const [callAnalytics,   setCallAnalytics]   = useState(null);
   const dateFilterMounted = useRef(false);
+  // Drill-down: which tile was tapped, and the lead opened from that list.
+  const [drill, setDrill]           = useState(null); // { title, userId, pipeline, metric }
+  const [detailLead, setDetailLead] = useState(null);
+  const [drillDirty, setDrillDirty] = useState(false);
+  const [listVersion, setListVersion] = useState(0);
+  const openDrill = (title, { userId = "", pipeline = "", metric }) => setDrill({ title, userId, pipeline, metric });
+  const closeDrill = () => {
+    setDrill(null); setDetailLead(null);
+    // A lead edited from the list can move a tile (status changed), so
+    // re-pull the numbers instead of leaving them stale.
+    if (drillDirty) { setDrillDirty(false); fetchData(true); }
+  };
 
   const displayMembers = useMemo(
     () => filterMemberId ? members.filter((m) => m._id === filterMemberId) : members,
@@ -377,9 +390,12 @@ export default function Performance() {
 
       {/* Summary cards */}
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <MetricCard icon={Users}  label="Total Leads"  value={totals.totalAssigned} note="Pipeline + Project combined" />
-        <MetricCard icon={Target} label="Site Visits"  value={totals.siteVisits}    note="Visit-stage across all pipelines" />
-        <MetricCard icon={Trophy} label="Closed / Booked" value={totals.closedWon} note="Won in pipeline + Booked in projects" />
+        <MetricCard icon={Users}  label="Total Leads"  value={totals.totalAssigned} note="Pipeline + Project combined"
+          onClick={() => openDrill("Total Leads", { userId: filterMemberId, metric: "assigned" })} />
+        <MetricCard icon={Target} label="Site Visits"  value={totals.siteVisits}    note="Visit-stage across all pipelines"
+          onClick={() => openDrill("Site Visits", { userId: filterMemberId, metric: "siteVisit" })} />
+        <MetricCard icon={Trophy} label="Closed / Booked" value={totals.closedWon} note="Won in pipeline + Booked in projects"
+          onClick={() => openDrill("Closed / Booked", { userId: filterMemberId, metric: "won" })} />
       </section>
 
       {/* Call Analytics */}
@@ -483,10 +499,10 @@ export default function Performance() {
                   <span className="ml-auto text-xs text-app-soft">{pipeline.totalAssigned || 0} leads</span>
                 </div>
                 <div className="p-3 grid grid-cols-3 xs:grid-cols-5 sm:grid-cols-5 gap-2">
-                  <SmallTile label="Assigned"     value={pipeline.totalAssigned || 0} />
-                  <SmallTile label="New"           value={pipeline.newLeads      || 0} />
-                  <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} />
-                  <SmallTile label="Closed Won"    value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} />
+                  <SmallTile label="Assigned"     value={pipeline.totalAssigned || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Assigned`, { userId: member._id, pipeline: "main", metric: "assigned" })} />
+                  <SmallTile label="New"           value={pipeline.newLeads      || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · New`, { userId: member._id, pipeline: "main", metric: "new" })} />
+                  <SmallTile label="Site Visit"    value={pipeline.siteVisits    || 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Site Visit`, { userId: member._id, pipeline: "main", metric: "siteVisit" })} />
+                  <SmallTile label="Closed Won"    value={pipeline.closedWon     || 0} highlight={pipeline.closedWon > 0} onOpen={() => openDrill(`${member.name} · Main Pipeline · Closed Won`, { userId: member._id, pipeline: "main", metric: "closedWon" })} />
                   <SmallTile label="Avg Response"  value={pipeline.avgResponseTime || "-"} valueClass="text-blue-400" />
                 </div>
                 {hasPipeline && (
@@ -511,16 +527,17 @@ export default function Performance() {
                   <span className="ml-auto text-xs text-app-soft">{project.totalAssigned || 0} leads</span>
                 </div>
                 <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <SmallTile label="Assigned"     value={project.totalAssigned || 0} />
-                  <SmallTile label="Interested"   value={project.interested    || 0} />
+                  <SmallTile label="Assigned"     value={project.totalAssigned || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Assigned`, { userId: member._id, pipeline: "project", metric: "assigned" })} />
+                  <SmallTile label="Interested"   value={project.interested    || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Interested`, { userId: member._id, pipeline: "project", metric: "interested" })} />
                   <SmallTile label="Site Visit"   value={project.siteVisits    || 0}
-                    note={project.siteVisitDone > 0 ? `${project.siteVisitDone} done` : null} />
-                  <SmallTile label="Booked"       value={project.booked        || 0} highlight={project.booked > 0} />
+                    note={project.siteVisitDone > 0 ? `${project.siteVisitDone} done` : null}
+                    onOpen={() => openDrill(`${member.name} · Project Pipeline · Site Visit`, { userId: member._id, pipeline: "project", metric: "siteVisit" })} />
+                  <SmallTile label="Booked"       value={project.booked        || 0} highlight={project.booked > 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Booked`, { userId: member._id, pipeline: "project", metric: "booked" })} />
                 </div>
                 <div className="p-3 pt-0 grid grid-cols-3 gap-2">
-                  <SmallTile label="Call Back"      value={project.callBack      || 0} />
-                  <SmallTile label="Not Interested" value={project.notInterested || 0} />
-                  <SmallTile label="Not Reachable"  value={project.notReachable  || 0} />
+                  <SmallTile label="Call Back"      value={project.callBack      || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Call Back`, { userId: member._id, pipeline: "project", metric: "callBack" })} />
+                  <SmallTile label="Not Interested" value={project.notInterested || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Not Interested`, { userId: member._id, pipeline: "project", metric: "notInterested" })} />
+                  <SmallTile label="Not Reachable"  value={project.notReachable  || 0} onOpen={() => openDrill(`${member.name} · Project Pipeline · Not Reachable`, { userId: member._id, pipeline: "project", metric: "notReachable" })} />
                 </div>
                 {hasProject && (
                   <div className="px-3 pb-3">
@@ -540,6 +557,20 @@ export default function Performance() {
         })}
       </section>
 
+      <PerformanceLeadsModal
+        drill={drill} hidden={!!detailLead}
+        dateFrom={dateFrom} dateTo={dateTo}
+        onClose={closeDrill}
+        onOpenLead={setDetailLead}
+        version={listVersion}
+      />
+      <LeadDetail
+        open={!!detailLead}
+        onClose={() => { setDetailLead(null); if (drillDirty) setListVersion((v) => v + 1); }}
+        lead={detailLead}
+        onUpdated={(u) => { setDetailLead((cur) => ({ ...cur, ...u })); setDrillDirty(true); }}
+      />
+
       {!displayMembers.length && (
         <section className="card p-6 text-sm text-app-soft flex items-center gap-3">
           <BarChart3 className="h-4 w-4" /> {filterMemberId ? "No data for this agent." : "No performance data available yet."}
@@ -549,9 +580,11 @@ export default function Performance() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, note }) {
+function MetricCard({ icon: Icon, label, value, note, onClick }) {
+  const clickable = !!onClick && value > 0;
   return (
-    <div className="card p-5">
+    <div className={`card p-5 ${clickable ? "cursor-pointer transition hover:border-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60" : ""}`}
+      {...(clickable ? { role: "button", tabIndex: 0, onClick, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } } : {})}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="stitch-kicker mb-2">{label}</p>
@@ -566,15 +599,98 @@ function MetricCard({ icon: Icon, label, value, note }) {
   );
 }
 
-function SmallTile({ label, value, highlight = false, valueClass = "", note = null }) {
+function SmallTile({ label, value, highlight = false, valueClass = "", note = null, onOpen }) {
   const isNum = typeof value === "number";
+  const clickable = !!onOpen && isNum && value > 0;
   return (
-    <div className="rounded-xl p-3 stitch-surface-muted">
+    <div className={`rounded-xl p-3 stitch-surface-muted ${clickable ? "cursor-pointer transition hover:ring-1 hover:ring-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60" : ""}`}
+      {...(clickable ? { role: "button", tabIndex: 0, onClick: onOpen, "aria-label": `${label}: ${value}. View leads`, onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } } } : {})}>
       <p className="text-[10px] text-app-soft leading-none">{label}</p>
       <p className={`mt-1.5 text-base font-bold truncate ${valueClass || (highlight && value > 0 ? "text-green-500" : "text-app")}`}>
         {isNum ? value.toLocaleString("en-IN") : value}
       </p>
       {note && <p className="text-[9px] text-teal-500 font-semibold mt-0.5 leading-none">{note}</p>}
     </div>
+  );
+}
+
+const LIST_LIMIT = 25;
+
+function PerformanceLeadsModal({ drill, dateFrom, dateTo, onClose, onOpenLead, version, hidden }) {
+  const [rows, setRows]       = useState([]);
+  const [total, setTotal]     = useState(0);
+  const [pages, setPages]     = useState(1);
+  const [page, setPage]       = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState(false);
+  const key = drill ? `${drill.userId}|${drill.pipeline}|${drill.metric}` : "";
+
+  // A different tile means a different list, so start from page 1.
+  useEffect(() => { setPage(1); setRows([]); setTotal(0); }, [key]);
+
+  useEffect(() => {
+    if (!drill) return;
+    let cancelled = false;
+    setLoading(true); setError(false);
+    api.get("/auth/performance/leads", {
+      params: {
+        metric: drill.metric,
+        ...(drill.userId && { userId: drill.userId }),
+        ...(drill.pipeline && { pipeline: drill.pipeline }),
+        ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }),
+        page, limit: LIST_LIMIT,
+      },
+    }).then(({ data }) => {
+      if (cancelled) return;
+      setRows(data.leads || []); setTotal(data.total || 0); setPages(data.pages || 1);
+    }).catch(() => { if (!cancelled) setError(true); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [key, page, dateFrom, dateTo, version]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <Modal open={!!drill && !hidden} onClose={onClose} size="xl"
+      title={drill ? `${drill.title}${loading && !rows.length ? "" : ` (${total.toLocaleString("en-IN")})`}` : ""}>
+      {error ? (
+        <p className="py-10 text-center text-sm text-app-soft">Couldn't load these leads. Close and try again.</p>
+      ) : loading && !rows.length ? (
+        <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: "var(--app-surface-low)" }} />)}</div>
+      ) : !rows.length ? (
+        <div className="flex flex-col items-center py-12 text-center">
+          <Inbox className="h-10 w-10 text-app-soft opacity-40 mb-3" />
+          <p className="text-sm font-medium text-app">No leads here</p>
+          <p className="text-xs text-app-soft mt-1">Nothing matches this number for the selected dates.</p>
+        </div>
+      ) : (
+        <div className={`space-y-2 transition-opacity ${loading ? "opacity-60" : ""}`}>
+          {rows.map((lead) => {
+            const stage = lead._type === "project" ? lead.booking : lead.status;
+            return (
+              <button key={`${lead._type}-${lead._id}`} type="button" onClick={() => onOpenLead(lead)}
+                className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-left transition hover:ring-1 hover:ring-orange-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/60"
+                style={{ background: "var(--app-surface-low)" }}>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-app">{lead.name || "Unnamed lead"}</p>
+                  <p className="truncate text-xs text-app-soft">
+                    {[lead.phone, lead._type === "project" ? lead.projectName : lead.source, lead.assignedToName].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                {stage && <div className="shrink-0"><StatusBadge status={stage} /></div>}
+                <ChevronRight className="h-4 w-4 shrink-0 text-app-soft" />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {pages > 1 && (
+        <div className="mt-4 flex items-center justify-between text-xs text-app-soft">
+          <span>Page {page} of {pages}</span>
+          <div className="flex gap-2">
+            <button className="btn-secondary rounded-xl px-2.5 py-1.5 disabled:opacity-40" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)} aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></button>
+            <button className="btn-secondary rounded-xl px-2.5 py-1.5 disabled:opacity-40" disabled={page >= pages || loading} onClick={() => setPage((p) => p + 1)} aria-label="Next page"><ChevronRight className="h-4 w-4" /></button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

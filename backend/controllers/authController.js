@@ -355,6 +355,15 @@ const authController = {
     }
   },
 
+  async getPerformanceLeads(req, res, next) {
+    try {
+      const data = await authService.getPerformanceLeads(req.user, req.query);
+      res.json({ success: true, ...data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async forgotPassword(req, res, next) {
     try {
       const { email } = req.body;

@@ -15,6 +15,7 @@ import '../../widgets/glass.dart';
 import '../../widgets/initials_avatar.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/upgrade_wall.dart';
+import 'performance_leads_sheet.dart';
 
 /// Performance — GET /auth/performance (admin/manager). Leaderboard of
 /// team members with dual Main Pipeline / Project Pipeline breakdown.
@@ -581,14 +582,31 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
     }
   }
 
+  /// Opens the real leads behind a tile. Re-pulls the numbers on close if a
+  /// lead was edited, so the tiles never go stale.
+  void _drill(String title, String metric, {String userId = '', String pipeline = ''}) {
+    showPerformanceLeads(
+      context,
+      title: title,
+      metric: metric,
+      userId: userId,
+      pipeline: pipeline,
+      dateFrom: _dateFrom,
+      dateTo: _dateTo,
+      onChanged: () => _load(isRefresh: true),
+    );
+  }
+
   Widget _smallTile(
     String label,
     dynamic value, {
     bool highlight = false,
     String? note,
+    VoidCallback? onTap,
   }) {
     final isNum = value is num;
-    return SoftSurface(
+    final tappable = onTap != null && isNum && value > 0;
+    final tile = SoftSurface(
       radius: 10,
       padding: const EdgeInsets.all(8),
       boxShadow: const [],
@@ -625,6 +643,12 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
             ),
         ],
       ),
+    );
+    if (!tappable) return tile;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: tile,
     );
   }
 
@@ -807,6 +831,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                   value: '${_screenTotal('totalAssigned')}',
                   icon: Icons.people_alt_rounded,
                   color: AppColors.primary,
+                  onTap: _screenTotal('totalAssigned') > 0 ? () => _drill('Total Leads', 'assigned', userId: _filterMemberId) : null,
                 ),
               ),
               const SizedBox(width: 8),
@@ -816,6 +841,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                   value: '${_screenTotal('siteVisits')}',
                   icon: Icons.track_changes_rounded,
                   color: AppColors.info,
+                  onTap: _screenTotal('siteVisits') > 0 ? () => _drill('Site Visits', 'siteVisit', userId: _filterMemberId) : null,
                 ),
               ),
               const SizedBox(width: 8),
@@ -825,6 +851,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                   value: '${_screenTotal('closedWon')}',
                   icon: Icons.emoji_events_rounded,
                   color: AppColors.success,
+                  onTap: _screenTotal('closedWon') > 0 ? () => _drill('Closed / Booked', 'won', userId: _filterMemberId) : null,
                 ),
               ),
             ],
@@ -1133,13 +1160,17 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                       crossAxisSpacing: 6,
                       childAspectRatio: 1.7,
                       children: [
-                        _smallTile('Assigned', pipeline['totalAssigned'] ?? 0),
-                        _smallTile('New', pipeline['newLeads'] ?? 0),
-                        _smallTile('Site Visit', pipeline['siteVisits'] ?? 0),
+                        _smallTile('Assigned', pipeline['totalAssigned'] ?? 0,
+                            onTap: () => _drill('${m['name']} · Main Pipeline · Assigned', 'assigned', userId: '${m['_id']}', pipeline: 'main')),
+                        _smallTile('New', pipeline['newLeads'] ?? 0,
+                            onTap: () => _drill('${m['name']} · Main Pipeline · New', 'new', userId: '${m['_id']}', pipeline: 'main')),
+                        _smallTile('Site Visit', pipeline['siteVisits'] ?? 0,
+                            onTap: () => _drill('${m['name']} · Main Pipeline · Site Visit', 'siteVisit', userId: '${m['_id']}', pipeline: 'main')),
                         _smallTile(
                           'Closed Won',
                           pipeline['closedWon'] ?? 0,
                           highlight: true,
+                          onTap: () => _drill('${m['name']} · Main Pipeline · Closed Won', 'closedWon', userId: '${m['_id']}', pipeline: 'main'),
                         ),
                         _smallTile(
                           'Avg Response',
@@ -1217,14 +1248,17 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                             _smallTile(
                               'Assigned',
                               project['totalAssigned'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Assigned', 'assigned', userId: '${m['_id']}', pipeline: 'project'),
                             ),
                             _smallTile(
                               'Interested',
                               project['interested'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Interested', 'interested', userId: '${m['_id']}', pipeline: 'project'),
                             ),
                             _smallTile(
                               'Site Visit',
                               project['siteVisits'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Site Visit', 'siteVisit', userId: '${m['_id']}', pipeline: 'project'),
                               note:
                                   ((project['siteVisitDone'] as num?) ?? 0) > 0
                                   ? '${project['siteVisitDone']} done'
@@ -1234,6 +1268,7 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                               'Booked',
                               project['booked'] ?? 0,
                               highlight: true,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Booked', 'booked', userId: '${m['_id']}', pipeline: 'project'),
                             ),
                           ],
                         ),
@@ -1246,14 +1281,17 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                           crossAxisSpacing: 6,
                           childAspectRatio: 1.7,
                           children: [
-                            _smallTile('Call Back', project['callBack'] ?? 0),
+                            _smallTile('Call Back', project['callBack'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Call Back', 'callBack', userId: '${m['_id']}', pipeline: 'project')),
                             _smallTile(
                               'Not Interested',
                               project['notInterested'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Not Interested', 'notInterested', userId: '${m['_id']}', pipeline: 'project'),
                             ),
                             _smallTile(
                               'Not Reachable',
                               project['notReachable'] ?? 0,
+                              onTap: () => _drill('${m['name']} · Project Pipeline · Not Reachable', 'notReachable', userId: '${m['_id']}', pipeline: 'project'),
                             ),
                           ],
                         ),

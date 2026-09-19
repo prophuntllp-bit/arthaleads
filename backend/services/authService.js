@@ -664,4 +664,94 @@ const authService = {
   },
 };
 
+
+// ── Performance drill-down ──────────────────────────────────────────────────
+// Must stay in lock-step with getPerformance above: same team scoping, same
+// date rule, same per-tile match. Each tile's number is a count of exactly
+// the rows this returns, so tapping a tile never lists a different set.
+const PERF_METRICS = {
+  // metric -> { main: Lead filter | null, project: ProjectLead filter | null }
+  assigned:      { main: {},                              project: {} },
+  new:           { main: { status: "New" },               project: null },
+  siteVisit:     { main: { status: "Site Visit" },        project: { booking: { $in: ["Site Visit Booked", "Site Visit Done"] } } },
+  siteVisitDone: { main: null,                            project: { booking: "Site Visit Done" } },
+  closedWon:     { main: { status: "Closed Won" },        project: null },
+  booked:        { main: null,                            project: { booking: "Booked" } },
+  won:           { main: { status: "Closed Won" },        project: { booking: "Booked" } },
+  interested:    { main: null,                            project: { booking: "Interested" } },
+  callBack:      { main: null,                            project: { booking: "Call Back" } },
+  notInterested: { main: null,                            project: { booking: "Not Interested" } },
+  notReachable:  { main: null,                            project: { booking: "Not Reachable" } },
+};
+
+authService.getPerformanceLeads = async function (actor, { userId, pipeline, metric, dateFrom, dateTo, page = 1, limit = 25 } = {}) {
+  const def = PERF_METRICS[metric];
+  if (!def) throw new AppError("Unknown performance metric", 400);
+
+  const memberMatch = actor.role === "manager"
+    ? { orgId: actor.orgId, role: { $in: ["manager", "agent"] } }
+    : { orgId: actor.orgId, role: { $in: ["admin", "manager", "agent"] } };
+  const visible = await User.find(memberMatch).select("_id").lean();
+  let userIds = visible.map((u) => u._id);
+  if (userId) {
+    // A manager must not be able to peek at an admin's numbers by id.
+    userIds = userIds.filter((id) => String(id) === String(userId));
+    if (!userIds.length) throw new AppError("Team member not found", 404);
+  }
+
+  const dateFilter = {};
+  if (dateFrom) dateFilter.$gte = new Date(dateFrom);
+  if (dateTo)   { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); dateFilter.$lte = d; }
+  const dateMatch = Object.keys(dateFilter).length ? { createdAt: dateFilter } : {};
+
+  const pageInt  = Math.max(1, parseInt(page) || 1);
+  const limitInt = Math.min(100, Math.max(1, parseInt(limit) || 25));
+  const skip     = (pageInt - 1) * limitInt;
+  const cap      = Math.min(skip + limitInt, 2000);
+
+  const wantMain    = def.main    && pipeline !== "project";
+  const wantProject = def.project && pipeline !== "main";
+
+  let leads = [], leadTotal = 0, projLeads = [], projTotal = 0;
+
+  if (wantMain) {
+    const f = { orgId: actor.orgId, assignedTo: { $in: userIds }, isArchived: { $ne: true }, ...dateMatch, ...def.main };
+    [leads, leadTotal] = await Promise.all([
+      Lead.find(f).populate("assignedTo", "name").sort({ createdAt: -1 }).limit(cap).lean(),
+      Lead.countDocuments(f),
+    ]);
+  }
+
+  if (wantProject) {
+    const projs = await Project.find({ orgId: actor.orgId, assignedTo: { $in: userIds } }).select("_id").lean();
+    // A project with two assigned agents is counted once per agent in the tile
+    // totals; the list shows each lead once, so an "everyone" list can be
+    // shorter than the summed tile. Per-member tiles always match exactly.
+    const f = { orgId: actor.orgId, project: { $in: projs.map((p) => p._id) }, ...dateMatch, ...def.project };
+    [projLeads, projTotal] = await Promise.all([
+      ProjectLead.find(f)
+        .populate({ path: "project", select: "name assignedTo", populate: { path: "assignedTo", select: "name" } })
+        .sort({ createdAt: -1 }).limit(cap).lean(),
+      ProjectLead.countDocuments(f),
+    ]);
+  }
+
+  const rows = [
+    ...leads.map((l) => ({ ...l, _type: "lead", assignedToName: l.assignedTo?.name || "", assignedTo: l.assignedTo?._id || l.assignedTo })),
+    ...projLeads.map((pl) => ({
+      _id: pl._id, _type: "project",
+      projectId: pl.project?._id || pl.project,
+      projectName: pl.project?.name || "",
+      assignedToName: (pl.project?.assignedTo || []).map((u) => u.name).filter(Boolean).join(", "),
+      name: pl.name, phone: pl.phone, email: pl.email, source: pl.source, status: pl.status,
+      remark: pl.remark, remark1: pl.remark1, remark2: pl.remark2,
+      followUpDate: pl.followUp, followUp2: pl.followUp2, booking: pl.booking, notes: pl.notes,
+      createdAt: pl.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(skip, skip + limitInt);
+
+  const total = leadTotal + projTotal;
+  return { leads: rows, total, page: pageInt, pages: Math.ceil(total / limitInt) };
+};
+
 module.exports = authService;
