@@ -952,9 +952,11 @@ Who you are:
 - If something is genuinely outside what you know (a fact not in the project data, or a capability that's off), phrase it the way a busy team member would — "let me have the team confirm that" — never "I currently don't have the ability to...", which reads as a system limitation, not a person.
 
 How to talk — this matters as much as what you say:
-- MIRROR the customer's own language in every single reply, not just the first one. If their last message has Hindi/Hinglish words in it (e.g. "nahi", "chaiye", "kitna", "batao"), your reply must also be in that same Hinglish, not English. If they write in plain casual English, match that casual register instead. Re-check this for every reply — do not settle into English just because you started there.
-  Example: customer says "Nahi, 2bhk chaiye" -> you say "Theek hai! Abhi Everglades mein sirf 1BHK available hai, dekhna chahenge? 🙂" (NOT "Currently, we only have 1BHK apartments available...").
-  Example: customer says "ok what's the price" -> you say "Starts at ₹44L for the 1BHK 🙂 Want me to check site visit slots?"
+- The language of each reply is decided ONLY by the customer's latest message, never by your own earlier replies in this chat. If they switch language, you switch with them immediately, in either direction.
+  Plain English message -> reply in plain casual English. Example: customer says "Do you have 2BHK in this" -> you say "Right now this one has 1BHK only 🙂 Want me to check site visit slots?"
+  Hindi written in English letters (Hinglish: nahi, chaiye, kitna, batao, kya...) -> reply in Hinglish. Example: customer says "Nahi, 2bhk chaiye" -> you say "Abhi is project mein 1BHK hi hai 🙂 Site visit ka plan banayein?"
+  Marathi written in English letters (ahe, pahije, kay, mala...) -> reply in the same Marathi style. Devanagari script -> reply in Devanagari.
+  Never use Hindi or Marathi words with a customer who is writing plain English.
 - Add ONE emoji (🙂🏡📍👍) at the end of almost every reply that isn't purely a price/RERA/address fact — this is not optional flavor, it's the default. Only skip it on a strictly factual one-liner.
 - 1 to 2 short sentences per reply, texted the way a person types on their phone, never like a report or email. Never open with "Based on your..." or "I recommend."
 - Never use em dashes or en dashes (—, –) — use a comma, period, or "to" instead (e.g. "1 to 3 months", not "1–3 months").
@@ -1158,6 +1160,45 @@ async function handOffToHuman(org, conversation, { notify = false, reason = "" }
   else sendPushToAll(payload, org._id).catch(() => {});
 }
 
+// Which language the customer is actually writing in, from their latest
+// messages. The model was copying the language of its own earlier replies (and
+// of the examples in its prompt), so a customer writing English could get
+// Hinglish back. This is stated to the model as a hard per-turn instruction.
+const HINGLISH_WORDS = new Set(("nahi nahin haan hai hain hoga kya kyun kyu kaise kitna kitne kitni chahiye chahie chaiye chahiye " +
+  "mujhe mera meri mere hume humein aap aapka aapki aapko apna tum tumhara batao bataiye bataye dikhao dikhaiye bhejo bhejiye karo karna kar karein " +
+  "theek thik accha achha bahut bohot zyada abhi kab kahan kaha kaun lekin aur toh mein se ko ka ki ke wala wali").split(" "));
+const MARATHI_WORDS = new Set("ahe aahe ahet nahi pahije pahiye kay kuthe kiti mala tumhi tumchi tumcha aamhi amhi majha mazha kasa kase thike bagha dakhva sanga".split(" "));
+
+function detectCustomerLanguage(texts) {
+  const analyse = (t) => {
+    const raw = String(t || "");
+    if (/[\u0900-\u097F]/.test(raw)) return { lang: "devanagari", strong: true };
+    const words = raw.toLowerCase().replace(/[^a-z\u0900-\u097F\s]/g, " ").split(/\s+/).filter(Boolean);
+    const mr = words.filter((w) => MARATHI_WORDS.has(w) && !HINGLISH_WORDS.has(w)).length;
+    const hi = words.filter((w) => HINGLISH_WORDS.has(w)).length;
+    // "nahi", "hai", "to", "me" also occur in English ("to", "me"), so a lone match
+    // in a longer sentence isn't proof; two matches or a clear Hindi verb is.
+    if (mr >= 1 && mr >= hi) return { lang: "marathi", strong: true };
+    if (hi >= 2 || (hi >= 1 && words.length <= 3)) return { lang: "hinglish", strong: true };
+    if (words.length >= 3) return { lang: "english", strong: true };
+    return { lang: null, strong: false }; // "ok", "yes", "price?" — too short to say
+  };
+  for (const t of [...texts].reverse().slice(0, 4)) {
+    const r = analyse(t);
+    if (r.strong) return r.lang;
+  }
+  return "english";
+}
+
+function languageInstruction(lang) {
+  switch (lang) {
+    case "hinglish":   return "The customer is writing Hinglish (Hindi in English letters). Reply in Hinglish, casual and short.";
+    case "marathi":    return "The customer is writing Marathi (in English letters). Reply in the same Marathi style, casual and short.";
+    case "devanagari": return "The customer is writing in Devanagari script. Reply in the same language and script.";
+    default:           return "The customer is writing in plain English. Reply in plain casual English only. Do NOT use any Hindi or Marathi words, even if your earlier replies in this chat did.";
+  }
+}
+
 async function triggerBotReply(org, agent, conversation, inboundText) {
   // Template generation already refuses to run without a key and says so. This
   // path used to sail straight into a 401 from OpenAI and swallow it.
@@ -1200,6 +1241,10 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
         content: m.body,
       })),
       { role: "user", content: inboundText },
+      // Last, so it outweighs the language of earlier assistant turns.
+      { role: "system", content: `Language for this reply: ${languageInstruction(
+        detectCustomerLanguage([...recentMsgs.filter((m) => m.direction === "inbound").map((m) => m.body), inboundText])
+      )}` },
     ];
 
     const aiRes = await axios.post(
@@ -3007,5 +3052,7 @@ router.get("/unread", async (req, res) => {
 
 // Called by the scheduler every few minutes (utils/scheduler.js).
 router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
+
+router._detectCustomerLanguage = detectCustomerLanguage;
 
 module.exports = router;
