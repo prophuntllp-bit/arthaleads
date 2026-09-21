@@ -974,7 +974,7 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       // Informational — never a dead end, and never retires the menu: the
       // same message's other buttons (and this one) stay tappable after.
       if (action === "photos") {
-        push({ from: "bot", note: true, text: "🖼️ Sends up to 3 project photos and the project video, whatever is uploaded for this project." });
+        push({ from: "bot", note: true, text: "🖼️ Sends up to 3 project photos and all uploaded videos, whatever is uploaded for this project." });
       } else if (action === "docs") {
         push({ from: "bot", note: true, text: "📄 Sends the floor plan PDF and the brochure PDF, whatever is uploaded for this project." });
       } else if (action === "location") {

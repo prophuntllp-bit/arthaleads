@@ -34,6 +34,7 @@ class _ProjectMediaSendSheetState extends State<_ProjectMediaSendSheet> {
   String _projectId = '';
   final Set<String> _picked = {};
   bool _sending = false;
+  final _message = TextEditingController(text: 'Here you go 🙂 Would you like to see it in person? I can check site visit slots for you.');
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _ProjectMediaSendSheetState extends State<_ProjectMediaSendSheet> {
     final fp = (p['floorPlanUrl'] as String? ?? '').isNotEmpty;
     final br = (p['brochureUrl'] as String? ?? '').isNotEmpty;
     return [
-      (key: 'videos', icon: Icons.movie_outlined, label: 'Video', have: videos > 0, note: videos == 0 ? 'not uploaded' : videos > 1 ? 'first of $videos is sent' : '1 video'),
+      (key: 'videos', icon: Icons.movie_outlined, label: 'Video', have: videos > 0, note: videos == 0 ? 'not uploaded' : videos > 1 ? 'all $videos videos sent' : '1 video'),
       (key: 'floorplan', icon: Icons.architecture_rounded, label: 'Floor plan (PDF)', have: fp, note: fp ? 'PDF' : 'not uploaded'),
       (key: 'brochure', icon: Icons.picture_as_pdf_outlined, label: 'Brochure (PDF)', have: br, note: br ? 'PDF' : 'not uploaded'),
       (key: 'photos', icon: Icons.photo_outlined, label: 'Photos', have: photos > 0, note: photos == 0 ? 'not uploaded' : '${photos < 3 ? photos : 3} of $photos sent'),
@@ -86,6 +87,7 @@ class _ProjectMediaSendSheetState extends State<_ProjectMediaSendSheet> {
         'conversationId': widget.conversationId,
         'projectId': _projectId,
         'kinds': _picked.toList(),
+        'message': _message.text.trim(),
       });
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -96,6 +98,12 @@ class _ProjectMediaSendSheetState extends State<_ProjectMediaSendSheet> {
         );
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
   }
 
   @override
@@ -157,6 +165,14 @@ class _ProjectMediaSendSheetState extends State<_ProjectMediaSendSheet> {
               contentPadding: EdgeInsets.zero,
               dense: true,
             ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _message,
+            minLines: 2,
+            maxLines: 4,
+            maxLength: 1000,
+            decoration: const InputDecoration(labelText: 'Message after the files (optional)', hintText: 'Leave empty to send only the files'),
+          ),
           const SizedBox(height: 4),
           Text(
             'Each file goes as its own WhatsApp message and uses one reply from your monthly allowance. Only while the customer\'s 24-hour reply window is open.',

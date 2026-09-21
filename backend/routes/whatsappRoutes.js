@@ -1335,8 +1335,8 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
     for (const url of (project.images || []).filter((u) => /^https?:/.test(u)).slice(0, 3)) sends.push({ type: "image", url, caption: project.name });
   });
   want("videos", wantsVideos && allowed(agent?.shareVideos), () => {
-    const v = (project.videos || []).find((x) => x?.url);
-    if (v) sends.push({ type: "video", url: v.url, caption: project.name });
+    // Every uploaded video (a project holds at most 3).
+    for (const v of (project.videos || []).filter((x) => x?.url).slice(0, 3)) sends.push({ type: "video", url: v.url, caption: project.name });
   });
   want("brochure", wantsBrochure && allowed(agent?.shareBrochure), () => {
     if (project.brochureUrl) sends.push({ type: "document", url: project.brochureUrl, caption: `${project.name} brochure`, filename: `${project.name} Brochure.pdf` });
@@ -2887,7 +2887,29 @@ router.post("/send-media", async (req, res) => {
         missing,
       });
     }
-    res.json({ success: true, sent, missing });
+    // Optional follow-up line, sent after the files so the chat keeps moving.
+    let messageSent = false;
+    const text = String(req.body?.message || "").trim().slice(0, 1000);
+    if (text) {
+      try {
+        const q = await credits.quote(req.orgId, "service", 1);
+        const held = await credits.reserve(req.orgId, { category: "service", count: 1 });
+        let msgId;
+        try { msgId = await sendProviderMessage(org, conv.contactPhone, text); }
+        catch (err) { await credits.release(req.orgId, held); throw err; }
+        await WaMessage.create({
+          orgId: req.orgId, conversationId: conv._id, waMsgId: msgId || undefined,
+          direction: "outbound", sender: "agent", senderName: req.user.name,
+          body: text, status: "sent", timestamp: new Date(),
+          reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
+        });
+        await WaConversation.findByIdAndUpdate(conv._id, { lastMessageAt: new Date(), lastMessagePreview: text.slice(0, 80) });
+        messageSent = true;
+      } catch (err) {
+        console.error("[WhatsApp] follow-up message after files failed:", err?.response?.data || err.message);
+      }
+    }
+    res.json({ success: true, sent, missing, messageSent });
   } catch (err) {
     res.status(500).json({ message: err?.response?.data?.error?.message || err.message });
   }

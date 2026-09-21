@@ -8,20 +8,23 @@ import CustomSelect from "./CustomSelect";
 /**
  * Send a project's photos, video, floor plan or brochure into a conversation by
  * hand. Same rules as a typed reply: only inside WhatsApp's 24-hour window, and
- * each file is one message (photos are capped at 3, the first video is sent).
+ * each file is one message (photos are capped at 3, every uploaded video is sent).
  * Upload the files on the Projects page first.
  */
+const DEFAULT_MESSAGE = "Here you go 🙂 Would you like to see it in person? I can check site visit slots for you.";
+
 export default function ProjectMediaSendModal({ open, onClose, conversation, onSent }) {
   const [projects, setProjects] = useState(null);
   const [error, setError]       = useState("");
   const [projectId, setProjectId] = useState("");
   const [picked, setPicked]     = useState({});
   const [sending, setSending]   = useState(false);
+  const [message, setMessage]   = useState(DEFAULT_MESSAGE);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setProjects(null); setError(""); setPicked({});
+    setProjects(null); setError(""); setPicked({}); setMessage(DEFAULT_MESSAGE);
     api.get("/projects")
       .then(({ data }) => {
         if (cancelled) return;
@@ -40,7 +43,7 @@ export default function ProjectMediaSendModal({ open, onClose, conversation, onS
     const photos = (project.images || []).filter((u) => /^https?:/.test(u)).length;
     const videos = (project.videos || []).length;
     return [
-      { key: "videos",    icon: Film,           label: "Video",      have: videos > 0,           note: videos ? (videos > 1 ? `first of ${videos} is sent` : "1 video") : "not uploaded" },
+      { key: "videos",    icon: Film,           label: "Video",      have: videos > 0,           note: videos ? (videos > 1 ? `all ${videos} videos sent` : "1 video") : "not uploaded" },
       { key: "floorplan", icon: LayoutTemplate, label: "Floor plan (PDF)", have: !!project.floorPlanUrl, note: project.floorPlanUrl ? "PDF" : "not uploaded" },
       { key: "brochure",  icon: FileText,       label: "Brochure (PDF)",   have: !!project.brochureUrl,  note: project.brochureUrl ? "PDF" : "not uploaded" },
       { key: "photos",    icon: ImageIcon,      label: "Photos",     have: photos > 0,           note: photos ? `${Math.min(photos, 3)} of ${photos} sent` : "not uploaded" },
@@ -56,7 +59,7 @@ export default function ProjectMediaSendModal({ open, onClose, conversation, onS
     if (!kinds.length || sending) return;
     setSending(true);
     try {
-      const { data } = await api.post("/whatsapp/send-media", { conversationId: conversation._id, projectId, kinds });
+      const { data } = await api.post("/whatsapp/send-media", { conversationId: conversation._id, projectId, kinds, message });
       toast.success(`Sent ${data.sent.length} ${data.sent.length === 1 ? "type of file" : "types of files"}`);
       onSent?.();
       onClose();
@@ -97,6 +100,12 @@ export default function ProjectMediaSendModal({ open, onClose, conversation, onS
                 <span className="text-xs text-app-soft">{it.note}</span>
               </label>
             ))}
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-app-soft block mb-1">Message after the files (optional)</label>
+            <textarea className="textarea w-full" rows={2} maxLength={1000} value={message} onChange={(e) => setMessage(e.target.value)}
+              placeholder="Leave empty to send only the files" />
           </div>
 
           <p className="text-[11px] text-app-soft">

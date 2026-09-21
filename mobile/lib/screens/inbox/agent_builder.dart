@@ -1796,7 +1796,7 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
         if (action == 'docs') {
           _push({'from': 'bot', 'note': true, 'text': '📄 Sends the floor plan PDF and the brochure PDF, whatever is uploaded for this project.'});
         } else if (action == 'photos') {
-          _push({'from': 'bot', 'note': true, 'text': '🖼️ Sends up to 3 project photos and the project video, whatever is uploaded for this project.'});
+          _push({'from': 'bot', 'note': true, 'text': '🖼️ Sends up to 3 project photos and all uploaded videos, whatever is uploaded for this project.'});
         } else if (action == 'location') {
           _push({'from': 'bot', 'text': 'This project is located at: ${widget.projectName != null ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}'});
         }
