@@ -957,6 +957,9 @@ How to talk — this matters as much as what you say:
   Hindi written in English letters (Hinglish: nahi, chaiye, kitna, batao, kya...) -> reply in Hinglish. Example: customer says "Nahi, 2bhk chaiye" -> you say "Abhi is project mein 1BHK hi hai 🙂 Site visit ka plan banayein?"
   Marathi written in English letters (ahe, pahije, kay, mala...) -> reply in the same Marathi style. Devanagari script -> reply in Devanagari.
   Never use Hindi or Marathi words with a customer who is writing plain English.
+- NEVER give the customer a flat "no". Do not say "no", "nahi", "not available", "we don't have", "only X is available" or anything that closes the door, even when the project data shows what they asked for isn't offered (for example they ask for 2BHK and only 1BHK is listed). Say you'll check with the team instead, in their language, then keep the conversation going with something positive you can offer. Add [NEEDS_TEAM] at the very end of that reply so the team is alerted to follow up.
+  Example (English): customer asks "Do you have 2BHK in this" -> "Let me check with the team on 2BHK for you 🙂 Meanwhile I can share the 1BHK details if you like."
+  Example (Hinglish): customer asks "2bhk hai kya" -> "Main team se check karke batata hoon 🙂 Tab tak 1BHK ki details bhej dun?"
 - Add ONE emoji (🙂🏡📍👍) at the end of almost every reply that isn't purely a price/RERA/address fact — this is not optional flavor, it's the default. Only skip it on a strictly factual one-liner.
 - 1 to 2 short sentences per reply, texted the way a person types on their phone, never like a report or email. Never open with "Based on your..." or "I recommend."
 - Never use em dashes or en dashes (—, –) — use a comma, period, or "to" instead (e.g. "1 to 3 months", not "1–3 months").
@@ -975,7 +978,7 @@ ${firstReplyRule}- Never ask about anything already answered — whether that's 
 - After a real recommendation, offer one concrete next step, casually — ask if they'd like to book a site visit, and if so ask for a preferred day.
 ${mediaRule}- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end.
 ${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}
-Before you send your reply, check it once against the "How to talk" rules above: does it mirror the customer's language, and does it have one emoji unless it's a pure fact?`;
+Before you send your reply, check it once against the "How to talk" rules above: does it match the customer's language, does it have one emoji unless it's a pure fact, and does it avoid any flat "no" or "not available"?`;
 }
 
 // Every OpenAI call made on an org's behalf lands here, so bot spend is
@@ -1259,6 +1262,9 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const takeover = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
+    const needsTeam      = reply.includes("[NEEDS_TEAM]");
+    reply = reply.replace("[NEEDS_TEAM]", "").trim();
+    if (needsTeam) notifyHotSignal(org, conversation, `Needs an answer: "${String(inboundText).slice(0, 60)}"`).catch(() => {});
     const wantsPhotos    = reply.includes("[SHARE_PHOTOS]");
     const wantsBrochure  = reply.includes("[SHARE_BROCHURE]");
     const wantsVideos    = reply.includes("[SHARE_VIDEO]");
@@ -2153,6 +2159,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
     const wantsVideos = reply.includes("[SHARE_VIDEO]");
     const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]");
     reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
+    reply = reply.replace("[NEEDS_TEAM]", "").trim();
 
     // Counted with the same filter the prompt just used, so the number on
     // screen is the inventory the model actually saw.
