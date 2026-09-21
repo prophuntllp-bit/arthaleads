@@ -435,7 +435,7 @@ const HOW_STEPS = [
     label: "Call & Follow Up",
     color: "#22c55e",
     title: "Call, Remark & Follow Up",
-    desc: "Agents log call outcomes, schedule follow-ups, and set booking status. Managers see live progress dashboards at every stage.",
+    desc: "Agents log call outcomes, schedule follow-ups, and set the lead outcome. Managers see live progress dashboards at every stage.",
     highlight: "Never miss a follow-up again",
   },
   {

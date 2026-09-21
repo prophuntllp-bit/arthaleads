@@ -301,6 +301,15 @@ cron.schedule("30 23 * * *", () => {
 
 module.exports = { runDailyReminder, runUpcomingReminder, runTaskReminder, runBackup, refreshFacebookTokens };
 
+// ── Every 5 minutes: follow-up nudges for people who stopped mid-way through
+// an agent's button flow (only agents that enabled it). Required lazily so the
+// WhatsApp routes module is not pulled in when the scheduler loads.
+cron.schedule("*/5 * * * *", () => {
+  require("../routes/whatsappRoutes").runFlowNudges()
+    .then(({ sent }) => { if (sent) logger.info(`[wa-nudges] sent ${sent} follow-up nudge(s)`); })
+    .catch((err) => logger.error(`[wa-nudges] cron failed: ${err.message}`));
+});
+
 // ── Every 30 minutes: warn orgs whose WhatsApp credits are running low ───────
 // Half-hourly rather than daily because credits drain in minutes during a
 // campaign, and the whole point is to catch it before replies start failing.

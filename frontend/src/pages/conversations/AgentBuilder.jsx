@@ -88,6 +88,8 @@ const DEFAULT_CTWA_FLOW = {
     { id: "s2", label: "Evening" },
   ],
   closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
+  nudgesEnabled: false,
+  nudgeText: "",
   testPhones: [],
 };
 
@@ -697,6 +699,30 @@ export default function AgentBuilder() {
                 value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
               <p className="text-[11px] text-app-soft mt-1">Sent after Photos &amp; Videos, Floor Plan &amp; Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.</p>
             </div>
+
+            <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
+              <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+                <input type="checkbox" className="mt-0.5 shrink-0"
+                  checked={form.ctwaFlow.nudgesEnabled === true} onChange={(e) => setFlow({ nudgesEnabled: e.target.checked })} />
+                <span>
+                  <span className="text-app font-semibold block">Follow up if they go quiet</span>
+                  <span className="text-xs text-app-soft">
+                    If someone stops answering mid-flow, send one gentle reminder after about 15 minutes and one last
+                    reminder shortly before the 24-hour reply window closes, each with the question and its buttons again.
+                    Business hours only, never more than two, and they stop as soon as the customer writes back.
+                  </span>
+                </span>
+              </label>
+              {form.ctwaFlow.nudgesEnabled === true && (
+                <div>
+                  <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
+                  <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
+                    value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
+                </div>
+              )}
+            </div>
+
+            {!isNew && form.ctwaFlow.enabled && <FlowFunnel agentId={id} />}
             <p className="text-[11px] text-app-soft text-center">
               Preview of this flow is alongside "Try it" →
             </p>
@@ -1250,6 +1276,70 @@ function MenuOptionEditor({ rows, onChange }) {
       {rows.length > 0 && (
         <DraggableChips rows={rows} onChange={onChange}
           renderLabel={(r) => <>{r.label} <span className="text-app-soft font-normal">→ {MENU_ACTIONS.find((a) => a.value === r.action)?.label}</span></>} />
+      )}
+    </div>
+  );
+}
+
+
+// Where people drop off in this agent's button flow (last 30 days).
+function FlowFunnel({ agentId }) {
+  const [data, setData] = useState(null);
+  const [days, setDays] = useState(30);
+  useEffect(() => {
+    let cancelled = false;
+    setData(null);
+    api.get(`/whatsapp/agents/${agentId}/funnel`, { params: { days } })
+      .then((r) => { if (!cancelled) setData(r.data); })
+      .catch(() => { if (!cancelled) setData({ error: true }); });
+    return () => { cancelled = true; };
+  }, [agentId, days]);
+
+  return (
+    <div className="space-y-3 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-app">Flow drop-off</p>
+          <p className="text-xs text-app-soft">How many people reached each step, and how it ended.</p>
+        </div>
+        <div className="flex gap-1">
+          {[7, 30, 90].map((d) => (
+            <button key={d} type="button" onClick={() => setDays(d)}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition ${days === d ? "bg-orange-500 text-white border-orange-500" : "text-app-soft"}`}
+              style={days === d ? undefined : { borderColor: "var(--app-border)" }}>{d}d</button>
+          ))}
+        </div>
+      </div>
+      {!data ? (
+        <div className="h-16 rounded-xl animate-pulse" style={{ background: "var(--app-surface-low)" }} />
+      ) : data.error ? (
+        <p className="text-xs text-app-soft">Couldn't load the funnel.</p>
+      ) : data.started === 0 ? (
+        <p className="text-xs text-app-soft">No conversations have gone through this flow in the last {days} days yet.</p>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            {[{ id: "_start", label: "Started the flow", reached: data.started }, ...data.steps].map((st) => (
+              <div key={st.id} className="flex items-center gap-2 text-xs">
+                <span className="w-40 shrink-0 truncate text-app-soft" title={st.label}>{st.label}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "var(--app-border)" }}>
+                  <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400"
+                    style={{ width: `${Math.round((st.reached / data.started) * 100)}%` }} />
+                </div>
+                <span className="w-16 shrink-0 text-right font-semibold text-app">
+                  {st.reached} <span className="font-normal text-app-soft">({Math.round((st.reached / data.started) * 100)}%)</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1 text-xs">
+            <span className="rounded-full px-2.5 py-1 font-semibold bg-green-500/10 text-green-600">{data.outcomes.siteVisit} booked a site visit</span>
+            <span className="rounded-full px-2.5 py-1 font-semibold bg-blue-500/10 text-blue-600">{data.outcomes.advisor} asked for an advisor</span>
+            <span className="rounded-full px-2.5 py-1 font-semibold bg-gray-500/10 text-app-soft">{data.outcomes.exited} typed instead of tapping</span>
+            <span className="rounded-full px-2.5 py-1 font-semibold bg-orange-500/10 text-orange-600">{data.outcomes.open} still open or went quiet</span>
+          </div>
+          <p className="text-[11px] text-app-soft">Steps a customer skipped because their form already answered them aren't counted, so those rows can read lower.</p>
+        </>
       )}
     </div>
   );

@@ -107,6 +107,10 @@ const waAgentSchema = new mongoose.Schema(
       siteVisitPrompt: { type: String, default: "Which time works best for your visit?" },
       siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
       closingPrompt:   { type: String, default: "Would you like to talk to our advisor, or book a site visit?" },
+      // Gentle follow-ups for someone who stops mid-flow: one after ~15 minutes
+      // and one shortly before the 24h reply window closes. Off unless enabled.
+      nudgesEnabled:   { type: Boolean, default: false },
+      nudgeText:       { type: String, default: "" },
       // Temporary testing gate: when non-empty, the flow only starts for a
       // conversation whose contact phone is in this list — regardless of
       // adIds/campaignRef — so the team can verify it live on themselves

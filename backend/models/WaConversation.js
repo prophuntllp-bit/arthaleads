@@ -47,6 +47,24 @@ const waConversationSchema = new mongoose.Schema({
   // services/ctwaFlowService.js). undefined — not "purpose" — for every
   // conversation not currently in a flow, same convention as campaignRef
   // above: "field absent" means "doesn't apply", not "at the first step".
+  // Follow-up nudges the button flow has sent since the customer last wrote
+  // (reset to 0 on every inbound message) — capped at 2. See ctwaFlowService.runNudges.
+  nudgeCount: { type: Number, default: 0 },
+  lastNudgeAt: { type: Date, default: null },
+  // Last "hot lead" alert pushed for this thread; debounces repeat alerts.
+  hotAlertedAt: { type: Date, default: null },
+  // Kept after the flow ends (flowState is cleared), so drop-off can be
+  // measured: every step the customer reached and how the flow ended.
+  flowFunnel: {
+    type: {
+      startedAt:    { type: Date },
+      stepsReached: [String],
+      lastStep:     { type: String },
+      outcome:      { type: String }, // "advisor" | "site_visit" | "exited"
+      outcomeAt:    { type: Date },
+    },
+    default: undefined,
+  },
   flowState: {
     type: {
       // Not an enum: a qualifying step is identified by its own

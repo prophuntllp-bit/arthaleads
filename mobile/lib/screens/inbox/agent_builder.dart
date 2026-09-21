@@ -139,6 +139,8 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
         {'id': 's2', 'label': 'Evening'},
       ],
       'closingPrompt': 'Would you like to talk to our advisor, or book a site visit?',
+      'nudgesEnabled': false,
+      'nudgeText': '',
       'testPhones': [],
     }));
 
@@ -220,6 +222,10 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   final _menuPromptCtrl = TextEditingController();
   final _siteVisitPromptCtrl = TextEditingController();
   final _closingPromptCtrl = TextEditingController();
+  final _nudgeTextCtrl = TextEditingController();
+  Map<String, dynamic>? _funnel;
+  bool _funnelError = false;
+  int _funnelDays = 30;
   final _testPhoneCtrl = TextEditingController();
 
   // Try-it console
@@ -237,12 +243,97 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
     _load();
   }
 
+  Future<void> _loadFunnel() async {
+    if (_isNew) return;
+    setState(() { _funnel = null; _funnelError = false; });
+    try {
+      final res = await _api.dio.get('/whatsapp/agents/${widget.agentId}/funnel', queryParameters: {'days': _funnelDays});
+      if (mounted) setState(() => _funnel = (res.data as Map).cast<String, dynamic>());
+    } catch (_) {
+      if (mounted) setState(() => _funnelError = true);
+    }
+  }
+
+  Widget _funnelCard() {
+    final t = AppTheme.of(context);
+    final f = _funnel;
+    final started = (f?['started'] as num?)?.toInt() ?? 0;
+    Widget body;
+    if (_funnelError) {
+      body = Text("Couldn't load the funnel.", style: TextStyle(fontSize: 12, color: t.textSoft));
+    } else if (f == null) {
+      body = const Padding(padding: EdgeInsets.all(8), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))));
+    } else if (started == 0) {
+      body = Text('No conversations have gone through this flow in the last $_funnelDays days yet.', style: TextStyle(fontSize: 12, color: t.textSoft));
+    } else {
+      final steps = [
+        {'label': 'Started the flow', 'reached': started},
+        ...((f['steps'] as List).cast<Map<String, dynamic>>()),
+      ];
+      final o = (f['outcomes'] as Map).cast<String, dynamic>();
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final st in steps)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  SizedBox(width: 110, child: Text('${st['label']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11.5, color: t.textSoft))),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: ((st['reached'] as num) / started).clamp(0, 1).toDouble(),
+                        minHeight: 8,
+                        color: AppColors.primary,
+                        backgroundColor: t.border,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 70, child: Text('${st['reached']} (${((st['reached'] as num) / started * 100).round()}%)', textAlign: TextAlign.right, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700))),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            '${o['siteVisit']} booked a site visit · ${o['advisor']} asked for an advisor · ${o['exited']} typed instead of tapping · ${o['open']} still open or went quiet',
+            style: TextStyle(fontSize: 11.5, height: 1.4, color: t.textSoft),
+          ),
+          const SizedBox(height: 4),
+          Text("Steps a customer skipped because their form already answered them aren't counted.", style: TextStyle(fontSize: 10.5, color: t.textSoft)),
+        ],
+      );
+    }
+    return _bordered(
+      children: [
+        Row(
+          children: [
+            const Expanded(child: Text('Flow drop-off', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800))),
+            for (final d in [7, 30, 90])
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: ChoiceChip(
+                  label: Text('${d}d', style: const TextStyle(fontSize: 11)),
+                  selected: _funnelDays == d,
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (_) { _funnelDays = d; _loadFunnel(); },
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        body,
+      ],
+    );
+  }
+
   @override
   void dispose() {
     for (final c in [
       _nameCtrl, _descCtrl, _greetingCtrl, _businessContextCtrl, _groundRulesCtrl,
       _systemPromptCtrl, _adIdCtrl, _welcomeCtrl, _menuPromptCtrl, _siteVisitPromptCtrl,
-      _closingPromptCtrl, _testPhoneCtrl, _tryCtrl,
+      _closingPromptCtrl, _nudgeTextCtrl, _testPhoneCtrl, _tryCtrl,
     ]) {
       c.dispose();
     }
@@ -255,6 +346,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
     _menuPromptCtrl.text = _flow['menuPrompt'] as String? ?? '';
     _siteVisitPromptCtrl.text = _flow['siteVisitPrompt'] as String? ?? '';
     _closingPromptCtrl.text = _flow['closingPrompt'] as String? ?? '';
+    _nudgeTextCtrl.text = _flow['nudgeText'] as String? ?? '';
   }
 
   List<Map<String, dynamic>> get _questions => (_flow['qualifyingQuestions'] as List).cast<Map<String, dynamic>>();
@@ -315,6 +407,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
       }
     }
     if (mounted) setState(() => _loading = false);
+    _loadFunnel();
   }
 
   Map<String, dynamic> _buildForm() {
@@ -322,7 +415,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
       ..['welcomeText'] = _welcomeCtrl.text.trim()
       ..['menuPrompt'] = _menuPromptCtrl.text.trim()
       ..['siteVisitPrompt'] = _siteVisitPromptCtrl.text.trim()
-      ..['closingPrompt'] = _closingPromptCtrl.text.trim();
+      ..['closingPrompt'] = _closingPromptCtrl.text.trim()
+      ..['nudgeText'] = _nudgeTextCtrl.text.trim();
     return {
       'name': _nameCtrl.text.trim(),
       'description': _descCtrl.text.trim(),
@@ -867,6 +961,30 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           help: 'Sent after Photos & Videos, Floor Plan & Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.',
           onChanged: (_) => setState(() {}),
         ),
+        const SizedBox(height: 14),
+        _bordered(
+          children: [
+            WaCheckRow(
+              value: _flow['nudgesEnabled'] == true,
+              onChanged: (v) => setState(() => _flow['nudgesEnabled'] = v),
+              title: 'Follow up if they go quiet',
+              subtitle: 'If someone stops answering mid-flow, send one gentle reminder after about 15 minutes and one last reminder shortly before the 24-hour reply window closes, each with the question and its buttons again. Business hours only, never more than two, and they stop as soon as the customer writes back.',
+            ),
+            if (_flow['nudgesEnabled'] == true) ...[
+              const SizedBox(height: 8),
+              WaField(
+                label: 'First reminder wording',
+                controller: _nudgeTextCtrl,
+                hint: 'Just checking in 🙂',
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ],
+        ),
+        if (!_isNew && _ctwaEnabled) ...[
+          const SizedBox(height: 14),
+          _funnelCard(),
+        ],
         Center(
           child: Text('Preview of this flow is at the bottom of the page ↓',
               style: TextStyle(fontSize: 11, color: t.textSoft)),

@@ -552,10 +552,36 @@ async function findLiveLeadByPhone(orgId, phone) {
 // Instantiated once at module load — sendQualifiedMedia, handOffToHuman and
 // autoAssignConversation are function declarations further down this file,
 // hoisted, so this is safe here regardless of source order.
+// A customer asking for something only a person can really deliver (floor plan,
+// video, 3D tour, a visit) is a buying signal worth a push right away, not at
+// the end of the flow. "Price" is deliberately not here: the ad's own opening
+// message asks for it, so every lead would be "hot".
+const HOT_SIGNAL_RE = /\b(floor\s?plan|3\s?d|virtual|walk\s?through|video|sample\s?flat|site\s?visit|visit|call\s?me|book(ing)?)\b/i;
+async function notifyHotSignal(org, conv, reason) {
+  try {
+    const fresh = await WaConversation.findById(conv._id).select("hotAlertedAt assignedTo contactName contactPhone").lean();
+    if (!fresh) return;
+    // At most one alert per thread every 6 hours.
+    if (fresh.hotAlertedAt && Date.now() - new Date(fresh.hotAlertedAt).getTime() < 6 * 60 * 60 * 1000) return;
+    await WaConversation.updateOne({ _id: conv._id }, { $set: { hotAlertedAt: new Date() } });
+    const payload = {
+      type: "hot_lead",
+      title: `🔥 ${fresh.contactName || fresh.contactPhone} is interested`,
+      body: `${reason} on WhatsApp`,
+      data: { url: "/conversations" },
+    };
+    if (fresh.assignedTo) return void sendPushToUser(fresh.assignedTo, payload).catch(() => {});
+    const recipients = org.whatsapp?.notifyOn?.newConversation || [];
+    if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
+    else sendPushToAll(payload, org._id).catch(() => {});
+  } catch (err) { console.error("[WhatsApp Bot] hot signal failed:", err.message); }
+}
+
 const ctwaFlow = createCtwaFlowService({
   WaConversation, Lead, Project,
   sendInteractive, sendProviderMessage, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
   credits, WaMessage,
+  Organization, WaAgent, isWithinBusinessHours, notifyHotSignal,
 });
 
 async function handleInbound(org, parsed) {
@@ -629,8 +655,17 @@ async function handleInbound(org, parsed) {
   await WaConversation.findByIdAndUpdate(conv._id, {
     lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
     contactName: conv.contactName || name,
+    // Any reply from the customer ends the current silence, so follow-up
+    // nudges can start fresh next time they go quiet.
+    nudgeCount: 0,
     $inc: { unreadCount: 1 },
   });
+
+  // Free-typed asks for a floor plan / video / visit (not button taps, and
+  // not the ad's own opening message) ping the team immediately.
+  if (!isNewConversation && !interactiveId && msgType === "text" && HOT_SIGNAL_RE.test(msgText)) {
+    notifyHotSignal(org, conv, `Asked: "${msgText.slice(0, 60)}"`).catch(() => {});
+  }
 
   if (conv.botEnabled) {
     await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation });
@@ -1756,6 +1791,8 @@ function sanitizeCtwaFlow(input) {
     menuPrompt:      String(input.menuPrompt || "").trim().slice(0, 300),
     siteVisitPrompt: String(input.siteVisitPrompt || "").trim().slice(0, 300),
     closingPrompt:   String(input.closingPrompt || "").trim().slice(0, 300),
+    nudgesEnabled:   input.nudgesEnabled === true,
+    nudgeText:       String(input.nudgeText || "").trim().slice(0, 200),
   };
 
   // 1-5 tenant-authored qualifying questions — each with its own options and
@@ -1869,6 +1906,46 @@ router.get("/agents", async (req, res) => {
       .populate("projectIds", "name")
       .sort({ isDefault: -1, createdAt: 1 });
     res.json({ agents: await withReadiness(req.orgId, agents) });
+  } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+// Where people drop off in an agent's button flow: how many reached each step
+// and how the flow ended. Counts conversations that started the flow in the
+// last N days (default 30). Steps come back in flow order.
+router.get("/agents/:id/funnel", async (req, res) => {
+  try {
+    const agent = await WaAgent.findOne({ _id: req.params.id, orgId: req.orgId }).lean();
+    if (!agent) return res.status(404).json({ message: "That assistant no longer exists." });
+    const days = Math.min(365, Math.max(1, parseInt(req.query.days) || 30));
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const convs = await WaConversation.find({
+      orgId: req.orgId, agentId: agent._id, "flowFunnel.startedAt": { $gte: since },
+    }).select("flowFunnel").lean();
+
+    const flow = agent.ctwaFlow || {};
+    const qs = (flow.qualifyingQuestions?.length ? flow.qualifyingQuestions : [
+      flow.purposeOptions?.length && { id: "purpose", questionText: "Purpose" },
+      flow.budgetBrackets?.length && { id: "budget", questionText: "Budget" },
+      flow.timelineOptions?.length && { id: "timeline", questionText: "Timeline" },
+    ].filter(Boolean));
+    const order = [
+      ...qs.map((q) => ({ id: q.id, label: String(q.questionText || q.id).slice(0, 60) })),
+      { id: "menu", label: "Saw the menu" },
+      { id: "site_visit", label: "Saw site-visit times" },
+    ];
+    const count = (id) => convs.filter((c) => (c.flowFunnel?.stepsReached || []).includes(id)).length;
+    const outcome = (o) => convs.filter((c) => c.flowFunnel?.outcome === o).length;
+    res.json({
+      days,
+      started: convs.length,
+      steps: order.map((o) => ({ ...o, reached: count(o.id) })),
+      outcomes: {
+        advisor: outcome("advisor"),
+        siteVisit: outcome("site_visit"),
+        exited: outcome("exited"),
+        open: convs.filter((c) => !c.flowFunnel?.outcome).length,
+      },
+    });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
@@ -2858,5 +2935,8 @@ router.get("/unread", async (req, res) => {
     res.json({ unread: 0 });
   }
 });
+
+// Called by the scheduler every few minutes (utils/scheduler.js).
+router.runFlowNudges = (now) => ctwaFlow.runNudges(now);
 
 module.exports = router;

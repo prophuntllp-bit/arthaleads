@@ -32,7 +32,18 @@ module.exports = function createCtwaFlowService({
   sendInteractive, sendProviderMessage, sendQualifiedMedia, handOffToHuman, autoAssignConversation,
   credits,
   WaMessage,
+  Organization, WaAgent, isWithinBusinessHours, notifyHotSignal,
 }) {
+  // Funnel tracking: which steps a customer reached and how the flow ended.
+  // Survives the flow itself (flowState is cleared at the end), so drop-off is
+  // measurable per step instead of being read off chats by hand.
+  const funnelStep = (id, step) => WaConversation.updateOne(
+    { _id: id }, { $addToSet: { "flowFunnel.stepsReached": step }, $set: { "flowFunnel.lastStep": step } }
+  ).catch(() => {});
+  const funnelOutcome = (id, outcome) => WaConversation.updateOne(
+    { _id: id, "flowFunnel.outcome": { $exists: false } }, { $set: { "flowFunnel.outcome": outcome, "flowFunnel.outcomeAt": new Date() } }
+  ).catch(() => {});
+
   const fill = (text, vars) =>
     String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 
@@ -244,6 +255,7 @@ module.exports = function createCtwaFlowService({
     } else {
       await autoAssignConversation(org, conversation);
     }
+    await funnelOutcome(conversation._id, "advisor");
     await handOffToHuman(org, conversation, { notify: true, reason: "asked to talk to an advisor" });
   }
 
@@ -273,13 +285,13 @@ module.exports = function createCtwaFlowService({
     if (firstIdx >= questions.length) {
       // Everything we'd ask is already on the lead — straight to the menu.
       const menuSent = await sendFlowStep(org, conversation, botName, { ...menuStep(agent), previewLabel: "Started qualification" });
-      if (menuSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "menu", startedAt: new Date() } });
+      if (menuSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "menu", startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: ["menu"], lastStep: "menu" } });
       return;
     }
     const first = questions[firstIdx];
     const questionSent = await sendFlowStep(org, conversation, botName, { ...questionStep(first, vars), previewLabel: "Started qualification" });
     if (questionSent) {
-      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date() } });
+      await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: [first.id], lastStep: first.id } });
     }
   }
 
@@ -372,7 +384,10 @@ module.exports = function createCtwaFlowService({
     const flow = agent.ctwaFlow;
     const questions = getQualifyingQuestions(agent);
 
-    const exitFlow = async () => WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
+    const exitFlow = async () => {
+      await funnelOutcome(conversation._id, "exited");
+      return WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
+    };
 
     // Matched by button id across every step this flow has, not by whatever
     // step we last recorded — Meta doesn't let us disable a button on a
@@ -408,9 +423,11 @@ module.exports = function createCtwaFlowService({
       if (next) {
         await sendFlowStep(org, conversation, botName, questionStep(next, { name: conversation.contactName || "there" }));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
+        await funnelStep(conversation._id, next.id);
       } else {
         await sendFlowStep(org, conversation, botName, menuStep(agent));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
+        await funnelStep(conversation._id, "menu");
       }
       return true;
     }
@@ -422,6 +439,7 @@ module.exports = function createCtwaFlowService({
       if (action === "site_visit") {
         await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
+        await funnelStep(conversation._id, "site_visit");
         return true;
       }
       if (action === "advisor") {
@@ -440,6 +458,7 @@ module.exports = function createCtwaFlowService({
         const wants = action === "photos"
           ? { wantsPhotos: true, wantsVideos: true }
           : { wantsBrochure: true, wantsFloorPlan: true };
+        notifyHotSignal?.(org, conversation, action === "photos" ? "asked for photos & videos" : "asked for the floor plan & brochure");
         const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
         if (missing.length) {
           const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
@@ -494,9 +513,83 @@ module.exports = function createCtwaFlowService({
     await sendFlowStep(org, conversation, botName, { bodyText: "Wonderful! Our team will confirm your visit shortly and take it from here.", previewLabel: "🏡 Site visit requested" });
     await WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     await autoAssignConversation(org, conversation);
+    await funnelOutcome(conversation._id, "site_visit");
     await handOffToHuman(org, conversation, { notify: true, reason: "requested a site visit" });
     return true;
   }
 
-  return { shouldStartFlow, startFlow, advanceFlow };
+  // ── Follow-up nudges ───────────────────────────────────────────────────────
+  // Someone who stops answering mid-flow gets one gentle nudge (about 15
+  // minutes after the bot's last message) and one final reminder shortly
+  // before the 24h reply window closes, each re-sending the pending question
+  // with its buttons so continuing is a single tap. Only for agents that turned
+  // it on, only in business hours, only while the bot spoke last, and at most
+  // two per silence (the count resets when the customer writes again). Inside
+  // the reply window these are ordinary free service messages.
+  const MIN = 60 * 1000, HOUR = 60 * MIN;
+
+  function pendingStepContent(agent, conversation) {
+    const step = conversation.flowState?.step;
+    const vars = { name: conversation.contactName || "there" };
+    if (step === "menu") return closingStep(agent);
+    if (step === "site_visit") return siteVisitStep(agent);
+    const q = getQualifyingQuestions(agent).find((x) => x.id === step);
+    return q ? questionStep(q, vars) : null;
+  }
+
+  async function nudgeOne(conv, now) {
+    if (!conv.agentId) return false;
+    const [agent, org] = await Promise.all([
+      WaAgent.findById(conv.agentId).lean(),
+      Organization.findById(conv.orgId),
+    ]);
+    if (!agent?.ctwaFlow?.enabled || !agent.ctwaFlow.nudgesEnabled || !org) return false;
+    if (isWithinBusinessHours && !isWithinBusinessHours(org)) return false;
+
+    const [last, lastIn] = await Promise.all([
+      WaMessage.findOne({ conversationId: conv._id }).sort({ timestamp: -1 }).select("direction sender timestamp").lean(),
+      WaMessage.findOne({ conversationId: conv._id, direction: "inbound" }).sort({ timestamp: -1 }).select("timestamp").lean(),
+    ]);
+    // Only while the bot spoke last: a human reply, or the customer's own
+    // message, means there's nothing to chase.
+    if (!last || last.direction !== "outbound" || last.sender !== "bot") return false;
+    const sinceBot = now - new Date(last.timestamp);
+    const sinceIn = now - new Date(lastIn?.timestamp || conv.createdAt);
+    if (sinceIn > 23 * HOUR) return false; // window closed or about to
+
+    const count = conv.nudgeCount || 0;
+    let kind = null;
+    if (sinceIn >= 20 * HOUR) kind = "final";
+    else if (count === 0 && sinceBot >= 15 * MIN && sinceBot <= 3 * HOUR) kind = "first";
+    if (!kind) return false;
+
+    const content = pendingStepContent(agent, conv);
+    if (!content) return false;
+    const prefix = kind === "final"
+      ? "Quick reminder before this chat closes 🙂"
+      : (agent.ctwaFlow.nudgeText?.trim() || "Just checking in 🙂");
+    const ok = await sendFlowStep(org, conv, agent.name || "Artha Assistant", {
+      ...content, bodyText: `${prefix}\n\n${content.bodyText}`, previewLabel: kind === "final" ? "Final reminder" : "Follow-up nudge",
+    });
+    if (!ok) return false;
+    await WaConversation.updateOne({ _id: conv._id }, { $set: { nudgeCount: kind === "final" ? 2 : 1, lastNudgeAt: now } });
+    return true;
+  }
+
+  async function runNudges(now = new Date()) {
+    const convs = await WaConversation.find({
+      "flowState.step": { $exists: true, $ne: null },
+      botEnabled: true,
+      nudgeCount: { $lt: 2 },
+      lastMessageAt: { $gte: new Date(now - 23 * HOUR) },
+    }).limit(300);
+    let sent = 0;
+    for (const c of convs) {
+      try { if (await nudgeOne(c, now)) sent++; }
+      catch (err) { console.error("[CTWA Flow] nudge failed:", err?.response?.data || err.message); }
+    }
+    return { checked: convs.length, sent };
+  }
+
+  return { shouldStartFlow, startFlow, advanceFlow, runNudges };
 };
