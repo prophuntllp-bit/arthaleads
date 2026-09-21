@@ -625,6 +625,92 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
     return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
   }
 
+  // One place for the field's name, so a rename touches a single line.
+  static const _bookingLabel = 'Booking';
+
+  BookingOption _bookingOf(Map<String, dynamic> lead) {
+    final v = lead['booking'] as String? ?? '';
+    return bookingOptions.firstWhere(
+      (o) => o.value == v,
+      orElse: () => BookingOption(v, v, bookingColors[v]),
+    );
+  }
+
+  Widget _dot(Color? c) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(color: c ?? Colors.grey.shade400, shape: BoxShape.circle),
+  );
+
+  /// Compact dropdown instead of a wall of pills: shows the current value and
+  /// opens a bottom-sheet list with a colour dot per option.
+  Widget _bookingDropdown(Map<String, dynamic> lead) {
+    final cur = _bookingOf(lead);
+    final isNone = cur.value.isEmpty;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _pickBooking(cur.value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.of(context).border),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            if (!isNone) ...[_dot(cur.color), const SizedBox(width: 10)],
+            Expanded(
+              child: Text(
+                isNone ? 'Select…' : cur.label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isNone ? FontWeight.w500 : FontWeight.w700,
+                  color: isNone ? Theme.of(context).hintColor : null,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickBooking(String current) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.7),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(bottom: 12),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(_bookingLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+              for (final o in bookingOptions)
+                ListTile(
+                  dense: true,
+                  leading: o.value.isEmpty ? const SizedBox(width: 10) : _dot(o.color),
+                  title: Text(
+                    o.value.isEmpty ? 'None' : o.label,
+                    style: TextStyle(fontWeight: o.value == current ? FontWeight.w800 : FontWeight.w500),
+                  ),
+                  trailing: o.value == current ? const Icon(Icons.check_rounded, color: AppColors.primary) : null,
+                  onTap: () => Navigator.pop(ctx, o.value),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked != null && picked != current) _patch({'booking': picked});
+  }
+
   @override
   Widget build(BuildContext context) {
     final budget = lead['budget'] as Map?;
@@ -787,28 +873,9 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
 
               if (_tab == 'info') ...[
                 // ── Booking ──
-                Text('Booking', style: Theme.of(context).textTheme.labelLarge),
+                Text(_bookingLabel, style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: bookingOptions
-                      .map(
-                        (o) => ChoiceChip(
-                          label: Text(
-                            o.label,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          selected:
-                              (lead['booking'] as String? ?? '') == o.value,
-                          selectedColor: (o.color ?? Colors.grey).withValues(
-                            alpha: 0.2,
-                          ),
-                          onSelected: (_) => _patch({'booking': o.value}),
-                        ),
-                      )
-                      .toList(),
-                ),
+                _bookingDropdown(lead),
                 const SizedBox(height: 16),
 
                 // ── Follow-ups ──
