@@ -1311,7 +1311,7 @@ async function resolveDiscussedProject(org, agent, replyText) {
 // one — so this re-checks the agent's own toggle and that the asset genuinely
 // exists before sending anything. Not available on a BSP connection; media
 // messages are Meta-direct only (see sendProviderMedia).
-async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsVideos, wantsBrochure, wantsFloorPlan, force = false, project: givenProject = null }) {
+async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsVideos, wantsBrochure, wantsFloorPlan, force = false, project: givenProject = null, senderOverride = null, senderNameOverride = null }) {
   const nothing = { sent: [], missing: [] };
   if (org.whatsapp?.provider !== "meta") return nothing;
   const project = givenProject || await resolveDiscussedProject(org, agent, replyText);
@@ -1369,7 +1369,7 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
     }
     await WaMessage.create({
       orgId: org._id, conversationId: conversation._id, waMsgId: msgId,
-      direction: "outbound", sender: "bot", senderName: botName,
+      direction: "outbound", sender: senderOverride || "bot", senderName: senderNameOverride || botName,
       body: m.caption || "", mediaType: m.type, mediaUrl: m.url,
       status: "sent", timestamp: new Date(),
       reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
@@ -2845,6 +2845,53 @@ router.post("/send-template", async (req, res) => {
 });
 
 // ── Send message ──────────────────────────────────────────────────────────────
+
+// ── Send project files by hand ────────────────────────────────────────────────
+// Lets a person on the team send a project's photos, video, floor plan or
+// brochure into a conversation from the Inbox (e.g. a customer who asked for
+// the video before it was uploaded). Same rules as a typed message: Meta
+// direct connection, 24h reply window, and one credit per file.
+router.post("/send-media", async (req, res) => {
+  try {
+    const { conversationId, projectId, kinds } = req.body || {};
+    const wanted = Array.isArray(kinds) ? kinds : [];
+    if (!wanted.length) return res.status(400).json({ message: "Pick at least one file to send." });
+    const conv = await WaConversation.findOne({ _id: conversationId, orgId: req.orgId });
+    if (!conv || !canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Conversation not found" });
+    const project = await Project.findOne({ _id: projectId, orgId: req.orgId, isArchived: { $ne: true } })
+      .select("name images videos brochureUrl floorPlanUrl").lean();
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const org = await Organization.findById(req.orgId);
+    if (!org?.whatsapp?.enabled || !org?.whatsapp?.apiKey) return res.status(400).json({ message: "WhatsApp not connected" });
+    if ((org.whatsapp.provider || "aisensy") !== "meta") {
+      return res.status(400).json({ message: "Sending files works on the direct WhatsApp connection only." });
+    }
+    const lastIn = await WaMessage.findOne({ conversationId: conv._id, direction: "inbound" })
+      .sort({ timestamp: -1 }).select("timestamp").lean();
+    if (!lastIn || Date.now() - new Date(lastIn.timestamp).getTime() > 24 * 60 * 60 * 1000) {
+      return res.status(409).json({
+        code: "WINDOW_CLOSED",
+        message: "It has been more than 24 hours since this person last wrote. WhatsApp only allows an approved template until they reply.",
+      });
+    }
+    const { sent, missing } = await sendQualifiedMedia(org, null, conv, req.user.name, project.name, {
+      wantsPhotos: wanted.includes("photos"), wantsVideos: wanted.includes("videos"),
+      wantsBrochure: wanted.includes("brochure"), wantsFloorPlan: wanted.includes("floorplan"),
+      force: true, project, senderOverride: "agent", senderNameOverride: req.user.name,
+    });
+    if (!sent.length) {
+      return res.status(400).json({
+        message: missing.length
+          ? "None of the selected files are uploaded for this project."
+          : "Couldn't send the files. Check your WhatsApp credits and try again.",
+        missing,
+      });
+    }
+    res.json({ success: true, sent, missing });
+  } catch (err) {
+    res.status(500).json({ message: err?.response?.data?.error?.message || err.message });
+  }
+});
 
 router.post("/send", async (req, res) => {
   try {

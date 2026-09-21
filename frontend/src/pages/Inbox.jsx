@@ -2,13 +2,14 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
-  FileText, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
+  FileText, Paperclip, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import WhatsAppIcon from "../components/WhatsAppIcon";
 import CreditTopUpModal from "../components/CreditTopUpModal";
 import TemplateSendModal from "../components/TemplateSendModal";
+import ProjectMediaSendModal from "../components/ProjectMediaSendModal";
 import { StatusBadge } from "../components/UI";
 import toast from "react-hot-toast";
 
@@ -274,6 +275,7 @@ export default function Inbox() {
   const [filter, setFilter]             = useState("all");
   const [showTopUp, setShowTopUp]       = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
   const [search, setSearch]             = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [total, setTotal]               = useState(0);
@@ -738,6 +740,13 @@ export default function Inbox() {
                       <Zap className="w-4 h-4" style={{ color: "#f59e0b" }} />
                     </button>
                   )}
+                  {isMeta && windowOpen && (
+                    <button onClick={() => setShowMedia(true)} title="Send project files (video, floor plan, brochure, photos)"
+                      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition hover:opacity-80"
+                      style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                      <Paperclip className="w-4 h-4 text-app-soft" />
+                    </button>
+                  )}
                   <textarea
                     rows={1}
                     className="flex-1 resize-none rounded-2xl px-4 py-2.5 text-sm text-app outline-none"
@@ -778,6 +787,15 @@ export default function Inbox() {
     </div>
 
     <CreditTopUpModal open={showTopUp} onClose={() => setShowTopUp(false)} onSuccess={refreshCredits} />
+
+    {isMeta && activeConv && (
+      <ProjectMediaSendModal
+        open={showMedia}
+        onClose={() => setShowMedia(false)}
+        conversation={activeConv}
+        onSent={() => { fetchMessages(activeId, true); refreshCredits(); }}
+      />
+    )}
 
     {isMeta && activeConv && (
       <TemplateSendModal

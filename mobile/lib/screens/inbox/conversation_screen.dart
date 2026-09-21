@@ -10,6 +10,7 @@ import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
+import 'project_media_send_sheet.dart';
 import 'template_send_sheet.dart';
 import 'wa_theme.dart';
 
@@ -84,6 +85,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final h = d.inHours;
     final m = d.inMinutes % 60;
     return h > 0 ? '${h}h ${m}m' : '${m}m';
+  }
+
+  Future<void> _openMediaSheet() async {
+    final sent = await showProjectMediaSendSheet(context, conversationId: widget.conversationId);
+    if (!sent || !mounted) return;
+    _load(silent: true);
+    _loadChannel();
   }
 
   Future<void> _openTemplateSheet() async {
@@ -965,6 +973,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
+                          if (_isMeta && windowOpen)
+                            IconButton(
+                              icon: const Icon(Icons.attach_file_rounded),
+                              tooltip: 'Send project files',
+                              onPressed: _openMediaSheet,
+                            ),
                           if (_isMeta)
                             IconButton(
                               icon: const Icon(Icons.bolt, color: Color(0xFFF59E0B)),
