@@ -77,8 +77,8 @@ const DEFAULT_CTWA_FLOW = {
   ],
   menuPrompt: "Great, what would you like to see next?",
   menuOptions: [
-    { id: "m0", label: "🖼️ Photos & Brochure", action: "photos" },
-    { id: "m1", label: "📞 Talk to Advisor", action: "advisor" },
+    { id: "m0", label: "🖼️ Photos & Videos", action: "photos" },
+    { id: "m1", label: "📄 Floor Plan & Brochure", action: "docs" },
     { id: "m2", label: "🏡 Book Site Visit", action: "site_visit" },
   ],
   siteVisitPrompt: "Which time works best for your visit?",
@@ -124,7 +124,8 @@ const MAPS_TO_OPTIONS = [
 ];
 
 const MENU_ACTIONS = [
-  { value: "photos",     label: "Send photos & brochure" },
+  { value: "photos",     label: "Send photos & videos" },
+  { value: "docs",       label: "Send floor plan & brochure (PDFs)" },
   { value: "location",   label: "Send project location" },
   { value: "site_visit", label: "Ask for a site-visit time" },
   { value: "advisor",    label: "Connect to a human advisor" },
@@ -156,7 +157,8 @@ const PRESET_BUDGET_BRACKETS = [
   { label: "Just Exploring", min: 0, max: 0 },
 ];
 const PRESET_MENU_OPTIONS = [
-  { label: "🖼️ Photos & Brochure", action: "photos" },
+  { label: "🖼️ Photos & Videos", action: "photos" },
+  { label: "📄 Floor Plan & Brochure", action: "docs" },
   { label: "📍 Location Details", action: "location" },
   { label: "🏡 Book Site Visit", action: "site_visit" },
   { label: "📞 Talk to Advisor", action: "advisor" },
@@ -176,7 +178,7 @@ export default function AgentBuilder() {
     name: "", description: "", status: "draft", greeting: "",
     businessContext: "", groundRules: "", projectIds: [],
     systemPrompt: "", language: "auto", adIds: [],
-    shareProjectPhotos: false, shareBrochure: false,
+    shareProjectPhotos: false, shareBrochure: false, shareVideos: false, shareFloorPlan: false,
     ctwaFlow: DEFAULT_CTWA_FLOW,
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
@@ -208,6 +210,7 @@ export default function AgentBuilder() {
           systemPrompt: a.systemPrompt || "", language: a.language || "auto",
           adIds: a.adIds || [],
           shareProjectPhotos: a.shareProjectPhotos === true, shareBrochure: a.shareBrochure === true,
+          shareVideos: a.shareVideos === true, shareFloorPlan: a.shareFloorPlan === true,
           // Merged over the defaults rather than used as-is — an agent saved
           // before welcomeText existed would otherwise load that field as
           // undefined and turn its textarea into an uncontrolled input.
@@ -511,6 +514,26 @@ export default function AgentBuilder() {
                 </span>
               </span>
             </label>
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+              <input type="checkbox" className="mt-0.5 shrink-0"
+                checked={form.shareVideos} onChange={(e) => set({ shareVideos: e.target.checked })} />
+              <span>
+                <span className="text-app font-semibold block">Can send the project video</span>
+                <span className="text-xs text-app-soft">
+                  Only for projects that have a video uploaded (up to 10MB) — add one on the Projects page.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+              <input type="checkbox" className="mt-0.5 shrink-0"
+                checked={form.shareFloorPlan} onChange={(e) => set({ shareFloorPlan: e.target.checked })} />
+              <span>
+                <span className="text-app font-semibold block">Can send the floor plan (PDF)</span>
+                <span className="text-xs text-app-soft">
+                  Only for projects that have a floor plan uploaded — add one on the Projects page.
+                </span>
+              </span>
+            </label>
             <p className="text-xs text-app-soft rounded-xl px-3 py-2" style={{ background: "var(--app-surface-low)" }}>
               Works on the direct Arthaleads connection only — not on AiSensy, Wati or Interakt. The
               assistant only ever sends what's relevant to what was just discussed, never on the first reply.
@@ -672,7 +695,7 @@ export default function AgentBuilder() {
               <label className="text-xs font-semibold text-app-soft block mb-1">Closing prompt</label>
               <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
                 value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
-              <p className="text-[11px] text-app-soft mt-1">Sent after Photos &amp; Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.</p>
+              <p className="text-[11px] text-app-soft mt-1">Sent after Photos &amp; Videos, Floor Plan &amp; Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.</p>
             </div>
             <p className="text-[11px] text-app-soft text-center">
               Preview of this flow is alongside "Try it" →
@@ -744,9 +767,9 @@ export default function AgentBuilder() {
                     </span>
                   )}
                   {m.body}
-                  {(m.wantsPhotos || m.wantsBrochure) && (
+                  {(m.wantsPhotos || m.wantsBrochure || m.wantsVideos || m.wantsFloorPlan) && (
                     <span className="block text-[10px] font-bold mt-1.5" style={{ color: "var(--app-primary)" }}>
-                      📎 would send {[m.wantsPhotos && "project photos", m.wantsBrochure && "the brochure"].filter(Boolean).join(" and ")} here — not sent in Try It
+                      📎 would send {[m.wantsPhotos && "project photos", m.wantsVideos && "the video", m.wantsFloorPlan && "the floor plan", m.wantsBrochure && "the brochure"].filter(Boolean).join(" and ")} here — not sent in Try It
                     </span>
                   )}
                   {m.handoff && (
@@ -925,7 +948,9 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       // Informational — never a dead end, and never retires the menu: the
       // same message's other buttons (and this one) stay tappable after.
       if (action === "photos") {
-        push({ from: "bot", note: true, text: "🖼️ Sends project photos + brochure, if that agent's \"What it can send\" toggles above are on for this project." });
+        push({ from: "bot", note: true, text: "🖼️ Sends up to 3 project photos and the project video, whatever is uploaded for this project." });
+      } else if (action === "docs") {
+        push({ from: "bot", note: true, text: "📄 Sends the floor plan PDF and the brochure PDF, whatever is uploaded for this project." });
       } else if (action === "location") {
         push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
       }
@@ -1187,7 +1212,7 @@ function BudgetBracketEditor({ rows, onChange }) {
   );
 }
 
-// No manual action picker here — every real action (photos, location,
+// No manual action picker here — every real action (photos, docs, location,
 // advisor, site visit) is already covered by the 4 presets below, and a
 // second control that duplicated what the preset already set was more
 // confusing than useful. A custom-worded button defaults to "advisor" (the
@@ -1208,7 +1233,7 @@ function MenuOptionEditor({ rows, onChange }) {
     <div>
       <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
       <p className="text-[11px] text-app-soft mb-1">
-        Photos &amp; Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site
+        Photos &amp; Videos, Floor Plan &amp; Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site
         Visit" — this flow never dead-ends on just a photo or an address.
       </p>
       {remaining.length > 0 && (

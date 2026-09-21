@@ -38,6 +38,8 @@ const projectBrochureKey = (projectId) => `arthaleads/brochures/project-${projec
 
 // A project can hold several images (unlike the single brochure), so each
 // upload needs its own key rather than one shared, overwritable slot.
+const projectFloorPlanKey = (projectId) => `arthaleads/floorplans/project-${projectId}`;
+const projectVideoKey = (projectId) => `arthaleads/projects/${projectId}/videos/${crypto.randomBytes(8).toString("hex")}.mp4`;
 const projectImageKey = (projectId) => `arthaleads/projects/${projectId}/${crypto.randomBytes(8).toString("hex")}`;
 
 // Everything else gets a random segment, because the bucket is public and a
@@ -117,6 +119,26 @@ async function uploadProjectBrochure(dataUri, projectId) {
   return versioned(url);
 }
 
+/** Floor-plan PDF: one per project, re-upload overwrites (same as the brochure). */
+async function uploadProjectFloorPlan(dataUri, projectId) {
+  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+  const url = await storage.put(projectFloorPlanKey(projectId), buffer, contentType);
+  return versioned(url);
+}
+async function deleteProjectFloorPlan(projectId) {
+  return storage.remove(projectFloorPlanKey(projectId));
+}
+
+/** One already-prepared (<=10MB MP4) project video. Own key per upload. */
+async function uploadProjectVideo(buffer, projectId) {
+  return storage.put(projectVideoKey(projectId), buffer, "video/mp4");
+}
+async function deleteProjectVideo(url) {
+  const key = String(url || "").split("/api/media/")[1];
+  if (!key) return;
+  return storage.remove(decodeURIComponent(key));
+}
+
 /** Delete a project's brochure. Never throws — see storage.remove. */
 async function deleteProjectBrochure(projectId) {
   return storage.remove(projectBrochureKey(projectId));
@@ -152,5 +174,9 @@ module.exports = {
   deleteProjectBrochure,
   uploadProjectImage,
   deleteProjectImage,
+  uploadProjectFloorPlan,
+  deleteProjectFloorPlan,
+  uploadProjectVideo,
+  deleteProjectVideo,
   isConfigured: storage.isConfigured,
 };

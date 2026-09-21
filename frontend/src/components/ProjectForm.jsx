@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, Spinner, AppDatePicker, SmartImage } from "./UI";
 import CustomSelect from "./CustomSelect";
-import { ChevronDown, FileText, ImageOff, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import { ChevronDown, FileText, ImageOff, Plus, Search, Trash2, Upload, X, Film } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
 
@@ -98,19 +98,48 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   // in the project document the way a compressed thumbnail is), and that
   // endpoint needs a real project id that a brand-new "Add Project" form does
   // not have yet. So this section only appears when editing an existing one.
-  const [brochureUrl, setBrochureUrl] = useState(project?.brochureUrl || "");
-  const [uploadingBrochure, setUploadingBrochure] = useState(false);
-  const brochureFileRef = useRef(null);
+  // Brochure and floor plan are the same thing to the server: one PDF each.
+  const [docs, setDocs] = useState({ brochure: project?.brochureUrl || "", floorplan: project?.floorPlanUrl || "" });
+  const [uploadingDoc, setUploadingDoc] = useState("");
+  const docRefs = { brochure: useRef(null), floorplan: useRef(null) };
+  const DOC_META = {
+    brochure:  { label: "Brochure",   path: "brochure",  field: "brochureUrl" },
+    floorplan: { label: "Floor plan", path: "floorplan", field: "floorPlanUrl" },
+  };
 
-  useEffect(() => { if (open) setBrochureUrl(project?.brochureUrl || ""); }, [open, project]);
+  // Videos: WhatsApp-ready MP4s. Up to 10MB is kept as is, 10 to 20MB is
+  // compressed on the server to fit 10MB, and above 20MB is refused here
+  // before anything is uploaded.
+  const [videos, setVideos] = useState(project?.videos || []);
+  const [videoStatus, setVideoStatus] = useState(""); // "" | "Uploading… 40%" | "Optimizing…"
+  const videoFileRef = useRef(null);
+  const MAX_VIDEOS = 3;
 
-  const handleBrochureFile = async (e) => {
+  useEffect(() => {
+    if (!open) return;
+    setDocs({ brochure: project?.brochureUrl || "", floorplan: project?.floorPlanUrl || "" });
+    setVideos(project?.videos || []);
+    // The list the parent holds can be stale (uploads here don't touch it),
+    // so pull the project's current files each time the modal opens.
+    if (!project?._id) return;
+    let cancelled = false;
+    api.get(`/projects/${project._id}`).then(({ data }) => {
+      const p = data.data || data.project;
+      if (cancelled || !p) return;
+      setDocs({ brochure: p.brochureUrl || "", floorplan: p.floorPlanUrl || "" });
+      setVideos(p.videos || []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [open, project]);
+
+  const handleDocFile = (kind) => async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file || !project) return;
-    if (file.type !== "application/pdf") return toast.error("Brochure must be a PDF");
-    if (file.size > 10 * 1024 * 1024) return toast.error("Max 10MB for a brochure");
-    setUploadingBrochure(true);
+    const { label, path, field } = DOC_META[kind];
+    if (file.type !== "application/pdf") return toast.error(`${label} must be a PDF`);
+    if (file.size > 5 * 1024 * 1024) return toast.error(`Max 5MB for a ${label.toLowerCase()}`);
+    setUploadingDoc(kind);
     try {
       const dataUri = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -118,21 +147,61 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const { data } = await api.post(`/projects/${project._id}/brochure`, { dataUri });
-      setBrochureUrl(data.brochureUrl);
-      toast.success("Brochure uploaded");
+      const { data } = await api.post(`/projects/${project._id}/${path}`, { dataUri });
+      setDocs((d) => ({ ...d, [kind]: data[field] }));
+      toast.success(`${label} uploaded`);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to upload brochure");
-    } finally { setUploadingBrochure(false); }
+      toast.error(err.response?.data?.message || `Failed to upload ${label.toLowerCase()}`);
+    } finally { setUploadingDoc(""); }
   };
 
-  const removeBrochure = async () => {
+  const removeDoc = async (kind) => {
+    if (!project) return;
+    const { label, path } = DOC_META[kind];
+    try {
+      await api.delete(`/projects/${project._id}/${path}`);
+      setDocs((d) => ({ ...d, [kind]: "" }));
+      toast.success(`${label} removed`);
+    } catch { toast.error(`Failed to remove ${label.toLowerCase()}`); }
+  };
+
+  const handleVideoFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !project) return;
+    if (!file.type.startsWith("video/")) return toast.error("That file isn't a video");
+    if (videos.length >= MAX_VIDEOS) return toast.error(`Up to ${MAX_VIDEOS} videos per project. Remove one first.`);
+    if (file.size > 20 * 1024 * 1024) {
+      return toast.error(`This video is ${(file.size / 1048576).toFixed(1)}MB. Videos over 20MB can't be uploaded, please trim or shrink it first.`);
+    }
+    const needsCompression = file.size > 10 * 1024 * 1024;
+    setVideoStatus("Uploading… 0%");
+    try {
+      const { data } = await api.post(`/projects/${project._id}/videos`, file, {
+        headers: { "Content-Type": file.type || "video/mp4" },
+        timeout: 300000,
+        onUploadProgress: (ev) => {
+          if (!ev.total) return;
+          const pct = Math.round((ev.loaded / ev.total) * 100);
+          setVideoStatus(pct >= 100 && needsCompression ? "Optimizing video, this can take a minute…" : `Uploading… ${pct}%`);
+        },
+      });
+      setVideos(data.videos || []);
+      toast.success(data.compressed
+        ? `Video optimized from ${(data.originalBytes / 1048576).toFixed(1)}MB to ${(data.sizeBytes / 1048576).toFixed(1)}MB`
+        : "Video uploaded");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to upload video");
+    } finally { setVideoStatus(""); }
+  };
+
+  const removeVideo = async (url) => {
     if (!project) return;
     try {
-      await api.delete(`/projects/${project._id}/brochure`);
-      setBrochureUrl("");
-      toast.success("Brochure removed");
-    } catch { toast.error("Failed to remove brochure"); }
+      const { data } = await api.delete(`/projects/${project._id}/videos`, { params: { url } });
+      setVideos(data.videos || []);
+      toast.success("Video removed");
+    } catch { toast.error("Failed to remove video"); }
   };
 
   // Re-sync form whenever the modal opens or the project prop changes
@@ -362,44 +431,92 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
             )}
           </div>
 
-          {/* ── Brochure (PDF) — only once the project exists ── */}
+          {/* ── Documents (PDF) — only once the project exists ── */}
           {project && (
             <div className="space-y-3 h-full rounded-2xl border p-4"
               style={{ borderColor: "var(--app-border)" }}>
-              <p className="stitch-kicker">Brochure</p>
+              <p className="stitch-kicker">Brochure &amp; Floor plan</p>
               <p className="text-xs text-app-soft">
-                Sent by the WhatsApp AI agent when its "Can send the brochure" permission is on
-                (Conversations → AI Agents).
+                Sent on WhatsApp by the "Floor Plan &amp; Brochure" flow button, or by the AI agent when its
+                permissions are on (Conversations → AI Agents).
               </p>
-              {brochureUrl ? (
-                <div className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
-                  style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
-                  <FileText className="h-5 w-5 shrink-0" style={{ color: "#ef4444" }} />
-                  <a href={brochureUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-semibold text-app hover:underline flex-1 min-w-0 truncate">
-                    {form.name || "Brochure"}.pdf
-                  </a>
-                  <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
-                    className="text-xs font-semibold text-app-soft hover:text-app transition disabled:opacity-40">
-                    Replace
-                  </button>
-                  <button type="button" onClick={removeBrochure} title="Remove brochure"
-                    className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition shrink-0">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => brochureFileRef.current?.click()} disabled={uploadingBrochure}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
-                  style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
-                  {uploadingBrochure ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
-                  {uploadingBrochure ? "Uploading…" : "Upload brochure PDF"}
-                </button>
-              )}
-              <input ref={brochureFileRef} type="file" accept="application/pdf" className="hidden" onChange={handleBrochureFile} />
+              {["brochure", "floorplan"].map((kind) => {
+                const { label } = DOC_META[kind];
+                const url = docs[kind];
+                const busy = uploadingDoc === kind;
+                return (
+                  <div key={kind} className="space-y-1.5">
+                    <p className="text-xs font-semibold text-app-soft">{label}</p>
+                    {url ? (
+                      <div className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5"
+                        style={{ background: "var(--app-surface-low)", border: "1px solid var(--app-border)" }}>
+                        <FileText className="h-5 w-5 shrink-0" style={{ color: "#ef4444" }} />
+                        <a href={url} target="_blank" rel="noopener noreferrer"
+                          className="text-sm font-semibold text-app hover:underline flex-1 min-w-0 truncate">
+                          {form.name || label}{kind === "floorplan" ? " floor plan" : ""}.pdf
+                        </a>
+                        <button type="button" onClick={() => docRefs[kind].current?.click()} disabled={busy}
+                          className="text-xs font-semibold text-app-soft hover:text-app transition disabled:opacity-40">
+                          Replace
+                        </button>
+                        <button type="button" onClick={() => removeDoc(kind)} title={`Remove ${label.toLowerCase()}`}
+                          className="p-1.5 rounded-lg text-app-soft hover:text-red-500 transition shrink-0">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => docRefs[kind].current?.click()} disabled={busy}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
+                        style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
+                        {busy ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
+                        {busy ? "Uploading…" : `Upload ${label.toLowerCase()} PDF`}
+                      </button>
+                    )}
+                    <input ref={docRefs[kind]} type="file" accept="application/pdf" className="hidden" onChange={handleDocFile(kind)} />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
+
+        {/* ── Videos — only once the project exists ── */}
+        {project && (
+          <div className="space-y-3 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
+            <p className="stitch-kicker">Project videos</p>
+            <p className="text-xs text-app-soft">
+              Sent on WhatsApp by the "Photos &amp; Videos" flow button. Up to {MAX_VIDEOS} videos. Files up to 10MB are
+              kept as they are, 10 to 20MB are compressed to fit 10MB, and anything over 20MB can't be uploaded.
+            </p>
+            <div className="flex flex-wrap gap-3 items-start">
+              {videos.map((v) => (
+                <div key={v.url} className="relative group w-40">
+                  <video src={v.url} preload="metadata" muted playsInline controls
+                    className="h-24 w-40 rounded-2xl object-cover border bg-black"
+                    style={{ borderColor: "var(--app-border)" }} />
+                  <p className="mt-1 text-[11px] text-app-soft">
+                    {v.sizeBytes ? `${(v.sizeBytes / 1048576).toFixed(1)}MB` : ""}
+                    {v.sizeBytes && v.durationSec ? " · " : ""}
+                    {v.durationSec ? `${v.durationSec}s` : ""}
+                  </p>
+                  <button type="button" onClick={() => removeVideo(v.url)} aria-label="Remove video"
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {videos.length < MAX_VIDEOS && (
+                <button type="button" onClick={() => videoFileRef.current?.click()} disabled={!!videoStatus}
+                  className="flex h-24 w-40 flex-col items-center justify-center gap-1 rounded-2xl text-xs font-semibold transition disabled:opacity-60 px-2 text-center"
+                  style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
+                  {videoStatus ? <Spinner size="sm" /> : <Film className="h-5 w-5" />}
+                  {videoStatus || "Upload video"}
+                </button>
+              )}
+            </div>
+            <input ref={videoFileRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/3gpp,video/*" className="hidden" onChange={handleVideoFile} />
+          </div>
+        )}
 
         {/* ── Pricing & Config ── */}
         <div className="space-y-4">

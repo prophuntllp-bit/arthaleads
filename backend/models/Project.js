@@ -14,6 +14,10 @@ const projectSchema = new mongoose.Schema(
     location:    { type: String, trim: true, default: "" },
     images:      [{ type: String, trim: true }], // array of URLs
     brochureUrl: { type: String, trim: true, default: "" }, // single PDF URL — sent by the WhatsApp AI agent when its Share Brochure permission is on
+    floorPlanUrl: { type: String, trim: true, default: "" }, // single PDF URL — sent with "Floor Plan & Brochure" / when the customer asks for the floor plan
+    // WhatsApp-ready MP4s (<=10MB, see utils/videoCompress.js). Added and
+    // removed only through the /videos endpoints, never through the project form.
+    videos: [{ _id: false, url: { type: String, trim: true }, sizeBytes: Number, durationSec: Number }],
 
     // Pricing & config
     propertyType:    { type: String, trim: true, default: "Apartment" },

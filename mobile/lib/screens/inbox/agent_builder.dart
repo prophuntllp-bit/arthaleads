@@ -40,7 +40,8 @@ const _mapsToOptions = {
 };
 
 const _menuActions = {
-  'photos': 'Send photos & brochure',
+  'photos': 'Send photos & videos',
+  'docs': 'Send floor plan & brochure (PDFs)',
   'location': 'Send project location',
   'site_visit': 'Ask for a site-visit time',
   'advisor': 'Connect to a human advisor',
@@ -66,7 +67,8 @@ const _presetBudgetBrackets = [
   {'label': 'Just Exploring', 'min': 0, 'max': 0},
 ];
 const _presetMenuOptions = [
-  {'label': '🖼️ Photos & Brochure', 'action': 'photos'},
+  {'label': '🖼️ Photos & Videos', 'action': 'photos'},
+  {'label': '📄 Floor Plan & Brochure', 'action': 'docs'},
   {'label': '📍 Location Details', 'action': 'location'},
   {'label': '🏡 Book Site Visit', 'action': 'site_visit'},
   {'label': '📞 Talk to Advisor', 'action': 'advisor'},
@@ -126,8 +128,8 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
       ],
       'menuPrompt': 'Great, what would you like to see next?',
       'menuOptions': [
-        {'id': 'm0', 'label': '🖼️ Photos & Brochure', 'action': 'photos'},
-        {'id': 'm1', 'label': '📞 Talk to Advisor', 'action': 'advisor'},
+        {'id': 'm0', 'label': '🖼️ Photos & Videos', 'action': 'photos'},
+        {'id': 'm1', 'label': '📄 Floor Plan & Brochure', 'action': 'docs'},
         {'id': 'm2', 'label': '🏡 Book Site Visit', 'action': 'site_visit'},
       ],
       'siteVisitPrompt': 'Which time works best for your visit?',
@@ -205,6 +207,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   bool _showAdvanced = false;
   bool _shareProjectPhotos = false;
   bool _shareBrochure = false;
+  bool _shareVideos = false;
+  bool _shareFloorPlan = false;
   final Set<String> _projectIds = {};
   List<Map<String, dynamic>> _projects = [];
   final List<String> _adIds = [];
@@ -280,6 +284,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
         _showAdvanced = _systemPromptCtrl.text.isNotEmpty;
         _shareProjectPhotos = a['shareProjectPhotos'] == true;
         _shareBrochure = a['shareBrochure'] == true;
+        _shareVideos = a['shareVideos'] == true;
+        _shareFloorPlan = a['shareFloorPlan'] == true;
         _projectIds.addAll((a['projectIds'] as List? ?? const [])
             .map((p) => (p is Map ? p['_id'] : p).toString()));
         _adIds.addAll((a['adIds'] as List? ?? const []).map((e) => e.toString()));
@@ -330,6 +336,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
       'adIds': _adIds,
       'shareProjectPhotos': _shareProjectPhotos,
       'shareBrochure': _shareBrochure,
+      'shareVideos': _shareVideos,
+      'shareFloorPlan': _shareFloorPlan,
       'ctwaFlow': flow,
     };
   }
@@ -424,6 +432,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           'handoff': data['handoff'] == true,
           'wantsPhotos': data['wantsPhotos'] == true,
           'wantsBrochure': data['wantsBrochure'] == true,
+          'wantsVideos': data['wantsVideos'] == true,
+          'wantsFloorPlan': data['wantsFloorPlan'] == true,
         });
         _tryMeta = data;
       });
@@ -539,6 +549,18 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                   onChanged: (v) => setState(() => _shareBrochure = v),
                   title: 'Can send the brochure (PDF)',
                   subtitle: 'Only for projects that have a brochure uploaded — add one on the Projects page.',
+                ),
+                WaCheckRow(
+                  value: _shareVideos,
+                  onChanged: (v) => setState(() => _shareVideos = v),
+                  title: 'Can send the project video',
+                  subtitle: 'Only for projects that have a video uploaded (up to 10MB) — add one on the Projects page.',
+                ),
+                WaCheckRow(
+                  value: _shareFloorPlan,
+                  onChanged: (v) => setState(() => _shareFloorPlan = v),
+                  title: 'Can send the floor plan (PDF)',
+                  subtitle: 'Only for projects that have a floor plan uploaded — add one on the Projects page.',
                 ),
                 const WaNotice(
                   "Works on the direct Arthaleads connection only — not on AiSensy, Wati or Interakt. The assistant only ever sends what's relevant to what was just discussed, never on the first reply.",
@@ -842,7 +864,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           label: 'Closing prompt',
           controller: _closingPromptCtrl,
           hint: 'Would you like to talk to our advisor, or book a site visit?',
-          help: 'Sent after Photos & Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.',
+          help: 'Sent after Photos & Videos, Floor Plan & Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.',
           onChanged: (_) => setState(() {}),
         ),
         Center(
@@ -1083,11 +1105,11 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
               ),
             Text('${m['body'] ?? ''}',
                 style: TextStyle(fontSize: 13.5, height: 1.4, color: isErr ? const Color(0xFFB91C1C) : t.text)),
-            if (m['wantsPhotos'] == true || m['wantsBrochure'] == true)
+            if (m['wantsPhotos'] == true || m['wantsBrochure'] == true || m['wantsVideos'] == true || m['wantsFloorPlan'] == true)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  '📎 would send ${[if (m['wantsPhotos'] == true) 'project photos', if (m['wantsBrochure'] == true) 'the brochure'].join(' and ')} here — not sent in Try It',
+                  '📎 would send ${[if (m['wantsPhotos'] == true) 'project photos', if (m['wantsVideos'] == true) 'the video', if (m['wantsFloorPlan'] == true) 'the floor plan', if (m['wantsBrochure'] == true) 'the brochure'].join(' and ')} here — not sent in Try It',
                   style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.primary),
                 ),
               ),
@@ -1387,7 +1409,7 @@ class _MenuOptionEditorState extends State<_MenuOptionEditor> {
         const WaLabel('"What next?" menu — up to 3 buttons'),
         const Padding(
           padding: EdgeInsets.only(bottom: 8),
-          child: WaHelp('Photos & Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site Visit" — this flow never dead-ends on just a photo or an address.'),
+          child: WaHelp('Photos & Videos, Floor Plan & Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site Visit" — this flow never dead-ends on just a photo or an address.'),
         ),
         if (remaining.isNotEmpty && !full)
           WaSelect<String>(
@@ -1653,8 +1675,10 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
           _step = null;
           return;
         }
-        if (action == 'photos') {
-          _push({'from': 'bot', 'note': true, 'text': '🖼️ Sends project photos + brochure, if that agent\'s "What it can send" toggles above are on for this project.'});
+        if (action == 'docs') {
+          _push({'from': 'bot', 'note': true, 'text': '📄 Sends the floor plan PDF and the brochure PDF, whatever is uploaded for this project.'});
+        } else if (action == 'photos') {
+          _push({'from': 'bot', 'note': true, 'text': '🖼️ Sends up to 3 project photos and the project video, whatever is uploaded for this project.'});
         } else if (action == 'location') {
           _push({'from': 'bot', 'text': 'This project is located at: ${widget.projectName != null ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}'});
         }

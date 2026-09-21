@@ -95,6 +95,83 @@ router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, n
   } catch (err) { next(err); }
 });
 
+// Floor plan: same shape as the brochure — a single PDF sent to customers.
+router.post("/:id/floorplan", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const { dataUri } = req.body || {};
+    if (!dataUri) return res.status(400).json({ success: false, message: "dataUri is required." });
+    if (!dataUri.startsWith("data:application/pdf")) {
+      return res.status(400).json({ success: false, message: "Only PDF files are accepted for a floor plan." });
+    }
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+    const { uploadProjectFloorPlan } = require("../utils/upload");
+    project.floorPlanUrl = await uploadProjectFloorPlan(dataUri, project._id.toString());
+    await project.save();
+    res.json({ success: true, floorPlanUrl: project.floorPlanUrl });
+  } catch (err) { next(err); }
+});
+
+router.delete("/:id/floorplan", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+    const { deleteProjectFloorPlan } = require("../utils/upload");
+    await deleteProjectFloorPlan(project._id.toString());
+    project.floorPlanUrl = "";
+    await project.save();
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// Videos: the raw file is the request body (Content-Type: video/*), not a
+// base64 JSON payload — the global JSON limit is 8MB and base64 adds a third.
+// prepareVideo enforces the policy: <=10MB as-is, 10-20MB compressed to fit
+// 10MB, >20MB rejected. WhatsApp only takes MP4 up to 16MB.
+const MAX_VIDEOS_PER_PROJECT = 3;
+router.post("/:id/videos", authorize("admin", "manager"),
+  express.raw({ type: ["video/*", "application/octet-stream"], limit: "21mb" }),
+  async (req, res, next) => {
+    try {
+      const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+      if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+      if ((project.videos || []).length >= MAX_VIDEOS_PER_PROJECT) {
+        return res.status(400).json({ success: false, message: `A project can have up to ${MAX_VIDEOS_PER_PROJECT} videos. Remove one first.` });
+      }
+      const { prepareVideo, VideoError } = require("../utils/videoCompress");
+      let prepared;
+      try {
+        prepared = await prepareVideo(Buffer.isBuffer(req.body) ? req.body : null);
+      } catch (err) {
+        if (err instanceof VideoError) return res.status(err.statusCode).json({ success: false, message: err.message });
+        throw err;
+      }
+      const { uploadProjectVideo } = require("../utils/upload");
+      const url = await uploadProjectVideo(prepared.buffer, project._id.toString());
+      project.videos.push({ url, sizeBytes: prepared.sizeBytes, durationSec: Math.round(prepared.durationSec) });
+      await project.save();
+      res.json({
+        success: true, videos: project.videos,
+        compressed: prepared.compressed, originalBytes: prepared.originalBytes, sizeBytes: prepared.sizeBytes,
+      });
+    } catch (err) { next(err); }
+  });
+
+router.delete("/:id/videos", authorize("admin", "manager"), async (req, res, next) => {
+  try {
+    const url = req.body?.url || req.query.url;
+    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+    const before = project.videos.length;
+    project.videos = project.videos.filter((v) => v.url !== url);
+    if (project.videos.length === before) return res.status(404).json({ success: false, message: "Video not found." });
+    await project.save();
+    const { deleteProjectVideo } = require("../utils/upload");
+    await deleteProjectVideo(url);
+    res.json({ success: true, videos: project.videos });
+  } catch (err) { next(err); }
+});
+
 // Project leads - specific paths before :leadId
 router.post("/:id/leads/import", authorize("admin", "manager"), projectController.importLeads);
 router.get("/:id/leads",          projectController.getLeads);

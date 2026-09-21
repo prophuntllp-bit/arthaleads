@@ -83,7 +83,7 @@ module.exports = function createCtwaFlowService({
     const filter = { orgId: org._id, isArchived: { $ne: true } };
     if (agent.projectIds?.length) filter._id = { $in: agent.projectIds };
     const projects = await Project.find(filter)
-      .select("name location images brochureUrl advisorId")
+      .select("name location images videos brochureUrl floorPlanUrl advisorId")
       .populate("advisorId", "name phone")
       .limit(2).lean();
     return projects.length === 1 ? projects[0] : null;
@@ -177,6 +177,34 @@ module.exports = function createCtwaFlowService({
     return qs?.length ? qs : legacyToQualifyingQuestions(agent?.ctwaFlow);
   }
 
+  // Whether the lead record already holds a real answer for a mapped field
+  // (typically from a lead form). Deliberately narrow: purpose and
+  // propertyType are left out because the Lead schema pre-fills them with
+  // defaults ("Buy", "Apartment"), so a value there proves nothing.
+  function leadKnows(lead, mapsTo) {
+    if (!lead) return false;
+    switch (mapsTo) {
+      case "budget":   return (lead.budget?.min || 0) > 0 || (lead.budget?.max || 0) > 0;
+      case "timeline": return !!String(lead.timeline || "").trim();
+      case "bhk":      return !!lead.bhk && lead.bhk !== "N/A";
+      case "city":
+      case "preferredLocation":
+      case "streetAddress": return !!String(lead[mapsTo] || "").trim();
+      default: return false;
+    }
+  }
+
+  // First question at or after `from` the lead hasn't already answered
+  // elsewhere — asking someone for a budget they typed into the form five
+  // minutes ago is the fastest way to lose them.
+  async function nextUnansweredIndex(questions, from, leadId) {
+    let lead = null;
+    if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk city preferredLocation streetAddress").lean();
+    let i = from;
+    while (i < questions.length && leadKnows(lead, questions[i].mapsTo)) i++;
+    return i;
+  }
+
   function menuStep(agent) {
     return { bodyText: agent.ctwaFlow.menuPrompt || "Great, what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
   }
@@ -241,7 +269,14 @@ module.exports = function createCtwaFlowService({
     }
     const questions = getQualifyingQuestions(agent);
     if (!questions.length) return; // sanitizeCtwaFlow blocks enabling without this — never crash live traffic over it regardless
-    const first = questions[0];
+    const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId);
+    if (firstIdx >= questions.length) {
+      // Everything we'd ask is already on the lead — straight to the menu.
+      const menuSent = await sendFlowStep(org, conversation, botName, { ...menuStep(agent), previewLabel: "Started qualification" });
+      if (menuSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "menu", startedAt: new Date() } });
+      return;
+    }
+    const first = questions[firstIdx];
     const questionSent = await sendFlowStep(org, conversation, botName, { ...questionStep(first, vars), previewLabel: "Started qualification" });
     if (questionSent) {
       await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: first.id, startedAt: new Date() } });
@@ -361,7 +396,15 @@ module.exports = function createCtwaFlowService({
     if (matchedQuestionIndex !== -1) {
       const question = questions[matchedQuestionIndex];
       await applyQuestionAnswer(conversation.leadId, question, matchedOption);
-      const next = questions[matchedQuestionIndex + 1];
+      // Where the conversation actually is right now. Tapping an earlier
+      // question's button again (changing an answer, or a double tap) updates
+      // the answer but must not re-send the questions that follow it.
+      const currentIdx = questions.findIndex((q) => q.id === step);
+      const position = currentIdx === -1 ? questions.length : currentIdx;
+      if (matchedQuestionIndex < position) return true;
+
+      const nextIdx = await nextUnansweredIndex(questions, matchedQuestionIndex + 1, conversation.leadId);
+      const next = questions[nextIdx];
       if (next) {
         await sendFlowStep(org, conversation, botName, questionStep(next, { name: conversation.contactName || "there" }));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
@@ -390,12 +433,34 @@ module.exports = function createCtwaFlowService({
       // showing what was asked for, nudge toward the same two real endings
       // again, and stay open for more exploring.
       const project = await resolveFlowProject(org, agent);
-      if (action === "photos" && project) {
-        await sendQualifiedMedia(org, agent, conversation, botName, project.name, { wantsPhotos: true, wantsBrochure: true });
+      if ((action === "photos" || action === "docs") && project) {
+        // The customer tapped this button, so it's an explicit ask — sent
+        // regardless of the free-text "what it can send" toggles. Anything
+        // not uploaded for the project is said plainly, never faked.
+        const wants = action === "photos"
+          ? { wantsPhotos: true, wantsVideos: true }
+          : { wantsBrochure: true, wantsFloorPlan: true };
+        const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
+        if (missing.length) {
+          const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
+          const lead = sent.length ? "The rest" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+          await sendFlowStep(org, conversation, botName, {
+            bodyText: sent.length
+              ? `${lead} isn't ready on my side yet. Our team will send ${label} across shortly.`
+              : `${lead} isn't ready on my side yet, our team will send it across shortly.`,
+          });
+        }
       } else if (action === "location" && project?.location) {
         await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
       }
-      await sendFlowStep(org, conversation, botName, closingStep(agent));
+      // If they already tapped another info button right behind this one, its
+      // own turn ends with the closing question — asking twice just stacks
+      // duplicate prompts in the middle of the chat.
+      const behind = conversation._pendingTaps?.() || [];
+      const infoIds = flow.menuOptions.filter((o) => ["photos", "docs", "location"].includes(o.action)).map((o) => o.id);
+      if (!behind.some((id) => infoIds.includes(id))) {
+        await sendFlowStep(org, conversation, botName, closingStep(agent));
+      }
       await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
       return true;
     }

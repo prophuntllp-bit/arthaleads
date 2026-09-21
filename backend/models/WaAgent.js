@@ -55,6 +55,8 @@ const waAgentSchema = new mongoose.Schema(
     // has photos/a brochure uploaded (buildProjectGroundedPrompt checks both).
     shareProjectPhotos: { type: Boolean, default: false },
     shareBrochure:      { type: Boolean, default: false },
+    shareVideos:        { type: Boolean, default: false },
+    shareFloorPlan:     { type: Boolean, default: false },
 
     // A hint in the prompt, not a translation layer — the model answers in
     // whatever the customer writes unless told otherwise.
@@ -101,7 +103,7 @@ const waAgentSchema = new mongoose.Schema(
         },
       }],
       menuPrompt:      { type: String, default: "Great, what would you like to see next?" },
-      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "location", "site_visit", "advisor"] } }], // ≤3
+      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "docs", "location", "site_visit", "advisor"] } }], // ≤3
       siteVisitPrompt: { type: String, default: "Which time works best for your visit?" },
       siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
       closingPrompt:   { type: String, default: "Would you like to talk to our advisor, or book a site visit?" },

@@ -646,7 +646,38 @@ async function handleInbound(org, parsed) {
  * to that pending message immediately, the same way a fresh inbound message
  * would, instead of silently waiting for a second message that may never come.
  */
-async function respondAsBot(org, conv, { interactiveId, msgText, isNewConversation }) {
+// One customer, one queue. WhatsApp delivers rapid taps as separate webhooks
+// that used to run at the same time: two menu buttons interleaved their photos
+// and prompts, and a double tap on a question sent the next question twice.
+// Running each conversation's turns strictly in arrival order (against a fresh
+// copy of the conversation, so flowState reflects the previous turn) fixes
+// both. Single API instance, so an in-process queue is enough.
+const botQueues = new Map(); // conversationId -> { tail: Promise, pending: [{ interactiveId }] }
+function respondAsBot(org, conv, args) {
+  const id = String(conv._id);
+  let q = botQueues.get(id);
+  if (!q) { q = { tail: Promise.resolve(), pending: [] }; botQueues.set(id, q); }
+  const entry = { interactiveId: args.interactiveId || null };
+  q.pending.push(entry);
+  const run = async () => {
+    q.pending.splice(q.pending.indexOf(entry), 1);
+    try {
+      const fresh = await WaConversation.findById(conv._id);
+      const target = fresh || conv;
+      // Taps still waiting behind this one, so a turn can avoid repeating a
+      // prompt the next turn is about to send anyway.
+      target._pendingTaps = () => q.pending.map((p) => p.interactiveId).filter(Boolean);
+      return await respondAsBotNow(org, target, args);
+    } finally {
+      if (!q.pending.length) setImmediate(() => { if (botQueues.get(id) === q && !q.pending.length) botQueues.delete(id); });
+    }
+  };
+  const next = q.tail.then(run, run);
+  q.tail = next.catch(() => {});
+  return next;
+}
+
+async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation }) {
   // Resolved before anything is sent, and pinned, so the away message, the
   // greeting and the reply are all unmistakably the same assistant.
   const agent = await resolveAgentForConversation(org, conv);
@@ -857,8 +888,11 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
 
   const canSharePhotos   = agent?.shareProjectPhotos === true;
   const canShareBrochure = agent?.shareBrochure === true;
-  const mediaRule = (canSharePhotos || canShareBrochure)
-    ? `- You ${[canSharePhotos && "may send project photos", canShareBrochure && "may send the brochure"].filter(Boolean).join(" and ")} when it's clearly relevant — say what you're sending, then add ${[canSharePhotos && "[SHARE_PHOTOS]", canShareBrochure && "[SHARE_BROCHURE]"].filter(Boolean).join(" and/or ")} at the very end of that reply. Only for the specific project just discussed, and only if you've already exchanged at least one message with this customer — never on the very first reply.\n`
+  const canShareVideos    = agent?.shareVideos === true;
+  const canShareFloorPlan = agent?.shareFloorPlan === true;
+  const canShareAny = canSharePhotos || canShareBrochure || canShareVideos || canShareFloorPlan;
+  const mediaRule = canShareAny
+    ? `- You ${[canSharePhotos && "may send project photos", canShareVideos && "may send the project video", canShareFloorPlan && "may send the floor plan", canShareBrochure && "may send the brochure"].filter(Boolean).join(", ")} when it's clearly relevant — say what you're sending, then add ${[canSharePhotos && "[SHARE_PHOTOS]", canShareVideos && "[SHARE_VIDEO]", canShareFloorPlan && "[SHARE_FLOORPLAN]", canShareBrochure && "[SHARE_BROCHURE]"].filter(Boolean).join(" and/or ")} at the very end of that reply. Use exactly the tag for what they asked: a floor plan request gets [SHARE_FLOORPLAN], never [SHARE_PHOTOS]. Only for the specific project just discussed, and only if you've already exchanged at least one message with this customer — never on the very first reply.\n`
     : `- If asked for photos, a brochure, or a document, don't say you're unable to — that reads as a system talking. Just say warmly that you'll have those sent across shortly, and keep the conversation moving.\n`;
 
   const tenantPrompt = agent?.systemPrompt?.trim()
@@ -1145,9 +1179,11 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     const takeover = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
-    const wantsPhotos   = reply.includes("[SHARE_PHOTOS]");
-    const wantsBrochure = reply.includes("[SHARE_BROCHURE]");
-    reply = reply.replace("[SHARE_PHOTOS]", "").replace("[SHARE_BROCHURE]", "").trim();
+    const wantsPhotos    = reply.includes("[SHARE_PHOTOS]");
+    const wantsBrochure  = reply.includes("[SHARE_BROCHURE]");
+    const wantsVideos    = reply.includes("[SHARE_VIDEO]");
+    const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]");
+    reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
 
     if (reply) {
       // The bot spends real money on every reply. Hold the credit before the
@@ -1188,8 +1224,16 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     // Fire-and-forget: a failed or skipped media send must never take down
     // the text reply that has already gone out, or trigger a human handoff
     // over something this minor.
-    if (wantsPhotos || wantsBrochure) {
-      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure })
+    if (wantsPhotos || wantsBrochure || wantsVideos || wantsFloorPlan) {
+      sendQualifiedMedia(org, agent, conversation, botName, reply, { wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan })
+        .then(async ({ missing }) => {
+          // The reply already said something was on its way. If the project
+          // has no such file, say so instead of leaving the customer waiting.
+          if (!missing.length) return;
+          const names = { photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" };
+          const list = missing.map((m) => names[m]).join(" and ");
+          await sendProviderMessage(org, conversation.contactPhone, `${list.charAt(0).toUpperCase()}${list.slice(1)} isn't ready on my side yet, our team will send it across shortly. 🙂`);
+        })
         .catch((err) => console.error("[WhatsApp Bot] media send failed:", err?.response?.data || err.message));
     }
 
@@ -1214,7 +1258,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
 async function resolveDiscussedProject(org, agent, replyText) {
   const filter = { orgId: org._id, isArchived: { $ne: true } };
   if (agent?.projectIds?.length) filter._id = { $in: agent.projectIds };
-  const projects = await Project.find(filter).select("name propertyType unitTypes bhkTypes images brochureUrl").lean();
+  const projects = await Project.find(filter).select("name propertyType unitTypes bhkTypes images videos brochureUrl floorPlanUrl").lean();
   if (projects.length === 1) return projects[0];
   const lower = replyText.toLowerCase();
   const matches = projects.filter((p) => {
@@ -1232,23 +1276,42 @@ async function resolveDiscussedProject(org, agent, replyText) {
 // one — so this re-checks the agent's own toggle and that the asset genuinely
 // exists before sending anything. Not available on a BSP connection; media
 // messages are Meta-direct only (see sendProviderMedia).
-async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsBrochure }) {
-  if (org.whatsapp?.provider !== "meta") return;
-  const project = await resolveDiscussedProject(org, agent, replyText);
-  if (!project) return;
+async function sendQualifiedMedia(org, agent, conversation, botName, replyText, { wantsPhotos, wantsVideos, wantsBrochure, wantsFloorPlan, force = false, project: givenProject = null }) {
+  const nothing = { sent: [], missing: [] };
+  if (org.whatsapp?.provider !== "meta") return nothing;
+  const project = givenProject || await resolveDiscussedProject(org, agent, replyText);
+  if (!project) return nothing;
 
+  // A button tap (force) is an explicit ask, so the free-text toggles don't
+  // apply; the model-driven path still honours them.
+  const allowed = (flag) => force || flag === true;
   const sends = [];
-  if (wantsPhotos && agent?.shareProjectPhotos && project.images?.length) {
+  const sent = [], missing = [];
+  const want = (kind, ok, add) => {
+    if (!ok) return;
+    const before = sends.length;
+    add();
+    (sends.length > before ? sent : missing).push(kind);
+  };
+  want("photos", wantsPhotos && allowed(agent?.shareProjectPhotos), () => {
     // Capped at 3 — WhatsApp has no album/carousel for raw images, so each is
     // its own billed message, and three photos is plenty to make the case
     // without turning a single reply into a spam burst.
-    for (const url of project.images.slice(0, 3)) sends.push({ type: "image", url, caption: project.name });
-  }
-  if (wantsBrochure && agent?.shareBrochure && project.brochureUrl) {
-    sends.push({ type: "document", url: project.brochureUrl, caption: `${project.name} brochure`, filename: `${project.name}.pdf` });
-  }
-  if (!sends.length) return;
+    for (const url of (project.images || []).filter((u) => /^https?:/.test(u)).slice(0, 3)) sends.push({ type: "image", url, caption: project.name });
+  });
+  want("videos", wantsVideos && allowed(agent?.shareVideos), () => {
+    const v = (project.videos || []).find((x) => x?.url);
+    if (v) sends.push({ type: "video", url: v.url, caption: project.name });
+  });
+  want("brochure", wantsBrochure && allowed(agent?.shareBrochure), () => {
+    if (project.brochureUrl) sends.push({ type: "document", url: project.brochureUrl, caption: `${project.name} brochure`, filename: `${project.name} Brochure.pdf` });
+  });
+  want("floorplan", wantsFloorPlan && allowed(agent?.shareFloorPlan), () => {
+    if (project.floorPlanUrl) sends.push({ type: "document", url: project.floorPlanUrl, caption: `${project.name} floor plan`, filename: `${project.name} Floor Plan.pdf` });
+  });
+  if (!sends.length) return { sent, missing };
 
+  let lastPreview = "📷 Photo";
   for (const m of sends) {
     const q = await credits.quote(org._id, "service", 1);
     let held = 0;
@@ -1257,7 +1320,7 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
     } catch (err) {
       if (err instanceof credits.InsufficientCreditsError) {
         console.warn(`[WhatsApp Bot] org ${org._id} out of credits — media send skipped`);
-        return; // keep whatever already sent in this loop; stop here
+        return { sent, missing }; // keep whatever already sent in this loop; stop here
       }
       throw err;
     }
@@ -1276,10 +1339,10 @@ async function sendQualifiedMedia(org, agent, conversation, botName, replyText, 
       status: "sent", timestamp: new Date(),
       reservedPaise: held, creditCategory: "service", freeTierApplied: q.freeCount > 0,
     });
+    lastPreview = m.type === "video" ? "🎬 Video" : m.type === "document" ? (m.filename?.includes("Floor") ? "📄 Floor plan" : "📄 Brochure") : "📷 Photo";
   }
-  await WaConversation.findByIdAndUpdate(conversation._id, {
-    lastMessageAt: new Date(), lastMessagePreview: wantsBrochure ? "📄 Brochure" : "📷 Photo",
-  });
+  await WaConversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date(), lastMessagePreview: lastPreview });
+  return { sent, missing };
 }
 
 // ── Per-org webhook: all providers ───────────────────────────────────────────
@@ -1666,14 +1729,14 @@ router.post("/settings/test", authorize("admin", "super_admin"), async (req, res
 const AGENT_FIELDS = [
   "name", "description", "greeting", "businessContext", "groundRules",
   "projectIds", "systemPrompt", "language", "adIds", "status",
-  "shareProjectPhotos", "shareBrochure", "ctwaFlow",
+  "shareProjectPhotos", "shareBrochure", "shareVideos", "shareFloorPlan", "ctwaFlow",
 ];
 
 // Caps mirror WhatsApp's own interactive-message limits (3 reply buttons, 10
 // list rows) — enforced here so a misconfigured flow fails on save with a
 // clear message instead of failing silently at Meta send time mid-conversation.
 const CTWA_STEP_CAPS = { menuOptions: 3, siteVisitSlots: 3 };
-const CTWA_MENU_ACTIONS = ["photos", "location", "site_visit", "advisor"];
+const CTWA_MENU_ACTIONS = ["photos", "docs", "location", "site_visit", "advisor"];
 const CTWA_MAX_QUESTIONS = 5;
 const CTWA_MAPS_TO = ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"];
 
@@ -1782,6 +1845,8 @@ async function sanitizeAgentBody(orgId, body) {
   }
   if (out.shareProjectPhotos !== undefined) out.shareProjectPhotos = out.shareProjectPhotos === true;
   if (out.shareBrochure      !== undefined) out.shareBrochure      = out.shareBrochure === true;
+  if (out.shareVideos        !== undefined) out.shareVideos        = out.shareVideos === true;
+  if (out.shareFloorPlan     !== undefined) out.shareFloorPlan     = out.shareFloorPlan === true;
   if (out.ctwaFlow !== undefined) out.ctwaFlow = sanitizeCtwaFlow(out.ctwaFlow);
   return out;
 }
@@ -1963,7 +2028,9 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
     // into the preview bubble verbatim instead of a "would send" indicator.
     const wantsPhotos = reply.includes("[SHARE_PHOTOS]");
     const wantsBrochure = reply.includes("[SHARE_BROCHURE]");
-    reply = reply.replace("[SHARE_PHOTOS]", "").replace("[SHARE_BROCHURE]", "").trim();
+    const wantsVideos = reply.includes("[SHARE_VIDEO]");
+    const wantsFloorPlan = reply.includes("[SHARE_FLOORPLAN]");
+    reply = reply.replace(/\[SHARE_(PHOTOS|BROCHURE|VIDEO|FLOORPLAN)\]/g, "").trim();
 
     // Counted with the same filter the prompt just used, so the number on
     // screen is the inventory the model actually saw.
@@ -1976,7 +2043,7 @@ router.post("/agents/preview", authorize("admin", "super_admin"), async (req, re
 
     res.json({
       reply, handoff, systemPrompt,
-      wantsPhotos, wantsBrochure,
+      wantsPhotos, wantsBrochure, wantsVideos, wantsFloorPlan,
       usingCustomPrompt: !!agent.systemPrompt?.trim(),
       projectsInScope: scoped, activeProjects: allActive,
       // The configured greeting is never part of the system prompt — on a real

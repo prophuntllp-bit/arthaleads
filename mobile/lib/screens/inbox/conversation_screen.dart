@@ -357,6 +357,29 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
     }
 
+    if (type == 'video') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => _openMedia(url),
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 230,
+              height: 130,
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
+              alignment: Alignment.center,
+              child: const Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 44),
+            ),
+          ),
+          if (body.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(body, style: TextStyle(color: wa.bubbleText, fontSize: 14.5)),
+          ],
+        ],
+      );
+    }
+
     if (type == 'document') {
       return InkWell(
         onTap: () => _openMedia(url),

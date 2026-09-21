@@ -215,6 +215,10 @@ function Bubble({ msg }) {
             className="rounded-xl mb-1.5 max-w-full max-h-64 object-cover"
             loading="lazy" />
         )}
+        {msg.mediaType === "video" && msg.mediaUrl && (
+          <video src={msg.mediaUrl} controls preload="metadata" playsInline
+            className="rounded-xl mb-1.5 max-w-full max-h-64 bg-black" />
+        )}
         {msg.mediaType === "document" && msg.mediaUrl && (
           <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-xl px-2.5 py-2 mb-1.5 transition hover:opacity-80"

@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
+import 'project_media_section.dart';
 
 /// Add/edit project form with the same structured fields and image workflow as
 /// the web app. Photos are resized/compressed on-device and sent as data URLs.
@@ -442,6 +443,7 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                       _imagePreview(_images[index], index),
                 ),
               ),
+            if (isEdit) ProjectMediaSection(project: widget.project!),
             if (widget.agents.isNotEmpty) ...[
               _sectionTitle('Assign agents'),
               Wrap(
