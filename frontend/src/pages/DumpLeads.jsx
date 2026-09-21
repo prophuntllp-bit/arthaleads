@@ -428,7 +428,7 @@ export default function DumpLeads() {
                       />
                     </th>
                   )}
-                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Booking Status", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
+                  {["Lead", "Phone", "WhatsApp", "Source", "Project", "Pipeline Status", "Lead Outcome", "Reason", "Assigned To", "Remark", "Added", canDelete && "Actions"].filter(Boolean).map((h) => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>

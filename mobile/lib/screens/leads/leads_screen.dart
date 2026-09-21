@@ -542,7 +542,7 @@ class LeadsScreenState extends State<LeadsScreen> {
     'Remark',
     'Remark 1',
     'Remark 2',
-    'Booking',
+    'Lead Outcome',
     'Assigned To',
     'Project',
     'Created At',
@@ -958,7 +958,9 @@ class LeadsScreenState extends State<LeadsScreen> {
                     lead['phone'] as String? ?? '',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
+                  SourceChip(lead['source'] as String?),
+                  const SizedBox(width: 8),
                   if (lead['projectName'] != null &&
                       (lead['projectName'] as String).isNotEmpty) ...[
                     Icon(
@@ -975,17 +977,6 @@ class LeadsScreenState extends State<LeadsScreen> {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ] else if (lead['source'] != null) ...[
-                    Icon(
-                      FontAwesomeIcons.globe.data,
-                      size: 13,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      lead['source'] as String,
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ],

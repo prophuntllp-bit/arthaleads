@@ -476,18 +476,7 @@ class _FollowUpsScreenState extends State<FollowUpsScreen> {
                                   spacing: 6,
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
-                                    if ((lead['source'] as String? ?? '').isNotEmpty)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blueGrey.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(999),
-                                        ),
-                                        child: Text(
-                                          lead['source'] as String,
-                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blueGrey),
-                                        ),
-                                      ),
+                                    SourceChip(lead['source'] as String?),
                                     if ((lead['booking'] as String? ?? '').isNotEmpty)
                                       BookingChip(lead['booking'] as String?),
                                   ],

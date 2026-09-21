@@ -49,7 +49,7 @@ async function fetchPageContext(page, userId, orgId, leadId) {
 - Purpose: ${lead.purpose || "Buy"}
 - Follow-up date: ${lead.followUpDate ? formatISTDate(lead.followUpDate) : "not set"}
 - Assigned to: ${lead.assignedTo?.name || "unassigned"}
-- Booking status: ${lead.booking || "none"}
+- Lead outcome: ${lead.booking || "none"}
 - Last remark: ${lead.remark1 || lead.remarkNote || "none"}
 - AI Score: ${lead.score ?? "not scored"}
 - Notes: ${(lead.notes || []).length} note(s)`);

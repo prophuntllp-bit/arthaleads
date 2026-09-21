@@ -558,7 +558,7 @@ export default function ProjectDetail() {
         "Email":          lead.email || "",
         "Source":         lead.source || "",
         "Contact Status": lead.status || "",
-        "Status":         lead.booking || "",
+        "Lead Outcome":       lead.booking || "",
         "Follow Up":      lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
         "Follow Up 2":    lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
         "Remark 1":       lead.remark1 || "",
@@ -613,7 +613,7 @@ export default function ProjectDetail() {
         "Email":          lead.email || "",
         "Source":         lead.source || "",
         "Contact Status": lead.status || "",
-        "Status":         lead.booking || "",
+        "Lead Outcome":       lead.booking || "",
         "Follow Up":      lead.followUp ? new Date(lead.followUp).toLocaleDateString("en-IN") : "",
         "Follow Up 2":    lead.followUp2 ? new Date(lead.followUp2).toLocaleDateString("en-IN") : "",
         "Remark 1":       lead.remark1 || "",
@@ -1168,7 +1168,7 @@ export default function ProjectDetail() {
                         <RTh k="remark2"       colW={colW} startResize={startResize}>Remark 2</RTh>
                         <RTh k="followUp"      colW={colW} startResize={startResize}>Follow Up</RTh>
                         <RTh k="followUp2"     colW={colW} startResize={startResize}>Follow Up 2</RTh>
-                        <RTh k="status"        colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="status"        colW={colW} startResize={startResize}>Lead Outcome</RTh>
                         <RTh k="updatedBy"     colW={colW} startResize={startResize}>Updated By</RTh>
                         <RTh k="assignedTo"    colW={colW} startResize={startResize}>Assigned To</RTh>
                         <th style={{ width: 72, minWidth: 72 }}>Actions</th>
@@ -1527,7 +1527,7 @@ export default function ProjectDetail() {
                         <RTh k="name" colW={colW} startResize={startResize} >Name</RTh>
                         <RTh k="phone"     colW={colW} startResize={startResize}>Phone</RTh>
                         <RTh k="whatsapp"  colW={colW} startResize={startResize}>WhatsApp</RTh>
-                        <RTh k="status"    colW={colW} startResize={startResize}>Status</RTh>
+                        <RTh k="status"    colW={colW} startResize={startResize}>Lead Outcome</RTh>
                         <RTh k="followUp"  colW={colW} startResize={startResize}>Follow Up</RTh>
                         <RTh k="followUp2" colW={colW} startResize={startResize}>Follow Up 2</RTh>
                         <RTh k="remark1"   colW={colW} startResize={startResize}>Remark 1</RTh>

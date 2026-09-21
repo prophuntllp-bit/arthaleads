@@ -691,7 +691,7 @@ export default function Leads() {
         Remark:        str(lead.remark),
         Remark1:       str(lead.remark1),
         Remark2:       str(lead.remark2),
-        Booking:       str(lead.booking),
+        "Lead Outcome": str(lead.booking),
         AssignedTo:    str(lead.assignedToName),
         Project:       str(lead.projectName),
         CreatedAt:     lead.createdAt ? new Date(lead.createdAt).toISOString().slice(0, 10) : "",
@@ -1250,7 +1250,7 @@ export default function Leads() {
                 {/* Priority, Booking */}
                 {[
                   { key: "priority", placeholder: "All Priorities", opts: PRIORITY_OPTIONS },
-                  { key: "booking",  placeholder: "All Bookings",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
+                  { key: "booking",  placeholder: "All Outcomes",   opts: BOOKING_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label, color: o.color })) },
                   // Campaigns only reach "given"; the campaign builder links here
                   // to show exactly who it skipped.
                   { key: "consent",  placeholder: "Any WhatsApp consent", opts: [
@@ -1377,7 +1377,7 @@ export default function Leads() {
                   <RTh k="remark2"      colW={colW} startResize={startResize}>Remark 2</RTh>
                   <RTh k="followup"     colW={colW} startResize={startResize}>Follow Up</RTh>
                   <RTh k="followup2"    colW={colW} startResize={startResize}>Follow Up 2</RTh>
-                  <RTh k="booking"      colW={colW} startResize={startResize}>Booking</RTh>
+                  <RTh k="booking"      colW={colW} startResize={startResize}>Lead Outcome</RTh>
                   <RTh k="property"     colW={colW} startResize={startResize}>Property</RTh>
                   <RTh k="assigned"     colW={colW} startResize={startResize}>Assigned</RTh>
                   <RTh k="actions"      colW={colW} startResize={startResize}>Actions</RTh>

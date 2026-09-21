@@ -27,7 +27,7 @@ module.exports = {
     if (!isProject) throw new AppError("That is a regular lead - use update_lead_status instead.", 400);
 
     const fields = [{
-      label: "Booking", param: "booking",
+      label: "Lead Outcome", param: "booking",
       from: doc.booking || "(none)", to: params.booking,
       editor: { type: "select", value: params.booking, options: OPTS.BOOKING.filter(Boolean) },
     }];

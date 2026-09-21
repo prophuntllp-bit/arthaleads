@@ -449,7 +449,7 @@ export default function FollowUps() {
                     <RTh k="whatsapp"   colW={colW} startResize={startResize} className={FU_TH}>WhatsApp</RTh>
                     <RTh k="source"     colW={colW} startResize={startResize} className={FU_TH}>Source</RTh>
                     <RTh k="status"     colW={colW} startResize={startResize} className={FU_TH}>Status</RTh>
-                    <RTh k="booking"    colW={colW} startResize={startResize} className={FU_TH}>Booking</RTh>
+                    <RTh k="booking"    colW={colW} startResize={startResize} className={FU_TH}>Lead Outcome</RTh>
                     <RTh k="remark1"    colW={colW} startResize={startResize} className={FU_TH}>Remark 1</RTh>
                     <RTh k="remark2"    colW={colW} startResize={startResize} className={FU_TH}>Remark 2</RTh>
                     <RTh k="remark3"    colW={colW} startResize={startResize} className={FU_TH}>Remark 3</RTh>

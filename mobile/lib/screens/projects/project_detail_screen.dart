@@ -664,7 +664,7 @@ class _LeadsTabState extends State<_LeadsTab> {
         'WhatsApp',
         'Email',
         'Source',
-        'Status',
+        'Lead Outcome',
         'Follow Up',
         'Follow Up 2',
         'Remark 1',
@@ -967,7 +967,7 @@ class _LeadsTabState extends State<_LeadsTab> {
                       child: ElevatedButton.icon(
                         onPressed: _bulkStatus,
                         icon: const Icon(Icons.flag, size: 16),
-                        label: const Text('Status'),
+                        label: const Text('Lead Outcome'),
                       ),
                     ),
                     const SizedBox(width: 8),

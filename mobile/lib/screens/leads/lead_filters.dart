@@ -131,7 +131,7 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
                   (v) => setState(() => f = f.copyWith(siteFilter: v))),
             _dropdown('Priority', priorityOptions, f.priority, (v) => setState(() => f = f.copyWith(priority: v))),
             _dropdown(
-              'Booking',
+              'Lead Outcome',
               bookingOptions.where((o) => o.value.isNotEmpty).map((o) => o.value).toList(),
               f.booking,
               (v) => setState(() => f = f.copyWith(booking: v)),

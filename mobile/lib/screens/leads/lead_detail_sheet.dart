@@ -626,7 +626,7 @@ class _LeadDetailSheetState extends State<LeadDetailSheet> {
   }
 
   // One place for the field's name, so a rename touches a single line.
-  static const _bookingLabel = 'Booking';
+  static const _bookingLabel = 'Lead Outcome';
 
   BookingOption _bookingOf(Map<String, dynamic> lead) {
     final v = lead['booking'] as String? ?? '';

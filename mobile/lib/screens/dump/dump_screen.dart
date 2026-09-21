@@ -185,7 +185,7 @@ class _DumpScreenState extends State<DumpScreen> {
         ? _leads.where((l) => _selected.contains(_uid(l))).toList()
         : _filtered;
     final rows = [
-      ['Name', 'Phone', 'Email', 'Source', 'Project', 'Pipeline Status', 'Booking Status', 'Reason', 'Assigned To', 'Remark', 'Added'],
+      ['Name', 'Phone', 'Email', 'Source', 'Project', 'Pipeline Status', 'Lead Outcome', 'Reason', 'Assigned To', 'Remark', 'Added'],
       ...source.map((l) => [
             l['name'] ?? '',
             l['phone'] ?? '',
@@ -392,16 +392,7 @@ class _DumpScreenState extends State<DumpScreen> {
                                     spacing: 6,
                                     runSpacing: 4,
                                     children: [
-                                      if ((lead['source'] as String? ?? '').isNotEmpty)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blueGrey.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(999),
-                                          ),
-                                          child: Text(lead['source'] as String,
-                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.blueGrey)),
-                                        ),
+                                      SourceChip(lead['source'] as String?),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(

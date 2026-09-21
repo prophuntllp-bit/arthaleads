@@ -370,7 +370,7 @@ const leadController = {
         Remark1: lead.remark1 || "",
         Remark2: lead.remark2 || "",
         ContactStatus: lead.remark || "",
-        Booking: lead.booking || "",
+        "Lead Outcome": lead.booking || "",
         AssignedTo: lead.assignedToName || "",
         Project: lead.projectName || "",
         CreatedAt: lead.createdAt ? istDateKey(lead.createdAt) : "",
