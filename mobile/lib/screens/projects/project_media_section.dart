@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -33,6 +32,7 @@ class _ProjectMediaSectionState extends State<ProjectMediaSection> {
   late String _floorPlan = widget.project['floorPlanUrl'] as String? ?? '';
   late List<Map<String, dynamic>> _videos = _videosOf(widget.project);
   String _busyDoc = ''; // 'brochure' | 'floorplan' | ''
+  String _docStatus = '';
   String _videoStatus = '';
 
   String get _id => widget.project['_id'].toString();
@@ -72,18 +72,33 @@ class _ProjectMediaSectionState extends State<ProjectMediaSection> {
     final res = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf'],
-      withData: true,
+      withData: false,
     );
-    final file = res?.files.single;
-    if (file == null) return;
-    final bytes = file.bytes;
-    if (bytes == null) return _snack('Could not read that file.', error: true);
-    if (bytes.length > 5 * _mb) return _snack('Max 5MB for a ${label.toLowerCase()}.', error: true);
-    setState(() => _busyDoc = kind);
+    final path = res?.files.single.path;
+    if (path == null) return;
+    final file = File(path);
+    final size = await file.length();
+    // Up to 10MB is kept as is, 10 to 15MB is compressed on the server to fit
+    // 10MB, and over 15MB is refused.
+    if (size > 15 * _mb) {
+      return _snack(
+        'This PDF is ${(size / _mb).toStringAsFixed(1)}MB. PDFs over 15MB cannot be uploaded, please shrink it first.',
+        error: true,
+      );
+    }
+    setState(() {
+      _busyDoc = kind;
+      _docStatus = size > 10 * _mb ? 'Optimizing PDF, this can take a minute…' : 'Uploading…';
+    });
     try {
       final r = await _api.dio.post(
         '/projects/$_id/${kind == 'brochure' ? 'brochure' : 'floorplan'}',
-        data: {'dataUri': 'data:application/pdf;base64,${base64Encode(bytes)}'},
+        data: file.openRead(),
+        options: Options(
+          headers: {Headers.contentLengthHeader: size, Headers.contentTypeHeader: 'application/pdf'},
+          sendTimeout: const Duration(minutes: 3),
+          receiveTimeout: const Duration(minutes: 3),
+        ),
       );
       if (!mounted) return;
       setState(() {
@@ -93,11 +108,13 @@ class _ProjectMediaSectionState extends State<ProjectMediaSection> {
           _floorPlan = r.data['floorPlanUrl'] as String? ?? '';
         }
       });
-      _snack('$label uploaded');
+      _snack(r.data['compressed'] == true
+          ? '$label optimized from ${((r.data['originalBytes'] as num) / _mb).toStringAsFixed(1)}MB to ${((r.data['sizeBytes'] as num) / _mb).toStringAsFixed(1)}MB'
+          : '$label uploaded');
     } catch (e) {
       _snack(ApiClient.errorMessage(e, 'Failed to upload ${label.toLowerCase()}'), error: true);
     } finally {
-      if (mounted) setState(() => _busyDoc = '');
+      if (mounted) setState(() { _busyDoc = ''; _docStatus = ''; });
     }
   }
 
@@ -187,7 +204,7 @@ class _ProjectMediaSectionState extends State<ProjectMediaSection> {
         icon: busy
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : const Icon(Icons.upload_file_rounded),
-        label: Text(busy ? 'Uploading…' : 'Upload ${label.toLowerCase()} PDF'),
+        label: Text(busy ? (_docStatus.isEmpty ? 'Uploading…' : _docStatus) : 'Upload ${label.toLowerCase()} PDF'),
       );
     }
     return Container(

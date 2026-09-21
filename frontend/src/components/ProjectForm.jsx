@@ -101,6 +101,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   // Brochure and floor plan are the same thing to the server: one PDF each.
   const [docs, setDocs] = useState({ brochure: project?.brochureUrl || "", floorplan: project?.floorPlanUrl || "" });
   const [uploadingDoc, setUploadingDoc] = useState("");
+  const [docStatus, setDocStatus] = useState("");
   const docRefs = { brochure: useRef(null), floorplan: useRef(null) };
   const DOC_META = {
     brochure:  { label: "Brochure",   path: "brochure",  field: "brochureUrl" },
@@ -128,6 +129,10 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
       if (cancelled || !p) return;
       setDocs({ brochure: p.brochureUrl || "", floorplan: p.floorPlanUrl || "" });
       setVideos(p.videos || []);
+      if (!advisorTouched.current) {
+        const adv = p.advisorId ? String(p.advisorId?._id || p.advisorId) : "";
+        setForm((f) => ({ ...f, advisorId: adv }));
+      }
     }).catch(() => {});
     return () => { cancelled = true; };
   }, [open, project]);
@@ -138,21 +143,25 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
     if (!file || !project) return;
     const { label, path, field } = DOC_META[kind];
     if (file.type !== "application/pdf") return toast.error(`${label} must be a PDF`);
-    if (file.size > 5 * 1024 * 1024) return toast.error(`Max 5MB for a ${label.toLowerCase()}`);
+    if (file.size > 15 * 1024 * 1024) {
+      return toast.error(`This PDF is ${(file.size / 1048576).toFixed(1)}MB. PDFs over 15MB can't be uploaded, please shrink it first.`);
+    }
     setUploadingDoc(kind);
+    setDocStatus(file.size > 10 * 1024 * 1024 ? "Optimizing PDF, this can take a minute…" : "Uploading…");
     try {
-      const dataUri = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+      // The file itself is the request body (not base64 JSON), so it isn't
+      // held to the 8MB JSON limit. 10 to 15MB is compressed server-side.
+      const { data } = await api.post(`/projects/${project._id}/${path}`, file, {
+        headers: { "Content-Type": "application/pdf" },
+        timeout: 180000,
       });
-      const { data } = await api.post(`/projects/${project._id}/${path}`, { dataUri });
       setDocs((d) => ({ ...d, [kind]: data[field] }));
-      toast.success(`${label} uploaded`);
+      toast.success(data.compressed
+        ? `${label} optimized from ${(data.originalBytes / 1048576).toFixed(1)}MB to ${(data.sizeBytes / 1048576).toFixed(1)}MB`
+        : `${label} uploaded`);
     } catch (err) {
       toast.error(err.response?.data?.message || `Failed to upload ${label.toLowerCase()}`);
-    } finally { setUploadingDoc(""); }
+    } finally { setUploadingDoc(""); setDocStatus(""); }
   };
 
   const removeDoc = async (kind) => {
@@ -234,6 +243,11 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
   }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  // The advisor is only sent when the user actually picked one. Any other save
+  // (photos, price, agents...) leaves it exactly as stored, so a form that
+  // hadn't finished loading the advisor can never clear it by accident.
+  const advisorTouched = useRef(false);
+  useEffect(() => { if (open) advisorTouched.current = false; }, [open, project?._id]);
 
   // ── Images ────────────────────────────────────────────────────────────────
   const addImageUrl = () => {
@@ -324,6 +338,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
       // Send only IDs to the backend
       assignedTo: form.assignedTo.map((m) => m._id),
     };
+    if (project && !advisorTouched.current) delete payload.advisorId;
 
     setSaving(true);
     try {
@@ -469,7 +484,7 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
                         className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition disabled:opacity-40"
                         style={{ background: "var(--app-surface-low)", border: "1px dashed var(--app-border-strong)", color: "var(--app-text-soft)" }}>
                         {busy ? <Spinner size="sm" /> : <Upload className="h-4 w-4" />}
-                        {busy ? "Uploading…" : `Upload ${label.toLowerCase()} PDF`}
+                        {busy ? (docStatus || "Uploading…") : `Upload ${label.toLowerCase()} PDF`}
                       </button>
                     )}
                     <input ref={docRefs[kind]} type="file" accept="application/pdf" className="hidden" onChange={handleDocFile(kind)} />
@@ -747,9 +762,11 @@ export default function ProjectForm({ open, onClose, project, onSaved }) {
           </div>
           <CustomSelect
             value={form.advisorId}
-            onChange={(v) => setForm((f) => ({ ...f, advisorId: v }))}
+            onChange={(v) => { advisorTouched.current = true; setForm((f) => ({ ...f, advisorId: v })); }}
             options={[{ value: "", label: "No advisor set — use normal round-robin assignment" },
-              ...allAgents.map((a) => ({ value: a._id, label: a.name }))]}
+              ...allAgents.map((a) => ({ value: a._id, label: a.name })),
+              ...(form.advisorId && !allAgents.some((a) => a._id === form.advisorId)
+                ? [{ value: form.advisorId, label: project?.advisorId?.name || "Current advisor" }] : [])]}
             style={{ width: "100%", padding: "12px 16px", borderRadius: "1rem", fontSize: 14 }}
           />
         </div>

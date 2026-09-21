@@ -113,15 +113,19 @@ async function uploadCallRecording(buffer, key, contentType = "audio/mpeg") {
  * Returns the public HTTPS URL — this is what the WhatsApp AI agent sends
  * when its Share Brochure permission is on (see whatsappRoutes.js).
  */
-async function uploadProjectBrochure(dataUri, projectId) {
-  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+async function uploadProjectBrochure(dataUriOrBuffer, projectId) {
+  const { contentType, buffer } = Buffer.isBuffer(dataUriOrBuffer)
+    ? { contentType: "application/pdf", buffer: dataUriOrBuffer }
+    : storage.decodeDataUri(dataUriOrBuffer);
   const url = await storage.put(projectBrochureKey(projectId), buffer, contentType);
   return versioned(url);
 }
 
 /** Floor-plan PDF: one per project, re-upload overwrites (same as the brochure). */
-async function uploadProjectFloorPlan(dataUri, projectId) {
-  const { contentType, buffer } = storage.decodeDataUri(dataUri);
+async function uploadProjectFloorPlan(dataUriOrBuffer, projectId) {
+  const { contentType, buffer } = Buffer.isBuffer(dataUriOrBuffer)
+    ? { contentType: "application/pdf", buffer: dataUriOrBuffer }
+    : storage.decodeDataUri(dataUriOrBuffer);
   const url = await storage.put(projectFloorPlanKey(projectId), buffer, contentType);
   return versioned(url);
 }

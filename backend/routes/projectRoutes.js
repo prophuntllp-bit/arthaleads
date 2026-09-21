@@ -65,23 +65,45 @@ router.delete("/:id", authorize("admin", "manager"), projectController.remove);
 // and stores only the resulting URL. Same admin/manager gate as PUT /:id,
 // since a brochure is exactly the kind of thing that ends up in a customer's
 // hands via the AI agent (see shareBrochure on WaAgent).
-router.post("/:id/brochure", authorize("admin", "manager"), async (req, res, next) => {
-  try {
-    const { dataUri } = req.body || {};
-    if (!dataUri) return res.status(400).json({ success: false, message: "dataUri is required." });
-    if (!dataUri.startsWith("data:application/pdf")) {
-      return res.status(400).json({ success: false, message: "Only PDF files are accepted for a brochure." });
-    }
-    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
-    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+//
+// The file is the raw request body (Content-Type: application/pdf) so it
+// isn't capped by the 8MB JSON limit; older app builds still send a JSON
+// { dataUri } and keep working. Policy (utils/pdfCompress.js): up to 10MB is
+// stored as is, 10 to 15MB is compressed to fit 10MB, over 15MB is refused.
+const rawPdf = express.raw({ type: "application/pdf", limit: "16mb" });
+function pdfUploadHandler(field, uploadFn) {
+  return async (req, res, next) => {
+    try {
+      let input;
+      if (Buffer.isBuffer(req.body)) {
+        input = req.body;
+      } else {
+        const { dataUri } = req.body || {};
+        if (!dataUri) return res.status(400).json({ success: false, message: "No file received." });
+        if (!dataUri.startsWith("data:application/pdf")) {
+          return res.status(400).json({ success: false, message: "Only PDF files are accepted." });
+        }
+        input = Buffer.from(dataUri.split(",")[1] || "", "base64");
+      }
+      const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
+      if (!project) return res.status(404).json({ success: false, message: "Project not found." });
 
-    const { uploadProjectBrochure } = require("../utils/upload");
-    const url = await uploadProjectBrochure(dataUri, project._id.toString());
-    project.brochureUrl = url;
-    await project.save();
-    res.json({ success: true, brochureUrl: url });
-  } catch (err) { next(err); }
-});
+      const { preparePdf, PdfError } = require("../utils/pdfCompress");
+      let prepared;
+      try {
+        prepared = await preparePdf(input);
+      } catch (err) {
+        if (err instanceof PdfError) return res.status(err.statusCode).json({ success: false, message: err.message });
+        throw err;
+      }
+      project[field] = await uploadFn(prepared.buffer, project._id.toString());
+      await project.save();
+      res.json({ success: true, [field]: project[field], compressed: prepared.compressed, originalBytes: prepared.originalBytes, sizeBytes: prepared.sizeBytes });
+    } catch (err) { next(err); }
+  };
+}
+router.post("/:id/brochure", authorize("admin", "manager"), rawPdf,
+  pdfUploadHandler("brochureUrl", (buf, id) => require("../utils/upload").uploadProjectBrochure(buf, id)));
 
 router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, next) => {
   try {
@@ -95,22 +117,9 @@ router.delete("/:id/brochure", authorize("admin", "manager"), async (req, res, n
   } catch (err) { next(err); }
 });
 
-// Floor plan: same shape as the brochure — a single PDF sent to customers.
-router.post("/:id/floorplan", authorize("admin", "manager"), async (req, res, next) => {
-  try {
-    const { dataUri } = req.body || {};
-    if (!dataUri) return res.status(400).json({ success: false, message: "dataUri is required." });
-    if (!dataUri.startsWith("data:application/pdf")) {
-      return res.status(400).json({ success: false, message: "Only PDF files are accepted for a floor plan." });
-    }
-    const project = await Project.findOne({ _id: req.params.id, orgId: req.user.orgId, isArchived: { $ne: true } });
-    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
-    const { uploadProjectFloorPlan } = require("../utils/upload");
-    project.floorPlanUrl = await uploadProjectFloorPlan(dataUri, project._id.toString());
-    await project.save();
-    res.json({ success: true, floorPlanUrl: project.floorPlanUrl });
-  } catch (err) { next(err); }
-});
+// Floor plan: same shape and limits as the brochure — a single PDF sent to customers.
+router.post("/:id/floorplan", authorize("admin", "manager"), rawPdf,
+  pdfUploadHandler("floorPlanUrl", (buf, id) => require("../utils/upload").uploadProjectFloorPlan(buf, id)));
 
 router.delete("/:id/floorplan", authorize("admin", "manager"), async (req, res, next) => {
   try {
