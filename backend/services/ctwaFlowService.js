@@ -329,7 +329,11 @@ module.exports = function createCtwaFlowService({
     switch (question.mapsTo) {
       case "purpose":
         mapped = normalizePurpose(value);
-        if (mapped) await updateLeadIfBlank(leadId, { purpose: mapped });
+        // Not updateLeadIfBlank: the Lead schema pre-fills purpose with "Buy",
+        // so "blank" never applied and an "Investment" tap was silently
+        // dropped. The customer's latest tap is the best evidence we have, so
+        // it wins (this also lets them change their mind).
+        if (mapped && leadId) await Lead.updateOne({ _id: leadId }, { $set: { purpose: mapped } });
         break;
       case "budget": {
         const range = option.max > 0 ? { min: option.min || 0, max: option.max } : parseIndianCurrencyRange(value);
