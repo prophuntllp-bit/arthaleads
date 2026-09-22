@@ -372,6 +372,7 @@ const Team           = lazy(() => import("./pages/Team"));
 const Performance    = lazy(() => import("./pages/Performance"));
 const Automation     = lazy(() => import("./pages/Automation"));
 const TelephonyIntegration = lazy(() => import("./pages/TelephonyIntegration"));
+const WhatsAppIntegration = lazy(() => import("./pages/WhatsAppIntegration"));
 const Settings       = lazy(() => import("./pages/Settings"));
 const HelpSupport    = lazy(() => import("./pages/HelpSupport"));
 const NotFound       = lazy(() => import("./pages/NotFound"));
@@ -828,6 +829,7 @@ export default function App() {
               <Route path="/team" element={<Team />} />
               <Route path="/integrations" element={<Automation />} />
               <Route path="/integrations/telephony" element={<TelephonyIntegration />} />
+              <Route path="/integrations/whatsapp" element={<WhatsAppIntegration />} />
               {/* The page was renamed Automation -> Integrations. Keep the old
                   slug redirecting: push notifications already delivered to
                   devices carry url:"/automation" in their payload and would

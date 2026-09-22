@@ -2015,13 +2015,12 @@ export default function Automation() {
           </button>
 
           {/* WhatsApp Business tile - connects your own number for the Inbox/AI
-              agent (managed on /conversations/settings). Distinct from the
-              "WhatsApp Bot Leads" tile below, which ingests leads from a
-              3rd-party bot's webhook instead. */}
+              agent. Opens its own page under Integrations (same pattern as
+              Telephony below) rather than navigating out to /conversations. */}
           <button
             type="button"
             className="card p-5 text-left transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
-            onClick={() => navigate("/conversations/settings")}
+            onClick={() => navigate("/integrations/whatsapp")}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
               <WhatsAppIcon className="h-5 w-5" style={{ color: "#25D366" }} />
@@ -2038,7 +2037,12 @@ export default function Automation() {
           </button>
 
           {Object.entries(PLATFORM_PRESETS)
-            .filter(([p]) => p !== "Facebook")
+            // Facebook has its own special tile above. WhatsApp's quick-connect
+            // tile was dead (nobody used a 3rd-party bot webhook this way) and
+            // is replaced by the WhatsApp Business tile above — the preset
+            // itself stays defined so an existing connection still renders
+            // correctly in "Your connections" below.
+            .filter(([p]) => p !== "Facebook" && p !== "WhatsApp")
             .map(([platform, preset]) => {
               const Icon = preset.icon;
               const isWebsiteForm = platform === "Website Form";

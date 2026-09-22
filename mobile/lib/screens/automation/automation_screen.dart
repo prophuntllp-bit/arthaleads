@@ -2071,17 +2071,6 @@ class _AutomationScreenState extends State<AutomationScreen> {
               ),
               _sourceCard(
                 icon: const FaIcon(
-                  FontAwesomeIcons.whatsapp,
-                  color: AppColors.whatsapp,
-                  size: 25,
-                ),
-                title: 'WhatsApp Bot Leads',
-                description:
-                    'Route WhatsApp enquiries from a bot or form into the CRM',
-                onTap: () => _openForm(initialPlatform: 'WhatsApp'),
-              ),
-              _sourceCard(
-                icon: const FaIcon(
                   FontAwesomeIcons.wordpress,
                   color: Color(0xFF21759B),
                   size: 25,
