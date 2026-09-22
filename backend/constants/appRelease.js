@@ -55,9 +55,9 @@ module.exports = {
     // Not marked mandatory (minBuild unchanged) — it's an annoyance, not
     // data loss or a blocked workflow, so a normal dismissible prompt is
     // enough.
-    build: 33,
+    build: 34,
     // Human-readable, shown in the update prompt.
-    version: "1.0.7",
+    version: "1.0.8",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -76,9 +76,9 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.7-33/arthaleads-1.0.7-33.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.8-34/arthaleads-1.0.8-34.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "WhatsApp Inbox now lives in the app: Templates, Campaigns, Credits, AI Agents and Settings, plus send-a-template and the 24-hour reply countdown in chats. Performance tiles open the leads behind them, and the side menu is roomier.",
+    notes: "Lead routing rules now work for WhatsApp, Google Ads and website leads, not just Facebook. Also: send all uploaded videos to a customer, an optional message after manually sent project files, PDF size limits, follow-up nudges and drop-off alerts in the WhatsApp flow, Lead Outcome dropdown, and coloured source pills with logos.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
@@ -94,25 +94,25 @@ module.exports = {
     // after a backend migration to `voiceCalls`) plus its recording now
     // plays inline instead of opening in another tab/app.
     download: {
-      version: "1.0.7",
+      version: "1.0.8",
       // The plain build number, not Android's versionCode — the APK is stamped
-      // 2032 and the app reports it back as 32 (% 1000). mobile/pubspec.yaml
+      // 2034 and the app reports it back as 34 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 33,
+      build: 34,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.7-33/arthaleads-1.0.7-33.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.8-34/arthaleads-1.0.8-34.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 81369311,
+      sizeBytes: 81597555,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "WhatsApp Inbox now lives in the app: Templates, Campaigns, Credits, AI Agents and Settings, plus send-a-template and the 24-hour reply countdown in chats. Performance tiles open the leads behind them, and the side menu is roomier.",
+      notes: "Lead routing rules now work for WhatsApp, Google Ads and website leads, not just Facebook. Also: send all uploaded videos to a customer, an optional message after manually sent project files, PDF size limits, follow-up nudges and drop-off alerts in the WhatsApp flow, Lead Outcome dropdown, and coloured source pills with logos.",
     },
   },
 };
