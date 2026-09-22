@@ -15,7 +15,7 @@ class Arthaleads_WPForms {
         $map = [];
         foreach ( $fields as $field ) {
             $key = strtolower( str_replace( ' ', '_', $field['name'] ?? '' ) );
-            $map[ $key ] = $field['value'] ?? '';
+            $map[ $key ] = sanitize_text_field( (string) ( $field['value'] ?? '' ) );
         }
 
         // Everything that isn't a recognized name/phone/email/message field —
@@ -23,7 +23,7 @@ class Arthaleads_WPForms {
         // it onto the lead's real fields instead of it being dropped silently.
         $custom_fields = [];
         foreach ( $fields as $field ) {
-            $val = trim( (string) ( $field['value'] ?? '' ) );
+            $val = sanitize_text_field( trim( (string) ( $field['value'] ?? '' ) ) );
             if ( $val === '' ) continue;
             $name = $field['name'] ?? '';
             $key  = strtolower( str_replace( ' ', '_', $name ) );

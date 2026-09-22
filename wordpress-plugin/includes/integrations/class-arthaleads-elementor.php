@@ -16,6 +16,7 @@ class Arthaleads_Elementor {
         $raw_fields = [];
         foreach ( $record->get( 'fields' ) as $id => $field ) {
             $val    = is_array( $field ) ? ( $field['value'] ?? '' ) : (string) $field;
+            $val    = sanitize_text_field( (string) $val );
             $id_key = strtolower( str_replace( [ '-', ' ', '.' ], '_', $id ) );
             $map[ $id_key ] = $val;
 

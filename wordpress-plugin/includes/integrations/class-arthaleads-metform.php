@@ -4,7 +4,7 @@ if ( ! defined( 'WPINC' ) ) die;
 class Arthaleads_Metform {
 
     private function dedup( $key ) {
-        $k = 'al_mf_' . md5( $key );
+        $k = 'arthaleads_mf_' . md5( $key );
         if ( get_transient( $k ) ) return false;
         set_transient( $k, 1, 60 );
         return true;

@@ -25,7 +25,7 @@ class Arthaleads_CF7 {
         $custom_fields = [];
         foreach ( $data as $key => $val ) {
             if ( is_array( $val ) ) $val = implode( ', ', array_filter( array_map( 'strval', $val ) ) );
-            $val = trim( (string) $val );
+            $val = sanitize_text_field( trim( (string) $val ) );
             if ( $val === '' ) continue;
             if ( strpos( $key, '_' ) === 0 || stripos( $key, 'recaptcha' ) !== false ) continue;
             $norm = strtolower( str_replace( '-', '_', $key ) );
@@ -35,10 +35,10 @@ class Arthaleads_CF7 {
         }
 
         ( new Arthaleads_API( 'cf7' ) )->send_lead( [
-            'name'          => trim( $data['your-name'] ?? $data['name'] ?? $data['full-name'] ?? $data['full_name'] ?? '' ),
-            'phone'         => $data['your-phone'] ?? $data['phone'] ?? $data['tel'] ?? $data['mobile'] ?? '',
-            'email'         => $data['your-email'] ?? $data['email'] ?? '',
-            'message'       => $data['your-message'] ?? $data['message'] ?? '',
+            'name'          => sanitize_text_field( trim( $data['your-name'] ?? $data['name'] ?? $data['full-name'] ?? $data['full_name'] ?? '' ) ),
+            'phone'         => sanitize_text_field( $data['your-phone'] ?? $data['phone'] ?? $data['tel'] ?? $data['mobile'] ?? '' ),
+            'email'         => sanitize_text_field( $data['your-email'] ?? $data['email'] ?? '' ),
+            'message'       => sanitize_text_field( $data['your-message'] ?? $data['message'] ?? '' ),
             'custom_fields' => $custom_fields,
         ] );
     }

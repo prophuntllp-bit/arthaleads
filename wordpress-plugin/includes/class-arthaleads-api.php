@@ -24,7 +24,7 @@ class Arthaleads_API {
         // a second form hook fired for the same submission — skip silently.
         $phone = isset( $data['phone'] ) ? sanitize_text_field( $data['phone'] ) : '';
         if ( $phone ) {
-            $dedup_key = 'al_dd_' . md5( $phone . $token );
+            $dedup_key = 'arthaleads_dd_' . md5( $phone . $token );
             if ( get_transient( $dedup_key ) ) return;
             set_transient( $dedup_key, 1, 60 );
         }

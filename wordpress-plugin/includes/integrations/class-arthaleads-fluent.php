@@ -14,7 +14,8 @@ class Arthaleads_Fluent {
     public function handle( $insertId, $formData, $form ) {
         $map = [];
         foreach ( $formData as $key => $val ) {
-            $map[ strtolower( $key ) ] = is_array( $val ) ? implode( ', ', $val ) : $val;
+            $v = is_array( $val ) ? implode( ', ', array_filter( array_map( 'strval', $val ) ) ) : $val;
+            $map[ strtolower( $key ) ] = sanitize_text_field( (string) $v );
         }
 
         // Everything that isn't a recognized name/phone/email/message field —
@@ -26,7 +27,7 @@ class Arthaleads_Fluent {
         $custom_fields = [];
         foreach ( $formData as $key => $val ) {
             if ( is_array( $val ) ) $val = implode( ', ', array_filter( array_map( 'strval', $val ) ) );
-            $val = trim( (string) $val );
+            $val = sanitize_text_field( trim( (string) $val ) );
             if ( $val === '' ) continue;
             if ( strpos( (string) $key, '_' ) === 0 ) continue;
             $norm = strtolower( (string) $key );

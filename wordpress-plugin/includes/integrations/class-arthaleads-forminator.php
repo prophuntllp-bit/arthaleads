@@ -19,7 +19,7 @@ class Arthaleads_Forminator {
 
         $get = function( $keys ) use ( $data ) {
             foreach ( (array) $keys as $k ) {
-                if ( ! empty( $data[ $k ]['value'] ) ) return $data[ $k ]['value'];
+                if ( ! empty( $data[ $k ]['value'] ) ) return sanitize_text_field( (string) $data[ $k ]['value'] );
             }
             return '';
         };
@@ -31,7 +31,7 @@ class Arthaleads_Forminator {
         foreach ( $data as $field_id => $meta ) {
             $val = is_array( $meta ) ? ( $meta['value'] ?? '' ) : $meta;
             if ( is_array( $val ) ) $val = implode( ', ', array_filter( array_map( 'strval', $val ) ) );
-            $val = trim( (string) $val );
+            $val = sanitize_text_field( trim( (string) $val ) );
             if ( $val === '' ) continue;
             // Strip Forminator's numeric field-instance suffix: "name-1" → "name"
             $base = strtolower( preg_replace( '/-\d+$/', '', (string) $field_id ) );

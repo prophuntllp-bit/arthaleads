@@ -170,6 +170,7 @@
                         btn.className = 'al-btn-test';
                         btn.textContent = '🧪 Send Test Lead';
                         saveBtn.parentNode.insertBefore(btn, saveBtn.nextSibling);
+                        testBtn = btn;
                         bindTestBtn(btn);
                     }
                 } else {

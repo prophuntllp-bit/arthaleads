@@ -2,9 +2,9 @@
 Contributors: arthaleads
 Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
-Tested up to: 6.8
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -99,6 +99,9 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.7 =
+* Prefixed the two transient keys used for duplicate-submission detection (`arthaleads_mf_...`, `arthaleads_dd_...`) instead of the unprefixed `al_mf_`/`al_dd_`, per Plugin Directory review feedback.
 
 = 1.0.6 =
 * Every supported form plugin (Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, Fluent Forms, and MetForm) now forwards every custom question answer (budget, configuration/BHK, purpose, timeline, etc.), not just name/phone/email/message, so the CRM can map real answers onto the lead's actual fields instead of losing them.

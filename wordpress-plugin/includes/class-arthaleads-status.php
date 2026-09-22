@@ -25,6 +25,7 @@ class Arthaleads_Status {
     }
 
     private static function is_plugin_installed( $slugs ) {
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
         $installed = get_plugins();
         foreach ( $slugs as $slug ) {
             if ( array_key_exists( $slug, $installed ) ) return true;

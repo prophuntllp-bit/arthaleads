@@ -15,7 +15,9 @@ class Arthaleads_Ninja {
         $map = [];
         foreach ( $form_data['fields'] as $field ) {
             $key = strtolower( str_replace( ' ', '_', $field['label'] ?? $field['key'] ?? '' ) );
-            $map[ $key ] = $field['value'] ?? '';
+            $v = $field['value'] ?? '';
+            if ( is_array( $v ) ) $v = implode( ', ', array_filter( array_map( 'strval', $v ) ) );
+            $map[ $key ] = sanitize_text_field( (string) $v );
         }
 
         // Everything that isn't a recognized name/phone/email/message field —
@@ -25,7 +27,7 @@ class Arthaleads_Ninja {
         foreach ( $form_data['fields'] as $field ) {
             $val = $field['value'] ?? '';
             if ( is_array( $val ) ) $val = implode( ', ', array_filter( array_map( 'strval', $val ) ) );
-            $val = trim( (string) $val );
+            $val = sanitize_text_field( trim( (string) $val ) );
             if ( $val === '' ) continue;
             $raw_label = $field['label'] ?? $field['key'] ?? '';
             $key = strtolower( str_replace( ' ', '_', $raw_label ) );
