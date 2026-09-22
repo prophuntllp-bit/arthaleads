@@ -12,6 +12,7 @@ import '../../widgets/labeled_field.dart';
 import 'automation_form.dart';
 import 'routing_rules_screen.dart';
 import 'telephony_integration_screen.dart';
+import '../inbox/wa_settings_page.dart';
 
 const _serverBase = 'https://api.arthaleads.com';
 
@@ -30,6 +31,12 @@ class _AutomationScreenState extends State<AutomationScreen> {
   List<Map<String, dynamic>> _automations = [];
   List<Map<String, dynamic>> _routingRules = [];
   bool _loading = true;
+  // WhatsApp Business (the real Inbox connection — Meta/AiSensy/Wati/Interakt
+  // credentials, managed on WaSettingsPage) is a different thing from the
+  // "WhatsApp" quick-connect card below, which is for routing leads in from a
+  // 3rd-party bot's webhook. Only a live status badge is fetched here; the
+  // actual connect/disconnect form is not duplicated on this screen.
+  bool? _waConnected;
 
   static final _platformIcons = {
     'Facebook': FontAwesomeIcons.facebookF.data,
@@ -43,6 +50,11 @@ class _AutomationScreenState extends State<AutomationScreen> {
   void initState() {
     super.initState();
     _load();
+    _api.dio.get('/whatsapp/status').then((r) {
+      if (mounted) setState(() => _waConnected = r.data['connected'] == true);
+    }).catchError((_) {
+      if (mounted) setState(() => _waConnected = false);
+    });
   }
 
   Future<void> _load() async {
@@ -2031,6 +2043,23 @@ class _AutomationScreenState extends State<AutomationScreen> {
               ),
               _sourceCard(
                 icon: const FaIcon(
+                  FontAwesomeIcons.whatsapp,
+                  color: AppColors.whatsapp,
+                  size: 25,
+                ),
+                title: 'WhatsApp Business',
+                description: _waConnected == true
+                    ? 'Connected · manage provider & profile'
+                    : 'Connect your number for Inbox, templates & the AI agent',
+                badge: _waConnected == true ? 'Connected' : null,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const Scaffold(body: WaSettingsPage()),
+                  ),
+                ),
+              ),
+              _sourceCard(
+                icon: const FaIcon(
                   FontAwesomeIcons.google,
                   color: Color(0xFFEF4444),
                   size: 23,
@@ -2046,7 +2075,7 @@ class _AutomationScreenState extends State<AutomationScreen> {
                   color: AppColors.whatsapp,
                   size: 25,
                 ),
-                title: 'WhatsApp',
+                title: 'WhatsApp Bot Leads',
                 description:
                     'Route WhatsApp enquiries from a bot or form into the CRM',
                 onTap: () => _openForm(initialPlatform: 'WhatsApp'),

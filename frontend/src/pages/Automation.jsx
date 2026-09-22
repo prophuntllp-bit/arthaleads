@@ -8,6 +8,7 @@ import {
 import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
+import WhatsAppIcon from "../components/WhatsAppIcon";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
 const PLATFORM_PRESETS = {
@@ -37,6 +38,10 @@ const PLATFORM_PRESETS = {
     description: "Route WhatsApp enquiries from a bot or provider (Wati, Interakt, Twilio, etc.) into the CRM.",
     icon: MessageCircle,
     tone: "bg-green-500/10 text-green-400",
+    // Disambiguates from the "WhatsApp Business" tile above it, which
+    // connects your own number for the Inbox/AI agent — this one is for a
+    // 3rd-party bot platform sending leads in via webhook.
+    label: "WhatsApp Bot Leads",
   },
   "Website Form": {
     mode: "form",
@@ -1847,6 +1852,16 @@ export default function Automation() {
 
   useEffect(() => { loadItems(); }, []);
 
+  // WhatsApp Business (the real Inbox connection — Meta/AiSensy/Wati/Interakt
+  // credentials, managed on /conversations/settings) is a different thing
+  // from the "WhatsApp" quick-connect tile below, which is for routing leads
+  // in from a 3rd-party bot's webhook. Only a live status badge is fetched
+  // here; the actual connect/disconnect form is not duplicated on this page.
+  const [waStatus, setWaStatus] = useState(null);
+  useEffect(() => {
+    api.get("/whatsapp/status").then((r) => setWaStatus(r.data)).catch(() => setWaStatus({ connected: false }));
+  }, []);
+
   useEffect(() => {
     if (!location.state?.presetPlatform) return;
     const platform = location.state.presetPlatform;
@@ -1997,6 +2012,29 @@ export default function Automation() {
             <h3 className="mt-4 text-base font-semibold text-app">Facebook</h3>
             <p className="mt-1 text-xs text-app-soft">Lead Ads · One click</p>
             <span className="absolute top-3 right-3 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] font-semibold text-blue-400">Popular</span>
+          </button>
+
+          {/* WhatsApp Business tile - connects your own number for the Inbox/AI
+              agent (managed on /conversations/settings). Distinct from the
+              "WhatsApp Bot Leads" tile below, which ingests leads from a
+              3rd-party bot's webhook instead. */}
+          <button
+            type="button"
+            className="card p-5 text-left transition hover:-translate-y-1 hover:border-emerald-500/30 relative overflow-hidden"
+            onClick={() => navigate("/conversations/settings")}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(37,211,102,0.12)" }}>
+              <WhatsAppIcon className="h-5 w-5" style={{ color: "#25D366" }} />
+            </div>
+            <h3 className="mt-4 text-base font-semibold text-app">WhatsApp Business</h3>
+            <p className="mt-1 text-xs text-app-soft">
+              {waStatus?.connected ? "Connected · manage provider & profile" : "Connect your number for Inbox, templates & the AI agent"}
+            </p>
+            {waStatus?.connected && (
+              <span className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Connected
+              </span>
+            )}
           </button>
 
           {Object.entries(PLATFORM_PRESETS)
