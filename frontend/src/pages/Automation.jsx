@@ -2418,12 +2418,53 @@ export default function Automation() {
 }
 
 /* ─── Lead Routing Rules ───────────────────────────────────────────────────── */
+const SOURCE_LABELS = {
+  facebook: "Facebook Lead Ads",
+  whatsapp: "WhatsApp (Click-to-WhatsApp Ads)",
+  google:   "Google Ads",
+  website:  "Website",
+};
+
+// Mirrors backend/models/RoutingRule.js MATCH_FIELDS_BY_SOURCE — keep in sync.
+const MATCH_FIELDS_BY_SOURCE = {
+  facebook: ["form_id", "campaign_id", "adset_id", "ad_id"],
+  whatsapp: ["ad_id"],
+  google:   ["campaign_id"],
+  website:  ["domain", "page_path"],
+};
+
 const MATCH_FIELD_LABELS = {
   form_id:     "Form ID",
   campaign_id: "Campaign ID",
   adset_id:    "Ad Set ID",
   ad_id:       "Ad ID",
+  domain:      "Website Domain",
+  page_path:   "Page URL Contains",
 };
+
+const MATCH_FIELD_PLACEHOLDERS = {
+  form_id:     "e.g. 9655855458173381",
+  campaign_id: "e.g. 9655855458173381",
+  adset_id:    "e.g. 9655855458173381",
+  ad_id:       "e.g. 9655855458173381",
+  domain:      "e.g. shapoorjipallonji.com",
+  page_path:   "e.g. /projects/joyville-hinjewadi",
+};
+
+function matchFieldHint(source, matchField) {
+  if (source === "website") {
+    return matchField === "domain"
+      ? "Exact match against the domain the form was submitted from (no \"www.\", no https://)."
+      : "Matches when the page URL contains this text — e.g. one project's landing page.";
+  }
+  if (source === "whatsapp") {
+    return "Find this in Facebook Ads Manager → your Click-to-WhatsApp ad → Ad ID.";
+  }
+  if (source === "google") {
+    return "Find this in Google Ads → Campaigns → Campaign ID column.";
+  }
+  return `Find this in Facebook Ads Manager → Campaign → ${MATCH_FIELD_LABELS[matchField]}.`;
+}
 
 function LeadRoutingSection() {
   const [rules, setRules] = useState([]);
@@ -2431,7 +2472,7 @@ function LeadRoutingSection() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ label: "", matchField: "form_id", matchValue: "", assignTo: "" });
+  const [form, setForm] = useState({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: "" });
 
   useEffect(() => {
     Promise.all([
@@ -2462,7 +2503,7 @@ function LeadRoutingSection() {
     try {
       const { data } = await api.post("/routing-rules", form);
       setRules((prev) => [data.rule, ...prev]);
-      setForm({ label: "", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "" });
+      setForm({ label: "", source: "facebook", matchField: "form_id", matchValue: "", assignTo: agents[0]?._id || "" });
       setShowForm(false);
       toast.success("Routing rule added");
     } catch (err) {
@@ -2492,9 +2533,9 @@ function LeadRoutingSection() {
     <section className="card p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-app">Campaign Routing Rules</h2>
+          <h2 className="text-lg font-bold text-app">Lead Routing Rules</h2>
           <p className="text-sm text-app-soft mt-0.5">
-            Route leads from specific Facebook campaigns or forms directly to a team member. All other leads follow the round-robin rotation.
+            Route leads from specific Facebook/Google campaigns, WhatsApp ads, or website domains and pages directly to a team member. All other leads follow the round-robin rotation.
           </p>
         </div>
         <button
@@ -2523,6 +2564,16 @@ function LeadRoutingSection() {
             </div>
 
             <div className="space-y-1">
+              <label className="label">Source</label>
+              <CustomSelect
+                value={form.source}
+                onChange={(v) => setForm((f) => ({ ...f, source: v, matchField: MATCH_FIELDS_BY_SOURCE[v][0] }))}
+                options={Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+              />
+            </div>
+
+            <div className="space-y-1">
               <label className="label">Assign To</label>
               <CustomSelect
                 value={form.assignTo}
@@ -2537,7 +2588,7 @@ function LeadRoutingSection() {
               <CustomSelect
                 value={form.matchField}
                 onChange={(v) => setForm((f) => ({ ...f, matchField: v }))}
-                options={Object.entries(MATCH_FIELD_LABELS).map(([k, v]) => ({ value: k, label: v }))}
+                options={MATCH_FIELDS_BY_SOURCE[form.source].map((k) => ({ value: k, label: MATCH_FIELD_LABELS[k] }))}
                 style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
               />
             </div>
@@ -2546,11 +2597,14 @@ function LeadRoutingSection() {
               <label className="label">{MATCH_FIELD_LABELS[form.matchField]} Value</label>
               <input
                 className="input font-mono text-sm"
-                placeholder="e.g. 9655855458173381"
+                placeholder={MATCH_FIELD_PLACEHOLDERS[form.matchField]}
                 value={form.matchValue}
-                onChange={(e) => setForm((f) => ({ ...f, matchValue: e.target.value.trim() }))}
+                onChange={(e) => {
+                  const raw = e.target.value.trim();
+                  setForm((f) => ({ ...f, matchValue: f.matchField === "domain" ? raw.toLowerCase() : raw }));
+                }}
               />
-              <p className="text-xs text-app-soft">Find this in Facebook Ads Manager → Campaign → {MATCH_FIELD_LABELS[form.matchField]}</p>
+              <p className="text-xs text-app-soft">{matchFieldHint(form.source, form.matchField)}</p>
             </div>
           </div>
 
@@ -2568,7 +2622,7 @@ function LeadRoutingSection() {
         <div className="flex justify-center py-6"><Spinner /></div>
       ) : rules.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-app-soft" style={{ borderColor: "var(--app-border)" }}>
-          No routing rules yet. Add one above to route specific campaigns to a team member.
+          No routing rules yet. Add one above to route specific campaigns, ads, or website pages to a team member.
         </div>
       ) : (
         <div className="space-y-3">
@@ -2584,7 +2638,12 @@ function LeadRoutingSection() {
               </button>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-app truncate">{rule.label}</p>
+                <p className="text-sm font-semibold text-app truncate">
+                  {rule.label}
+                  <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-app-soft align-middle">
+                    {SOURCE_LABELS[rule.source || "facebook"]}
+                  </span>
+                </p>
                 <p className="text-xs text-app-soft">
                   {MATCH_FIELD_LABELS[rule.matchField]} <code className="text-orange-400 font-mono">{rule.matchValue}</code>
                   {" → "}

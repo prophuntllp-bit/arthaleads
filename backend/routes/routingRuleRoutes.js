@@ -22,16 +22,24 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { label, matchField, matchValue, assignTo } = req.body;
+    const source = RoutingRule.SOURCES.includes(req.body.source) ? req.body.source : "facebook";
     if (!label || !matchValue || !assignTo) {
       return res.status(400).json({ success: false, message: "label, matchValue and assignTo are required" });
     }
+    const validFields = RoutingRule.MATCH_FIELDS_BY_SOURCE[source];
+    const field = validFields.includes(matchField) ? matchField : validFields[0];
+    // Hostnames are always lowercase — normalize here too, not just in the
+    // frontend, so a rule saved from any client still matches.
+    const value = field === "domain" ? matchValue.toLowerCase() : matchValue;
+
     const agent = await User.findOne({ _id: assignTo, orgId: req.orgId }).select("_id name");
     if (!agent) return res.status(404).json({ success: false, message: "Agent not found" });
 
     const rule = await RoutingRule.create({
       label,
-      matchField: matchField || "form_id",
-      matchValue,
+      source,
+      matchField: field,
+      matchValue: value,
       assignTo: agent._id,
       assignToName: agent.name,
       isActive: true,

@@ -8,7 +8,7 @@ const Automation = require("../models/Automation");
 const logger = require("../config/logger");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { getNextAssignee } = require("../utils/assignLead");
-const RoutingRule     = require("../models/RoutingRule");
+const { matchRoutingRule, matchWebsiteRoutingRule } = require("../utils/routingRules");
 const Organization    = require("../models/Organization");
 const { mapGoogleLeadFields, fromWebhookColumns } = require("../utils/googleLeadFields");
 const { mapCustomFieldsToLead } = require("../utils/formFieldMapper");
@@ -569,15 +569,11 @@ router.post("/", express.json({ verify: verifyFbSignature }), async (req, res) =
         // Check campaign routing rules first (form_id, campaign_id, adset_id, ad_id)
         const orgId = automation.orgId;
 
-        const ruleMatch = await RoutingRule.findOne({
-          orgId,
-          isActive: true,
-          $or: [
-            { matchField: "form_id",     matchValue: String(leadData.form_id     || leadDetails.form_id     || "") },
-            { matchField: "campaign_id", matchValue: String(leadData.campaign_id || "") },
-            { matchField: "adset_id",    matchValue: String(leadData.adset_id    || leadDetails.adset_id    || "") },
-            { matchField: "ad_id",       matchValue: String(leadData.ad_id       || leadDetails.ad_id       || "") },
-          ].filter((c) => c.matchValue),
+        const ruleMatch = await matchRoutingRule(orgId, "facebook", {
+          form_id:     leadData.form_id     || leadDetails.form_id     || "",
+          campaign_id: leadData.campaign_id || "",
+          adset_id:    leadData.adset_id    || leadDetails.adset_id    || "",
+          ad_id:       leadData.ad_id       || leadDetails.ad_id       || "",
         });
 
         // Routing rules always assign regardless of autoAssign (they are explicit overrides).
@@ -767,10 +763,19 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
       }
     }
 
-    // Respect the org's Auto Lead Assignment setting
+    const sourceDomain = (() => { try { return page_url ? new URL(page_url).hostname.replace(/^www\./, "") : ""; } catch { return ""; } })();
+
+    // Check campaign routing rules first — a rule tied to this domain, or to
+    // a sub-page whose path the lead's page_url contains, wins outright.
+    // Round-robin only runs when nothing matches, same as the Facebook path.
+    const ruleMatch = await matchWebsiteRoutingRule(orgId, { domain: sourceDomain, pageUrl: page_url || "" });
+
     const org = await Organization.findById(orgId).select("autoAssign").lean();
     let assignee = null;
-    if (org?.autoAssign !== false) {
+    if (ruleMatch) {
+      assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
+      logger.info(`[website webhook] rule "${ruleMatch.label}" matched - assigning "${name}" to ${assignee.name}`);
+    } else if (org?.autoAssign !== false) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 
@@ -818,7 +823,7 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
       leadSourceLabel: sourceLabel,
       formPlugin: form_plugin || "",
       sourcePage: page_url || "",
-      sourceDomain: (() => { try { return page_url ? new URL(page_url).hostname.replace(/^www\./, "") : ""; } catch { return ""; } })(),
+      sourceDomain,
       notes: [
         {
           text: [
@@ -1401,8 +1406,14 @@ router.post("/google", express.json(), googleLeadLimiter, async (req, res) => {
     }
 
     const org = await Organization.findById(orgId).select("autoAssign").lean();
+    const ruleMatch = !isTestLead
+      ? await matchRoutingRule(orgId, "google", { campaign_id: campaign_id ? String(campaign_id) : "" })
+      : null;
+
     let assignee = null;
-    if (!isTestLead && org?.autoAssign !== false) {
+    if (ruleMatch) {
+      assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
+    } else if (!isTestLead && org?.autoAssign !== false) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 

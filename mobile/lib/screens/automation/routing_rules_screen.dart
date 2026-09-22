@@ -6,11 +6,32 @@ import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 
-const _matchFields = ['form_id', 'campaign_id', 'adset_id', 'ad_id'];
+// Mirrors backend/models/RoutingRule.js MATCH_FIELDS_BY_SOURCE — keep in sync.
+const _matchFieldsBySource = {
+  'facebook': ['form_id', 'campaign_id', 'adset_id', 'ad_id'],
+  'whatsapp': ['ad_id'],
+  'google': ['campaign_id'],
+  'website': ['domain', 'page_path'],
+};
+const _sourceLabels = {
+  'facebook': 'Facebook Lead Ads',
+  'whatsapp': 'WhatsApp (Click-to-WhatsApp Ads)',
+  'google': 'Google Ads',
+  'website': 'Website',
+};
+const _matchFieldLabels = {
+  'form_id': 'Form ID',
+  'campaign_id': 'Campaign ID',
+  'adset_id': 'Ad Set ID',
+  'ad_id': 'Ad ID',
+  'domain': 'Website Domain',
+  'page_path': 'Page URL Contains',
+};
 
-/// Campaign Lead Routing Rules — GET/POST/PATCH/DELETE /routing-rules.
-/// Matches a Facebook form_id/campaign_id/adset_id/ad_id to a specific
-/// agent; leads that don't match any rule fall back to round-robin.
+/// Lead Routing Rules — GET/POST/PATCH/DELETE /routing-rules.
+/// Matches attribution data from Facebook, WhatsApp (CTWA), Google Ads, or
+/// the website (domain / page URL) to a specific agent; leads that don't
+/// match any rule fall back to round-robin.
 /// Growth-plan and above only (planGate on the backend).
 class RoutingRulesScreen extends StatefulWidget {
   const RoutingRulesScreen({super.key});
@@ -104,7 +125,8 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
   Future<void> _addRule() async {
     final labelCtrl = TextEditingController();
     final valueCtrl = TextEditingController();
-    String matchField = _matchFields.first;
+    String source = 'facebook';
+    String matchField = _matchFieldsBySource[source]!.first;
     String? assignTo;
     final created = await showModalBottomSheet<bool>(
       context: context,
@@ -124,17 +146,38 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
               ),
               const SizedBox(height: 8),
               LabeledField(
-                label: 'Match Field',
+                label: 'Source',
                 child: DropdownButtonFormField<String>(
-                  initialValue: matchField,
+                  initialValue: source,
                   decoration: const InputDecoration(isDense: true),
-                  items: _matchFields.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
-                  onChanged: (v) => setSheet(() => matchField = v ?? _matchFields.first),
+                  items: _sourceLabels.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                  onChanged: (v) => setSheet(() {
+                    source = v ?? 'facebook';
+                    matchField = _matchFieldsBySource[source]!.first;
+                  }),
                 ),
               ),
               const SizedBox(height: 8),
               LabeledField(
-                label: 'Match Value (Facebook ID)',
+                label: 'Match Field',
+                // Keyed on `source` so switching source rebuilds this dropdown
+                // fresh with the new matchField as its initial value — a plain
+                // DropdownButtonFormField only reads `initialValue` once, on
+                // first build, so an external reassignment wouldn't otherwise
+                // update what's shown.
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(source),
+                  initialValue: matchField,
+                  decoration: const InputDecoration(isDense: true),
+                  items: _matchFieldsBySource[source]!
+                      .map((f) => DropdownMenuItem(value: f, child: Text(_matchFieldLabels[f] ?? f)))
+                      .toList(),
+                  onChanged: (v) => setSheet(() => matchField = v ?? _matchFieldsBySource[source]!.first),
+                ),
+              ),
+              const SizedBox(height: 8),
+              LabeledField(
+                label: 'Match Value',
                 child: TextField(controller: valueCtrl, decoration: const InputDecoration(isDense: true)),
               ),
               const SizedBox(height: 8),
@@ -160,8 +203,11 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                   try {
                     await _api.dio.post('/routing-rules', data: {
                       'label': labelCtrl.text.trim(),
+                      'source': source,
                       'matchField': matchField,
-                      'matchValue': valueCtrl.text.trim(),
+                      'matchValue': matchField == 'domain'
+                          ? valueCtrl.text.trim().toLowerCase()
+                          : valueCtrl.text.trim(),
                       'assignTo': assignTo,
                     });
                     if (ctx.mounted) Navigator.pop(ctx, true);
@@ -224,7 +270,10 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             child: ListTile(
                               title: Text(r['label'] as String? ?? '—', style: const TextStyle(fontWeight: FontWeight.w600)),
-                              subtitle: Text('${r['matchField']} = ${r['matchValue']} → ${r['assignToName'] ?? ''}'),
+                              subtitle: Text(
+                                '${_sourceLabels[r['source'] ?? 'facebook'] ?? r['source']} · '
+                                '${_matchFieldLabels[r['matchField']] ?? r['matchField']} = ${r['matchValue']} → ${r['assignToName'] ?? ''}',
+                              ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

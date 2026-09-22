@@ -23,6 +23,7 @@ const { getNextAssignee } = require("./assignLead");
 const { sendPushToAll, sendPushToUser } = require("./push");
 const { mapGoogleLeadFields, fromApiFields } = require("./googleLeadFields");
 const { mapCustomFieldsToLead } = require("./formFieldMapper");
+const { matchRoutingRule } = require("./routingRules");
 
 const GOOGLE_ADS_API_VERSION = "v17";
 // First-ever sync for a freshly connected account: look back this far rather
@@ -141,8 +142,14 @@ async function pollOneGoogleAdsConnection(automation) {
     }
     const cleanPhone = phone || "N/A (test)";
 
+    const ruleMatch = !isTestLead
+      ? await matchRoutingRule(orgId, "google", { campaign_id: sub.campaignId || "" })
+      : null;
+
     let assignee = null;
-    if (!isTestLead && org?.autoAssign !== false) {
+    if (ruleMatch) {
+      assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
+    } else if (!isTestLead && org?.autoAssign !== false) {
       try { assignee = await getNextAssignee(orgId); } catch { /* no active agents */ }
     }
 

@@ -29,6 +29,7 @@ const rateLimit      = require("express-rate-limit");
 const { generateWhatsAppTemplate } = require("../utils/openai");
 const onboarding = require("../services/whatsappOnboardingService");
 const { getNextAssignee } = require("../utils/assignLead");
+const { matchRoutingRule } = require("../utils/routingRules");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const OPTS = require("../constants/leadOptions");
@@ -351,8 +352,16 @@ function campaignLabel(campaignRef) {
 // enrichExistingWhatsAppLead(), which applies the exact same
 // never-overwrite-a-real-value discipline as mapVistrowExtractedFields.
 async function autoCaptureWhatsAppLead(org, phone, name, campaignRef) {
+  // Rule match (by the ad's ad_id) wins outright, same as every other
+  // source; round-robin only runs when nothing matches.
+  const ruleMatch = campaignRef?.adId
+    ? await matchRoutingRule(org._id, "whatsapp", { ad_id: campaignRef.adId })
+    : null;
+
   let assignee = null;
-  if (org.autoAssign !== false) {
+  if (ruleMatch) {
+    assignee = { _id: ruleMatch.assignTo, name: ruleMatch.assignToName };
+  } else if (org.autoAssign !== false) {
     try { assignee = await getNextAssignee(org._id); } catch { /* no active agents */ }
   }
   const lead = await Lead.create({
