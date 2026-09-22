@@ -44,6 +44,8 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
   final _api = ApiClient.instance;
   List<Map<String, dynamic>> _rules = [];
   List<Map<String, dynamic>> _agents = [];
+  List<String> _domains = [];
+  List<Map<String, dynamic>> _sitePages = [];
   bool _loading = true;
   String? _planError;
 
@@ -62,10 +64,16 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
       final results = await Future.wait([
         _api.dio.get('/routing-rules'),
         _api.dio.get('/auth/agents'),
+        // Same endpoint the Leads screen filter uses — real domains/pages
+        // leads have already come in from, so a rule can be picked instead
+        // of typed.
+        _api.dio.get('/leads/domains'),
       ]);
       setState(() {
         _rules = (results[0].data['rules'] as List? ?? []).cast<Map<String, dynamic>>();
         _agents = (results[1].data['agents'] as List? ?? []).cast<Map<String, dynamic>>();
+        _domains = (results[2].data['domains'] as List? ?? []).cast<String>();
+        _sitePages = (results[2].data['pages'] as List? ?? []).cast<Map<String, dynamic>>();
       });
     } catch (e) {
       final msg = ApiClient.errorMessage(e, 'Failed to load routing rules');
@@ -122,6 +130,53 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
     }
   }
 
+  // Bottom sheet listing real domains (and the pages under each, from actual
+  // lead traffic) so a rule can be picked instead of typed. Only shows
+  // domains/pages that have already sent at least one lead — a brand-new page
+  // won't be listed yet, so the caller's text field stays manually editable.
+  // Returns {'field': 'domain'|'page_path', 'value': ...} or null if cancelled.
+  Future<Map<String, String>?> _pickWebsiteTarget(BuildContext context) {
+    return showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 16),
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text('Pick a domain or page', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+            for (final d in _domains) ...[
+              Builder(builder: (_) {
+                final pagesOfD = _sitePages.where((p) => p['domain'] == d).toList();
+                final total = pagesOfD.fold<int>(0, (n, p) => n + ((p['count'] as num?)?.toInt() ?? 0));
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.public_rounded, size: 18),
+                  title: Text(d),
+                  trailing: total > 0 ? Text('$total') : null,
+                  onTap: () => Navigator.pop(ctx, {'field': 'domain', 'value': d}),
+                );
+              }),
+              for (final p in _sitePages.where((p) => p['domain'] == d && p['path'] != '/'))
+                ListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.only(left: 40, right: 16),
+                  leading: const Icon(Icons.insert_drive_file_outlined, size: 16),
+                  title: Text(p['path'] as String? ?? ''),
+                  trailing: Text('${p['count'] ?? ''}'),
+                  onTap: () => Navigator.pop(ctx, {'field': 'page_path', 'value': p['path'] as String? ?? ''}),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _addRule() async {
     final labelCtrl = TextEditingController();
     final valueCtrl = TextEditingController();
@@ -160,13 +215,14 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
               const SizedBox(height: 8),
               LabeledField(
                 label: 'Match Field',
-                // Keyed on `source` so switching source rebuilds this dropdown
-                // fresh with the new matchField as its initial value — a plain
+                // Keyed on source+matchField so switching source, or picking
+                // a field via the website quick-pick below, rebuilds this
+                // dropdown fresh with the new value — a plain
                 // DropdownButtonFormField only reads `initialValue` once, on
                 // first build, so an external reassignment wouldn't otherwise
                 // update what's shown.
                 child: DropdownButtonFormField<String>(
-                  key: ValueKey(source),
+                  key: ValueKey('$source|$matchField'),
                   initialValue: matchField,
                   decoration: const InputDecoration(isDense: true),
                   items: _matchFieldsBySource[source]!
@@ -175,6 +231,22 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                   onChanged: (v) => setSheet(() => matchField = v ?? _matchFieldsBySource[source]!.first),
                 ),
               ),
+              if (source == 'website' && _domains.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.travel_explore_rounded, size: 18),
+                  label: const Text('Pick from your website\'s actual traffic'),
+                  onPressed: () async {
+                    final picked = await _pickWebsiteTarget(ctx);
+                    if (picked != null) {
+                      setSheet(() {
+                        matchField = picked['field']!;
+                        valueCtrl.text = picked['value']!;
+                      });
+                    }
+                  },
+                ),
+              ],
               const SizedBox(height: 8),
               LabeledField(
                 label: 'Match Value',

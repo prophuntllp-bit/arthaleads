@@ -2469,6 +2469,8 @@ function matchFieldHint(source, matchField) {
 function LeadRoutingSection() {
   const [rules, setRules] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [domains, setDomains] = useState([]);
+  const [sitePages, setSitePages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -2478,11 +2480,16 @@ function LeadRoutingSection() {
     Promise.all([
       api.get("/routing-rules"),
       api.get("/auth/agents"),
+      // Same endpoint the Leads page filter uses — real domains/pages leads
+      // have already come in from, so a rule can be picked instead of typed.
+      api.get("/leads/domains"),
     ])
-      .then(([rulesRes, agentsRes]) => {
+      .then(([rulesRes, agentsRes, domainsRes]) => {
         const agentList = agentsRes.data.agents || [];
         setRules(rulesRes.data.rules || []);
         setAgents(agentList);
+        setDomains(domainsRes.data.domains || []);
+        setSitePages(domainsRes.data.pages || []);
         if (agentList.length > 0) {
           setForm((f) => ({ ...f, assignTo: f.assignTo || agentList[0]._id }));
         }
@@ -2490,6 +2497,25 @@ function LeadRoutingSection() {
       .catch(() => { toast.error("Failed to load routing data"); })
       .finally(() => setLoading(false));
   }, []);
+
+  // Flat, indented option list for the website quick-pick: one row per known
+  // domain, one indented row per page under it (from real lead traffic).
+  // Picking a domain fills matchField "domain"; picking a page fills
+  // matchField "page_path" with just the path (works regardless of www./
+  // protocol, since matching is a substring check against the full URL).
+  const websiteQuickPickOptions = useMemo(() => {
+    const opts = [{ value: "", label: "— Type manually below —" }];
+    for (const d of domains) {
+      const pagesOfD = sitePages.filter((p) => p.domain === d);
+      const total = pagesOfD.reduce((n, p) => n + p.count, 0);
+      opts.push({ value: `domain:${d}`, label: `🌐 ${d}${total ? ` (${total})` : ""}` });
+      for (const p of pagesOfD) {
+        if (p.path === "/") continue; // the bare domain row above already covers this
+        opts.push({ value: `page:${p.path}`, label: `　↳ ${p.path} (${p.count})` });
+      }
+    }
+    return opts;
+  }, [domains, sitePages]);
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -2592,6 +2618,25 @@ function LeadRoutingSection() {
                 style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
               />
             </div>
+
+            {form.source === "website" && websiteQuickPickOptions.length > 1 && (
+              <div className="space-y-1 sm:col-span-2">
+                <label className="label">Pick from your website's actual traffic</label>
+                <CustomSelect
+                  value=""
+                  onChange={(v) => {
+                    if (!v) return;
+                    const [kind, ...rest] = v.split(":");
+                    const val = rest.join(":");
+                    setForm((f) => ({ ...f, matchField: kind === "domain" ? "domain" : "page_path", matchValue: val }));
+                  }}
+                  options={websiteQuickPickOptions}
+                  placeholder="— Type manually below —"
+                  style={{ width: "100%", padding: "12px 16px", fontSize: 14, borderRadius: 16 }}
+                />
+                <p className="text-xs text-app-soft">Only shows domains/pages that have already sent at least one lead — a brand-new page won't be listed yet, so type it in manually below.</p>
+              </div>
+            )}
 
             <div className="space-y-1">
               <label className="label">{MATCH_FIELD_LABELS[form.matchField]} Value</label>
