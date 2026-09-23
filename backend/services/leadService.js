@@ -731,7 +731,16 @@ const leadService = {
   },
 
   async getAllUnified(query, user) {
-    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter, sitePage } = query;
+    const { search, status, source, priority, booking, projectId, page = 1, limit = 50, dateRange, from, to, followUpToday, siteFilter, sitePage, type } = query;
+    // `type` opts a caller (the Pipeline board) into explicitly including
+    // ProjectLeads across ALL projects, not just a specific `projectId` —
+    // "leads" (default, unchanged) = plain Lead collection only, matching
+    // every existing caller's behavior; "projects" = ProjectLead only;
+    // "all" = both. Leads.jsx's browse-everything view deliberately still
+    // skips ProjectLeads by default (see skipProjectLeads below) since they
+    // have none of the pipeline fields and would show as blank rows there.
+    const wantsProjectLeads = type === "projects" || type === "all";
+    const wantsPlainLeads   = type !== "projects";
     // Accept both names — the Leads page filter sends `assignedTo`, some
     // internal callers still send the older `userId`.
     const agentId  = query.assignedTo || query.userId;
@@ -803,7 +812,7 @@ const leadService = {
     // (requirements/budget/purpose) and were inflating the unfiltered list
     // with blank rows. An explicit project filter or a domain search both
     // count as deliberate intent to include them.
-    const skipProjectLeads = !!priority || !!consent || (!projectId && !siteFilter && !sitePage);
+    const skipProjectLeads = !!priority || !!consent || (!wantsProjectLeads && !projectId && !siteFilter && !sitePage);
     let projLeads = [], projTotal = 0;
 
     if (!skipProjectLeads) {
@@ -863,7 +872,7 @@ const leadService = {
 
     // Lead has no project association at all — a project filter can only
     // ever match ProjectLead documents, so skip the Lead query entirely.
-    const [leads, leadTotal] = projectId
+    const [leads, leadTotal] = (projectId || !wantsPlainLeads)
       ? [[], 0]
       : await Promise.all([
           Lead.find(leadFilter).sort({ createdAt: -1 }).limit(fetchCap).lean(),

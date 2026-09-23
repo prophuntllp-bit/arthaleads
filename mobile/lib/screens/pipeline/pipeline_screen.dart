@@ -34,6 +34,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
   List<Map<String, dynamic>> _leads = [];
   List<Map<String, dynamic>> _agents = [];
   String _assignedTo = '';
+  String _pipelineType = 'all'; // 'all' | 'leads' | 'projects'
   bool _loading = true;
   DateTime? _lastUpdated;
   Timer? _timer;
@@ -74,6 +75,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
         queryParameters: {
           'limit': 2000,
           'page': 1,
+          'type': _pipelineType,
           if (_assignedTo.isNotEmpty) 'assignedTo': _assignedTo,
         },
       );
@@ -254,6 +256,23 @@ class _PipelineScreenState extends State<PipelineScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(
             children: [
+              Expanded(
+                child: AppSelect<String>(
+                  label: 'Pipeline',
+                  dense: true,
+                  value: _pipelineType,
+                  options: const {
+                    'all': 'All Pipelines',
+                    'leads': 'Leads Pipeline',
+                    'projects': 'Project Pipeline',
+                  },
+                  onChanged: (v) {
+                    setState(() => _pipelineType = v ?? 'all');
+                    _load();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
               if (_agents.isNotEmpty)
                 Expanded(
                   child: AppSelect<String>(

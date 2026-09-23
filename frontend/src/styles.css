@@ -602,6 +602,32 @@
   animation: hotBorderSpin 3s linear infinite;
 }
 
+/* ── Import result modal — checkmark draw-in + count pop ─────────────────────
+   The circle and check are drawn via stroke-dashoffset (stroke-dasharray set
+   inline per-path so this keyframe works for both regardless of path length),
+   then each stat pops in staggered via animation-delay set inline. */
+@keyframes importCheckDraw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes importCheckCircleScale {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes importStatPop {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+.import-check-circle {
+  animation: importCheckCircleScale 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.import-check-path {
+  animation: importCheckDraw 0.4s 0.35s ease-out both;
+}
+.import-stat {
+  animation: importStatPop 0.35s ease-out both;
+}
+
 /* ── Native Android app feel (Capacitor context) ─────────────────────────────
    Applied only when html.is-native class is set (by main.jsx when Capacitor
    is detected). Prevents browser-like behaviour: text selection, overscroll

@@ -16,6 +16,7 @@ import '../../core/theme.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/import_result_dialog.dart';
 import '../../widgets/motion.dart';
 import '../leads/lead_detail_sheet.dart';
 import 'project_form.dart';
@@ -586,17 +587,15 @@ class _LeadsTabState extends State<_LeadsTab> {
         '/projects/$_projectId/leads/import',
         data: {'rows': parsed.rows},
       );
+      _load(reset: true);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Imported ${res.data['inserted'] ?? parsed.rows.length}, '
-              '${res.data['duplicates'] ?? 0} duplicate(s) skipped',
-            ),
-          ),
+        await showImportResultDialog(
+          context,
+          inserted: res.data['inserted'] as int? ?? parsed.rows.length,
+          duplicates: res.data['duplicates'] as int? ?? 0,
+          skippedInvalid: (res.data['skipped'] as int?) ?? parsed.skipped,
         );
       }
-      _load(reset: true);
     } on ProjectImportEmptyException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

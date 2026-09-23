@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   StatusBadge, PriorityBadge, SourceBadge,
-  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber,
+  PageLoader, EmptyState, ConfirmDialog, Spinner, PhoneActions, WhatsAppLink, toWaNumber, ImportResultModal,
 } from "../components/UI";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -333,6 +333,7 @@ export default function Leads() {
   // transferMeta: { lead, leadType: "lead"|"project", projectId: string|null }
   const [transferMeta, setTransferMeta] = useState(null);
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null); // { inserted, duplicates, skippedInvalid, notice } | null
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showOrgQr, setShowOrgQr] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -1003,6 +1004,7 @@ export default function Leads() {
 
       const headers = Object.keys(rows[0]);
       let leadsToImport;
+      let notice;
 
       if (isFbCsv(headers)) {
         // Auto-detected Facebook Lead Form export
@@ -1015,7 +1017,7 @@ export default function Leads() {
         );
         leadsToImport = realRows.map((row) => parseFbRow(row, questionCols)).filter((e) => e.name && e.phone);
         if (!leadsToImport.length) { toast.error("No valid leads in the Facebook export"); return; }
-        toast(`Facebook format detected - ${questionCols.length} custom question(s) mapped`, { icon: "📋" });
+        notice = `Facebook format detected — ${questionCols.length} custom question(s) mapped`;
       } else {
         // Standard CRM import format
         // First pass: try alias-based matching
@@ -1037,7 +1039,7 @@ export default function Leads() {
                 .filter(([, v]) => v)
                 .map(([k, v]) => `${k}="${v}"`)
                 .join(", ");
-              toast(`Auto-detected columns: ${detectedNames}`, { icon: "🔍" });
+              notice = `Auto-detected columns: ${detectedNames}`;
               leadsToImport = inferred;
             }
           }
@@ -1048,8 +1050,9 @@ export default function Leads() {
         if (!leadsToImport?.length) { toast.error("No valid leads found — check that your file has name and phone columns"); return; }
       }
 
+      const skippedInvalid = rows.length - leadsToImport.length;
       const { data } = await api.post("/leads/import", { leads: leadsToImport });
-      toast.success(data.message || `${leadsToImport.length} lead(s) imported`);
+      setImportResult({ inserted: data.count ?? leadsToImport.length, duplicates: data.duplicates || 0, skippedInvalid, notice });
       refetch();
     } catch (e) {
       toast.error(e.response?.data?.message || e.message || "Import failed");
@@ -1614,6 +1617,14 @@ export default function Leads() {
             ? `Are you sure you want to permanently delete ${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""}? This cannot be undone.`
             : `${selectedIds.size} selected lead${selectedIds.size !== 1 ? "s" : ""} will be moved to the Dump section. You can restore or permanently delete them from there.`
         }
+      />
+      <ImportResultModal
+        open={!!importResult}
+        onClose={() => setImportResult(null)}
+        inserted={importResult?.inserted}
+        duplicates={importResult?.duplicates}
+        skippedInvalid={importResult?.skippedInvalid}
+        notice={importResult?.notice}
       />
       <TransferModal
         open={!!transferMeta}

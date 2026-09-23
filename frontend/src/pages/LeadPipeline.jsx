@@ -9,6 +9,12 @@ import { useAuth } from "../context/AuthContext";
 
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
+const PIPELINE_TYPE_OPTIONS = [
+  { value: "all",      label: "All Pipelines" },
+  { value: "leads",    label: "Leads Pipeline" },
+  { value: "projects", label: "Project Pipeline" },
+];
+
 const STAGE_META = {
   "New":        { title: "New",         icon: Clock3,       badge: "bg-sky-500/15 text-sky-400",      bar: "bg-sky-400",     accent: "#38bdf8" },
   "Contacted":  { title: "Contacted",   icon: PhoneCall,    badge: "bg-amber-500/15 text-amber-400",  bar: "bg-amber-400",   accent: "#fbbf24" },
@@ -35,6 +41,7 @@ export default function LeadPipeline() {
   const [expanded, setExpanded] = useState(new Set());
   const [members, setMembers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(""); // "" = all members
+  const [pipelineType, setPipelineType] = useState("all"); // "all" | "leads" | "projects"
   const timerRef = useRef(null);
 
   const toggleExpand = (id) => setExpanded(prev => {
@@ -62,10 +69,10 @@ export default function LeadPipeline() {
     }
   };
 
-  const fetchLeads = useCallback(async (silent = false, userId = selectedUserId) => {
+  const fetchLeads = useCallback(async (silent = false, userId = selectedUserId, type = pipelineType) => {
     if (silent) setRefreshing(true); else setLoading(true);
     try {
-      const params = { limit: 2000, page: 1 };
+      const params = { limit: 2000, page: 1, type };
       if (userId) params.userId = userId;
       const { data } = await api.get("/leads/unified", { params });
       setLeads(data.leads || []);
@@ -76,7 +83,7 @@ export default function LeadPipeline() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, pipelineType]);
 
   // Fetch team members for the member picker (admin/manager only)
   useEffect(() => {
@@ -87,10 +94,10 @@ export default function LeadPipeline() {
   // Initial load + live auto-refresh every 30s
   useEffect(() => {
     clearInterval(timerRef.current);
-    fetchLeads(false, selectedUserId);
-    timerRef.current = setInterval(() => fetchLeads(true, selectedUserId), REFRESH_INTERVAL);
+    fetchLeads(false, selectedUserId, pipelineType);
+    timerRef.current = setInterval(() => fetchLeads(true, selectedUserId, pipelineType), REFRESH_INTERVAL);
     return () => clearInterval(timerRef.current);
-  }, [fetchLeads, selectedUserId]);
+  }, [fetchLeads, selectedUserId, pipelineType]);
 
   const grouped = useMemo(() => {
     return STATUS_OPTIONS.reduce((acc, status) => {
@@ -133,6 +140,13 @@ export default function LeadPipeline() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {/* Pipeline type picker — All / Leads-only / Project-only */}
+          <CustomSelect
+            value={pipelineType}
+            onChange={setPipelineType}
+            options={PIPELINE_TYPE_OPTIONS}
+            style={{ minWidth: 160 }}
+          />
           {/* Member picker — admin / manager only */}
           {isAdminOrManager && members.length > 0 && (
             <CustomSelect

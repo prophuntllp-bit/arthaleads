@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker, SmartImage } from "../components/UI";
+import { PageLoader, Spinner, EmptyState, ConfirmDialog, PhoneActions, WhatsAppLink, AppDatePicker, SmartImage, ImportResultModal } from "../components/UI";
 import ProjectForm from "../components/ProjectForm";
 import LeadForm from "../components/LeadForm";
 import LeadDetail from "../components/LeadDetail";
@@ -411,6 +411,7 @@ export default function ProjectDetail() {
   const [leadsLoading, setLeadsLoading] = useState(false);
   const [search, setSearch]             = useState(() => location.state?.searchLead || "");
   const [importing, setImporting]       = useState(false);
+  const [importResult, setImportResult] = useState(null); // { inserted, duplicates, skippedInvalid } | null
   const [deletingLeadId, setDeletingLeadId] = useState(null);
   const [deletingLead, setDeletingLead]     = useState(false);
   const [detailLead, setDetailLead]         = useState(null);
@@ -706,13 +707,8 @@ export default function ProjectDetail() {
       const duplicates = res.data?.duplicates ?? 0;
       const skippedInvalid = res.data?.skipped ?? 0;
 
-      if (inserted > 0) {
-        const parts = [`${inserted} lead${inserted !== 1 ? "s" : ""} imported successfully`];
-        if (duplicates > 0)    parts.push(`${duplicates} duplicate${duplicates !== 1 ? "s" : ""} skipped`);
-        if (skippedInvalid > 0) parts.push(`${skippedInvalid} invalid row${skippedInvalid !== 1 ? "s" : ""} ignored`);
-        toast.success(parts.join(" · "), { duration: 5000 });
-      } else if (duplicates > 0) {
-        toast.error(`All ${duplicates} leads already exist in this project - nothing new added`, { duration: 5000 });
+      if (inserted > 0 || duplicates > 0 || skippedInvalid > 0) {
+        setImportResult({ inserted, duplicates, skippedInvalid });
       } else {
         toast.error("No leads were imported");
       }
@@ -1712,6 +1708,14 @@ export default function ProjectDetail() {
         loading={deletingProject}
         title="Delete Project"
         message={`Are you sure you want to delete "${project.name}"? All imported leads will remain but the project will be removed.`}
+      />
+
+      <ImportResultModal
+        open={!!importResult}
+        onClose={() => setImportResult(null)}
+        inserted={importResult?.inserted}
+        duplicates={importResult?.duplicates}
+        skippedInvalid={importResult?.skippedInvalid}
       />
 
       {/* Edit Lead modal - works across all three sections */}

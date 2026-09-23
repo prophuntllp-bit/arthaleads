@@ -21,6 +21,7 @@ import '../../widgets/buttons.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
 import '../../widgets/chips.dart';
+import '../../widgets/import_result_dialog.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/qr_sheet.dart';
 import 'lead_detail_sheet.dart';
@@ -662,12 +663,16 @@ class LeadsScreenState extends State<LeadsScreen> {
         '/leads/import',
         data: {'leads': result.leads},
       );
-      if (result.notice != null) _snack(result.notice!);
-      _snack(
-        response.data['message']?.toString() ??
-            '${result.leads.length} leads imported',
-      );
       await _load(reset: true);
+      if (mounted) {
+        await showImportResultDialog(
+          context,
+          inserted: response.data['count'] as int? ?? result.leads.length,
+          duplicates: response.data['duplicates'] as int? ?? 0,
+          skippedInvalid: result.totalRows - result.leads.length,
+          notice: result.notice,
+        );
+      }
     } on ImportEmptyException catch (e) {
       _snack(e.message, error: true);
     } catch (error) {

@@ -13,7 +13,8 @@ import 'package:excel/excel.dart' as xlsx;
 class ImportResult {
   final List<Map<String, dynamic>> leads;
   final String? notice;
-  const ImportResult(this.leads, [this.notice]);
+  final int totalRows;
+  const ImportResult(this.leads, [this.notice, this.totalRows = 0]);
 }
 
 class ImportEmptyException implements Exception {
@@ -401,5 +402,5 @@ Future<ImportResult> parseLeadImportFile(String path, List<Map<String, dynamic>>
     }
   }
 
-  return ImportResult(leadsToImport, notice);
+  return ImportResult(leadsToImport, notice, rows.length);
 }

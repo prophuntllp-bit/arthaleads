@@ -224,6 +224,70 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, loadin
   );
 }
 
+/**
+ * Persistent (no auto-dismiss) import-result summary, replacing a toast that
+ * disappeared in 3-5s before anyone could actually read the duplicate count.
+ * Shown after any bulk lead import (general Leads page + per-project import).
+ */
+export function ImportResultModal({ open, onClose, inserted = 0, duplicates = 0, skippedInvalid = 0, notice }) {
+  if (!open) return null;
+  const failed = inserted === 0;
+  const stats = [
+    { label: "Imported", value: inserted, color: "#22c55e" },
+    ...(duplicates > 0 ? [{ label: "Duplicates skipped", value: duplicates, color: "#f59e0b" }] : []),
+    ...(skippedInvalid > 0 ? [{ label: "Invalid rows ignored", value: skippedInvalid, color: "#ef4444" }] : []),
+  ];
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Import result">
+      <div className="absolute inset-0 bg-black/50" style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }} onClick={onClose} />
+      <div
+        className="relative w-full max-w-sm rounded-3xl shadow-2xl p-7 text-center"
+        style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+      >
+        <div className="flex justify-center mb-4">
+          {failed ? (
+            <div className="w-16 h-16 rounded-full flex items-center justify-center import-check-circle" style={{ background: "rgba(239,68,68,0.12)" }}>
+              <X className="w-8 h-8" style={{ color: "#ef4444" }} />
+            </div>
+          ) : (
+            <svg width="64" height="64" viewBox="0 0 64 64" className="import-check-circle">
+              <circle cx="32" cy="32" r="30" fill="rgba(34,197,94,0.12)" />
+              <circle cx="32" cy="32" r="30" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"
+                strokeDasharray="188" strokeDashoffset="188" className="import-check-path" style={{ animationDelay: "0.05s" }} />
+              <path d="M20 33 L28 41 L44 24" fill="none" stroke="#22c55e" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
+                strokeDasharray="34" strokeDashoffset="34" className="import-check-path" />
+            </svg>
+          )}
+        </div>
+
+        <h2 className="text-base font-bold text-app mb-1">
+          {failed ? "Nothing imported" : "Import complete"}
+        </h2>
+        {notice && <p className="text-xs text-app-soft mb-4">{notice}</p>}
+
+        <div className={`space-y-2 ${notice ? "" : "mt-4"}`}>
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className="import-stat flex items-center justify-between px-4 py-2.5 rounded-xl"
+              style={{ background: "var(--app-surface-low)", animationDelay: `${0.15 + i * 0.08}s` }}
+            >
+              <span className="text-xs font-medium text-app-soft">{s.label}</span>
+              <span className="text-sm font-black" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+          {failed && stats.length === 0 && (
+            <p className="text-xs text-app-soft">All rows already existed or were invalid.</p>
+          )}
+        </div>
+
+        <button onClick={onClose} className="btn-primary w-full mt-6">Done</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Phone helpers ─────────────────────────────────────────────────────────────
 // Normalises phone → international format for wa.me (defaults to +91 India)
 export function toWaNumber(phone = "") {
