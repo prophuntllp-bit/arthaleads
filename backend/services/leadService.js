@@ -893,7 +893,11 @@ const leadService = {
       phone:        pl.phone,
       email:        pl.email,
       source:       pl.source,
-      status:       pl.status,
+      // ProjectLead.status defaults to "" (unset), not "New" — the Pipeline
+      // board buckets strictly by the exact STATUS_OPTIONS names, so an
+      // unset status matched none of them and the lead silently vanished
+      // from every column instead of landing in "New".
+      status:       pl.status || "New",
       remark:       pl.remark,
       remark1:      pl.remark1,
       remark2:      pl.remark2,
