@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -526,23 +527,14 @@ class _DeveloperFormState extends State<_DeveloperForm> {
             Expanded(child: _field('eoi', 'EOI Incentive', number: true)),
           ],
         ),
-        LabeledField(
+        AppSelect<String>(
           label: 'Invoice Template',
-          child: DropdownButtonFormField<String>(
-            initialValue: _template,
-            decoration: const InputDecoration(),
-            items: const [
-              DropdownMenuItem(
-                value: 'detailed',
-                child: Text('Detailed (with brokerage breakdown)'),
-              ),
-              DropdownMenuItem(
-                value: 'simple',
-                child: Text('Simple (flat amount)'),
-              ),
-            ],
-            onChanged: (v) => _template = v ?? 'detailed',
-          ),
+          value: _template,
+          options: const {
+            'detailed': 'Detailed (with brokerage breakdown)',
+            'simple': 'Simple (flat amount)',
+          },
+          onChanged: (v) => setState(() => _template = v ?? 'detailed'),
         ),
         const SizedBox(height: 20),
         GradientButton(

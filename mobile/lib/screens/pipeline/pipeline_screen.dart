@@ -11,9 +11,9 @@ import '../../core/auth_state.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/chips.dart';
-import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 import '../../widgets/whatsapp_send_sheet.dart';
@@ -256,31 +256,19 @@ class _PipelineScreenState extends State<PipelineScreen> {
             children: [
               if (_agents.isNotEmpty)
                 Expanded(
-                  child: LabeledField(
+                  child: AppSelect<String>(
                     label: 'Member',
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _assignedTo,
-                      decoration: const InputDecoration(isDense: true),
-                      items: [
-                        const DropdownMenuItem(
-                          value: '',
-                          child: Text('All Members'),
-                        ),
-                        ..._agents.map(
-                          (a) => DropdownMenuItem(
-                            value: a['_id'] as String,
-                            child: Text(
-                              a['name'] as String? ?? '',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        setState(() => _assignedTo = v ?? '');
-                        _load();
-                      },
-                    ),
+                    dense: true,
+                    value: _assignedTo,
+                    options: {
+                      '': 'All Members',
+                      for (final a in _agents)
+                        (a['_id'] as String): (a['name'] as String? ?? ''),
+                    },
+                    onChanged: (v) {
+                      setState(() => _assignedTo = v ?? '');
+                      _load();
+                    },
                   ),
                 )
               else

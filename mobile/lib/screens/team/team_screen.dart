@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/initials_avatar.dart';
 import '../../widgets/labeled_field.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
@@ -279,35 +280,19 @@ class _TeamScreenState extends State<TeamScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                LabeledField(
+                AppSelect<String>(
                   label: 'Role',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: role,
-                    decoration: const InputDecoration(),
-                    items: [
-                      const DropdownMenuItem(
-                        value: 'admin',
-                        child: Text('Admin'),
-                      ),
-                      const DropdownMenuItem(
-                        value: 'manager',
-                        child: Text('Manager'),
-                      ),
-                      const DropdownMenuItem(
-                        value: 'agent',
-                        child: Text('Agent'),
-                      ),
-                      // Not a normally assignable role — included only so editing an
-                      // existing super_admin's other fields doesn't crash the dropdown
-                      // (initialValue must match exactly one item) or silently demote them.
-                      if (role == 'super_admin')
-                        const DropdownMenuItem(
-                          value: 'super_admin',
-                          child: Text('Super Admin'),
-                        ),
-                    ],
-                    onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
-                  ),
+                  value: role,
+                  options: {
+                    'admin': 'Admin',
+                    'manager': 'Manager',
+                    'agent': 'Agent',
+                    // Not a normally assignable role — included only so editing an
+                    // existing super_admin's other fields doesn't crash the picker
+                    // (value must match one of the options) or silently demote them.
+                    if (role == 'super_admin') 'super_admin': 'Super Admin',
+                  },
+                  onChanged: (v) => setSheetState(() => role = v ?? 'agent'),
                 ),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,

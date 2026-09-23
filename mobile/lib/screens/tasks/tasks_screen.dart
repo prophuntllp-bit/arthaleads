@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -292,41 +293,28 @@ class _TasksScreenState extends State<TasksScreen> {
                   child: TextField(controller: descCtrl, maxLines: 3),
                 ),
                 const SizedBox(height: 12),
-                LabeledField(
+                AppSelect<String>(
                   label: 'Priority',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: priority,
-                    decoration: const InputDecoration(),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'critical',
-                        child: Text('Critical'),
-                      ),
-                      DropdownMenuItem(value: 'high', child: Text('High')),
-                      DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                      DropdownMenuItem(value: 'low', child: Text('Low')),
-                    ],
-                    onChanged: (v) =>
-                        setSheetState(() => priority = v ?? 'medium'),
-                  ),
+                  value: priority,
+                  options: const {
+                    'critical': 'Critical',
+                    'high': 'High',
+                    'medium': 'Medium',
+                    'low': 'Low',
+                  },
+                  onChanged: (v) =>
+                      setSheetState(() => priority = v ?? 'medium'),
                 ),
                 const SizedBox(height: 12),
                 if (_agents.isNotEmpty)
-                  LabeledField(
+                  AppSelect<String?>(
                     label: 'Assign to',
-                    child: DropdownButtonFormField<String>(
-                      initialValue: assignedTo,
-                      decoration: const InputDecoration(),
-                      items: _agents
-                          .map(
-                            (a) => DropdownMenuItem(
-                              value: a['_id'] as String,
-                              child: Text(a['name'] as String? ?? '—'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setSheetState(() => assignedTo = v),
-                    ),
+                    value: assignedTo,
+                    options: {
+                      for (final a in _agents)
+                        (a['_id'] as String): (a['name'] as String? ?? '—'),
+                    },
+                    onChanged: (v) => setSheetState(() => assignedTo = v),
                   ),
                 const SizedBox(height: 12),
                 ListTile(
@@ -373,21 +361,15 @@ class _TasksScreenState extends State<TasksScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                DropdownButtonFormField<String>(
-                  initialValue: projectId,
-                  decoration: const InputDecoration(hintText: 'Select project'),
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('— None —'),
-                    ),
-                    ..._projects.map(
-                      (p) => DropdownMenuItem(
-                        value: p['_id'] as String,
-                        child: Text(p['name'] as String? ?? '—'),
-                      ),
-                    ),
-                  ],
+                AppSelect<String?>(
+                  label: '',
+                  hint: 'Select project',
+                  value: projectId,
+                  options: {
+                    null: '— None —',
+                    for (final p in _projects)
+                      (p['_id'] as String): (p['name'] as String? ?? '—'),
+                  },
                   onChanged: (v) => setSheetState(() => projectId = v),
                 ),
                 const SizedBox(height: 16),

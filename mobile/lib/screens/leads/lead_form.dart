@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/constants.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 
@@ -283,30 +284,16 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
               _field(_followUpNote, 'Follow-up Note', maxLines: 2),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: LabeledField(
+                child: AppSelect<String>(
                   label: 'WhatsApp marketing consent',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _whatsappConsent,
-                    decoration: const InputDecoration(isDense: true),
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'unknown',
-                        child: Text('Not recorded'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'granted',
-                        child: Text(
-                          'Given — happy to receive WhatsApp updates',
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: 'denied',
-                        child: Text('Refused — do not send marketing'),
-                      ),
-                    ],
-                    onChanged: (v) =>
-                        setState(() => _whatsappConsent = v ?? 'unknown'),
-                  ),
+                  value: _whatsappConsent,
+                  options: const {
+                    'unknown': 'Not recorded',
+                    'granted': 'Given — happy to receive WhatsApp updates',
+                    'denied': 'Refused — do not send marketing',
+                  },
+                  onChanged: (v) =>
+                      setState(() => _whatsappConsent = v ?? 'unknown'),
                 ),
               ),
               const Padding(
@@ -320,25 +307,15 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
             if (!_isProjectLead && widget.agents.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: LabeledField(
+                child: AppSelect<String>(
                   label: 'Assign to',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _assignedTo.isEmpty ? '' : _assignedTo,
-                    decoration: const InputDecoration(isDense: true),
-                    items: [
-                      const DropdownMenuItem(
-                        value: '',
-                        child: Text('Auto-assign'),
-                      ),
-                      ...widget.agents.map(
-                        (a) => DropdownMenuItem(
-                          value: a['_id'] as String,
-                          child: Text(a['name'] as String? ?? ''),
-                        ),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => _assignedTo = v ?? ''),
-                  ),
+                  value: _assignedTo.isEmpty ? '' : _assignedTo,
+                  options: {
+                    '': 'Auto-assign',
+                    for (final a in widget.agents)
+                      (a['_id'] as String): (a['name'] as String? ?? ''),
+                  },
+                  onChanged: (v) => setState(() => _assignedTo = v ?? ''),
                 ),
               ),
             const SizedBox(height: 16),
@@ -396,19 +373,16 @@ class _LeadFormScreenState extends State<LeadFormScreen> {
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: LabeledField(
+      child: AppSelect<String>(
         label: label,
-        child: DropdownButtonFormField<String>(
-          initialValue: value.isEmpty && allowEmpty
-              ? ''
-              : (options.contains(value) ? value : options.first),
-          decoration: const InputDecoration(isDense: true),
-          items: [
-            if (allowEmpty) const DropdownMenuItem(value: '', child: Text('—')),
-            ...options.map((o) => DropdownMenuItem(value: o, child: Text(o))),
-          ],
-          onChanged: (v) => onChanged(v ?? ''),
-        ),
+        value: value.isEmpty && allowEmpty
+            ? ''
+            : (options.contains(value) ? value : options.first),
+        options: {
+          if (allowEmpty) '': '—',
+          for (final o in options) o: o,
+        },
+        onChanged: (v) => onChanged(v ?? ''),
       ),
     );
   }

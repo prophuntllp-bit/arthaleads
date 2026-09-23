@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -246,37 +247,31 @@ class _HelpScreenState extends State<HelpScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: LabeledField(
+                      child: AppSelect<String>(
                         label: 'Category',
-                        child: DropdownButtonFormField<String>(
-                          initialValue: category,
-                          decoration: const InputDecoration(),
-                          items: const [
-                            DropdownMenuItem(value: 'general', child: Text('General')),
-                            DropdownMenuItem(value: 'technical', child: Text('Technical')),
-                            DropdownMenuItem(value: 'billing', child: Text('Billing')),
-                            DropdownMenuItem(value: 'bug', child: Text('Bug report')),
-                            DropdownMenuItem(value: 'feature-request', child: Text('Feature request')),
-                          ],
-                          onChanged: (v) => setSheetState(() => category = v ?? 'general'),
-                        ),
+                        value: category,
+                        options: const {
+                          'general': 'General',
+                          'technical': 'Technical',
+                          'billing': 'Billing',
+                          'bug': 'Bug report',
+                          'feature-request': 'Feature request',
+                        },
+                        onChanged: (v) => setSheetState(() => category = v ?? 'general'),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: LabeledField(
+                      child: AppSelect<String>(
                         label: 'Priority',
-                        child: DropdownButtonFormField<String>(
-                          initialValue: priority,
-                          decoration: const InputDecoration(),
-                          items: const [
-                            DropdownMenuItem(value: 'low', child: Text('Low')),
-                            DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                            DropdownMenuItem(value: 'high', child: Text('High')),
-                            DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
-                          ],
-                          onChanged: (v) => setSheetState(() => priority = v ?? 'medium'),
-                        ),
+                        value: priority,
+                        options: const {
+                          'low': 'Low',
+                          'medium': 'Medium',
+                          'high': 'High',
+                          'urgent': 'Urgent',
+                        },
+                        onChanged: (v) => setSheetState(() => priority = v ?? 'medium'),
                       ),
                     ),
                   ],

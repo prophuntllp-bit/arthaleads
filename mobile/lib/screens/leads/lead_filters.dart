@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 
@@ -228,17 +229,15 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: LabeledField(
+      child: AppSelect<String>(
         label: label,
-        child: DropdownButtonFormField<String>(
-          initialValue: value.isEmpty ? '' : value,
-          decoration: const InputDecoration(isDense: true),
-          items: [
-            DropdownMenuItem(value: '', child: Text('All', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color))),
-            ...options.map((o) => DropdownMenuItem(value: o.$1, child: Text(o.$2, overflow: TextOverflow.ellipsis))),
-          ],
-          onChanged: (v) => onChanged(v ?? ''),
-        ),
+        dense: true,
+        value: value.isEmpty ? '' : value,
+        options: {
+          '': 'All',
+          for (final o in options) o.$1: o.$2,
+        },
+        onChanged: (v) => onChanged(v ?? ''),
       ),
     );
   }

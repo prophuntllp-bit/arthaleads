@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -200,36 +201,29 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                 child: TextField(controller: labelCtrl, decoration: const InputDecoration(isDense: true)),
               ),
               const SizedBox(height: 8),
-              LabeledField(
+              AppSelect<String>(
                 label: 'Source',
-                child: DropdownButtonFormField<String>(
-                  initialValue: source,
-                  decoration: const InputDecoration(isDense: true),
-                  items: _sourceLabels.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-                  onChanged: (v) => setSheet(() {
-                    source = v ?? 'facebook';
-                    matchField = _matchFieldsBySource[source]!.first;
-                  }),
-                ),
+                dense: true,
+                value: source,
+                options: _sourceLabels,
+                onChanged: (v) => setSheet(() {
+                  source = v ?? 'facebook';
+                  matchField = _matchFieldsBySource[source]!.first;
+                }),
               ),
               const SizedBox(height: 8),
-              LabeledField(
+              // AppSelect reads `value` on every build, unlike a plain
+              // DropdownButtonFormField's `initialValue` (read once), so
+              // switching source or picking a field via the website
+              // quick-pick below just works without a rebuild key.
+              AppSelect<String>(
                 label: 'Match Field',
-                // Keyed on source+matchField so switching source, or picking
-                // a field via the website quick-pick below, rebuilds this
-                // dropdown fresh with the new value — a plain
-                // DropdownButtonFormField only reads `initialValue` once, on
-                // first build, so an external reassignment wouldn't otherwise
-                // update what's shown.
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey('$source|$matchField'),
-                  initialValue: matchField,
-                  decoration: const InputDecoration(isDense: true),
-                  items: _matchFieldsBySource[source]!
-                      .map((f) => DropdownMenuItem(value: f, child: Text(_matchFieldLabels[f] ?? f)))
-                      .toList(),
-                  onChanged: (v) => setSheet(() => matchField = v ?? _matchFieldsBySource[source]!.first),
-                ),
+                dense: true,
+                value: matchField,
+                options: {
+                  for (final f in _matchFieldsBySource[source]!) f: _matchFieldLabels[f] ?? f,
+                },
+                onChanged: (v) => setSheet(() => matchField = v ?? _matchFieldsBySource[source]!.first),
               ),
               if (source == 'website' && _domains.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -253,16 +247,14 @@ class _RoutingRulesScreenState extends State<RoutingRulesScreen> {
                 child: TextField(controller: valueCtrl, decoration: const InputDecoration(isDense: true)),
               ),
               const SizedBox(height: 8),
-              LabeledField(
+              AppSelect<String?>(
                 label: 'Assign to Agent',
-                child: DropdownButtonFormField<String>(
-                  initialValue: assignTo,
-                  decoration: const InputDecoration(isDense: true),
-                  items: _agents
-                      .map((a) => DropdownMenuItem(value: a['_id'] as String, child: Text(a['name'] as String? ?? '')))
-                      .toList(),
-                  onChanged: (v) => setSheet(() => assignTo = v),
-                ),
+                dense: true,
+                value: assignTo,
+                options: {
+                  for (final a in _agents) (a['_id'] as String): (a['name'] as String? ?? ''),
+                },
+                onChanged: (v) => setSheet(() => assignTo = v),
               ),
               const SizedBox(height: 16),
               GradientButton(

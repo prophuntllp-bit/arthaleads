@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../widgets/skeleton.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/call_options_sheet.dart';
 import '../../widgets/glass.dart';
 import '../../widgets/motion.dart';
@@ -718,28 +719,15 @@ class _CallsScreenState extends State<CallsScreen> {
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _agentFilter.isEmpty ? '' : _agentFilter,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                        value: '',
-                        child: Text('All Agents'),
-                      ),
-                      ..._agents.map(
-                        (a) => DropdownMenuItem(
-                          value: a['_id'] as String,
-                          child: Text(a['name'] as String? ?? ''),
-                        ),
-                      ),
-                    ],
+                  child: AppSelect<String>(
+                    label: '',
+                    dense: true,
+                    value: _agentFilter.isEmpty ? '' : _agentFilter,
+                    options: {
+                      '': 'All Agents',
+                      for (final a in _agents)
+                        (a['_id'] as String): (a['name'] as String? ?? ''),
+                    },
                     onChanged: (v) {
                       setState(() => _agentFilter = v ?? '');
                       _load(reset: true);

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import 'project_media_section.dart';
@@ -373,12 +374,13 @@ class _ProjectFormScreenState extends State<ProjectFormScreen> {
                   .toList(),
             ),
             _sectionTitle('Amenities'),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Select amenity'),
-              items: _amenityOptions
-                  .where((a) => !_amenities.contains(a))
-                  .map((a) => DropdownMenuItem(value: a, child: Text(a)))
-                  .toList(),
+            AppSelect<String>(
+              label: '',
+              hint: 'Select amenity',
+              value: null,
+              options: {
+                for (final a in _amenityOptions.where((a) => !_amenities.contains(a))) a: a,
+              },
               onChanged: (value) {
                 if (value != null) _addAmenity(value);
               },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -364,26 +365,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  LabeledField(
+                  AppSelect<String>(
                     label: 'Developer *',
-                    child: DropdownButtonFormField<String>(
-                      initialValue: developerId,
-                      decoration: const InputDecoration(),
-                      items: _developers
-                          .map(
-                            (d) => DropdownMenuItem(
-                              value: d['_id'] as String,
-                              child: Text(d['name'] as String? ?? '—'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: editing
-                          ? null
-                          : (v) {
-                              developerId = v;
-                              applyDeveloperDefaults(v);
-                            },
-                    ),
+                    value: developerId,
+                    enabled: !editing,
+                    options: {
+                      for (final d in _developers)
+                        (d['_id'] as String): (d['name'] as String? ?? '—'),
+                    },
+                    onChanged: (v) {
+                      setSheetState(() => developerId = v);
+                      applyDeveloperDefaults(v);
+                    },
                   ),
                   const SizedBox(height: 12),
                   LabeledField(
@@ -401,22 +394,12 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: LabeledField(
+                        child: AppSelect<String>(
                           label: 'Type',
-                          child: DropdownButtonFormField<String>(
-                            initialValue: unitType,
-                            decoration: const InputDecoration(),
-                            items: _unitTypes
-                                .map(
-                                  (t) => DropdownMenuItem(
-                                    value: t,
-                                    child: Text(t),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) =>
-                                setSheetState(() => unitType = v ?? 'Flat'),
-                          ),
+                          value: unitType,
+                          options: {for (final t in _unitTypes) t: t},
+                          onChanged: (v) =>
+                              setSheetState(() => unitType = v ?? 'Flat'),
                         ),
                       ),
                     ],

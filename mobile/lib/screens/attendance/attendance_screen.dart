@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/motion.dart';
@@ -309,23 +310,16 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                LabeledField(
+                AppSelect<String>(
                   label: 'Team member',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: selectedUser,
-                    decoration: const InputDecoration(),
-                    items: members
-                        .map(
-                          (user) => DropdownMenuItem(
-                            value: user['_id'].toString(),
-                            child: Text(user['name']?.toString() ?? 'Member'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) selectedUser = value;
-                    },
-                  ),
+                  value: selectedUser,
+                  options: {
+                    for (final user in members)
+                      user['_id'].toString(): user['name']?.toString() ?? 'Member',
+                  },
+                  onChanged: (value) {
+                    if (value != null) setSheet(() => selectedUser = value);
+                  },
                 ),
                 const SizedBox(height: 10),
                 LabeledField(
@@ -1199,31 +1193,19 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
           _statusCard(clockIn, clockOut, clockedIn, done),
           const SizedBox(height: 16),
           if (recordsOnly) ...[
-            LabeledField(
+            AppSelect<String?>(
               label: 'Team member',
-              child: DropdownButtonFormField<String>(
-                initialValue: _recordUserId,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.person_search_outlined),
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('All members'),
-                  ),
-                  ..._team.map((row) {
-                    final user = (row['user'] as Map).cast<String, dynamic>();
-                    return DropdownMenuItem<String>(
-                      value: user['_id'].toString(),
-                      child: Text(user['name']?.toString() ?? 'Member'),
-                    );
-                  }),
-                ],
-                onChanged: (value) {
-                  setState(() => _recordUserId = value);
-                  _load();
-                },
-              ),
+              value: _recordUserId,
+              options: {
+                null: 'All members',
+                for (final row in _team)
+                  ((row['user'] as Map).cast<String, dynamic>()['_id'].toString()):
+                      ((row['user'] as Map).cast<String, dynamic>()['name']?.toString() ?? 'Member'),
+              },
+              onChanged: (value) {
+                setState(() => _recordUserId = value);
+                _load();
+              },
             ),
             const SizedBox(height: 12),
           ],

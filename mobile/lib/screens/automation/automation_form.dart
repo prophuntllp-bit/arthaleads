@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/labeled_field.dart';
 
@@ -158,17 +159,12 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
             if (!_isEdit)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: LabeledField(
+                child: AppSelect<String>(
                   label: 'Platform',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _platform,
-                    decoration: const InputDecoration(isDense: true),
-                    items: _platformDefaults.keys
-                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                        .toList(),
-                    onChanged: (v) =>
-                        setState(() => _platform = v ?? 'Google'),
-                  ),
+                  dense: true,
+                  value: _platform,
+                  options: {for (final p in _platformDefaults.keys) p: p},
+                  onChanged: (v) => setState(() => _platform = v ?? 'Google'),
                 ),
               )
             else if (_isFacebook)
@@ -215,21 +211,16 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
             ] else ...[
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: LabeledField(
+                child: AppSelect<String>(
                   label: 'Status',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _status,
-                    decoration: const InputDecoration(isDense: true),
-                    items: const [
-                      DropdownMenuItem(value: 'draft', child: Text('Draft')),
-                      DropdownMenuItem(
-                        value: 'connected',
-                        child: Text('Connected'),
-                      ),
-                      DropdownMenuItem(value: 'paused', child: Text('Paused')),
-                    ],
-                    onChanged: (v) => setState(() => _status = v ?? 'draft'),
-                  ),
+                  dense: true,
+                  value: _status,
+                  options: const {
+                    'draft': 'Draft',
+                    'connected': 'Connected',
+                    'paused': 'Paused',
+                  },
+                  onChanged: (v) => setState(() => _status = v ?? 'draft'),
                 ),
               ),
               Padding(
