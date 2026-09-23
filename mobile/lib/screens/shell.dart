@@ -15,6 +15,7 @@ import '../widgets/profile_menu.dart';
 import 'help/artha_chat_screen.dart';
 import 'attendance/attendance_screen.dart';
 import 'automation/automation_screen.dart';
+import 'billing/plans_screen.dart';
 import 'bookings/bookings_screen.dart';
 import 'calls/calls_screen.dart';
 import 'dashboard/dashboard_screen.dart';
@@ -237,12 +238,17 @@ class _NavItem {
   // resolves, but hidden from the drawer list itself — web only reaches
   // Referrals through the profile dropdown, not the main sidebar nav.
   final bool showInDrawer;
+  // Stricter than adminOnly (auth.isAdmin, i.e. role != 'agent'): some items
+  // — Plan & Billing mirrors Sidebar.jsx's `roles: ["admin"]` — are for the
+  // literal admin role only, excluding manager and super_admin too.
+  final bool Function(AuthState auth)? extraGate;
   const _NavItem(
     this.label,
     this.icon,
     this.builder, {
     this.adminOnly = false,
     this.showInDrawer = true,
+    this.extraGate,
   });
 }
 
@@ -313,7 +319,8 @@ class _ShellState extends State<Shell> {
   void _navigateToLabel(String label) {
     final auth = context.read<AuthState>();
     final visible = _items
-        .where((item) => !item.adminOnly || auth.isAdmin)
+        .where((item) =>
+            (!item.adminOnly || auth.isAdmin) && (item.extraGate?.call(auth) ?? true))
         .toList();
     final index = visible.indexWhere((item) => item.label == label);
     if (index != -1 && index != _index) {
@@ -418,6 +425,12 @@ class _ShellState extends State<Shell> {
       showInDrawer: false,
     ),
     _NavItem(
+      'Plan & Billing',
+      Icons.bolt_rounded,
+      () => const PlansScreen(),
+      extraGate: (auth) => auth.role == 'admin',
+    ),
+    _NavItem(
       'Help & Support',
       Icons.support_agent_rounded,
       () => const HelpScreen(),
@@ -428,7 +441,9 @@ class _ShellState extends State<Shell> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
-    final visible = _items.where((i) => !i.adminOnly || auth.isAdmin).toList();
+    final visible = _items
+        .where((i) => (!i.adminOnly || auth.isAdmin) && (i.extraGate?.call(auth) ?? true))
+        .toList();
     if (_index >= visible.length) _index = 0;
     final current = visible[_index];
     final currentScreen = current.label == 'Dashboard'
