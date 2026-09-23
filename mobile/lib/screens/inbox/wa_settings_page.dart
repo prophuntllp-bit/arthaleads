@@ -430,7 +430,8 @@ class _WaSettingsPageState extends State<WaSettingsPage> {
             GradientButton(
               onPressed: _checkingWebhook ? null : _checkWebhook,
               loading: _checkingWebhook,
-              child: Text(checked ? 'Check again' : 'Check incoming messages'),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              child: Text(checked ? 'Check again' : 'Check incoming messages', style: const TextStyle(fontSize: 13)),
             ),
           ],
         ),

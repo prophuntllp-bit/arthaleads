@@ -339,7 +339,7 @@ class _AutomationFormScreenState extends State<AutomationFormScreen> {
                   ],
                 ),
               ),
-              if (_platform == 'Custom') ...[
+              if (_platform == 'Custom' || _platform == 'WhatsApp') ...[
                 const SizedBox(height: 8),
                 Builder(
                   builder: (context) {

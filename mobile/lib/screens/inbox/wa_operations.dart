@@ -242,7 +242,8 @@ class _BusinessHoursCardState extends State<_BusinessHoursCard> {
         GradientButton(
           onPressed: _saving ? null : _save,
           loading: _saving,
-          child: const Text('Save business hours'),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: const Text('Save business hours', style: TextStyle(fontSize: 13)),
         ),
       ],
     );
@@ -294,7 +295,8 @@ class _AutoAssignCardState extends State<_AutoAssignCard> {
         GradientButton(
           onPressed: _saving ? null : _save,
           loading: _saving,
-          child: const Text('Save'),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: const Text('Save', style: TextStyle(fontSize: 13)),
         ),
       ],
     );
@@ -405,7 +407,8 @@ class _NotificationsCardState extends State<_NotificationsCard> {
         GradientButton(
           onPressed: _saving ? null : _save,
           loading: _saving,
-          child: const Text('Save notification settings'),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: const Text('Save notification settings', style: TextStyle(fontSize: 13)),
         ),
       ],
     );
@@ -756,7 +759,8 @@ class _BusinessProfileCardState extends State<_BusinessProfileCard> {
         GradientButton(
           onPressed: _saving ? null : _save,
           loading: _saving,
-          child: const Text('Save profile'),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: const Text('Save profile', style: TextStyle(fontSize: 13)),
         ),
         const SizedBox(height: 14),
         Container(
