@@ -239,11 +239,10 @@ class _BusinessHoursCardState extends State<_BusinessHoursCard> {
             help: "Sent at most once a day per conversation, not on every message.",
           ),
         ],
-        SecondaryButton(
+        GradientButton(
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save business hours'),
+          loading: _saving,
+          child: const Text('Save business hours'),
         ),
       ],
     );
@@ -292,11 +291,10 @@ class _AutoAssignCardState extends State<_AutoAssignCard> {
           onChanged: (v) => setState(() => _enabled = v),
           title: 'Auto-assign handed-off conversations',
         ),
-        SecondaryButton(
+        GradientButton(
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save'),
+          loading: _saving,
+          child: const Text('Save'),
         ),
       ],
     );
@@ -404,11 +402,10 @@ class _NotificationsCardState extends State<_NotificationsCard> {
             (id) => setState(() => _lowCredits.contains(id) ? _lowCredits.remove(id) : _lowCredits.add(id))),
         _picker('Quality rating drop', widget.agents, _qualityDrop,
             (id) => setState(() => _qualityDrop.contains(id) ? _qualityDrop.remove(id) : _qualityDrop.add(id))),
-        SecondaryButton(
+        GradientButton(
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save notification settings'),
+          loading: _saving,
+          child: const Text('Save notification settings'),
         ),
       ],
     );
@@ -756,11 +753,10 @@ class _BusinessProfileCardState extends State<_BusinessProfileCard> {
           options: {for (final v in _verticals) v: v.replaceAll('_', ' ')},
           onChanged: (v) => setState(() => _vertical = v),
         ),
-        SecondaryButton(
+        GradientButton(
           onPressed: _saving ? null : _save,
-          child: _saving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Save profile'),
+          loading: _saving,
+          child: const Text('Save profile'),
         ),
         const SizedBox(height: 14),
         Container(

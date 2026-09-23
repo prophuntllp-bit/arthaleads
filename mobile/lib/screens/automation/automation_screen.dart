@@ -2015,7 +2015,10 @@ class _AutomationScreenState extends State<AutomationScreen> {
                 badge: _waConnected == true ? 'Connected' : null,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const Scaffold(body: WaSettingsPage()),
+                    builder: (_) => Scaffold(
+                      appBar: AppBar(title: const Text('WhatsApp Business')),
+                      body: const WaSettingsPage(),
+                    ),
                   ),
                 ),
               ),

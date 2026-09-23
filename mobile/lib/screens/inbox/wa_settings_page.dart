@@ -427,11 +427,10 @@ class _WaSettingsPageState extends State<WaSettingsPage> {
               ],
             ),
             const SizedBox(height: 10),
-            SecondaryButton(
+            GradientButton(
               onPressed: _checkingWebhook ? null : _checkWebhook,
-              child: _checkingWebhook
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Text(checked ? 'Check again' : 'Check incoming messages'),
+              loading: _checkingWebhook,
+              child: Text(checked ? 'Check again' : 'Check incoming messages'),
             ),
           ],
         ),
