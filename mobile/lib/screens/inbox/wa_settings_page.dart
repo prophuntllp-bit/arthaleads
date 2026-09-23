@@ -6,6 +6,7 @@ import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import 'wa_embedded_signup_screen.dart';
+import 'wa_operations.dart';
 import 'wa_ui.dart';
 
 const _providers = {
@@ -391,6 +392,7 @@ class _WaSettingsPageState extends State<WaSettingsPage> {
           const SizedBox(height: 12),
           _webhookHealthCard(),
         ],
+        const WaOperationsSection(),
       ],
     );
   }
