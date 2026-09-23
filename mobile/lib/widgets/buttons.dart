@@ -93,7 +93,12 @@ class _GradientButtonState extends State<GradientButton> {
                 ),
               ],
             ),
-            child: Center(child: content),
+            // Center() without a widthFactor fills all the width its parent
+            // offers, not just the content's — so with fullWidth: false this
+            // must NOT be wrapped in Center, or the button silently stretches
+            // to fill a Column/Card anyway regardless of the flag. Centering
+            // isn't needed here: the Row above already sizes to its content.
+            child: widget.fullWidth ? Center(child: content) : content,
           ),
         ),
       ),
