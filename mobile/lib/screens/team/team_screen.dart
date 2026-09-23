@@ -14,14 +14,6 @@ import '../../widgets/app_select.dart';
 import '../../widgets/motion.dart';
 import '../../widgets/page_header.dart';
 
-const _planLimits = {
-  'starter': 3,
-  'growth': 20,
-  'trial': 20,
-  'pro': 20,
-  'enterprise': 999999,
-};
-
 /// Team — GET/POST/PATCH/DELETE /auth/users. GET is admin + manager;
 /// create/edit/toggle/delete stay admin (+ super_admin) only — see
 /// backend/routes/authRoutes.js. Managers get the same read-only view the
@@ -38,10 +30,30 @@ class _TeamScreenState extends State<TeamScreen> {
   List<Map<String, dynamic>> _users = [];
   bool _loading = true;
 
+  // Seat ceiling comes from the server, not a local copy of plan numbers —
+  // this used to carry its own plan-limits table, which drifted to stale
+  // pre-2026 caps (starter 3, growth 20) that the API no longer enforced. A
+  // paid org's real ceiling is however many seats it bought, which only the
+  // server knows (see GET /org/seats and web's Team.jsx for the same fix).
+  Map<String, dynamic>? _seatInfo;
+
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  Future<void> _loadSeats() async {
+    try {
+      final res = await _api.dio.get('/org/seats');
+      if (mounted) {
+        setState(() => _seatInfo = ((res.data as Map)['seats'] as Map?)?.cast<String, dynamic>());
+      }
+    } catch (_) {
+      // Non-fatal: the server enforces the cap regardless, so a failure here
+      // costs the meter, not the guard rail.
+      if (mounted) setState(() => _seatInfo = null);
+    }
   }
 
   Future<void> _load() async {
@@ -52,6 +64,7 @@ class _TeamScreenState extends State<TeamScreen> {
         () => _users = (res.data['users'] as List? ?? [])
             .cast<Map<String, dynamic>>(),
       );
+      _loadSeats();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -437,11 +450,13 @@ class _TeamScreenState extends State<TeamScreen> {
     final admins = _users.where((u) => u['role'] == 'admin').length;
     final managers = _users.where((u) => u['role'] == 'manager').length;
     final agents = _users.where((u) => u['role'] == 'agent').length;
-    final plan = auth.org?['plan'] as String?;
+    final seatLimit = _seatInfo?['limit'] as num?; // null = unlimited
     final memberLimit = auth.role == 'super_admin'
         ? 999999
-        : (_planLimits[plan] ?? 999999);
-    final atLimit = _users.length >= memberLimit;
+        : (seatLimit?.toInt() ?? 999999);
+    final atLimit = auth.role == 'super_admin'
+        ? false
+        : (_seatInfo != null ? _seatInfo!['canAdd'] != true : false);
 
     return Scaffold(
       // Bottom-left: the draggable Artha assistant bubble owns the
