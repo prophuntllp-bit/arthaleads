@@ -1827,12 +1827,19 @@ const AGENT_FIELDS = [
   "shareProjectPhotos", "shareBrochure", "shareVideos", "shareFloorPlan", "ctwaFlow",
 ];
 
-// Caps mirror WhatsApp's own interactive-message limits (3 reply buttons, 10
-// list rows) — enforced here so a misconfigured flow fails on save with a
-// clear message instead of failing silently at Meta send time mid-conversation.
-const CTWA_STEP_CAPS = { menuOptions: 3, siteVisitSlots: 3 };
-const CTWA_MENU_ACTIONS = ["photos", "docs", "location", "site_visit", "advisor"];
-const CTWA_MAX_QUESTIONS = 5;
+// 10 list rows mirrors WhatsApp's own interactive-message limit — enforced
+// here so a misconfigured flow fails on save with a clear message instead of
+// failing silently at Meta send time mid-conversation. Interactive BUTTONS
+// cap at 3, but a question with more than 3 options already renders as a
+// list instead (see ctwaFlowService.optionsAsButtonsOrList), so 10 is the
+// real ceiling for either shape.
+const CTWA_OPTION_CAP = 10;
+const CTWA_OPTION_ACTIONS = ["none", "photos", "docs", "location", "advisor", "site_visit"];
+// Generous headroom above the old fixed 3 (purpose/budget/timeline) now that
+// what used to be the separate "what next?" menu and "site visit" steps are
+// just more entries in this same list — a tenant can still add further
+// questions after them.
+const CTWA_MAX_QUESTIONS = 8;
 const CTWA_MAPS_TO = ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"];
 
 function sanitizeOptionRow(r, { withBudget = false } = {}) {
@@ -1840,6 +1847,7 @@ function sanitizeOptionRow(r, { withBudget = false } = {}) {
     id: String(r?.id || "").trim().slice(0, 60),
     label: String(r?.label || "").trim().slice(0, 60),
     ...(withBudget ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
+    action: CTWA_OPTION_ACTIONS.includes(r?.action) ? r.action : "none",
   };
 }
 
@@ -1848,17 +1856,17 @@ function sanitizeCtwaFlow(input) {
   const clean = {
     enabled: input.enabled === true,
     welcomeText:     String(input.welcomeText || "").trim().slice(0, 500),
-    menuPrompt:      String(input.menuPrompt || "").trim().slice(0, 300),
-    siteVisitPrompt: String(input.siteVisitPrompt || "").trim().slice(0, 300),
     closingPrompt:   String(input.closingPrompt || "").trim().slice(0, 300),
     nudgesEnabled:   input.nudgesEnabled === true,
     nudgeText:       String(input.nudgeText || "").trim().slice(0, 200),
   };
 
-  // 1-5 tenant-authored qualifying questions — each with its own options and
-  // an explicit mapsTo (see ctwaFlowService.applyQuestionAnswer). Unlike the
-  // old fixed purpose/budget/timeline fields, questionText/mapsTo are no
-  // longer implied by which array a row lives in.
+  // Tenant-authored questions — each with its own options and an explicit
+  // mapsTo (see ctwaFlowService.applyQuestionAnswer). What used to be the
+  // separate, hardcoded "what next?" menu and "site visit" steps are now
+  // just more entries here, distinguished only by their options' `action`
+  // (see the schema comment in models/WaAgent.js for the full list) — not by
+  // which array or field they came from.
   const questionRows = Array.isArray(input.qualifyingQuestions) ? input.qualifyingQuestions : [];
   clean.qualifyingQuestions = questionRows
     .map((q) => {
@@ -1866,22 +1874,11 @@ function sanitizeCtwaFlow(input) {
       const options = (Array.isArray(q?.options) ? q.options : [])
         .map((r) => sanitizeOptionRow(r, { withBudget: mapsTo === "budget" }))
         .filter((r) => r.id && r.label)
-        .slice(0, 10);
+        .slice(0, CTWA_OPTION_CAP);
       return { id: String(q?.id || "").trim().slice(0, 60), questionText: String(q?.questionText || "").trim().slice(0, 300), options, mapsTo };
     })
     .filter((q) => q.id && q.questionText && q.options.length)
     .slice(0, CTWA_MAX_QUESTIONS);
-
-  for (const [key, cap] of Object.entries(CTWA_STEP_CAPS)) {
-    const rows = Array.isArray(input[key]) ? input[key] : [];
-    clean[key] = rows
-      .map((r) => ({
-        ...sanitizeOptionRow(r),
-        ...(key === "menuOptions" ? { action: CTWA_MENU_ACTIONS.includes(r?.action) ? r.action : "advisor" } : {}),
-      }))
-      .filter((r) => r.id && r.label)
-      .slice(0, cap);
-  }
 
   // Temporary testing allowlist — digits only (matches WaConversation.contactPhone's
   // "no +, no spaces" shape), deduped, capped well above any real team size.
@@ -1889,18 +1886,13 @@ function sanitizeCtwaFlow(input) {
     ? [...new Set(input.testPhones.map((p) => String(p || "").replace(/\D/g, "")).filter(Boolean))].slice(0, 25)
     : [];
 
-  if (clean.enabled) {
+  if (clean.enabled && !clean.qualifyingQuestions.length) {
     // welcomeText is deliberately optional — a tenant running Meta's own
     // "automated greeting" on the ad itself (Ads Manager → Conversations)
     // doesn't want a second, redundant one from this bot; leaving it blank
-    // skips straight to the first qualifying question (see ctwaFlowService.startFlow).
-    const missing = Object.keys(CTWA_STEP_CAPS).filter((k) => !clean[k].length);
-    if (!clean.qualifyingQuestions.length || missing.length) {
-      const e = new Error(
-        `The CTWA flow needs at least one qualifying question (with at least one option and question text) and at least one option for each step before it can be turned on${missing.length ? ` (missing options for: ${missing.join(", ")})` : ""}.`
-      );
-      e.status = 400; throw e;
-    }
+    // skips straight to the first question (see ctwaFlowService.startFlow).
+    const e = new Error("The CTWA flow needs at least one question, with at least one option, before it can be turned on.");
+    e.status = 400; throw e;
   }
   return clean;
 }
@@ -1982,16 +1974,14 @@ router.get("/agents/:id/funnel", async (req, res) => {
       orgId: req.orgId, agentId: agent._id, "flowFunnel.startedAt": { $gte: since },
     }).select("flowFunnel").lean();
 
-    const flow = agent.ctwaFlow || {};
-    const qs = (flow.qualifyingQuestions?.length ? flow.qualifyingQuestions : [
-      flow.purposeOptions?.length && { id: "purpose", questionText: "Purpose" },
-      flow.budgetBrackets?.length && { id: "budget", questionText: "Budget" },
-      flow.timelineOptions?.length && { id: "timeline", questionText: "Timeline" },
-    ].filter(Boolean));
+    // Reuses the exact same question list (including the legacy-doc
+    // fallback for an agent saved before qualifyingQuestions existed) that
+    // ctwaFlowService itself asks and steps through — so this funnel can
+    // never drift from what the flow actually sent.
+    const qs = ctwaFlow.getQualifyingQuestions(agent);
     const order = [
       ...qs.map((q) => ({ id: q.id, label: String(q.questionText || q.id).slice(0, 60) })),
-      { id: "menu", label: "Saw the menu" },
-      { id: "site_visit", label: "Saw site-visit times" },
+      { id: "closing", label: "Reached closing" },
     ];
     const count = (id) => convs.filter((c) => (c.flowFunnel?.stepsReached || []).includes(id)).length;
     const outcome = (o) => convs.filter((c) => c.flowFunnel?.outcome === o).length;

@@ -10,16 +10,19 @@
 // existing rule-based scorer (utils/leadScorer.js) reacts to a CTWA lead
 // exactly the same way it reacts to any other lead. No second scoring system.
 //
-// The backbone (qualify → menu → close) is fixed, matching the flow product/
-// support specced out — but the qualifying phase itself is a tenant-managed
-// list of 1-5 questions (WaAgent.ctwaFlow.qualifyingQuestions), each with its
-// own explicit mapsTo telling this file which real Lead field the answer
-// should write to (or "none"). This is a platform feature every tenant uses,
-// not just real-estate ones — the leads data this session's form-field-mapper
-// work surfaced tenants whose questions look nothing like Purpose/Budget/
-// Timeline, so those three can no longer be hardcoded. A generic drag-and-
-// drop flow builder covering the menu/close phase too is separate, explicitly
-// out-of-scope future work; see the plan this was built from.
+// Only the closing step is fixed (talk to an advisor, or book a site visit —
+// the only two ways this flow is allowed to end). Everything before that,
+// including what used to be separate hardcoded "menu" and "site visit"
+// steps, is one tenant-managed, freely reorderable list of questions
+// (WaAgent.ctwaFlow.qualifyingQuestions) — each with its own explicit mapsTo
+// telling this file which real Lead field the answer should write to (or
+// "none"), and each option optionally carrying an `action` (send photos/
+// docs/location and keep going, hand off to an advisor, or book a site
+// visit) — see the option-level comment on the schema for the full list.
+// This is a platform feature every tenant uses, not just real-estate ones —
+// the leads data this session's form-field-mapper work surfaced tenants
+// whose questions look nothing like Purpose/Budget/Timeline, so those three
+// can no longer be hardcoded, and neither can a fixed "what next" menu.
 //
 // Constructed with its dependencies rather than requiring whatsappRoutes.js
 // directly — those helpers (sendInteractive, sendQualifiedMedia, ...) are
@@ -164,21 +167,44 @@ module.exports = function createCtwaFlowService({
   }
 
   // Pre-existing agent docs (e.g. Riya's, saved before qualifyingQuestions
-  // existed) still have the old purposeQuestion/purposeOptions/budgetBrackets/
-  // timelineOptions fields and nothing else — synthesized into the same
-  // 3-question shape they always behaved as, so nothing about them changes
-  // until the tenant actually edits and re-saves through the new UI. No
-  // migration script needed; this runs on every read instead.
+  // existed, or before menu/site-visit were folded into it) still have the
+  // old purposeQuestion/purposeOptions/budgetBrackets/timelineOptions/
+  // menuOptions/siteVisitSlots fields — synthesized into the same question
+  // shape they always behaved as, so nothing about them changes until the
+  // tenant actually edits and re-saves through the current UI. No migration
+  // script needed; this runs on every read instead.
+  //
+  // A legacy menu option with action "site_visit" meant "open the slot
+  // picker" back when that was a separate hardcoded step — remapped to
+  // "none" here, since the equivalent now is simply that the site-visit
+  // question comes right after this one in the synthesized array, and
+  // "none" already means "move to the next question."
   function legacyToQualifyingQuestions(ctwaFlow) {
     const qs = [];
     if (ctwaFlow?.purposeOptions?.length) {
-      qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions, mapsTo: "purpose" });
+      qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "purpose" });
     }
     if (ctwaFlow?.budgetBrackets?.length) {
-      qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets, mapsTo: "budget" });
+      qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets.map((o) => ({ ...o, action: "none" })), mapsTo: "budget" });
     }
     if (ctwaFlow?.timelineOptions?.length) {
-      qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions, mapsTo: "timeline" });
+      qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "timeline" });
+    }
+    if (ctwaFlow?.menuOptions?.length) {
+      qs.push({
+        id: "menu",
+        questionText: ctwaFlow.menuPrompt || "Great, what would you like to see next?",
+        options: ctwaFlow.menuOptions.map((m) => ({ id: m.id, label: m.label, action: m.action === "site_visit" ? "none" : (m.action || "none") })),
+        mapsTo: "none",
+      });
+    }
+    if (ctwaFlow?.siteVisitSlots?.length) {
+      qs.push({
+        id: "site_visit_slots",
+        questionText: ctwaFlow.siteVisitPrompt || "Which time works best for your visit?",
+        options: ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, label: s.label, action: "site_visit" })),
+        mapsTo: "none",
+      });
     }
     return qs;
   }
@@ -214,13 +240,6 @@ module.exports = function createCtwaFlowService({
     let i = from;
     while (i < questions.length && leadKnows(lead, questions[i].mapsTo)) i++;
     return i;
-  }
-
-  function menuStep(agent) {
-    return { bodyText: agent.ctwaFlow.menuPrompt || "Great, what would you like to see next?", buttons: agent.ctwaFlow.menuOptions.map((m) => ({ id: m.id, title: m.label })) };
-  }
-  function siteVisitStep(agent) {
-    return { bodyText: agent.ctwaFlow.siteVisitPrompt || "Which time works best for your visit?", buttons: agent.ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, title: s.label })) };
   }
 
   // The only two ways this flow is allowed to end: a human advisor, or a
@@ -283,9 +302,9 @@ module.exports = function createCtwaFlowService({
     if (!questions.length) return; // sanitizeCtwaFlow blocks enabling without this — never crash live traffic over it regardless
     const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId);
     if (firstIdx >= questions.length) {
-      // Everything we'd ask is already on the lead — straight to the menu.
-      const menuSent = await sendFlowStep(org, conversation, botName, { ...menuStep(agent), previewLabel: "Started qualification" });
-      if (menuSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "menu", startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: ["menu"], lastStep: "menu" } });
+      // Everything we'd ask is already on the lead — straight to closing.
+      const closingSent = await sendFlowStep(org, conversation, botName, { ...closingStep(agent), previewLabel: "Started qualification" });
+      if (closingSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "closing", startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: ["closing"], lastStep: "closing" } });
       return;
     }
     const first = questions[firstIdx];
@@ -385,107 +404,130 @@ module.exports = function createCtwaFlowService({
     const step = conversation.flowState?.step;
     if (!step || !agent?.ctwaFlow?.enabled) return false;
     const botName = agent.name || "Artha Assistant";
-    const flow = agent.ctwaFlow;
     const questions = getQualifyingQuestions(agent);
+    const vars = { name: conversation.contactName || "there" };
 
     const exitFlow = async () => {
       await funnelOutcome(conversation._id, "exited");
       return WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     };
 
-    // Matched by button id across every step this flow has, not by whatever
-    // step we last recorded — Meta doesn't let us disable a button on a
-    // message already sent, and a lead often wants to revisit an earlier
-    // question (see the location, then still tap the floor plan; pick a
-    // different budget after moving on) rather than being stuck wherever
-    // they last left off. So any earlier message's button keeps doing
-    // exactly what it says, for as long as the flow hasn't reached a true
-    // terminal (advisor connected, or a site-visit slot picked — both hand
-    // off to a human and clear flowState, so nothing reaches this function
-    // again after that).
+    // What the customer sees after any non-terminal question: the next
+    // still-unanswered question, or the fixed closing prompt once none are
+    // left. This is the one thing every option's tap eventually leads to,
+    // whatever it did along the way (recorded an answer, sent photos, ...).
+    const advancePast = async (questionIndex) => {
+      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId);
+      const next = questions[nextIdx];
+      if (next) {
+        await sendFlowStep(org, conversation, botName, questionStep(next, vars));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
+        await funnelStep(conversation._id, next.id);
+      } else {
+        await sendFlowStep(org, conversation, botName, closingStep(agent));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "closing" });
+        await funnelStep(conversation._id, "closing");
+      }
+    };
+
+    // Matched by button id across every question this flow has, not by
+    // whatever step we last recorded — Meta doesn't let us disable a button
+    // on a message already sent, and a lead often wants to revisit an
+    // earlier question (see the location, then still tap the floor plan;
+    // pick a different budget after moving on) rather than being stuck
+    // wherever they last left off. So any earlier message's button keeps
+    // doing exactly what it says, for as long as the flow hasn't reached a
+    // true terminal (advisor connected, or a site-visit slot picked — both
+    // hand off to a human and clear flowState, so nothing reaches this
+    // function again after that).
     let matchedQuestionIndex = -1, matchedOption = null;
     for (let i = 0; i < questions.length; i++) {
       const opt = questions[i].options.find((o) => o.id === interactiveId);
       if (opt) { matchedQuestionIndex = i; matchedOption = opt; break; }
     }
-    const menuOpt     = flow.menuOptions.find((o) => o.id === interactiveId);
-    const closingOpt  = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
-    const slotOpt      = flow.siteVisitSlots.find((o) => o.id === interactiveId);
+    const closingOpt = CLOSING_OPTIONS.find((o) => o.id === interactiveId);
 
     if (matchedQuestionIndex !== -1) {
       const question = questions[matchedQuestionIndex];
-      await applyQuestionAnswer(conversation.leadId, question, matchedOption);
-      // Where the conversation actually is right now. Tapping an earlier
-      // question's button again (changing an answer, or a double tap) updates
-      // the answer but must not re-send the questions that follow it.
-      const currentIdx = questions.findIndex((q) => q.id === step);
-      const position = currentIdx === -1 ? questions.length : currentIdx;
-      if (matchedQuestionIndex < position) return true;
+      const action = matchedOption.action || "none";
 
-      const nextIdx = await nextUnansweredIndex(questions, matchedQuestionIndex + 1, conversation.leadId);
-      const next = questions[nextIdx];
-      if (next) {
-        await sendFlowStep(org, conversation, botName, questionStep(next, { name: conversation.contactName || "there" }));
-        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
-        await funnelStep(conversation._id, next.id);
-      } else {
-        await sendFlowStep(org, conversation, botName, menuStep(agent));
-        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
-        await funnelStep(conversation._id, "menu");
-      }
-      return true;
-    }
-
-    if (slotOpt) return completeSiteVisit(org, conversation, botName, slotOpt);
-
-    if (menuOpt || closingOpt) {
-      const action = menuOpt ? menuOpt.action : closingOpt.id; // closing ids ARE their action
-      if (action === "site_visit") {
-        await sendFlowStep(org, conversation, botName, siteVisitStep(agent));
-        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "site_visit" });
-        await funnelStep(conversation._id, "site_visit");
-        return true;
-      }
+      // Terminal actions win outright, regardless of whether this button
+      // came from an earlier, already-passed message — an explicit "Talk to
+      // Advisor" or a picked site-visit slot always means what it says.
       if (action === "advisor") {
+        await applyQuestionAnswer(conversation.leadId, question, matchedOption);
         await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent));
         await exitFlow();
         return true;
       }
-      // Informational — photos / location — never a dead end: after
-      // showing what was asked for, nudge toward the same two real endings
-      // again, and stay open for more exploring.
-      const project = await resolveFlowProject(org, agent);
-      if ((action === "photos" || action === "docs") && project) {
-        // The customer tapped this button, so it's an explicit ask — sent
-        // regardless of the free-text "what it can send" toggles. Anything
-        // not uploaded for the project is said plainly, never faked.
-        const wants = action === "photos"
-          ? { wantsPhotos: true, wantsVideos: true }
-          : { wantsBrochure: true, wantsFloorPlan: true };
-        notifyHotSignal?.(org, conversation, action === "photos" ? "asked for photos & videos" : "asked for the floor plan & brochure");
-        const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
-        if (missing.length) {
-          const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
-          const lead = sent.length ? "The rest" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
-          await sendFlowStep(org, conversation, botName, {
-            bodyText: sent.length
-              ? `${lead} isn't ready on my side yet. Our team will send ${label} across shortly.`
-              : `${lead} isn't ready on my side yet, our team will send it across shortly.`,
-          });
+      if (action === "site_visit") {
+        return completeSiteVisit(org, conversation, botName, matchedOption);
+      }
+
+      // Informational — photos / docs / location — never a dead end, and
+      // always re-sent on tap even if this button is from an earlier,
+      // already-passed message: someone scrolling back up to ask for photos
+      // again is a legitimate repeat request, not a correction.
+      if (action === "photos" || action === "docs") {
+        const project = await resolveFlowProject(org, agent);
+        if (project) {
+          // The customer tapped this button, so it's an explicit ask — sent
+          // regardless of the free-text "what it can send" toggles. Anything
+          // not uploaded for the project is said plainly, never faked.
+          const wants = action === "photos"
+            ? { wantsPhotos: true, wantsVideos: true }
+            : { wantsBrochure: true, wantsFloorPlan: true };
+          notifyHotSignal?.(org, conversation, action === "photos" ? "asked for photos & videos" : "asked for the floor plan & brochure");
+          const { sent, missing } = (await sendQualifiedMedia(org, agent, conversation, botName, project.name, { ...wants, force: true, project })) || { sent: [], missing: [] };
+          if (missing.length) {
+            const label = missing.map((m) => ({ photos: "photos", videos: "the video", brochure: "the brochure", floorplan: "the floor plan" }[m])).join(" and ");
+            const lead = sent.length ? "The rest" : `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+            await sendFlowStep(org, conversation, botName, {
+              bodyText: sent.length
+                ? `${lead} isn't ready on my side yet. Our team will send ${label} across shortly.`
+                : `${lead} isn't ready on my side yet, our team will send it across shortly.`,
+            });
+          }
         }
-      } else if (action === "location" && project?.location) {
-        await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
+      } else if (action === "location") {
+        const project = await resolveFlowProject(org, agent);
+        if (project?.location) {
+          await sendFlowStep(org, conversation, botName, { bodyText: `${project.name} is located at: ${project.location}` });
+        }
       }
-      // If they already tapped another info button right behind this one, its
-      // own turn ends with the closing question — asking twice just stacks
-      // duplicate prompts in the middle of the chat.
-      const behind = conversation._pendingTaps?.() || [];
-      const infoIds = flow.menuOptions.filter((o) => ["photos", "docs", "location"].includes(o.action)).map((o) => o.id);
-      if (!behind.some((id) => infoIds.includes(id))) {
-        await sendFlowStep(org, conversation, botName, closingStep(agent));
-      }
-      await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "menu" });
+
+      await applyQuestionAnswer(conversation.leadId, question, matchedOption);
+
+      // Where the conversation actually is right now. Tapping an earlier
+      // question's button again (changing an answer, re-requesting photos,
+      // or a double tap) updates the answer / resends info above, but must
+      // not re-send whatever already followed it.
+      const currentIdx = questions.findIndex((q) => q.id === step);
+      const position = currentIdx === -1 ? questions.length : currentIdx;
+      if (matchedQuestionIndex < position) return true;
+
+      await advancePast(matchedQuestionIndex);
       return true;
+    }
+
+    if (closingOpt) {
+      if (closingOpt.id === "advisor") {
+        await terminalAdvisor(org, agent, conversation, botName, await resolveFlowProject(org, agent));
+        await exitFlow();
+        return true;
+      }
+      // "Book Site Visit" from the closing prompt — hand off to a dedicated
+      // slot-picking question if the tenant configured one (any question
+      // whose every option books a site visit), otherwise book immediately
+      // using the closing button's own label as the slot.
+      const slotsQuestion = questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+      if (slotsQuestion) {
+        await sendFlowStep(org, conversation, botName, questionStep(slotsQuestion, vars));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": slotsQuestion.id });
+        await funnelStep(conversation._id, slotsQuestion.id);
+        return true;
+      }
+      return completeSiteVisit(org, conversation, botName, { id: "site_visit", label: "General enquiry" });
     }
 
     // No known button matched — a free-typed message. Exit the flow rather
@@ -535,8 +577,7 @@ module.exports = function createCtwaFlowService({
   function pendingStepContent(agent, conversation) {
     const step = conversation.flowState?.step;
     const vars = { name: conversation.contactName || "there" };
-    if (step === "menu") return closingStep(agent);
-    if (step === "site_visit") return siteVisitStep(agent);
+    if (step === "closing") return closingStep(agent);
     const q = getQualifyingQuestions(agent).find((x) => x.id === step);
     return q ? questionStep(q, vars) : null;
   }
@@ -595,5 +636,5 @@ module.exports = function createCtwaFlowService({
     return { checked: convs.length, sent };
   }
 
-  return { shouldStartFlow, startFlow, advanceFlow, runNudges };
+  return { shouldStartFlow, startFlow, advanceFlow, runNudges, getQualifyingQuestions };
 };

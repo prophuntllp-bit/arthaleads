@@ -41,10 +41,11 @@ const STATUSES = [
 const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "option"}_${i}`;
 
 // Sensible starting point for an Indian real-estate CTWA flow — every label
-// (and the wording) is editable per agent; only the qualify → menu → close
-// backbone shape is fixed. The qualifying phase itself is an open-ended list
-// (1-5 questions), not a hardcoded Purpose/Budget/Timeline triad — this is a
-// platform feature every tenant uses, not just real-estate ones.
+// (and the wording) is editable per agent, and so is the order and count of
+// questions; only the closing step (talk to an advisor, or book a site
+// visit) is fixed. What used to be separate hardcoded "what next?" and
+// "site visit" steps are now just two more entries in the same list — this
+// is a platform feature every tenant uses, not just real-estate ones.
 const DEFAULT_CTWA_FLOW = {
   enabled: false,
   welcomeText: "Hi {{name}} 👋 Thanks for your interest in {{project}}!",
@@ -52,40 +53,46 @@ const DEFAULT_CTWA_FLOW = {
     {
       id: "purpose", questionText: "Are you looking for this primarily for:", mapsTo: "purpose",
       options: [
-        { id: "self_use_0", label: "Self Use" },
-        { id: "investment_1", label: "Investment" },
+        { id: "self_use_0", label: "Self Use", action: "none" },
+        { id: "investment_1", label: "Investment", action: "none" },
       ],
     },
     {
       id: "budget", questionText: "Perfect. What's your approximate budget range?", mapsTo: "budget",
       options: [
-        { id: "b0", label: "Under ₹50L", min: 0, max: 5000000 },
-        { id: "b1", label: "₹50L - ₹1Cr", min: 5000000, max: 10000000 },
-        { id: "b2", label: "₹1Cr+", min: 10000000, max: 0 },
-        { id: "b3", label: "Just Exploring", min: 0, max: 0 },
+        { id: "b0", label: "Under ₹50L", min: 0, max: 5000000, action: "none" },
+        { id: "b1", label: "₹50L - ₹1Cr", min: 5000000, max: 10000000, action: "none" },
+        { id: "b2", label: "₹1Cr+", min: 10000000, max: 0, action: "none" },
+        { id: "b3", label: "Just Exploring", min: 0, max: 0, action: "none" },
       ],
     },
     {
       id: "timeline", questionText: "Got it. When are you looking to finalize?", mapsTo: "timeline",
       options: [
-        { id: "t0", label: "Within 30 Days" },
-        { id: "t1", label: "1-3 Months" },
-        { id: "t2", label: "3-6 Months" },
-        { id: "t3", label: "Just Exploring" },
+        { id: "t0", label: "Within 30 Days", action: "none" },
+        { id: "t1", label: "1-3 Months", action: "none" },
+        { id: "t2", label: "3-6 Months", action: "none" },
+        { id: "t3", label: "Just Exploring", action: "none" },
       ],
     },
-  ],
-  menuPrompt: "Great, what would you like to see next?",
-  menuOptions: [
-    { id: "m0", label: "🖼️ Photos & Videos", action: "photos" },
-    { id: "m1", label: "📄 Floor Plan & Brochure", action: "docs" },
-    { id: "m2", label: "🏡 Book Site Visit", action: "site_visit" },
-  ],
-  siteVisitPrompt: "Which time works best for your visit?",
-  siteVisitSlots: [
-    { id: "s0", label: "Morning" },
-    { id: "s1", label: "Afternoon" },
-    { id: "s2", label: "Evening" },
+    {
+      id: "menu", questionText: "Great, what would you like to see next?", mapsTo: "none",
+      options: [
+        { id: "m0", label: "🖼️ Photos & Videos", action: "photos" },
+        { id: "m1", label: "📄 Floor Plan & Brochure", action: "docs" },
+        // "none" — not "site_visit" — because tapping this should lead into
+        // the slot-picker question right below, not book immediately.
+        { id: "m2", label: "🏡 Book Site Visit", action: "none" },
+      ],
+    },
+    {
+      id: "site_visit_slots", questionText: "Which time works best for your visit?", mapsTo: "none",
+      options: [
+        { id: "s0", label: "Morning", action: "site_visit" },
+        { id: "s1", label: "Afternoon", action: "site_visit" },
+        { id: "s2", label: "Evening", action: "site_visit" },
+      ],
+    },
   ],
   closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
   nudgesEnabled: false,
@@ -93,22 +100,41 @@ const DEFAULT_CTWA_FLOW = {
   testPhones: [],
 };
 
-// Pre-existing agents saved before qualifyingQuestions existed (e.g. any
-// agent saved through this page before this change shipped) still carry the
-// old purposeQuestion/purposeOptions/budgetBrackets/timelineOptions fields
-// and nothing else — synthesized into the same 3-question shape they always
-// behaved as. Mirrors ctwaFlowService.js's legacyToQualifyingQuestions
-// exactly. The very next Save persists the new shape for good.
+// Pre-existing agents saved before this change carry the old
+// purposeQuestion/purposeOptions/budgetBrackets/timelineOptions/menuOptions/
+// siteVisitSlots fields and no qualifyingQuestions — synthesized into the
+// same question shape they always behaved as, so nothing about them changes
+// until the tenant opens and re-saves through this page. Mirrors
+// ctwaFlowService.js's legacyToQualifyingQuestions exactly (including
+// remapping a legacy menu option's "site_visit" action to "none" — the
+// slot-picker question synthesized right after it now IS the mechanism that
+// used to be a separate hardcoded step).
 function legacyToQualifyingQuestions(ctwaFlow) {
   const qs = [];
   if (ctwaFlow?.purposeOptions?.length) {
-    qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions, mapsTo: "purpose" });
+    qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "purpose" });
   }
   if (ctwaFlow?.budgetBrackets?.length) {
-    qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets, mapsTo: "budget" });
+    qs.push({ id: "budget", questionText: "Perfect. What's your approximate budget range?", options: ctwaFlow.budgetBrackets.map((o) => ({ ...o, action: "none" })), mapsTo: "budget" });
   }
   if (ctwaFlow?.timelineOptions?.length) {
-    qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions, mapsTo: "timeline" });
+    qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "timeline" });
+  }
+  if (ctwaFlow?.menuOptions?.length) {
+    qs.push({
+      id: "menu",
+      questionText: ctwaFlow.menuPrompt || "Great, what would you like to see next?",
+      options: ctwaFlow.menuOptions.map((m) => ({ id: m.id, label: m.label, action: m.action === "site_visit" ? "none" : (m.action || "none") })),
+      mapsTo: "none",
+    });
+  }
+  if (ctwaFlow?.siteVisitSlots?.length) {
+    qs.push({
+      id: "site_visit_slots",
+      questionText: ctwaFlow.siteVisitPrompt || "Which time works best for your visit?",
+      options: ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, label: s.label, action: "site_visit" })),
+      mapsTo: "none",
+    });
   }
   return qs;
 }
@@ -125,12 +151,17 @@ const MAPS_TO_OPTIONS = [
   { value: "streetAddress",     label: "Street address" },
 ];
 
-const MENU_ACTIONS = [
-  { value: "photos",     label: "Send photos & videos" },
-  { value: "docs",       label: "Send floor plan & brochure (PDFs)" },
-  { value: "location",   label: "Send project location" },
-  { value: "site_visit", label: "Ask for a site-visit time" },
-  { value: "advisor",    label: "Connect to a human advisor" },
+// Per-option action — independent of the question's own "Maps to". Only
+// offered on questions that don't map to a real lead field ("none"), since a
+// Purpose/Budget/Timeline answer is about capturing structured data, not
+// triggering a send or an ending.
+const OPTION_ACTIONS = [
+  { value: "none",       label: "Just record the answer, then continue" },
+  { value: "photos",     label: "Send photos & videos, then continue" },
+  { value: "docs",       label: "Send floor plan & brochure, then continue" },
+  { value: "location",   label: "Send the project location, then continue" },
+  { value: "advisor",    label: "End here — connect to a human advisor" },
+  { value: "site_visit", label: "End here — book a site visit (uses this button's own label as the time)" },
 ];
 
 // Common lead-qualifying buttons most real-estate WhatsApp bots use — a
@@ -320,7 +351,11 @@ export default function AgentBuilder() {
     setAdDraft("");
   };
 
-  const MAX_QUALIFYING_QUESTIONS = 5;
+  // Generous headroom above the old fixed 3 (purpose/budget/timeline) now
+  // that what used to be the separate "what next?" and "site visit" steps
+  // are just more entries in this same list — a tenant can still add more
+  // questions after them. Mirrors backend CTWA_MAX_QUESTIONS.
+  const MAX_QUALIFYING_QUESTIONS = 8;
   const updateQuestion = (index, next) => setFlow({
     qualifyingQuestions: form.ctwaFlow.qualifyingQuestions.map((q, i) => (i === index ? next : q)),
   });
@@ -678,26 +713,15 @@ export default function AgentBuilder() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" prompt</label>
-              <input className="input w-full" placeholder="Great, what would you like to see next?"
-                value={form.ctwaFlow.menuPrompt} onChange={(e) => setFlow({ menuPrompt: e.target.value })} />
-            </div>
-            <MenuOptionEditor rows={form.ctwaFlow.menuOptions}
-              onChange={(rows) => setFlow({ menuOptions: rows })} />
-
-            <div>
-              <label className="text-xs font-semibold text-app-soft block mb-1">Site-visit prompt</label>
-              <input className="input w-full" placeholder="Which time works best for your visit?"
-                value={form.ctwaFlow.siteVisitPrompt} onChange={(e) => setFlow({ siteVisitPrompt: e.target.value })} />
-            </div>
-            <ChipRowEditor label="Site-visit time slots — up to 3 buttons" max={3}
-              rows={form.ctwaFlow.siteVisitSlots} onChange={(rows) => setFlow({ siteVisitSlots: rows })} />
-
-            <div>
               <label className="text-xs font-semibold text-app-soft block mb-1">Closing prompt</label>
               <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
                 value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
-              <p className="text-[11px] text-app-soft mt-1">Sent after Photos &amp; Videos, Floor Plan &amp; Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.</p>
+              <p className="text-[11px] text-app-soft mt-1">
+                The one fixed ending — sent once every question above has been asked (or straight away if the lead
+                already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are
+                not editable: "Book Site Visit" re-asks whichever question above has every option set to "book a site
+                visit", or books immediately if none do.
+              </p>
             </div>
 
             <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
@@ -884,9 +908,9 @@ function fillVars(text, vars) {
   return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 }
 
-// Mirrors ctwaFlowService.js's CLOSING_OPTIONS exactly — fixed, not
-// agent-configurable, so "Price & Floor Plan" / "Location Details" always
-// land on one of these two real endings instead of going quiet.
+// Mirrors ctwaFlowService.js's CLOSING_OPTIONS exactly — the one fixed,
+// not agent-configurable ending, reached once every question above has
+// been asked with nothing else ending the flow first.
 const CLOSING_BUTTONS = [{ id: "advisor", label: "Talk to Advisor" }, { id: "site_visit", label: "Book Site Visit" }];
 
 function CtwaFlowPreviewPanel({ flow, projectName }) {
@@ -923,14 +947,30 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
   useEffect(() => { restart(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const needOptions = (rows, label) => {
-    if (rows.length) return false;
-    push({ from: "bot", warn: true, text: `No ${label} configured yet — add at least one above to preview past this step.` });
-    setStep(null);
-    return true;
+  // Sends one question, or a warning if it has no options yet (can happen
+  // on an unsaved, still-being-edited question).
+  const sendQuestion = (q) => {
+    if (!q.options.length) {
+      push({ from: "bot", warn: true, text: "This question has no options yet — add at least one above to preview past this step." });
+      setStep(null);
+      return;
+    }
+    push({ from: "bot", text: fillVars(q.questionText, vars) || "(question text is empty)", buttons: q.options });
+    setStep(q.id);
   };
 
-  // Matched by button id across every step, not by whatever step is
+  const sendClosing = () => {
+    push({ from: "bot", text: flow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
+    setStep("closing");
+  };
+
+  const bookSiteVisit = () => {
+    push({ from: "bot", text: "Wonderful! Our team will confirm your visit shortly and take it from here." });
+    push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
+    setStep(null);
+  };
+
+  // Matched by button id across every question, not by whatever step is
   // currently recorded — mirrors ctwaFlowService.advanceFlow exactly. A real
   // WhatsApp message's buttons never stop being tappable once a newer one
   // is sent, and a lead often wants to revisit an earlier question (check
@@ -941,38 +981,16 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
   const tap = (opt) => {
     push({ from: "user", text: opt.label });
 
-    const qIndex   = (flow.qualifyingQuestions || []).findIndex((q) => q.options.some((o) => o.id === opt.id));
-    const inMenu    = flow.menuOptions.some((o) => o.id === opt.id);
+    const questions = flow.qualifyingQuestions || [];
+    const qIndex = questions.findIndex((q) => q.options.some((o) => o.id === opt.id));
     const inClosing = CLOSING_BUTTONS.some((o) => o.id === opt.id);
-    const inSlots   = flow.siteVisitSlots.some((o) => o.id === opt.id);
 
     if (qIndex !== -1) {
-      const next = flow.qualifyingQuestions[qIndex + 1];
-      if (next) {
-        push({ from: "bot", text: fillVars(next.questionText, vars) || "(question text is empty)", buttons: next.options });
-        setStep(next.id);
-      } else {
-        if (needOptions(flow.menuOptions, "\"what next\" options")) return;
-        push({ from: "bot", text: flow.menuPrompt || "Great, what would you like to see next?", buttons: flow.menuOptions });
-        setStep("menu");
-      }
-      return;
-    }
-    if (inSlots) {
-      push({ from: "bot", text: "Wonderful! Our team will confirm your visit shortly and take it from here." });
-      push({ from: "bot", note: true, text: "✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified." });
-      setStep(null); return;
-    }
-    if (inMenu || inClosing) {
-      const action = inMenu ? opt.action : opt.id; // closing ids ARE their action
-      if (action === "site_visit") {
-        if (needOptions(flow.siteVisitSlots, "site-visit time slots")) return;
-        push({ from: "bot", text: flow.siteVisitPrompt || "Which time works best for your visit?", buttons: flow.siteVisitSlots });
-        setStep("site_visit"); return;
-      }
+      const action = opt.action || "none";
       if (action === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
-      // Informational — never a dead end, and never retires the menu: the
-      // same message's other buttons (and this one) stay tappable after.
+      if (action === "site_visit") { bookSiteVisit(); return; }
+      // Informational — never a dead end, and never retires this question's
+      // own buttons: they (and this one) stay tappable after.
       if (action === "photos") {
         push({ from: "bot", note: true, text: "🖼️ Sends up to 3 project photos and all uploaded videos, whatever is uploaded for this project." });
       } else if (action === "docs") {
@@ -980,8 +998,19 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       } else if (action === "location") {
         push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
       }
-      push({ from: "bot", text: flow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
-      setStep("menu"); return;
+      const next = questions[qIndex + 1];
+      if (next) sendQuestion(next); else sendClosing();
+      return;
+    }
+
+    if (inClosing) {
+      if (opt.id === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
+      // "Book Site Visit" from the closing prompt — hand off to a dedicated
+      // slot-picking question if one exists (every option books a visit),
+      // otherwise book immediately.
+      const slotsQuestion = questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+      if (slotsQuestion) sendQuestion(slotsQuestion); else bookSiteVisit();
+      return;
     }
   };
 
@@ -1190,6 +1219,8 @@ function QualifyingQuestionEditor({ question, index, total, onChange, onRemove, 
 
       {question.mapsTo === "budget"
         ? <BudgetBracketEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} />
+        : question.mapsTo === "none"
+        ? <OptionActionEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} presets={PRESET_MENU_OPTIONS} />
         : <ChipRowEditor label="Options — up to 10, shown as buttons if 3 or fewer, a list if more" max={10} presets={presets}
             rows={question.options} onChange={(rows) => setQ({ options: rows })} />}
     </div>
@@ -1238,44 +1269,73 @@ function BudgetBracketEditor({ rows, onChange }) {
   );
 }
 
-// No manual action picker here — every real action (photos, docs, location,
-// advisor, site visit) is already covered by the 4 presets below, and a
-// second control that duplicated what the preset already set was more
-// confusing than useful. A custom-worded button defaults to "advisor" (the
-// one action that's always safe — it just hands the customer to a person).
-function MenuOptionEditor({ rows, onChange }) {
-  const [label, setLabel] = useState("");
-  const addRow = (row) => {
-    if (rows.length >= 3 || rows.some((r) => r.label.toLowerCase() === row.label.toLowerCase())) return;
-    onChange([...rows, { id: slugify(row.label, rows.length), ...row }]);
+// Used on any question that doesn't map to a real lead field ("Maps to" =
+// "none") — this is what a "what next?" menu or a "which time works for
+// you" slot picker actually is now: an ordinary question whose options
+// happen to carry an action. Each option gets its own action dropdown,
+// editable any time — not fixed at add-time the way it used to be.
+function OptionActionEditor({ rows, onChange, presets }) {
+  const [draft, setDraft] = useState("");
+  const dragIndex = useRef(null);
+  const [overIndex, setOverIndex] = useState(null);
+
+  const add = (text) => {
+    text = text.trim();
+    if (!text || rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === text.toLowerCase())) return;
+    onChange([...rows, { id: slugify(text, rows.length), label: text, action: "none" }]);
+    setDraft("");
   };
-  const add = () => {
-    if (!label.trim()) return;
-    addRow({ label: label.trim(), action: "advisor" });
-    setLabel("");
+  const addPreset = (p) => {
+    if (rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase())) return;
+    onChange([...rows, { id: slugify(p.label, rows.length), label: p.label, action: p.action }]);
   };
-  const remaining = PRESET_MENU_OPTIONS.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
+  const setAction = (rowId, action) => onChange(rows.map((r) => (r.id === rowId ? { ...r, action } : r)));
+  const reorder = (from, to) => {
+    if (from === to) return;
+    const next = [...rows];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  };
+  const remaining = presets?.filter((p) => !rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase()));
+
   return (
     <div>
-      <label className="text-xs font-semibold text-app-soft block mb-1">"What next?" menu — up to 3 buttons</label>
+      <label className="text-xs font-semibold text-app-soft block mb-1">Options — up to 10, shown as buttons if 3 or fewer, a list if more</label>
       <p className="text-[11px] text-app-soft mb-1">
-        Photos &amp; Videos, Floor Plan &amp; Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site
-        Visit" — this flow never dead-ends on just a photo or an address.
+        Each option can just record the answer and move to the next question, send something and still keep going
+        (never a dead end), or end the flow outright.
       </p>
-      {remaining.length > 0 && (
-        <CustomSelect value="" onChange={(v) => addRow(remaining.find((p) => p.label === v))}
+      {presets && remaining.length > 0 && (
+        <CustomSelect value="" onChange={(v) => addPreset(remaining.find((p) => p.label === v))}
           options={remaining.map((p) => p.label)} placeholder="Quick add a common option…" style={PRESET_SELECT_STYLE} />
       )}
       <div className={`${ROW_CLS} mt-2`}>
-        <input className={`${SMALL_INPUT} flex-1`} value={label} onChange={(e) => setLabel(e.target.value)}
-          placeholder="Or type your own — becomes a 'Talk to Advisor' style button" disabled={rows.length >= 3}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
-        <button type="button" onClick={add} disabled={!label.trim() || rows.length >= 3}
-          className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40 shrink-0"><Plus className="w-3.5 h-3.5" /></button>
+        <input className={`${SMALL_INPUT} flex-1`} value={draft} onChange={(e) => setDraft(e.target.value)}
+          placeholder="Or type your own…" disabled={rows.length >= 10}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(draft); } }} />
+        <button type="button" onClick={() => add(draft)} disabled={!draft.trim() || rows.length >= 10}
+          className="btn-secondary rounded-full px-2.5 py-1.5 disabled:opacity-40"><Plus className="w-3.5 h-3.5" /></button>
       </div>
       {rows.length > 0 && (
-        <DraggableChips rows={rows} onChange={onChange}
-          renderLabel={(r) => <>{r.label} <span className="text-app-soft font-normal">→ {MENU_ACTIONS.find((a) => a.value === r.action)?.label}</span></>} />
+        <div className="space-y-1.5 mt-2">
+          {rows.map((r, i) => (
+            <div key={r.id} draggable
+              onDragStart={(e) => { dragIndex.current = i; e.dataTransfer.effectAllowed = "move"; }}
+              onDragOver={(e) => { e.preventDefault(); if (overIndex !== i) setOverIndex(i); }}
+              onDrop={(e) => { e.preventDefault(); if (dragIndex.current !== null) reorder(dragIndex.current, i); dragIndex.current = null; setOverIndex(null); }}
+              onDragEnd={() => { dragIndex.current = null; setOverIndex(null); }}
+              className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 cursor-grab active:cursor-grabbing"
+              style={{ background: "var(--app-surface-low)", border: overIndex === i ? "1px dashed var(--app-primary)" : "1px solid var(--app-border)" }}>
+              <GripVertical className="w-3.5 h-3.5 text-app-soft shrink-0" />
+              <span className="text-xs font-semibold text-app flex-1 min-w-0 truncate">{r.label}</span>
+              <CustomSelect value={r.action || "none"} onChange={(v) => setAction(r.id, v)}
+                options={OPTION_ACTIONS} style={{ minWidth: 170, padding: "5px 10px", borderRadius: "0.6rem", fontSize: 11 }} />
+              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                className="text-app-soft hover:text-red-500 transition shrink-0"><X className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

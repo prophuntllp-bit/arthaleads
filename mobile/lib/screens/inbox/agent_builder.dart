@@ -39,17 +39,21 @@ const _mapsToOptions = {
   'streetAddress': 'Street address',
 };
 
-const _menuActions = {
-  'photos': 'Send photos & videos',
-  'docs': 'Send floor plan & brochure (PDFs)',
-  'location': 'Send project location',
-  'site_visit': 'Ask for a site-visit time',
-  'advisor': 'Connect to a human advisor',
+// Per-option action — independent of the question's own "Maps to". Only
+// offered on questions that don't map to a real lead field ("none"), since a
+// Purpose/Budget/Timeline answer is about capturing structured data, not
+// triggering a send or an ending.
+const _optionActions = {
+  'none': 'Just record the answer, then continue',
+  'photos': 'Send photos & videos, then continue',
+  'docs': 'Send floor plan & brochure, then continue',
+  'location': 'Send the project location, then continue',
+  'advisor': 'End here — connect to a human advisor',
+  'site_visit': "End here — book a site visit (uses this button's own label as the time)",
 };
 
 const _presetPurpose = ['Self Use', 'Investment', 'Buy', 'Rent', 'Just Exploring'];
 const _presetTimeline = ['Within 30 Days', '1-3 Months', '3-6 Months', '6-12 Months', 'Just Exploring'];
-const _presetSiteVisitSlots = ['Morning', 'Afternoon', 'Evening', 'This Weekend', 'Weekday'];
 const _presetBhk = ['1BHK', '2BHK', '3BHK', '4BHK', '5BHK+', 'Studio'];
 const _presetPropertyType = ['Apartment', 'Villa', 'Plot', 'Commercial', 'Office', 'Penthouse'];
 const _mapsToPresets = {
@@ -99,8 +103,8 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
           'questionText': 'Are you looking for this primarily for:',
           'mapsTo': 'purpose',
           'options': [
-            {'id': 'self_use_0', 'label': 'Self Use'},
-            {'id': 'investment_1', 'label': 'Investment'},
+            {'id': 'self_use_0', 'label': 'Self Use', 'action': 'none'},
+            {'id': 'investment_1', 'label': 'Investment', 'action': 'none'},
           ],
         },
         {
@@ -108,10 +112,10 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
           'questionText': "Perfect. What's your approximate budget range?",
           'mapsTo': 'budget',
           'options': [
-            {'id': 'b0', 'label': 'Under ₹50L', 'min': 0, 'max': 5000000},
-            {'id': 'b1', 'label': '₹50L - ₹1Cr', 'min': 5000000, 'max': 10000000},
-            {'id': 'b2', 'label': '₹1Cr+', 'min': 10000000, 'max': 0},
-            {'id': 'b3', 'label': 'Just Exploring', 'min': 0, 'max': 0},
+            {'id': 'b0', 'label': 'Under ₹50L', 'min': 0, 'max': 5000000, 'action': 'none'},
+            {'id': 'b1', 'label': '₹50L - ₹1Cr', 'min': 5000000, 'max': 10000000, 'action': 'none'},
+            {'id': 'b2', 'label': '₹1Cr+', 'min': 10000000, 'max': 0, 'action': 'none'},
+            {'id': 'b3', 'label': 'Just Exploring', 'min': 0, 'max': 0, 'action': 'none'},
           ],
         },
         {
@@ -119,24 +123,34 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
           'questionText': 'Got it. When are you looking to finalize?',
           'mapsTo': 'timeline',
           'options': [
-            {'id': 't0', 'label': 'Within 30 Days'},
-            {'id': 't1', 'label': '1-3 Months'},
-            {'id': 't2', 'label': '3-6 Months'},
-            {'id': 't3', 'label': 'Just Exploring'},
+            {'id': 't0', 'label': 'Within 30 Days', 'action': 'none'},
+            {'id': 't1', 'label': '1-3 Months', 'action': 'none'},
+            {'id': 't2', 'label': '3-6 Months', 'action': 'none'},
+            {'id': 't3', 'label': 'Just Exploring', 'action': 'none'},
           ],
         },
-      ],
-      'menuPrompt': 'Great, what would you like to see next?',
-      'menuOptions': [
-        {'id': 'm0', 'label': '🖼️ Photos & Videos', 'action': 'photos'},
-        {'id': 'm1', 'label': '📄 Floor Plan & Brochure', 'action': 'docs'},
-        {'id': 'm2', 'label': '🏡 Book Site Visit', 'action': 'site_visit'},
-      ],
-      'siteVisitPrompt': 'Which time works best for your visit?',
-      'siteVisitSlots': [
-        {'id': 's0', 'label': 'Morning'},
-        {'id': 's1', 'label': 'Afternoon'},
-        {'id': 's2', 'label': 'Evening'},
+        {
+          'id': 'menu',
+          'questionText': 'Great, what would you like to see next?',
+          'mapsTo': 'none',
+          'options': [
+            {'id': 'm0', 'label': '🖼️ Photos & Videos', 'action': 'photos'},
+            {'id': 'm1', 'label': '📄 Floor Plan & Brochure', 'action': 'docs'},
+            // "none" — not "site_visit" — because tapping this should lead
+            // into the slot-picker question right below, not book immediately.
+            {'id': 'm2', 'label': '🏡 Book Site Visit', 'action': 'none'},
+          ],
+        },
+        {
+          'id': 'site_visit_slots',
+          'questionText': 'Which time works best for your visit?',
+          'mapsTo': 'none',
+          'options': [
+            {'id': 's0', 'label': 'Morning', 'action': 'site_visit'},
+            {'id': 's1', 'label': 'Afternoon', 'action': 'site_visit'},
+            {'id': 's2', 'label': 'Evening', 'action': 'site_visit'},
+          ],
+        },
       ],
       'closingPrompt': 'Would you like to talk to our advisor, or book a site visit?',
       'nudgesEnabled': false,
@@ -144,16 +158,26 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
       'testPhones': [],
     }));
 
-/// Agents saved before qualifyingQuestions existed carried purposeOptions /
-/// budgetBrackets / timelineOptions instead — same synthesis the web does.
+/// Agents saved before this change carried purposeOptions / budgetBrackets /
+/// timelineOptions / menuOptions / siteVisitSlots instead of one unified
+/// qualifyingQuestions list — synthesized into the same question shape they
+/// always behaved as, exactly mirroring ctwaFlowService.js and the web
+/// builder's legacyToQualifyingQuestions (including remapping a legacy menu
+/// option's "site_visit" action to "none" — the slot-picker question
+/// synthesized right after it now IS the mechanism that used to be a
+/// separate hardcoded step).
 List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
   final qs = <Map<String, dynamic>>[];
   List l(String k) => (f[k] as List?) ?? const [];
+  List<Map<String, dynamic>> withNoneAction(List rows) => rows
+      .whereType<Map>()
+      .map((r) => {...Map<String, dynamic>.from(r), 'action': 'none'})
+      .toList();
   if (l('purposeOptions').isNotEmpty) {
     qs.add({
       'id': 'purpose',
       'questionText': f['purposeQuestion'] ?? 'Are you exploring this primarily for:',
-      'options': l('purposeOptions'),
+      'options': withNoneAction(l('purposeOptions')),
       'mapsTo': 'purpose',
     });
   }
@@ -161,7 +185,7 @@ List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
     qs.add({
       'id': 'budget',
       'questionText': "Perfect. What's your approximate budget range?",
-      'options': l('budgetBrackets'),
+      'options': withNoneAction(l('budgetBrackets')),
       'mapsTo': 'budget',
     });
   }
@@ -169,8 +193,27 @@ List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
     qs.add({
       'id': 'timeline',
       'questionText': 'Got it. When are you looking to finalize?',
-      'options': l('timelineOptions'),
+      'options': withNoneAction(l('timelineOptions')),
       'mapsTo': 'timeline',
+    });
+  }
+  if (l('menuOptions').isNotEmpty) {
+    qs.add({
+      'id': 'menu',
+      'questionText': f['menuPrompt'] ?? 'Great, what would you like to see next?',
+      'options': l('menuOptions').whereType<Map>().map((m) {
+        final action = m['action'] as String?;
+        return {'id': m['id'], 'label': m['label'], 'action': action == 'site_visit' ? 'none' : (action ?? 'none')};
+      }).toList(),
+      'mapsTo': 'none',
+    });
+  }
+  if (l('siteVisitSlots').isNotEmpty) {
+    qs.add({
+      'id': 'site_visit_slots',
+      'questionText': f['siteVisitPrompt'] ?? 'Which time works best for your visit?',
+      'options': l('siteVisitSlots').whereType<Map>().map((s) => {'id': s['id'], 'label': s['label'], 'action': 'site_visit'}).toList(),
+      'mapsTo': 'none',
     });
   }
   return qs;
@@ -219,8 +262,6 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   // CTWA flow
   Map<String, dynamic> _flow = _defaultFlow();
   final _welcomeCtrl = TextEditingController();
-  final _menuPromptCtrl = TextEditingController();
-  final _siteVisitPromptCtrl = TextEditingController();
   final _closingPromptCtrl = TextEditingController();
   final _nudgeTextCtrl = TextEditingController();
   Map<String, dynamic>? _funnel;
@@ -332,7 +373,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   void dispose() {
     for (final c in [
       _nameCtrl, _descCtrl, _greetingCtrl, _businessContextCtrl, _groundRulesCtrl,
-      _systemPromptCtrl, _adIdCtrl, _welcomeCtrl, _menuPromptCtrl, _siteVisitPromptCtrl,
+      _systemPromptCtrl, _adIdCtrl, _welcomeCtrl,
       _closingPromptCtrl, _nudgeTextCtrl, _testPhoneCtrl, _tryCtrl,
     ]) {
       c.dispose();
@@ -343,15 +384,11 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
 
   void _applyFlowToControllers() {
     _welcomeCtrl.text = _flow['welcomeText'] as String? ?? '';
-    _menuPromptCtrl.text = _flow['menuPrompt'] as String? ?? '';
-    _siteVisitPromptCtrl.text = _flow['siteVisitPrompt'] as String? ?? '';
     _closingPromptCtrl.text = _flow['closingPrompt'] as String? ?? '';
     _nudgeTextCtrl.text = _flow['nudgeText'] as String? ?? '';
   }
 
   List<Map<String, dynamic>> get _questions => (_flow['qualifyingQuestions'] as List).cast<Map<String, dynamic>>();
-  List<Map<String, dynamic>> get _menuOptions => (_flow['menuOptions'] as List).cast<Map<String, dynamic>>();
-  List<Map<String, dynamic>> get _slots => (_flow['siteVisitSlots'] as List).cast<Map<String, dynamic>>();
   List<String> get _testPhones => (_flow['testPhones'] as List).cast<String>();
   bool get _ctwaEnabled => _flow['enabled'] == true;
 
@@ -390,10 +427,10 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           final qs = _mapList(c['qualifyingQuestions']);
           merged['qualifyingQuestions'] = qs.isNotEmpty ? qs : _legacyToQuestions(c);
           for (final q in (merged['qualifyingQuestions'] as List)) {
-            q['options'] = _mapList(q['options']);
+            q['options'] = _mapList(q['options'])
+                .map((o) => {...o, 'action': o['action'] ?? 'none'})
+                .toList();
           }
-          merged['menuOptions'] = _mapList(c['menuOptions']);
-          merged['siteVisitSlots'] = _mapList(c['siteVisitSlots']);
           merged['testPhones'] = (c['testPhones'] as List? ?? const []).map((e) => e.toString()).toList();
           _flow = merged;
           _applyFlowToControllers();
@@ -413,8 +450,6 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   Map<String, dynamic> _buildForm() {
     final flow = Map<String, dynamic>.from(_flow)
       ..['welcomeText'] = _welcomeCtrl.text.trim()
-      ..['menuPrompt'] = _menuPromptCtrl.text.trim()
-      ..['siteVisitPrompt'] = _siteVisitPromptCtrl.text.trim()
       ..['closingPrompt'] = _closingPromptCtrl.text.trim()
       ..['nudgeText'] = _nudgeTextCtrl.text.trim();
     return {
@@ -690,8 +725,6 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
 
   Map<String, dynamic> _flowForPreview() => Map<String, dynamic>.from(_flow)
     ..['welcomeText'] = _welcomeCtrl.text
-    ..['menuPrompt'] = _menuPromptCtrl.text
-    ..['siteVisitPrompt'] = _siteVisitPromptCtrl.text
     ..['closingPrompt'] = _closingPromptCtrl.text;
 
   // ── What it can discuss ────────────────────────────────────────────────
@@ -922,7 +955,11 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           'Add another question',
           icon: Icons.add,
           full: true,
-          onPressed: _questions.length >= 5
+          // Generous headroom above the old fixed 3 (purpose/budget/timeline)
+          // now that what used to be the separate "what next?" and "site
+          // visit" steps are just more entries in this same list. Mirrors
+          // web's MAX_QUALIFYING_QUESTIONS / backend CTWA_MAX_QUESTIONS.
+          onPressed: _questions.length >= 8
               ? null
               : () => setState(() => _questions.add({
                     'id': 'q_${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}',
@@ -931,34 +968,12 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                     'mapsTo': 'none',
                   })),
         ),
-        const SizedBox(height: 16),
-        WaField(
-          label: '"What next?" prompt',
-          controller: _menuPromptCtrl,
-          hint: 'Great, what would you like to see next?',
-          onChanged: (_) => setState(() {}),
-        ),
-        _MenuOptionEditor(rows: _menuOptions, onChanged: () => setState(() {})),
-        const SizedBox(height: 14),
-        WaField(
-          label: 'Site-visit prompt',
-          controller: _siteVisitPromptCtrl,
-          hint: 'Which time works best for your visit?',
-          onChanged: (_) => setState(() {}),
-        ),
-        _ChipRowEditor(
-          label: 'Site-visit time slots — up to 3 buttons',
-          max: 3,
-          presets: _presetSiteVisitSlots,
-          rows: _slots,
-          onChanged: () => setState(() {}),
-        ),
         const SizedBox(height: 14),
         WaField(
           label: 'Closing prompt',
           controller: _closingPromptCtrl,
           hint: 'Would you like to talk to our advisor, or book a site visit?',
-          help: 'Sent after Photos & Videos, Floor Plan & Brochure or Location Details — always followed by "Talk to Advisor" / "Book Site Visit", so the flow never dead-ends.',
+          help: 'The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable: "Book Site Visit" re-asks whichever question above has every option set to "book a site visit", or books immediately if none do.',
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 14),
@@ -1249,8 +1264,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
 class _ReorderChips extends StatelessWidget {
   final List<Map<String, dynamic>> rows;
   final VoidCallback onChanged;
-  final String Function(Map<String, dynamic>)? suffix;
-  const _ReorderChips({required this.rows, required this.onChanged, this.suffix});
+  const _ReorderChips({required this.rows, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -1290,8 +1304,6 @@ class _ReorderChips extends StatelessWidget {
                       text: '${rows[i]['label']}',
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                       children: [
-                        if (suffix != null)
-                          TextSpan(text: '  → ${suffix!(rows[i])}', style: TextStyle(fontWeight: FontWeight.w400, color: t.textSoft)),
                         if (rows[i]['min'] != null && rows[i]['max'] != null)
                           TextSpan(
                             text: '  ₹${rows[i]['min']} – ${(rows[i]['max'] == 0 || rows[i]['max'] == '0') ? 'no cap' : '₹${rows[i]['max']}'}',
@@ -1492,15 +1504,20 @@ class _BudgetBracketEditorState extends State<_BudgetBracketEditor> {
   }
 }
 
-class _MenuOptionEditor extends StatefulWidget {
+// Used on any question that doesn't map to a real lead field ("Maps to" =
+// "none") — this is what a "what next?" menu or a "which time works for
+// you" slot picker actually is now: an ordinary question whose options
+// happen to carry an action. Each option gets its own action dropdown,
+// editable any time — not fixed at add-time the way it used to be.
+class _OptionActionEditor extends StatefulWidget {
   final List<Map<String, dynamic>> rows;
   final VoidCallback onChanged;
-  const _MenuOptionEditor({required this.rows, required this.onChanged});
+  const _OptionActionEditor({required this.rows, required this.onChanged});
   @override
-  State<_MenuOptionEditor> createState() => _MenuOptionEditorState();
+  State<_OptionActionEditor> createState() => _OptionActionEditorState();
 }
 
-class _MenuOptionEditorState extends State<_MenuOptionEditor> {
+class _OptionActionEditorState extends State<_OptionActionEditor> {
   final _ctrl = TextEditingController();
   @override
   void dispose() {
@@ -1511,7 +1528,7 @@ class _MenuOptionEditorState extends State<_MenuOptionEditor> {
   bool _has(String l) => widget.rows.any((r) => '${r['label']}'.toLowerCase() == l.toLowerCase());
 
   void _addRow(String label, String action) {
-    if (widget.rows.length >= 3 || _has(label)) return;
+    if (widget.rows.length >= 10 || _has(label)) return;
     widget.rows.add({'id': _slug(label, widget.rows.length), 'label': label, 'action': action});
     widget.onChanged();
     setState(() {});
@@ -1519,15 +1536,16 @@ class _MenuOptionEditorState extends State<_MenuOptionEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final full = widget.rows.length >= 3;
+    final t = AppTheme.of(context);
+    final full = widget.rows.length >= 10;
     final remaining = _presetMenuOptions.where((p) => !_has(p['label']!)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const WaLabel('"What next?" menu — up to 3 buttons'),
+        const WaLabel('Options — up to 10, shown as buttons if 3 or fewer, a list if more'),
         const Padding(
           padding: EdgeInsets.only(bottom: 8),
-          child: WaHelp('Photos & Videos, Floor Plan & Brochure and Location Details always follow up with "Talk to Advisor" / "Book Site Visit" — this flow never dead-ends on just a photo or an address.'),
+          child: WaHelp('Each option can just record the answer and move to the next question, send something and still keep going (never a dead end), or end the flow outright.'),
         ),
         if (remaining.isNotEmpty && !full)
           WaSelect<String>(
@@ -1549,11 +1567,11 @@ class _MenuOptionEditorState extends State<_MenuOptionEditor> {
                 controller: _ctrl,
                 enabled: !full,
                 style: const TextStyle(fontSize: 13),
-                decoration: waDecoration(context, hint: "Or type your own — becomes a 'Talk to Advisor' style button", dense: true),
+                decoration: waDecoration(context, hint: 'Or type your own…', dense: true),
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (v) {
                   if (v.trim().isNotEmpty) {
-                    _addRow(v.trim(), 'advisor');
+                    _addRow(v.trim(), 'none');
                     _ctrl.clear();
                   }
                 },
@@ -1564,20 +1582,67 @@ class _MenuOptionEditorState extends State<_MenuOptionEditor> {
               onPressed: (_ctrl.text.trim().isEmpty || full)
                   ? null
                   : () {
-                      _addRow(_ctrl.text.trim(), 'advisor');
+                      _addRow(_ctrl.text.trim(), 'none');
                       _ctrl.clear();
                     },
             ),
           ],
         ),
         if (widget.rows.isNotEmpty)
-          _ReorderChips(
-            rows: widget.rows,
-            suffix: (r) => _menuActions[r['action']] ?? '${r['action']}',
-            onChanged: () {
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            onReorderItem: (from, to) {
+              final r = widget.rows.removeAt(from);
+              widget.rows.insert(to, r);
               widget.onChanged();
               setState(() {});
             },
+            children: [
+              for (var i = 0; i < widget.rows.length; i++)
+                Container(
+                  key: ValueKey('${widget.rows[i]['id']}_$i'),
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(color: t.surfaceLow, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.border)),
+                  child: Row(
+                    children: [
+                      ReorderableDragStartListener(
+                        index: i,
+                        child: Padding(padding: const EdgeInsets.all(8), child: Icon(Icons.drag_indicator, size: 18, color: t.textSoft)),
+                      ),
+                      Expanded(
+                        child: Text('${widget.rows[i]['label']}',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                      ),
+                      SizedBox(
+                        width: 150,
+                        child: WaSelect<String>(
+                          label: '',
+                          dense: true,
+                          value: (widget.rows[i]['action'] as String?) ?? 'none',
+                          options: _optionActions,
+                          onChanged: (v) {
+                            widget.rows[i]['action'] = v ?? 'none';
+                            widget.onChanged();
+                            setState(() {});
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        icon: Icon(Icons.close, size: 16, color: t.textSoft),
+                        onPressed: () {
+                          widget.rows.removeAt(i);
+                          widget.onChanged();
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
       ],
     );
@@ -1661,6 +1726,8 @@ class _QuestionEditorState extends State<_QuestionEditor> {
           ),
           if (mapsTo == 'budget')
             _BudgetBracketEditor(rows: options, onChanged: widget.onChanged)
+          else if (mapsTo == 'none')
+            _OptionActionEditor(rows: options, onChanged: widget.onChanged)
           else
             _ChipRowEditor(
               label: 'Options — up to 10, shown as buttons if 3 or fewer, a list if more',
@@ -1707,8 +1774,6 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
   Map<String, String> get _vars => {'name': 'Ananya', 'project': widget.projectName ?? 'this project'};
   Map<String, dynamic> get _f => widget.flow;
   List<Map<String, dynamic>> get _qs => _mapList(_f['qualifyingQuestions']);
-  List<Map<String, dynamic>> get _menu => _mapList(_f['menuOptions']);
-  List<Map<String, dynamic>> get _slots => _mapList(_f['siteVisitSlots']);
 
   @override
   void dispose() {
@@ -1742,57 +1807,59 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
     });
   }
 
-  bool _needOptions(List rows, String label) {
-    if (rows.isNotEmpty) return false;
-    _push({'from': 'bot', 'warn': true, 'text': 'No $label configured yet — add at least one above to preview past this step.'});
-    _step = null;
-    return true;
+  // Sends one question, or a warning if it has no options yet (can happen
+  // on an unsaved, still-being-edited question).
+  void _sendQuestion(Map<String, dynamic> q) {
+    final options = _mapList(q['options']);
+    if (options.isEmpty) {
+      _push({'from': 'bot', 'warn': true, 'text': 'This question has no options yet — add at least one above to preview past this step.'});
+      _step = null;
+      return;
+    }
+    final qt = _fillVars(q['questionText'] as String?, _vars);
+    _push({'from': 'bot', 'text': qt.isEmpty ? '(question text is empty)' : qt, 'buttons': options});
+    _step = q['id'] as String?;
   }
 
+  void _sendClosing() {
+    final c = (_f['closingPrompt'] as String? ?? '');
+    _push({'from': 'bot', 'text': c.isEmpty ? 'Would you like to talk to our advisor, or book a site visit?' : c, 'buttons': _closingButtons});
+    _step = 'closing';
+  }
+
+  void _bookSiteVisit() {
+    _push({'from': 'bot', 'text': 'Wonderful! Our team will confirm your visit shortly and take it from here.'});
+    _push({'from': 'bot', 'note': true, 'text': '✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified.'});
+    _step = null;
+  }
+
+  // Matched by button id across every question, not by whatever step is
+  // currently recorded — mirrors ctwaFlowService.advanceFlow exactly. A real
+  // WhatsApp message's buttons never stop being tappable once a newer one is
+  // sent, so every button in this preview stays live too, for as long as the
+  // flow hasn't reached a true ending (advisor connected, or a site visit
+  // booked).
   void _tap(Map<String, dynamic> opt) {
     setState(() {
       _push({'from': 'user', 'text': opt['label']});
       final qs = _qs;
       final qIndex = qs.indexWhere((q) => _mapList(q['options']).any((o) => o['id'] == opt['id']));
-      final inMenu = _menu.any((o) => o['id'] == opt['id']);
       final inClosing = _closingButtons.any((o) => o['id'] == opt['id']);
-      final inSlots = _slots.any((o) => o['id'] == opt['id']);
 
       if (qIndex != -1) {
-        if (qIndex + 1 < qs.length) {
-          final next = qs[qIndex + 1];
-          final qt = _fillVars(next['questionText'] as String?, _vars);
-          _push({'from': 'bot', 'text': qt.isEmpty ? '(question text is empty)' : qt, 'buttons': _mapList(next['options'])});
-          _step = next['id'] as String?;
-        } else {
-          if (_needOptions(_menu, '"what next" options')) return;
-          final p = (_f['menuPrompt'] as String? ?? '');
-          _push({'from': 'bot', 'text': p.isEmpty ? 'Great, what would you like to see next?' : p, 'buttons': _menu});
-          _step = 'menu';
-        }
-        return;
-      }
-      if (inSlots) {
-        _push({'from': 'bot', 'text': 'Wonderful! Our team will confirm your visit shortly and take it from here.'});
-        _push({'from': 'bot', 'note': true, 'text': '✅ Lead updated: status → Site Visit, booking → Site Visit Booked, activity logged. Bot pauses and a human on your team is assigned and notified.'});
-        _step = null;
-        return;
-      }
-      if (inMenu || inClosing) {
-        final action = inMenu ? opt['action'] : opt['id'];
-        if (action == 'site_visit') {
-          if (_needOptions(_slots, 'site-visit time slots')) return;
-          final p = (_f['siteVisitPrompt'] as String? ?? '');
-          _push({'from': 'bot', 'text': p.isEmpty ? 'Which time works best for your visit?' : p, 'buttons': _slots});
-          _step = 'site_visit';
-          return;
-        }
+        final action = (opt['action'] as String?) ?? 'none';
         if (action == 'advisor') {
           _push({'from': 'bot', 'text': "Connecting you with our advisor, they'll reach out to you shortly. You can also reach them directly on <their phone number>."});
           _push({'from': 'bot', 'note': true, 'text': '✅ Uses this project\'s "Talk to Advisor" contact if one is set (Projects page) — real name and phone number included so the lead can call directly; otherwise falls back to normal round-robin assignment with no number shown. Bot pauses and that person is notified.'});
           _step = null;
           return;
         }
+        if (action == 'site_visit') {
+          _bookSiteVisit();
+          return;
+        }
+        // Informational — never a dead end, and never retires this
+        // question's own buttons: they (and this one) stay tappable after.
         if (action == 'docs') {
           _push({'from': 'bot', 'note': true, 'text': '📄 Sends the floor plan PDF and the brochure PDF, whatever is uploaded for this project.'});
         } else if (action == 'photos') {
@@ -1800,9 +1867,36 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
         } else if (action == 'location') {
           _push({'from': 'bot', 'text': 'This project is located at: ${widget.projectName != null ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}'});
         }
-        final c = (_f['closingPrompt'] as String? ?? '');
-        _push({'from': 'bot', 'text': c.isEmpty ? 'Would you like to talk to our advisor, or book a site visit?' : c, 'buttons': _closingButtons});
-        _step = 'menu';
+        if (qIndex + 1 < qs.length) {
+          _sendQuestion(qs[qIndex + 1]);
+        } else {
+          _sendClosing();
+        }
+        return;
+      }
+
+      if (inClosing) {
+        if (opt['id'] == 'advisor') {
+          _push({'from': 'bot', 'text': "Connecting you with our advisor, they'll reach out to you shortly. You can also reach them directly on <their phone number>."});
+          _push({'from': 'bot', 'note': true, 'text': '✅ Uses this project\'s "Talk to Advisor" contact if one is set (Projects page) — real name and phone number included so the lead can call directly; otherwise falls back to normal round-robin assignment with no number shown. Bot pauses and that person is notified.'});
+          _step = null;
+          return;
+        }
+        // "Book Site Visit" from the closing prompt — hand off to a
+        // dedicated slot-picking question if one exists (every option books
+        // a visit), otherwise book immediately.
+        final slotsQuestion = qs.cast<Map<String, dynamic>?>().firstWhere(
+              (q) {
+                final options = _mapList(q!['options']);
+                return options.isNotEmpty && options.every((o) => o['action'] == 'site_visit');
+              },
+              orElse: () => null,
+            );
+        if (slotsQuestion != null) {
+          _sendQuestion(slotsQuestion);
+        } else {
+          _bookSiteVisit();
+        }
       }
     });
   }

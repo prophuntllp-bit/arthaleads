@@ -73,11 +73,14 @@ const waAgentSchema = new mongoose.Schema(
     // started from a Click-to-WhatsApp ad (conversation.campaignRef set) — real
     // WhatsApp interactive buttons/lists for the qualifying questions,
     // deterministic branching, answers written straight onto the Lead
-    // record. See services/ctwaFlowService.js. The backbone (qualify → menu
-    // → close) is fixed, but the qualifying phase is a tenant-managed list
-    // of 1-5 questions (add/remove/reorder), not a hardcoded Purpose/
-    // Budget/Timeline triad — this is a platform feature every tenant uses,
-    // not just real-estate ones.
+    // record. See services/ctwaFlowService.js. Only the closing step (talk
+    // to an advisor, or book a site visit — the only two ways this flow is
+    // allowed to end) is fixed. Everything before it, including what used
+    // to be the separate hardcoded "menu" and "site visit" steps, is now
+    // just more entries in the same tenant-managed qualifyingQuestions list
+    // (add/remove/reorder freely) — not a hardcoded Purpose/Budget/Timeline
+    // triad, and not a hardcoded "what next" menu either. This is a
+    // platform feature every tenant uses, not just real-estate ones.
     ctwaFlow: {
       enabled:     { type: Boolean, default: false },
       // Sent as its own plain-text message, before the first qualifying
@@ -85,27 +88,52 @@ const waAgentSchema = new mongoose.Schema(
       // interactive message reads as the bot talking over itself.
       // "{{name}}"/"{{project}}" supported.
       welcomeText:     { type: String, default: "" },
-      // 1-5 questions, each with its own options (≤10) and an explicit
-      // mapsTo telling ctwaFlowService.advanceFlow which real Lead field
-      // (if any) the answer should write to. mapsTo is a statement of
-      // intent, not a guarantee — the answer's VALUE still has to parse
-      // for that field (see formFieldMapper.js's normalizers); anything
-      // that doesn't, or is "none", lands in Lead.formResponses instead of
-      // forcing a bad value.
+      // Tenant-managed list of questions, each with its own options (≤10)
+      // and an explicit mapsTo telling ctwaFlowService.advanceFlow which
+      // real Lead field (if any) the answer should write to. mapsTo is a
+      // statement of intent, not a guarantee — the answer's VALUE still has
+      // to parse for that field (see formFieldMapper.js's normalizers);
+      // anything that doesn't, or is "none", lands in Lead.formResponses
+      // instead of forcing a bad value.
+      //
+      // Each OPTION can additionally carry an `action`, independent of the
+      // question's own mapsTo:
+      //   "none"      (default) — just record the answer, then move to the
+      //                next question in this same array (this is how a
+      //                former "what next?" menu button that should lead
+      //                into a site-visit-slot question works — that
+      //                question simply comes right after it in the array).
+      //   "photos"/"docs"/"location" — send the project's photos/videos,
+      //                brochure/floor plan, or its location text, THEN
+      //                still move to the next question — never a dead end,
+      //                but also never forced straight to closing either.
+      //   "advisor"   — terminal: hands off to a human advisor immediately,
+      //                regardless of where the flow currently is.
+      //   "site_visit"— terminal: books a site visit using this option's
+      //                own label as the requested slot, then hands off.
+      //                Use this on every option of a dedicated "which time
+      //                works for you" question.
       qualifyingQuestions: [{
         id: String,
         questionText: String,
-        options: [{ id: String, label: String, min: Number, max: Number }], // min/max only meaningful when mapsTo is "budget"
+        options: [{
+          id: String, label: String, min: Number, max: Number, // min/max only meaningful when mapsTo is "budget"
+          action: { type: String, enum: ["none", "photos", "docs", "location", "advisor", "site_visit"], default: "none" },
+        }],
         mapsTo: {
           type: String,
           enum: ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"],
           default: "none",
         },
       }],
+      // Legacy-only from here down — no longer written by new saves, kept
+      // so an agent saved before this change still reads and behaves
+      // exactly as it did (see ctwaFlowService.legacyToQualifyingQuestions),
+      // until the tenant opens and re-saves it through the current UI.
       menuPrompt:      { type: String, default: "Great, what would you like to see next?" },
-      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "docs", "location", "site_visit", "advisor"] } }], // ≤3
+      menuOptions:     [{ id: String, label: String, action: { type: String, enum: ["photos", "docs", "location", "site_visit", "advisor"] } }],
       siteVisitPrompt: { type: String, default: "Which time works best for your visit?" },
-      siteVisitSlots:  [{ id: String, label: String }],                              // ≤3
+      siteVisitSlots:  [{ id: String, label: String }],
       closingPrompt:   { type: String, default: "Would you like to talk to our advisor, or book a site visit?" },
       // Gentle follow-ups for someone who stops mid-flow: one after ~15 minutes
       // and one shortly before the 24h reply window closes. Off unless enabled.
