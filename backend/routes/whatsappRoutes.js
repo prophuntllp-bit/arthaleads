@@ -1032,11 +1032,17 @@ function summarizeLeadQualifiers(lead) {
     ["Configuration/type", lead.bhk],
     ["Budget", lead.budget?.min || lead.budget?.max ? fmtBudgetForPrompt(lead.budget) : null],
     ["Preferred location", lead.preferredLocation],
+    ["Timeline", lead.timeline],
   ];
   const known = fields.filter(([, v]) => v && v !== "N/A");
   const missing = fields.filter(([, v]) => !v || v === "N/A");
 
   const lines = [`Customer name: ${lead.name}`, `Status: ${lead.status}`, `Source: ${lead.source || "N/A"}`];
+  // The campaign/form this lead came from — e.g. "Arthaleads · Everglades II
+  // | Short Form V2" — not a qualifier to ask about, just background so the
+  // model isn't opening cold on a lead who already engaged with a specific
+  // campaign or project ad.
+  if (lead.leadSourceLabel) lines.push(`Came in via: ${lead.leadSourceLabel}`);
   lines.push(known.length
     ? `Already answered via the lead form — do NOT ask about these again: ${known.map(([k, v]) => `${k}: ${v}`).join(". ")}.`
     : "Nothing was captured on the lead form yet — all qualifiers below are still open.");
@@ -1228,7 +1234,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     let lead = null;
     if (conversation.leadId) {
       lead = await Lead.findById(conversation.leadId)
-        .select("name status source propertyType bhk purpose budget preferredLocation leadSourceLabel").lean();
+        .select("name status source propertyType bhk purpose budget preferredLocation timeline leadSourceLabel").lean();
       if (lead) leadContext = summarizeLeadQualifiers(lead);
     }
 
