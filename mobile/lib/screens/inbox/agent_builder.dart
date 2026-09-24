@@ -159,14 +159,9 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
     }));
 
 /// Agents saved before this change carried purposeOptions / budgetBrackets /
-/// timelineOptions / menuOptions / siteVisitSlots instead of one unified
-/// qualifyingQuestions list — synthesized into the same question shape they
-/// always behaved as, exactly mirroring ctwaFlowService.js and the web
-/// builder's legacyToQualifyingQuestions (including remapping a legacy menu
-/// option's "site_visit" action to "none" — the slot-picker question
-/// synthesized right after it now IS the mechanism that used to be a
-/// separate hardcoded step).
-List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
+/// timelineOptions instead of one unified qualifyingQuestions list —
+/// synthesized into the same question shape they always behaved as.
+List<Map<String, dynamic>> _legacyPurposeBudgetTimeline(Map<String, dynamic> f) {
   final qs = <Map<String, dynamic>>[];
   List l(String k) => (f[k] as List?) ?? const [];
   List<Map<String, dynamic>> withNoneAction(List rows) => rows
@@ -197,6 +192,17 @@ List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
       'mapsTo': 'timeline',
     });
   }
+  return qs;
+}
+
+/// A legacy menu option with action "site_visit" meant "open the slot
+/// picker" back when that was a separate hardcoded step — remapped to
+/// "none" here, since the equivalent now is simply that the site-visit
+/// question comes right after this one in the array, and "none" already
+/// means "move to the next question."
+List<Map<String, dynamic>> _legacyMenuAndSiteVisit(Map<String, dynamic> f) {
+  final qs = <Map<String, dynamic>>[];
+  List l(String k) => (f[k] as List?) ?? const [];
   if (l('menuOptions').isNotEmpty) {
     qs.add({
       'id': 'menu',
@@ -215,6 +221,33 @@ List<Map<String, dynamic>> _legacyToQuestions(Map<String, dynamic> f) {
       'options': l('siteVisitSlots').whereType<Map>().map((s) => {'id': s['id'], 'label': s['label'], 'action': 'site_visit'}).toList(),
       'mapsTo': 'none',
     });
+  }
+  return qs;
+}
+
+/// Handles three states, not just "fully legacy" vs. "fully migrated":
+///   1. No qualifyingQuestions at all — everything (purpose/budget/timeline
+///      AND menu/site-visit) is synthesized from the old separate fields.
+///   2. qualifyingQuestions already has entries (e.g. purpose/budget/
+///      timeline were migrated at some point) but menuOptions/
+///      siteVisitSlots are STILL separate, un-folded fields — those two
+///      questions are appended on top, since otherwise this in-between
+///      state silently drops the menu/site-visit steps entirely (a real
+///      bug: an agent migrated before menu/site-visit were folded in lost
+///      both steps from its live flow, not just this editor — mirrors
+///      ctwaFlowService.js's identical getQualifyingQuestions exactly).
+///   3. qualifyingQuestions already includes a folded-in "menu" /
+///      "site_visit_slots" question (tenant re-saved through the current
+///      builder) — nothing appended, no duplicates.
+List<Map<String, dynamic>> _resolveQualifyingQuestions(Map<String, dynamic> f) {
+  final saved = _mapList(f['qualifyingQuestions']);
+  final qs = saved.isNotEmpty ? saved : _legacyPurposeBudgetTimeline(f);
+  final hasMenu = qs.any((q) => q['id'] == 'menu');
+  final hasSlots = qs.any((q) => q['id'] == 'site_visit_slots');
+  if (!hasMenu || !hasSlots) {
+    for (final q in _legacyMenuAndSiteVisit(f)) {
+      if ((q['id'] == 'menu' && !hasMenu) || (q['id'] == 'site_visit_slots' && !hasSlots)) qs.add(q);
+    }
   }
   return qs;
 }
@@ -424,8 +457,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
         if (ctwa is Map && ctwa['welcomeText'] != null) {
           final c = Map<String, dynamic>.from(ctwa);
           final merged = _defaultFlow()..addAll(c);
-          final qs = _mapList(c['qualifyingQuestions']);
-          merged['qualifyingQuestions'] = qs.isNotEmpty ? qs : _legacyToQuestions(c);
+          merged['qualifyingQuestions'] = _resolveQualifyingQuestions(c);
           for (final q in (merged['qualifyingQuestions'] as List)) {
             q['options'] = _mapList(q['options'])
                 .map((o) => {...o, 'action': o['action'] ?? 'none'})

@@ -101,15 +101,9 @@ const DEFAULT_CTWA_FLOW = {
 };
 
 // Pre-existing agents saved before this change carry the old
-// purposeQuestion/purposeOptions/budgetBrackets/timelineOptions/menuOptions/
-// siteVisitSlots fields and no qualifyingQuestions — synthesized into the
-// same question shape they always behaved as, so nothing about them changes
-// until the tenant opens and re-saves through this page. Mirrors
-// ctwaFlowService.js's legacyToQualifyingQuestions exactly (including
-// remapping a legacy menu option's "site_visit" action to "none" — the
-// slot-picker question synthesized right after it now IS the mechanism that
-// used to be a separate hardcoded step).
-function legacyToQualifyingQuestions(ctwaFlow) {
+// purposeQuestion/purposeOptions/budgetBrackets/timelineOptions fields —
+// synthesized into the same question shape they always behaved as.
+function legacyPurposeBudgetTimeline(ctwaFlow) {
   const qs = [];
   if (ctwaFlow?.purposeOptions?.length) {
     qs.push({ id: "purpose", questionText: ctwaFlow.purposeQuestion || "Are you exploring this primarily for:", options: ctwaFlow.purposeOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "purpose" });
@@ -120,6 +114,16 @@ function legacyToQualifyingQuestions(ctwaFlow) {
   if (ctwaFlow?.timelineOptions?.length) {
     qs.push({ id: "timeline", questionText: "Got it. When are you looking to finalize?", options: ctwaFlow.timelineOptions.map((o) => ({ ...o, action: "none" })), mapsTo: "timeline" });
   }
+  return qs;
+}
+
+// A legacy menu option with action "site_visit" meant "open the slot
+// picker" back when that was a separate hardcoded step — remapped to
+// "none" here, since the equivalent now is simply that the site-visit
+// question comes right after this one in the array, and "none" already
+// means "move to the next question."
+function legacyMenuAndSiteVisit(ctwaFlow) {
+  const qs = [];
   if (ctwaFlow?.menuOptions?.length) {
     qs.push({
       id: "menu",
@@ -135,6 +139,33 @@ function legacyToQualifyingQuestions(ctwaFlow) {
       options: ctwaFlow.siteVisitSlots.map((s) => ({ id: s.id, label: s.label, action: "site_visit" })),
       mapsTo: "none",
     });
+  }
+  return qs;
+}
+
+// Handles three states, not just "fully legacy" vs. "fully migrated":
+//   1. No qualifyingQuestions at all — everything (purpose/budget/timeline
+//      AND menu/site-visit) is synthesized from the old separate fields.
+//   2. qualifyingQuestions already has entries (e.g. purpose/budget/
+//      timeline were migrated at some point) but menuOptions/siteVisitSlots
+//      are STILL separate, un-folded fields — those two questions are
+//      appended on top, since otherwise this in-between state silently
+//      drops the menu/site-visit steps entirely (a real bug: an agent
+//      migrated before menu/site-visit were folded in lost both steps from
+//      its live flow, not just this editor — see ctwaFlowService.js's
+//      identical getQualifyingQuestions, which this mirrors exactly).
+//   3. qualifyingQuestions already includes a folded-in "menu" /
+//      "site_visit_slots" question (tenant re-saved through the current
+//      builder) — nothing appended, no duplicates.
+function resolveQualifyingQuestions(ctwaFlow) {
+  const saved = ctwaFlow?.qualifyingQuestions;
+  const qs = saved?.length ? [...saved] : legacyPurposeBudgetTimeline(ctwaFlow);
+  const hasMenu  = qs.some((q) => q.id === "menu");
+  const hasSlots = qs.some((q) => q.id === "site_visit_slots");
+  if (!hasMenu || !hasSlots) {
+    for (const q of legacyMenuAndSiteVisit(ctwaFlow)) {
+      if ((q.id === "menu" && !hasMenu) || (q.id === "site_visit_slots" && !hasSlots)) qs.push(q);
+    }
   }
   return qs;
 }
@@ -255,9 +286,7 @@ export default function AgentBuilder() {
             ? {
                 ...DEFAULT_CTWA_FLOW,
                 ...a.ctwaFlow,
-                qualifyingQuestions: a.ctwaFlow.qualifyingQuestions?.length
-                  ? a.ctwaFlow.qualifyingQuestions
-                  : legacyToQualifyingQuestions(a.ctwaFlow),
+                qualifyingQuestions: resolveQualifyingQuestions(a.ctwaFlow),
               }
             : DEFAULT_CTWA_FLOW,
         });
