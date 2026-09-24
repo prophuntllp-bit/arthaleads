@@ -113,12 +113,23 @@ const waAgentSchema = new mongoose.Schema(
       //                own label as the requested slot, then hands off.
       //                Use this on every option of a dedicated "which time
       //                works for you" question.
+      //
+      // For a "none"/"photos"/"docs"/"location" option, `next` picks what
+      // comes after: blank (default) continues to the next question in this
+      // same array; a question's own id jumps straight to that question
+      // instead (so two different buttons on the same question — e.g.
+      // "Photos & Videos" vs. "Book a Private Preview" — can lead to
+      // different next steps rather than both always landing on whatever is
+      // positionally next); the literal string "__closing__" skips straight
+      // to the closing prompt. Ignored on a terminal option (advisor /
+      // site_visit), since those already end the flow.
       qualifyingQuestions: [{
         id: String,
         questionText: String,
         options: [{
           id: String, label: String, min: Number, max: Number, // min/max only meaningful when mapsTo is "budget"
           action: { type: String, enum: ["none", "photos", "docs", "location", "advisor", "site_visit"], default: "none" },
+          next: { type: String, default: "" },
         }],
         mapsTo: {
           type: String,

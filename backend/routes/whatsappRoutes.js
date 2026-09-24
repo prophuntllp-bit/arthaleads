@@ -1848,12 +1848,20 @@ const CTWA_OPTION_ACTIONS = ["none", "photos", "docs", "location", "advisor", "s
 const CTWA_MAX_QUESTIONS = 8;
 const CTWA_MAPS_TO = ["purpose", "budget", "timeline", "bhk", "propertyType", "city", "preferredLocation", "streetAddress", "none"];
 
+// The one non-question value `next` may point to — skip straight to the
+// closing prompt regardless of what else is unanswered.
+const CTWA_NEXT_CLOSING = "__closing__";
+
 function sanitizeOptionRow(r, { withBudget = false } = {}) {
   return {
     id: String(r?.id || "").trim().slice(0, 60),
     label: String(r?.label || "").trim().slice(0, 60),
     ...(withBudget ? { min: Number(r?.min) || 0, max: Number(r?.max) || 0 } : {}),
     action: CTWA_OPTION_ACTIONS.includes(r?.action) ? r.action : "none",
+    // Validated below once every question's real id is known — a `next`
+    // naming a question that got dropped (empty text/options, over the cap)
+    // would otherwise silently point nowhere.
+    next: String(r?.next || "").trim().slice(0, 60),
   };
 }
 
@@ -1885,6 +1893,18 @@ function sanitizeCtwaFlow(input) {
     })
     .filter((q) => q.id && q.questionText && q.options.length)
     .slice(0, CTWA_MAX_QUESTIONS);
+
+  // A `next` that isn't one of this flow's own question ids (or the
+  // closing sentinel) — pointing at a question that got filtered out above,
+  // or leftover from a since-deleted question — falls back to "" (the
+  // default: continue to the next question in array order) rather than
+  // silently pointing nowhere.
+  const validNextTargets = new Set([CTWA_NEXT_CLOSING, ...clean.qualifyingQuestions.map((q) => q.id)]);
+  for (const q of clean.qualifyingQuestions) {
+    for (const o of q.options) {
+      if (o.next && !validNextTargets.has(o.next)) o.next = "";
+    }
+  }
 
   // Temporary testing allowlist — digits only (matches WaConversation.contactPhone's
   // "no +, no spaces" shape), deduped, capped well above any real team size.

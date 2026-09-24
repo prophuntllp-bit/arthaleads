@@ -40,6 +40,10 @@ const STATUSES = [
 
 const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "option"}_${i}`;
 
+// The one non-question value an option's `next` may point to — matches
+// backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
+const NEXT_CLOSING = "__closing__";
+
 // Sensible starting point for an Indian real-estate CTWA flow — every label
 // (and the wording) is editable per agent, and so is the order and count of
 // questions; only the closing step (talk to an advisor, or book a site
@@ -729,6 +733,7 @@ export default function AgentBuilder() {
               <div className="space-y-3">
                 {form.ctwaFlow.qualifyingQuestions.map((q, i) => (
                   <QualifyingQuestionEditor key={q.id} question={q} index={i} total={form.ctwaFlow.qualifyingQuestions.length}
+                    allQuestions={form.ctwaFlow.qualifyingQuestions}
                     onChange={(next) => updateQuestion(i, next)}
                     onRemove={() => removeQuestion(i)}
                     onMoveUp={() => moveQuestion(i, -1)}
@@ -1027,8 +1032,11 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
       } else if (action === "location") {
         push({ from: "bot", text: `This project is located at: ${projectName ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}` });
       }
-      const next = questions[qIndex + 1];
-      if (next) sendQuestion(next); else sendClosing();
+      // An explicit "then go to" wins over the default array-order
+      // progression — mirrors ctwaFlowService.advanceFlow exactly.
+      if (opt.next === NEXT_CLOSING) { sendClosing(); return; }
+      const target = opt.next ? questions.find((q) => q.id === opt.next) : questions[qIndex + 1];
+      if (target) sendQuestion(target); else sendClosing();
       return;
     }
 
@@ -1207,7 +1215,7 @@ function ChipRowEditor({ label, rows, max, onChange, presets }) {
 // label-only ChipRowEditor. Replaces what used to be three separate fixed
 // Purpose/Budget/Timeline sections with one repeatable card, since the
 // qualifying phase is now an open-ended tenant-authored list.
-function QualifyingQuestionEditor({ question, index, total, onChange, onRemove, onMoveUp, onMoveDown }) {
+function QualifyingQuestionEditor({ question, index, total, allQuestions, onChange, onRemove, onMoveUp, onMoveDown }) {
   const setQ = (patch) => onChange({ ...question, ...patch });
   const presets = MAPS_TO_PRESETS[question.mapsTo];
   return (
@@ -1249,7 +1257,8 @@ function QualifyingQuestionEditor({ question, index, total, onChange, onRemove, 
       {question.mapsTo === "budget"
         ? <BudgetBracketEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} />
         : question.mapsTo === "none"
-        ? <OptionActionEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} presets={PRESET_MENU_OPTIONS} />
+        ? <OptionActionEditor rows={question.options} onChange={(rows) => setQ({ options: rows })} presets={PRESET_MENU_OPTIONS}
+            otherQuestions={allQuestions.filter((q) => q.id !== question.id)} />
         : <ChipRowEditor label="Options — up to 10, shown as buttons if 3 or fewer, a list if more" max={10} presets={presets}
             rows={question.options} onChange={(rows) => setQ({ options: rows })} />}
     </div>
@@ -1303,7 +1312,7 @@ function BudgetBracketEditor({ rows, onChange }) {
 // you" slot picker actually is now: an ordinary question whose options
 // happen to carry an action. Each option gets its own action dropdown,
 // editable any time — not fixed at add-time the way it used to be.
-function OptionActionEditor({ rows, onChange, presets }) {
+function OptionActionEditor({ rows, onChange, presets, otherQuestions = [] }) {
   const [draft, setDraft] = useState("");
   const dragIndex = useRef(null);
   const [overIndex, setOverIndex] = useState(null);
@@ -1311,14 +1320,20 @@ function OptionActionEditor({ rows, onChange, presets }) {
   const add = (text) => {
     text = text.trim();
     if (!text || rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === text.toLowerCase())) return;
-    onChange([...rows, { id: slugify(text, rows.length), label: text, action: "none" }]);
+    onChange([...rows, { id: slugify(text, rows.length), label: text, action: "none", next: "" }]);
     setDraft("");
   };
   const addPreset = (p) => {
     if (rows.length >= 10 || rows.some((r) => r.label.toLowerCase() === p.label.toLowerCase())) return;
-    onChange([...rows, { id: slugify(p.label, rows.length), label: p.label, action: p.action }]);
+    onChange([...rows, { id: slugify(p.label, rows.length), label: p.label, action: p.action, next: "" }]);
   };
   const setAction = (rowId, action) => onChange(rows.map((r) => (r.id === rowId ? { ...r, action } : r)));
+  const setNext = (rowId, next) => onChange(rows.map((r) => (r.id === rowId ? { ...r, next } : r)));
+  const NEXT_OPTIONS = [
+    { value: "", label: "Continue automatically (default)" },
+    ...otherQuestions.filter((q) => q.questionText.trim()).map((q) => ({ value: q.id, label: `Skip to: ${q.questionText.slice(0, 40)}` })),
+    { value: NEXT_CLOSING, label: "Skip straight to closing" },
+  ];
   const reorder = (from, to) => {
     if (from === to) return;
     const next = [...rows];
@@ -1348,22 +1363,34 @@ function OptionActionEditor({ rows, onChange, presets }) {
       </div>
       {rows.length > 0 && (
         <div className="space-y-1.5 mt-2">
-          {rows.map((r, i) => (
-            <div key={r.id} draggable
-              onDragStart={(e) => { dragIndex.current = i; e.dataTransfer.effectAllowed = "move"; }}
-              onDragOver={(e) => { e.preventDefault(); if (overIndex !== i) setOverIndex(i); }}
-              onDrop={(e) => { e.preventDefault(); if (dragIndex.current !== null) reorder(dragIndex.current, i); dragIndex.current = null; setOverIndex(null); }}
-              onDragEnd={() => { dragIndex.current = null; setOverIndex(null); }}
-              className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 cursor-grab active:cursor-grabbing"
-              style={{ background: "var(--app-surface-low)", border: overIndex === i ? "1px dashed var(--app-primary)" : "1px solid var(--app-border)" }}>
-              <GripVertical className="w-3.5 h-3.5 text-app-soft shrink-0" />
-              <span className="text-xs font-semibold text-app flex-1 min-w-0 truncate">{r.label}</span>
-              <CustomSelect value={r.action || "none"} onChange={(v) => setAction(r.id, v)}
-                options={OPTION_ACTIONS} style={{ minWidth: 170, padding: "5px 10px", borderRadius: "0.6rem", fontSize: 11 }} />
-              <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
-                className="text-app-soft hover:text-red-500 transition shrink-0"><X className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
+          {rows.map((r, i) => {
+            const isTerminal = r.action === "advisor" || r.action === "site_visit";
+            return (
+              <div key={r.id} draggable
+                onDragStart={(e) => { dragIndex.current = i; e.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={(e) => { e.preventDefault(); if (overIndex !== i) setOverIndex(i); }}
+                onDrop={(e) => { e.preventDefault(); if (dragIndex.current !== null) reorder(dragIndex.current, i); dragIndex.current = null; setOverIndex(null); }}
+                onDragEnd={() => { dragIndex.current = null; setOverIndex(null); }}
+                className="rounded-xl px-2.5 py-1.5 cursor-grab active:cursor-grabbing space-y-1.5"
+                style={{ background: "var(--app-surface-low)", border: overIndex === i ? "1px dashed var(--app-primary)" : "1px solid var(--app-border)" }}>
+                <div className="flex items-center gap-2">
+                  <GripVertical className="w-3.5 h-3.5 text-app-soft shrink-0" />
+                  <span className="text-xs font-semibold text-app flex-1 min-w-0 truncate">{r.label}</span>
+                  <CustomSelect value={r.action || "none"} onChange={(v) => setAction(r.id, v)}
+                    options={OPTION_ACTIONS} style={{ minWidth: 170, padding: "5px 10px", borderRadius: "0.6rem", fontSize: 11 }} />
+                  <button type="button" onClick={() => onChange(rows.filter((x) => x.id !== r.id))}
+                    className="text-app-soft hover:text-red-500 transition shrink-0"><X className="w-3.5 h-3.5" /></button>
+                </div>
+                {!isTerminal && (
+                  <div className="flex items-center gap-2 pl-5.5" style={{ paddingLeft: 22 }}>
+                    <span className="text-[10.5px] text-app-soft shrink-0">Then</span>
+                    <CustomSelect value={r.next || ""} onChange={(v) => setNext(r.id, v)}
+                      options={NEXT_OPTIONS} style={{ width: "100%", padding: "5px 10px", borderRadius: "0.6rem", fontSize: 11 }} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

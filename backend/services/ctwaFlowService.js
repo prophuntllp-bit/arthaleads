@@ -272,6 +272,9 @@ module.exports = function createCtwaFlowService({
   // booked site visit — fixed, not agent-configurable, so "Photos &
   // Brochure" / "Location Details" never become dead ends with no next step.
   const CLOSING_OPTIONS = [{ id: "advisor", title: "Talk to Advisor" }, { id: "site_visit", title: "Book Site Visit" }];
+  // The one non-question value an option's `next` may point to — matches
+  // whatsappRoutes.js's sanitizeCtwaFlow exactly.
+  const NEXT_CLOSING = "__closing__";
   function closingStep(agent) {
     return { bodyText: agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
   }
@@ -438,22 +441,29 @@ module.exports = function createCtwaFlowService({
       return WaConversation.findByIdAndUpdate(conversation._id, { $unset: { flowState: 1 } });
     };
 
-    // What the customer sees after any non-terminal question: the next
-    // still-unanswered question, or the fixed closing prompt once none are
-    // left. This is the one thing every option's tap eventually leads to,
-    // whatever it did along the way (recorded an answer, sent photos, ...).
-    const advancePast = async (questionIndex) => {
-      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId);
-      const next = questions[nextIdx];
-      if (next) {
-        await sendFlowStep(org, conversation, botName, questionStep(next, vars));
-        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": next.id });
-        await funnelStep(conversation._id, next.id);
+    // Sends a specific question (or the closing prompt, for the "__closing__"
+    // sentinel) and records it as the new step — the one thing every
+    // non-terminal option's tap eventually leads to, whatever it did along
+    // the way (recorded an answer, sent photos, ...).
+    const goTo = async (targetId) => {
+      const target = targetId === NEXT_CLOSING ? null : questions.find((q) => q.id === targetId);
+      if (target) {
+        await sendFlowStep(org, conversation, botName, questionStep(target, vars));
+        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": target.id });
+        await funnelStep(conversation._id, target.id);
       } else {
         await sendFlowStep(org, conversation, botName, closingStep(agent));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "closing" });
         await funnelStep(conversation._id, "closing");
       }
+    };
+
+    // Default when an option doesn't explicitly say where to go next: the
+    // next still-unanswered question in array order, or closing once none
+    // are left.
+    const advancePast = async (questionIndex) => {
+      const nextIdx = await nextUnansweredIndex(questions, questionIndex + 1, conversation.leadId);
+      await goTo(questions[nextIdx]?.id ?? NEXT_CLOSING);
     };
 
     // Matched by button id across every question this flow has, not by
@@ -532,7 +542,13 @@ module.exports = function createCtwaFlowService({
       const position = currentIdx === -1 ? questions.length : currentIdx;
       if (matchedQuestionIndex < position) return true;
 
-      await advancePast(matchedQuestionIndex);
+      // An explicit "then go to" wins over the default array-order
+      // progression — this is what lets two different buttons on the same
+      // question (e.g. "Photos & Videos" vs. "Book a Private Preview") lead
+      // to different next steps instead of both always landing on whatever
+      // is positionally next.
+      if (matchedOption.next) await goTo(matchedOption.next);
+      else await advancePast(matchedQuestionIndex);
       return true;
     }
 

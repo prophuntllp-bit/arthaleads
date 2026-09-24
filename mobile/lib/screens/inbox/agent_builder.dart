@@ -84,6 +84,10 @@ const _closingButtons = [
   {'id': 'site_visit', 'label': 'Book Site Visit'},
 ];
 
+/// The one non-question value an option's `next` may point to — matches
+/// backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
+const _kNextClosing = '__closing__';
+
 String _slug(String v, int i) {
   final s = v
       .toLowerCase()
@@ -974,6 +978,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
             question: _questions[i],
             index: i,
             total: _questions.length,
+            allQuestions: _questions,
             onChanged: () => setState(() {}),
             onRemove: () => setState(() => _questions.removeAt(i)),
             onMove: (d) => setState(() {
@@ -1544,7 +1549,8 @@ class _BudgetBracketEditorState extends State<_BudgetBracketEditor> {
 class _OptionActionEditor extends StatefulWidget {
   final List<Map<String, dynamic>> rows;
   final VoidCallback onChanged;
-  const _OptionActionEditor({required this.rows, required this.onChanged});
+  final List<Map<String, dynamic>> otherQuestions;
+  const _OptionActionEditor({required this.rows, required this.onChanged, this.otherQuestions = const []});
   @override
   State<_OptionActionEditor> createState() => _OptionActionEditorState();
 }
@@ -1561,10 +1567,19 @@ class _OptionActionEditorState extends State<_OptionActionEditor> {
 
   void _addRow(String label, String action) {
     if (widget.rows.length >= 10 || _has(label)) return;
-    widget.rows.add({'id': _slug(label, widget.rows.length), 'label': label, 'action': action});
+    widget.rows.add({'id': _slug(label, widget.rows.length), 'label': label, 'action': action, 'next': ''});
     widget.onChanged();
     setState(() {});
   }
+
+  Map<String, String> get _nextOptions => {
+        '': 'Continue automatically (default)',
+        for (final q in widget.otherQuestions)
+          if ((q['questionText'] as String? ?? '').trim().isNotEmpty)
+            q['id'] as String:
+                'Skip to: ${(q['questionText'] as String).substring(0, (q['questionText'] as String).length > 40 ? 40 : (q['questionText'] as String).length)}',
+        _kNextClosing: 'Skip straight to closing',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -1636,41 +1651,69 @@ class _OptionActionEditorState extends State<_OptionActionEditor> {
                 Container(
                   key: ValueKey('${widget.rows[i]['id']}_$i'),
                   margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   decoration: BoxDecoration(color: t.surfaceLow, borderRadius: BorderRadius.circular(14), border: Border.all(color: t.border)),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ReorderableDragStartListener(
-                        index: i,
-                        child: Padding(padding: const EdgeInsets.all(8), child: Icon(Icons.drag_indicator, size: 18, color: t.textSoft)),
+                      Row(
+                        children: [
+                          ReorderableDragStartListener(
+                            index: i,
+                            child: Padding(padding: const EdgeInsets.all(8), child: Icon(Icons.drag_indicator, size: 18, color: t.textSoft)),
+                          ),
+                          Expanded(
+                            child: Text('${widget.rows[i]['label']}',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                          ),
+                          SizedBox(
+                            width: 150,
+                            child: WaSelect<String>(
+                              label: '',
+                              dense: true,
+                              value: (widget.rows[i]['action'] as String?) ?? 'none',
+                              options: _optionActions,
+                              onChanged: (v) {
+                                widget.rows[i]['action'] = v ?? 'none';
+                                widget.onChanged();
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(Icons.close, size: 16, color: t.textSoft),
+                            onPressed: () {
+                              widget.rows.removeAt(i);
+                              widget.onChanged();
+                              setState(() {});
+                            },
+                          ),
+                        ],
                       ),
-                      Expanded(
-                        child: Text('${widget.rows[i]['label']}',
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-                      ),
-                      SizedBox(
-                        width: 150,
-                        child: WaSelect<String>(
-                          label: '',
-                          dense: true,
-                          value: (widget.rows[i]['action'] as String?) ?? 'none',
-                          options: _optionActions,
-                          onChanged: (v) {
-                            widget.rows[i]['action'] = v ?? 'none';
-                            widget.onChanged();
-                            setState(() {});
-                          },
+                      if (!['advisor', 'site_visit'].contains(widget.rows[i]['action']))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 34, right: 8, bottom: 6),
+                          child: Row(
+                            children: [
+                              Text('Then', style: TextStyle(fontSize: 10.5, color: t.textSoft)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: WaSelect<String>(
+                                  label: '',
+                                  dense: true,
+                                  value: (widget.rows[i]['next'] as String?) ?? '',
+                                  options: _nextOptions,
+                                  onChanged: (v) {
+                                    widget.rows[i]['next'] = v ?? '';
+                                    widget.onChanged();
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: Icon(Icons.close, size: 16, color: t.textSoft),
-                        onPressed: () {
-                          widget.rows.removeAt(i);
-                          widget.onChanged();
-                          setState(() {});
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -1685,6 +1728,7 @@ class _QuestionEditor extends StatefulWidget {
   final Map<String, dynamic> question;
   final int index;
   final int total;
+  final List<Map<String, dynamic>> allQuestions;
   final VoidCallback onChanged;
   final VoidCallback onRemove;
   final void Function(int dir) onMove;
@@ -1693,6 +1737,7 @@ class _QuestionEditor extends StatefulWidget {
     required this.question,
     required this.index,
     required this.total,
+    this.allQuestions = const [],
     required this.onChanged,
     required this.onRemove,
     required this.onMove,
@@ -1759,7 +1804,11 @@ class _QuestionEditorState extends State<_QuestionEditor> {
           if (mapsTo == 'budget')
             _BudgetBracketEditor(rows: options, onChanged: widget.onChanged)
           else if (mapsTo == 'none')
-            _OptionActionEditor(rows: options, onChanged: widget.onChanged)
+            _OptionActionEditor(
+              rows: options,
+              onChanged: widget.onChanged,
+              otherQuestions: widget.allQuestions.where((oq) => oq['id'] != q['id']).toList(),
+            )
           else
             _ChipRowEditor(
               label: 'Options — up to 10, shown as buttons if 3 or fewer, a list if more',
@@ -1899,7 +1948,19 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
         } else if (action == 'location') {
           _push({'from': 'bot', 'text': 'This project is located at: ${widget.projectName != null ? "(the project's saved location)" : "(no single project — assign one above to resolve this)"}'});
         }
-        if (qIndex + 1 < qs.length) {
+        // An explicit "then go to" wins over the default array-order
+        // progression — mirrors ctwaFlowService.advanceFlow exactly.
+        final nextTarget = opt['next'] as String?;
+        if (nextTarget == _kNextClosing) {
+          _sendClosing();
+        } else if (nextTarget != null && nextTarget.isNotEmpty) {
+          final target = qs.cast<Map<String, dynamic>?>().firstWhere((q) => q!['id'] == nextTarget, orElse: () => null);
+          if (target != null) {
+            _sendQuestion(target);
+          } else {
+            _sendClosing();
+          }
+        } else if (qIndex + 1 < qs.length) {
           _sendQuestion(qs[qIndex + 1]);
         } else {
           _sendClosing();
