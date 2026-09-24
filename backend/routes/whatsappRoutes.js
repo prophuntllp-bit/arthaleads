@@ -1851,6 +1851,10 @@ const CTWA_MAPS_TO = ["purpose", "budget", "timeline", "bhk", "propertyType", "c
 // The one non-question value `next` may point to — skip straight to the
 // closing prompt regardless of what else is unanswered.
 const CTWA_NEXT_CLOSING = "__closing__";
+// The one non-question value closingSiteVisitNext may point to — book
+// immediately when "Book Site Visit" is tapped, skipping any question even
+// if one would otherwise auto-detect.
+const CTWA_BOOK_IMMEDIATELY = "__book__";
 
 function sanitizeOptionRow(r, { withBudget = false } = {}) {
   return {
@@ -1871,6 +1875,8 @@ function sanitizeCtwaFlow(input) {
     enabled: input.enabled === true,
     welcomeText:     String(input.welcomeText || "").trim().slice(0, 500),
     closingPrompt:   String(input.closingPrompt || "").trim().slice(0, 300),
+    // Validated below once every question's real id is known.
+    closingSiteVisitNext: String(input.closingSiteVisitNext || "").trim().slice(0, 60),
     nudgesEnabled:   input.nudgesEnabled === true,
     nudgeText:       String(input.nudgeText || "").trim().slice(0, 200),
   };
@@ -1904,6 +1910,13 @@ function sanitizeCtwaFlow(input) {
     for (const o of q.options) {
       if (o.next && !validNextTargets.has(o.next)) o.next = "";
     }
+  }
+  // Same rule for the closing prompt's own "Book Site Visit" target — a
+  // question id or the book-immediately sentinel, or "" to keep the
+  // existing auto-detect behavior.
+  const validClosingTargets = new Set([CTWA_BOOK_IMMEDIATELY, ...clean.qualifyingQuestions.map((q) => q.id)]);
+  if (clean.closingSiteVisitNext && !validClosingTargets.has(clean.closingSiteVisitNext)) {
+    clean.closingSiteVisitNext = "";
   }
 
   // Temporary testing allowlist — digits only (matches WaConversation.contactPhone's

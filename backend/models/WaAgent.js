@@ -146,6 +146,16 @@ const waAgentSchema = new mongoose.Schema(
       siteVisitPrompt: { type: String, default: "Which time works best for your visit?" },
       siteVisitSlots:  [{ id: String, label: String }],
       closingPrompt:   { type: String, default: "Would you like to talk to our advisor, or book a site visit?" },
+      // What happens when the closing prompt's fixed "Book Site Visit"
+      // button is tapped: "" (default) auto-detects any question where
+      // every option's action is "site_visit" and asks that, or books
+      // immediately if none exists; "__book__" always books immediately,
+      // skipping any question even if one would auto-detect; a question's
+      // own id always asks that specific question instead of auto-detecting
+      // — lets "Book Site Visit" lead somewhere different than an ordinary
+      // option's own "Then go to" (e.g. a fuller "when would you like to
+      // visit" question rather than a plain time-of-day picker).
+      closingSiteVisitNext: { type: String, default: "" },
       // Gentle follow-ups for someone who stops mid-flow: one after ~15 minutes
       // and one shortly before the 24h reply window closes. Off unless enabled.
       nudgesEnabled:   { type: Boolean, default: false },

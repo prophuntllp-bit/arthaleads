@@ -43,6 +43,9 @@ const slugify = (v, i) => `${String(v || "").toLowerCase().trim().replace(/[^a-z
 // The one non-question value an option's `next` may point to — matches
 // backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
 const NEXT_CLOSING = "__closing__";
+// The one non-question value closingSiteVisitNext may point to — matches
+// backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
+const CLOSING_BOOK_IMMEDIATELY = "__book__";
 
 // Sensible starting point for an Indian real-estate CTWA flow — every label
 // (and the wording) is editable per agent, and so is the order and count of
@@ -99,6 +102,7 @@ const DEFAULT_CTWA_FLOW = {
     },
   ],
   closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
+  closingSiteVisitNext: "",
   nudgesEnabled: false,
   nudgeText: "",
   testPhones: [],
@@ -753,9 +757,15 @@ export default function AgentBuilder() {
               <p className="text-[11px] text-app-soft mt-1">
                 The one fixed ending — sent once every question above has been asked (or straight away if the lead
                 already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are
-                not editable: "Book Site Visit" re-asks whichever question above has every option set to "book a site
-                visit", or books immediately if none do.
+                not editable — but where "Book Site Visit" leads is:
               </p>
+              <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
+                options={[
+                  { value: "", label: "Auto-detect (a question where every option books a visit)" },
+                  { value: CLOSING_BOOK_IMMEDIATELY, label: "Book immediately — no question asked" },
+                  ...form.ctwaFlow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
+                ]}
+                style={{ ...SELECT_STYLE, marginTop: 6 }} />
             </div>
 
             <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
@@ -1042,11 +1052,15 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
     if (inClosing) {
       if (opt.id === "advisor") { pushAdvisorTerminal(); setStep(null); return; }
-      // "Book Site Visit" from the closing prompt — hand off to a dedicated
-      // slot-picking question if one exists (every option books a visit),
-      // otherwise book immediately.
-      const slotsQuestion = questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
-      if (slotsQuestion) sendQuestion(slotsQuestion); else bookSiteVisit();
+      // "Book Site Visit" from the closing prompt — a configured target
+      // wins outright, else auto-detect a question where every option
+      // books a visit, else book immediately. Mirrors ctwaFlowService.js.
+      const configured = flow.closingSiteVisitNext || "";
+      if (configured === CLOSING_BOOK_IMMEDIATELY) { bookSiteVisit(); return; }
+      const target = configured
+        ? questions.find((q) => q.id === configured)
+        : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+      if (target) sendQuestion(target); else bookSiteVisit();
       return;
     }
   };

@@ -88,6 +88,10 @@ const _closingButtons = [
 /// backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
 const _kNextClosing = '__closing__';
 
+/// The one non-question value closingSiteVisitNext may point to — matches
+/// backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
+const _kBookImmediately = '__book__';
+
 String _slug(String v, int i) {
   final s = v
       .toLowerCase()
@@ -157,6 +161,7 @@ Map<String, dynamic> _defaultFlow() => jsonDecode(jsonEncode({
         },
       ],
       'closingPrompt': 'Would you like to talk to our advisor, or book a site visit?',
+      'closingSiteVisitNext': '',
       'nudgesEnabled': false,
       'nudgeText': '',
       'testPhones': [],
@@ -1010,8 +1015,20 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           label: 'Closing prompt',
           controller: _closingPromptCtrl,
           hint: 'Would you like to talk to our advisor, or book a site visit?',
-          help: 'The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable: "Book Site Visit" re-asks whichever question above has every option set to "book a site visit", or books immediately if none do.',
+          help: 'The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:',
           onChanged: (_) => setState(() {}),
+        ),
+        WaSelect<String>(
+          label: '',
+          value: (_flow['closingSiteVisitNext'] as String?) ?? '',
+          options: {
+            '': 'Auto-detect (a question where every option books a visit)',
+            _kBookImmediately: 'Book immediately — no question asked',
+            for (final q in _questions)
+              if (_mapList(q['options']).isNotEmpty)
+                q['id'] as String: 'Ask: ${(q['questionText'] as String? ?? '').isEmpty ? "(untitled question)" : (q['questionText'] as String).substring(0, (q['questionText'] as String).length > 50 ? 50 : (q['questionText'] as String).length)}',
+          },
+          onChanged: (v) => setState(() => _flow['closingSiteVisitNext'] = v ?? ''),
         ),
         const SizedBox(height: 14),
         _bordered(
@@ -1975,18 +1992,25 @@ class _CtwaPreviewState extends State<_CtwaPreview> {
           _step = null;
           return;
         }
-        // "Book Site Visit" from the closing prompt — hand off to a
-        // dedicated slot-picking question if one exists (every option books
-        // a visit), otherwise book immediately.
-        final slotsQuestion = qs.cast<Map<String, dynamic>?>().firstWhere(
-              (q) {
-                final options = _mapList(q!['options']);
-                return options.isNotEmpty && options.every((o) => o['action'] == 'site_visit');
-              },
-              orElse: () => null,
-            );
-        if (slotsQuestion != null) {
-          _sendQuestion(slotsQuestion);
+        // "Book Site Visit" from the closing prompt — a configured target
+        // wins outright, else auto-detect a question where every option
+        // books a visit, else book immediately. Mirrors ctwaFlowService.js.
+        final configured = (_f['closingSiteVisitNext'] as String?) ?? '';
+        if (configured == _kBookImmediately) {
+          _bookSiteVisit();
+          return;
+        }
+        final target = configured.isNotEmpty
+            ? qs.cast<Map<String, dynamic>?>().firstWhere((q) => q!['id'] == configured, orElse: () => null)
+            : qs.cast<Map<String, dynamic>?>().firstWhere(
+                (q) {
+                  final options = _mapList(q!['options']);
+                  return options.isNotEmpty && options.every((o) => o['action'] == 'site_visit');
+                },
+                orElse: () => null,
+              );
+        if (target != null) {
+          _sendQuestion(target);
         } else {
           _bookSiteVisit();
         }

@@ -275,6 +275,9 @@ module.exports = function createCtwaFlowService({
   // The one non-question value an option's `next` may point to — matches
   // whatsappRoutes.js's sanitizeCtwaFlow exactly.
   const NEXT_CLOSING = "__closing__";
+  // The one non-question value closingSiteVisitNext may point to — matches
+  // whatsappRoutes.js's sanitizeCtwaFlow exactly.
+  const CTWA_BOOK_IMMEDIATELY = "__book__";
   function closingStep(agent) {
     return { bodyText: agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
   }
@@ -558,16 +561,23 @@ module.exports = function createCtwaFlowService({
         await exitFlow();
         return true;
       }
-      // "Book Site Visit" from the closing prompt — hand off to a dedicated
-      // slot-picking question if the tenant configured one (any question
-      // whose every option books a site visit), otherwise book immediately
-      // using the closing button's own label as the slot.
-      const slotsQuestion = questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
-      if (slotsQuestion) {
-        await sendFlowStep(org, conversation, botName, questionStep(slotsQuestion, vars));
-        await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": slotsQuestion.id });
-        await funnelStep(conversation._id, slotsQuestion.id);
-        return true;
+      // "Book Site Visit" from the closing prompt. Tenant-configured target
+      // (closingSiteVisitNext) wins outright — a specific question id asks
+      // that question, "__book__" always books immediately. With nothing
+      // configured, fall back to auto-detecting any question whose every
+      // option books a site visit, or book immediately if none exists. This
+      // is deliberately independent of any option's own `next` — it's what
+      // lets "Book Site Visit" lead somewhere different than an ordinary
+      // menu option that also happens to reach a site-visit question.
+      const configuredNext = agent.ctwaFlow.closingSiteVisitNext || "";
+      if (configuredNext !== CTWA_BOOK_IMMEDIATELY) {
+        const target = configuredNext
+          ? questions.find((q) => q.id === configuredNext)
+          : questions.find((q) => q.options.length && q.options.every((o) => o.action === "site_visit"));
+        if (target) {
+          await goTo(target.id);
+          return true;
+        }
       }
       return completeSiteVisit(org, conversation, botName, { id: "site_visit", label: "General enquiry" });
     }
