@@ -1484,6 +1484,19 @@ async function processWebhookForOrg(org, provider, body, headers, logLabel) {
       console.log(`[${logLabel}] statuses:`,
         JSON.stringify(changes.flatMap((c) => c.value?.statuses || [])),
         "| messageIds:", JSON.stringify(changes.flatMap((c) => (c.value?.messages || []).map((m) => m.id))));
+      // Evidence for "where did this lead really come from": logs every
+      // inbound message's `referral` block (or its absence) as Meta actually
+      // sent it, keyed by phone + message id — the only way to tell "Meta
+      // never attached one" apart from "it arrived and something here
+      // dropped it" after the fact, since referral is otherwise read once
+      // and never persisted. Remove once CTWA attribution gaps are understood.
+      for (const c of changes) {
+        for (const m of (c.value?.messages || [])) {
+          console.log(`[${logLabel}] referral:`, JSON.stringify({
+            from: m.from, msgId: m.id, type: m.type, referral: m.referral || null,
+          }));
+        }
+      }
     } catch {}
   }
 
