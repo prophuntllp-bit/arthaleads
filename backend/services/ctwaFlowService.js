@@ -663,7 +663,7 @@ module.exports = function createCtwaFlowService({
     const content = pendingStepContent(agent, conv);
     if (!content) return false;
     const prefix = kind === "final"
-      ? "Quick reminder before this chat closes 🙂"
+      ? "One last check-in from me — happy to pick this up whenever suits you 👋"
       : (agent.ctwaFlow.nudgeText?.trim() || "Just checking in 🙂");
     const ok = await sendFlowStep(org, conv, agent.name || "Artha Assistant", {
       ...content, bodyText: `${prefix}\n\n${content.bodyText}`, previewLabel: kind === "final" ? "Final reminder" : "Follow-up nudge",
