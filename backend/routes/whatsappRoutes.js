@@ -903,6 +903,7 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
   const projectLines = projects.map((p) => {
     const bits = [
       p.location && `Location: ${p.location}`,
+      p.location && `Google Maps link: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.location)}`,
       p.propertyType && `Property type: ${p.propertyType}`,
       (p.priceMin || p.priceMax) && `Price: ${fmtPrice(p.priceMin) || "?"} - ${fmtPrice(p.priceMax) || "?"}`,
       (p.unitTypes?.length || p.bhkTypes?.length) && `Available types: ${(p.unitTypes?.length ? p.unitTypes : p.bhkTypes).join(", ")}`,
@@ -983,6 +984,7 @@ ${firstReplyRule}- Never ask about anything already answered — whether that's 
 - Once at least two qualifiers are known between the lead form and this chat combined, you may recommend one matching project or unit type. Mention only the few facts needed for that recommendation.
 - The goal of every reply is to move this lead toward booking a site visit, not just to answer questions — nurture the conversation across a few short turns rather than settling everything in one message. Work it in naturally once you've built some context, not as a scripted CTA tacked onto every message.
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say the team will confirm shortly.
+- Never write a bracketed placeholder like "[Google Maps Link]", "[link]", "[X]" or anything similar as if it were a real value — that is never sent to the customer as-is and reads as a broken message. If asked for the location or a map, and a "Google Maps link" is listed for that project above, paste that exact URL in your reply. If none is listed, describe the location in words instead of inventing a link. The same goes for any other fact: only ever use a real value from the data above, word for word, never a placeholder standing in for one.
 - Map requirements by property type and available type: apartment requests match BHK/studio/duplex/penthouse values, plot requests match plot sizes or plot categories, villa requests match villa types, and commercial requests match office/shop/showroom/commercial unit types. Never describe a plot or commercial unit as a BHK.
 - After a real recommendation, offer one concrete next step, casually — ask if they'd like to book a site visit, and if so ask for a preferred day.
 ${mediaRule}- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end.
