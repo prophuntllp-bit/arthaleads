@@ -32,6 +32,7 @@ const { getNextAssignee } = require("../utils/assignLead");
 const { matchRoutingRule } = require("../utils/routingRules");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
+const { fillTemplate } = require("../utils/formFieldMapper");
 const OPTS = require("../constants/leadOptions");
 const createCtwaFlowService = require("../services/ctwaFlowService");
 
@@ -779,9 +780,16 @@ async function resumeBotIfOwed(org, convId) {
 // Sent once, as the very first outbound message on a brand-new conversation —
 // before the AI's contextual reply to whatever the customer actually wrote.
 // Failure here must never block the real reply that follows.
+//
+// "{{name}}" is supported here the same way it is on the CTWA flow's
+// welcomeText/nudgeText/closingPrompt (see fillTemplate in
+// utils/formFieldMapper.js) — this used to send agent.greeting completely
+// verbatim, so a tenant who typed "{{name}}" (a reasonable guess, since the
+// same placeholder works elsewhere in the same Agent Builder) got a literal
+// "{{name}}" sent to every real customer instead of their actual name.
 async function sendBotGreeting(org, agent, conversation) {
   try {
-    const greeting = agent.greeting.trim();
+    const greeting = fillTemplate(agent.greeting, { name: conversation.contactName || "there" }).trim();
     const botName = agent.name || "Artha Assistant";
     let held = 0;
     try {

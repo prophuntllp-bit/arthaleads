@@ -682,8 +682,8 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                   note: '(optional)',
                   controller: _greetingCtrl,
                   maxLines: 3,
-                  hint: 'Hi! Thanks for reaching out — how can I help you find your next home?',
-                  help: 'Sent automatically as the first message when someone new writes in.',
+                  hint: 'Hi {{name}} 👋 Thanks for reaching out — how can I help you find your next home?',
+                  help: 'Sent automatically as the first message when someone new writes in. Use {{name}}.',
                 ),
                 WaField(
                   label: 'Business context',
@@ -1015,7 +1015,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
           label: 'Closing prompt',
           controller: _closingPromptCtrl,
           hint: 'Would you like to talk to our advisor, or book a site visit?',
-          help: 'The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:',
+          help: 'Use {{name}}. The one fixed ending — sent once every question above has been asked (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:',
           onChanged: (_) => setState(() {}),
         ),
         WaSelect<String>(
@@ -1045,6 +1045,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                 label: 'First reminder wording',
                 controller: _nudgeTextCtrl,
                 hint: 'Just checking in 🙂',
+                help: 'Use {{name}}.',
                 onChanged: (_) => setState(() {}),
               ),
             ],

@@ -156,4 +156,17 @@ function mapCustomFieldsToLead(entries) {
   return { leadUpdates, remaining };
 }
 
-module.exports = { mapCustomFieldsToLead, parseIndianCurrencyRange, normalizeBhk, normalizePurpose, normalizePropertyType, normalizeTimeline };
+// Fills "{{name}}"/"{{project}}"-style placeholders in a tenant-authored
+// message. Shared so every place that sends one of these — the CTWA flow's
+// welcomeText/nudgeText/closingPrompt, and the plain free-text agent's
+// greeting — resolves the same placeholders the same way, rather than each
+// call site growing its own copy (or, as happened before this existed,
+// forgetting to substitute at all and leaking a literal "{{name}}" to the
+// customer). An unknown key or a missing var value is removed rather than
+// left as a literal placeholder — better a slightly awkward sentence than a
+// visible "{{whatever}}" in a live message.
+function fillTemplate(text, vars) {
+  return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars?.[k] != null ? String(vars[k]) : ""));
+}
+
+module.exports = { mapCustomFieldsToLead, parseIndianCurrencyRange, normalizeBhk, normalizePurpose, normalizePropertyType, normalizeTimeline, fillTemplate };

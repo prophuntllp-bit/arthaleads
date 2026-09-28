@@ -28,7 +28,7 @@
 // directly — those helpers (sendInteractive, sendQualifiedMedia, ...) are
 // private closures in that file, and reaching into a route file from a
 // service would invert the codebase's normal dependency direction.
-const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline } = require("../utils/formFieldMapper");
+const { normalizePurpose, parseIndianCurrencyRange, normalizeBhk, normalizePropertyType, normalizeTimeline, fillTemplate: fill } = require("../utils/formFieldMapper");
 
 module.exports = function createCtwaFlowService({
   WaConversation, Lead, Project,
@@ -46,9 +46,6 @@ module.exports = function createCtwaFlowService({
   const funnelOutcome = (id, outcome) => WaConversation.updateOne(
     { _id: id, "flowFunnel.outcome": { $exists: false } }, { $set: { "flowFunnel.outcome": outcome, "flowFunnel.outcomeAt": new Date() } }
   ).catch(() => {});
-
-  const fill = (text, vars) =>
-    String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 
   /**
    * True only when this agent+conversation should start the button flow
@@ -278,8 +275,9 @@ module.exports = function createCtwaFlowService({
   // The one non-question value closingSiteVisitNext may point to — matches
   // whatsappRoutes.js's sanitizeCtwaFlow exactly.
   const CTWA_BOOK_IMMEDIATELY = "__book__";
-  function closingStep(agent) {
-    return { bodyText: agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_OPTIONS };
+  function closingStep(agent, vars) {
+    const text = agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?";
+    return { bodyText: fill(text, vars), buttons: CLOSING_OPTIONS };
   }
 
   /**
@@ -335,7 +333,7 @@ module.exports = function createCtwaFlowService({
     const firstIdx = await nextUnansweredIndex(questions, 0, conversation.leadId);
     if (firstIdx >= questions.length) {
       // Everything we'd ask is already on the lead — straight to closing.
-      const closingSent = await sendFlowStep(org, conversation, botName, { ...closingStep(agent), previewLabel: "Started qualification" });
+      const closingSent = await sendFlowStep(org, conversation, botName, { ...closingStep(agent, vars), previewLabel: "Started qualification" });
       if (closingSent) await WaConversation.findByIdAndUpdate(conversation._id, { flowState: { step: "closing", startedAt: new Date() }, flowFunnel: { startedAt: new Date(), stepsReached: ["closing"], lastStep: "closing" } });
       return;
     }
@@ -455,7 +453,7 @@ module.exports = function createCtwaFlowService({
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": target.id });
         await funnelStep(conversation._id, target.id);
       } else {
-        await sendFlowStep(org, conversation, botName, closingStep(agent));
+        await sendFlowStep(org, conversation, botName, closingStep(agent, vars));
         await WaConversation.findByIdAndUpdate(conversation._id, { "flowState.step": "closing" });
         await funnelStep(conversation._id, "closing");
       }
@@ -629,7 +627,7 @@ module.exports = function createCtwaFlowService({
   function pendingStepContent(agent, conversation) {
     const step = conversation.flowState?.step;
     const vars = { name: conversation.contactName || "there" };
-    if (step === "closing") return closingStep(agent);
+    if (step === "closing") return closingStep(agent, vars);
     const q = getQualifyingQuestions(agent).find((x) => x.id === step);
     return q ? questionStep(q, vars) : null;
   }
@@ -662,9 +660,10 @@ module.exports = function createCtwaFlowService({
 
     const content = pendingStepContent(agent, conv);
     if (!content) return false;
+    const vars = { name: conv.contactName || "there" };
     const prefix = kind === "final"
       ? "One last check-in from me — happy to pick this up whenever suits you 👋"
-      : (agent.ctwaFlow.nudgeText?.trim() || "Just checking in 🙂");
+      : (fill(agent.ctwaFlow.nudgeText, vars).trim() || "Just checking in 🙂");
     const ok = await sendFlowStep(org, conv, agent.name || "Artha Assistant", {
       ...content, bodyText: `${prefix}\n\n${content.bodyText}`, previewLabel: kind === "final" ? "Final reminder" : "Follow-up nudge",
     });

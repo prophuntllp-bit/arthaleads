@@ -492,9 +492,11 @@ export default function AgentBuilder() {
               <label className="text-xs font-semibold text-app-soft mb-1 block">
                 Greeting <span className="font-normal">(optional)</span>
               </label>
-              <input className="input w-full" placeholder="Hi! Thanks for reaching out — how can I help you find your next home?"
+              <input className="input w-full" placeholder="Hi {{name}} 👋 Thanks for reaching out — how can I help you find your next home?"
                 value={form.greeting} onChange={(e) => set({ greeting: e.target.value })} />
-              <p className="text-xs text-app-soft mt-1">Sent automatically as the first message when someone new writes in.</p>
+              <p className="text-xs text-app-soft mt-1">
+                Sent automatically as the first message when someone new writes in. Use <code>{"{{name}}"}</code>.
+              </p>
             </div>
 
             <div>
@@ -755,9 +757,9 @@ export default function AgentBuilder() {
               <input className="input w-full" placeholder="Would you like to talk to our advisor, or book a site visit?"
                 value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
               <p className="text-[11px] text-app-soft mt-1">
-                The one fixed ending — sent once every question above has been asked (or straight away if the lead
-                already answered all of them elsewhere). Its two buttons, "Talk to Advisor" and "Book Site Visit", are
-                not editable — but where "Book Site Visit" leads is:
+                Use <code>{"{{name}}"}</code>. The one fixed ending — sent once every question above has been asked
+                (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to
+                Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:
               </p>
               <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
                 options={[
@@ -786,6 +788,7 @@ export default function AgentBuilder() {
                   <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
                   <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
                     value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
+                  <p className="text-[11px] text-app-soft mt-1">Use <code>{"{{name}}"}</code>.</p>
                 </div>
               )}
             </div>
