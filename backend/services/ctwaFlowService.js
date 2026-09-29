@@ -244,9 +244,11 @@ module.exports = function createCtwaFlowService({
   function leadKnows(lead, mapsTo) {
     if (!lead) return false;
     switch (mapsTo) {
-      case "budget":   return (lead.budget?.min || 0) > 0 || (lead.budget?.max || 0) > 0;
-      case "timeline": return !!String(lead.timeline || "").trim();
-      case "bhk":      return !!lead.bhk && lead.bhk !== "N/A";
+      case "budget":       return (lead.budget?.min || 0) > 0 || (lead.budget?.max || 0) > 0;
+      case "timeline":     return !!String(lead.timeline || "").trim();
+      case "bhk":          return !!lead.bhk && lead.bhk !== "N/A";
+      case "purpose":      return !!lead.purpose && lead.purpose !== "N/A";
+      case "propertyType": return !!lead.propertyType && lead.propertyType !== "N/A";
       case "city":
       case "preferredLocation":
       case "streetAddress": return !!String(lead[mapsTo] || "").trim();
@@ -259,7 +261,12 @@ module.exports = function createCtwaFlowService({
   // minutes ago is the fastest way to lose them.
   async function nextUnansweredIndex(questions, from, leadId) {
     let lead = null;
-    if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk city preferredLocation streetAddress").lean();
+    // purpose/propertyType were missing here entirely — leadKnows() had no
+    // case for them, so a question mapped to either NEVER counted as
+    // answered even when the lead record already had a real value, and the
+    // flow always re-asked it. Selected here now that leadKnows() actually
+    // checks them.
+    if (leadId) lead = await Lead.findById(leadId).select("budget timeline bhk purpose propertyType city preferredLocation streetAddress").lean();
     let i = from;
     while (i < questions.length && leadKnows(lead, questions[i].mapsTo)) i++;
     return i;
@@ -693,5 +700,5 @@ module.exports = function createCtwaFlowService({
     return { checked: convs.length, sent };
   }
 
-  return { shouldStartFlow, startFlow, advanceFlow, runNudges, getQualifyingQuestions };
+  return { shouldStartFlow, startFlow, advanceFlow, runNudges, getQualifyingQuestions, applyQuestionAnswer };
 };

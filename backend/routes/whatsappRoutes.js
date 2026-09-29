@@ -1188,6 +1188,68 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
   }
 }
 
+/**
+ * Manual-recovery helper for the Inbox's "Start qualification flow" button:
+ * a lead whose CTWA flow never ran (the exact Khopoli bug) may already have
+ * had a real back-and-forth with the plain free-text agent before someone
+ * clicks that button — e.g. already told it their purpose in their own
+ * words. Without this, startFlow always begins at question 1 regardless,
+ * repeating something the lead already answered.
+ *
+ * Unlike enrichWhatsAppLead (which extracts into a small fixed schema),
+ * this checks the transcript against the agent's OWN configured questions
+ * and their exact button options — each option is effectively an enum
+ * value, so matching is far less guesswork than open extraction. Answers
+ * that clearly match are applied exactly as if the button had been tapped
+ * (ctwaFlow.applyQuestionAnswer), so the existing "never overwrite a real
+ * value" write rules apply unchanged and nextUnansweredIndex naturally
+ * skips them. Best-effort only — never blocks starting the flow.
+ */
+async function inferAnsweredFromTranscript(org, agent, conversation, questions) {
+  const mappable = questions.filter((q) => q.mapsTo !== "none" && q.options?.length);
+  if (!mappable.length || !process.env.OPENAI_API_KEY) return;
+  try {
+    const recentMsgs = await WaMessage.find({ conversationId: conversation._id })
+      .sort({ timestamp: -1 }).limit(20).lean();
+    recentMsgs.reverse();
+    const transcript = recentMsgs
+      .map((m) => `${m.direction === "inbound" ? "Customer" : "Assistant"}: ${m.body}`)
+      .join("\n").slice(0, 4000);
+    if (!transcript.trim()) return;
+
+    const qList = mappable
+      .map((q) => `${q.id}: "${q.questionText}" — options: ${q.options.map((o) => `${o.id}=${o.label}`).join(", ")}`)
+      .join("\n");
+    const aiRes = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content:
+            "Below is a WhatsApp sales chat transcript and a list of qualifying questions, each with a fixed set of button options. " +
+            "Decide which questions the customer has ALREADY clearly answered somewhere in the conversation, even though they never tapped a button — free-typed replies count. " +
+            "For each one, return the id of the single option that most closely and unambiguously matches what the customer said. " +
+            "Only include a question if you are confident — a vague, partial, or multi-part answer (e.g. 'both', 'maybe', 'not sure yet') must be left out rather than guessed at. " +
+            'Return ONLY compact JSON: {"<questionId>": "<optionId>", ...} — omit anything you are not confident about, return {} if nothing qualifies.\n\nQuestions:\n' + qList },
+          { role: "user", content: transcript },
+        ],
+        max_tokens: 150, temperature: 0,
+        response_format: { type: "json_object" },
+      },
+      { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" } }
+    );
+    recordAiUsage(org._id, aiRes.data?.usage, "botEnrich");
+
+    const parsed = JSON.parse(aiRes.data?.choices?.[0]?.message?.content || "{}");
+    for (const q of mappable) {
+      const opt = q.options.find((o) => o.id === parsed[q.id]);
+      if (opt) await ctwaFlow.applyQuestionAnswer(conversation.leadId, q, opt);
+    }
+  } catch (err) {
+    console.error("[CTWA Flow] inferAnsweredFromTranscript failed:", err?.response?.data || err.message);
+  }
+}
+
 // ── AI bot reply ──────────────────────────────────────────────────────────────
 
 // The bot going quiet used to be indistinguishable from the bot doing its job:
@@ -2491,6 +2553,13 @@ router.post("/conversations/:id/start-flow", async (req, res) => {
     if (String(conv.agentId || "") !== String(agent._id)) {
       await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
       conv.agentId = agent._id;
+    }
+    // A lead recovered this way may already have answered some of these
+    // questions in the free-text conversation that came before this click —
+    // check the transcript before deciding where the flow actually starts,
+    // so it doesn't re-ask something the lead already told the bot.
+    if (conv.leadId) {
+      await inferAnsweredFromTranscript(org, agent, conv, ctwaFlow.getQualifyingQuestions(agent));
     }
     await ctwaFlow.startFlow(org, agent, conv);
     res.json({ ok: true });
