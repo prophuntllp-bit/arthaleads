@@ -792,7 +792,12 @@ export default function AgentBuilder() {
                   <label className="text-xs font-semibold text-app-soft block mb-1">First reminder wording</label>
                   <input className="input w-full" placeholder="Just checking in 🙂" maxLength={200}
                     value={form.ctwaFlow.nudgeText || ""} onChange={(e) => setFlow({ nudgeText: e.target.value })} />
-                  <p className="text-[11px] text-app-soft mt-1">Use <code>{"{{name}}"}</code>.</p>
+                  <p className="text-[11px] text-app-soft mt-1">
+                    Use <code>{"{{name}}"}</code>. Keep this to a short "just checking in" — it's sent directly above the
+                    pending question and its buttons, so don't ask anything here yourself. A lead who answers a question
+                    posed in THIS text instead of tapping one of the real buttons below it won't match any option, and
+                    the whole button flow ends right there.
+                  </p>
                 </div>
               )}
             </div>

@@ -1045,7 +1045,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
                 label: 'First reminder wording',
                 controller: _nudgeTextCtrl,
                 hint: 'Just checking in 🙂',
-                help: 'Use {{name}}.',
+                help: 'Use {{name}}. Keep this to a short "just checking in" — it\'s sent directly above the pending question and its buttons, so don\'t ask anything here yourself. A lead who answers a question posed in THIS text instead of tapping one of the real buttons below it won\'t match any option, and the whole button flow ends right there.',
                 onChanged: (_) => setState(() {}),
               ),
             ],
