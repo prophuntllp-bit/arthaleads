@@ -1209,7 +1209,7 @@ async function handOffToHuman(org, conversation, { notify = false, reason = "" }
 // Hinglish back. This is stated to the model as a hard per-turn instruction.
 const HINGLISH_WORDS = new Set(("nahi nahin haan hai hain hoga kya kyun kyu kaise kitna kitne kitni chahiye chahie chaiye chahiye " +
   "mujhe mera meri mere hume humein aap aapka aapki aapko apna tum tumhara batao bataiye bataye dikhao dikhaiye bhejo bhejiye karo karna kar karein " +
-  "theek thik accha achha bahut bohot zyada abhi kab kahan kaha kaun lekin aur toh mein se ko ka ki ke wala wali").split(" "));
+  "theek thik accha achha bahut bohot zyada kam kamse sasta sasti mehenga mehngi abhi kab kahan kaha kaun lekin aur toh mein se ko ka ki ke wala wali").split(" "));
 const MARATHI_WORDS = new Set("ahe aahe ahet nahi pahije pahiye kay kuthe kiti mala tumhi tumchi tumcha aamhi amhi majha mazha kasa kase thike bagha dakhva sanga".split(" "));
 
 function detectCustomerLanguage(texts) {
