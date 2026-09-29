@@ -55,9 +55,20 @@ module.exports = {
     // Not marked mandatory (minBuild unchanged) — it's an annoyance, not
     // data loss or a blocked workflow, so a normal dismissible prompt is
     // enough.
-    build: 34,
+    //
+    // 29 Sep 2026: 35 fixes a SECOND, different cause of the same symptom —
+    // 31/32 fixed the storage layer losing its key; this one is
+    // AuthState._restore() giving up after a single failed /auth/me call
+    // (a Railway cold start or a network blip), which left the token intact
+    // but showed the login screen anyway. Now retries up to 3x with backoff
+    // before giving up. Also ships the new Plan & Billing screen (native
+    // Razorpay checkout), an admin self-role editor, CTWA test-lock
+    // warnings, a manual "Start qualification flow" recovery button,
+    // numbered project lead lists, Template Builder advisory warnings +
+    // CRM-field labels, and a Campaigns "Record consent" shortcut.
+    build: 35,
     // Human-readable, shown in the update prompt.
-    version: "1.0.8",
+    version: "1.0.9",
     // Installs older than this are FORCED to update (blocking dialog).
     // 0 disables forcing. Never set above `build`.
     //
@@ -76,43 +87,38 @@ module.exports = {
     // we cannot see who is on a 32-bit device; the download block's own
     // comment already documents why an ABI split is the wrong call for an
     // audience we don't control. Bigger file, installs everywhere.
-    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.8-34/arthaleads-1.0.8-34.apk",
+    url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.9-35/arthaleads-1.0.9-35.apk",
     // Optional short "what's new" line, shown in that prompt.
-    notes: "Lead routing rules now work for WhatsApp, Google Ads and website leads, not just Facebook. Also: send all uploaded videos to a customer, an optional message after manually sent project files, PDF size limits, follow-up nudges and drop-off alerts in the WhatsApp flow, Lead Outcome dropdown, and coloured source pills with logos.",
+    notes: "New Plan & Billing screen, a fix for random sign-outs on launch, CTWA test-lock warnings, a manual Start-qualification-flow button, numbered lead lists, and Template/Campaign builder improvements.",
 
     // ── The public download page (new installs) ──────────────────────────────
     // Ahead of the block above by design. Anyone arriving at /download-app has
     // no app yet, so serving them the newest signed build costs nothing and
     // saves them an update on day one — while the field stays on `build`.
     //
-    // 18 Sep 2026: 32 replaces flutter_secure_storage with plain
-    // shared_preferences — 31's Jetpack-Crypto fix still lost its key on this
-    // device, so the storage layer itself (not just the cipher) was swapped.
-    // Also: Notes/Calls tabs split out of Info/Activity, a WhatsApp button
-    // next to Call on Lead Details, and the Transcript tab fixed (it was
-    // silently broken — still reading the old singular `voiceCall` field
-    // after a backend migration to `voiceCalls`) plus its recording now
-    // plays inline instead of opening in another tab/app.
+    // 29 Sep 2026: matches the fleet block above — 35 is going out to
+    // everyone in this same push, so download and fleet stay in step rather
+    // than one leading the other.
     download: {
-      version: "1.0.8",
+      version: "1.0.9",
       // The plain build number, not Android's versionCode — the APK is stamped
-      // 2034 and the app reports it back as 34 (% 1000). mobile/pubspec.yaml
+      // 2035 and the app reports it back as 35 (% 1000). mobile/pubspec.yaml
       // explains why the two differ; the short version is that every install
       // in the field is on versionCode 2024 and cannot be given a lower one.
-      build: 34,
+      build: 35,
       // Universal APK, not the arm64 split: this link is public, we cannot see
       // whose phone is on the other end, and a 32-bit device meeting an arm64
       // APK fails with a bare "App not installed" that the user cannot fix.
       // Bigger file, but it installs everywhere the page claims it will.
-      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.8-34/arthaleads-1.0.8-34.apk",
+      url: "https://github.com/prophuntllp-bit/arthaleads/releases/download/mobile-v1.0.9-35/arthaleads-1.0.9-35.apk",
       // Bytes, so the page can format it. 0 hides the figure rather than
       // showing a wrong one.
-      sizeBytes: 81597555,
+      sizeBytes: 81893263,
       // Minimum Android version, for the requirements line on that page. This
       // is the human-readable form of minSdk in mobile/android/app/build.gradle.kts
       // — keep the two in step.
       minAndroid: "7.0",
-      notes: "Lead routing rules now work for WhatsApp, Google Ads and website leads, not just Facebook. Also: send all uploaded videos to a customer, an optional message after manually sent project files, PDF size limits, follow-up nudges and drop-off alerts in the WhatsApp flow, Lead Outcome dropdown, and coloured source pills with logos.",
+      notes: "New Plan & Billing screen, a fix for random sign-outs on launch, CTWA test-lock warnings, a manual Start-qualification-flow button, numbered lead lists, and Template/Campaign builder improvements.",
     },
   },
 };
