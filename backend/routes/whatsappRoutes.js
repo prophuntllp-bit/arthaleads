@@ -1239,7 +1239,7 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
     if (!transcript.trim()) return;
 
     const qList = mappable
-      .map((q) => `${q.id}: "${q.questionText}" — options: ${q.options.map((o) => `${o.id}=${o.label}`).join(", ")}`)
+      .map((q) => `${q.id} [maps to: ${q.mapsTo}]: "${q.questionText}" — options: ${q.options.map((o) => `${o.id}=${o.label}`).join(", ")}`)
       .join("\n");
     const aiRes = await axios.post(
       "https://api.openai.com/v1/chat/completions",
@@ -1250,7 +1250,8 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
             "Below is a WhatsApp sales chat transcript and a list of qualifying questions, each with a fixed set of button options. " +
             "Decide which questions the customer has ALREADY clearly answered somewhere in the conversation, even though they never tapped a button — free-typed replies count. " +
             "For each one, return the id of the single option that most closely and unambiguously matches what the customer said. " +
-            "Only include a question if you are confident — a vague, partial, or multi-part answer (e.g. 'both', 'maybe', 'not sure yet') must be left out rather than guessed at. " +
+            "Only include a question if you are confident — a vague or genuinely unclear answer (e.g. 'maybe', 'not sure yet') must be left out rather than guessed at. " +
+            "Exception, specifically for a question marked [maps to: purpose]: if the customer names more than one purpose (e.g. 'both', 'investment and second home'), pick whichever of that question's OWN options best represents an investment purpose — never leave a purpose question unanswered just because the customer mentioned more than one purpose. " +
             'Return ONLY compact JSON: {"<questionId>": "<optionId>", ...} — omit anything you are not confident about, return {} if nothing qualifies.\n\nQuestions:\n' + qList },
           { role: "user", content: transcript },
         ],
