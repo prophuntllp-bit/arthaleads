@@ -938,7 +938,6 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
     ].filter(Boolean);
     const bits = [
       p.location && `Location: ${p.location}`,
-      p.location && `Google Maps link: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.location)}`,
       p.propertyType && `Property type: ${p.propertyType}`,
       (p.priceMin || p.priceMax) && `Price: ${fmtPrice(p.priceMin) || "?"} - ${fmtPrice(p.priceMax) || "?"}`,
       (p.unitTypes?.length || p.bhkTypes?.length) && `Available types: ${(p.unitTypes?.length ? p.unitTypes : p.bhkTypes).join(", ")}`,
@@ -1023,7 +1022,7 @@ ${firstReplyRule}- Never ask about anything already answered — whether that's 
 - The goal of every reply is to move this lead toward booking a site visit, not just to answer questions — nurture the conversation across a few short turns rather than settling everything in one message. Work it in naturally once you've built some context, not as a scripted CTA tacked onto every message.
 - Only mention prices, availability, or specs listed above — never invent or guess. If asked about something not listed, say the team will confirm shortly.
 - Any number you state — price, area, budget, possession date — must be copied exactly from the data above, digit for digit. Never approximate it, round it differently, or recall a similar number from earlier in this chat (including a CTWA button's label the customer saw but didn't tap) instead of the actual value given to you right now — a project's price can change between messages, and the figure above is always the current one.
-- Never write a bracketed placeholder like "[Google Maps Link]", "[link]", "[X]" or anything similar as if it were a real value — that is never sent to the customer as-is and reads as a broken message. If asked for the location or a map, and a "Google Maps link" is listed for that project above, paste that exact URL in your reply. If none is listed, describe the location in words instead of inventing a link. The same goes for any other fact: only ever use a real value from the data above, word for word, never a placeholder standing in for one.
+- Never write a bracketed placeholder like "[Google Maps Link]", "[link]", "[X]" or anything similar as if it were a real value — that is never sent to the customer as-is and reads as a broken message. If asked for the location or a map, never send a link of any kind — just describe the location in plain words using the "Location" value listed for that project above, the same way you would say it out loud. The same goes for any other fact: only ever use a real value from the data above, word for word, never a placeholder or a link standing in for one.
 - Map requirements by property type and available type: apartment requests match BHK/studio/duplex/penthouse values, plot requests match plot sizes or plot categories, villa requests match villa types, and commercial requests match office/shop/showroom/commercial unit types. Never describe a plot or commercial unit as a BHK.
 - After a real recommendation, offer one concrete next step, casually — ask if they'd like to book a site visit, and if so ask for a preferred day.
 ${mediaRule}- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end.
