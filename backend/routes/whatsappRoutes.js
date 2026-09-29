@@ -656,11 +656,12 @@ async function handleInbound(org, parsed) {
   // never advancing, no WaMessage ever appearing in the Inbox) for every
   // customer who ever tapped a button, not just CTWA leads.
   const MEDIA_TYPES = new Set(["image", "audio", "document", "sticker", "video"]);
+  const inboundTimestamp = new Date();
   await WaMessage.create({
     orgId: org._id, conversationId: conv._id, waMsgId: msgId || undefined,
     direction: "inbound", sender: "customer", senderName: name,
     body: msgText, mediaType: MEDIA_TYPES.has(msgType) ? msgType : "text",
-    status: "delivered", timestamp: new Date(),
+    status: "delivered", timestamp: inboundTimestamp,
   });
   await WaConversation.findByIdAndUpdate(conv._id, {
     lastMessageAt: new Date(), lastMessagePreview: msgText.slice(0, 80),
@@ -678,7 +679,7 @@ async function handleInbound(org, parsed) {
   }
 
   if (conv.botEnabled) {
-    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation });
+    await respondAsBot(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp: inboundTimestamp });
   }
 }
 
@@ -722,7 +723,21 @@ function respondAsBot(org, conv, args) {
   return next;
 }
 
-async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation }) {
+async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConversation, sinceTimestamp }) {
+  // Two independent paths can both end up owing a reply to the same inbound
+  // message — the live webhook, and resumeBotIfOwed firing right as someone
+  // flips "Bot ON" back on for a thread whose last message arrived while it
+  // was off. Without this, both run triggerBotReply/startFlow for the same
+  // turn and the customer gets two different bot replies to one message
+  // (seen live: a "Price" tap got two separately-worded purpose questions,
+  // four seconds apart). Whichever one actually got queued first already
+  // answered it by the time this one runs, so there is nothing left to do.
+  if (sinceTimestamp) {
+    const alreadyAnswered = await WaMessage.exists({
+      conversationId: conv._id, direction: "outbound", sender: "bot", timestamp: { $gt: sinceTimestamp },
+    });
+    if (alreadyAnswered) return;
+  }
   // Resolved before anything is sent, and pinned, so the away message, the
   // greeting and the reply are all unmistakably the same assistant.
   const agent = await resolveAgentForConversation(org, conv);
@@ -774,7 +789,7 @@ async function resumeBotIfOwed(org, convId) {
   const everReplied = await WaMessage.exists({ conversationId: convId, direction: "outbound" });
   const conv = await WaConversation.findById(convId);
   if (!conv?.botEnabled) return; // toggled off again before this ran
-  await respondAsBot(org, conv, { interactiveId: null, msgText: lastMsg.body, isNewConversation: !everReplied });
+  await respondAsBot(org, conv, { interactiveId: null, msgText: lastMsg.body, isNewConversation: !everReplied, sinceTimestamp: lastMsg.timestamp });
 }
 
 // Sent once, as the very first outbound message on a brand-new conversation —
