@@ -569,11 +569,19 @@ class _CampaignBuilderScreenState extends State<CampaignBuilderScreen> {
                       recognizer: TapGestureRecognizer()
                         ..onTap = () => Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => LeadsScreen(
-                                  initialFilters: LeadFilters(
-                                    consent: 'unknown',
-                                    status: _statusFilter,
-                                    source: _sourceFilter,
+                                // LeadsScreen has no AppBar of its own — it
+                                // normally lives inside Shell's chrome — so a
+                                // bare push here left it with no back button,
+                                // no header, and its in-body title jammed up
+                                // against the status bar.
+                                builder: (_) => Scaffold(
+                                  appBar: AppBar(title: const Text('Leads')),
+                                  body: LeadsScreen(
+                                    initialFilters: LeadFilters(
+                                      consent: 'unknown',
+                                      status: _statusFilter,
+                                      source: _sourceFilter,
+                                    ),
                                   ),
                                 ),
                               ),
