@@ -417,9 +417,21 @@ async function autoAssignConversation(org, conversation) {
 }
 
 // ── Notification recipients ───────────────────────────────────────────────────
+// The "nobody's claimed this yet" fallback for any lead-specific alert
+// (new lead, hot signal, bot failure) — only admin/manager, who can already
+// see every conversation regardless of assignment (canAccessConversation
+// below), not every push subscription in the org. An "agent"-role user
+// can't even open an unassigned conversation in their own Inbox, so a
+// notification naming the lead was always a leak past that boundary, not a
+// convenience — this used to go to literally everyone via sendPushToAll.
+async function notifyUnclaimedLead(org, payload) {
+  const notifiable = await User.find({ orgId: org._id, role: { $ne: "agent" } }).select("_id").lean();
+  notifiable.forEach((u) => sendPushToUser(u._id, payload).catch(() => {}));
+}
+
 // notifyOn.newConversation narrows who gets pinged for a brand-new thread; an
 // empty list keeps the old behaviour (whoever the matched lead is assigned to,
-// else broadcast to the whole org) rather than going silent.
+// else notify admin/manager) rather than going silent.
 async function notifyNewConversation(org, conv, lead) {
   const payload = lead
     ? { type: "new_lead", title: `New Lead: ${lead.name}`, body: `${conv.contactPhone} · WhatsApp`, data: { url: "/leads" } }
@@ -432,9 +444,9 @@ async function notifyNewConversation(org, conv, lead) {
   const recipients = org.whatsapp?.notifyOn?.newConversation || [];
   if (recipients.length) {
     recipients.forEach((userId) => sendPushToUser(userId, payload).catch(() => {}));
-  } else {
-    sendPushToAll(payload, org._id).catch(() => {});
+    return;
   }
+  await notifyUnclaimedLead(org, payload);
 }
 
 // ── Business hours ────────────────────────────────────────────────────────────
@@ -583,7 +595,7 @@ async function notifyHotSignal(org, conv, reason) {
     if (fresh.assignedTo) return void sendPushToUser(fresh.assignedTo, payload).catch(() => {});
     const recipients = org.whatsapp?.notifyOn?.newConversation || [];
     if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
-    else sendPushToAll(payload, org._id).catch(() => {});
+    else await notifyUnclaimedLead(org, payload);
   } catch (err) { console.error("[WhatsApp Bot] hot signal failed:", err.message); }
 }
 
@@ -1299,7 +1311,7 @@ async function handOffToHuman(org, conversation, { notify = false, reason = "" }
   };
   const recipients = org.whatsapp?.notifyOn?.newConversation || [];
   if (recipients.length) recipients.forEach((u) => sendPushToUser(u, payload).catch(() => {}));
-  else sendPushToAll(payload, org._id).catch(() => {});
+  else notifyUnclaimedLead(org, payload).catch(() => {});
 }
 
 // Which language the customer is actually writing in, from their latest
