@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -8,6 +9,8 @@ import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
+import '../leads/lead_filters.dart';
+import '../leads/leads_screen.dart';
 import 'wa_ui.dart';
 
 String _rupees(num? paise) {
@@ -553,8 +556,32 @@ class _CampaignBuilderScreenState extends State<CampaignBuilderScreen> {
           if (((prev['skippedNoConsent'] as num?) ?? 0) > 0)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text('${_fmtInt(prev['skippedNoConsent'] as num?)} excluded — no marketing consent.',
-                  style: TextStyle(fontSize: 11.5, color: t.textSoft)),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(fontSize: 11.5, color: t.textSoft),
+                  children: [
+                    TextSpan(text: '${_fmtInt(prev['skippedNoConsent'] as num?)} excluded — no marketing consent. '),
+                    // No bulk "grant all" here on purpose: one click cannot
+                    // capture consent on behalf of many people.
+                    TextSpan(
+                      text: 'Record consent',
+                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => LeadsScreen(
+                                  initialFilters: LeadFilters(
+                                    consent: 'unknown',
+                                    status: _statusFilter,
+                                    source: _sourceFilter,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           if (((prev['skippedNoPhone'] as num?) ?? 0) > 0)
             Padding(

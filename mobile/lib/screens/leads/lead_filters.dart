@@ -15,6 +15,7 @@ class LeadFilters {
   final String projectId;
   final String assignedTo;
   final String siteFilter;
+  final String consent;
   final DateTime? from;
   final DateTime? to;
   final bool myOnly;
@@ -28,6 +29,7 @@ class LeadFilters {
     this.projectId = '',
     this.assignedTo = '',
     this.siteFilter = '',
+    this.consent = '',
     this.from,
     this.to,
     this.myOnly = false,
@@ -42,6 +44,7 @@ class LeadFilters {
         if (projectId.isNotEmpty) 'projectId': projectId,
         if (assignedTo.isNotEmpty) 'assignedTo': assignedTo,
         if (siteFilter.isNotEmpty) 'siteFilter': siteFilter,
+        if (consent.isNotEmpty) 'consent': consent,
         if (from != null) 'from': from!.toIso8601String().substring(0, 10),
         if (to != null) 'to': to!.toIso8601String().substring(0, 10),
         if (myOnly) 'myOnly': 'true',
@@ -58,6 +61,7 @@ class LeadFilters {
     String? projectId,
     String? assignedTo,
     String? siteFilter,
+    String? consent,
     DateTime? from,
     DateTime? to,
     bool clearFrom = false,
@@ -73,12 +77,19 @@ class LeadFilters {
         projectId: projectId ?? this.projectId,
         assignedTo: assignedTo ?? this.assignedTo,
         siteFilter: siteFilter ?? this.siteFilter,
+        consent: consent ?? this.consent,
         from: clearFrom ? null : (from ?? this.from),
         to: clearTo ? null : (to ?? this.to),
         myOnly: myOnly ?? this.myOnly,
         followUpToday: followUpToday ?? this.followUpToday,
       );
 }
+
+const consentOptions = [
+  ('granted', 'Consent given'),
+  ('unknown', 'Consent not recorded'),
+  ('denied', 'Consent refused'),
+];
 
 class LeadFiltersSheet extends StatefulWidget {
   final LeadFilters current;
@@ -137,6 +148,8 @@ class _LeadFiltersSheetState extends State<LeadFiltersSheet> {
               f.booking,
               (v) => setState(() => f = f.copyWith(booking: v)),
             ),
+            _dropdownPairs('WhatsApp Consent', consentOptions, f.consent,
+                (v) => setState(() => f = f.copyWith(consent: v))),
             _dropdownPairs(
               'Project',
               widget.projects.map((p) => (p['_id'] as String, p['name'] as String? ?? '')).toList(),

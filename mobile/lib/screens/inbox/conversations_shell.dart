@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../core/theme_state.dart';
@@ -26,13 +29,22 @@ class ConversationsShell extends StatefulWidget {
 
 class _ConversationsShellState extends State<ConversationsShell>
     with SingleTickerProviderStateMixin {
+  final _api = ApiClient.instance;
   late TabController _tabController;
 
+  // Glance-at signals on the tab strip — mirrors ConversationsLayout.jsx's
+  // unread pill (polled every 20s, same cadence as web) and the credits
+  // empty-balance dot (fetched once on mount, same as web's one-shot
+  // refreshCredits() — child tabs refresh their own balance after topping up).
+  int _unread = 0;
+  bool _creditsEmpty = false;
+  Timer? _unreadTimer;
+
   List<_Tab> _tabs(bool isAdmin) => [
-    const _Tab('Inbox', Icons.chat_rounded, InboxScreen()),
+    _Tab('Inbox', Icons.chat_rounded, const InboxScreen(), badge: _unread > 0 ? (_unread > 99 ? '99+' : '$_unread') : null),
     const _Tab('Templates', Icons.description_rounded, TemplatesPage()),
     const _Tab('Campaigns', Icons.campaign_rounded, CampaignsPage()),
-    const _Tab('Credits', Icons.account_balance_wallet_rounded, CreditsPage()),
+    _Tab('Credits', Icons.account_balance_wallet_rounded, const CreditsPage(), dot: _creditsEmpty),
     if (isAdmin)
       const _Tab('AI Agents', Icons.auto_awesome_rounded, AgentsPage()),
     if (isAdmin)
@@ -44,10 +56,29 @@ class _ConversationsShellState extends State<ConversationsShell>
     super.initState();
     final isAdmin = context.read<AuthState>().isWaAdmin;
     _tabController = TabController(length: _tabs(isAdmin).length, vsync: this);
+    _pollUnread();
+    _unreadTimer = Timer.periodic(const Duration(seconds: 20), (_) => _pollUnread());
+    _loadCreditsBalance();
+  }
+
+  Future<void> _pollUnread() async {
+    try {
+      final res = await _api.dio.get('/whatsapp/unread');
+      if (mounted) setState(() => _unread = (res.data['unread'] as num?)?.toInt() ?? 0);
+    } catch (_) {}
+  }
+
+  Future<void> _loadCreditsBalance() async {
+    try {
+      final res = await _api.dio.get('/credits/balance');
+      final available = (res.data['availablePaise'] as num?) ?? 0;
+      if (mounted) setState(() => _creditsEmpty = available <= 0);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _unreadTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -90,9 +121,55 @@ class _ConversationsShellState extends State<ConversationsShell>
                     tabAlignment: TabAlignment.start,
                     dividerColor: Colors.transparent,
                     labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-                    tabs: tabs
-                        .map((t) => Tab(height: 62, icon: Icon(t.icon, size: 20), text: t.label))
-                        .toList(),
+                    tabs: tabs.map((t) {
+                      return Tab(
+                        height: 62,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Icon(t.icon, size: 20),
+                                if (t.dot)
+                                  Positioned(
+                                    top: -2,
+                                    right: -3,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(color: Color(0xFFB91C1C), shape: BoxShape.circle),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(t.label, style: const TextStyle(fontSize: 13)),
+                                if (t.badge != null) ...[
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    constraints: const BoxConstraints(minWidth: 20),
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.16),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      t.badge!,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
                 Consumer<ThemeState>(
@@ -131,5 +208,7 @@ class _Tab {
   final String label;
   final IconData icon;
   final Widget child;
-  const _Tab(this.label, this.icon, this.child);
+  final String? badge;
+  final bool dot;
+  const _Tab(this.label, this.icon, this.child, {this.badge, this.dot = false});
 }

@@ -2,9 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../core/api_client.dart';
 import '../../core/theme.dart';
+import '../../data/template_gallery.dart' as gallery_data;
 import '../../widgets/buttons.dart';
 import '../../widgets/motion.dart';
 import 'wa_ui.dart';
+
+// Words that make Meta reclassify a template as marketing. Sending
+// promotional content under a UTILITY category is the single most common
+// rejection predictable from the text alone. Mirrors templateLint.js.
+final _promoWordsRx = RegExp(
+  r'\b(offer|discount|sale|deal|free|limited|hurry|book now|exclusive|off|cashback|bonus|lowest price|best price)\b',
+  caseSensitive: false,
+);
 
 /// Create/edit one WhatsApp template. Mirrors
 /// frontend/src/pages/conversations/TemplateBuilder.jsx against
@@ -35,13 +44,16 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
   List<String> _existingNames = [];
 
   final _nameCtrl = TextEditingController();
-  String _category = 'UTILITY';
+  String _category = 'MARKETING';
   String _language = 'en_US';
   final _headerCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
   final _footerCtrl = TextEditingController();
   final List<TextEditingController> _exampleCtrls = [];
   final List<_ButtonRow> _buttons = [];
+  // Which CRM field each {{n}} is meant to hold — comes from a gallery preset
+  // or an AI variant, drives the "Fills from" labels. Mirrors TemplateBuilder.jsx.
+  List<String> _varMap = [];
 
   // AI generation
   final _aiPromptCtrl = TextEditingController();
@@ -86,9 +98,10 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
 
   void _applyPreset(Map<String, dynamic> preset) {
     _nameCtrl.text = _slugify(preset['title'] as String? ?? preset['key'] as String? ?? '');
-    _category = preset['category'] as String? ?? 'UTILITY';
+    _category = preset['category'] as String? ?? 'MARKETING';
     _bodyCtrl.text = preset['body'] as String? ?? '';
     _footerCtrl.text = preset['footer'] as String? ?? '';
+    _varMap = (preset['varMap'] as List? ?? []).cast<String>();
     final example = (preset['example'] as List? ?? []).cast<String>();
     _syncExampleFields();
     for (var i = 0; i < example.length && i < _exampleCtrls.length; i++) {
@@ -240,6 +253,41 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
     return issues.toSet().toList();
   }
 
+  // ── Warn-level lint (the rest of web's templateLint.js — advisory, does
+  // not block submission) ────────────────────────────────────────────────
+  List<String> get _warnings {
+    final issues = <String>[];
+    final body = _bodyCtrl.text.trim();
+    if (body.isEmpty) return issues;
+    final vars = _bodyVars;
+
+    // Two placeholders touching read as one blank to Meta's reviewer.
+    if (RegExp(r'\{\{\s*\d+\s*\}\}[\s,.\-]{0,2}\{\{\s*\d+\s*\}\}').hasMatch(body)) {
+      issues.add('Two variables sit next to each other with almost no text between them. Meta often rejects this.');
+    }
+
+    // Mostly-placeholder templates get rejected as having no reviewable content.
+    final literal = body.replaceAll(RegExp(r'\{\{\s*\d+\s*\}\}'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (vars.length >= 3 && literal.length < vars.length * 20) {
+      issues.add('There is very little fixed text around the variables. Meta rejects templates it cannot read as a real message.');
+    }
+
+    if (_category == 'UTILITY' || _category == 'AUTHENTICATION') {
+      final hit = _promoWordsRx.firstMatch(body) ??
+          _promoWordsRx.firstMatch(_footerCtrl.text) ??
+          _promoWordsRx.firstMatch(_headerCtrl.text);
+      if (hit != null) {
+        issues.add(
+          '"${hit.group(0)}" reads as promotional. Meta will likely reclassify this as Marketing, or reject it under ${_category.toLowerCase()}.',
+        );
+      }
+    }
+    if (_category == 'MARKETING') {
+      issues.add('Marketing templates can only go to leads who have recorded opt-in, and cost more per message than utility.');
+    }
+    return issues;
+  }
+
   Future<void> _generate() async {
     if (_aiPromptCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -279,6 +327,7 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
       _nameCtrl.text = name;
       _bodyCtrl.text = v['body'] as String? ?? '';
       _footerCtrl.text = v['footer'] as String? ?? '';
+      _varMap = (v['varMap'] as List? ?? []).cast<String>();
       _syncExampleFields();
       final example = (v['example'] as List? ?? []).cast<String>();
       for (var i = 0; i < example.length && i < _exampleCtrls.length; i++) {
@@ -391,6 +440,7 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
     }
     final t = AppTheme.of(context);
     final blockers = _blockers;
+    final warnings = _warnings;
     final vars = _bodyVars;
     final title = _isEditing
         ? (_nameCtrl.text.isEmpty ? 'Edit template' : _nameCtrl.text)
@@ -492,7 +542,8 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
                   const SizedBox(height: 16),
                   const WaLabel('Sample values'),
                   Text(
-                    'An example is required for every variable — it is how a reviewer reads the message.',
+                    'An example is required for every variable — it is how a reviewer reads the message.'
+                    '${_varMap.isNotEmpty ? ' These came with the template; edit them to match your business.' : ''}',
                     style: TextStyle(fontSize: 12, height: 1.4, color: t.textSoft),
                   ),
                   const SizedBox(height: 10),
@@ -510,6 +561,11 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
                             child: Text('{{${i + 1}}}',
                                 style: const TextStyle(fontFamily: 'monospace', fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary)),
                           ),
+                          if (i < _varMap.length) ...[
+                            const SizedBox(width: 8),
+                            Text(gallery_data.varLabels[_varMap[i]] ?? _varMap[i],
+                                style: TextStyle(fontSize: 11, color: t.textSoft)),
+                          ],
                           const SizedBox(width: 10),
                           Expanded(
                             child: TextField(
@@ -536,10 +592,13 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
             ),
             _buttonsEditor(),
             _previewCard(),
-            if (blockers.isNotEmpty)
+            if (blockers.isNotEmpty || warnings.isNotEmpty)
               WaCard(
                 title: 'Before you submit',
-                children: [for (final b in blockers) WaNotice(b, danger: true)],
+                children: [
+                  for (final b in blockers) WaNotice(b, danger: true),
+                  for (final w in warnings) WaNotice(w, warn: true),
+                ],
               ),
             WaCard(
               children: [
@@ -819,6 +878,13 @@ class _TemplateBuilderScreenState extends State<TemplateBuilderScreen> {
                               textAlign: TextAlign.center,
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF00A5F4))),
                         ),
+                      if ((v['varMap'] as List? ?? const []).isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Fills from: ${(v['varMap'] as List).map((f) => gallery_data.varLabels[f as String] ?? f).join(', ')}',
+                          style: TextStyle(fontSize: 10, height: 1.4, color: t.textSoft),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       WaPillButton('Use this', full: true, onPressed: () => _useVariant(v)),
                     ],

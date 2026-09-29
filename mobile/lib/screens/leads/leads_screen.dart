@@ -33,7 +33,11 @@ import 'wa_broadcast_sheet.dart';
 /// Unified Leads list — mirrors frontend/src/pages/Leads.jsx.
 /// Rows come from GET /leads/unified and are tagged `_type: lead|project`.
 class LeadsScreen extends StatefulWidget {
-  const LeadsScreen({super.key});
+  // Seeds the filter sheet's applied state on open — used by CampaignBuilder's
+  // "Record consent" shortcut to land here pre-filtered to exactly who it
+  // skipped. Mirrors Leads.jsx reading location.state.presetConsent/Status/Source.
+  final LeadFilters? initialFilters;
+  const LeadsScreen({super.key, this.initialFilters});
 
   @override
   State<LeadsScreen> createState() => LeadsScreenState();
@@ -53,7 +57,7 @@ class LeadsScreenState extends State<LeadsScreen> {
   bool _importing = false;
   bool _exporting = false;
 
-  LeadFilters _filters = const LeadFilters();
+  late LeadFilters _filters = widget.initialFilters ?? const LeadFilters();
 
   // Multi-select / bulk state
   final Set<String> _selected = {};
