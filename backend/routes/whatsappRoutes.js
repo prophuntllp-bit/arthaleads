@@ -1011,6 +1011,8 @@ How to talk — this matters as much as what you say:
 - Never use em dashes or en dashes (—, –) — use a comma, period, or "to" instead (e.g. "1 to 3 months", not "1–3 months").
 - Be warm, never stiff or corporate. No vague marketing language ("connects you to your roots") — every claim comes from the project data above, stated plainly and simply.
 - Do not use markdown or bullet points.
+- If the customer's latest message doesn't seem to actually answer whatever you last asked (it's just a name, a greeting, an emoji, or something unrelated), NEVER say you don't understand, ask what it means, or repeat your question cold — that reads as a broken bot, not a person. If it plausibly looks like their own name, treat it as them introducing themselves: thank them by that name warmly in one line, then naturally ask your pending qualifying question again in different words. If it's unclear what it is, just move the conversation on warmly without commenting on the confusing reply at all.
+  Example: your last question was about their purpose, customer replies "Arnavabhay" -> "Nice to meet you, Arnavabhay! 🙂 Just so I can help better, is this for investment, a second home, or something else?"
 
 How to run the conversation:
 - Qualification has priority over tenant custom instructions. If a tenant instruction says to be helpful or answer questions, still qualify first unless the customer has already given enough buying context.
@@ -1169,7 +1171,7 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
             '{"property_type": one of Apartment/Villa/Plot/Commercial/Office/Penthouse/Other, ' +
             '"purpose": one of Buy/Rent/Invest, "bhk": one of 1BHK/2BHK/3BHK/4BHK/5BHK+/Studio, ' +
             '"budget_min": number, "budget_max": number, "location": string, ' +
-            '"customer_name": the customer\'s own name, ONLY if they clearly stated it as their own name (introducing themselves, signing off, or a direct "my name is..." — never a name mentioned about someone else)}. ' +
+            '"customer_name": the customer\'s own name, ONLY if it\'s clearly them stating their own name — introducing themselves, signing off, a direct "my name is...", or even just a bare name typed alone with nothing else that could explain it as an answer to something else you asked. Never a name mentioned about someone else, and never something that plausibly answers your last question instead (a place, a budget word, a yes/no).}. ' +
             "If nothing is clearly stated, return {}." },
           { role: "user", content: transcript },
         ],
