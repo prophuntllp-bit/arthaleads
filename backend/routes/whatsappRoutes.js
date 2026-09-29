@@ -2452,6 +2452,40 @@ router.get("/conversations/:id/messages", async (req, res) => {
   }
 });
 
+// Manually kicks off the CTWA button flow on an existing thread — the
+// recovery path for exactly what happened to the Khopoli leads: real
+// customers who reached an agent while its flow was silently gated (test
+// numbers left set, ad id not yet routed, etc.) and got the plain chat
+// instead. shouldStartFlow()'s gating is deliberately skipped here — a human
+// clicking this button in the Inbox is a stronger signal than any automatic
+// heuristic, so it always starts the flow as long as the resolved agent has
+// one enabled and the thread isn't already mid-flow.
+router.post("/conversations/:id/start-flow", async (req, res) => {
+  try {
+    const conv = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId });
+    if (!conv) return res.status(404).json({ message: "Not found" });
+    if (!canAccessConversation(req.user, conv)) return res.status(404).json({ message: "Not found" });
+    if (conv.flowState?.step) return res.status(400).json({ message: "This conversation is already partway through a button flow." });
+
+    const org = await Organization.findById(req.orgId).lean();
+    if (!org) return res.status(404).json({ message: "Not found" });
+    const agent = conv.agentId
+      ? await WaAgent.findOne({ _id: conv.agentId, orgId: req.orgId }).lean()
+      : await resolveAgentForConversation(org, conv);
+    if (!agent) return res.status(400).json({ message: "No assistant is assigned to this conversation yet." });
+    if (!agent.ctwaFlow?.enabled) return res.status(400).json({ message: `${agent.name} doesn't have a button flow turned on.` });
+
+    if (String(conv.agentId || "") !== String(agent._id)) {
+      await WaConversation.findByIdAndUpdate(conv._id, { agentId: agent._id });
+      conv.agentId = agent._id;
+    }
+    await ctwaFlow.startFlow(org, agent, conv);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.patch("/conversations/:id", async (req, res) => {
   try {
     const existing = await WaConversation.findOne({ _id: req.params.id, orgId: req.orgId }).lean();

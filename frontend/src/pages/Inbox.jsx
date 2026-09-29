@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useLocation, useNavigate, useParams, useOutletContext } from "react-router-dom";
 import {
   AlertTriangle, Bot, Check, CheckCheck, ChevronDown, Clock, ExternalLink,
-  FileText, Paperclip, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
+  FileText, ListChecks, Paperclip, Plus, RefreshCw, Search, Send, Settings, User, UserCheck, Wallet, X, Zap,
 } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -470,6 +470,26 @@ export default function Inbox() {
     setConversations((prev) => prev.map((c) => (c._id === activeId ? { ...c, ...data.conversation } : c)));
   };
 
+  // Manual recovery for exactly the Khopoli situation: a lead whose agent's
+  // button flow never actually fired for them (test numbers left set, ad id
+  // not yet routed, or any other gating condition) got the plain chat
+  // instead. A human clicking this is a stronger signal than the automatic
+  // heuristics, so the backend starts the flow regardless of them.
+  const [startingFlow, setStartingFlow] = useState(false);
+  const startQualificationFlow = async () => {
+    if (!activeConv || startingFlow) return;
+    setStartingFlow(true);
+    try {
+      await api.post(`/whatsapp/conversations/${activeId}/start-flow`);
+      toast.success("Qualification flow started");
+      fetchMessages(activeId, true);
+    } catch (e) {
+      toast.error(e.response?.data?.message || "Could not start the flow");
+    } finally {
+      setStartingFlow(false);
+    }
+  };
+
   // Claiming a thread is the one assignment action that needs no team picker,
   // and it is the one an agent actually reaches for.
   const claimConv = async () => {
@@ -658,6 +678,14 @@ export default function Inbox() {
                   : { background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
                 {activeConv?.botEnabled ? <><Bot className="w-3 h-3" /> Bot ON</> : <><User className="w-3 h-3" /> Manual</>}
               </button>
+              {!activeConv?.flowState?.step && (
+                <button onClick={startQualificationFlow} disabled={startingFlow}
+                  title="Manually kick off this assistant's button-driven qualification flow on this thread"
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold transition disabled:opacity-50"
+                  style={{ background: "var(--app-surface-low)", color: "var(--app-text-soft)", border: "1px solid var(--app-border)" }}>
+                  <ListChecks className="w-3 h-3" /> {startingFlow ? "Starting…" : "Start qualification flow"}
+                </button>
+              )}
               {lead && (
                 <button onClick={() => navigate("/leads", { state: { openLeadId: lead._id } })} title="Open lead"
                   className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition">
