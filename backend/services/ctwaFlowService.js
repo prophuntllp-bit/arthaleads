@@ -319,12 +319,18 @@ module.exports = function createCtwaFlowService({
    * running Meta's own "automated greeting" on the ad itself (Ads Manager →
    * Conversations, shown the instant someone taps the ad, before this bot
    * ever sees a message) doesn't want a second, redundant "thanks for your
-   * interest" from here too.
+   * interest" from here too. It's also skipped whenever the bot has already
+   * said anything at all in this thread — a brand-new conversation is the
+   * only time "thanks for your interest" reads naturally; a lead who was
+   * already greeted (by the free-text agent, or manually via the Inbox's
+   * "Start qualification flow" recovery button on an existing thread) just
+   * needs the flow's actual first question, not a second hello.
    */
   async function startFlow(org, agent, conversation) {
     const botName = agent.name || "Artha Assistant";
     const vars = { name: conversation.contactName || "there", project: (await resolveFlowProject(org, agent))?.name || "" };
-    if (agent.ctwaFlow.welcomeText?.trim()) {
+    const alreadyGreeted = await WaMessage.exists({ conversationId: conversation._id, direction: "outbound", sender: "bot" });
+    if (agent.ctwaFlow.welcomeText?.trim() && !alreadyGreeted) {
       const greetingSent = await sendFlowStep(org, conversation, botName, { bodyText: fill(agent.ctwaFlow.welcomeText, vars) });
       if (!greetingSent) return;
     }
