@@ -1132,13 +1132,24 @@ function mapWhatsAppExtractedFields(extracted) {
 // Only ever called for a lead this bot itself auto-captured (source
 // "WhatsApp"), and short-circuits once every field is already filled in — so
 // a fully-enriched lead never triggers another billed extraction call.
+// A WhatsApp contact's display name is whatever they set on their own
+// phone — sometimes an emoji, a nickname, or blank, none of which is
+// something worth keeping once the customer actually introduces themselves
+// in the chat (see enrichWhatsAppLead below). "Real" here just means it has
+// at least one letter — good enough to tell "😊" or a bare phone number
+// apart from an actual name, in any script.
+function looksLikeRealName(name) {
+  return /[a-zA-Zऀ-ॿ]/.test(String(name || ""));
+}
+
 async function enrichWhatsAppLead(conversation, recentMsgs) {
   if (!conversation.leadId || !process.env.OPENAI_API_KEY) return;
   try {
     const lead = await Lead.findById(conversation.leadId)
-      .select("source propertyType purpose bhk budget preferredLocation").lean();
+      .select("name source propertyType purpose bhk budget preferredLocation").lean();
     if (!lead || lead.source !== "WhatsApp") return;
-    const alreadyComplete = lead.propertyType !== "N/A" && lead.purpose !== "N/A" && lead.bhk !== "N/A"
+    const needsName = !looksLikeRealName(lead.name) || !looksLikeRealName(conversation.contactName);
+    const alreadyComplete = !needsName && lead.propertyType !== "N/A" && lead.purpose !== "N/A" && lead.bhk !== "N/A"
       && lead.preferredLocation && (lead.budget?.min || lead.budget?.max);
     if (alreadyComplete) return;
 
@@ -1157,7 +1168,8 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
             "Return ONLY compact JSON with keys you are confident about — omit any key not clearly and explicitly stated by the customer, never guess or infer: " +
             '{"property_type": one of Apartment/Villa/Plot/Commercial/Office/Penthouse/Other, ' +
             '"purpose": one of Buy/Rent/Invest, "bhk": one of 1BHK/2BHK/3BHK/4BHK/5BHK+/Studio, ' +
-            '"budget_min": number, "budget_max": number, "location": string}. ' +
+            '"budget_min": number, "budget_max": number, "location": string, ' +
+            '"customer_name": the customer\'s own name, ONLY if they clearly stated it as their own name (introducing themselves, signing off, or a direct "my name is..." — never a name mentioned about someone else)}. ' +
             "If nothing is clearly stated, return {}." },
           { role: "user", content: transcript },
         ],
@@ -1180,8 +1192,17 @@ async function enrichWhatsAppLead(conversation, recentMsgs) {
     if (mapped.preferredLocation && !lead.preferredLocation)    setOps.preferredLocation = mapped.preferredLocation;
     if (mapped.budget && !lead.budget?.min && !lead.budget?.max) setOps.budget = mapped.budget;
 
+    const statedName = String(parsed.customer_name || "").trim().slice(0, 80);
+    if (statedName && looksLikeRealName(statedName) && !looksLikeRealName(lead.name)) setOps.name = statedName;
+
     if (Object.keys(setOps).length) {
       await Lead.updateOne({ _id: conversation.leadId }, { $set: setOps });
+    }
+    // A separate collection (and a display name most of the Inbox reads
+    // straight off the conversation, not the lead) — the same "their own
+    // WhatsApp profile name wasn't a real name" check applies here too.
+    if (statedName && looksLikeRealName(statedName) && !looksLikeRealName(conversation.contactName)) {
+      await WaConversation.findByIdAndUpdate(conversation._id, { contactName: statedName });
     }
   } catch (err) {
     console.error("[WhatsApp Lead Capture] enrichment failed:", err?.response?.data || err.message);
