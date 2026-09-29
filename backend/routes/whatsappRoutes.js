@@ -919,11 +919,23 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
     projectFilter._id = { $in: agent.projectIds };
   }
   const projects = await Project.find(projectFilter)
-    .select("name description location propertyType unitTypes priceMin priceMax bhkTypes area amenities possessionDate reraNumber")
+    .select("name description location propertyType unitTypes priceMin priceMax bhkTypes area amenities possessionDate reraNumber images videos brochureUrl floorPlanUrl")
     .sort({ createdAt: -1 }).limit(20).lean();
 
   const fmtPrice = (n) => (n ? `₹${(n / 100000).toFixed(n % 100000 ? 1 : 0)}L` : null);
   const projectLines = projects.map((p) => {
+    // What sendQualifiedMedia can actually deliver for THIS project, not just
+    // whether the agent's toggle for that media type is on — those two used
+    // to be conflated, so the model would promise a brochure/photos/floor
+    // plan purely because the agent was allowed to share them, even for a
+    // project with nothing actually uploaded, and only find out it had
+    // nothing to send after already telling the customer "sending it now."
+    const availableMedia = [
+      p.images?.length && "photos",
+      p.videos?.length && "video",
+      p.brochureUrl && "brochure",
+      p.floorPlanUrl && "floor plan",
+    ].filter(Boolean);
     const bits = [
       p.location && `Location: ${p.location}`,
       p.location && `Google Maps link: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.location)}`,
@@ -935,6 +947,7 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
       p.possessionDate && `Possession: ${new Date(p.possessionDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`,
       p.reraNumber && `RERA: ${p.reraNumber}`,
       p.description && `Notes: ${p.description.slice(0, 200)}`,
+      `Media actually uploaded and ready to send: ${availableMedia.length ? availableMedia.join(", ") : "none yet"}`,
     ].filter(Boolean).join(" | ");
     return `- ${p.name}${bits ? ` — ${bits}` : ""}`;
   });
@@ -960,7 +973,7 @@ async function buildProjectGroundedPrompt(org, agent, leadContext, campaignRef, 
   const canShareFloorPlan = agent?.shareFloorPlan === true;
   const canShareAny = canSharePhotos || canShareBrochure || canShareVideos || canShareFloorPlan;
   const mediaRule = canShareAny
-    ? `- You ${[canSharePhotos && "may send project photos", canShareVideos && "may send the project video", canShareFloorPlan && "may send the floor plan", canShareBrochure && "may send the brochure"].filter(Boolean).join(", ")}, but ONLY when the customer has explicitly asked for it by name in their latest message (e.g. "send floor plan", "photos please", "do you have a brochure") — never offer, suggest, or ask if they'd like one first, and never send it just because it seems relevant. If they haven't asked for it, don't mention sending it at all. When they do ask, say what you're sending, then add ${[canSharePhotos && "[SHARE_PHOTOS]", canShareVideos && "[SHARE_VIDEO]", canShareFloorPlan && "[SHARE_FLOORPLAN]", canShareBrochure && "[SHARE_BROCHURE]"].filter(Boolean).join(" and/or ")} at the very end of that reply. Use exactly the tag for what they asked: a floor plan request gets [SHARE_FLOORPLAN], never [SHARE_PHOTOS]. Only for the specific project just discussed, and only if you've already exchanged at least one message with this customer — never on the very first reply.\n`
+    ? `- You ${[canSharePhotos && "may send project photos", canShareVideos && "may send the project video", canShareFloorPlan && "may send the floor plan", canShareBrochure && "may send the brochure"].filter(Boolean).join(", ")}, but ONLY when the customer has explicitly asked for it by name in their latest message (e.g. "send floor plan", "photos please", "do you have a brochure") AND that exact item is listed under "Media actually uploaded and ready to send" for the specific project just discussed — never offer, suggest, or ask if they'd like one first, and never send it just because it seems relevant. If they haven't asked for it, don't mention sending it at all. If they ask for something that ISN'T listed as uploaded for that project (even if your permissions above allow that media type in general), do NOT say you're sending it or that it's on its way — that becomes a broken promise the moment it goes out. Say instead that the team will get it over to them shortly, warmly, with no [SHARE_*] tag. When they ask for something that IS listed as uploaded, say what you're sending, then add ${[canSharePhotos && "[SHARE_PHOTOS]", canShareVideos && "[SHARE_VIDEO]", canShareFloorPlan && "[SHARE_FLOORPLAN]", canShareBrochure && "[SHARE_BROCHURE]"].filter(Boolean).join(" and/or ")} at the very end of that reply. Use exactly the tag for what they asked: a floor plan request gets [SHARE_FLOORPLAN], never [SHARE_PHOTOS]. Only for the specific project just discussed, and only if you've already exchanged at least one message with this customer — never on the very first reply.\n`
     : `- If asked for photos, a brochure, or a document, don't say you're unable to — that reads as a system talking. Just say warmly that you'll have those sent across shortly, and keep the conversation moving.\n`;
 
   const tenantPrompt = agent?.systemPrompt?.trim()
