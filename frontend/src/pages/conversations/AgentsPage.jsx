@@ -51,6 +51,11 @@ function AgentCard({ agent, onDelete, onStatus, onDefault, busy }) {
   const s = STATUS[agent.status] || STATUS.draft;
   const { score, total } = agent.readiness || { score: 0, total: 6 };
   const ready = score === total;
+  // Live to the org (status "active") but its button flow is still locked to
+  // a handful of test numbers — every real lead silently falls back to the
+  // plain chat instead, with nothing else on this card hinting that the flow
+  // everyone thinks is running actually never fires for a genuine customer.
+  const ctwaTestLocked = agent.status === "active" && agent.ctwaFlow?.enabled && (agent.ctwaFlow?.testPhones?.length > 0);
   const projectLabel = agent.projectIds?.length
     ? (agent.projectIds.length === 1
         ? (agent.projectIds[0]?.name || "1 project")
@@ -98,6 +103,15 @@ function AgentCard({ agent, onDelete, onStatus, onDefault, busy }) {
         <MetaRow icon={Megaphone} label="Ads routed" value={agent.adIds?.length || "—"} />
         <MetaRow icon={Clock} label="Updated" value={fmtDate(agent.updatedAt)} />
       </div>
+
+      {ctwaTestLocked && (
+        <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)" }}>
+          <span className="text-xs font-bold" style={{ color: "#dc2626" }}>Live, but the button flow only replies to test numbers</span>
+          <p className="text-[11px] mt-0.5" style={{ color: "#dc2626" }}>
+            {agent.ctwaFlow.testPhones.length} test number{agent.ctwaFlow.testPhones.length > 1 ? "s are" : " is"} still set — every real lead is getting the plain chat instead of your button flow. Clear the test numbers in the CTWA section below to fix this.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-xl px-3 py-2.5"
         style={ready

@@ -674,9 +674,13 @@ export default function AgentBuilder() {
               forced onto the wrong one. Anyone who free-types instead of tapping drops back into this assistant's
               usual conversation.
             </p>
-            <p className="text-xs rounded-xl px-3 py-2.5" style={{ background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
+            <p className="text-xs rounded-xl px-3 py-2.5" style={form.ctwaFlow.testPhones.length && form.status === "active"
+                ? { background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", color: "#dc2626" }
+                : { background: "rgba(var(--app-primary-rgb),0.08)", color: "var(--app-primary)" }}>
               {form.ctwaFlow.testPhones.length
-                ? <>Locked to testing — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.</>
+                ? (form.status === "active"
+                    ? <><strong>This assistant is live, but locked to testing</strong> — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow. Every real lead reaching it right now silently falls back to the normal conversation instead. Clear the list below to actually turn this flow on for real leads.</>
+                    : <>Locked to testing — only the {form.ctwaFlow.testPhones.length} number{form.ctwaFlow.testPhones.length > 1 ? "s" : ""} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.</>)
                 : form.adIds.length
                 ? <>Reserved for leads from the {form.adIds.length} ad{form.adIds.length > 1 ? "s" : ""} routed above — anyone else reaching this assistant gets the normal free-text conversation instead.</>
                 : <>"Route ads to this agent" above is empty, so this runs for <strong>every</strong> conversation this assistant handles — including genuine leads reaching it right now. Add test numbers below to restrict it to just your own team while you verify it, or add an Ad ID above once you're ready to restrict it to actual ad clicks.</>}
