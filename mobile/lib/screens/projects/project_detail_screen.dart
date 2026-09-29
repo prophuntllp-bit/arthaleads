@@ -879,8 +879,19 @@ class _LeadsTabState extends State<_LeadsTab> {
                                   ? AppColors.primary
                                   : Theme.of(context).disabledColor,
                             ),
-                            title: Text(
-                              lead['name'] as String? ?? '—',
+                            title: Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '${i + 1}. ',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).disabledColor,
+                                    ),
+                                  ),
+                                  TextSpan(text: lead['name'] as String? ?? '—'),
+                                ],
+                              ),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                               ),

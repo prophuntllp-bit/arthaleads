@@ -273,6 +273,41 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  bool _startingFlow = false;
+
+  // Manual recovery for a lead whose agent's button flow never actually
+  // fired for them (test numbers left set, ad id not yet routed, or any
+  // other gating condition) — they got the plain chat instead. A human
+  // clicking this is a stronger signal than the automatic heuristics, so
+  // the backend starts the flow regardless of them. Mirrors Inbox.jsx's
+  // startQualificationFlow.
+  Future<void> _startQualificationFlow() async {
+    if (_conv == null || _startingFlow) return;
+    setState(() => _startingFlow = true);
+    try {
+      await _api.dio.post(
+        '/whatsapp/conversations/${widget.conversationId}/start-flow',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Qualification flow started')),
+        );
+        await _load(silent: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ApiClient.errorMessage(e, 'Could not start the flow')),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _startingFlow = false);
+    }
+  }
+
   Future<void> _setStatus(String status) async {
     try {
       final res = await _api.dio.patch(
@@ -645,6 +680,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ],
         ),
         actions: [
+          if (_conv != null &&
+              (_conv!['flowState'] as Map?)?['step'] == null)
+            IconButton(
+              tooltip: 'Manually kick off this assistant\'s button-driven qualification flow on this thread',
+              onPressed: _startingFlow ? null : _startQualificationFlow,
+              icon: _startingFlow
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: wa.headerFg),
+                    )
+                  : Icon(Icons.checklist_rounded, color: wa.headerFg),
+            ),
           if (lead != null)
             IconButton(
               tooltip: 'Open linked lead',

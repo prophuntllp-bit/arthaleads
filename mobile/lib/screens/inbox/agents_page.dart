@@ -398,6 +398,12 @@ class _AgentCard extends StatelessWidget {
     final desc = agent['description'] as String? ?? '';
     final rColor = complete ? const Color(0xFF15803D) : const Color(0xFFB45309);
     final adCount = (agent['adIds'] as List? ?? []).length;
+    // Live to the org but its button flow is still locked to a handful of
+    // test numbers — every real lead silently falls back to the plain chat.
+    // Mirrors AgentsPage.jsx's ctwaTestLocked warning.
+    final ctwaFlow = (agent['ctwaFlow'] as Map?)?.cast<String, dynamic>();
+    final testPhones = (ctwaFlow?['testPhones'] as List? ?? []);
+    final ctwaTestLocked = status == 'active' && ctwaFlow?['enabled'] == true && testPhones.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -501,6 +507,32 @@ class _AgentCard extends StatelessWidget {
               ],
             ),
           ),
+          if (ctwaTestLocked) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.35)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Live, but the button flow only replies to test numbers',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFFDC2626))),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${testPhones.length} test number${testPhones.length > 1 ? 's are' : ' is'} still set — '
+                    'every real lead is getting the plain chat instead of your button flow. '
+                    'Clear the test numbers in the CTWA section below to fix this.',
+                    style: const TextStyle(fontSize: 11, height: 1.35, color: Color(0xFFDC2626)),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Container(
             width: double.infinity,

@@ -12,6 +12,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../core/update_service.dart';
+import '../../widgets/app_select.dart';
 import '../../widgets/buttons.dart';
 import '../../widgets/delete_account_tile.dart';
 import '../../widgets/labeled_field.dart';
@@ -90,6 +91,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final _phone = TextEditingController();
   final _currentPassword = TextEditingController();
   final _newPassword = TextEditingController();
+  String? _role;
   String? _avatar;
   bool _avatarBroken = false;
   bool _obscureCurrent = true;
@@ -154,6 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _name.text = auth.user?['name'] as String? ?? '';
       _phone.text = auth.user?['phone'] as String? ?? '';
       _avatar = auth.user?['avatar'] as String?;
+      _role = auth.role;
       _profileInitialized = true;
     }
     if (!_billingInitialized) {
@@ -230,6 +233,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
     setState(() => _savingProfile = true);
+    final role = context.read<AuthState>().role;
+    final isAdmin = role == 'admin' || role == 'super_admin';
     try {
       await _api.dio.put(
         '/auth/me',
@@ -237,6 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           'name': _name.text.trim(),
           'phone': _phone.text.trim(),
           'avatar': _avatar ?? '',
+          if (isAdmin) 'role': _role,
           if (_newPassword.text.isNotEmpty)
             'currentPassword': _currentPassword.text,
           if (_newPassword.text.isNotEmpty) 'newPassword': _newPassword.text,
@@ -602,6 +608,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 20),
+        // Role — editable by admins only, mirrors Settings.jsx:649-674. An
+        // admin can change even their own role from here (same as web); a
+        // non-admin only sees what their role is, set elsewhere by an admin.
+        if (auth.role == 'admin' || auth.role == 'super_admin')
+          AppSelect<String>(
+            label: 'Role',
+            value: _role ?? auth.role,
+            options: const {
+              'admin': 'Admin',
+              'manager': 'Manager',
+              'agent': 'Sales Agent',
+            },
+            onChanged: (v) => setState(() => _role = v),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.of(context).surfaceLow,
+              borderRadius: BorderRadius.circular(AppRadii.card),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.shield_outlined, size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
+                const Text('Role', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(width: 4),
+                Text(
+                  '— ${auth.role == 'manager' ? 'Manager' : 'Sales Agent'} (set by your admin)',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 20),
         LabeledField(
           label: 'Full Name',

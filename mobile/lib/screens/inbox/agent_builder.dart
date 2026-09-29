@@ -895,8 +895,11 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
   Widget _ctwaCard() {
     final t = AppTheme.of(context);
     final phones = _testPhones.length;
+    final testLocked = phones > 0 && _status == 'active';
     final String scope = phones > 0
-        ? "Locked to testing — only the $phones number${phones > 1 ? 's' : ''} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it."
+        ? (testLocked
+            ? "This assistant is live, but locked to testing — only the $phones number${phones > 1 ? 's' : ''} below get this flow. Every real lead reaching it right now silently falls back to the normal conversation instead. Clear the list below to actually turn this flow on for real leads."
+            : "Locked to testing — only the $phones number${phones > 1 ? 's' : ''} below get this flow right now. Everyone else, including genuine leads, gets the normal conversation. Clear the list below once you're done verifying it.")
         : _adIds.isNotEmpty
             ? 'Reserved for leads from the ${_adIds.length} ad${_adIds.length > 1 ? 's' : ''} routed above — anyone else reaching this assistant gets the normal free-text conversation instead.'
             : '"Route ads to this agent" above is empty, so this runs for every conversation this assistant handles — including genuine leads reaching it right now. Add test numbers below to restrict it to just your own team while you verify it, or add an Ad ID above once you\'re ready to restrict it to actual ad clicks.';
@@ -918,7 +921,7 @@ class _AgentBuilderScreenState extends State<AgentBuilderScreen> {
       description:
           "Replace the first few free-text qualifying questions with real WhatsApp buttons/lists — your own questions, in your own order — followed by what they want next and a site-visit time. Answers write straight onto the lead when they clearly map to a field; anything else is still recorded, just not forced onto the wrong one. Anyone who free-types instead of tapping drops back into this assistant's usual conversation. (Growth plan or higher.)",
       children: [
-        WaNotice(scope),
+        WaNotice(scope, danger: testLocked),
         const SizedBox(height: 14),
         _bordered(
           children: [

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import 'api_client.dart';
@@ -70,13 +71,25 @@ class AuthState extends ChangeNotifier {
     if (_api.hasToken) {
       restoringKnownSession = true;
       notifyListeners();
-      try {
-        final res = await _api.dio.get('/auth/me');
-        user = (res.data['user'] as Map?)?.cast<String, dynamic>();
-        org = (res.data['org'] as Map?)?.cast<String, dynamic>();
-      } catch (_) {
-        // 401 already cleared the token via the interceptor; network errors
-        // leave the token in place so a later retry can restore the session.
+      // Up to 3 attempts with backoff. A single failed /auth/me here used to
+      // drop straight to the login screen even though the token was still
+      // valid and untouched — indistinguishable from a real logout to
+      // _AuthGate (main.dart), which only looks at `loggedIn`. That is what
+      // was reported as the app "logging out" 2-3 times: a Railway cold
+      // start or a transient connection blip failed the one restore
+      // attempt, and only relaunching (a fresh attempt) got back in. A 401
+      // already cleared the token via the interceptor and won't succeed on
+      // retry, so it still fails fast.
+      for (var attempt = 0; attempt < 3; attempt++) {
+        try {
+          final res = await _api.dio.get('/auth/me');
+          user = (res.data['user'] as Map?)?.cast<String, dynamic>();
+          org = (res.data['org'] as Map?)?.cast<String, dynamic>();
+          break;
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 401 || attempt == 2) break;
+          await Future.delayed(Duration(milliseconds: 1500 * (attempt + 1)));
+        }
       }
     }
     // `restoring` is cleared by restore()'s finally block, so it is released
