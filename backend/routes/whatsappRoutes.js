@@ -2649,9 +2649,10 @@ router.post("/conversations/:id/start-flow", async (req, res) => {
 
     const org = await Organization.findById(req.orgId).lean();
     if (!org) return res.status(404).json({ message: "Not found" });
-    const agent = conv.agentId
-      ? await WaAgent.findOne({ _id: conv.agentId, orgId: req.orgId }).lean()
-      : await resolveAgentForConversation(org, conv);
+    // Re-resolved rather than trusting the pin: a thread wrongly placed on
+    // another project's agent moves to the right one when a human starts the
+    // flow from here.
+    const agent = await resolveAgentForConversation(org, conv);
     if (!agent) return res.status(400).json({ message: "No assistant is assigned to this conversation yet." });
     if (!agent.ctwaFlow?.enabled) return res.status(400).json({ message: `${agent.name} doesn't have a button flow turned on.` });
 
