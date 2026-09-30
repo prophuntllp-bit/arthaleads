@@ -9,3 +9,4 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 delete_option( 'arthaleads_options' );
+delete_option( 'arthaleads_review' );

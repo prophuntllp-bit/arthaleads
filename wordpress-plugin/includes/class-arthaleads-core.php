@@ -51,6 +51,7 @@ class Arthaleads_Core {
         $this->loader->add_action( 'admin_enqueue_scripts',        $admin, 'enqueue_assets' );
         $this->loader->add_action( 'wp_ajax_' . Arthaleads_Constants::WP_SAVE_ACTION, new Arthaleads_Options(), 'save_handler' );
         $this->loader->add_action( 'wp_ajax_arthaleads_test_lead', $admin, 'send_test_lead' );
+        ( new Arthaleads_Review_Notice() )->register();
     }
 
     public function run() {

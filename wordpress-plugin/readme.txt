@@ -4,7 +4,7 @@ Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -101,6 +101,9 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.9 =
+* Added a one-time, dismissible request for a WordPress.org review. It only appears to administrators after the plugin has forwarded several leads and been installed for a week, and never again once dismissed. Also added a "Rate this plugin" link on the Plugins screen.
 
 = 1.0.8 =
 * Plugin author details now credit Vistrow Technologies, the developer of Arthaleads.

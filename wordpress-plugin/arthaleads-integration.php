@@ -3,7 +3,7 @@
  * Plugin Name:       Arthaleads
  * Plugin URI:        https://www.arthaleads.com/wordpress-plugin
  * Description:       Send WordPress form leads directly into Arthaleads CRM — zero code, one token. Supports Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, Fluent Forms, and MetForm.
- * Version:           1.0.8
+ * Version:           1.0.9
  * Author:            Vistrow Technologies
  * Author URI:        https://www.vistrow.com/
  * License:           GPL-2.0+
@@ -16,13 +16,15 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
-define( 'ARTHALEADS_VERSION',   '1.0.8' );
+define( 'ARTHALEADS_VERSION',   '1.0.9' );
 define( 'ARTHALEADS_PLUGIN_ID', 'arthaleads-integration' );
+define( 'ARTHALEADS_PLUGIN_FILE', __FILE__ );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-constants.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-status.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-options.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-api.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-review-notice.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-loader.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-core.php';
 

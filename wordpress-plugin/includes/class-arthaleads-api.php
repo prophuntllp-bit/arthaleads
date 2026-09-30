@@ -57,5 +57,7 @@ class Arthaleads_API {
             'timeout'  => 10,
             'blocking' => false,
         ] );
+
+        Arthaleads_Review_Notice::record_lead();
     }
 }
