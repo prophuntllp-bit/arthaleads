@@ -47,6 +47,25 @@ const NEXT_CLOSING = "__closing__";
 // backend whatsappRoutes.js's sanitizeCtwaFlow / ctwaFlowService.js exactly.
 const CLOSING_BOOK_IMMEDIATELY = "__book__";
 
+// The two ways the flow can end, in the order they're offered. Mirrors
+// ctwaFlowService.js's CLOSING_OPTIONS. A tenant can rename either or leave
+// one out (a campaign aimed at out-of-town investors has no use for a site
+// visit), but never both.
+const CLOSING_DEFAULTS = [
+  { id: "advisor", label: "Talk to Advisor", hint: "Connects the lead with your advisor" },
+  { id: "site_visit", label: "Book Site Visit", hint: "Books a site visit" },
+];
+const CLOSING_TITLE_MAX = 20;
+const DEFAULT_CLOSING_PROMPT = "Would you like to talk to our advisor, or book a site visit?";
+const ADVISOR_ONLY_CLOSING_PROMPT = "Would you like to talk to our advisor?";
+function resolveClosingButtons(flow) {
+  const saved = (Array.isArray(flow?.closingButtons) ? flow.closingButtons : [])
+    .filter((b) => CLOSING_DEFAULTS.some((d) => d.id === b?.id) && String(b.label || "").trim());
+  const seen = new Set();
+  const uniq = saved.filter((b) => !seen.has(b.id) && seen.add(b.id)).map((b) => ({ id: b.id, label: String(b.label).slice(0, CLOSING_TITLE_MAX) }));
+  return uniq.length ? uniq : CLOSING_DEFAULTS.map(({ id, label }) => ({ id, label }));
+}
+
 // Sensible starting point for an Indian real-estate CTWA flow — every label
 // (and the wording) is editable per agent, and so is the order and count of
 // questions; only the closing step (talk to an advisor, or book a site
@@ -103,6 +122,7 @@ const DEFAULT_CTWA_FLOW = {
   ],
   closingPrompt: "Would you like to talk to our advisor, or book a site visit?",
   closingSiteVisitNext: "",
+  closingButtons: CLOSING_DEFAULTS.map(({ id, label }) => ({ id, label })),
   nudgesEnabled: false,
   nudgeText: "",
   testPhones: [],
@@ -255,6 +275,17 @@ export default function AgentBuilder() {
   });
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setFlow = (patch) => setForm((f) => ({ ...f, ctwaFlow: { ...f.ctwaFlow, ...patch } }));
+  // patch === null turns a closing button off; an object turns it on and/or
+  // renames it. Offered in the fixed order above, and never left empty.
+  const setClosingButton = (id, patch) => setForm((f) => {
+    const current = f.ctwaFlow.closingButtons;
+    let next;
+    if (patch === null) next = current.filter((b) => b.id !== id);
+    else if (current.some((b) => b.id === id)) next = current.map((b) => (b.id === id ? { ...b, ...patch } : b));
+    else next = CLOSING_DEFAULTS.map((d) => (d.id === id ? { id, label: d.label, ...patch } : current.find((b) => b.id === d.id))).filter(Boolean);
+    if (!next.length) return f;
+    return { ...f, ctwaFlow: { ...f.ctwaFlow, closingButtons: next } };
+  });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [adDraft, setAdDraft] = useState("");
   const [testPhoneDraft, setTestPhoneDraft] = useState("");
@@ -295,6 +326,7 @@ export default function AgentBuilder() {
                 ...DEFAULT_CTWA_FLOW,
                 ...a.ctwaFlow,
                 qualifyingQuestions: resolveQualifyingQuestions(a.ctwaFlow),
+                closingButtons: resolveClosingButtons(a.ctwaFlow),
               }
             : DEFAULT_CTWA_FLOW,
         });
@@ -769,16 +801,41 @@ export default function AgentBuilder() {
                 value={form.ctwaFlow.closingPrompt} onChange={(e) => setFlow({ closingPrompt: e.target.value })} />
               <p className="text-[11px] text-app-soft mt-1">
                 Use <code>{"{{name}}"}</code>. The one fixed ending — sent once every question above has been asked
-                (or straight away if the lead already answered all of them elsewhere). Its two buttons, "Talk to
-                Advisor" and "Book Site Visit", are not editable — but where "Book Site Visit" leads is:
+                (or straight away if the lead already answered all of them elsewhere). Rename its buttons, or turn one
+                off if it doesn't suit this campaign. At least one has to stay.
               </p>
-              <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
-                options={[
-                  { value: "", label: "Auto-detect (a question where every option books a visit)" },
-                  { value: CLOSING_BOOK_IMMEDIATELY, label: "Book immediately — no question asked" },
-                  ...form.ctwaFlow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
-                ]}
-                style={{ ...SELECT_STYLE, marginTop: 6 }} />
+              <div className="space-y-2 mt-2">
+                {CLOSING_DEFAULTS.map((d) => {
+                  const row = form.ctwaFlow.closingButtons.find((b) => b.id === d.id);
+                  const isLast = !!row && form.ctwaFlow.closingButtons.length === 1;
+                  return (
+                    <div key={d.id} className="flex items-center gap-2.5">
+                      <input type="checkbox" className="shrink-0" checked={!!row} disabled={isLast}
+                        title={isLast ? "At least one button has to stay" : row ? "Turn this button off" : "Turn this button on"}
+                        onChange={(e) => setClosingButton(d.id, e.target.checked ? {} : null)} />
+                      <input className="input flex-1" maxLength={CLOSING_TITLE_MAX} disabled={!row}
+                        value={row ? row.label : d.label}
+                        onChange={(e) => setClosingButton(d.id, { label: e.target.value })} />
+                      <span className="hidden sm:block text-[11px] text-app-soft w-44 shrink-0">{d.hint}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-app-soft mt-1">
+                Button names are limited to {CLOSING_TITLE_MAX} characters, the most WhatsApp allows.
+              </p>
+              {form.ctwaFlow.closingButtons.some((b) => b.id === "site_visit") && (
+                <>
+                  <p className="text-[11px] text-app-soft mt-2">Where the site visit button leads:</p>
+                  <CustomSelect value={form.ctwaFlow.closingSiteVisitNext || ""} onChange={(v) => setFlow({ closingSiteVisitNext: v })}
+                    options={[
+                      { value: "", label: "Auto-detect (a question where every option books a visit)" },
+                      { value: CLOSING_BOOK_IMMEDIATELY, label: "Book immediately — no question asked" },
+                      ...form.ctwaFlow.qualifyingQuestions.filter((q) => q.options.length).map((q) => ({ value: q.id, label: `Ask: ${q.questionText.slice(0, 50) || "(untitled question)"}` })),
+                    ]}
+                    style={{ ...SELECT_STYLE, marginTop: 6 }} />
+                </>
+              )}
             </div>
 
             <div className="space-y-2 rounded-2xl border p-4" style={{ borderColor: "var(--app-border)" }}>
@@ -971,10 +1028,16 @@ function fillVars(text, vars) {
   return String(text || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
 }
 
-// Mirrors ctwaFlowService.js's CLOSING_OPTIONS exactly — the one fixed,
-// not agent-configurable ending, reached once every question above has
-// been asked with nothing else ending the flow first.
-const CLOSING_BUTTONS = [{ id: "advisor", label: "Talk to Advisor" }, { id: "site_visit", label: "Book Site Visit" }];
+// Mirrors ctwaFlowService.js's closing step: the buttons this agent offers
+// (see resolveClosingButtons), reached once every question above has been
+// asked with nothing else ending the flow first. A tap on either id still
+// resolves even if the tenant left that button out of the flow.
+const CLOSING_IDS = CLOSING_DEFAULTS.map((d) => d.id);
+function closingPromptText(flow, buttons) {
+  const stock = !flow.closingPrompt || flow.closingPrompt === DEFAULT_CLOSING_PROMPT;
+  if (!stock) return flow.closingPrompt;
+  return buttons.some((b) => b.id === "site_visit") ? DEFAULT_CLOSING_PROMPT : ADVISOR_ONLY_CLOSING_PROMPT;
+}
 
 function CtwaFlowPreviewPanel({ flow, projectName }) {
   const [log, setLog] = useState([]);
@@ -1023,7 +1086,8 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
   };
 
   const sendClosing = () => {
-    push({ from: "bot", text: flow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?", buttons: CLOSING_BUTTONS });
+    const buttons = resolveClosingButtons(flow);
+    push({ from: "bot", text: closingPromptText(flow, buttons), buttons });
     setStep("closing");
   };
 
@@ -1046,7 +1110,7 @@ function CtwaFlowPreviewPanel({ flow, projectName }) {
 
     const questions = flow.qualifyingQuestions || [];
     const qIndex = questions.findIndex((q) => q.options.some((o) => o.id === opt.id));
-    const inClosing = CLOSING_BUTTONS.some((o) => o.id === opt.id);
+    const inClosing = CLOSING_IDS.includes(opt.id);
 
     if (qIndex !== -1) {
       const action = opt.action || "none";

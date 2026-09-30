@@ -276,6 +276,27 @@ module.exports = function createCtwaFlowService({
   // booked site visit — fixed, not agent-configurable, so "Photos &
   // Brochure" / "Location Details" never become dead ends with no next step.
   const CLOSING_OPTIONS = [{ id: "advisor", title: "Talk to Advisor" }, { id: "site_visit", title: "Book Site Visit" }];
+  const DEFAULT_CLOSING_PROMPT = "Would you like to talk to our advisor, or book a site visit?";
+  const CLOSING_ADVISOR_ONLY_PROMPT = "Would you like to talk to our advisor?";
+  // WhatsApp reply-button titles are capped at 20 characters.
+  const CLOSING_TITLE_MAX = 20;
+
+  // The closing buttons this agent actually offers. Matching a tap (below)
+  // still uses the full CLOSING_OPTIONS list, so a "Book Site Visit" button
+  // already sitting in an older chat keeps working after a tenant removes it
+  // from the flow.
+  function getClosingButtons(agent) {
+    const seen = new Set();
+    const out = [];
+    for (const b of agent?.ctwaFlow?.closingButtons || []) {
+      const known = CLOSING_OPTIONS.find((o) => o.id === b?.id);
+      const title = String(b?.label || "").trim().slice(0, CLOSING_TITLE_MAX);
+      if (!known || !title || seen.has(known.id)) continue;
+      seen.add(known.id);
+      out.push({ id: known.id, title });
+    }
+    return out.length ? out : CLOSING_OPTIONS;
+  }
   // The one non-question value an option's `next` may point to — matches
   // whatsappRoutes.js's sanitizeCtwaFlow exactly.
   const NEXT_CLOSING = "__closing__";
@@ -283,8 +304,14 @@ module.exports = function createCtwaFlowService({
   // whatsappRoutes.js's sanitizeCtwaFlow exactly.
   const CTWA_BOOK_IMMEDIATELY = "__book__";
   function closingStep(agent, vars) {
-    const text = agent.ctwaFlow.closingPrompt || "Would you like to talk to our advisor, or book a site visit?";
-    return { bodyText: fill(text, vars), buttons: CLOSING_OPTIONS };
+    const buttons = getClosingButtons(agent);
+    // The stock wording asks about a site visit, which reads wrong once that
+    // button is gone. A prompt the tenant actually wrote is left alone.
+    const offersSiteVisit = buttons.some((b) => b.id === "site_visit");
+    const saved = agent.ctwaFlow.closingPrompt;
+    const stock = !saved || saved === DEFAULT_CLOSING_PROMPT;
+    const text = stock ? (offersSiteVisit ? DEFAULT_CLOSING_PROMPT : CLOSING_ADVISOR_ONLY_PROMPT) : saved;
+    return { bodyText: fill(text, vars), buttons };
   }
 
   /**

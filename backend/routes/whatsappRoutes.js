@@ -2141,6 +2141,14 @@ function sanitizeCtwaFlow(input) {
       if (o.next && !validNextTargets.has(o.next)) o.next = "";
     }
   }
+  // Which closing buttons to offer. Only the two real endings exist, each at
+  // most once, with a WhatsApp-safe title. Nothing usable left means "use the
+  // defaults" (both), so a flow can never be saved with no way to finish.
+  const seenClosing = new Set();
+  clean.closingButtons = (Array.isArray(input.closingButtons) ? input.closingButtons : [])
+    .map((b) => ({ id: b?.id, label: String(b?.label || "").trim().slice(0, 20) }))
+    .filter((b) => (b.id === "advisor" || b.id === "site_visit") && b.label && !seenClosing.has(b.id) && seenClosing.add(b.id));
+
   // Same rule for the closing prompt's own "Book Site Visit" target — a
   // question id or the book-immediately sentinel, or "" to keep the
   // existing auto-detect behavior.

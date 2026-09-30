@@ -156,6 +156,12 @@ const waAgentSchema = new mongoose.Schema(
       // option's own "Then go to" (e.g. a fuller "when would you like to
       // visit" question rather than a plain time-of-day picker).
       closingSiteVisitNext: { type: String, default: "" },
+      // Which of the closing prompt's two endings are offered, in order, and
+      // what each button says. Empty/absent means both with their default
+      // wording, so agents saved before this existed behave exactly as before.
+      // A tenant who doesn't want site visits (say a campaign aimed at
+      // out-of-town investors) just leaves that one out.
+      closingButtons: [{ _id: false, id: { type: String, enum: ["advisor", "site_visit"] }, label: String }],
       // Gentle follow-ups for someone who stops mid-flow: one after ~15 minutes
       // and one shortly before the 24h reply window closes. Off unless enabled.
       nudgesEnabled:   { type: Boolean, default: false },
