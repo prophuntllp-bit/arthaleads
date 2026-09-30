@@ -2652,7 +2652,7 @@ router.post("/conversations/:id/start-flow", async (req, res) => {
     // Re-resolved rather than trusting the pin: a thread wrongly placed on
     // another project's agent moves to the right one when a human starts the
     // flow from here.
-    const agent = await resolveAgentForConversation(org, conv);
+    const agent = (await resolveAgentByMessageText(org, conv)) || await resolveAgentForConversation(org, conv);
     if (!agent) return res.status(400).json({ message: "No assistant is assigned to this conversation yet." });
     if (!agent.ctwaFlow?.enabled) return res.status(400).json({ message: `${agent.name} doesn't have a button flow turned on.` });
 
