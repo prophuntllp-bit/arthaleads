@@ -1,7 +1,32 @@
 // utils/push.js — unified push: Web Push (browser/PWA) + FCM (Capacitor Android APK)
 const webPush = require("web-push");
 const PushSubscription = require("../models/PushSubscription");
+const User = require("../models/User");
+const Organization = require("../models/Organization");
 const logger = require("../config/logger");
+
+// A PushSubscription row is created on login and only ever deleted by an
+// explicit client-side unsubscribe call (logout, or an expired token
+// bouncing) — nothing removes it when the user is deactivated or the org's
+// plan lapses. Without this, a deactivated user (or an entire org whose
+// renewal expired) keeps getting every notification indefinitely, on
+// whatever device they were last logged into, for as long as that device
+// keeps running — the actual reported bug. Checked at send time, every
+// time, rather than trusting cleanup to have happened somewhere upstream.
+async function _filterActive(subs) {
+  if (!subs.length) return [];
+  const userIds = [...new Set(subs.map((s) => String(s.userId)).filter(Boolean))];
+  const orgIds  = [...new Set(subs.map((s) => String(s.orgId)).filter(Boolean))];
+  const [activeUsers, activeOrgs] = await Promise.all([
+    userIds.length ? User.find({ _id: { $in: userIds }, isActive: { $ne: false } }).select("_id").lean() : [],
+    orgIds.length  ? Organization.find({ _id: { $in: orgIds }, isActive: { $ne: false } }).select("_id").lean() : [],
+  ]);
+  const activeUserSet = new Set(activeUsers.map((u) => String(u._id)));
+  const activeOrgSet  = new Set(activeOrgs.map((o) => String(o._id)));
+  return subs.filter((s) =>
+    activeUserSet.has(String(s.userId)) && (!s.orgId || activeOrgSet.has(String(s.orgId)))
+  );
+}
 
 // ── Web Push (VAPID) ──────────────────────────────────────────────────────────
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -88,12 +113,16 @@ async function _sendFcm(tokens, payload) {
 }
 
 /**
- * Send push to every subscriber in an org (or all orgs if orgId omitted).
+ * Send push to every active subscriber in an org.
  * Sends to both Web Push (browser/PWA) and FCM (Capacitor APK) subscribers.
  */
 async function sendPushToAll(payload, orgId) {
-  const filter = orgId ? { orgId } : {};
-  const subs = await PushSubscription.find(filter);
+  // orgId is not optional — every caller in this codebase already passes
+  // one, and dropping it used to mean "broadcast to literally every org on
+  // the platform," a footgun nothing was actually using but that a single
+  // future forgotten argument would have silently triggered.
+  if (!orgId) { logger.warn("[push] sendPushToAll called without an orgId — refusing to broadcast platform-wide"); return; }
+  const subs = await _filterActive(await PushSubscription.find({ orgId }));
 
   const webSubs = subs.filter((s) => s.type !== "fcm" && s.endpoint);
   const fcmSubs = subs.filter((s) => s.type === "fcm" && s.fcmToken);
@@ -125,7 +154,7 @@ async function sendPushToAll(payload, orgId) {
  * Send push to a specific user only (all their registered devices/browsers).
  */
 async function sendPushToUser(userId, payload) {
-  const subs = await PushSubscription.find({ userId });
+  const subs = await _filterActive(await PushSubscription.find({ userId }));
   if (!subs.length) return;
 
   const webSubs = subs.filter((s) => s.type !== "fcm" && s.endpoint);
