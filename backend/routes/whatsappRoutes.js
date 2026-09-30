@@ -1328,10 +1328,12 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
           { role: "system", content:
             "Below is a WhatsApp sales chat transcript and a list of qualifying questions, each with a fixed set of button options. " +
             "Decide which questions the customer has ALREADY clearly answered somewhere in the conversation, even though they never tapped a button — free-typed replies count. " +
+            "Only lines starting with 'Customer:' can answer anything. Lines starting with 'Assistant:' are the team's own questions and suggestions, which often list the very options below — NEVER treat an Assistant line as an answer, and a customer who only sent a greeting or an ad's prefilled message has answered nothing. " +
+            "For every question you include, also give the customer's exact words that answer it, copied verbatim from a Customer line. " +
             "For each one, return the id of the single option that most closely and unambiguously matches what the customer said. " +
             "Only include a question if you are confident — a vague or genuinely unclear answer (e.g. 'maybe', 'not sure yet') must be left out rather than guessed at. " +
             "Exception, specifically for a question marked [maps to: purpose]: if the customer names more than one purpose (e.g. 'both', 'investment and second home'), pick whichever of that question's OWN options best represents an investment purpose — never leave a purpose question unanswered just because the customer mentioned more than one purpose. " +
-            'Return ONLY compact JSON: {"<questionId>": "<optionId>", ...} — omit anything you are not confident about, return {} if nothing qualifies.\n\nQuestions:\n' + qList },
+            'Return ONLY compact JSON: {"<questionId>": {"option": "<optionId>", "quote": "<customer\'s exact words>"}, ...} — omit anything you are not confident about, return {} if nothing qualifies.\n\nQuestions:\n' + qList },
           { role: "user", content: transcript },
         ],
         max_tokens: 150, temperature: 0,
@@ -1342,8 +1344,18 @@ async function inferAnsweredFromTranscript(org, agent, conversation, questions) 
     recordAiUsage(org._id, aiRes.data?.usage, "botEnrich");
 
     const parsed = JSON.parse(aiRes.data?.choices?.[0]?.message?.content || "{}");
+    // An answer only counts if the quoted words really appear in something the
+    // customer sent. The model used to read the bot's own "investment, second
+    // home or something else?" as the customer's answer and mark a lead who
+    // had said nothing as Invest.
+    const customerText = normalizeForMatch(
+      recentMsgs.filter((m) => m.direction === "inbound").map((m) => m.body).join(" ")
+    );
     for (const q of mappable) {
-      const opt = q.options.find((o) => o.id === parsed[q.id]);
+      const hit = parsed[q.id];
+      const quote = normalizeForMatch(hit?.quote);
+      if (!quote || !customerText.includes(quote)) continue;
+      const opt = q.options.find((o) => o.id === hit.option);
       if (opt) await ctwaFlow.applyQuestionAnswer(conversation.leadId, q, opt);
     }
   } catch (err) {
