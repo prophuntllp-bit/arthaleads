@@ -715,3 +715,18 @@ html.is-native .top-scroll-mirror::-webkit-scrollbar { display: block !important
     display: none;
   }
 }
+
+/* Status pills that stay readable on both themes. The pale -400 tints used
+   before were near-invisible on the light theme's translucent panels. */
+.pill-ok, .pill-info {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  border: 1px solid;
+}
+.pill-ok   { color: #047857; background: rgba(16, 185, 129, 0.14); border-color: rgba(4, 120, 87, 0.35); }
+.pill-info { color: #0e7490; background: rgba(6, 182, 212, 0.14);  border-color: rgba(14, 116, 144, 0.35); }
+:root.dark .pill-ok   { color: #6ee7b7; background: rgba(16, 185, 129, 0.18); border-color: rgba(110, 231, 183, 0.35); }
+:root.dark .pill-info { color: #67e8f9; background: rgba(6, 182, 212, 0.18);  border-color: rgba(103, 232, 249, 0.35); }

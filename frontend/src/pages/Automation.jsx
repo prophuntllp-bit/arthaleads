@@ -789,6 +789,26 @@ const FORM_PLUGINS = [
   "Ninja Forms", "Forminator", "Fluent Forms",
 ];
 
+// The site's own favicon, so several connected sites are told apart at a
+// glance. Falls back to the plain icon when there is no URL yet or the image
+// can't load.
+function SiteFavicon({ url, fallback, size = 32 }) {
+  const [failed, setFailed] = useState(false);
+  let host = "";
+  try { host = url ? new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname : ""; } catch { host = ""; }
+  if (!host || failed) return fallback;
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`}
+      alt=""
+      width={size} height={size}
+      className="rounded-md bg-white object-contain"
+      style={{ width: size, height: size }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function WpSiteCard({ conn, onDelete }) {
   const [copiedId, setCopiedId] = useState(null);
   const isConnected = conn.status === "connected";
@@ -820,7 +840,7 @@ function WpSiteCard({ conn, onDelete }) {
       {/* Site header */}
       <div className={`flex items-center gap-3 px-4 py-3 ${isConnected ? "bg-emerald-500" : "bg-[var(--app-surface-low)]"}`}>
         <div className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${isConnected ? "bg-white/20" : "bg-[#21759b]"}`}>
-          <WordPressIcon />
+          <SiteFavicon url={conn.siteUrl} size={24} fallback={<WordPressIcon />} />
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-bold truncate ${isConnected ? "text-white" : "text-app"}`}>
@@ -845,14 +865,14 @@ function WpSiteCard({ conn, onDelete }) {
       {conn.connectedForms?.length > 0 && (
         <div className="flex flex-wrap gap-1 px-4 py-2" style={{ borderBottom: "1px solid var(--app-border)" }}>
           {conn.connectedForms.map((f) => (
-            <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ {f}</span>
+            <span key={f} className="pill-ok">✓ {f}</span>
           ))}
         </div>
       )}
 
       {/* Token row */}
       <div className="flex items-center gap-2 px-4 py-3">
-        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-orange-400 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
+        <code className="flex-1 rounded-xl px-3 py-2 text-sm font-mono font-bold text-orange-600 tracking-wider min-w-0 truncate" style={{ background: "var(--app-surface-low)" }}>
           {conn.token}
         </code>
         <button onClick={copy} className="btn-secondary rounded-xl px-3 py-2 shrink-0 flex items-center gap-1.5 text-xs">
@@ -911,7 +931,7 @@ function WordPressWizard({ open, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] shell-panel overflow-hidden">
+      <div className="relative w-full sm:max-w-lg sm:rounded-[1.75rem] rounded-t-[1.75rem] overflow-hidden" style={{ background: "var(--app-surface-solid)", border: "1px solid var(--app-border)", boxShadow: "var(--app-shadow)" }}>
         {/* Header */}
         <div className="flex items-center gap-3 p-6" style={{ borderBottom: "1px solid var(--app-border)" }}>
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl" style={{ background: "#21759b" }}>
@@ -989,7 +1009,7 @@ function WordPressWizard({ open, onClose }) {
               {/* Supported plugins */}
               <div className="flex flex-wrap gap-2">
                 {FORM_PLUGINS.map((p) => (
-                  <span key={p} className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">✓ {p}</span>
+                  <span key={p} className="pill-info">✓ {p}</span>
                 ))}
               </div>
             </>
@@ -2118,7 +2138,9 @@ export default function Automation() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className={`flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden ${isFb ? "bg-[#1877F2]" : isVistrowVoice ? "" : preset.tone}`}>
-                        {isFb ? <FacebookIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={36} /> : <Icon className="h-4 w-4" />}
+                        {isFb ? <FacebookIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={36} /> : item.platform === "Website Form" && item.siteUrl
+                          ? <SiteFavicon url={item.siteUrl} size={28} fallback={<Icon className="h-4 w-4" />} />
+                          : <Icon className="h-4 w-4" />}
                       </div>
                       <div className="min-w-0">
                         <h3 className="truncate text-sm font-semibold text-app">{item.name}</h3>
@@ -2216,7 +2238,7 @@ export default function Automation() {
                           <p className="text-xs text-app-soft mb-1">Active Forms</p>
                           <div className="flex flex-wrap gap-1">
                             {item.connectedForms.map((f) => (
-                              <span key={f} className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ {f}</span>
+                              <span key={f} className="pill-ok">✓ {f}</span>
                             ))}
                           </div>
                         </div>

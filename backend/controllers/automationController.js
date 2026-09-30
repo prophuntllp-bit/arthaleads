@@ -26,9 +26,15 @@ const Automation = require("../models/Automation");
 const { AppError } = require("../middlewares/errorHandler");
 const { formatISTDateTime } = require("../utils/datetime");
 
+// 16 characters from a 32-letter alphabet with no look-alikes (no 0/O, 1/I) is
+// 80 bits of entropy: still far beyond guessing, but short enough to read out
+// or type, unlike the 51-character hex string this replaced. Existing tokens
+// keep working as they are.
+const TOKEN_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function generateWebsiteToken() {
-  // 192 bits of entropy - URL-safe hex, no need for slice
-  return "AW-" + crypto.randomBytes(24).toString("hex");
+  let chars = "";
+  for (let i = 0; i < 16; i++) chars += TOKEN_ALPHABET[crypto.randomInt(TOKEN_ALPHABET.length)];
+  return `AW-${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8, 12)}-${chars.slice(12)}`;
 }
 
 const automationController = {
