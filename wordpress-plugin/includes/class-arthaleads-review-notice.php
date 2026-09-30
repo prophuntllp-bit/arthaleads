@@ -94,7 +94,7 @@ class Arthaleads_Review_Notice {
     public function render() {
         if ( ! $this->should_show() ) return;
         $state = self::get_state();
-        $logo  = plugin_dir_url( __FILE__ ) . '../admin/assets/logo.png';
+        $logo  = plugin_dir_url( __FILE__ ) . '../admin/assets/notice-icon.png';
         ?>
         <div class="notice notice-info is-dismissible arthaleads-review" style="display:flex;align-items:center;gap:16px;padding:14px 16px;">
             <img src="<?php echo esc_url( $logo ); ?>" alt="" width="56" height="56" style="border-radius:10px;flex:none;" />

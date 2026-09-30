@@ -1,4 +1,4 @@
-=== Arthaleads ===
+=== Arthaleads CRM: Contact Form Lead Capture ===
 Contributors: arthaleads
 Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
@@ -97,12 +97,12 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 
 == Screenshots ==
 
-1. The plugin settings page — paste your token and save.
-2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
+1. The settings page: paste your token, choose which form plugins to capture leads from, and send a test lead to check the connection.
 
 == Changelog ==
 
 = 1.0.9 =
+* Clearer plugin title, and a real screenshot of the settings page.
 * Added a one-time, dismissible request for a WordPress.org review. It only appears to administrators after the plugin has forwarded several leads and been installed for a week, and never again once dismissed. Also added a "Rate this plugin" link on the Plugins screen.
 
 = 1.0.8 =

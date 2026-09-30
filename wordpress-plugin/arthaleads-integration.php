@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Arthaleads
+ * Plugin Name:       Arthaleads CRM: Contact Form Lead Capture
  * Plugin URI:        https://www.arthaleads.com/wordpress-plugin
  * Description:       Send WordPress form leads directly into Arthaleads CRM — zero code, one token. Supports Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, Fluent Forms, and MetForm.
  * Version:           1.0.9
