@@ -515,6 +515,13 @@ export default function AgentBuilder() {
               <textarea className="input w-full resize-none" rows={3}
                 placeholder="Dos and don'ts — e.g. never discuss competitor pricing, always ask for a preferred visit time before booking a site visit."
                 value={form.groundRules} onChange={(e) => set({ groundRules: e.target.value })} />
+              {/(₹|rs\.?\s?\d|inr\s?\d)\s?[\d,.]+\s?(l\b|lakh|lac|cr\b|crore|k\b)?/i.test(form.groundRules || "") && (
+                <p className="text-xs mt-1.5 font-semibold" style={{ color: "#dc2626" }}>
+                  These rules contain a price. Prices typed here go stale the moment you edit the project,
+                  and the assistant may still quote the old one. Set prices on the Projects page instead;
+                  the assistant always reads those live.
+                </p>
+              )}
             </div>
           </div>
 

@@ -33,6 +33,7 @@ const { matchRoutingRule } = require("../utils/routingRules");
 const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const { fillTemplate } = require("../utils/formFieldMapper");
+const { looksLikeSolicitation } = require("../utils/solicitationGuard");
 const OPTS = require("../constants/leadOptions");
 const createCtwaFlowService = require("../services/ctwaFlowService");
 
@@ -750,6 +751,14 @@ async function respondAsBotNow(org, conv, { interactiveId, msgText, isNewConvers
     });
     if (alreadyAnswered) return;
   }
+  // Someone pitching their own services (agency, freelancer) is not a buyer.
+  // Checked before any flow step or model call so no tokens or WhatsApp
+  // credits are spent on them.
+  if (!interactiveId && looksLikeSolicitation(msgText)) {
+    await muteNonBuyer(conv, "message reads as a vendor pitch");
+    return;
+  }
+
   // Resolved before anything is sent, and pinned, so the away message, the
   // greeting and the reply are all unmistakably the same assistant.
   const agent = await resolveAgentForConversation(org, conv);
@@ -873,7 +882,17 @@ async function resolveAgentForConversation(org, conversation) {
     const pinned = await WaAgent.findOne({ _id: conversation.agentId, orgId: org._id }).lean();
     // A pinned agent that was since deleted falls through and re-resolves,
     // rather than leaving the thread permanently unanswerable.
-    if (pinned && pinned.status === "active") return pinned;
+    if (pinned && pinned.status === "active") {
+      // An agent tied to specific ads only keeps a thread that came from one
+      // of them. A thread that was wrongly placed on it earlier (no ad
+      // attached, different subject) is re-resolved instead of staying stuck
+      // with the wrong project's assistant for good.
+      const tiedToAds = Array.isArray(pinned.adIds) && pinned.adIds.length > 0;
+      const cameFromItsAd = tiedToAds && pinned.adIds.includes(conversation.campaignRef?.adId);
+      if (!tiedToAds || cameFromItsAd) return pinned;
+      const better = await resolveAgentByMessageText(org, conversation);
+      if (!better || String(better._id) === String(pinned._id)) return pinned;
+    }
   }
 
   const adId = conversation.campaignRef?.adId;
@@ -882,8 +901,52 @@ async function resolveAgentForConversation(org, conversation) {
     if (byAd) return byAd;
   }
 
+  // Meta sometimes delivers an ad click with no referral block at all, and the
+  // ad's prefilled message ("Hi, I'd like details of X plots near Khopoli") is
+  // then the only sign of which campaign this was. Match it to the one agent
+  // whose projects it names, rather than dumping the lead on whichever agent
+  // happens to be oldest (seen live: a Khopoli lead answered about a Pune
+  // apartment project).
+  const byText = await resolveAgentByMessageText(org, conversation);
+  if (byText) return byText;
+
+  // The org-wide default, else an agent that isn't tied to specific ads. An
+  // agent pinned to particular ads only ever answers those ads: sending it a
+  // lead we can't place means a confident answer about the wrong project, so
+  // that lead waits for a human instead.
   return await WaAgent.findOne({ orgId: org._id, status: "active", isDefault: true }).lean()
-    || await WaAgent.findOne({ orgId: org._id, status: "active" }).sort({ createdAt: 1 }).lean();
+    || await WaAgent.findOne({ orgId: org._id, status: "active", $or: [{ adIds: { $exists: false } }, { adIds: { $size: 0 } }] }).sort({ createdAt: 1 }).lean();
+}
+
+const GENERIC_PROJECT_WORDS = new Set(["project", "projects", "plots", "plot", "homes", "home", "residency", "residences", "apartments", "apartment", "villas", "villa", "heights", "towers", "tower", "estate", "phase"]);
+
+async function resolveAgentByMessageText(org, conversation) {
+  const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" })
+    .sort({ timestamp: 1 }).select("body").lean();
+  const text = normalizeForMatch(first?.body);
+  if (!text) return null;
+
+  const agents = await WaAgent.find({ orgId: org._id, status: "active", "projectIds.0": { $exists: true } }).select("projectIds").lean();
+  if (!agents.length) return null;
+  const projects = await Project.find({ _id: { $in: agents.flatMap((a) => a.projectIds) } }).select("name location").lean();
+  const byId = new Map(projects.map((p) => [String(p._id), p]));
+
+  const wordsOf = (p) => normalizeForMatch(`${p.name} ${p.location || ""}`).split(" ")
+    .filter((w) => w.length >= 5 && !GENERIC_PROJECT_WORDS.has(w));
+  const matched = agents.filter((a) =>
+    a.projectIds.some((id) => { const p = byId.get(String(id)); return p && wordsOf(p).some((w) => text.includes(w)); })
+  );
+  return matched.length === 1 ? await WaAgent.findById(matched[0]._id).lean() : null;
+}
+
+// Stops the bot for good on a conversation that isn't a buyer. Marks the
+// thread Done and tags the lead so the team can see why it went quiet.
+async function muteNonBuyer(conv, reason) {
+  console.log(`[WhatsApp Bot] muting non-buyer conversation ${conv._id}: ${reason}`);
+  await WaConversation.findByIdAndUpdate(conv._id, { botEnabled: false, status: "resolved", $unset: { flowState: 1 } });
+  if (conv.leadId) {
+    await Lead.updateOne({ _id: conv.leadId }, { $addToSet: { tags: "Not a buyer" } }).catch(() => {});
+  }
 }
 
 const normalizeForMatch = (str) => String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -1038,6 +1101,8 @@ ${firstReplyRule}- Never ask about anything already answered — whether that's 
 - Map requirements by property type and available type: apartment requests match BHK/studio/duplex/penthouse values, plot requests match plot sizes or plot categories, villa requests match villa types, and commercial requests match office/shop/showroom/commercial unit types. Never describe a plot or commercial unit as a BHK.
 - After a real recommendation, offer one concrete next step, casually — ask if they'd like to book a site visit, and if so ask for a preferred day.
 ${mediaRule}- If the customer asks to speak to a human or agent, reply briefly then add [HUMAN_TAKEOVER] at the very end.
+- The "Projects you can discuss" data above is the single source of truth for every price, size, availability and date. If the team rules or custom instructions anywhere in this prompt quote a different price, size or figure for a project, that figure is out of date: ignore it and use the project data instead. Never quote a price or size that is not in the project data.
+- If the customer is clearly not a buyer but someone selling their own services to us (a marketing agency, freelancer, web designer, job seeker, vendor), do not qualify them, pitch anything, or reply at all. Output only [NOT_A_BUYER] and nothing else.
 ${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}
 Before you send your reply, check it once against the "How to talk" rules above: does it match the customer's language, does it have one emoji unless it's a pure fact, and does it avoid any flat "no" or "not available"?`;
 }
@@ -1410,6 +1475,10 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     recordAiUsage(org._id, aiRes.data?.usage, "botReply");
 
     let reply = aiRes.data?.choices?.[0]?.message?.content?.trim() || "";
+    if (reply.includes("[NOT_A_BUYER]")) {
+      await muteNonBuyer(conversation, "model flagged the sender as a vendor, not a buyer");
+      return;
+    }
     const takeover = reply.includes("[HUMAN_TAKEOVER]");
     reply = reply.replace("[HUMAN_TAKEOVER]", "").trim();
 
