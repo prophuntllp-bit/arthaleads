@@ -4,7 +4,7 @@ Tags: crm, lead capture, contact form, leads, real estate
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.7
+Stable tag: 1.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,6 +15,8 @@ Send leads from any WordPress contact form directly into Arthaleads CRM — auto
 **Arthaleads CRM – Lead Capture for Contact Forms** connects your WordPress website to [Arthaleads CRM](https://arthaleads.com) so that every form submission is automatically captured as a lead, assigned to your team, and tracked in one place.
 
 No copy-pasting. No missed leads. Every enquiry goes straight into your CRM pipeline the moment someone submits a form.
+
+Arthaleads is a product of [Vistrow Technologies](https://www.vistrow.com/), who develop and maintain it. Learn more on the [Arthaleads product page](https://www.vistrow.com/products/arthaleads).
 
 = Supported Form Plugins =
 
@@ -99,6 +101,9 @@ The plugin automatically ignores duplicate submissions from the same phone numbe
 2. Lead captured in Arthaleads CRM with source, phone, and timestamp.
 
 == Changelog ==
+
+= 1.0.8 =
+* Plugin author details now credit Vistrow Technologies, the developer of Arthaleads.
 
 = 1.0.7 =
 * Prefixed the two transient keys used for duplicate-submission detection (`arthaleads_mf_...`, `arthaleads_dd_...`) instead of the unprefixed `al_mf_`/`al_dd_`, per Plugin Directory review feedback.

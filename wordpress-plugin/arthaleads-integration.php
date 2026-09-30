@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name:       Arthaleads
- * Plugin URI:        https://arthaleads.com/wordpress-plugin
+ * Plugin URI:        https://www.vistrow.com/products/arthaleads
  * Description:       Send WordPress form leads directly into Arthaleads CRM — zero code, one token. Supports Contact Form 7, WPForms, Elementor Pro Forms, Gravity Forms, Ninja Forms, Forminator, Fluent Forms, and MetForm.
- * Version:           1.0.7
- * Author:            Arthaleads
- * Author URI:        https://arthaleads.com
+ * Version:           1.0.8
+ * Author:            Vistrow Technologies
+ * Author URI:        https://www.vistrow.com/
  * License:           GPL-2.0+
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       arthaleads
@@ -16,7 +16,7 @@
 
 if ( ! defined( 'WPINC' ) ) die;
 
-define( 'ARTHALEADS_VERSION',   '1.0.7' );
+define( 'ARTHALEADS_VERSION',   '1.0.8' );
 define( 'ARTHALEADS_PLUGIN_ID', 'arthaleads-integration' );
 
 require_once plugin_dir_path( __FILE__ ) . 'includes/class-arthaleads-constants.php';
