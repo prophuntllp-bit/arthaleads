@@ -39,6 +39,25 @@ const websiteLeadLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// The two ingest endpoints accept different kinds of token: /webhook/website
+// only Website Form sources, /webhook/lead only Custom / Vistrow Voice /
+// WhatsApp ones. A valid token sent to the other endpoint used to come back as
+// a bare "Invalid token" with nothing in the logs, which looks exactly like a
+// typo. This says what actually happened, to someone who already holds the token.
+const WEBSITE_ROUTE_PLATFORMS = ["Website Form"];
+const LEAD_ROUTE_PLATFORMS = ["Custom", "Vistrow Voice", "WhatsApp"];
+async function rejectUnknownToken(res, label, token, ownPlatforms) {
+  const other = await Automation.findOne({ verifyToken: token, isActive: true }).select("platform").lean();
+  const wrongRoute = other && !ownPlatforms.includes(other.platform)
+    ? (WEBSITE_ROUTE_PLATFORMS.includes(other.platform) ? "/webhook/website" : LEAD_ROUTE_PLATFORMS.includes(other.platform) ? "/webhook/lead" : null)
+    : null;
+  logger.warn(`[${label}] rejected: ${wrongRoute ? `token belongs to a ${other.platform} source, wrong endpoint` : "unknown or inactive token"} (${String(token).length} chars)`);
+  return res.status(401).json({
+    success: false,
+    message: wrongRoute ? `This token belongs to a ${other.platform} source. Send it to ${wrongRoute} instead.` : "Invalid token",
+  });
+}
+
 // ── Facebook signature verification ──────────────────────────────────────────
 // Uses the `verify` callback of express.json() to access the raw buffer
 // before parsing. Throws 403 if the signature doesn't match FB_APP_SECRET.
@@ -748,7 +767,7 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
     if (!token) return res.status(400).json({ success: false, message: "Missing token" });
 
     const automation = await Automation.findOne({ platform: "Website Form", verifyToken: token, isActive: true });
-    if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
+    if (!automation) return rejectUnknownToken(res, "website webhook", token, WEBSITE_ROUTE_PLATFORMS);
 
     const orgId = automation.orgId;
 
@@ -1010,7 +1029,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       verifyToken: token,
       isActive: true,
     });
-    if (!automation) return res.status(401).json({ success: false, message: "Invalid token" });
+    if (!automation) return rejectUnknownToken(res, "custom webhook", token, LEAD_ROUTE_PLATFORMS);
 
     const orgId = automation.orgId;
     // Stamp the lead's source from the matched connection's own platform, so a

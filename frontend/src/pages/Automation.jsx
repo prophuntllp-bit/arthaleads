@@ -683,7 +683,7 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
     }
   };
 
-  const endpoint = `${(apiBase || "").replace(/\/api\/?$/, "")}${form.webhookPath || "/api/leads"}`;
+  const endpoint = `${(apiBase || "").replace(/\/api\/?$/, "")}${ingestPath(form.platform, form.webhookPath)}`;
 
   return (
     <Modal open={open} onClose={onClose} title={editingItem ? "Edit Source" : "Add Lead Source"} size="lg">
@@ -747,6 +747,12 @@ function SourceModal({ open, onClose, editingItem, onSaved, apiBase }) {
             </button>
           </div>
           <p className="mt-1 text-xs text-app-soft">POST leads to this endpoint with source set to <span className="text-orange-400">{form.leadSourceLabel || form.platform}</span>.</p>
+          {form.platform === "Website Form" && (
+            <p className="mt-1 text-xs text-app-soft">
+              Website Form tokens are created under Integrations → WordPress / Website Forms and work for any website, not only WordPress.
+              A Custom source's token will not work on this endpoint.
+            </p>
+          )}
         </div>
         {(form.platform === "Custom" || form.platform === "WhatsApp") && (
           <div>
@@ -807,6 +813,15 @@ function SiteFavicon({ url, fallback, size = 32 }) {
       onError={() => setFailed(true)}
     />
   );
+}
+
+// Which endpoint actually accepts a source's token. The saved webhookPath is
+// "/api/leads" for every manually added source, which no token has ever worked
+// against, so the screen showed callers an address that always failed.
+function ingestPath(platform, stored) {
+  if (platform === "Website Form") return "/webhook/website";
+  if (platform === "Custom" || platform === "Vistrow Voice" || platform === "WhatsApp") return "/webhook/lead";
+  return stored || "/api/leads";
 }
 
 function WpSiteCard({ conn, onDelete }) {
@@ -2132,7 +2147,7 @@ export default function Automation() {
               const Icon = preset.icon;
               const isFb = item.platform === "Facebook";
               const isVistrowVoice = item.platform === "Vistrow Voice";
-              const endpointPath = item.webhookPath || "/api/leads";
+              const endpointPath = ingestPath(item.platform, item.webhookPath);
               return (
                 <article key={item._id} className="card p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
