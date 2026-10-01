@@ -36,6 +36,24 @@ const KEY_PATTERNS = {
 // check on "investment".
 const KEY_ORDER = ["budget", "timeline", "purpose", "bhk", "propertyType", "streetAddress", "city", "preferredLocation"];
 
+// "I am interested in: Buying a plot" answers two things at once: the purpose
+// (buy / invest / rent) and the property type (plot, villa, ...).
+const INTEREST_KEY = /\binterest(?:ed)?\b|looking[_ ]?for/i;
+function deriveFromInterest(value) {
+  const v = String(value || "").toLowerCase();
+  const out = {};
+  if (/\binvest/.test(v)) out.purpose = "Invest";
+  else if (/\b(rent|renting|lease|leasing)\b/.test(v)) out.purpose = "Rent";
+  else if (/\b(buy|buying|purchase|purchasing)\b/.test(v)) out.purpose = "Buy";
+  if (/\b(plot|plots|land)\b/.test(v)) out.propertyType = "Plot";
+  else if (/\bvilla/.test(v)) out.propertyType = "Villa";
+  else if (/\bpenthouse/.test(v)) out.propertyType = "Penthouse";
+  else if (/\b(apartment|flat)s?\b/.test(v)) out.propertyType = "Apartment";
+  else if (/\boffice/.test(v)) out.propertyType = "Office";
+  else if (/\bcommercial|\bshop\b/.test(v)) out.propertyType = "Commercial";
+  return out;
+}
+
 function classifyKey(fieldKey, label) {
   const haystack = `${fieldKey || ""} ${label || ""}`.toLowerCase();
   for (const target of KEY_ORDER) {
@@ -125,6 +143,18 @@ function mapCustomFieldsToLead(entries) {
   for (const entry of entries || []) {
     const { fieldKey, label, value } = entry;
     if (!value) { remaining.push(entry); continue; }
+
+    if (INTEREST_KEY.test(`${fieldKey || ""} ${label || ""}`) && !classifyKey(fieldKey, label)) {
+      const d = deriveFromInterest(value);
+      // The answer is kept in formResponses too, so the exact wording survives.
+      let used = false;
+      for (const k of ["purpose", "propertyType"]) {
+        if (d[k] && leadUpdates[k] === undefined) { leadUpdates[k] = d[k]; used = true; }
+      }
+      remaining.push(entry);
+      void used;
+      continue;
+    }
 
     const target = classifyKey(fieldKey, label);
     if (!target) { remaining.push(entry); continue; }

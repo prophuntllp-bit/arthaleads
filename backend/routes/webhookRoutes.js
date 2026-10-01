@@ -868,6 +868,21 @@ router.post("/website", express.json(), websiteLeadLimiter, async (req, res) => 
       ],
     });
 
+    // A site that posts straight to this endpoint (not through the WordPress
+    // plugin) never registers itself, so learn its address, name and form from
+    // its first lead. That is what gives the connection its favicon and name.
+    try {
+      if (page_url && !automation.siteUrl) {
+        const u = new URL(page_url);
+        automation.siteUrl = u.origin;
+        if (!automation.siteName) automation.siteName = u.hostname.replace(/^www\./, "");
+        if (/^WordPress Site( \d+)?$/i.test(automation.name || "")) automation.name = u.hostname.replace(/^www\./, "");
+      }
+      if (form_name && !(automation.connectedForms || []).includes(form_name) && (automation.connectedForms || []).length < 30) {
+        automation.connectedForms = [...(automation.connectedForms || []), form_name];
+      }
+    } catch { /* an unparseable page_url just skips the auto-fill */ }
+
     automation.status = "connected";
     automation.lastSyncAt = new Date();
     await automation.save();
