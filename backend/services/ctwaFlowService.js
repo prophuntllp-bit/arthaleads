@@ -81,7 +81,15 @@ module.exports = function createCtwaFlowService({
       return agent.ctwaFlow.testPhones.includes(conversation.contactPhone);
     }
     if (!isNewConversation) return false;
-    if (agent.adIds?.length) return agent.adIds.includes(conversation.campaignRef?.adId);
+    if (agent.adIds?.length) {
+      const adId = conversation.campaignRef?.adId;
+      if (adId) return agent.adIds.includes(adId);
+      // Meta occasionally delivers an ad click with its ad details missing. A
+      // brand-new chat with no ad that still ended up on an ad-tied agent got
+      // there only because its first message names that agent's project (see
+      // resolveAgentByMessageText), so it is the same lead and gets the same flow.
+      return true;
+    }
     return true;
   }
 

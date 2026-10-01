@@ -34,6 +34,7 @@ const { sendPushToAll, sendPushToUser } = require("../utils/push");
 const { scoreLead, scoreLabel } = require("../utils/leadScorer");
 const { fillTemplate } = require("../utils/formFieldMapper");
 const { looksLikeSolicitation } = require("../utils/solicitationGuard");
+const { limitEmoji } = require("../utils/limitEmoji");
 const OPTS = require("../constants/leadOptions");
 const createCtwaFlowService = require("../services/ctwaFlowService");
 
@@ -275,7 +276,7 @@ function parseStatusUpdates(provider, payload) {
           // pricing is what we bill against — it carries Meta's own verdict on
           // category and whether the message was billable at all. Passing it
           // through here is what lets applyStatusUpdates settle the hold.
-          updates.push({ msgId: s.id, status: s.status, pricing: s.pricing || null });
+          updates.push({ msgId: s.id, status: s.status, pricing: s.pricing || null, origin: s.conversation?.origin?.type || null });
         }
       }
     }
@@ -284,10 +285,18 @@ function parseStatusUpdates(provider, payload) {
 }
 
 async function applyStatusUpdates(org, updates) {
-  for (const { msgId, status, pricing } of updates) {
+  for (const { msgId, status, pricing, origin } of updates) {
     const existing = await WaMessage.findOne({ orgId: org._id, waMsgId: msgId })
       .select("status reservedPaise creditCategory freeTierApplied creditSettled conversationId").lean();
     if (!existing) continue; // status event for a message we don't have (or dup) — nothing to update
+
+    // Meta labels a chat that was opened from an ad "referral_conversion" in
+    // its own delivery status, even on the occasions the inbound message
+    // itself arrives with the ad details (`referral`) missing. That is the
+    // only proof such a lead came from an ad.
+    if (origin === "referral_conversion") {
+      markAdOrigin(org, existing.conversationId).catch((err) => console.error("[WhatsApp] markAdOrigin failed:", err.message));
+    }
 
     // ── Settle the credit hold ────────────────────────────────────────────
     // Meta only reveals the real price here, after the send. Settle once, on
@@ -685,6 +694,12 @@ async function handleInbound(org, parsed) {
     $inc: { unreadCount: 1 },
   });
 
+  // A lead that arrived with no ad details still names its project in the
+  // ad's prefilled message, so give it a source rather than leaving it blank.
+  if (isNewConversation && !conv.campaignRef?.adId) {
+    labelAdlessLead(org, conv).catch(() => {});
+  }
+
   // Free-typed asks for a floor plan / video / visit (not button taps, and
   // not the ad's own opening message) ping the team immediately.
   if (!isNewConversation && !interactiveId && msgType === "text" && HOT_SIGNAL_RE.test(msgText)) {
@@ -918,9 +933,37 @@ async function resolveAgentForConversation(org, conversation) {
     || await WaAgent.findOne({ orgId: org._id, status: "active", $or: [{ adIds: { $exists: false } }, { adIds: { $size: 0 } }] }).sort({ createdAt: 1 }).lean();
 }
 
+// Source label for a lead whose ad details never reached us. Whatever label
+// exists already (a real ad name) is never overwritten; a text-derived
+// "WhatsApp enquiry" guess is upgraded once Meta confirms an ad origin.
+const AD_ORIGIN_UNKNOWN_LABEL = "Facebook Ad · details not sent by Meta";
+
+async function labelLeadIfWeaker(leadId, label, { replaceGuess = false } = {}) {
+  if (!leadId || !label) return;
+  const weak = [{ leadSourceLabel: "" }, { leadSourceLabel: null }, { leadSourceLabel: { $exists: false } }];
+  if (replaceGuess) weak.push({ leadSourceLabel: /^WhatsApp enquiry/ });
+  await Lead.updateOne({ _id: leadId, $or: weak }, { $set: { leadSourceLabel: label } });
+}
+
+async function labelAdlessLead(org, conv) {
+  if (!conv?.leadId || conv.campaignRef?.adId) return;
+  const m = await matchByMessageText(org, conv);
+  await labelLeadIfWeaker(conv.leadId, m?.project ? `WhatsApp enquiry · ${m.project.name}` : "");
+}
+
+async function markAdOrigin(org, conversationId) {
+  const conv = await WaConversation.findOne({ _id: conversationId, orgId: org._id }).select("leadId campaignRef").lean();
+  if (!conv?.leadId || conv.campaignRef?.adId) return;
+  const m = await matchByMessageText(org, conv);
+  const label = m?.project ? `Facebook Ad · ${m.project.name} (ad not identified)` : AD_ORIGIN_UNKNOWN_LABEL;
+  await labelLeadIfWeaker(conv.leadId, label, { replaceGuess: true });
+}
+
 const GENERIC_PROJECT_WORDS = new Set(["project", "projects", "plots", "plot", "homes", "home", "residency", "residences", "apartments", "apartment", "villas", "villa", "heights", "towers", "tower", "estate", "phase"]);
 
-async function resolveAgentByMessageText(org, conversation) {
+// Which agent, and which of its projects, the conversation's first message
+// names. Only an unambiguous single-agent match counts.
+async function matchByMessageText(org, conversation) {
   const first = await WaMessage.findOne({ conversationId: conversation._id, direction: "inbound" })
     .sort({ timestamp: 1 }).select("body").lean();
   const text = normalizeForMatch(first?.body);
@@ -933,10 +976,17 @@ async function resolveAgentByMessageText(org, conversation) {
 
   const wordsOf = (p) => normalizeForMatch(`${p.name} ${p.location || ""}`).split(" ")
     .filter((w) => w.length >= 5 && !GENERIC_PROJECT_WORDS.has(w));
-  const matched = agents.filter((a) =>
-    a.projectIds.some((id) => { const p = byId.get(String(id)); return p && wordsOf(p).some((w) => text.includes(w)); })
-  );
-  return matched.length === 1 ? await WaAgent.findById(matched[0]._id).lean() : null;
+  const hits = [];
+  for (const a of agents) {
+    const named = a.projectIds.map((id) => byId.get(String(id))).filter((p) => p && wordsOf(p).some((w) => text.includes(w)));
+    if (named.length) hits.push({ agentId: a._id, project: named.length === 1 ? named[0] : null });
+  }
+  return hits.length === 1 ? hits[0] : null;
+}
+
+async function resolveAgentByMessageText(org, conversation) {
+  const m = await matchByMessageText(org, conversation);
+  return m ? await WaAgent.findById(m.agentId).lean() : null;
 }
 
 // Stops the bot for good on a conversation that isn't a buyer. Marks the
@@ -1073,20 +1123,20 @@ Who you are:
 
 How to talk — this matters as much as what you say:
 - The language of each reply is decided ONLY by the customer's latest message, never by your own earlier replies in this chat. If they switch language, you switch with them immediately, in either direction.
-  Plain English message -> reply in plain casual English. Example: customer says "Do you have 2BHK in this" -> you say "Right now this one has 1BHK only 🙂 Want me to check site visit slots?"
-  Hindi written in English letters (Hinglish: nahi, chaiye, kitna, batao, kya...) -> reply in Hinglish. Example: customer says "Nahi, 2bhk chaiye" -> you say "Abhi is project mein 1BHK hi hai 🙂 Site visit ka plan banayein?"
+  Plain English message -> reply in plain casual English. Example: customer says "Do you have 2BHK in this" -> you say "Right now this one has 1BHK only. Want me to check site visit slots?"
+  Hindi written in English letters (Hinglish: nahi, chaiye, kitna, batao, kya...) -> reply in Hinglish. Example: customer says "Nahi, 2bhk chaiye" -> you say "Abhi is project mein 1BHK hi hai. Site visit ka plan banayein?"
   Marathi written in English letters (ahe, pahije, kay, mala...) -> reply in the same Marathi style. Devanagari script -> reply in Devanagari.
   Never use Hindi or Marathi words with a customer who is writing plain English.
 - NEVER give the customer a flat "no". Do not say "no", "nahi", "not available", "we don't have", "only X is available" or anything that closes the door, even when the project data shows what they asked for isn't offered (for example they ask for 2BHK and only 1BHK is listed). Say you'll check with the team instead, in their language, then keep the conversation going with something positive you can offer. Add [NEEDS_TEAM] at the very end of that reply so the team is alerted to follow up.
-  Example (English): customer asks "Do you have 2BHK in this" -> "Let me check with the team on 2BHK for you 🙂 Meanwhile I can share the 1BHK details if you like."
-  Example (Hinglish): customer asks "2bhk hai kya" -> "Main team se check karke batata hoon 🙂 Tab tak 1BHK ki details bhej dun?"
-- Add ONE emoji (🙂🏡📍👍) at the end of almost every reply that isn't purely a price/RERA/address fact — this is not optional flavor, it's the default. Only skip it on a strictly factual one-liner.
+  Example (English): customer asks "Do you have 2BHK in this" -> "Let me check with the team on 2BHK for you. Meanwhile I can share the 1BHK details if you like."
+  Example (Hinglish): customer asks "2bhk hai kya" -> "Main team se check karke batata hoon. Tab tak 1BHK ki details bhej dun?"
+- Use an emoji only occasionally, in roughly one reply out of three. Most replies have none. Never put one on two replies in a row, and never reuse an emoji you already used earlier in this chat. Skip it on anything factual or when the customer sounds frustrated.
 - 1 to 2 short sentences per reply, texted the way a person types on their phone, never like a report or email. Never open with "Based on your..." or "I recommend."
 - Never use em dashes or en dashes (—, –) — use a comma, period, or "to" instead (e.g. "1 to 3 months", not "1–3 months").
 - Be warm, never stiff or corporate. No vague marketing language ("connects you to your roots") — every claim comes from the project data above, stated plainly and simply.
 - Do not use markdown or bullet points.
 - If the customer's latest message doesn't seem to actually answer whatever you last asked (it's just a name, a greeting, an emoji, or something unrelated), NEVER say you don't understand, ask what it means, or repeat your question cold — that reads as a broken bot, not a person. If it plausibly looks like their own name, treat it as them introducing themselves: thank them by that name warmly in one line, then naturally ask your pending qualifying question again in different words. If it's unclear what it is, just move the conversation on warmly without commenting on the confusing reply at all.
-  Example: your last question was about their purpose, customer replies "Arnavabhay" -> "Nice to meet you, Arnavabhay! 🙂 Just so I can help better, is this for investment, a second home, or something else?"
+  Example: your last question was about their purpose, customer replies "Arnavabhay" -> "Nice to meet you, Arnavabhay! Just so I can help better, is this for investment, a second home, or something else?"
 
 How to run the conversation:
 - Qualification has priority over tenant custom instructions. If a tenant instruction says to be helpful or answer questions, still qualify first unless the customer has already given enough buying context.
@@ -1104,7 +1154,7 @@ ${mediaRule}- If the customer asks to speak to a human or agent, reply briefly t
 - The "Projects you can discuss" data above is the single source of truth for every price, size, availability and date. If the team rules or custom instructions anywhere in this prompt quote a different price, size or figure for a project, that figure is out of date: ignore it and use the project data instead. Never quote a price or size that is not in the project data.
 - If the customer is clearly not a buyer but someone selling their own services to us (a marketing agency, freelancer, web designer, job seeker, vendor), do not qualify them, pitch anything, or reply at all. Output only [NOT_A_BUYER] and nothing else.
 ${language}${rules}${leadContext ? `\nCustomer context: ${leadContext}` : ""}
-Before you send your reply, check it once against the "How to talk" rules above: does it match the customer's language, does it have one emoji unless it's a pure fact, and does it avoid any flat "no" or "not available"?`;
+Before you send your reply, check it once against the "How to talk" rules above: does it match the customer's language, does it avoid repeating an emoji from your earlier replies, and does it avoid any flat "no" or "not available"?`;
 }
 
 // Every OpenAI call made on an org's behalf lands here, so bot spend is
@@ -1487,6 +1537,7 @@ async function triggerBotReply(org, agent, conversation, inboundText) {
     recordAiUsage(org._id, aiRes.data?.usage, "botReply");
 
     let reply = aiRes.data?.choices?.[0]?.message?.content?.trim() || "";
+    reply = limitEmoji(reply, recentMsgs.filter((m) => m.direction === "outbound" && m.sender === "bot").map((m) => m.body));
     if (reply.includes("[NOT_A_BUYER]")) {
       await muteNonBuyer(conversation, "model flagged the sender as a vendor, not a buyer");
       return;
