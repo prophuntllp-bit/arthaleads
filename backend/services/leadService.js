@@ -110,6 +110,10 @@ const getDateRangeFilter = (dateRange, from, to) => {
       const firstKey = `${keyToAnchor(todayKey).getUTCFullYear()}-01-01`;
       return { $gte: startOfISTDay(firstKey), $lte: endOfISTDay(todayKey) };
     }
+    case "lastyear": {
+      const y = keyToAnchor(todayKey).getUTCFullYear() - 1;
+      return { $gte: startOfISTDay(`${y}-01-01`), $lte: endOfISTDay(`${y}-12-31`) };
+    }
     default:
       return null;
   }
@@ -944,13 +948,37 @@ const leadService = {
     const createdAtFilter = getDateRangeFilter(query.dateRange, query.from, query.to);
     const dateStage = createdAtFilter ? [{ $match: { createdAt: createdAtFilter } }] : [];
 
-    const todayStart = new Date(); todayStart.setHours(0,  0,  0,   0);
-    const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
-    const thisMonthStart = new Date(); thisMonthStart.setDate(1); thisMonthStart.setHours(0,0,0,0);
-    const thisMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth()+1, 0, 23, 59, 59, 999);
-    const lastMonthStart = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth()-1, 1, 0, 0, 0, 0);
-    const lastMonthEnd   = new Date(thisMonthStart.getFullYear(), thisMonthStart.getMonth(), 0, 23, 59, 59, 999);
+    // Every boundary below is the IST calendar day / month, not the server's
+    // (UTC) one: "today" used to start at 5:30am IST and a month began 5:30
+    // hours late, so early-morning figures were quietly wrong.
+    const todayKey   = istDateKey();
+    const todayStart = startOfISTDay(todayKey);
+    const todayEnd   = endOfISTDay(todayKey);
+    const nowAnchor  = keyToAnchor(todayKey);
+    const yr = nowAnchor.getUTCFullYear(), mo = nowAnchor.getUTCMonth(), dom = nowAnchor.getUTCDate();
+    const dayKey = (y, m, d) => anchorToKey(new Date(Date.UTC(y, m, d)));
+    const thisMonthStart = startOfISTDay(dayKey(yr, mo, 1));
+    const thisMonthEnd   = endOfISTDay(dayKey(yr, mo + 1, 0));
+    const lastMonthStart = startOfISTDay(dayKey(yr, mo - 1, 1));
+    const lastMonthEnd   = endOfISTDay(dayKey(yr, mo, 0));
+    // The same number of days into last month, so a month that is two days old
+    // is compared with two days of last month, not with all of it.
+    const daysInLastMonth = new Date(Date.UTC(yr, mo, 0)).getUTCDate();
+    const lastMonthSameDaysEnd = endOfISTDay(dayKey(yr, mo - 1, Math.min(dom, daysInLastMonth)));
     const next48hEnd     = new Date(todayEnd.getTime() + 48 * 60 * 60 * 1000);
+
+    // The window just before the selected one, same length, for "vs previous
+    // period". Only defined for a bounded range.
+    let previousFilter = null;
+    if (createdAtFilter?.$gte && createdAtFilter?.$lte) {
+      const len = createdAtFilter.$lte.getTime() - createdAtFilter.$gte.getTime() + 1;
+      previousFilter = { $gte: new Date(createdAtFilter.$gte.getTime() - len), $lte: new Date(createdAtFilter.$gte.getTime() - 1) };
+    }
+    // Trend buckets: per day for a range up to about three months, per month
+    // beyond that (or for all time).
+    const spanDays = previousFilter ? Math.round((createdAtFilter.$lte - createdAtFilter.$gte) / 86400000) + 1 : null;
+    const trendBucket = spanDays && spanDays <= 92 ? "day" : "month";
+    const toIstKey = (d) => (d ? new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10) : null);
 
     // Single $facet aggregation — allowDiskUse prevents OOM on large orgs
     const [result] = await Lead.aggregate([
@@ -1039,6 +1067,40 @@ const leadService = {
           ],
           lastMonthClosedWon: [
             { $match: { status: "Closed Won", updatedAt: { $gte: lastMonthStart, $lte: lastMonthEnd } } },
+            { $count: "count" },
+          ],
+
+          // ── Figures for the selected date range ──────────────────────────
+          // The dashboard cards read these, so changing the range moves them.
+          periodPipeline: [
+            ...dateStage,
+            { $match: { status: { $nin: ["Closed Won", "Closed Lost"] } } },
+            { $group: { _id: null, total: { $sum: "$budget.max" }, count: { $sum: 1 } } },
+          ],
+          periodAvgResponse: [
+            ...dateStage,
+            { $match: { firstContactedAt: { $ne: null } } },
+            { $project: { responseMs: { $subtract: ["$firstContactedAt", "$createdAt"] } } },
+            { $group: { _id: null, avgMs: { $avg: "$responseMs" }, count: { $sum: 1 } } },
+          ],
+          previousPeriodLeads: previousFilter
+            ? [{ $match: { createdAt: previousFilter } }, { $count: "count" }]
+            : [{ $match: { _id: null } }],
+          dailyLeads: [
+            ...dateStage,
+            { $group: {
+              _id: { $dateToString: { format: trendBucket === "day" ? "%Y-%m-%d" : "%Y-%m", date: "$createdAt", timezone: "Asia/Kolkata" } },
+              count: { $sum: 1 },
+            }},
+            { $sort: { "_id": 1 } },
+          ],
+
+          lastMonthSamePeriodLeads: [
+            { $match: { createdAt: { $gte: lastMonthStart, $lte: lastMonthSameDaysEnd } } },
+            { $count: "count" },
+          ],
+          lastMonthSamePeriodClosedWon: [
+            { $match: { status: "Closed Won", updatedAt: { $gte: lastMonthStart, $lte: lastMonthSameDaysEnd } } },
             { $count: "count" },
           ],
 
@@ -1133,6 +1195,19 @@ const leadService = {
       lastMonthLeads:     result.lastMonthLeads[0]?.count || 0,
       thisMonthClosedWon: result.thisMonthClosedWon[0]?.count || 0,
       lastMonthClosedWon: result.lastMonthClosedWon[0]?.count || 0,
+      lastMonthSamePeriodLeads:     result.lastMonthSamePeriodLeads[0]?.count || 0,
+      lastMonthSamePeriodClosedWon: result.lastMonthSamePeriodClosedWon[0]?.count || 0,
+
+      // For the selected range (see the facets above)
+      periodPipelineValue: result.periodPipeline[0]?.total || 0,
+      periodPipelineLeads: result.periodPipeline[0]?.count || 0,
+      periodAvgResponseMs: result.periodAvgResponse[0]?.avgMs != null ? Math.max(0, result.periodAvgResponse[0].avgMs) : null,
+      periodContacted:     result.periodAvgResponse[0]?.count || 0,
+      previousPeriodLeads: previousFilter ? (result.previousPeriodLeads[0]?.count || 0) : null,
+      dailyLeads:          result.dailyLeads || [],
+      trendBucket,
+      rangeStartKey: createdAtFilter?.$gte ? toIstKey(createdAtFilter.$gte) : null,
+      rangeEndKey:   createdAtFilter?.$lte ? toIstKey(createdAtFilter.$lte) : null,
       conversionRate:     result.allTimeTotal[0]?.count
         ? Math.round((allTimeStatus["Closed Won"] || 0) / result.allTimeTotal[0].count * 1000) / 10
         : 0,

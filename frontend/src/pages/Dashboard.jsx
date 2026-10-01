@@ -175,8 +175,8 @@ function SmartInsightsWidget({ data }) {
       const topSource = Object.entries(data.bySource || {}).sort((a, b) => b[1] - a[1])[0];
       const summary = [
         `Total leads all-time: ${data.allTimeTotal ?? 0}`,
-        `New leads this period: ${data.totalLeads ?? 0}`,
-        `This month new leads: ${data.thisMonthLeads ?? 0}, last month: ${data.lastMonthLeads ?? 0}`,
+        `New leads this period: ${data.totalLeads ?? 0}${data.previousPeriodLeads != null ? `, previous period: ${data.previousPeriodLeads}` : ""}`,
+        `This month new leads so far: ${data.thisMonthLeads ?? 0}, the same days last month: ${data.lastMonthSamePeriodLeads ?? 0}`,
         `Closed Won this month: ${data.thisMonthClosedWon ?? 0}`,
         `Conversion rate: ${data.conversionRate ?? 0}%`,
         `Follow-ups due today: ${data.todayFollowUps ?? 0}`,
@@ -445,6 +445,23 @@ function fmtResponseTime(ms) {
   return `${(hrs / 24).toFixed(1)} days`;
 }
 
+// How the selected date range reads in a sentence ("... created in the last 30
+// days"), so every figure on the page can say what it covers.
+const RANGE_PHRASES = {
+  today: "today", yesterday: "yesterday", todayYesterday: "today and yesterday",
+  last7days: "in the last 7 days", last14days: "in the last 14 days", last28days: "in the last 28 days", last30days: "in the last 30 days",
+  thisweek: "this week", lastweek: "last week", thismonth: "this month", lastmonth: "last month",
+  thisyear: "this year", lastyear: "last year",
+};
+function describeRange(range) {
+  if (range && typeof range === "object") {
+    const f = (k) => new Date(`${k}T00:00:00`).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    return range.from && range.to ? `from ${f(range.from)} to ${f(range.to)}` : "in this period";
+  }
+  if (!range) return "across all time";
+  return RANGE_PHRASES[range] || "in this period";
+}
+
 export default function Dashboard() {
   useEffect(() => { document.title = "Dashboard - Arthaleads CRM"; }, []);
   const { user } = useAuth();
@@ -627,7 +644,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Zone 2: Today at a Glance ─────────────────────────────────── */}
-      <ZonedKPIRow data={data} navigate={navigate} />
+      <ZonedKPIRow data={data} navigate={navigate} scope={describeRange(dateRange)} />
 
       {/* ── Zone 3: Action Required ───────────────────────────────────── */}
       <div className="space-y-3">
@@ -648,7 +665,7 @@ export default function Dashboard() {
           <StaleLeadsWidget navigate={navigate} />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <RevenueForecastWidget data={data} />
-            <WeeklyTrendWidget data={data} />
+            <LeadsTrendWidget data={data} scope={describeRange(dateRange)} />
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <LiveAgentStatusWidget navigate={navigate} />
@@ -779,7 +796,7 @@ export default function Dashboard() {
             )}
           </section>
         </div>
-        <DropoffFunnel allTimeByStatus={data?.allTimeByStatus} />
+        <DropoffFunnel byStatus={data?.byStatus} scope={describeRange(dateRange)} />
       </div>
 
       {/* ── Zone 6: Team ─────────────────────────────────────────────── */}
@@ -841,37 +858,43 @@ function ZoneHeader({ label, color = "default" }) {
   );
 }
 
-function ZonedKPIRow({ data, navigate }) {
-  const delta = data ? calcDelta(data.thisMonthLeads, data.lastMonthLeads) : null;
+function ZonedKPIRow({ data, navigate, scope = "" }) {
+  // These follow the date range at the top of the page. The follow-ups card is
+  // the one exception: it is always today's, because a follow-up that is due
+  // today is due today whatever range is being looked at.
+  const total = data?.totalLeads ?? 0;
+  const delta = data && data.previousPeriodLeads != null ? calcDelta(total, data.previousPeriodLeads) : null;
+  const closedWon = data?.byStatus?.["Closed Won"] ?? 0;
+  const conversion = total ? Math.round((closedWon / total) * 1000) / 10 : 0;
   const stats = [
     {
-      label: "Total Leads", value: data?.allTimeTotal ?? 0, color: "#f97316",
-      sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs last month` : "All time",
+      label: "Total Leads", value: total, color: "#f97316",
+      sub: delta !== null ? `${delta >= 0 ? "↑" : "↓"} ${Math.abs(delta)}% vs previous period` : (scope ? `created ${scope}` : "All time"),
       subColor: delta !== null ? (delta >= 0 ? "#22c55e" : "#ef4444") : undefined,
       onClick: () => navigate("/leads"),
     },
     {
-      label: "Pipeline", value: fmtINR(data?.pipelineValue), color: "var(--app-text)",
-      sub: `${data?.pipelineLeads || 0} active leads`,
+      label: "Pipeline", value: fmtINR(data?.periodPipelineValue ?? data?.pipelineValue), color: "var(--app-text)",
+      sub: `${data?.periodPipelineLeads ?? data?.pipelineLeads ?? 0} active leads ${scope}`.trim(),
     },
     {
-      label: "New", value: data?.allTimeNew ?? 0, color: "#6366f1",
-      sub: "Uncontacted",
+      label: "New", value: data?.byStatus?.New ?? data?.allTimeNew ?? 0, color: "#6366f1",
+      sub: "Not contacted yet",
       onClick: () => navigate("/leads", { state: { presetStatus: "New" } }),
     },
     {
-      label: "Closed Won", value: data?.allTimeClosedWon ?? 0, color: "#22c55e",
-      sub: `${data?.conversionRate ?? 0}% conversion`,
+      label: "Closed Won", value: closedWon, color: "#22c55e",
+      sub: closedWon ? `${conversion}% of leads ${scope}`.trim() : "None marked Closed Won",
       onClick: () => navigate("/leads", { state: { presetStatus: "Closed Won" } }),
     },
     {
       label: "Follow-ups", value: data?.todayFollowUps ?? 0, color: "#f59e0b",
-      sub: "Due today",
+      sub: "Due today, all leads",
       onClick: () => navigate("/leads", { state: { presetFollowUpToday: true } }),
     },
     {
-      label: "Avg Response", value: fmtResponseTime(data?.avgResponseMs), color: "#22c55e",
-      sub: "First contact",
+      label: "Avg Response", value: fmtResponseTime(data?.periodAvgResponseMs ?? data?.avgResponseMs), color: "#22c55e",
+      sub: data?.periodContacted ? `first contact, ${data.periodContacted} leads` : "First contact",
     },
   ];
   return (
@@ -882,7 +905,7 @@ function ZonedKPIRow({ data, navigate }) {
             <>
               <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold truncate leading-none">{s.label}</p>
               <p className="text-xl sm:text-2xl font-black leading-none truncate mt-1" style={{ color: s.color }}>{s.value}</p>
-              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }}>{s.sub}</p>
+              <p className="text-[9px] truncate mt-0.5" style={{ color: s.subColor || "var(--app-text-soft)" }} title={s.sub}>{s.sub}</p>
             </>
           );
           return s.onClick ? (
@@ -897,6 +920,10 @@ function ZonedKPIRow({ data, navigate }) {
           );
         })}
       </div>
+      <p className="text-[11px] text-app-soft">
+        Showing leads created {scope || "in the selected period"}, using the date range above.
+        {data?.allTimeTotal != null && <> {data.allTimeTotal.toLocaleString("en-IN")} leads in total.</>}
+      </p>
     </div>
   );
 }
@@ -1075,7 +1102,7 @@ function ActivityFeed({ items, navigate }) {
 }
 
 // ── Pipeline Drop-off Funnel ──────────────────────────────────────────────────
-function DropoffFunnel({ allTimeByStatus }) {
+function DropoffFunnel({ byStatus, scope = "" }) {
   const STAGES = [
     { key: "New",         color: "#6366f1" },
     { key: "Contacted",   color: "#f59e0b" },
@@ -1084,7 +1111,7 @@ function DropoffFunnel({ allTimeByStatus }) {
     { key: "Closed Won",  color: "#22c55e" },
     { key: "Closed Lost", color: "#ef4444" },
   ];
-  const total = STAGES.reduce((s, st) => s + (allTimeByStatus?.[st.key] || 0), 0);
+  const total = STAGES.reduce((s, st) => s + (byStatus?.[st.key] || 0), 0);
   if (!total) return null;
   return (
     <section className="card p-4 sm:p-6">
@@ -1093,11 +1120,11 @@ function DropoffFunnel({ allTimeByStatus }) {
           <p className="stitch-kicker mb-1">Where leads get stuck</p>
           <h3 className="text-base font-bold text-app">Pipeline Drop-off</h3>
         </div>
-        <div className="stitch-pill text-xs">{total} all-time</div>
+        <div className="stitch-pill text-xs">{total} leads · {scope || "this period"}</div>
       </div>
       <div className="space-y-2">
         {STAGES.map(({ key, color }) => {
-          const count = allTimeByStatus?.[key] || 0;
+          const count = byStatus?.[key] || 0;
           const pct = Math.round(count / total * 100);
           return (
             <div key={key} className="flex items-center gap-3">
@@ -1476,20 +1503,20 @@ function RevenueForecastWidget({ data }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Expected Revenue</p>
-          <p className="text-lg font-black text-emerald-400 leading-none">{fmtINR(expectedRev)}</p>
-          <p className="text-[9px] text-app-soft">At {data.conversionRate ?? 0}% conversion</p>
+          <p className="text-lg font-black text-emerald-400 leading-none">{expectedRev ? fmtINR(expectedRev) : "—"}</p>
+          <p className="text-[9px] text-app-soft">{expectedRev ? `At ${data.conversionRate}% conversion` : "Needs a closed deal to project from"}</p>
         </div>
         <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Month Leads</p>
           <p className="text-lg font-black text-indigo-400 leading-none">{data.thisMonthLeads || 0}</p>
-          <p className={`text-[9px] font-semibold ${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "text-emerald-400" : "text-red-400"}`}>
-            {(data.lastMonthLeads || 0) === 0 ? "Last month: 0" : `${(data.thisMonthLeads || 0) >= (data.lastMonthLeads || 0) ? "↑" : "↓"} vs ${data.lastMonthLeads} last month`}
+          <p className={`text-[9px] font-semibold ${(data.thisMonthLeads || 0) >= (data.lastMonthSamePeriodLeads || 0) ? "text-emerald-400" : "text-red-400"}`}>
+            {(data.lastMonthSamePeriodLeads || 0) === 0 ? "Same days last month: 0" : `${(data.thisMonthLeads || 0) >= (data.lastMonthSamePeriodLeads || 0) ? "↑" : "↓"} vs ${data.lastMonthSamePeriodLeads} same days last month`}
           </p>
         </div>
         <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Closings vs Last Month</p>
-          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0} <span className="text-sm font-normal text-app-soft">/ {data.lastMonthClosedWon || 0}</span></p>
-          <p className="text-[9px] text-app-soft">This month / last month</p>
+          <p className="text-lg font-black text-orange-500 leading-none">{data.thisMonthClosedWon || 0} <span className="text-sm font-normal text-app-soft">/ {data.lastMonthSamePeriodClosedWon || 0}</span></p>
+          <p className="text-[9px] text-app-soft">This month / same days last month</p>
         </div>
         <div className="card p-3 flex flex-col gap-1">
           <p className="text-[9px] text-app-soft uppercase tracking-wider font-semibold">Projected Pace</p>
@@ -1750,52 +1777,69 @@ function LiveAgentStatusWidget({ navigate }) {
   );
 }
 
-// ── 5. Weekly Trend Chart Widget ──────────────────────────────────────────────
-function WeeklyTrendWidget({ data }) {
-  if (!data?.recentDailyLeads) return null;
+// ── 5. Leads trend (follows the date range) ─────────────────────────────────
+function LeadsTrendWidget({ data, scope = "" }) {
+  if (!data?.dailyLeads) return null;
 
-  const today = new Date();
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (6 - i));
-    return d.toISOString().slice(0, 10);
-  });
-
-  const countMap = {};
-  data.recentDailyLeads.forEach((r) => { countMap[r._id] = r.count; });
-
-  const chartData = days.map((date) => ({
-    day: new Date(date + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short" }),
-    count: countMap[date] || 0,
-  }));
-
-  const total7 = chartData.reduce((s, d) => s + d.count, 0);
-  const prev7  = data.lastMonthLeads || 0;
-  const delta7 = data.thisMonthLeads > 0 ? null : null;
+  const counts = Object.fromEntries(data.dailyLeads.map((r) => [r._id, r.count]));
+  const monthly = data.trendBucket === "month";
+  const keys = [];
+  if (!monthly) {
+    let k = data.rangeStartKey;
+    const end = data.rangeEndKey;
+    while (k && end && k <= end && keys.length < 120) {
+      keys.push(k);
+      const d = new Date(`${k}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1);
+      k = d.toISOString().slice(0, 10);
+    }
+  } else {
+    const present = Object.keys(counts).sort();
+    const first = data.rangeStartKey?.slice(0, 7) || present[0];
+    const last = data.rangeEndKey?.slice(0, 7) || present[present.length - 1];
+    if (first && last) {
+      let [y, m] = first.split("-").map(Number);
+      const [ey, em] = last.split("-").map(Number);
+      while ((y < ey || (y === ey && m <= em)) && keys.length < 60) {
+        keys.push(`${y}-${String(m).padStart(2, "0")}`);
+        m += 1; if (m > 12) { m = 1; y += 1; }
+      }
+    }
+  }
+  const label = (k) => monthly
+    ? new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-IN", { month: "short", year: "2-digit", timeZone: "UTC" })
+    : new Date(`${k}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+  const chartData = keys.map((k) => ({ key: k, day: label(k), count: counts[k] || 0 }));
+  const total = chartData.reduce((sum, d) => sum + d.count, 0);
 
   return (
     <section className="card p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="stitch-kicker mb-1">Trends</p>
-          <h3 className="text-base font-bold text-app">Leads This Week</h3>
+          <h3 className="text-base font-bold text-app">Leads Over Time</h3>
         </div>
         <div className="text-right">
-          <p className="text-xl font-black text-app">{total7}</p>
-          <p className="text-[10px] text-app-soft">last 7 days</p>
+          <p className="text-xl font-black text-app">{total.toLocaleString("en-IN")}</p>
+          <p className="text-[10px] text-app-soft">{scope || "in this period"}</p>
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={100}>
-        <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-          <XAxis dataKey="day" tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip
-            contentStyle={{ borderRadius: 12, border: "1px solid var(--app-border)", background: "var(--app-bg)", color: "var(--app-text)", fontSize: 12 }}
-            cursor={{ stroke: "rgba(249,115,22,0.2)", strokeWidth: 2 }}
-          />
-          <Line type="monotone" dataKey="count" stroke="#f97316" strokeWidth={2} dot={{ fill: "#f97316", r: 3 }} activeDot={{ r: 5 }} />
-        </LineChart>
-      </ResponsiveContainer>
+      {chartData.length === 0 ? (
+        <p className="text-sm text-app-soft py-8 text-center">No leads in this period.</p>
+      ) : (
+        <ResponsiveContainer width="100%" height={100}>
+          <LineChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <XAxis dataKey="day" interval="preserveStartEnd" minTickGap={24} tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "var(--app-text-soft)" }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip
+              formatter={(v) => [`${v} ${v === 1 ? "lead" : "leads"}`, ""]}
+              separator=""
+              contentStyle={{ borderRadius: 12, border: "1px solid var(--app-border)", background: "var(--app-bg)", color: "var(--app-text)", fontSize: 12 }}
+              cursor={{ stroke: "rgba(249,115,22,0.2)", strokeWidth: 2 }}
+            />
+            <Line type="monotone" dataKey="count" stroke="#f97316" strokeWidth={2} dot={chartData.length <= 14 ? { fill: "#f97316", r: 3 } : false} activeDot={{ r: 5 }} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
     </section>
   );
 }
