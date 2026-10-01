@@ -9,6 +9,7 @@ import api from "../services/api";
 import { ConfirmDialog, EmptyState, Modal, PageLoader, Spinner } from "../components/UI";
 import CustomSelect from "../components/CustomSelect";
 import WhatsAppIcon from "../components/WhatsAppIcon";
+import ConnectionCard, { ConnectionGroups } from "../components/ConnectionCard";
 
 /* ─── platform presets (non-Facebook) ─────────────────────────────────────── */
 const PLATFORM_PRESETS = {
@@ -2141,242 +2142,44 @@ export default function Automation() {
       ) : (
         <section className="space-y-3">
           <p className="text-sm font-semibold text-app-soft">Your connections ({items.length})</p>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {items.map((item) => {
+          <ConnectionGroups
+            items={items}
+            renderCard={(item) => {
               const preset = PLATFORM_PRESETS[item.platform] || PLATFORM_PRESETS.Custom;
               const Icon = preset.icon;
               const isFb = item.platform === "Facebook";
               const isVistrowVoice = item.platform === "Vistrow Voice";
-              const endpointPath = ingestPath(item.platform, item.webhookPath);
+              const leading = isFb ? <FacebookIcon />
+                : isVistrowVoice ? <VistrowVoiceIcon size={40} />
+                : item.platform === "Website Form" && item.siteUrl
+                  ? <SiteFavicon url={item.siteUrl} size={28} fallback={<Icon className="h-5 w-5" />} />
+                  : <Icon className="h-5 w-5" />;
               return (
-                <article key={item._id} className="card p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden ${isFb ? "bg-[#1877F2]" : isVistrowVoice ? "" : preset.tone}`}>
-                        {isFb ? <FacebookIcon /> : isVistrowVoice ? <VistrowVoiceIcon size={36} /> : item.platform === "Website Form" && item.siteUrl
-                          ? <SiteFavicon url={item.siteUrl} size={28} fallback={<Icon className="h-4 w-4" />} />
-                          : <Icon className="h-4 w-4" />}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-app">{item.name}</h3>
-                        <p className="text-xs text-app-soft">{item.platform}</p>
-                      </div>
-                    </div>
-                    <span className={`badge shrink-0 ${item.status === "connected" ? "bg-emerald-500/10 text-emerald-400" : item.status === "paused" ? "bg-amber-500/10 text-amber-400" : "bg-white/5 text-app-soft"}`}>
-                      {item.status}
-                    </span>
-                  </div>
-
-                  {isFb ? (() => {
-                    // Token health calculation
-                    const expiresAt     = item.userTokenExpiresAt ? new Date(item.userTokenExpiresAt) : null;
-                    const daysLeft      = expiresAt ? Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-                    const isPermanent   = daysLeft !== null && daysLeft > 365 * 5; // 2099 sentinel
-                    const tokenExpired  = !isPermanent && daysLeft !== null && daysLeft <= 0;
-                    const tokenOk       = isPermanent || daysLeft === null || daysLeft > 20;
-                    const tokenWarn     = !isPermanent && daysLeft !== null && daysLeft <= 20 && daysLeft > 5;
-                    const tokenBad      = !isPermanent && daysLeft !== null && daysLeft <= 5;
-                    return (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-3 rounded-xl p-3 stitch-surface-muted text-sm">
-                          <div>
-                            <p className="text-xs text-app-soft">Page ID</p>
-                            <p className="mt-0.5 font-medium text-app truncate">{item.pageId || "All pages"}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-app-soft">Form</p>
-                            <p className="mt-0.5 font-medium text-app truncate">{item.formId || "All forms"}</p>
-                          </div>
-                        </div>
-                        {/* Token health row */}
-                        <div className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs ${tokenBad ? "bg-red-500/10 border border-red-500/30" : tokenWarn ? "bg-amber-500/10 border border-amber-400/30" : "bg-emerald-500/10 border border-emerald-500/20"}`}>
-                          <div className="flex items-center gap-1.5">
-                            {tokenBad ? <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> : tokenWarn ? <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> : <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />}
-                            <span className={tokenBad ? "text-red-400 font-semibold" : tokenWarn ? "text-amber-400 font-semibold" : "text-emerald-400"}>
-                              {isPermanent
-                                ? "Permanent System User Token — never expires"
-                                : daysLeft === null
-                                  ? "Token health unknown - click Refresh"
-                                  : tokenExpired
-                                    ? "Token expired — reconnect now to resume lead capture"
-                                    : tokenBad
-                                      ? `Token expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} — refresh now!`
-                                      : tokenWarn
-                                        ? `Token expires in ${daysLeft} days — refresh soon`
-                                        : `Token valid for ${daysLeft} days`}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {tokenExpired ? (
-                              <button
-                                onClick={() => { setFbEditingItem(item); setFbWizardOpen(true); }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-red-500 text-white transition hover:bg-red-600"
-                              >
-                                <RefreshCw className="w-3 h-3" /> Reconnect
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleRefreshFbTokens(item._id, item.orgId)}
-                                disabled={refreshingId === item._id}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition disabled:opacity-50 ${tokenBad ? "bg-red-500 text-white" : tokenWarn ? "bg-amber-500 text-white" : "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"}`}
-                              >
-                                <RefreshCw className={`w-3 h-3 ${refreshingId === item._id ? "animate-spin" : ""}`} />
-                                {refreshingId === item._id ? "Refreshing…" : "Refresh"}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {item.tokenRefreshedAt && (
-                          <p className="text-[10px] text-app-soft px-1">
-                            Last refreshed: {new Date(item.tokenRefreshedAt).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        )}
-                        <FormLabelsEditor
-                          item={item}
-                          onUpdated={(id, formLabels) =>
-                            setItems((prev) => prev.map((i) => (i._id === id ? { ...i, formLabels } : i)))
-                          }
-                        />
-                      </div>
-                    );
-                  })() : item.platform === "Website Form" ? (
-                    <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
-                      {item.siteName || item.siteUrl ? (
-                        <div>
-                          <p className="text-xs text-app-soft mb-0.5">Connected Website</p>
-                          <p className="font-semibold text-sm text-app">{item.siteName || "WordPress Site"}</p>
-                          {item.siteUrl && <p className="text-xs text-app-soft">{item.siteUrl}</p>}
-                        </div>
-                      ) : null}
-                      {item.connectedForms?.length > 0 && (
-                        <div>
-                          <p className="text-xs text-app-soft mb-1">Active Forms</p>
-                          <div className="flex flex-wrap gap-1">
-                            {item.connectedForms.map((f) => (
-                              <span key={f} className="pill-ok">✓ {f}</span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-xs text-app-soft mb-1">API Endpoint</p>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
-                            {serverBase}{endpointPath}
-                          </code>
-                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}${endpointPath}`)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : item.platform === "Google" && item.mode === "oauth" ? (
-                    <div className="rounded-xl p-3 stitch-surface-muted space-y-2">
-                      <div>
-                        <p className="text-xs text-app-soft mb-0.5">Google Ads Account</p>
-                        <p className="font-semibold text-sm text-app truncate">{item.googleCustomerName || "Not selected"}</p>
-                        {item.googleCustomerId && <p className="text-xs text-app-soft">{item.googleCustomerId}</p>}
-                      </div>
-                      <p className="text-xs text-app-soft">
-                        {item.lastSyncAt ? `Last synced: ${new Date(item.lastSyncAt).toLocaleString()}` : "Not synced yet"} — click Edit to sync now.
-                      </p>
-                    </div>
-                  ) : item.platform === "Google" ? (
-                    <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
-                      <div>
-                        <p className="text-xs text-app-soft mb-1">Webhook URL</p>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-red-400" style={{ background: "var(--app-surface-low)" }}>
-                            {serverBase}/webhook/google
-                          </code>
-                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}/webhook/google`)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-app-soft mb-1">Key</p>
-                        {item.verifyToken ? (
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-red-400" style={{ background: "var(--app-surface-low)" }}>
-                              {item.verifyToken}
-                            </code>
-                            <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(item.verifyToken)}>
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-amber-400">No key yet — click Edit, then Update to generate one.</p>
-                        )}
-                        <p className="mt-1 text-[11px] text-app-soft">Paste both into Google Ads → Lead form extension → Webhook integration.</p>
-                      </div>
-                    </div>
-                  ) : (item.platform === "Custom" || item.platform === "Vistrow Voice" || item.platform === "WhatsApp") ? (
-                    <div className="rounded-xl p-3 stitch-surface-muted space-y-3">
-                      <div>
-                        <p className="text-xs text-app-soft mb-1">API Endpoint</p>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
-                            {serverBase}/webhook/lead
-                          </code>
-                          <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}/webhook/lead`)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs text-app-soft mb-1">Auth Token</p>
-                        {item.verifyToken ? (
-                          <div className="flex items-center gap-2">
-                            <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs font-mono font-semibold text-orange-400" style={{ background: "var(--app-surface-low)" }}>
-                              {item.verifyToken}
-                            </code>
-                            <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(item.verifyToken)}>
-                              <Copy className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-amber-400">No token yet — click Edit, then Update to generate one.</p>
-                        )}
-                        <p className="mt-1 text-[11px] text-app-soft">POST <code className="text-orange-400">{`{ token, name, phone, email, message }`}</code> as JSON. <code className="text-orange-400">message</code> becomes the lead's requirements.</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl p-3 stitch-surface-muted">
-                      <p className="text-xs text-app-soft mb-2">API Endpoint</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 truncate rounded-xl px-3 py-1.5 text-xs text-orange-400" style={{ background: "var(--app-surface-low)" }}>
-                          {serverBase}{endpointPath}
-                        </code>
-                        <button className="btn-secondary rounded-xl shrink-0" onClick={() => copyEndpoint(`${serverBase}${endpointPath}`)}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <button className="btn-secondary rounded-xl" onClick={() => openEdit(item)}>
-                      <Pencil className="h-4 w-4" /> Edit
-                    </button>
-                    {isFb && (
-                      <button className="btn-secondary rounded-xl" onClick={() => runDiagnostic(item)} title="Check why leads may not be arriving">
-                        <SearchCheck className="h-4 w-4" /> Diagnose
-                      </button>
-                    )}
-                    {item.externalSourceUrl && (
-                      <a href={item.externalSourceUrl} target="_blank" rel="noreferrer" className="btn-secondary rounded-xl">
-                        <ExternalLink className="h-4 w-4" /> Open
-                      </a>
-                    )}
-                    <button className="btn-danger rounded-xl ml-auto" onClick={() => setDeleting(item)}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </article>
+                <ConnectionCard
+                  key={item._id}
+                  item={item}
+                  leading={leading}
+                  serverBase={serverBase}
+                  endpointPath={ingestPath(item.platform, item.webhookPath)}
+                  onCopy={copyEndpoint}
+                  onEdit={() => openEdit(item)}
+                  onDelete={() => setDeleting(item)}
+                  onDiagnose={() => runDiagnostic(item)}
+                  onRefreshToken={() => handleRefreshFbTokens(item._id, item.orgId)}
+                  onReconnect={() => { setFbEditingItem(item); setFbWizardOpen(true); }}
+                  refreshing={refreshingId === item._id}
+                  formNamesEditor={isFb ? (
+                    <FormLabelsEditor
+                      item={item}
+                      onUpdated={(id, formLabels) =>
+                        setItems((prev) => prev.map((i) => (i._id === id ? { ...i, formLabels } : i)))
+                      }
+                    />
+                  ) : null}
+                />
               );
-            })}
-          </div>
+            }}
+          />
         </section>
       )}
 
