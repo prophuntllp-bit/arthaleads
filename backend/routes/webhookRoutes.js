@@ -1151,7 +1151,26 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
       const newCallEntry = { _id: new mongoose.Types.ObjectId(), ...voiceCall, createdAt: new Date(), updatedAt: new Date() };
 
       if (existingByPhone) {
-        await Lead.updateOne({ _id: existingByPhone._id }, { $push: { voiceCalls: newCallEntry } });
+        try {
+          await Lead.updateOne({ _id: existingByPhone._id }, { $push: { voiceCalls: newCallEntry } });
+        } catch (pushErr) {
+          // Same unique partial index as branch 3's create/create race
+          // (orgId, source, voiceCalls.externalCallId) - here it's a
+          // push/push race instead of a create/create one. The loser just
+          // re-confirms the call is already on the lead and reports success
+          // instead of failing the webhook (Vistrow would otherwise retry
+          // and re-trigger the same race).
+          if (pushErr?.code === 11000) {
+            const winner = await Lead.findOne({
+              orgId, source: leadSource, "voiceCalls.externalCallId": callIdNum,
+            }).select("_id").lean();
+            if (winner) {
+              logger.info(`[custom webhook] push/push race resolved for call ${callIdNum} - lead ${winner._id} already has it`);
+              return res.status(200).json({ success: true, message: "Call updated", leadId: winner._id });
+            }
+          }
+          throw pushErr;
+        }
         automation.status = "connected";
         automation.lastSyncAt = new Date();
         await automation.save();
@@ -1337,7 +1356,7 @@ router.post("/lead", express.json(), customLeadLimiter, async (req, res) => {
     logger.info(`[custom webhook] lead created: ${lead.name} | ${cleanPhone} | source: ${sourceLabel}`);
     res.status(201).json({ success: true, message: "Lead received", leadId: lead._id });
   } catch (err) {
-    logger.error(`[custom webhook] error: ${err.message}`);
+    logger.error(`[custom webhook] error: ${err.message} | code: ${err.code} | stack: ${err.stack}`);
     res.status(500).json({ success: false, message: "Failed to process lead" });
   }
 });
